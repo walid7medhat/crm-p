@@ -1,0 +1,65 @@
+<?php
+
+namespace App\Listeners;
+
+use App\Events\LeadUpdated;
+use App\Models\User;
+use App\Notifications\LeadUpdatedNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Queue\InteractsWithQueue;
+
+class SendLeadUpdateNotification
+{
+    public function handle(LeadUpdated $event)
+    {
+        $lead = $event->lead;
+        $user = User::find($event->userId);
+        
+        // الحصول على جميع المستخدمين الذين يمكنهم رؤية الـ lead
+        $usersToNotify = $this->getUsersToNotify($lead);
+        
+        foreach ($usersToNotify as $notifyUser) {
+            // تجنب إرسال إشعار للمستخدم نفسه
+            if ($notifyUser->id !== $user->id) {
+                $notifyUser->notify(new LeadUpdatedNotification(
+                    $lead, 
+                    $event->actionType, 
+                    $user,
+                    $event->changes
+                ));
+            }
+        }
+    }
+    
+    private function getUsersToNotify($lead)
+    {
+        $users = collect();
+        
+        // 1. Responsible person
+        if ($lead->responsible_person_id) {
+            $users->push(User::find($lead->responsible_person_id));
+        }
+        
+        // 2. Added by
+        if ($lead->added_by) {
+            $users->push(User::find($lead->added_by));
+        }
+        
+        // 3. Participants
+        foreach ($lead->participants as $participant) {
+            if ($participant->user_id) {
+                $users->push(User::find($participant->user_id));
+            }
+        }
+        
+        // 4. Observers
+        foreach ($lead->observers as $observer) {
+            if ($observer->user_id) {
+                $users->push(User::find($observer->user_id));
+            }
+        }
+        
+        // إزالة التكرارات والقيم الفارغة
+        return $users->filter()->unique('id');
+    }
+}

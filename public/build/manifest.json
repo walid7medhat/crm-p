@@ -1,0 +1,227 @@
+{
+  "_html2canvas-DpGRtyeE.js": {
+    "file": "assets/html2canvas-DpGRtyeE.js",
+    "name": "html2canvas",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/main.js"
+    ]
+  },
+  "_sweetalert2.esm.all-!~{004}~.js": {
+    "file": "assets/sweetalert2.esm-CyX7bHpw.css",
+    "src": "_sweetalert2.esm.all-!~{004}~.js"
+  },
+  "_sweetalert2.esm.all-DNU0Hfq4.js": {
+    "file": "assets/sweetalert2.esm.all-DNU0Hfq4.js",
+    "name": "sweetalert2.esm.all",
+    "css": [
+      "assets/sweetalert2.esm-CyX7bHpw.css"
+    ],
+    "assets": [
+      "assets/user-g8XIt7bn.png"
+    ]
+  },
+  "node_modules/canvg/lib/index.es.js": {
+    "file": "assets/index.es-BtUcfJI7.js",
+    "name": "index.es",
+    "src": "node_modules/canvg/lib/index.es.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/main.js",
+      "_sweetalert2.esm.all-DNU0Hfq4.js"
+    ]
+  },
+  "node_modules/dompurify/dist/purify.es.mjs": {
+    "file": "assets/purify.es-B6FQ9oRL.js",
+    "name": "purify.es",
+    "src": "node_modules/dompurify/dist/purify.es.mjs",
+    "isDynamicEntry": true
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-D3ESTK0v.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-S6trwwry.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_sweetalert2.esm.all-DNU0Hfq4.js"
+    ]
+  },
+  "resources/js/assets/images/a.jpeg": {
+    "file": "assets/a-CNSB645Y.jpeg",
+    "src": "resources/js/assets/images/a.jpeg"
+  },
+  "resources/js/assets/images/auth/envelop-icon.png": {
+    "file": "assets/envelop-icon-BC-dOgaD.png",
+    "src": "resources/js/assets/images/auth/envelop-icon.png"
+  },
+  "resources/js/assets/images/auth/forgot-pass-img.png": {
+    "file": "assets/forgot-pass-img-BLwoaPgo.png",
+    "src": "resources/js/assets/images/auth/forgot-pass-img.png"
+  },
+  "resources/js/assets/images/avatar/avatar1.png": {
+    "file": "assets/avatar1-scz5y5rp.png",
+    "src": "resources/js/assets/images/avatar/avatar1.png"
+  },
+  "resources/js/assets/images/b.jpeg": {
+    "file": "assets/b-B4mY67FF.jpeg",
+    "src": "resources/js/assets/images/b.jpeg"
+  },
+  "resources/js/assets/images/c.jpeg": {
+    "file": "assets/c-Ca3l_2-q.jpeg",
+    "src": "resources/js/assets/images/c.jpeg"
+  },
+  "resources/js/assets/images/flags/flag1.png": {
+    "file": "assets/flag1-CFmrKp4B.png",
+    "src": "resources/js/assets/images/flags/flag1.png"
+  },
+  "resources/js/assets/images/flags/flag2.png": {
+    "file": "assets/flag1-CFmrKp4B.png",
+    "src": "resources/js/assets/images/flags/flag1.png"
+  },
+  "resources/js/assets/images/flags/flag3.png": {
+    "file": "assets/flag1-CFmrKp4B.png",
+    "src": "resources/js/assets/images/flags/flag1.png"
+  },
+  "resources/js/assets/images/flags/flag4.png": {
+    "file": "assets/flag1-CFmrKp4B.png",
+    "src": "resources/js/assets/images/flags/flag1.png"
+  },
+  "resources/js/assets/images/flags/flag5.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/kanban/kanban-1.png": {
+    "file": "assets/kanban-1-qVDbPN7Q.png",
+    "src": "resources/js/assets/images/kanban/kanban-1.png"
+  },
+  "resources/js/assets/images/kanban/kanban-2.png": {
+    "file": "assets/kanban-1-qVDbPN7Q.png",
+    "src": "resources/js/assets/images/kanban/kanban-1.png"
+  },
+  "resources/js/assets/images/product/product-img1.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/product/product-img2.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/product/product-img3.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/product/product-img4.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/product/product-img5.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/user-grid/user-grid-img13.png": {
+    "file": "assets/user-grid-img13-BFWLT_VE.png",
+    "src": "resources/js/assets/images/user-grid/user-grid-img13.png"
+  },
+  "resources/js/assets/images/user-grid/user-grid-img14.png": {
+    "file": "assets/user-grid-img14-BGOE21rx.png",
+    "src": "resources/js/assets/images/user-grid/user-grid-img14.png"
+  },
+  "resources/js/assets/images/user-list/user-list1.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/user-list/user-list10.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/user-list/user-list2.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/user-list/user-list3.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/user-list/user-list4.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/user-list/user-list5.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/user-list/user-list6.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/user-list/user-list7.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/user-list/user-list8.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/user-list/user-list9.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/user.png": {
+    "file": "assets/user-g8XIt7bn.png",
+    "src": "resources/js/assets/images/user.png"
+  },
+  "resources/js/assets/images/users/user1.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/users/user2.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/users/user3.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/users/user4.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/assets/images/users/user5.png": {
+    "file": "assets/flag5-BD-cC3Ws.png",
+    "src": "resources/js/assets/images/flags/flag5.png"
+  },
+  "resources/js/main.js": {
+    "file": "assets/main-CVPcl9iX.js",
+    "name": "main",
+    "src": "resources/js/main.js",
+    "isEntry": true,
+    "imports": [
+      "_sweetalert2.esm.all-DNU0Hfq4.js"
+    ],
+    "dynamicImports": [
+      "_html2canvas-DpGRtyeE.js",
+      "node_modules/dompurify/dist/purify.es.mjs",
+      "node_modules/canvg/lib/index.es.js"
+    ],
+    "css": [
+      "assets/main-C2jJxiic.css"
+    ],
+    "assets": [
+      "assets/flag5-BD-cC3Ws.png",
+      "assets/a-CNSB645Y.jpeg",
+      "assets/b-B4mY67FF.jpeg",
+      "assets/c-Ca3l_2-q.jpeg",
+      "assets/user-grid-img14-BGOE21rx.png",
+      "assets/user-grid-img13-BFWLT_VE.png",
+      "assets/avatar1-scz5y5rp.png",
+      "assets/forgot-pass-img-BLwoaPgo.png",
+      "assets/envelop-icon-BC-dOgaD.png",
+      "assets/kanban-1-qVDbPN7Q.png"
+    ]
+  }
+}
