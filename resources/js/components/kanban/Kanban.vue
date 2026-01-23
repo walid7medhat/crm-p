@@ -1,4 +1,5 @@
 <template>
+    <CreateLeadModal v-model="showCreateModal" />
     <div class="kanban-main-wrapper">
         <b-tabs 
             v-model="activeTabIndex"
@@ -32,8 +33,22 @@
             <!-- Header Actions at the end of the tabs row -->
             <template #tabs-end>
                 <div class="header-actions ms-auto d-flex align-items-center gap-11">
+
+                    <!-- Search Input Wrapper -->
+                    <div class="search-wrapper d-flex align-items-center">
+                        <div class="search-tag d-flex align-items-center gap-2">
+                            <span>Deals in progress</span>
+                            <iconify-icon icon="lucide:x" class="close-tag-icon"></iconify-icon>
+                        </div>
+                        <div class="search-input-container d-flex align-items-center">
+                            <iconify-icon icon="lucide:plus" class="search-plus-icon"></iconify-icon>
+                            <b-form-input placeholder="Search" class="search-input" />
+                        </div>
+                        <iconify-icon icon="lucide:x" class="clear-search-icon"></iconify-icon>
+                    </div>
+                    
                     <!-- Create New Button -->
-                    <button class="btn-create-new d-flex align-items-center">
+                    <button class="btn-create-new d-flex align-items-center" @click="showCreateModal = true">
                         <span class="btn-create-new-text">Create New</span>
                         <iconify-icon icon="lucide:chevrons-up-down" class="text-warning-600 text-md"></iconify-icon>
                     </button>
@@ -56,10 +71,12 @@
 <script setup>
 import { ref, computed } from 'vue'
 import Leads from './leads.vue'
+import CreateLeadModal from './CreateLeadModal.vue'
 import leadsSettings from '@/assets/images/kanban/svg/leads-setting.svg'
-import { BTabs, BTab } from 'bootstrap-vue-3'
+import { BTabs, BTab, BFormInput } from 'bootstrap-vue-3'
 
 const activeTab = ref('leads')
+const showCreateModal = ref(false)
 
 const tabs = ref([
     { id: 'deals', name: 'Deals', hasChevron: false },
@@ -91,7 +108,6 @@ const activeTabName = computed(() => {
     flex-direction: column;
     background-color: #ffffff !important;
     margin-top: 11px;
-    opacity: 1;
     border-radius: 20px;
 }
 
@@ -208,5 +224,74 @@ const activeTabName = computed(() => {
 }
 .more-options-wrapper {
     margin-right: 28px;
+}
+
+/* Search Input Styles */
+.search-wrapper {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 100px;
+    max-width: 438px;
+    gap: 5px;
+}
+
+.search-tag {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 100px;
+    margin: 5px;
+    padding: 5px 10px;
+    font-size: 12px;
+    color: #475569;
+    white-space: nowrap;
+}
+
+.close-tag-icon {
+    font-size: 12px;
+    cursor: pointer;
+    color: #000000;
+    background: #E2E8F0;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-input-container {
+    color: #94A3B8;
+    
+
+}
+
+.search-plus-icon {
+    font-size: 18px;
+    color: #94A3B8;
+}
+
+.search-input {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    width: 100%;
+    font-size: 18px;
+    color: #1E293B;
+    background: transparent !important;
+    padding: 0 !important;
+    height: auto !important;
+}
+
+.search-input::placeholder {
+    color: #94A3B8;
+    font-size: 13px;
+}
+
+.clear-search-icon {
+    color: #F2994A;
+    font-size: 20px;
+    cursor: pointer;
+    margin-right: 8px;
 }
 </style>
