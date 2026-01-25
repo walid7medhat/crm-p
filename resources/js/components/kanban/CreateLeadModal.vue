@@ -88,7 +88,7 @@
                     <!-- Footer Actions -->
                     <div class="d-flex align-items-center justify-content-between mt-3 pt-4">
                         <div class="d-flex gap-4">
-                            <a href="#" class="footer-link" @click.prevent>Add Field</a>
+                            <a href="#" class="footer-link text-decoration-underline" @click.prevent>Add Field</a>
                             <a href="#" class="footer-link text-secondary" @click.prevent>Restore default fields</a>
                         </div>
                         <div class="d-flex gap-3">
@@ -258,7 +258,7 @@ const resetForm = () => {
 
 .footer-link {
     font-size: 14px;
-    text-decoration: underline;
+    /* text-decoration: underline; */
     color: #3B82F6;
     font-weight: 500;
 }
