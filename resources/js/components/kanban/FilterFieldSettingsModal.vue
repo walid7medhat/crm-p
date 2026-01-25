@@ -43,8 +43,8 @@
             </div>
 
             <!-- Leads Section -->
-            <div v-show="activeTabs.includes('leads')" class="settings-section mb-3">
-                <div class="section-header mb-3 border-bottom pb-2">
+            <div v-show="activeTabs.includes('leads')" class="settings-section mb-3 mt-3">
+                <div class="section-header mb-3 border-bottom">
                     <b-form-checkbox v-model="allLeads" class="main-checkbox">
                         <span class="section-title">Leads</span>
                     </b-form-checkbox>
@@ -60,7 +60,7 @@
 
             <!-- Activity Section -->
             <div v-show="activeTabs.includes('activity')" class="settings-section activity-section mb-4">
-                <div class="section-header mb-3 border-bottom pb-2">
+                <div class="section-header mb-3 border-bottom">
                     <b-form-checkbox v-model="allActivity" class="main-checkbox">
                         <span class="section-title">Activity</span>
                     </b-form-checkbox>
@@ -78,8 +78,8 @@
             <div class="d-flex align-items-center justify-content-between mt-4">
                 <a href="#" class="text-muted text-decoration-none fs-14" @click.prevent>Default Fields</a>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-cancel rounded-pill px-4" @click="show = false">Cancel</button>
-                    <button class="btn btn-apply rounded-pill px-4" @click="applySettings">Apply</button>
+                    <button class="btn btn-cancel rounded-pill" @click="show = false">Cancel</button>
+                    <button class="btn btn-apply rounded-pill" @click="applySettings">Apply</button>
                 </div>
             </div>
         </div>
@@ -315,23 +315,30 @@ const applySettings = () => {
 }
 
 .btn-cancel {
-    background: #F8FAFC;
+    background: #F4F4F4;
     border: none;
+    padding: 10px 25px;
+    border-radius: 100px;
+    font-size: 14px;
     color: #01062C;
-    font-weight: 600;
-    padding: 12px 30px;
 }
 
 .btn-apply {
     background: #000;
     border: none;
+    padding: 10px 25px;
+    border-radius: 100px;
+    font-size: 14px;
     color: #fff;
-    font-weight: 600;
-    padding: 12px 30px;
 }
 
 .text-muted {
-    color: #94A3B8 !important;
+    color: #979797 !important;
+    font-family: Montserrat;
+    font-weight: 400;
+    font-style: Medium;
+    font-size: 13px;
+    margin-left: 5px;
 }
 
 .field-checkbox {
@@ -343,5 +350,9 @@ const applySettings = () => {
 
 :deep(.form-check .form-check-input) {
     margin-top: 3px !important;
+}
+
+.section-header {
+    padding-bottom: 10px !important;
 }
 </style>
