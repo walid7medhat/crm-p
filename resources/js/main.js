@@ -24,7 +24,7 @@ addCSS('https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css')
 
 
 // Setup Axios
-axios.defaults.baseURL = 'https://listings.oiaproperties.com'
+axios.defaults.baseURL = 'http://127.0.0.1:8001'
 axios.defaults.headers.common['Accept'] = 'application/json'
 axios.defaults.headers.common['Content-Type'] = 'application/json'
 
@@ -99,7 +99,7 @@ window.Echo = new Echo({
     key: import.meta.env.VITE_PUSHER_APP_KEY,
     cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
     forceTLS: true,
-    authEndpoint: 'https://listings.oiaproperties.com/broadcasting/auth',
+    authEndpoint: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api/broadcasting/auth',
     auth: {
         headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -120,7 +120,7 @@ app.use(router)
 app.use(VueApexCharts)
 
 // Global properties
-app.config.globalProperties.$apiBaseUrl = 'https://listings.oiaproperties.com/api'
+app.config.globalProperties.$apiBaseUrl = 'http://127.0.0.1:8000/api'
 app.config.globalProperties.$axios = axios
 
 // SweetAlert configuration

@@ -1,5 +1,6 @@
 <template>
-    <CreateLeadModal v-model="showCreateModal" />
+    <LeadSearchModal v-model="showSearchModal" />
+    <!-- <CreateLeadModal v-model="showCreateModal" /> -->
     <div class="kanban-main-wrapper">
         <b-tabs 
             v-model="activeTabIndex"
@@ -41,7 +42,7 @@
                             <iconify-icon icon="lucide:x" class="close-tag-icon"></iconify-icon>
                         </div>
                         <div class="search-input-container d-flex align-items-center">
-                            <iconify-icon icon="lucide:plus" class="search-plus-icon"></iconify-icon>
+                            <iconify-icon icon="lucide:plus" class="search-plus-icon" @click="showSearchModal = true" style="cursor: pointer;"></iconify-icon>
                             <b-form-input placeholder="Search" class="search-input" />
                         </div>
                         <iconify-icon icon="lucide:x" class="clear-search-icon"></iconify-icon>
@@ -71,11 +72,13 @@
 <script setup>
 import { ref, computed } from 'vue'
 import Leads from './leads.vue'
+import LeadSearchModal from './LeadSearchModal.vue'
 import CreateLeadModal from './CreateLeadModal.vue'
 import leadsSettings from '@/assets/images/kanban/svg/leads-setting.svg'
 import { BTabs, BTab, BFormInput } from 'bootstrap-vue-3'
 
 const activeTab = ref('leads')
+const showSearchModal = ref(false)
 const showCreateModal = ref(false)
 
 const tabs = ref([
@@ -233,6 +236,9 @@ const activeTabName = computed(() => {
     border-radius: 100px;
     max-width: 438px;
     gap: 5px;
+    height: 38px;
+    display: flex;
+    align-items: center;
 }
 
 .search-tag {
@@ -262,13 +268,17 @@ const activeTabName = computed(() => {
 
 .search-input-container {
     color: #94A3B8;
-    
-
+    height: 100%;
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
 }
 
 .search-plus-icon {
     font-size: 18px;
     color: #94A3B8;
+    margin-right: 5px;
+    margin-bottom: 2px;
 }
 
 .search-input {
@@ -276,16 +286,18 @@ const activeTabName = computed(() => {
     outline: none !important;
     box-shadow: none !important;
     width: 100%;
-    font-size: 18px;
+    font-size: 11px;
     color: #1E293B;
     background: transparent !important;
     padding: 0 !important;
-    height: auto !important;
+    height: 100% !important;
+    display: flex;
+    align-items: center;
 }
 
 .search-input::placeholder {
     color: #94A3B8;
-    font-size: 13px;
+    font-size: 11px;
 }
 
 .clear-search-icon {
