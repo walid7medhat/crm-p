@@ -1,6 +1,6 @@
 {
-  "_html2canvas-DpGRtyeE.js": {
-    "file": "assets/html2canvas-DpGRtyeE.js",
+  "_html2canvas-ByOsSqxb.js": {
+    "file": "assets/html2canvas-ByOsSqxb.js",
     "name": "html2canvas",
     "isDynamicEntry": true,
     "imports": [
@@ -11,8 +11,8 @@
     "file": "assets/sweetalert2.esm-CyX7bHpw.css",
     "src": "_sweetalert2.esm.all-!~{004}~.js"
   },
-  "_sweetalert2.esm.all-DNU0Hfq4.js": {
-    "file": "assets/sweetalert2.esm.all-DNU0Hfq4.js",
+  "_sweetalert2.esm.all-C3RWJrIl.js": {
+    "file": "assets/sweetalert2.esm.all-C3RWJrIl.js",
     "name": "sweetalert2.esm.all",
     "css": [
       "assets/sweetalert2.esm-CyX7bHpw.css"
@@ -22,33 +22,33 @@
     ]
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-BtUcfJI7.js",
+    "file": "assets/index.es-Bw3QEjvX.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/main.js",
-      "_sweetalert2.esm.all-DNU0Hfq4.js"
+      "_sweetalert2.esm.all-C3RWJrIl.js"
     ]
   },
   "node_modules/dompurify/dist/purify.es.mjs": {
-    "file": "assets/purify.es-B6FQ9oRL.js",
+    "file": "assets/purify.es-B9ZVCkUG.js",
     "name": "purify.es",
     "src": "node_modules/dompurify/dist/purify.es.mjs",
     "isDynamicEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app-D3ESTK0v.css",
+    "file": "assets/app-eCxRmb9p.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-S6trwwry.js",
+    "file": "assets/app-UaFyif5a.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_sweetalert2.esm.all-DNU0Hfq4.js"
+      "_sweetalert2.esm.all-C3RWJrIl.js"
     ]
   },
   "resources/js/assets/images/a.jpeg": {
@@ -95,13 +95,13 @@
     "file": "assets/flag5-BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
-  "resources/js/assets/images/kanban/kanban-1.png": {
-    "file": "assets/kanban-1-qVDbPN7Q.png",
-    "src": "resources/js/assets/images/kanban/kanban-1.png"
+  "resources/js/assets/images/kanban/svg/leads-icon.png": {
+    "file": "assets/leads-icon-D03NU8br.png",
+    "src": "resources/js/assets/images/kanban/svg/leads-icon.png"
   },
-  "resources/js/assets/images/kanban/kanban-2.png": {
-    "file": "assets/kanban-1-qVDbPN7Q.png",
-    "src": "resources/js/assets/images/kanban/kanban-1.png"
+  "resources/js/assets/images/kanban/svg/leads-setting.svg": {
+    "file": "assets/leads-setting-BjGx_oMu.svg",
+    "src": "resources/js/assets/images/kanban/svg/leads-setting.svg"
   },
   "resources/js/assets/images/product/product-img1.png": {
     "file": "assets/flag5-BD-cC3Ws.png",
@@ -196,20 +196,20 @@
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/main.js": {
-    "file": "assets/main-CVPcl9iX.js",
+    "file": "assets/main-DMaol61M.js",
     "name": "main",
     "src": "resources/js/main.js",
     "isEntry": true,
     "imports": [
-      "_sweetalert2.esm.all-DNU0Hfq4.js"
+      "_sweetalert2.esm.all-C3RWJrIl.js"
     ],
     "dynamicImports": [
-      "_html2canvas-DpGRtyeE.js",
+      "_html2canvas-ByOsSqxb.js",
       "node_modules/dompurify/dist/purify.es.mjs",
       "node_modules/canvg/lib/index.es.js"
     ],
     "css": [
-      "assets/main-C2jJxiic.css"
+      "assets/main-CGCJwRV7.css"
     ],
     "assets": [
       "assets/flag5-BD-cC3Ws.png",
@@ -221,7 +221,8 @@
       "assets/avatar1-scz5y5rp.png",
       "assets/forgot-pass-img-BLwoaPgo.png",
       "assets/envelop-icon-BC-dOgaD.png",
-      "assets/kanban-1-qVDbPN7Q.png"
+      "assets/leads-icon-D03NU8br.png",
+      "assets/leads-setting-BjGx_oMu.svg"
     ]
   }
 }

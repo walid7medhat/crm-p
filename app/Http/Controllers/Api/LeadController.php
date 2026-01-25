@@ -30,53 +30,59 @@ class LeadController extends Controller
 
     /**
      * Get all leads with auto-revert check and hierarchy support
-     */
-    public function index(Request $request): JsonResponse
-    {
-        try {
-            $this->checkAndRevertLeads();
-
-            $user = auth()->user();
-            $perPage = $request->get('per_page', 20);
-            
-            $leadsQuery = Lead::with([
-                'stage', 
-                'addedBy', 
-                'responsiblePerson', 
-                'participants',
-                'observers.user'
-            ]);
-
-            if (($user->hasRole('super_admin') || $user->hasRole('admin'))) {
-
-                $leads = $leadsQuery->latest()->paginate($perPage);
-            } 
-            elseif ($user->hasRole(['manager', 'team_lead'])) {
-                $subordinatesIds = $user->getAllSubordinatesIds();
-                
-                $leads = $leadsQuery->where(function($query) use ($subordinatesIds, $user) {
-                    $query->whereIn('responsible_person_id',array_merge( $subordinatesIds,$user->id))
-                          ->orWhereIn('added_by', $subordinatesIds);
-                                })->latest()->paginate($perPage);
+             */
+        public function index(Request $request): JsonResponse
+        {
+            try {
+                $this->checkAndRevertLeads();
+        
+                $user = auth()->user();
+                $perPage = $request->get('per_page', 20);
+        
+                $leadsQuery = Lead::with([
+                    'stage', 
+                    'addedBy', 
+                    'responsiblePerson', 
+                    'participants',
+                    'observers.user'
+                ]);
+        
+                if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+                    $leads = $leadsQuery->latest()->get();
+                } elseif ($user->hasRole(['manager', 'team_lead'])) {
+                    $subordinatesIds = $user->getAllSubordinatesIds();
+                    $leads = $leadsQuery->where(function($query) use ($subordinatesIds, $user) {
+                                $query->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]))
+                                      ->orWhereIn('added_by', $subordinatesIds);
+                            })->latest()->get();
+                } else {
+                    $leads = $leadsQuery->where(function($query) use ($user) {
+                                $query->where('responsible_person_id', $user->id)
+                                      ->orWhere('added_by', $user->id);
+                            })->latest()->get();
+                }
+        
+                $stagesWithLeads = $leads->groupBy('stage_id')->map(function($leadsGroup, $stageId) {
+                    $stage = $leadsGroup->first()->stage; 
+                    return [
+                        'stage_name' => $stage?->name ?? 'No Stage',
+                        'stage_id' => $stage?->id,
+                        'leads' => LeadResource::collection($leadsGroup),
+                    ];
+                })->values(); 
+                return ApiResponse::success(
+                    $stagesWithLeads,
+                    'Leads grouped by stage retrieved successfully'
+                );
+        
+            } catch (\Exception $e) {
+                return ApiResponse::error('Failed to retrieve leads: ' . $e->getMessage());
             }
-            else {
-                $leads = $leadsQuery->where(function($query) use ($user) {
-                            $query->where('responsible_person_id', $user->id)
-                                ->orWhere('added_by', $user->id);
-                        })->latest()->paginate($perPage);
-            }
-
-            return ApiResponse::success(
-                new LeadCollection($leads),
-                'Leads retrieved successfully'
-            );
-        } catch (\Exception $e) {
-            return ApiResponse::error('Failed to retrieve leads: ' . $e->getMessage());
         }
-    }
+
 
     /**
-     * Create a new lead - بس responsible_person_id
+     * Create a new lead - 
      */
     public function store(LeadRequest $request): JsonResponse
     {
@@ -127,7 +133,7 @@ class LeadController extends Controller
                 new LeadResource($lead->load([
                     'stage', 
                     'addedBy', 
-                    'responsiblePerson', // ✅ بس responsiblePerson
+                    'responsiblePerson',
                     'participants',
                     'observers.user'
                 ])),
@@ -192,7 +198,6 @@ class LeadController extends Controller
 
                 $changes = [];
                 
-                // تتبع تغيير المسؤول
                 if (!empty($leadData['responsible_person_id']) && $leadData['responsible_person_id'] !== $lead->responsible_person_id) {
                     $oldPerson = User::find($lead->responsible_person_id);
                     $newPerson = User::find($leadData['responsible_person_id']);
@@ -236,7 +241,6 @@ class LeadController extends Controller
                     }
                 }
 
-                // 🔔 إرسال إشعار البث المباشر
                 if (!empty($changes) && isset($changes['action']) && $changes['action'] === 'assigned') {
                     broadcast(new LeadUpdated($lead, 'assigned', null, $changes));
                 } else {
