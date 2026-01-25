@@ -57,4 +57,9 @@ class Project extends Model
     {
         return $this->belongsTo(User::class, 'added_by');
     }
+    public function listings(): HasMany
+    {
+        return $this->hasMany(Listing::class,'project_id');
+    }
+
 }

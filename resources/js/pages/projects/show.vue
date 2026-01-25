@@ -120,7 +120,7 @@
                   <div class="row g-3">
                     <div v-for="feature in project.features" 
                          :key="feature.id" 
-                         class="col-md-4 col-sm-6">
+                         class="col-md-3 col-sm-6">
                       <div class="d-flex align-items-center p-3 border rounded">
                         <img v-if="feature.img" 
                              :src="feature.img" 
@@ -130,7 +130,7 @@
                              height="24"
                              style="object-fit: contain;">
                         <div>
-                          <h6 class="mb-0" style="font-size: 13px;">{{ feature.name }}</h6>
+                          <p class="mb-0" style="font-size: 13px;">{{ feature.name }}</p>
                           <small class="text-muted" style="font-size: 11px;">{{ feature.category }}</small>
                         </div>
                       </div>

@@ -54,30 +54,51 @@
                         <thead>
                             <tr>
                                 <th scope="col">ID</th>
-                                <th scope="col">Image</th>
-                                <th scope="col">Title</th>
-                                <th scope="col">Developer</th>
-                                <!--<th scope="col">Price</th>-->
-                                <th scope="col">Area</th>
-                                <th scope="col">Status</th>
-                                <th scope="col">Created Date</th>
+                                <th scope="col">Image
+                                <button class="btn btn-sm btn-link p-0 ms-1" 
+                                        @click="toggleImageSort"
+                                        title="Sort by image status">
+                                    <iconify-icon icon="lucide:arrow-up-down"></iconify-icon>
+                                </button>
+                                </th>
+                               <th @click="sortBy('title')" class="sortable">
+                                        Title
+                                        <iconify-icon
+                                            v-if="sortKey === 'title'"
+                                            :icon="sortDirection === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'"
+                                        />
+                                    </th>
+                                    
+                                    <th @click="sortBy('developer')" class="sortable">Developer</th>
+                                    <th @click="sortBy('area')" class="sortable">Area</th>
+                                    <th @click="sortBy('status')" class="sortable">Status</th>
+                                    <th @click="sortBy('count_listing')" class="sortable">Count of Listing</th>
+                                    <th @click="sortBy('duplicated')" class="sortable">Duplicated</th>
+                                    <th @click="sortBy('created_at')" class="sortable">Created Date</th>
+
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="project in paginatedProjects" :key="project.id">
                                 <td>{{ project.id }}</td>
-                                <td>
-                                    <img v-if="project.main_image" 
-                                         :src="project.main_image" 
-                                         alt="Project Image"
-                                         class="flex-shrink-0 me-2 radius-8"
-                                         width="60"
-                                         height="60"
-                                         style="object-fit: cover;">
-                                    <div v-else class="bg-light rounded d-flex align-items-center justify-content-center"
-                                         style="width: 60px; height: 60px;">
-                                        <iconify-icon icon="lucide:image" class="text-muted"></iconify-icon>
+                                 <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <img v-if="project.main_image" 
+                                             :src="project.main_image" 
+                                             alt="Project Image"
+                                             class="flex-shrink-0 me-2 radius-8"
+                                             width="60"
+                                             height="60"
+                                             style="object-fit: cover;">
+                                        <div v-else class="bg-light rounded d-flex align-items-center justify-content-center"
+                                             style="width: 60px; height: 60px;">
+                                            <iconify-icon icon="lucide:image" class="text-muted"></iconify-icon>
+                                        </div>
+                                        
+                                        <!--<span class="badge" :class="project.has_image ? 'bg-success' : 'bg-danger'">-->
+                                        <!--    {{ project.has_image ? 'Has Image' : 'No Image' }}-->
+                                        <!--</span>-->
                                     </div>
                                 </td>
                                 <td>
@@ -115,6 +136,42 @@
                                     <small class="badge text-white" :class="statusBadgeClass(project.status)">
                                         {{ project.status_label }}
                                     </small>
+                                </td>
+                                <td>{{project.listing_count}}</td>
+                                <td>  <router-link
+                                        v-if="project.duplicated_project"
+                                        :to="`/projects/${project.duplicated_project.id}`"
+                                        class="text-danger text-decoration-underline"
+                                      >
+                                        {{ project.duplicated_project.title }}
+                                      </router-link>
+                                      
+                                    <span v-else class="text-muted">No</span>
+                                </td>
+                                 <td>
+                                    <div class="completion-indicator">
+                                        <div class="progress" style="height: 6px; width: 100px;">
+                                            <div class="progress-bar" 
+                                                 :class="completionClass(project.completion_percentage)"
+                                                 :style="{ width: project.completion_percentage + '%' }">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <span class="text-sm fw-medium">{{ project.completion_percentage }}%</span>
+                                            <!--<span class="badge" :class="completionBadgeClass(project.completion_percentage)">-->
+                                            <!--    {{ project.completion_status }}-->
+                                            <!--</span>-->
+                                        </div>
+                                        
+                                        <div class="completion-details mt-1">
+                                            <small class="d-block text-muted" v-if="!project.has_image">❌ No Image</small>
+                                            <small class="d-block text-muted" v-if="!project.description">❌ No Description</small>
+                                            <small class="d-block text-muted" v-if="!project.developer">❌ No Developer</small>
+                                            <small class="d-block text-muted" v-if="!project.area">❌ No Area</small>
+                                            <small class="d-block text-muted" v-if="!project.features || project.features.length === 0">❌ No Features</small>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td>{{ formatDate(project.created_at) }}</td>
                                 <td class="d-flex gap-2">
@@ -308,21 +365,84 @@ export default {
             selectedShow: 10,
             searchText: '',
             currentPage: 1,
-            projects: []
+            projects: [],
+             sortByImage: 'all' ,
+        sortKey: null,          // title | status | duplicated | created_at | ...
+        sortDirection: 'asc'    // asc | desc
         };
     },
     computed: {
         filteredProjects() {
-            if (!this.searchText) return this.projects;
+                let filtered = this.projects;
             
-            const search = this.searchText.toLowerCase();
-            return this.projects.filter(project =>
-                project.title.toLowerCase().includes(search) ||
-                (project.developer?.name && project.developer.name.toLowerCase().includes(search)) ||
-                (project.area?.name && project.area.name.toLowerCase().includes(search)) ||
-                project.status.toLowerCase().includes(search)
-            );
-        },
+                // 🔍 search
+                if (this.searchText) {
+                    const search = this.searchText.toLowerCase();
+                    filtered = filtered.filter(project =>
+                        project.title.toLowerCase().includes(search) ||
+                        (project.developer?.name && project.developer.name.toLowerCase().includes(search)) ||
+                        (project.area?.name && project.area.name.toLowerCase().includes(search)) ||
+                        project.status.toLowerCase().includes(search)
+                    );
+                }
+            
+                // 🔁 SORTING 
+                if (this.sortKey) {
+                    filtered = [...filtered].sort((a, b) => {
+                        let aVal, bVal;
+            
+                        switch (this.sortKey) {
+                            case 'title':
+                                aVal = a.title?.toLowerCase();
+                                bVal = b.title?.toLowerCase();
+                                break;
+            
+                            case 'status':
+                                aVal = a.status;
+                                bVal = b.status;
+                                break;
+            
+                            case 'area':
+                                aVal = a.area?.name?.toLowerCase();
+                                bVal = b.area?.name?.toLowerCase();
+                                break;
+            
+                            case 'developer':
+                                aVal = a.developer?.name?.toLowerCase();
+                                bVal = b.developer?.name?.toLowerCase();
+                                break;
+            
+                            case 'duplicated':
+                                aVal = a.duplicated_project ? 1 : 0;
+                                bVal = b.duplicated_project ? 1 : 0;
+                                break;
+                           case 'count_listing':
+                                    aVal = Number(a.listing_count) || 0;
+                                    bVal = Number(b.listing_count) || 0;
+                                    break;
+
+            
+                            case 'created_at':
+                                aVal = new Date(a.created_at);
+                                bVal = new Date(b.created_at);
+                                break;
+            
+                            default:
+                                return 0;
+                        }
+            
+                        if (aVal == null) return 1;
+                        if (bVal == null) return -1;
+            
+                        if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+                        if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+                        return 0;
+                    });
+                }
+            
+                return filtered;
+            },
+
         paginatedProjects() {
             if (this.selectedShow === 'all') {
                 return this.filteredProjects;
@@ -348,6 +468,7 @@ export default {
         }
     },
     watch: {
+       
         selectedShow() {
             this.currentPage = 1;
         },
@@ -359,6 +480,20 @@ export default {
         this.fetchProjects();
     },
     methods: {
+          sortBy(key) {
+            if (this.sortKey === key) {
+                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortKey = key;
+                this.sortDirection = 'asc';
+            }
+        },
+          toggleImageSort() {
+            const options = ['all', 'has-image', 'no-image'];
+            const currentIndex = options.indexOf(this.sortByImage);
+            this.sortByImage = options[(currentIndex + 1) % options.length];
+        },
+        
         async fetchProjects() {
             try {
                 this.loading = true;
@@ -373,7 +508,13 @@ export default {
                 if (!response.ok) throw new Error('Failed to fetch projects');
                 
                 const data = await response.json();
-                this.projects = data.data || [];
+                this.projects = (data.data || []).map(project => ({
+                    ...project,
+                    has_image: !!project.main_image,
+                    description: project.about,
+                    completion_percentage: this.calculateCompletionPercentage(project),
+                    completion_status: this.getCompletionStatus(project)
+                }));
                 
             } catch (error) {
                 console.error('Error fetching projects:', error);
@@ -382,6 +523,55 @@ export default {
             } finally {
                 this.loading = false;
             }
+        },
+        
+        calculateCompletionPercentage(project) {
+            const fields = [
+                { name: 'title', value: project.title, weight: 20 },
+                { name: 'image', value: project.main_image, weight: 15 },
+                { name: 'description', value: project.about, weight: 20 },
+                { name: 'developer', value: project.developer, weight: 15 },
+                { name: 'area', value: project.area, weight: 15 },
+                { name: 'features', value: project.features && project.features.length > 0, weight: 15 }
+            ];
+            
+            let totalScore = 0;
+            let totalWeight = 0;
+            
+            fields.forEach(field => {
+                totalWeight += field.weight;
+                if (field.value) {
+                    if (field.name === 'features') {
+                        totalScore += field.value ? field.weight : 0;
+                    } else if (field.value && (typeof field.value === 'string' ? field.value.trim() : true)) {
+                        totalScore += field.weight;
+                    }
+                }
+            });
+            
+            return totalWeight > 0 ? Math.round((totalScore / totalWeight) * 100) : 0;
+        },
+        
+        getCompletionStatus(project) {
+            const percentage = this.calculateCompletionPercentage(project);
+            if (percentage === 100) return 'Complete';
+            if (percentage >= 80) return 'Almost Complete';
+            if (percentage >= 50) return 'Partially Complete';
+            return 'Incomplete';
+        },
+        
+        completionClass(percentage) {
+            if (percentage === 100) return 'bg-success';
+            if (percentage >= 80) return 'bg-primary';
+            if (percentage >= 50) return 'bg-warning';
+            return 'bg-danger';
+        },
+        
+        completionBadgeClass(percentage) {
+            if (percentage === 100) return 'bg-success';
+            if (percentage >= 80) return 'bg-primary';
+            if (percentage >= 50) return 'bg-warning';
+            return 'bg-danger';
         },
 
         addProject() {
@@ -597,4 +787,65 @@ export default {
 .pagination .page-item .page-link.bg-primary-600 {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+.completion-indicator {
+    min-width: 120px;
+}
+
+.progress {
+    background-color: #e9ecef;
+    border-radius: 3px;
+}
+
+.progress-bar {
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+/* complete */
+.completion-details {
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+.completion-details small {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge {
+    font-size: 0.65rem;
+    padding: 0.25em 0.5em;
+}
+
+.btn-link {
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.btn-link:hover {
+    color: #0d6efd;
+}
+
+.table td, .table th {
+    padding: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .completion-indicator {
+        min-width: 100px;
+    }
+    
+    .progress {
+        width: 80px;
+    }
+}
+.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+.sortable:hover {
+    text-decoration: underline;
+}
+
 </style>

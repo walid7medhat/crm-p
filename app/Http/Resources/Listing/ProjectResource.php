@@ -4,11 +4,25 @@ namespace App\Http\Resources\Listing;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-
+use App\Models\Project;
 class ProjectResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+    //     $isDuplicated = Project::where('title', $this->title)
+    // ->where('area_id', $this->area_id)
+    // ->where('developer_id', $this->developer_id)
+    // ->where('id', '!=', $this->id)
+    // ->exists();
+$isDuplicated = Project::whereRaw(
+        'LOWER(TRIM(title)) = ?',
+        [strtolower(trim($this->title))]
+    )
+    ->where('id', '!=', $this->id)
+    ->select('id','title')
+    ->first();
+
+
         return [
             'id' => $this->id,
             'title' => $this->title,
@@ -20,7 +34,7 @@ class ProjectResource extends JsonResource
                 'avatar' => $this->developer->avatar_path ? asset('storage/' . $this->developer->avatar_path) : null
             ] : null,
             
-            // Area data - مهم
+            // Area data - 
             'area' => $this->area ? [
                 'id' => $this->area->id,
                 'name' => $this->area->name,
@@ -61,7 +75,9 @@ class ProjectResource extends JsonResource
             'main_image' => $this->mainImage ? asset('storage/' . $this->mainImage->image_path) : null,
             'added_by' => $this->addedBy?->name,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
-            'updated_at' => $this->updated_at?->format('Y-m-d H:i:s')
+            'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
+            'listing_count'=>$this->listings->count(),
+            'is_duplicated'=>$isDuplicated
         ];
     }
 }

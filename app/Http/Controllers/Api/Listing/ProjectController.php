@@ -317,13 +317,13 @@ class ProjectController extends Controller
             }
 
             // Check if user has permission to update this project
-            if ($project->added_by !== $user->id && ! $user->hasRole(['admin', 'super_admin'])) {
-                Log::warning('⚠️ Unauthorized update attempt:', [
-                    'user_id' => $user->id,
-                    'project_added_by' => $project->added_by
-                ]);
-                return ApiResponse::error('You are not authorized to update this project', 403);
-            }
+            // if ($project->added_by !== $user->id && ! $user->hasRole(['admin', 'super_admin'])) {
+            //     Log::warning('⚠️ Unauthorized update attempt:', [
+            //         'user_id' => $user->id,
+            //         'project_added_by' => $project->added_by
+            //     ]);
+            //     return ApiResponse::error('You are not authorized to update this project', 403);
+            // }
 
             $data = $request->validated();
             
