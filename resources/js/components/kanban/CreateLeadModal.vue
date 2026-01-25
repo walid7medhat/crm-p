@@ -23,70 +23,70 @@
                 </div>
 
                 <!-- Right Content -->
-                <div class="form-content-wrapper flex-grow-1 p-4 position-relative">
+                <div class="form-content-wrapper flex-grow-1 position-relative">
                     <button class="close-btn" @click="show = false">
                         <iconify-icon icon="lucide:x"></iconify-icon>
                     </button>
 
                     <div class="row g-4">
                         <!-- Lead Name -->
-                        <div class="col-md-6">
+                        <div class="col-md-6 mt-3">
                             <label class="form-label-custom">Lead Name</label>
                             <b-form-input placeholder="Enter Lead Name" class="custom-input" />
                         </div>
                         <!-- Responsible Person -->
-                        <div class="col-md-6">
+                        <div class="col-md-6 mt-3">
                             <label class="form-label-custom">Responsible Person</label>
                             <b-form-select v-model="form.responsible" :options="personOptions" class="custom-select" />
                         </div>
 
                         <!-- Created On -->
-                        <div class="col-md-6">
+                        <div class="col-md-6 mt-3">
                             <label class="form-label-custom">Created On</label>
                             <b-form-select v-model="form.createdOn" :options="dateOptions" class="custom-select" />
                         </div>
                         <!-- Status -->
-                        <div class="col-md-6">
+                        <div class="col-md-6 mt-3">
                             <label class="form-label-custom">Status</label>
                             <b-form-select v-model="form.status" :options="statusOptions" class="custom-select" />
                         </div>
 
                         <!-- ID -->
-                        <div class="col-md-6">
+                        <div class="col-md-6 mt-3">
                             <label class="form-label-custom">ID</label>
                             <b-form-input placeholder="Enter ID" class="custom-input" />
                         </div>
                         <!-- Modified By -->
-                        <div class="col-md-6">
+                        <div class="col-md-6 mt-3">
                             <label class="form-label-custom">Modified By</label>
                             <b-form-select v-model="form.modifiedBy" :options="personOptions" class="custom-select" />
                         </div>
 
                         <!-- Stage Changed By -->
-                        <div class="col-md-6">
+                        <div class="col-md-6 mt-3">
                             <label class="form-label-custom">Stage Changed By</label>
                             <b-form-select v-model="form.stageChangedBy" :options="personOptions" class="custom-select" />
                         </div>
                         <!-- Date -->
-                        <div class="col-md-6">
+                        <div class="col-md-6 mt-3">
                             <label class="form-label-custom">Date</label>
                             <b-form-select v-model="form.date" :options="dateOptions" class="custom-select" />
                         </div>
 
                         <!-- Source -->
-                        <div class="col-md-6">
+                        <div class="col-md-6 mt-3">
                             <label class="form-label-custom">Source</label>
                             <b-form-select v-model="form.source" :options="personOptions" class="custom-select" />
                         </div>
                         <!-- Lead Branch Source -->
-                        <div class="col-md-6">
+                        <div class="col-md-6 mt-3">
                             <label class="form-label-custom">Lead Branch Source</label>
                             <b-form-select v-model="form.branchSource" :options="dateOptions" class="custom-select" />
                         </div>
                     </div>
 
                     <!-- Footer Actions -->
-                    <div class="d-flex align-items-center justify-content-between mt-5 pt-4">
+                    <div class="d-flex align-items-center justify-content-between mt-3 pt-4">
                         <div class="d-flex gap-4">
                             <a href="#" class="footer-link" @click.prevent>Add Field</a>
                             <a href="#" class="footer-link text-secondary" @click.prevent>Restore default fields</a>
@@ -170,16 +170,16 @@ const resetForm = () => {
 
 <style scoped>
 .create-lead-container {
-    min-height: 600px;
+    min-height: 507px;
     background: #fff;
     border-radius: 12px;
     overflow: hidden;
 }
 
 .sidebar-pills {
-    width: 240px;
+    min-width: 221px;
     background: #F8FAFC;
-    padding-top: 40px !important;
+    padding: 25px !important;
 }
 
 .pill-btn {
@@ -188,12 +188,11 @@ const resetForm = () => {
     border-radius: 100px;
     font-size: 13px;
     color: #475569;
-    padding: 5px 10px;
+    padding: 1px 10px;
     text-align: center;
     transition: all 0.2s;
     border: 1px solid #E2E8F0;
     width: fit-content;
-    margin-left: 20px;
     text-wrap: nowrap;
 }
 
@@ -204,39 +203,57 @@ const resetForm = () => {
 }
 
 .form-content-wrapper {
-    padding: 40px 60px !important;
+    padding: 30px 20px !important;
 }
 
 .close-btn {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 0px;
+    right: 10px;
     border: none;
     background: transparent;
-    font-size: 24px;
-    color: #64748B;
+    font-size: 22px;
+    color: #000000;
     cursor: pointer;
+    z-index: 10;
 }
 
 .form-label-custom {
     display: block;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
-    color: #01062C;
-    margin-bottom: 8px;
+    color: #000000;
+    margin-bottom: 2px;
 }
 
-.custom-input, .custom-select {
-    height: 48px;
-    border-radius: 8px;
-    border: 1px solid #E2E8F0;
-    font-size: 14px;
-    color: #64748B;
-    padding: 0 16px;
+.custom-input {
+    height: 42px !important;
+    border-radius: 10px !important;
+    border: 1px solid #E2E8F0 !important;
+    font-size: 13px !important;
+    color: #64748B !important;
+    font-family: 'Montserrat';
+}
+
+.custom-select {
+    height: 42px !important;
+    border-radius: 10px !important;
+    border: 1px solid #E2E8F0 !important;
+    font-size: 13px !important;
+    color: #64748B !important;
+    font-family: 'Montserrat';
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
 }
 
 .custom-input::placeholder {
-    color: #94A3B8;
+    color: #64748B !important;
+    opacity: 1;
+    font-size: 13px !important;
+    font-family: 'Montserrat';
 }
 
 .footer-link {
@@ -247,22 +264,20 @@ const resetForm = () => {
 }
 
 .btn-reset {
-    background: #F1F5F9;
+    background: #F4F4F4;
     border: none;
-    padding: 10px 32px;
+    padding: 10px 25px;
     border-radius: 100px;
-    font-size: 16px;
-    font-weight: 500;
+    font-size: 14px;
     color: #01062C;
 }
 
 .btn-search {
     background: #000;
     border: none;
-    padding: 10px 40px;
+    padding: 10px 25px;
     border-radius: 100px;
-    font-size: 16px;
-    font-weight: 500;
+    font-size: 14px;
     color: #fff;
 }
 
