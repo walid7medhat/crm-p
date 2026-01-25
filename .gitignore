@@ -60,3 +60,7 @@ typings/
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
+
+node_modules
+package-lock.json
+composer.lock
