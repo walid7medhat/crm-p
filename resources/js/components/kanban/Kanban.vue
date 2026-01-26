@@ -1,6 +1,6 @@
 <template>
     <LeadSearchModal v-model="showSearchModal" />
-    <!-- <CreateLeadModal v-model="showCreateModal" /> -->
+    <CreateLeadModal v-model="showCreateModal" />
     <div class="kanban-main-wrapper">
         <b-tabs 
             v-model="activeTabIndex"
