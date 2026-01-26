@@ -74,10 +74,13 @@ class LeadResource extends JsonResource
             'participants' => LeadParticipantResource::collection($this->whenLoaded('participants')),
             'observers' => LeadObserverResource::collection($this->whenLoaded('observers')),
             
+            'budget'=>$this->budget,
+            'currency'=>$this->currency,
+            
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             
-            'budget'=>$this->budget,
+            
         ];
     }
 }

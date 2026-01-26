@@ -80,6 +80,7 @@ class LeadRequest extends FormRequest
             'observers.*' => 'exists:users,id',
             
             'budget'=>'nullable',
+             'currency'=>'nullable',
         ];
 
         if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
