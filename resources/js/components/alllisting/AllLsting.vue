@@ -117,6 +117,12 @@
                    <span  v-if="property.is_hot_deal== 'Yes'" class="badge-off_plan">
                      Hot Deal
                     </span>
+                    <span v-if="property.completion_status === 'Under Construction'" class="badge-offplan">
+                      <i class="ri-building-line me-1"></i>Off Plan
+                    </span>
+                    <span v-else-if="property.completion_status === 'Completed'" class="badge-ready">
+                      <i class="ri-checkbox-circle-line me-1"></i>Ready
+                    </span>
                 </div>
                 
                 <span class="badge-images" v-if="property.gallery_images && property.gallery_images.length">
@@ -299,7 +305,6 @@ export default {
         } else {
           console.log('⚠️ Agent not found in list, creating custom filter');
           
-          // إذا لم يجد الـ agent، أنشئ filter يدوي
           const customAgent = {
             id: parseInt(agentId),
             name: agentName || `Agent ${agentId}`
@@ -316,7 +321,6 @@ export default {
       }
     };
 
-    // ✅ دالة للتعامل مع agent من query مباشرة (بدون SearchBar)
     const handleAgentFromQuery = (query) => {
       if (!query.agent_id) return;
       
@@ -603,7 +607,9 @@ export default {
       if (filters.area && filters.area.id) {
         apiFilters.area_id = filters.area.id;
       }
-
+     if (filters.completionStatus && filters.completionStatus.value) {
+        apiFilters.completion_status = filters.completionStatus.value;
+      }
       // Property Type Filter
       if (filters.propertyType && filters.propertyType.id) {
         apiFilters.property_type_id = filters.propertyType.id;
@@ -1057,6 +1063,23 @@ export default {
 }
 .badge-off_plan {
   background: #faa300;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+.badge-offplan {
+  background: #ffc107;
+  color: #212529;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.badge-ready {
+  background: #28a745;
   color: white;
   padding: 4px 8px;
   border-radius: 6px;

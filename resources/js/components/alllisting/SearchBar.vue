@@ -54,7 +54,17 @@
       <!-- Main Search Row -->
       <div class="main-search-row">
          
-
+      <!-- Completion Status (Off Plan/Ready) -->
+            <div class="form-group compact">
+              <label class="form-label">Project Status</label>
+              <v-select
+                v-model="selectedCompletionStatus"
+                :options="completionStatusOptions"
+                placeholder="Select status"
+                class="custom-select unified-input"
+                @update:modelValue="handleFilterChange"
+              />
+            </div>
         <!-- Property Type -->
         <div class="form-group compact">
           <label class="form-label">Property Type</label>
@@ -354,6 +364,7 @@ export default {
     const selectedStatus = ref("All");
     const selectedArea = ref(null);
     const selectedProject = ref(null); 
+    const selectedCompletionStatus = ref(null); 
     const selectedPropertyType = ref(null);
     const selectedBeds = ref("");
     const selectedSort = ref("");
@@ -374,6 +385,11 @@ const searchReferenceNumber = ref("");
     const saleRentOptions = ["All", "Sale", "Rent"];
     const statusOptions = ["All", "Ready", "Offplan"];
     const bedsOptions = ["Studio", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
+     const completionStatusOptions = [
+      { label: "Select Completion Status", value: null },
+      { label: "Completed", value: "Completed" },
+      { label: "Under Construction", value: "Under Construction" }
+    ];
     const sortOptions = [
          { label: "Hot Deal", value: "hot_deal" },
       { label: "Most Recent", value: "created_at_desc" },
@@ -497,7 +513,8 @@ const searchReferenceNumber = ref("");
              priceFrom.value > 0 || 
              priceTo.value < 10000000 || 
              sizeFrom.value > 0 || 
-             sizeTo.value < 10000 || searchReferenceNumber.value.trim() !== "";
+             sizeTo.value < 10000 || searchReferenceNumber.value.trim() !== "" ||
+             selectedCompletionStatus.value !== null;
     });
 
     // Convert filters to API format
@@ -508,7 +525,9 @@ const searchReferenceNumber = ref("");
       if (filters.saleRent && filters.saleRent !== 'All') {
         apiFilters.listing_status = filters.saleRent.toLowerCase();
       }
-
+         if (filters.completionStatus && filters.completionStatus.value) {
+        apiFilters.completion_status = filters.completionStatus.value;
+      }
       // Status Filter
       if (filters.status && filters.status !== 'All') {
         apiFilters.completion_status = filters.status;
@@ -574,6 +593,7 @@ const searchReferenceNumber = ref("");
       searchTimer.value = setTimeout(() => {
         const filters = {
           saleRent: selectedSaleRent.value,
+              completionStatus: selectedCompletionStatus.value,
           status: selectedStatus.value,
           area: selectedArea.value,
           propertyType: selectedPropertyType.value,
@@ -646,6 +666,7 @@ const searchReferenceNumber = ref("");
         }
       const filters = {
         saleRent: selectedSaleRent.value,
+         completionStatus: selectedCompletionStatus.value,
         status: selectedStatus.value,
         area: selectedArea.value,
         propertyType: selectedPropertyType.value,
@@ -667,6 +688,7 @@ const searchReferenceNumber = ref("");
     const resetFilters = () => {
       selectedSaleRent.value = "All";
       selectedStatus.value = "All";
+        selectedCompletionStatus.value = null;
       selectedArea.value = null;
       selectedPropertyType.value = null;
         selectedAgent.value = null;
@@ -792,6 +814,7 @@ const searchReferenceNumber = ref("");
       selectedProject,
       selectedSaleRent,
       selectedStatus,
+       selectedCompletionStatus, 
       selectedArea,
       selectedPropertyType,
        selectedAgent,
@@ -807,6 +830,7 @@ const searchReferenceNumber = ref("");
       // Static options
       saleRentOptions,
       statusOptions,
+       completionStatusOptions,
       bedsOptions,
       sortOptions,
       
@@ -1410,4 +1434,5 @@ const searchReferenceNumber = ref("");
 /*  min-width: 200px;*/
 /*  flex: 2;*/
 /*}*/
+
 </style>

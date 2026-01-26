@@ -13,28 +13,57 @@
                     @keyup.enter="applyFilters"
                   />
                 </div>
+                   <div class="form-group compact">
+                  <label class="form-label">Project</label>
+                  <v-select
+                    v-model="selectedProject"
+                    :options="projects"
+                    :disabled="isLoadingProjects"
+                    label="name"
+                    placeholder="Select project"
+                    class="custom-select unified-input"
+                    @update:modelValue="handleFilterChange"
+                  >
+                    <template #no-options>
+                      <div class="text-center p-2">
+                        {{ isLoadingProjects ? 'Loading projects...' : 'No projects found' }}
+                      </div>
+                    </template>
+                  </v-select>
+                </div>
+                      <!-- Location -->
+                <div class="form-group compact">
+                  <label class="form-label">Location</label>
+                  <v-select
+                    v-model="selectedArea"
+                    :options="areas"
+                    :disabled="isLoadingAreas"
+                    label="name"
+                    placeholder="Select area"
+                    class="custom-select unified-input"
+                    @update:modelValue="handleFilterChange"
+                  >
+                    <template #no-options>
+                      <div class="text-center p-2">
+                        {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
+                      </div>
+                    </template>
+                  </v-select>
+                </div>
             </div>
       <!-- Main Search Row -->
       <div class="main-search-row">
           
-        <!-- Location -->
+    <!-- Completion Status (Off Plan/Ready) -->
         <div class="form-group compact">
-          <label class="form-label">Area</label>
+          <label class="form-label">Project Status</label>
           <v-select
-            v-model="selectedArea"
-            :options="areas"
-            :disabled="isLoadingAreas"
-            label="name"
-            placeholder="Select area"
+            v-model="selectedCompletionStatus"
+            :options="completionStatusOptions"
+            placeholder="Select status"
             class="custom-select unified-input"
             @update:modelValue="handleFilterChange"
-          >
-            <template #no-options>
-              <div class="text-center p-2">
-                {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
-              </div>
-            </template>
-          </v-select>
+          />
         </div>
 
         <!-- Property Type -->
@@ -265,10 +294,13 @@ export default {
     
     // Reactive data
     const areas = ref([]);
+      const projects = ref([]);
     const propertyTypes = ref([]);
     const isLoadingAreas = ref(false);
     const isLoadingPropertyTypes = ref(false);
-    
+     const isLoadingProjects = ref(false);
+      const selectedProject = ref(null); 
+      const selectedCompletionStatus = ref(null); 
     const selectedSaleRent = ref("All");
     const selectedStatus = ref("All");
     const selectedArea = ref(null);
@@ -292,6 +324,12 @@ const searchReferenceNumber = ref("");
     const saleRentOptions = ["All", "Sale", "Rent"];
     const statusOptions = ["All", "Ready", "Offplan"];
     const bedsOptions = ["Studio", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
+    
+     const completionStatusOptions = [
+      { label: "Select Completion Status", value: null },
+      { label: "Completed", value: "Completed" },
+      { label: "Under Construction", value: "Under Construction" }
+    ];
 const sortOptions = [
              { label: "Hot Deal", value: "hot_deal" },
 
@@ -302,6 +340,26 @@ const sortOptions = [
   // { label: "Size: Large to Small", value: "size_desc" }
 ];
     // Fetch areas from API
+     const fetchProjects = async () => {
+      try {
+        isLoadingProjects.value = true;
+        const response = await api.get("/listings/projects");
+        
+        const projectsData = response.data.data || response.data;
+        
+        projects.value = projectsData.map(project => ({
+          id: project.id,
+          name: project.name || project.project_name || project.title || `Project ${project.id}`
+        }));
+        
+        console.log("✅ Projects loaded:", projects.value.length);
+        
+      } catch (error) {
+        console.error("❌ Error fetching projects:", error.response || error);
+      } finally {
+        isLoadingProjects.value = false;
+      }
+    };
     const fetchAreas = async () => {
       try {
         isLoadingAreas.value = true;
@@ -377,13 +435,17 @@ const sortOptions = [
              priceFrom.value > 0 || 
              priceTo.value < 10000000 || 
              sizeFrom.value > 0 || 
-             sizeTo.value < 10000 || searchReferenceNumber.value.trim() !== "";
+             sizeTo.value < 10000 || searchReferenceNumber.value.trim() !== ""
+             ||
+             selectedCompletionStatus.value !== null;
     });
 
     // Convert filters to API format
     const convertFiltersToAPI = (filters) => {
       const apiFilters = {};
-
+      if (filters.completionStatus && filters.completionStatus.value) {
+        apiFilters.completion_status = filters.completionStatus.value;
+      }
       // Sale/Rent Filter
       if (filters.saleRent && filters.saleRent !== 'All') {
         apiFilters.listing_status = filters.saleRent.toLowerCase();
@@ -398,7 +460,9 @@ const sortOptions = [
       if (filters.area) {
         apiFilters.area_id = filters.area.id;
       }
-
+     if (filters.project) {
+        apiFilters.project_id = filters.project.id;
+      }
       // Property Type Filter
       if (filters.propertyType) {
         apiFilters.property_type_id = filters.propertyType.id;
@@ -444,8 +508,10 @@ const sortOptions = [
       searchTimer.value = setTimeout(() => {
         const filters = {
           saleRent: selectedSaleRent.value,
+              completionStatus: selectedCompletionStatus.value,
           status: selectedStatus.value,
           area: selectedArea.value,
+          project: selectedProject.value,
           propertyType: selectedPropertyType.value,
           beds: selectedBeds.value,
           priceFrom: priceFrom.value,
@@ -508,8 +574,10 @@ const sortOptions = [
       }
       const filters = {
         saleRent: selectedSaleRent.value,
+         completionStatus: selectedCompletionStatus.value,
         status: selectedStatus.value,
         area: selectedArea.value,
+         project: selectedProject.value,
         propertyType: selectedPropertyType.value,
         beds: selectedBeds.value,
         priceFrom: priceFrom.value,
@@ -528,7 +596,9 @@ const sortOptions = [
     const resetFilters = () => {
       selectedSaleRent.value = "All";
       selectedStatus.value = "All";
+        selectedCompletionStatus.value = null;
       selectedArea.value = null;
+      selectedProject.value = null;
       selectedPropertyType.value = null;
       selectedBeds.value = "";
       selectedSort.value = "created_at_desc";
@@ -618,7 +688,7 @@ const sortOptions = [
     onMounted(() => {
       fetchAreas();
       fetchPropertyTypes();
-
+fetchProjects()
       document.addEventListener('click', (e) => {
         const searchContainer = document.querySelector('.search-container');
         if (searchContainer && !searchContainer.contains(e.target)) {
@@ -636,12 +706,16 @@ const sortOptions = [
     return {
       // Data
       areas,
+      projects,
       propertyTypes,
       isLoadingAreas,
       isLoadingPropertyTypes,
+      isLoadingProjects, 
       selectedSaleRent,
       selectedStatus,
+       selectedCompletionStatus, 
       selectedArea,
+      selectedProject, 
       selectedPropertyType,
       selectedBeds,
       selectedSort,
@@ -655,6 +729,7 @@ const sortOptions = [
       // Static options
       saleRentOptions,
       statusOptions,
+       completionStatusOptions,
       bedsOptions,
       sortOptions,
       

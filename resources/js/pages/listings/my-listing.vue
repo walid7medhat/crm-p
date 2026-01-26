@@ -128,6 +128,12 @@
                  <span  v-if="property.is_hot_deal== 'Yes'" class="badge-off_plan">
                  Hot Deal
                 </span>
+                <span v-if="property.completion_status === 'Under Construction'" class="badge-offplan">
+                      <i class="ri-building-line me-1"></i>Off Plan
+                    </span>
+                    <span v-else-if="property.completion_status === 'Completed'" class="badge-ready">
+                      <i class="ri-checkbox-circle-line me-1"></i>Ready
+                    </span>
                  
               </div>
               <!-- Images Count Badge Only -->
@@ -536,7 +542,9 @@ const fetchProperties = async (filters = {}, page = 1) => {
      if (filters.referenceNumber && filters.referenceNumber.trim() !== "") {
         apiFilters.reference_number = filters.referenceNumber.trim();
       }
-
+        if (filters.project) {
+        apiFilters.project_id = filters.project.id;
+      }
       // Bedrooms Filter
       if (filters.beds) {
         if (filters.beds === 'Studio') {
@@ -545,7 +553,9 @@ const fetchProperties = async (filters = {}, page = 1) => {
           apiFilters.number_of_bedrooms = parseInt(filters.beds);
         }
       }
-
+ if (filters.completionStatus && filters.completionStatus.value) {
+    apiFilters.completion_status = filters.completionStatus.value;
+  }
       // Price Range Filter
       if (filters.priceFrom > 0 || filters.priceTo < 10000000) {
         apiFilters.min_price = filters.priceFrom;
@@ -990,5 +1000,22 @@ const fetchProperties = async (filters = {}, page = 1) => {
 }
 .icons{
     gap:2px
+}
+.badge-offplan {
+  background: #ffc107;
+  color: #212529;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.badge-ready {
+  background: #28a745;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
 }
 </style>

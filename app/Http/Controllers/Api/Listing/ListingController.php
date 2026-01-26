@@ -137,6 +137,10 @@ public function permissions(User $user): JsonResponse
         if($request->filled('status')) {
             $query->where('status', $request->status);
         }
+            if($request->filled('completion_status')) {
+                $completionStatus = $request->completion_status;
+                $query->where('completion_status', $completionStatus);
+            }
 
         if($request->filled('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));

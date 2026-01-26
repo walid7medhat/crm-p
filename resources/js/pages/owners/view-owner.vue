@@ -100,7 +100,7 @@
                                             </div>
                                             <div class="info-item">
                                                 <span class="info-label">{{ getLocationLabel() }}</span>
-                                                <span class="info-value">{{ owner.location.name }}</span>
+                                                <span class="info-value">{{ owner.location?.name }}</span>
                                             </div>
                                         </div>
                                     </div>
