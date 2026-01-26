@@ -17,40 +17,69 @@
                 </button>
             </div>
 
-            <!-- Stepper -->
-            <div class="stepper-container my-3">
-                <div class="stepper-wrapper d-flex align-items-center justify-content-center">
-                    <div class="step-item" :class="{ 'active': currentStep >= 1 }">
-                        <div class="step-circle">1</div>
-                        <div class="step-label">General Information</div>
-                    </div>
-                    <div class="step-line"></div>
-                    <div class="step-item" :class="{ 'active': currentStep >= 2 }">
-                        <div class="step-circle">2</div>
-                        <div class="step-label">More Information</div>
-                    </div>
+            <!-- Stage Selector -->
+            <div class="stage-selector-wrapper p-3">
+                <div class="stage-container">
+                    <template v-for="(stage, index) in stages" :key="stage.id">
+                        <div 
+                            class="stage-pill"
+                            :class="{ 'active': index <= selectedStageIndex }"
+                            :style="{ 
+                                backgroundColor: index <= selectedStageIndex ? stage.color : 'transparent',
+                                borderColor: index <= selectedStageIndex ? stage.color : '#E2E8F0',
+                                zIndex: stages.length - index,
+                                marginLeft: index > 0 ? '-15px' : '0'
+                            }"
+                            @click="selectStage(index)"
+                        >
+                            <!-- Separator at the end -->
+                            <div v-if="index < stages.length - 1" class="stage-separator">
+                                <iconify-icon 
+                                    icon="lucide:chevrons-right" 
+                                    class="separator-icon" 
+                                    :class="{ 'active-separator': index < selectedStageIndex }"
+                                ></iconify-icon>
+                            </div>
+                            <div class="stage-circle">
+                                <div class="stage-dot" :style="{ backgroundColor: stage.color }"></div>
+                            </div>
+                            <span class="stage-text" :class="{ 'active-text': index <= selectedStageIndex }">
+                                {{ stage.name }}
+                            </span>
+
+                        
+                        </div>
+                    </template>
                 </div>
             </div>
 
             <!-- Form Content -->
             <div class="form-scroll-area">
-                <div v-if="currentStep === 1" class="step-content">
+                <div class="step-content">
                     <div class="row g-4 p-4 position-relative">
                         <!-- Lead Name -->
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="form-label-custom">Lead Name</label>
                             <b-form-input v-model="form.leadName" placeholder="Enter Lead Name" class="custom-input" />
-                        </div>
-                        <!-- Stage -->
-                        <div class="col-md-6">
-                            <label class="form-label-custom">Stage</label>
-                            <b-form-select v-model="form.stage" :options="stageOptions" class="custom-select" />
                         </div>
 
                         <!-- Salutation, First Name, Last Name, Position -->
                         <div class="col-md-3">
-                            <label class="form-label-custom">Salutatione</label>
-                            <b-form-select v-model="form.salutation" :options="salutationOptions" class="custom-select" />
+                            <label class="form-label-custom">Salutation</label>
+                            <v-select 
+                                v-model="form.salutation" 
+                                :options="salutationOptions" 
+                                :reduce="option => option.value"
+                                label="text"
+                                placeholder="Not Selected"
+                                class="custom-v-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label-custom">First Name</label>
@@ -67,20 +96,48 @@
 
                         <!-- Contact Details Section -->
                             <div class="contact-details-card p-3">
-                                <span class="section-title d-block">Contact Details</span>
+                                <span class="section-title d-block mb-3">Contact Details</span>
                                 <div class="d-flex justify-content-between align-items-center gap-2">
                                     <div class="col">
                                         <label class="form-label-custom">Contact</label>
                                         <div class="input-group-custom">
                                             <b-form-input v-model="form.phone" placeholder="Enter Phone Number" class="custom-input" />
-                                            <b-form-select v-model="form.phoneType" :options="phoneTypeOptions" class="custom-select" />
+                                            <v-select 
+                                                v-model="form.phoneType" 
+                                                :options="phoneTypeOptions" 
+                                                :reduce="option => option.value"
+                                                label="text"
+                                                :clearable="false"
+                                                :searchable="false"
+                                                class="custom-v-select-inline"
+                                            >
+                                                <template #open-indicator="{ attributes }">
+                                                    <span v-bind="attributes">
+                                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                    </span>
+                                                </template>
+                                            </v-select>
                                         </div>
                                     </div>
                                     <div class="col">
                                         <label class="form-label-custom">Email</label>
                                         <div class="input-group-custom">
                                             <b-form-input v-model="form.email" placeholder="Enter Your Email" class="custom-input" />
-                                            <b-form-select v-model="form.emailType" :options="emailTypeOptions" class="custom-select" />
+                                            <v-select 
+                                                v-model="form.emailType" 
+                                                :options="emailTypeOptions" 
+                                                :reduce="option => option.value"
+                                                label="text"
+                                                :clearable="false"
+                                                :searchable="false"
+                                                class="custom-v-select-inline"
+                                            >
+                                                <template #open-indicator="{ attributes }">
+                                                    <span v-bind="attributes">
+                                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                    </span>
+                                                </template>
+                                            </v-select>
                                         </div>
                                     </div>
                                     <div class="col">
@@ -101,55 +158,87 @@
                             ></b-form-textarea>
                         </div>
 
-                        <!-- Selector, Ad ID, Purpose Of Purchase -->
-                        <div class="col-md-4">
-                            <label class="form-label-custom">Selector</label>
-                            <b-form-select v-model="form.selector" :options="selectorOptions" class="custom-select" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label-custom">Ad ID</label>
-                            <b-form-input v-model="form.adId" placeholder="Enter Ad Id" class="custom-input" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label-custom">Purpose Of Purchase</label>
-                            <b-form-select v-model="form.purpose" :options="purposeOptions" class="custom-select" />
-                        </div>
-                    </div>
-                </div>
 
-                <div v-if="currentStep === 2" class="step-content">
-                    <div class="row g-4 p-4 position-relative">
-                        <!-- Source -->
-                        <div class="col-md-4">
+
+                        <!-- How Many Bedrooms -->
+                        <div class="col-md-3">
+                            <label class="form-label-custom">How Many Bedrooms</label>
+                            <v-select 
+                                v-model="form.bedrooms" 
+                                :options="bedroomOptions" 
+                                :reduce="option => option.value"
+                                label="text"
+                                placeholder="Select Bedrooms"
+                                class="custom-v-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label-custom">Budget</label>
+                            <div class="input-group-custom">
+                                <b-form-input v-model="form.budget" placeholder="Enter Budget" class="custom-input" />
+                                <v-select 
+                                    v-model="form.currency" 
+                                    :options="currencyOptions" 
+                                    :reduce="option => option.value"
+                                    label="text"
+                                    :clearable="false"
+                                    :searchable="false"
+                                    class="custom-v-select-inline"
+                                >
+                                    <template #open-indicator="{ attributes }">
+                                        <span v-bind="attributes">
+                                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                        </span>
+                                    </template>
+                                </v-select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label-custom">Purpose Of Purchase</label>
+                            <v-select 
+                                v-model="form.purpose" 
+                                :options="purposeOptions" 
+                                :reduce="option => option.value"
+                                label="text"
+                                placeholder="Select Purpose"
+                                class="custom-v-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                        </div>
+                         <!-- Source -->
+                         <div class="col-md-3">
                             <label class="form-label-custom">Source</label>
-                            <b-form-select v-model="form.source" :options="sourceOptions" class="custom-select" />
-                        </div>
-                        <!-- Lead Source -->
-                        <div class="col-md-4">
-                            <label class="form-label-custom">Lead Source</label>
-                            <b-form-input v-model="form.leadSource" placeholder="Add Lead Source" class="custom-input" />
-                        </div>
-                        <!-- Address -->
-                        <div class="col-md-4">
-                            <label class="form-label-custom">Address</label>
-                            <b-form-input v-model="form.address" placeholder="Enter Address" class="custom-input" />
+                            <v-select 
+                                v-model="form.source" 
+                                :options="sourceOptions" 
+                                :reduce="option => option.value"
+                                label="text"
+                                placeholder="Select Source"
+                                class="custom-v-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
                         </div>
 
                         <!-- Source Information -->
                         <div class="col-12">
                             <label class="form-label-custom">Source Information</label>
                             <b-form-textarea v-model="form.sourceInfo" placeholder="Text Here" class="custom-textarea" />
-                        </div>
-
-                        <!-- How Many Bedrooms -->
-                        <div class="col-md-6">
-                            <label class="form-label-custom">How Many Bedrooms</label>
-                            <b-form-select v-model="form.bedrooms" :options="bedroomOptions" class="custom-select" />
-                        </div>
-                        <!-- Interested In -->
-                        <div class="col-md-6">
-                            <label class="form-label-custom">Intrested In</label>
-                            <b-form-select v-model="form.interestedIn" :options="interestOptions" class="custom-select" />
                         </div>
 
                         <!-- Responsible Person Card -->
@@ -254,27 +343,10 @@
             </div>
 
             <!-- Footer Actions -->
-            <div class="modal-footer-custom d-flex align-items-center justify-content-between">
-                <button 
-                    class="btn-prev" 
-                    :disabled="currentStep === 1"
-                    @click="currentStep--"
-                >
-                    <iconify-icon icon="lucide:chevron-left" class="me-1"></iconify-icon>
-                    Previous
-                </button>
+            <div class="modal-footer-custom d-flex align-items-center justify-content-end">
                 <div class="d-flex gap-3">
                     <button class="btn-clear" @click="resetForm">Clear</button>
                     <button 
-                        v-if="currentStep < 2" 
-                        class="btn-next-step" 
-                        @click="currentStep++"
-                    >
-                        Next Step
-                        <iconify-icon icon="lucide:chevron-right" class="ms-1"></iconify-icon>
-                    </button>
-                    <button 
-                        v-else 
                         class="btn-next-step" 
                         @click="submitForm"
                     >
@@ -289,6 +361,8 @@
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue'
 import { BModal, BFormInput, BFormSelect, BFormTextarea, BDropdown, BDropdownItem } from 'bootstrap-vue-3'
+import vSelect from 'vue-select'
+import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
 import avatar1 from '@/assets/images/users/user1.png'
 
@@ -299,7 +373,6 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const show = ref(props.modelValue)
-const currentStep = ref(1)
 const users = ref([
     {
         id: 1,
@@ -335,7 +408,6 @@ const isLoadingUsers = ref(false)
 
 watch(() => props.modelValue, (val) => {
     show.value = val
-    if (val) currentStep.value = 1
 })
 
 watch(show, (val) => {
@@ -356,8 +428,28 @@ const fetchUsers = async () => {
     }
 }
 
+const fetchStages = async () => {
+    try {
+        const response = await api.get('/stages/kanban/stages-with-leads')
+        stages.value = response.data.data.map((stage, index) => ({
+            id: stage.id,
+            name: stage.name,
+            color: stage.color || getColorByIndex(index)
+        }))
+        
+        // Set default stage to first one
+        if (stages.value.length > 0) {
+            form.value.stage = stages.value[0].name
+            form.value.stage_id = stages.value[0].id
+        }
+    } catch (error) {
+        console.error('Error fetching stages:', error)
+    }
+}
+
 onMounted(() => {
     fetchUsers()
+    fetchStages()
 })
 
 const filteredUsers = computed(() => {
@@ -375,7 +467,8 @@ const selectUser = (user) => {
 
 const form = ref({
     leadName: '',
-    stage: 'New leads',
+    stage: '',
+    stage_id: null,
     salutation: null,
     firstName: '',
     lastName: '',
@@ -405,8 +498,29 @@ const form = ref({
     }
 })
 
+// Same color logic from leads.vue
+const colors = ['#7BD3EA', '#E3DA32', '#F2C934', '#8EC82F', '#00A74C']
+
+function getColorByIndex(index) {
+    return colors[index % colors.length]
+}
+
+const stages = ref([])
+const selectedStageIndex = ref(0)
+
+const selectStage = (index) => {
+    selectedStageIndex.value = index
+    form.value.stage = stages.value[index].name
+    form.value.stage_id = stages.value[index].id
+}
+
 const stageOptions = [
-    { value: 'New leads', text: 'New leads' }
+    { value: 'New leads', text: 'New leads' },
+    { value: 'Qualified', text: 'Qualified' },
+    { value: 'Proposal', text: 'Proposal' },
+    { value: 'Negotiation', text: 'Negotiation' },
+    { value: 'Closed Won', text: 'Closed Won' },
+    { value: 'Closed Lost', text: 'Closed Lost' }
 ]
 
 const salutationOptions = [
@@ -419,6 +533,11 @@ const salutationOptions = [
 const phoneTypeOptions = [
     { value: 'Work Phone', text: 'Work Phone' },
     { value: 'Mobile', text: 'Mobile' }
+]
+
+const currencyOptions = [
+    { value: 'USD', text: 'USD $' },
+    { value: 'AED', text: 'AED د.إ' },
 ]
 
 const emailTypeOptions = [
@@ -449,7 +568,8 @@ const interestOptions = [
 const resetForm = () => {
     form.value = {
         leadName: '',
-        stage: 'New leads',
+        stage: stages.value.length > 0 ? stages.value[0].name : '',
+        stage_id: stages.value.length > 0 ? stages.value[0].id : null,
         salutation: null,
         firstName: '',
         lastName: '',
@@ -470,12 +590,14 @@ const resetForm = () => {
         bedrooms: null,
         interestedIn: null
     }
+    selectedStageIndex.value = 0
 }
 
 const submitForm = () => {
     const payload = {
         ...form.value,
-        responsible_person_id: form.value.responsible_person_id
+        responsible_person_id: form.value.responsible_person_id,
+        stage_id: form.value.stage_id
     }
     console.log('Form submitted:', payload)
     show.value = false
@@ -516,66 +638,101 @@ const submitForm = () => {
     margin-bottom: 10px;
 }
 
-/* Stepper Styles */
-.stepper-container {
-    padding: 0 40px;
+/* Stage Selector Styles */
+.stage-selector-wrapper {
+    border-bottom: 1px solid #F4F4F4;
+    overflow-x: auto;
+    scrollbar-width: none;
 }
 
-.stepper-wrapper {
-    position: relative;
-    max-width: 335px;
-    margin: 0 auto;
+.stage-selector-wrapper::-webkit-scrollbar {
+    display: none;
 }
 
-.step-item {
+.stage-container {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    position: relative;
-    z-index: 2;
-    flex: 0 0 150px;
+    /* gap: 8px; */
+    padding: 8px 16px;
+    border: 1px solid #E5E7EB; /* Blue outline as seen in image */
+    border-radius: 50px;
+    box-shadow: 1px 1px 5px 5px #00000005;
+    width: fit-content;
+    min-width: 100%;
 }
 
-.step-circle {
-    width: 34px;
-    height: 34px;
+.stage-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 15px;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    position: relative;
+}
+
+.stage-pill:not(:first-child) {
+    padding-left: 25px;
+}
+
+.stage-pill:not(.active) {
+    color: #94A3B8;
+}
+
+.stage-pill.active {
+   /* padding-left: 3px !important; */
+}
+
+.stage-circle {
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
-    background: #D8D8D8;
-    color: #01062C;
+    border: 1px solid #E2E8F0;
+    background: #FFFFFF;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
-    font-size: 14px;
-    margin-bottom: 8px;
-    border: 1px solid #E2E8F0;
-    box-shadow: 0 0 0 2px #fff, 0 0 0 3px #D8D8D8;
+    flex-shrink: 0;
 }
 
-.step-item.active .step-circle {
-    background: #01062C;
-    color: #fff;
-    border-color: #01062C;
-    box-shadow: 0 0 0 2px #fff, 0 0 0 3px #FAA300;
+.stage-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
 }
 
-.step-label {
+.stage-text {
+    font-family: Montserrat;
+    font-weight: 400;
     font-size: 13px;
-    font-weight: 500;
-    color: #94A3B8;
-    white-space: nowrap;
+    color: #979797;
 }
 
-.step-item.active .step-label {
+.stage-pill.active .stage-text {
     color: #01062C;
+    font-weight: 400;
 }
 
-.step-line {
-    flex: 1;
-    height: 1px;
-    border-top: 1px dashed #666666;
-    margin: 0 -30px;
-    margin-bottom: 25px;
+.stage-separator {
+    display: flex;
+    align-items: center;
+    color: #01062C;
+    flex-shrink: 0;
+    /* margin-left: 8px; */
+    /* margin-right: -12px; */
+    z-index: 2;
+}
+
+.active-separator {
+    color: #FFFF !important;
+}
+
+.separator-icon {
+    font-size: 20px;
+    color: #E2E8F0;
 }
 
 /* Form Styles */
@@ -627,19 +784,191 @@ const submitForm = () => {
     padding: 12px 15px !important;
 }
 
-.custom-select {
-    height: 42px !important;
-    border-radius: 10px !important;
-    border: 1px solid #E2E8F0 !important;
-    font-size: 13px !important;
-    color: #64748B !important;
+/* Custom v-select styles to match the image */
+:deep(.custom-v-select) {
     font-family: 'Montserrat';
-    appearance: none;
-    background-color: #fff !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E") !important;
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 16px;
+}
+
+:deep(.custom-v-select .vs__dropdown-toggle) {
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    padding: 0 8px;
+}
+
+:deep(.custom-v-select .vs__selected) {
+    font-size: 13px;
+    color: #64748B;
+    margin: 0;
+    padding: 0;
+    line-height: 40px;
+}
+
+:deep(.custom-v-select .vs__search) {
+    font-size: 13px;
+    color: #64748B;
+    margin: 0;
+    padding: 0;
+}
+
+:deep(.custom-v-select .vs__search::placeholder) {
+    color: #64748B;
+}
+
+:deep(.custom-v-select .vs__actions) {
+    padding: 0 8px;
+}
+
+:deep(.custom-v-select .vs__open-indicator-icon) {
+    font-size: 16px;
+    color: #64748B;
+}
+
+:deep(svg) {
+    vertical-align: middle !important;
+}
+
+:deep(.custom-v-select .vs__dropdown-menu) {
+    /* border-radius: 12px; */
+    border: 1px solid #E2E8F0;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
+    padding: 0;
+    margin-top: 5px;
+    z-index: 1100;
+}
+
+:deep(.custom-v-select .vs__dropdown-option) {
+    padding: 5px 10px;
+    /* border-radius: 0px 0px 8px 8px; */
+    font-size: 14px;
+    color: #475569;
+    transition: all 0.2s;
+}
+
+:deep(.custom-v-select .vs__dropdown-option--highlight) {
+    background: #FAA300 !important;
+    color: #fff !important;
+}
+
+:deep(.custom-v-select .vs__dropdown-option--selected) {
+    background: #FAA300;
+    color: #fff;
+}
+
+:deep(.custom-v-select .vs__clear) {
+    /* display: none; */
+    /* margin-bottom: 14px; */
+}
+
+/* Inline v-select for input groups */
+:deep(.custom-v-select-inline) {
+    width: 100px;
+    min-width: 100px;
+    position: relative;
+}
+
+:deep(.custom-v-select-inline .vs__dropdown-toggle) {
+    height: 42px !important;
+    border: none !important;
+    border-left: 1px solid #E2E8F0 !important;
+    border-radius: 0 8px 8px 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+:deep(.custom-v-select-inline .vs__selected-options) {
+    padding: 0 0 0 8px !important;
+    margin: 0 !important;
+    flex-basis: auto !important;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    max-width: calc(100% - 30px);
+}
+
+:deep(.custom-v-select-inline .vs__selected) {
+    color: #64748B !important;
+    font-size: 13px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: static !important;
+    line-height: normal !important;
+    background: transparent !important;
+    border: none !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block !important;
+}
+
+:deep(.custom-v-select-inline .vs__actions) {
+    padding: 0 8px 0 4px !important;
+    margin: 0 !important;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+:deep(.custom-v-select-inline .vs__search) {
+    display: none !important;
+}
+
+:deep(.custom-v-select-inline .vs__dropdown-menu) {
+    width: 150px !important;
+    min-width: 150px !important;
+    left: auto !important;
+    right: 0 !important;
+    /* border-radius: 12px; */
+    border: 1px solid #E2E8F0;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
+    padding: 0px;
+    margin-top: 5px;
+    z-index: 9999 !important;
+    position: absolute !important;
+}
+
+:deep(.custom-v-select-inline .vs__dropdown-option) {
+    /* padding: 10px 15px; */
+    /* border-radius: 8px; */
+    font-size: 14px;
+    color: #475569;
+    transition: all 0.2s;
+    margin: 1px;
+}
+
+:deep(.custom-v-select-inline .vs__dropdown-option--highlight) {
+    background: #FAA300 !important;
+    color: #fff !important;
+}
+
+:deep(.custom-v-select-inline .vs__dropdown-option--selected) {
+    background: #FAA300;
+    color: #fff;
+}
+
+:deep(.custom-v-select-inline .vs__open-indicator) {
+    cursor: pointer;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+:deep(.custom-v-select-inline .vs__open-indicator > span) {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+:deep(.custom-v-select-inline .vs__open-indicator-icon) {
+    font-size: 16px;
+    color: #64748B;
 }
 
 .custom-input::placeholder, .custom-textarea::placeholder {
@@ -653,24 +982,16 @@ const submitForm = () => {
     display: flex;
     border: 1px solid #E2E8F0;
     border-radius: 8px;
-    overflow: hidden;
+    overflow: visible;
+    align-items: stretch;
+    position: relative;
 }
 
 .input-group-custom .custom-input {
     border: none !important;
     flex-grow: 1 !important;
-}
-
-.input-group-custom .custom-select {
-    border: none !important;
-    border-left: 1px solid #E2E8F0 !important;
-    border-radius: 0 !important;
-    width: 130px;
-    background: #FFFF !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E") !important;
-    background-repeat: no-repeat !important;
-    background-position: right 12px center !important;
-    background-size: 16px !important;
+    border-radius: 8px 0 0 8px !important;
+    padding: 0 8px !important;
 }
 
 .modal-footer-custom {
