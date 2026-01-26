@@ -176,10 +176,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import draggable from 'vuedraggable'
-import avatar1 from '@/assets/images/users/user1.png'
+// import avatar1 from '@/assets/images/users/user1.png'
 import leadsIcon from '@/assets/images/kanban/svg/leads-icon.png'
-import avatar2 from '@/assets/images/users/user2.png'
-import ViewLeadModal from './ViewLeadModal.vue'
+// import avatar2 from '@/assets/images/users/user2.png'
+// import ViewLeadModal from './ViewLeadModal.vue'
 import api from '@/plugins/axios'
 
 // Import Bootstrap
@@ -254,8 +254,8 @@ function openModal(task = null, status = '') {
             name: '',
             source: '',
             branchSource: '',
-            responsible: { name: 'Ahmad al mahfouz', avatar: avatar1 },
-            assignedBy: { date: new Date().toLocaleString(), avatar: avatar2 },
+            responsible: { name: 'Ahmad al mahfouz', avatar: '' },
+            assignedBy: { date: new Date().toLocaleString(), avatar: '' },
             createdAt: new Date().toLocaleString(),
             status: status
         }
