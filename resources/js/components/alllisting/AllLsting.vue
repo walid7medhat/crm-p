@@ -145,7 +145,7 @@
                       </span>
                       
                 </span>
-                  <span class="d-flex justify-content-between icons">
+                  <span class="d-flex justify-content-between icons" v-if="property.number_of_bedrooms">
                       <!--<i class="ri-hotel-bed-line me-1"></i>-->
                       <img :src="bedIcon" class="imgicon"/>
                        <span>
@@ -274,9 +274,8 @@ export default {
 
     const defaultImages = [property1, property2, property3, property4];
 
-    // ✅ دالة لتطبيق فلتر agent من query
     const applyAgentFilterFromQuery = async (agentId, agentName) => {
-      await nextTick(); // انتظر حتى يتم تحميل SearchBar
+      await nextTick(); 
       
       if (!searchBarRef.value) {
         console.log('⏳ Waiting for SearchBar to load...');
@@ -285,20 +284,15 @@ export default {
       }
       
       try {
-        // الوصول إلى methods و data في SearchBar
         const searchBar = searchBarRef.value;
-        
-        // البحث عن الـ agent في قائمة agents
-        const agents = searchBar.agents || [];
+            const agents = searchBar.agents || [];
         const foundAgent = agents.find(a => a.id == agentId);
         
         if (foundAgent) {
           console.log('✅ Found agent in list:', foundAgent.name);
           
-          // تعيين الـ agent في SearchBar
           searchBar.selectedAgent = foundAgent;
           
-          // تطبيق الفلتر
           setTimeout(() => {
             searchBar.applyFilters();
           }, 300);
@@ -333,13 +327,11 @@ export default {
         
         console.log('🔍 Applying agent filter directly:', agentFilter);
         
-        // إضافة فلتر الـ agent إلى currentFilters مباشرة
         currentFilters.value = { 
           ...currentFilters.value, 
           ...agentFilter 
         };
         
-        // إعادة جلب البيانات
         fetchProperties({}, 1);
         
       } catch (error) {
@@ -347,17 +339,14 @@ export default {
       }
     };
 
-    // ✅ مراقبة query parameters مرة واحدة فقط
     watch(() => route.query, (newQuery) => {
       if (newQuery.agent_id) {
         console.log('🎯 Agent filter detected in URL:', newQuery);
         
-        // محاولة استخدام SearchBar أولاً
         setTimeout(() => {
           applyAgentFilterFromQuery(newQuery.agent_id, newQuery.agent_name);
         }, 1000);
         
-        // وإلا استخدم الطريقة المباشرة
         setTimeout(() => {
           handleAgentFromQuery(newQuery);
         }, 1500);
@@ -643,7 +632,9 @@ export default {
         apiFilters.min_price = filters.priceFrom > 0 ? filters.priceFrom : undefined;
         apiFilters.max_price = filters.priceTo < 10000000 ? filters.priceTo : undefined;
       }
-
+      if (filters.project && filters.project.id) {
+        apiFilters.project_id = filters.project.id;
+      }
       // Size Range Filter
       if (filters.sizeFrom > 0 || filters.sizeTo < 10000) {
         apiFilters.min_size = filters.sizeFrom > 0 ? filters.sizeFrom : undefined;

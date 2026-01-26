@@ -76,7 +76,7 @@
                 </div>
 
                 <div class="specs-grid-main">
-                   <div class="spec-main-item">
+                   <div class="spec-main-item" v-if="property.number_of_bedrooms">
                     <div class="spec-main-info">
                       <span class="spec-main-value">
                           <!--<i class="ri-hotel-bed-line"></i>-->
@@ -86,7 +86,7 @@
                     </div>
                   </div>
                   
-                  <div class="spec-main-item">
+                  <div class="spec-main-item"  v-if="property.number_of_bathrooms">
                     <div class="spec-main-info">
                       <span class="spec-main-value">
                           <!--<i class="ri-contrast-drop-line"></i>-->
@@ -149,7 +149,7 @@
                   
                   <div class="info-item">
                     <span class="info-label">Bedrooms</span>
-                    <span class="info-value">{{ property.number_of_bedrooms || "0" }}</span>
+                    <span class="info-value"> {{ property.number_of_bedrooms==0?'Studio':property.number_of_bedrooms  +'Bedrooms' }} </span>
                   </div>
                   
                   <div class="info-item">
@@ -1805,21 +1805,17 @@ const isAuthenticated = computed(() => {
 
 // New computed properties for dropdown actions
 const canAssignAgent = computed(() => {
+  const property = props.property; // 
   const user = getCurrentUser();
-  
-  if (!user) {
-    console.log('No user found in localStorage');
-    return false;
-  }
-  
-  console.log('User from localStorage:', user);
+
+  if (!user || !property) return false;
+
   console.log('User role_name:', user.role_name);
-  
-  const canAssign = user.role_name === 'admin' || user.role_name === 'super_admin';
-  console.log('Can assign agent:', canAssign);
-  
-  return canAssign;
+  console.log('Property can_assign_agent:', property.user_permissions?.can_assign_agent);
+
+  return property.user_permissions?.can_assign_agent || false;
 });
+
 
 const canMarkAsConverted = computed(() => {
   return canEditProperty.value;

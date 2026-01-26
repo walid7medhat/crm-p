@@ -77,7 +77,9 @@ class LeadRequest extends FormRequest
             'participants.*.type' => 'required|in:contact,company',
             
             'observers' => 'nullable|array',
-            'observers.*' => 'exists:users,id'
+            'observers.*' => 'exists:users,id',
+            
+            'budget'=>'nullable',
         ];
 
         if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {

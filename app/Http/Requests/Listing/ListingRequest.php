@@ -18,6 +18,17 @@ class ListingRequest extends FormRequest
         $isDraft = $this->input('action') === 'draft';
         $isUpdate = $this->isMethod('put') || $this->isMethod('patch');
 $listingId = $this->route('property');
+// Add conditional rules based on action and method
+        // Action-specific rules
+        $propertyTypeId = $this->input('property_type_id');
+
+        $isPlot = false;
+
+
+        if ($propertyTypeId) {
+            $plotTypes = [24,31,35,36];
+            $isPlot = in_array($propertyTypeId, $plotTypes);
+        }
         $rules = [
             // 'unit_number' => 'required|string|max:50',
             'unit_number' => [
@@ -34,8 +45,8 @@ $listingId = $this->route('property');
             ],
             'size_sqft' => 'nullable|numeric|min:1',
             'size_sqmt' => 'nullable|numeric|min:1',
-            'number_of_bedrooms' => 'nullable|integer|min:0',
-            'number_of_bathrooms' => 'nullable|integer|min:0',
+            'number_of_bedrooms' => $isPlot?'nullable':'nullable|integer|min:0',
+            'number_of_bathrooms' => $isPlot?'nullable':'nullable|integer|min:0',
             'price' => 'required|numeric|min:10000',
             'listing_status' => 'sometimes|string|max:50',
             'mortgage_status' => 'nullable|string|max:50',
@@ -69,17 +80,7 @@ $listingId = $this->route('property');
         $rules['gallery.*'] = 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:10240';
         $rules['hero_image'] = 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:10240';
 
-        // Add conditional rules based on action and method
-        // Action-specific rules
-        $propertyTypeId = $this->input('property_type_id');
-
-        $isPlot = false;
-
-
-        if ($propertyTypeId) {
-            $plotTypes = [24,31,35,36];
-            $isPlot = in_array($propertyTypeId, $plotTypes);
-        }
+        
 
 
             if ($isDraft) {

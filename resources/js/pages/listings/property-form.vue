@@ -1652,7 +1652,6 @@ const loadPaymentPlansFromString = (paymentPlanString) => {
   }
 };
 
-// إضافة الدوال المساعدة المفقودة
 const convertSqmToSqft = () => {
   if (form.value.size_sqmt && !isNaN(form.value.size_sqmt)) {
     form.value.size_sqft = (form.value.size_sqmt * 10.7639).toFixed(2);

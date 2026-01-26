@@ -147,6 +147,9 @@ public function permissions(User $user): JsonResponse
              if($request->filled('owner_id')) {
                 $query->where('owner_id', $request->owner_id);
             }
+              if($request->filled('project_id')) {
+                $query->where('project_id', $request->project_id);
+            }
             if ($request->filled('search')) {
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {
@@ -1153,18 +1156,55 @@ public function toggleStatus($id)
 public function assignAgent(Request $request, $id)
 {
     try {
-        $property = Listing::with(['area', 'agent'])->findOrFail($id);
-        
-        if (!Auth::user()->hasRole(['admin', 'super_admin'])) {
+        $currentUser = Auth::user();
+
+        // السماح بالدور المناسب
+        if (! $currentUser->hasRole(['admin','super_admin','team_lead','manager'])) {
             return ApiResponse::error('Access denied', 403);
         }
 
+        // جلب property
+        $property = Listing::with(['agent'])->findOrFail($id);
+
+        // لو المدير أو تيم ليد، تأكد property تبعته أو تبع agent من تحته
+        if ($currentUser->hasRole(['team_lead','manager'])) {
+
+            // جلب جميع الـ agent المسموح بهم (التحتيه)
+            $allowedAgentIds = User::where(function($q) use ($currentUser) {
+                $q->where('id', $currentUser->id)
+                  ->orWhere('parent_id', $currentUser->id)
+                  ->orWhereHas('parent', function($parentQuery) use ($currentUser) {
+                      $parentQuery->where('parent_id', $currentUser->id);
+                  });
+            })->pluck('id')->toArray();
+
+            // تأكد إن property agent_id تبع التحتيه أو هو نفسه
+            if ($property->agent_id && !in_array($property->agent_id, $allowedAgentIds)) {
+                return ApiResponse::error('You cannot assign an agent to a property that does not belong to your hierarchy', 403);
+            }
+        }
+
+        // Validation للـ agent الجديد
         $request->validate([
-            'agent_id' => 'required|exists:users,id',
+            'agent_id' => ['required','exists:users,id', function($attribute, $value, $fail) use ($currentUser) {
+                // نفس قاعدة التحتيه
+                if ($currentUser->hasRole(['team_lead','manager'])) {
+                    $allowedAgentIds = User::where(function($q) use ($currentUser) {
+                        $q->where('id', $currentUser->id)
+                          ->orWhere('parent_id', $currentUser->id)
+                          ->orWhereHas('parent', function($parentQuery) use ($currentUser) {
+                              $parentQuery->where('parent_id', $currentUser->id);
+                          });
+                    })->pluck('id')->toArray();
+
+                    if (!in_array($value, $allowedAgentIds)) {
+                        $fail('You cannot assign this agent because they are not under your hierarchy.');
+                    }
+                }
+            }],
             'notes' => 'nullable|string|max:1000'
         ]);
 
-        // حفظ الـ Agent القديم إذا كان موجوداً
         $oldAgent = $property->agent;
         $newAgent = User::findOrFail($request->agent_id);
 
@@ -1175,32 +1215,18 @@ public function assignAgent(Request $request, $id)
         $property->update([
             'agent_id' => $request->agent_id,
             'assignment_notes' => $request->notes,
-            'assigned_by' => Auth::id(),
+            'assigned_by' => $currentUser->id,
             'assigned_at' => now()
         ]);
 
-        try {
-            $newAgent->notify(new PropertyAssignedNotification($property, Auth::user()));
-            \Log::info('Property assignment notification sent to new agent', [
-                'agent_id' => $newAgent->id,
-                'property_id' => $property->id,
-                'assigned_by' => Auth::id()
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Failed to send assignment notification to new agent: ' . $e->getMessage());
+        // إشعارات كما في الكود السابق
+        if ($newAgent) {
+            try { $newAgent->notify(new PropertyAssignedNotification($property, $currentUser)); } 
+            catch (\Exception $e) { \Log::error($e->getMessage()); }
         }
-
         if ($oldAgent && $oldAgent->id != $newAgent->id) {
-            try {
-                $oldAgent->notify(new PropertyUnassignedNotification($property, Auth::user()));
-                \Log::info('Property unassignment notification sent to old agent', [
-                    'agent_id' => $oldAgent->id,
-                    'property_id' => $property->id,
-                    'unassigned_by' => Auth::id()
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Failed to send unassignment notification to old agent: ' . $e->getMessage());
-            }
+            try { $oldAgent->notify(new PropertyUnassignedNotification($property, $currentUser)); } 
+            catch (\Exception $e) { \Log::error($e->getMessage()); }
         }
 
         $this->clearCache();
@@ -1214,12 +1240,12 @@ public function assignAgent(Request $request, $id)
         return ApiResponse::error('Failed to assign agent: ' . $e->getMessage());
     }
 }
+
 public function markAsConverted(Request $request, $id)
 {
     try {
         $property = Listing::findOrFail($id);
         
-        // التحقق من الصلاحيات
         if (Auth::user()->hasRole('sales') && $property->agent_id !== Auth::id()) {
             return ApiResponse::error('Access denied', 403);
         }

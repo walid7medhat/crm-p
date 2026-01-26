@@ -157,7 +157,7 @@
                       </span>
                       
                 </span>
-                  <span class="d-flex justify-content-between icons">
+                  <span class="d-flex justify-content-between icons" v-if="property.number_of_bedrooms">
                       <!--<i class="ri-hotel-bed-line me-1"></i>-->
                       <img :src="bedIcon" class="imgicon"/>
                        <span>

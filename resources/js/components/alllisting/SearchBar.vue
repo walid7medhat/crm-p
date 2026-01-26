@@ -1,8 +1,8 @@
 <template>
   <div class="">
     <div class="search-bar">
-      <div class="main-search-row">
-              <div class="form-group  col-md-4">
+       <div class="main-search-row">
+                <div class="form-group  col-md-4">
                   <label class="form-label">Reference Number</label>
                   <input 
                     v-model="searchReferenceNumber"
@@ -13,29 +13,47 @@
                     @keyup.enter="applyFilters"
                   />
                 </div>
-            </div>
+                 <div class="form-group compact">
+                  <label class="form-label">Project</label>
+                  <v-select
+                    v-model="selectedProject"
+                    :options="projects"
+                    :disabled="isLoadingProjects"
+                    label="name"
+                    placeholder="Select project"
+                    class="custom-select unified-input"
+                    @update:modelValue="handleFilterChange"
+                  >
+                    <template #no-options>
+                      <div class="text-center p-2">
+                        {{ isLoadingProjects ? 'Loading projects...' : 'No projects found' }}
+                      </div>
+                    </template>
+                  </v-select>
+                </div>
+                <!-- Location -->
+                <div class="form-group compact">
+                  <label class="form-label">Location</label>
+                  <v-select
+                    v-model="selectedArea"
+                    :options="areas"
+                    :disabled="isLoadingAreas"
+                    label="name"
+                    placeholder="Select area"
+                    class="custom-select unified-input"
+                    @update:modelValue="handleFilterChange"
+                  >
+                    <template #no-options>
+                      <div class="text-center p-2">
+                        {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
+                      </div>
+                    </template>
+                  </v-select>
+                </div>
+        </div>
       <!-- Main Search Row -->
       <div class="main-search-row">
          
-        <!-- Location -->
-        <div class="form-group compact">
-          <label class="form-label">Area</label>
-          <v-select
-            v-model="selectedArea"
-            :options="areas"
-            :disabled="isLoadingAreas"
-            label="name"
-            placeholder="Select area"
-            class="custom-select unified-input"
-            @update:modelValue="handleFilterChange"
-          >
-            <template #no-options>
-              <div class="text-center p-2">
-                {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
-              </div>
-            </template>
-          </v-select>
-        </div>
 
         <!-- Property Type -->
         <div class="form-group compact">
@@ -325,15 +343,17 @@ export default {
     // Reactive data
     const areas = ref([]);
     const propertyTypes = ref([]);
+      const projects = ref([]);
     const isLoadingAreas = ref(false);
     const isLoadingPropertyTypes = ref(false);
         const isLoadingAgents = ref(false);
-
+ const isLoadingProjects = ref(false); 
         const agents = ref([]);
 
     const selectedSaleRent = ref("All");
     const selectedStatus = ref("All");
     const selectedArea = ref(null);
+    const selectedProject = ref(null); 
     const selectedPropertyType = ref(null);
     const selectedBeds = ref("");
     const selectedSort = ref("");
@@ -383,7 +403,26 @@ const searchReferenceNumber = ref("");
         isLoadingAreas.value = false;
       }
     };
-
+   const fetchProjects = async () => {
+      try {
+        isLoadingProjects.value = true;
+        const response = await api.get("/listings/projects");
+        
+        const projectsData = response.data.data || response.data;
+        
+        projects.value = projectsData.map(project => ({
+          id: project.id,
+          name: project.name || project.project_name || project.title || `Project ${project.id}`
+        }));
+        
+        console.log("✅ Projects loaded:", projects.value.length);
+        
+      } catch (error) {
+        console.error("❌ Error fetching projects:", error.response || error);
+      } finally {
+        isLoadingProjects.value = false;
+      }
+    };
     // Fetch property types from API
     const fetchPropertyTypes = async () => {
       try {
@@ -452,7 +491,7 @@ const searchReferenceNumber = ref("");
     const hasActiveFilters = computed(() => {
       return selectedSaleRent.value !== "All" || 
              selectedStatus.value !== "All" || 
-             selectedArea.value || selectedAgent.value || 
+             selectedArea.value || selectedAgent.value || selectedProject.value || 
              selectedPropertyType.value || 
              selectedBeds.value || 
              priceFrom.value > 0 || 
@@ -487,6 +526,10 @@ const searchReferenceNumber = ref("");
    // Agent Filter
       if (filters.agent) {
         apiFilters.agent_id = filters.agent.id;
+      }
+      // Project Filter
+      if (filters.project) {
+        apiFilters.project = filters.project.id;
       }
       // Bedrooms Filter
       if (filters.beds) {
@@ -535,6 +578,7 @@ const searchReferenceNumber = ref("");
           area: selectedArea.value,
           propertyType: selectedPropertyType.value,
           agent: selectedAgent.value,
+          project: selectedProject.value,
           beds: selectedBeds.value,
           priceFrom: priceFrom.value,
           priceTo: priceTo.value,
@@ -606,6 +650,7 @@ const searchReferenceNumber = ref("");
         area: selectedArea.value,
         propertyType: selectedPropertyType.value,
         agent: selectedAgent.value,
+        project: selectedProject.value,
         beds: selectedBeds.value,
         priceFrom: priceFrom.value,
         priceTo: priceTo.value,
@@ -716,6 +761,7 @@ const searchReferenceNumber = ref("");
       fetchAreas();
       fetchPropertyTypes();
         fetchAgents();
+        fetchProjects();
 
       // Close dropdowns when clicking outside
       document.addEventListener('click', (e) => {
@@ -737,10 +783,13 @@ const searchReferenceNumber = ref("");
       // Data
       areas,
       agents,
+      projects,
       propertyTypes,
       isLoadingAreas,
       isLoadingPropertyTypes,
       isLoadingAgents,
+      isLoadingProjects, 
+      selectedProject,
       selectedSaleRent,
       selectedStatus,
       selectedArea,
@@ -765,6 +814,7 @@ const searchReferenceNumber = ref("");
       priceProgressStyle,
       sizeProgressStyle,
       hasActiveFilters,
+      
       
       // Methods
       applyFilters,
@@ -1356,4 +1406,8 @@ const searchReferenceNumber = ref("");
   opacity: 1 !important;
   transform: translateY(0) !important;
 }
+/*.form-group.compact:nth-child(1) { */
+/*  min-width: 200px;*/
+/*  flex: 2;*/
+/*}*/
 </style>
