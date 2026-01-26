@@ -193,7 +193,7 @@ function getColorByIndex(index) {
     return colors[index % colors.length]
 }
 
-onMounted(async () => {
+const fetchLeads = async () => {
     try {
         const response = await api.get('/stages/kanban/stages-with-leads')
         columns.value = response.data.data.map((stage, index) => ({
@@ -202,10 +202,18 @@ onMounted(async () => {
             color: stage.color || getColorByIndex(index),
             leads: stage.leads || []
         }))
-
     } catch (error) {
         console.error('Error fetching stages:', error)
     }
+}
+
+onMounted(() => {
+    fetchLeads()
+})
+
+// Expose fetchLeads so parent can call it
+defineExpose({
+    fetchLeads
 })
 
 const currentTask = ref({

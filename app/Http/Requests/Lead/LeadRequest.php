@@ -15,7 +15,7 @@ class LeadRequest extends FormRequest
     {
         $rules = [
             'lead_name' => 'required|string|max:255',
-            'lead_number' => 'required|string|unique:leads,lead_number',
+            'lead_number' => 'string|unique:leads,lead_number',
             'stage_id' => 'required|exists:stages,id',
             
             // Contact Information
@@ -84,7 +84,7 @@ class LeadRequest extends FormRequest
         ];
 
         if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
-            $rules['lead_number'] = 'required|string|unique:leads,lead_number,' . $this->route('lead')->id;
+            $rules['lead_number'] = 'string|unique:leads,lead_number,' . $this->route('lead')->id;
         }
 
         return $rules;

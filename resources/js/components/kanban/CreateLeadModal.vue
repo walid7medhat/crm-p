@@ -18,7 +18,7 @@
             </div>
 
             <!-- Stage Selector -->
-            <div class="stage-selector-wrapper p-3">
+            <div class="stage-selector-wrapper p-3 pb-0">
                 <div class="stage-container">
                     <template v-for="(stage, index) in stages" :key="stage.id">
                         <div 
@@ -28,16 +28,16 @@
                                 backgroundColor: index <= selectedStageIndex ? stage.color : 'transparent',
                                 borderColor: index <= selectedStageIndex ? stage.color : '#E2E8F0',
                                 zIndex: stages.length - index,
-                                marginLeft: index > 0 ? '-15px' : '0'
+                                marginLeft: index > 0 ? '-26px' : '0',
                             }"
                             @click="selectStage(index)"
                         >
                             <!-- Separator at the end -->
-                            <div v-if="index < stages.length - 1" class="stage-separator">
+                            <div v-if="index > 0" class="stage-separator">
                                 <iconify-icon 
                                     icon="lucide:chevrons-right" 
                                     class="separator-icon" 
-                                    :class="{ 'active-separator': index < selectedStageIndex }"
+                                    :class="{ 'active-separator': index <= selectedStageIndex }"
                                 ></iconify-icon>
                             </div>
                             <div class="stage-circle">
@@ -60,7 +60,7 @@
                         <!-- Lead Name -->
                         <div class="col-12">
                             <label class="form-label-custom">Lead Name</label>
-                            <b-form-input v-model="form.leadName" placeholder="Enter Lead Name" class="custom-input" />
+                            <b-form-input v-model="form.lead_name" placeholder="Enter Lead Name" class="custom-input" />
                         </div>
 
                         <!-- Salutation, First Name, Last Name, Position -->
@@ -83,15 +83,14 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label-custom">First Name</label>
-                            <b-form-input v-model="form.firstName" placeholder="Enter Your First Name *" class="custom-input" />
+                            <b-form-input v-model="form.first_name" placeholder="Enter Your First Name *" class="custom-input" />
                         </div>
                         <div class="col-md-3">
                             <label class="form-label-custom">Last Name</label>
-                            <b-form-input v-model="form.lastName" placeholder="Enter Your Last Name *" class="custom-input" />
+                            <b-form-input v-model="form.last_name" placeholder="Enter Your Last Name *" class="custom-input" />
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label-custom">Position</label>
-                            <b-form-input v-model="form.position" placeholder="Enter Your Position" class="custom-input" />
+                            <!-- Field removed as per new form structure -->
                         </div>
 
                         <!-- Contact Details Section -->
@@ -100,49 +99,15 @@
                                 <div class="d-flex justify-content-between align-items-center gap-2">
                                     <div class="col">
                                         <label class="form-label-custom">Contact</label>
-                                        <div class="input-group-custom">
-                                            <b-form-input v-model="form.phone" placeholder="Enter Phone Number" class="custom-input" />
-                                            <v-select 
-                                                v-model="form.phoneType" 
-                                                :options="phoneTypeOptions" 
-                                                :reduce="option => option.value"
-                                                label="text"
-                                                :clearable="false"
-                                                :searchable="false"
-                                                class="custom-v-select-inline"
-                                            >
-                                                <template #open-indicator="{ attributes }">
-                                                    <span v-bind="attributes">
-                                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                                    </span>
-                                                </template>
-                                            </v-select>
-                                        </div>
+                                        <b-form-input v-model="form.whatsapp_number" placeholder="Enter Phone Number" class="custom-input" />
                                     </div>
                                     <div class="col">
                                         <label class="form-label-custom">Email</label>
-                                        <div class="input-group-custom">
-                                            <b-form-input v-model="form.email" placeholder="Enter Your Email" class="custom-input" />
-                                            <v-select 
-                                                v-model="form.emailType" 
-                                                :options="emailTypeOptions" 
-                                                :reduce="option => option.value"
-                                                label="text"
-                                                :clearable="false"
-                                                :searchable="false"
-                                                class="custom-v-select-inline"
-                                            >
-                                                <template #open-indicator="{ attributes }">
-                                                    <span v-bind="attributes">
-                                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                                    </span>
-                                                </template>
-                                            </v-select>
-                                        </div>
+                                        <b-form-input v-model="form.email" placeholder="Enter Your Email" class="custom-input" />
                                     </div>
                                     <div class="col">
                                         <label class="form-label-custom">Secondary Phone</label>
-                                        <b-form-input v-model="form.secondaryPhone" placeholder="Enter Phone Number" class="custom-input" />
+                                        <b-form-input v-model="form.work_phone_2" placeholder="Enter Phone Number" class="custom-input" />
                                     </div>
                                 </div>
                             </div>
@@ -151,7 +116,7 @@
                         <div class="col-12">
                             <label class="form-label-custom">Comments</label>
                             <b-form-textarea 
-                                v-model="form.comments" 
+                                v-model="form.comment" 
                                 placeholder="Text Here" 
                                 rows="4" 
                                 class="custom-textarea"
@@ -181,7 +146,7 @@
                         <div class="col-md-3">
                             <label class="form-label-custom">Budget</label>
                             <div class="input-group-custom">
-                                <b-form-input v-model="form.budget" placeholder="Enter Budget" class="custom-input" />
+                                <b-form-input v-model="form.budget"  type="number" placeholder="Enter Budget" class="custom-input" />
                                 <v-select 
                                     v-model="form.currency" 
                                     :options="currencyOptions" 
@@ -202,7 +167,7 @@
                         <div class="col-md-3">
                             <label class="form-label-custom">Purpose Of Purchase</label>
                             <v-select 
-                                v-model="form.purpose" 
+                                v-model="form.purpose_buying" 
                                 :options="purposeOptions" 
                                 :reduce="option => option.value"
                                 label="text"
@@ -220,7 +185,7 @@
                          <div class="col-md-3">
                             <label class="form-label-custom">Source</label>
                             <v-select 
-                                v-model="form.source" 
+                                v-model="form.lead_source" 
                                 :options="sourceOptions" 
                                 :reduce="option => option.value"
                                 label="text"
@@ -238,7 +203,7 @@
                         <!-- Source Information -->
                         <div class="col-12">
                             <label class="form-label-custom">Source Information</label>
-                            <b-form-textarea v-model="form.sourceInfo" placeholder="Text Here" class="custom-textarea" />
+                            <b-form-textarea v-model="form.source_information" placeholder="Text Here" class="custom-textarea" />
                         </div>
 
                         <!-- Responsible Person Card -->
@@ -343,14 +308,21 @@
             </div>
 
             <!-- Footer Actions -->
-            <div class="modal-footer-custom d-flex align-items-center justify-content-end">
-                <div class="d-flex gap-3">
-                    <button class="btn-clear" @click="resetForm">Clear</button>
+            <div class="modal-footer-custom">
+                <!-- Error Message -->
+                <div v-if="errorMessage" class="alert alert-danger mb-3" role="alert">
+                    {{ errorMessage }}
+                </div>
+                
+                <div class="d-flex align-items-center justify-content-end gap-3">
+                    <button class="btn-clear" @click="resetForm" :disabled="isSubmitting">Clear</button>
                     <button 
                         class="btn-next-step" 
                         @click="submitForm"
+                        :disabled="isSubmitting"
                     >
-                        Create Lead
+                        <span v-if="isSubmitting">Creating...</span>
+                        <span v-else>Add</span>
                     </button>
                 </div>
             </div>
@@ -370,41 +342,16 @@ const props = defineProps({
     modelValue: Boolean
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'lead-created'])
 
 const show = ref(props.modelValue)
-const users = ref([
-    {
-        id: 1,
-        name: 'Maria Guan',
-        email: 'mariaguan@gmail.com',
-        position: 'Sales Agent',
-        avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
-    },
-    {
-        id: 2,
-        name: 'Chris Lynch',
-        email: 'chrislynch@gmail.com',
-        position: 'Team Lead',
-        avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
-    },
-    {
-        id: 3,
-        name: 'Dia Lewis',
-        email: 'dialewis@gmail.com',
-        position: 'Manager',
-        avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
-    },
-    {
-        id: 4,
-        name: 'Brian Williams',
-        email: 'brianwilliams@gmail.com',
-        position: 'Sales Agent',
-        avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
-    }
-])
+const users = ref([])
+const sources = ref([])
 const searchQuery = ref('')
 const isLoadingUsers = ref(false)
+const isLoadingSources = ref(false)
+const isSubmitting = ref(false)
+const errorMessage = ref('')
 
 watch(() => props.modelValue, (val) => {
     show.value = val
@@ -413,6 +360,27 @@ watch(() => props.modelValue, (val) => {
 watch(show, (val) => {
     emit('update:modelValue', val)
 })
+
+const fetchSources = async () => {
+    try {
+        isLoadingSources.value = true
+        const response = await api.get('/sources')
+        if (response.data && (response.data.data || response.data)) {
+            const data = response.data.data || response.data
+            sourceOptions.value = [
+                // { value: null, text: 'Select Source' },
+                ...data.map(source => ({
+                    value: source.id,
+                    text: source.name
+                }))
+            ]
+        }
+    } catch (error) {
+        console.error('Error fetching sources:', error)
+    } finally {
+        isLoadingSources.value = false
+    }
+}
 
 const fetchUsers = async () => {
     try {
@@ -439,7 +407,6 @@ const fetchStages = async () => {
         
         // Set default stage to first one
         if (stages.value.length > 0) {
-            form.value.stage = stages.value[0].name
             form.value.stage_id = stages.value[0].id
         }
     } catch (error) {
@@ -450,6 +417,7 @@ const fetchStages = async () => {
 onMounted(() => {
     fetchUsers()
     fetchStages()
+    fetchSources()
 })
 
 const filteredUsers = computed(() => {
@@ -466,36 +434,29 @@ const selectUser = (user) => {
 }
 
 const form = ref({
-    leadName: '',
-    stage: '',
+    lead_name: '',
     stage_id: null,
     salutation: null,
-    firstName: '',
-    lastName: '',
-    position: '',
-    phone: '',
-    phoneType: 'Work Phone',
+    first_name: '',
+    last_name: '',
+    whatsapp_number: '',
     email: '',
-    emailType: 'Work',
-    secondaryPhone: '',
-    comments: '',
-    selector: null,
-    adId: '',
-    purpose: null,
-    source: null,
-    leadSource: '',
-    address: '',
-    sourceInfo: '',
+    work_phone_2: '',
+    comment: '',
+    lead_source: '',
+    source_information: '',
     bedrooms: null,
-    interestedIn: null,
+    purpose_buying: null,
     responsible_person_id: 1, // Default or selected
-    responsible_person: {
-        id: 1,
-        name: 'Ahmad Mahfoz',
-        email: 'testuseremail@gmail.com',
-        position: '--',
-        avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
-    }
+    // responsible_person: {
+    //     id: 1,
+    //     name: 'Ahmad Mahfoz',
+    //     email: 'testuseremail@gmail.com',
+    //     position: '--',
+    //     avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
+    // },
+    budget: null,
+    currency: null,
 })
 
 // Same color logic from leads.vue
@@ -510,21 +471,11 @@ const selectedStageIndex = ref(0)
 
 const selectStage = (index) => {
     selectedStageIndex.value = index
-    form.value.stage = stages.value[index].name
     form.value.stage_id = stages.value[index].id
 }
 
-const stageOptions = [
-    { value: 'New leads', text: 'New leads' },
-    { value: 'Qualified', text: 'Qualified' },
-    { value: 'Proposal', text: 'Proposal' },
-    { value: 'Negotiation', text: 'Negotiation' },
-    { value: 'Closed Won', text: 'Closed Won' },
-    { value: 'Closed Lost', text: 'Closed Lost' }
-]
-
 const salutationOptions = [
-    { value: null, text: 'Not Selected' },
+    // { value: null, text: 'Not Selected' },
     { value: 'Mr', text: 'Mr' },
     { value: 'Ms', text: 'Ms' },
     { value: 'Mrs', text: 'Mrs' }
@@ -550,57 +501,86 @@ const selectorOptions = [
 ]
 
 const purposeOptions = [
-    { value: null, text: 'Select Purpose' }
-]
-
-const sourceOptions = [
-    { value: null, text: 'Select Source' }
+    // { value: null, text: 'Select Purpose' }
+  { value: "Self Use", text: "Self Use" },
+  { value: "Investment", text: "Investment" },
+  { value: "Rental Income", text: "Rental Income" },
+  { value: "Future Residence", text: "Future Residence" },
+  { value: "Business Use", text: "Business Use" },
+  { value: "Commercial Investment", text: "Commercial Investment" },
+  { value: "Holiday / Weekend Home", text: "Holiday / Weekend Home" },
+  { value: "Land Banking", text: "Land Banking" },
+  { value: "Resale", text: "Resale" },
+  { value: "Portfolio Expansion", text: "Portfolio Expansion" }
 ]
 
 const bedroomOptions = [
-    { value: null, text: 'Select Bedrooms' }
+    // { value: null, text: 'Select Bedrooms' },
+    { value: 'studio', text: 'Studio' },
+    { value: 1, text: '1' },
+    { value: 2, text: '2' },
+    { value: 3, text: '3' },
+    { value: 4, text: '4' },
+    { value: 5, text: '5' },
+    { value: 6, text: '6' },
+    { value: 7, text: '7' },
+    { value: 8, text: '8' },
+    { value: 9, text: '9' },
 ]
-
-const interestOptions = [
-    { value: null, text: 'Select Interest' }
-]
-
 const resetForm = () => {
     form.value = {
-        leadName: '',
-        stage: stages.value.length > 0 ? stages.value[0].name : '',
+        lead_name: '',
         stage_id: stages.value.length > 0 ? stages.value[0].id : null,
         salutation: null,
-        firstName: '',
-        lastName: '',
-        position: '',
-        phone: '',
-        phoneType: 'Work Phone',
+        first_name: '',
+        last_name: '',
+        whatsapp_number: '',
         email: '',
-        emailType: 'Work',
-        secondaryPhone: '',
-        comments: '',
-        selector: null,
-        adId: '',
-        purpose: null,
-        source: null,
-        leadSource: '',
-        address: '',
-        sourceInfo: '',
+        work_phone_2: '',
+        comment: '',
+        lead_source: '',
+        source_information: '',
         bedrooms: null,
-        interestedIn: null
+        purpose_buying: null,
+        responsible_person_id: 1,
+        // responsible_person: {
+        //     id: 1,
+        //     name: 'Ahmad Mahfoz',
+        //     email: 'testuseremail@gmail.com',
+        //     position: '--',
+        //     avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
+        // },
+        budget: null,
+        currency: null,
     }
     selectedStageIndex.value = 0
 }
 
-const submitForm = () => {
-    const payload = {
-        ...form.value,
-        responsible_person_id: form.value.responsible_person_id,
-        stage_id: form.value.stage_id
+const submitForm = async () => {
+    try {
+        isSubmitting.value = true
+        errorMessage.value = ''
+        
+        const payload = {
+            ...form.value,
+            responsible_person_id: form.value.responsible_person_id,
+            stage_id: form.value.stage_id
+        }
+        
+        const response = await api.post('/leads', payload)
+        
+        // Success: close modal, reset form, and emit event to refetch leads
+        show.value = false
+        resetForm()
+        emit('lead-created')
+        
+    } catch (error) {
+        // Error: show error message, don't close modal, don't reset form
+        console.error('Error creating lead:', error)
+        errorMessage.value = error.response?.data?.message || 'Failed to create lead. Please try again.'
+    } finally {
+        isSubmitting.value = false
     }
-    console.log('Form submitted:', payload)
-    show.value = false
 }
 </script>
 
@@ -640,7 +620,7 @@ const submitForm = () => {
 
 /* Stage Selector Styles */
 .stage-selector-wrapper {
-    border-bottom: 1px solid #F4F4F4;
+    /* border-bottom: 1px solid #F4F4F4; */
     overflow-x: auto;
     scrollbar-width: none;
 }
@@ -652,8 +632,7 @@ const submitForm = () => {
 .stage-container {
     display: flex;
     align-items: center;
-    /* gap: 8px; */
-    padding: 8px 16px;
+    padding: 4px;
     border: 1px solid #E5E7EB; /* Blue outline as seen in image */
     border-radius: 50px;
     box-shadow: 1px 1px 5px 5px #00000005;
@@ -669,7 +648,6 @@ const submitForm = () => {
     border-radius: 30px;
     cursor: pointer;
     transition: all 0.2s ease;
-    border: 1px solid transparent;
     white-space: nowrap;
     position: relative;
 }
@@ -682,8 +660,9 @@ const submitForm = () => {
     color: #94A3B8;
 }
 
-.stage-pill.active {
+.stage-pill .active {
    /* padding-left: 3px !important; */
+   /* border: 1px solid #ffff; */
 }
 
 .stage-circle {
@@ -728,11 +707,13 @@ const submitForm = () => {
 
 .active-separator {
     color: #FFFF !important;
+    font-weight: 400 !important;
 }
 
 .separator-icon {
     font-size: 20px;
-    color: #E2E8F0;
+    font-weight: 400 !important;
+    color: #D9D9D9;
 }
 
 /* Form Styles */
@@ -797,12 +778,23 @@ const submitForm = () => {
     padding: 0 8px;
 }
 
+:deep(.custom-v-select .vs__selected-options) {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    max-width: calc(100% - 30px);
+}
+
 :deep(.custom-v-select .vs__selected) {
     font-size: 13px;
     color: #64748B;
     margin: 0;
     padding: 0;
-    line-height: 40px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
+    line-height: 40px; 
 }
 
 :deep(.custom-v-select .vs__search) {
@@ -999,6 +991,19 @@ const submitForm = () => {
     padding: 15px;
 }
 
+.alert {
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-family: 'Montserrat';
+}
+
+.alert-danger {
+    background-color: #FEE2E2;
+    border: 1px solid #FCA5A5;
+    color: #991B1B;
+}
+
 .contact-details-card {
     background: #FFFFFF;
     border: 1px solid #F3F3F3;
@@ -1100,6 +1105,12 @@ const submitForm = () => {
     border-radius: 100px;
     font-size: 14px;
     color: #01062C;
+    cursor: pointer;
+}
+
+.btn-clear:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .btn-next-step {
@@ -1113,10 +1124,16 @@ const submitForm = () => {
     display: flex;
     align-items: center;
     cursor: pointer;
+    transition: background 0.2s;
 }
 
-.btn-next-step:hover {
+.btn-next-step:hover:not(:disabled) {
     background: #0f172a;
+}
+
+.btn-next-step:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 /* Dropdown Styles */

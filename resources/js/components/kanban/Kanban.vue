@@ -1,6 +1,6 @@
 <template>
     <LeadSearchModal v-model="showSearchModal" />
-    <CreateLeadModal v-model="showCreateModal" />
+    <CreateLeadModal v-model="showCreateModal" @lead-created="handleLeadCreated" />
     <div class="kanban-main-wrapper">
         <b-tabs 
             v-model="activeTabIndex"
@@ -23,7 +23,7 @@
                 </template>
 
                 <!-- Tab Content -->
-                <Leads v-if="tab.id === 'leads'" />
+                <Leads v-if="tab.id === 'leads'" ref="leadsRef" />
                 <div v-else class="p-40 text-center text-secondary-light h-100 d-flex align-items-center justify-content-center">
                     <div class="card p-40 radius-12 border shadow-sm">
                         <h4 class="mb-0">{{ tab.name }} Content coming soon...</h4>
@@ -80,6 +80,7 @@ import { BTabs, BTab, BFormInput } from 'bootstrap-vue-3'
 const activeTab = ref('leads')
 const showSearchModal = ref(false)
 const showCreateModal = ref(false)
+const leadsRef = ref(null)
 
 const tabs = ref([
     { id: 'deals', name: 'Deals', hasChevron: false },
@@ -102,6 +103,13 @@ const activeTabIndex = computed({
 const activeTabName = computed(() => {
     return tabs.value.find(t => t.id === activeTab.value)?.name || ''
 })
+
+const handleLeadCreated = () => {
+    // Refetch leads data when a new lead is created
+    if (leadsRef.value && typeof leadsRef.value.fetchLeads === 'function') {
+        leadsRef.value.fetchLeads()
+    }
+}
 </script>
 
 <style scoped>
