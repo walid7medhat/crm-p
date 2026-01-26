@@ -176,9 +176,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import draggable from 'vuedraggable'
-// import avatar1 from '@/assets/images/users/user1.png'
+import avatar1 from '@/assets/images/users/user1.png'
 import leadsIcon from '@/assets/images/kanban/svg/leads-icon.png'
-// import avatar2 from '@/assets/images/users/user2.png'
+import avatar2 from '@/assets/images/users/user2.png'
 // import ViewLeadModal from './ViewLeadModal.vue'
 import api from '@/plugins/axios'
 
