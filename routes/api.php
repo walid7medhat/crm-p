@@ -25,7 +25,7 @@ use App\Http\Controllers\Api\Listing\ProjectController;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Notifications\ListingAccessRequestNotification;
-
+use App\Http\Controllers\Api\SourceController;
 use App\Models\UserInvitation;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -34,7 +34,7 @@ Route::get('/test-email', function () {
     try {
         // Test basic email
         Mail::raw('This is a test email', function ($message) {
-            $message->to('maheKhalifa87@gmail.com')
+            $message->to('')
                     ->subject('Test Email');
         });
         
@@ -155,7 +155,8 @@ Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']
 Route::post('/leads/{lead}/assign-responsible-person', [LeadController::class, 'assignResponsiblePerson']);
 Route::get('/available-responsible-persons', [LeadController::class, 'getAvailableResponsiblePersons']);
 Route::post('/check-revert', [LeadController::class, 'checkRevert']);
-
+  // =================sources=============
+        Route::apiResource('sources', SourceController::class);
 Route::prefix('listings')->group(function(){
 
     Route::get('/{id}/comments', [ListingCommentController::class, 'index']);

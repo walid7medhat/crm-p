@@ -145,13 +145,13 @@
                       </span>
                       
                 </span>
-                  <span class="d-flex justify-content-between icons" v-if="property.number_of_bedrooms">
-                      <!--<i class="ri-hotel-bed-line me-1"></i>-->
-                      <img :src="bedIcon" class="imgicon"/>
-                       <span>
-                      {{ property.number_of_bedrooms == 0? 'Studio' : property.number_of_bedrooms }}
-                      </span>
-                 </span>
+                 <span class="d-flex justify-content-between icons" v-if="property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
+                  <img :src="bedIcon" class="imgicon"/>
+                  <span>
+                    {{ property.number_of_bedrooms == 0 ? 'Studio' : property.number_of_bedrooms }}
+                  </span>
+                </span>
+
                   <span class="d-flex justify-content-between icons">
                       <!--<i class="ri-water-flash-line me-1"></i>-->
                       <img :src="bathIcon" class="imgicon"/>
@@ -255,7 +255,7 @@ export default {
     const property2 = "/assets/images/b.jpeg";
     const property3 = "/assets/images/c.jpeg";
     const property4 = "/assets/images/a.jpeg";
-    const route = useRoute(); // ✅ استخدم useRoute هنا
+    const route = useRoute(); 
     const properties = ref([]);
     const isLoading = ref(false);
     const currentFilters = ref({});

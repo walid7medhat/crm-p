@@ -138,15 +138,13 @@
                                     </small>
                                 </td>
                                 <td>{{project.listing_count}}</td>
-                                <td>  <router-link
-                                        v-if="project.duplicated_project"
-                                        :to="`/projects/${project.duplicated_project.id}`"
-                                        class="text-danger text-decoration-underline"
-                                      >
-                                        {{ project.duplicated_project.title }}
-                                      </router-link>
-                                      
+                                <td> <router-link v-if="project.duplicated_project"
+                                                 :to="`/projects/${project.duplicated_project.id}`"
+                                                 class="text-danger text-decoration-underline">
+                                      {{ project.duplicated_project.title }}
+                                    </router-link>
                                     <span v-else class="text-muted">No</span>
+
                                 </td>
                                  <td>
                                     <div class="completion-indicator">

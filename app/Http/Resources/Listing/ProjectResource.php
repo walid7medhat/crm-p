@@ -14,12 +14,11 @@ class ProjectResource extends JsonResource
     // ->where('developer_id', $this->developer_id)
     // ->where('id', '!=', $this->id)
     // ->exists();
-$isDuplicated = Project::whereRaw(
+$duplicatedProject = Project::whereRaw(
         'LOWER(TRIM(title)) = ?',
         [strtolower(trim($this->title))]
     )
     ->where('id', '!=', $this->id)
-    ->select('id','title')
     ->first();
 
 
@@ -77,7 +76,11 @@ $isDuplicated = Project::whereRaw(
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
             'listing_count'=>$this->listings->count(),
-            'is_duplicated'=>$isDuplicated
+            'duplicated_project' => $duplicatedProject ? [
+                    'id' => $duplicatedProject->id,
+                    'title' => $duplicatedProject->title
+                ] : null,
+
         ];
     }
 }
