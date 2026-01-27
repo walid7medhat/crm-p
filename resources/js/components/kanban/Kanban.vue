@@ -1,6 +1,7 @@
 <template>
     <LeadSearchModal v-model="showSearchModal" />
     <CreateLeadModal v-model="showCreateModal" @lead-created="handleLeadCreated" />
+    <AddStageModal v-model="showAddStageModal" @stage-created="handleStageCreated" />
     <div class="kanban-main-wrapper">
         <b-tabs 
             v-model="activeTabIndex"
@@ -56,9 +57,25 @@
 
                     <!-- More Options -->
                     <div class="more-options-wrapper d-flex align-items-center gap-12">
-                        <button class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">
-                            <iconify-icon icon="lucide:more-vertical" class="text-lg font-weight-bold"></iconify-icon>
-                        </button>
+                        <b-dropdown 
+                            variant="link" 
+                            no-caret 
+                            toggle-class="action-icon-btn-dropdown p-0 border-0"
+                            menu-class="stage-dropdown-menu"
+                            right
+                        >
+                            <template #button-content>
+                                <button class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">
+                                    <iconify-icon icon="lucide:more-vertical" class="text-lg font-weight-bold"></iconify-icon>
+                                </button>
+                            </template>
+                            
+                            <b-dropdown-item @click="showAddStageModal = true" class="dropdown-item-custom">
+                                <img :src="addStage" alt="Add Stage" class="dropdown-icon" />
+                                <span class="dropdown-text">Add New Stage</span>
+                            </b-dropdown-item>
+                        </b-dropdown>
+                        
                         <button class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">
                             <img :src="leadsSettings" alt="Settings" />
                         </button>
@@ -74,12 +91,15 @@ import { ref, computed } from 'vue'
 import Leads from './leads.vue'
 import LeadSearchModal from './LeadSearchModal.vue'
 import CreateLeadModal from './CreateLeadModal.vue'
+import AddStageModal from './AddStageModal.vue'
 import leadsSettings from '@/assets/images/kanban/svg/leads-setting.svg'
-import { BTabs, BTab, BFormInput } from 'bootstrap-vue-3'
+import addStage from '@/assets/images/kanban/svg/add-stage.svg'
+import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem } from 'bootstrap-vue-3'
 
 const activeTab = ref('leads')
 const showSearchModal = ref(false)
 const showCreateModal = ref(false)
+const showAddStageModal = ref(false)
 const leadsRef = ref(null)
 
 const tabs = ref([
@@ -109,6 +129,13 @@ const handleLeadCreated = () => {
     if (leadsRef.value && typeof leadsRef.value.fetchLeads === 'function') {
         leadsRef.value.fetchLeads()
     }
+}
+
+const handleStageCreated = (stageData) => {
+    // Handle stage creation here
+    console.log('New stage created:', stageData)
+    // You can add API call here to save the stage
+    // After saving, you might want to refresh the stages list
 }
 </script>
 
@@ -207,11 +234,21 @@ const handleLeadCreated = () => {
     background: white;
     border-color: #E2E8F0 !important;
     transition: all 0.2s;
+    color: inherit;
 }
 
 .action-icon-btn:hover {
     background: #F8FAFC;
     border-color: #CBD5E1 !important;
+}
+
+.action-icon-btn:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+:deep(.action-icon-btn-dropdown .action-icon-btn) {
+    color: #1E293B !important;
 }
 
 .radius-circle {
@@ -313,5 +350,72 @@ const handleLeadCreated = () => {
     font-size: 20px;
     cursor: pointer;
     margin-right: 8px;
+}
+
+/* Dropdown Styles */
+:deep(.action-icon-btn-dropdown) {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    color: inherit !important;
+}
+
+:deep(.action-icon-btn-dropdown:hover),
+:deep(.action-icon-btn-dropdown:focus),
+:deep(.action-icon-btn-dropdown:active),
+:deep(.action-icon-btn-dropdown.show) {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: inherit !important;
+}
+
+:deep(.action-icon-btn-dropdown::after) {
+    display: none !important;
+}
+
+:deep(.stage-dropdown-menu) {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
+    padding: 8px;
+    min-width: 220px;
+    margin-top: 8px !important;
+}
+
+:deep(.dropdown-item-custom) {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px !important;
+    border-radius: 10px;
+    transition: all 0.2s;
+    border: none !important;
+    background: transparent !important;
+}
+
+:deep(.dropdown-item-custom:hover) {
+    background: #F8FAFC !important;
+}
+
+:deep(.dropdown-item-custom .dropdown-icon) {
+    font-size: 18px;
+    color: #666666;
+    vertical-align: middle !important;
+    margin-right: 10px;
+}
+
+:deep(.dropdown-item-custom .dropdown-text) {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666666;
+}
+
+:deep(.dropdown-item-custom:hover .dropdown-icon),
+:deep(.dropdown-item-custom:hover .dropdown-text) {
+    color: #0F172A;
 }
 </style>

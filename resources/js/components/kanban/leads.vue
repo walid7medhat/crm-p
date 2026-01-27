@@ -20,17 +20,17 @@
                                     </button>
                                     <ul class="dropdown-menu p-12 border bg-base shadow">
                                         <li>
-                                            <a href="#" class="duplicate-button dropdown-item px-16 py-8 rounded text-secondary-light bg-hover-neutral-200 text-hover-neutral-900 d-flex align-items-center gap-2" @click="duplicateColumn(column)">
-                                                <iconify-icon class="text-xl" icon="humbleicons:duplicate"></iconify-icon>
-                                                Duplicate
+                                            <a href="#" class="duplicate-button dropdown-item px-10 py-1 text-secondary-light bg-hover-neutral-200 text-hover-neutral-900 d-flex align-items-center gap-2" @click="editStage(column)">
+                                                <iconify-icon class="text-xs" icon="lucide:edit"></iconify-icon>
+                                                Edit Stage
                                             </a>
                                         </li>
-                                        <li>
+                                        <!-- <li>
                                             <a href="#" class="delete-button dropdown-item px-16 py-8 rounded text-secondary-light bg-hover-danger-200 text-hover-danger-900 d-flex align-items-center gap-2" @click="deleteColumn(index)">
                                                 <iconify-icon class="text-xl" icon="mingcute:delete-2-line"></iconify-icon>
                                                 Delete
                                             </a>
-                                        </li>
+                                        </li> -->
                                     </ul>
                                 </div>
                             </div>
@@ -110,7 +110,7 @@
     </div>
 
     <!-- View Lead Modal -->
-    <ViewLeadModal v-model="showViewModal" :lead="selectedLead" />
+    <ViewLeadModal v-model="showViewModal" :leadId="selectedLead" />
 
     <!-- Add/Edit Task Modal -->
     <div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
@@ -179,7 +179,7 @@ import draggable from 'vuedraggable'
 import avatar1 from '@/assets/images/users/user1.png'
 import leadsIcon from '@/assets/images/kanban/svg/leads-icon.png'
 import avatar2 from '@/assets/images/users/user2.png'
-// import ViewLeadModal from './ViewLeadModal.vue'
+import ViewLeadModal from './ViewLeadModal.vue'
 import api from '@/plugins/axios'
 
 // Import Bootstrap
@@ -247,7 +247,7 @@ function formatDate(dateString) {
 }
 
 function viewLead(task) {
-    selectedLead.value = task
+    selectedLead.value = task?.id
     showViewModal.value = true
 }
 
@@ -306,17 +306,8 @@ function deleteTask(taskId) {
     }
 }
 
-function duplicateColumn(column) {
-    const duplicatedColumn = {
-        ...column,
-        title: column.title,
-        leads: [...column.leads.map(task => ({ ...task, id: Date.now() + Math.random() }))],
-    }
-    columns.value.push(duplicatedColumn)
-}
-
-function deleteColumn(index) {
-    columns.value.splice(index, 1)
+function editStage(stage) {
+    console.log(stage)
 }
 
 async function onLeadDragChange(evt, column) {

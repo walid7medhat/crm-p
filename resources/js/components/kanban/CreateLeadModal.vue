@@ -8,50 +8,12 @@
         centered
         body-class="p-0"
     >
-        <div class="create-lead-modal-content p-4">
+        <div class="create-lead-modal-content p-3">
             <!-- Header with Close Button -->
-            <div class="d-flex justify-content-between align-items-center px-3 border-bottom">
-                <span class="modal-title">Create New Lead</span>
-                <button class="close-btn-top" @click="show = false">
-                    <iconify-icon icon="lucide:x"></iconify-icon>
-                </button>
-            </div>
+            <ModalHeader title="Create New Lead" @close="show = false" />
 
             <!-- Stage Selector -->
-            <div class="stage-selector-wrapper p-3 pb-0">
-                <div class="stage-container">
-                    <template v-for="(stage, index) in stages" :key="stage.id">
-                        <div 
-                            class="stage-pill"
-                            :class="{ 'active': index <= selectedStageIndex }"
-                            :style="{ 
-                                backgroundColor: index <= selectedStageIndex ? stage.color : 'transparent',
-                                borderColor: index <= selectedStageIndex ? stage.color : '#E2E8F0',
-                                zIndex: stages.length - index,
-                                marginLeft: index > 0 ? '-26px' : '0',
-                            }"
-                            @click="selectStage(index)"
-                        >
-                            <!-- Separator at the end -->
-                            <div v-if="index > 0" class="stage-separator">
-                                <iconify-icon 
-                                    icon="lucide:chevrons-right" 
-                                    class="separator-icon" 
-                                    :class="{ 'active-separator': index <= selectedStageIndex }"
-                                ></iconify-icon>
-                            </div>
-                            <div class="stage-circle">
-                                <div class="stage-dot" :style="{ backgroundColor: stage.color }"></div>
-                            </div>
-                            <span class="stage-text" :class="{ 'active-text': index <= selectedStageIndex }">
-                                {{ stage.name }}
-                            </span>
-
-                        
-                        </div>
-                    </template>
-                </div>
-            </div>
+            <StageSelector class="px-1" v-model="form.stage_id" />
 
             <!-- Form Content -->
             <div class="form-scroll-area">
@@ -337,6 +299,8 @@ import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
 import avatar1 from '@/assets/images/users/user1.png'
+import ModalHeader from './ModalHeader.vue'
+import StageSelector from './StageSelector.vue'
 
 const props = defineProps({
     modelValue: Boolean
@@ -352,13 +316,17 @@ const isLoadingUsers = ref(false)
 const isLoadingSources = ref(false)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
+const sourceOptions = ref([])
 
 watch(() => props.modelValue, (val) => {
     show.value = val
 })
 
 watch(show, (val) => {
-    emit('update:modelValue', val)
+    if (val) {
+        form.value.stage_id = null
+        emit('update:modelValue', null)
+    }
 })
 
 const fetchSources = async () => {
@@ -396,27 +364,8 @@ const fetchUsers = async () => {
     }
 }
 
-const fetchStages = async () => {
-    try {
-        const response = await api.get('/stages/kanban/stages-with-leads')
-        stages.value = response.data.data.map((stage, index) => ({
-            id: stage.id,
-            name: stage.name,
-            color: stage.color || getColorByIndex(index)
-        }))
-        
-        // Set default stage to first one
-        if (stages.value.length > 0) {
-            form.value.stage_id = stages.value[0].id
-        }
-    } catch (error) {
-        console.error('Error fetching stages:', error)
-    }
-}
-
 onMounted(() => {
     fetchUsers()
-    fetchStages()
     fetchSources()
 })
 
@@ -459,20 +408,6 @@ const form = ref({
     currency: null,
 })
 
-// Same color logic from leads.vue
-const colors = ['#7BD3EA', '#E3DA32', '#F2C934', '#8EC82F', '#00A74C']
-
-function getColorByIndex(index) {
-    return colors[index % colors.length]
-}
-
-const stages = ref([])
-const selectedStageIndex = ref(0)
-
-const selectStage = (index) => {
-    selectedStageIndex.value = index
-    form.value.stage_id = stages.value[index].id
-}
 
 const salutationOptions = [
     // { value: null, text: 'Not Selected' },
@@ -530,7 +465,7 @@ const bedroomOptions = [
 const resetForm = () => {
     form.value = {
         lead_name: '',
-        stage_id: stages.value.length > 0 ? stages.value[0].id : null,
+        stage_id: null,
         salutation: null,
         first_name: '',
         last_name: '',
@@ -543,17 +478,9 @@ const resetForm = () => {
         bedrooms: null,
         purpose_buying: null,
         responsible_person_id: 1,
-        // responsible_person: {
-        //     id: 1,
-        //     name: 'Ahmad Mahfoz',
-        //     email: 'testuseremail@gmail.com',
-        //     position: '--',
-        //     avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
-        // },
         budget: null,
         currency: null,
     }
-    selectedStageIndex.value = 0
 }
 
 const submitForm = async () => {
@@ -616,104 +543,6 @@ const submitForm = async () => {
     font-weight: 500;
     cursor: pointer;
     margin-bottom: 10px;
-}
-
-/* Stage Selector Styles */
-.stage-selector-wrapper {
-    /* border-bottom: 1px solid #F4F4F4; */
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-.stage-selector-wrapper::-webkit-scrollbar {
-    display: none;
-}
-
-.stage-container {
-    display: flex;
-    align-items: center;
-    padding: 4px;
-    border: 1px solid #E5E7EB; /* Blue outline as seen in image */
-    border-radius: 50px;
-    box-shadow: 1px 1px 5px 5px #00000005;
-    width: fit-content;
-    min-width: 100%;
-}
-
-.stage-pill {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 15px;
-    border-radius: 30px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    position: relative;
-}
-
-.stage-pill:not(:first-child) {
-    padding-left: 25px;
-}
-
-.stage-pill:not(.active) {
-    color: #94A3B8;
-}
-
-.stage-pill .active {
-   /* padding-left: 3px !important; */
-   /* border: 1px solid #ffff; */
-}
-
-.stage-circle {
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    border: 1px solid #E2E8F0;
-    background: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.stage-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-}
-
-.stage-text {
-    font-family: Montserrat;
-    font-weight: 400;
-    font-size: 13px;
-    color: #979797;
-}
-
-.stage-pill.active .stage-text {
-    color: #01062C;
-    font-weight: 400;
-}
-
-.stage-separator {
-    display: flex;
-    align-items: center;
-    color: #01062C;
-    flex-shrink: 0;
-    /* margin-left: 8px; */
-    /* margin-right: -12px; */
-    z-index: 2;
-}
-
-.active-separator {
-    color: #FFFF !important;
-    font-weight: 400 !important;
-}
-
-.separator-icon {
-    font-size: 20px;
-    font-weight: 400 !important;
-    color: #D9D9D9;
 }
 
 /* Form Styles */
@@ -846,11 +675,6 @@ const submitForm = async () => {
 :deep(.custom-v-select .vs__dropdown-option--selected) {
     background: #FAA300;
     color: #fff;
-}
-
-:deep(.custom-v-select .vs__clear) {
-    /* display: none; */
-    /* margin-bottom: 14px; */
 }
 
 /* Inline v-select for input groups */
