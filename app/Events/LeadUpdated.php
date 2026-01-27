@@ -6,7 +6,6 @@ use App\Models\Lead;
 use App\Models\User;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -16,143 +15,176 @@ class LeadUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $lead;
-    public $actionType; // 'created', 'updated', 'deleted', 'stage_changed', 'assigned'
-    public $userId;
-    public $changes;
+    public Lead $lead;
+    public string $actionType;
+    public ?int $userId;
+    public ?array $changes;
 
-    public function __construct(Lead $lead, $actionType = 'updated', $userId = null, $changes = null)
-    {
+    /**
+     * @param Lead $lead
+     * @param string $actionType
+     * @param int|null $userId
+     * @param array|null $changes
+     */
+    public function __construct(
+        Lead $lead,
+        string $actionType = 'updated',
+        ?int $userId = null,
+        ?array $changes = null
+    ) {
         $this->lead = $lead;
         $this->actionType = $actionType;
-        $this->userId = $userId ?? auth()->id();
+        $this->userId = $userId;
         $this->changes = $changes;
-        
-        // Load relationships for broadcasting
-        $this->lead->load(['stage', 'responsiblePerson', 'addedBy', 'participants', 'observers.user']);
+
+        // تحميل العلاقات بدون كسر لو null
+        $this->lead->loadMissing([
+            'stage',
+            'responsiblePerson',
+            'addedBy',
+            'participants',
+            'observers.user',
+        ]);
     }
 
-        public function broadcastOn()
-        {
-            // أعد المستخدمين الذين يمكنهم رؤية هذا الـ lead
-            $channels = $this->getUserChannels();
-            
-            return $channels;
-        }
+    /**
+     * القنوات اللي هيتبعت عليها الحدث
+     */
+    public function broadcastOn()
+    {
+        return $this->getUserChannels();
+    }
 
+    /**
+     * اسم الحدث
+     */
     public function broadcastAs()
     {
-            return new Channel('lead.updated');
-
+        return 'lead.updated';
     }
 
-    public function broadcastWith()
+    /**
+     * الداتا اللي بتتبعت
+     */
+    public function broadcastWith(): array
     {
         return [
-            'lead' => new \App\Http\Resources\Lead\LeadResource($this->lead),
+            'lead'        => new \App\Http\Resources\Lead\LeadResource($this->lead),
             'action_type' => $this->actionType,
-            'user_id' => $this->userId,
-            'user_name' => auth()->user()->name,
-            'changes' => $this->changes,
-            'message' => $this->getMessage(),
-            'timestamp' => now()->toISOString()
+            'user_id'     => $this->userId,
+            'user_name'   => $this->getActorName(),
+            'changes'     => $this->changes,
+            'message'     => $this->getMessage(),
+            'timestamp'   => now()->toISOString(),
         ];
     }
 
-    private function getMessage()
+    /**
+     * اسم الشخص اللي عمل الأكشن
+     */
+    private function getActorName(): string
     {
-        $userName = auth()->user()->name;
+        if ($this->userId) {
+            return User::find($this->userId)?->name ?? 'System';
+        }
+
+        return 'Integration';
+    }
+
+    /**
+     * رسالة الحدث
+     */
+    private function getMessage(): string
+    {
+        $userName = $this->getActorName();
         $leadName = $this->lead->lead_name ?: "Lead #{$this->lead->lead_number}";
 
         switch ($this->actionType) {
             case 'created':
                 return "{$userName} created a new lead: {$leadName}";
+
             case 'updated':
                 return "{$userName} updated lead: {$leadName}";
+
             case 'deleted':
                 return "{$userName} deleted lead: {$leadName}";
+
             case 'stage_changed':
                 $oldStage = $this->changes['old_stage'] ?? 'Previous Stage';
-                $newStage = $this->changes['new_stage'] ?? $this->lead->stage->name;
+                $newStage = $this->lead->stage?->name ?? 'New Stage';
                 return "{$userName} moved lead {$leadName} from {$oldStage} to {$newStage}";
+
             case 'assigned':
                 $oldPerson = $this->changes['old_person'] ?? 'Previous Person';
-                $newPerson = $this->changes['new_person'] ?? $this->lead->responsiblePerson->name;
+                $newPerson = $this->lead->responsiblePerson?->name ?? 'Unassigned';
                 return "{$userName} assigned lead {$leadName} from {$oldPerson} to {$newPerson}";
+
             default:
                 return "Lead {$leadName} has been updated";
         }
     }
 
     /**
-     * الحصول على قنوات جميع المستخدمين الذين يمكنهم رؤية الـ lead
+     * قنوات المستخدمين اللي ليهم علاقة بالـ lead
      */
-    private function getUserChannels()
+    private function getUserChannels(): array
     {
         $channels = [];
-            // $channels[] = new PrivateChannel('user.24' );
-        
-        // 1. الـ User المسؤول عن الـ lead
+
         if ($this->lead->responsible_person_id) {
             $channels[] = new PrivateChannel('user.' . $this->lead->responsible_person_id);
         }
 
-        // 2. الـ User الذي أضاف الـ lead
         if ($this->lead->added_by) {
             $channels[] = new PrivateChannel('user.' . $this->lead->added_by);
         }
 
-        // 3. جميع الـ Participants
-        foreach ($this->lead->participants as $participant) {
-            // إذا كان participant لديه user_id
+        foreach ($this->lead->participants ?? [] as $participant) {
             if ($participant->user_id) {
                 $channels[] = new PrivateChannel('user.' . $participant->user_id);
             }
         }
 
-        // 4. جميع الـ Observers
-        foreach ($this->lead->observers as $observer) {
+        foreach ($this->lead->observers ?? [] as $observer) {
             if ($observer->user_id) {
                 $channels[] = new PrivateChannel('user.' . $observer->user_id);
             }
         }
 
-        // 5. الـ Managers والـ Team Leads الذين يشرفون على responsible person
+        // hierarchy managers
         if ($this->lead->responsible_person_id) {
-            $responsibleUser = \App\Models\User::find($this->lead->responsible_person_id);
+            $responsibleUser = User::find($this->lead->responsible_person_id);
+
             if ($responsibleUser) {
-                // الحصول على جميع المدراء وفريق leads فوق هذا المستخدم
-                $managers = $this->getManagersHierarchy($responsibleUser);
-                foreach ($managers as $managerId) {
+                foreach ($this->getManagersHierarchy($responsibleUser) as $managerId) {
                     $channels[] = new PrivateChannel('user.' . $managerId);
                 }
             }
         }
 
-        // 6. إزالة التكرارات
-        $uniqueChannels = collect($channels)->unique(function ($channel) {
-            return $channel->name;
-        })->values()->all();
-
-        return $uniqueChannels;
+        return collect($channels)
+            ->unique(fn ($channel) => $channel->name)
+            ->values()
+            ->all();
     }
 
     /**
-     * الحصول على جميع المدراء في التسلسل الهرمي
+     * المدراء الأعلى في الهيكل الإداري
      */
-    private function getManagersHierarchy(User $user)
+    private function getManagersHierarchy(User $user): array
     {
         $managerIds = [];
         $currentUser = $user;
 
         while ($currentUser->parent_id) {
-            $parent = \App\Models\User::find($currentUser->parent_id);
-            if ($parent) {
-                $managerIds[] = $parent->id;
-                $currentUser = $parent;
-            } else {
+            $parent = User::find($currentUser->parent_id);
+
+            if (!$parent) {
                 break;
             }
+
+            $managerIds[] = $parent->id;
+            $currentUser = $parent;
         }
 
         return array_unique($managerIds);

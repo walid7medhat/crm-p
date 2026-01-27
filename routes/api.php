@@ -97,6 +97,8 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
     Route::get('/kanban/leads-by-stage/{stage}', [StageController::class, 'getLeadsByStage']);
 
 });
+Route::get('leads/integration', [LeadController::class,'storeIntegration']);
+
 Route::middleware(['jwt.auth'])->group(function () {
     Route::get('dashboard/stats',[DashboardController::class,'getStats']);
     Route::get('/dashboard/listings-statistics', [DashboardController::class, 'getListingsStatistics']);

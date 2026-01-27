@@ -16,7 +16,7 @@ class LeadRequest extends FormRequest
         $rules = [
             'lead_name' => 'required|string|max:255',
             'lead_number' => 'string|unique:leads,lead_number',
-            'stage_id' => 'required|exists:stages,id',
+            'stage_id' => 'nullable|exists:stages,id',
             
             // Contact Information
             'salutation' => 'nullable|string|max:10',

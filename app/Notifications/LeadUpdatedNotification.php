@@ -19,7 +19,7 @@ class LeadUpdatedNotification extends Notification
     public $user;
     public $changes;
 
-    public function __construct(Lead $lead, $actionType, User $user, $changes = null)
+public function __construct(Lead $lead, string $actionType, ?User $user = null, ?array $changes = null)
     {
         $this->lead = $lead;
         $this->actionType = $actionType;
@@ -39,8 +39,8 @@ class LeadUpdatedNotification extends Notification
             'lead_name' => $this->lead->lead_name,
             'lead_number' => $this->lead->lead_number,
             'action_type' => $this->actionType,
-            'user_id' => $this->user->id,
-            'user_name' => $this->user->name,
+            'user_id' => $this->user?->id,
+            'user_name' => $this->user?->name,
             'changes' => $this->changes,
             'message' => $this->getMessage(),
             'timestamp' => now()->toISOString()
@@ -58,8 +58,8 @@ class LeadUpdatedNotification extends Notification
                 'responsible_person_id' => $this->lead->responsible_person_id,
             ],
             'action_type' => $this->actionType,
-            'user_id' => $this->user->id,
-            'user_name' => $this->user->name,
+            'user_id' => $this->user?->id,
+            'user_name' => $this->user?->name,
             'changes' => $this->changes,
             'message' => $this->getMessage(),
             'timestamp' => now()->toISOString()
@@ -69,7 +69,7 @@ class LeadUpdatedNotification extends Notification
     public function getMessage()
     {
         $leadName = $this->lead->lead_name ?: "Lead #{$this->lead->lead_number}";
-        $userName = $this->user->name;
+$userName = $this->user?->name ?? 'Integration';
 
         switch ($this->actionType) {
             case 'created':

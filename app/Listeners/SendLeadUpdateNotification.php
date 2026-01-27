@@ -15,12 +15,10 @@ class SendLeadUpdateNotification
         $lead = $event->lead;
         $user = User::find($event->userId);
         
-        // الحصول على جميع المستخدمين الذين يمكنهم رؤية الـ lead
         $usersToNotify = $this->getUsersToNotify($lead);
         
         foreach ($usersToNotify as $notifyUser) {
-            // تجنب إرسال إشعار للمستخدم نفسه
-            if ($notifyUser->id !== $user->id) {
+            if (!$user || $notifyUser->id !== $user->id ) {
                 $notifyUser->notify(new LeadUpdatedNotification(
                     $lead, 
                     $event->actionType, 

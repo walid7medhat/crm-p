@@ -109,7 +109,9 @@ class LeadController extends Controller
                     return ApiResponse::error('Responsible person must be an admin, manager, or team lead', 422);
                 }
             }
-
+          if(!$request->stage_id){
+              $leadData['stage_id']=Stage::orderBy('order','asc')->first()->id;
+          }
             $lead = Lead::create($leadData);
 
             if (!empty($participants)) {
@@ -436,4 +438,46 @@ class LeadController extends Controller
             return ApiResponse::error('Failed to check and revert leads: ' . $e->getMessage());
         }
     }
+    public function storeIntegration(LeadRequest $request): JsonResponse
+{
+
+    try {
+        $leadData = $request->validated();
+
+
+
+        $leadData['last_stage_change_at'] = now();
+        $leadData['lead_number'] = null;
+
+        // responsible person
+        $leadData['responsible_person_id'] = $leadData['responsible_person_id'] 
+            ?? config('leads.default_manager');
+
+        // default stage
+        $firstStage = Stage::orderBy('order','asc')->first();
+        $leadData['stage_id'] = $leadData['stage_id'] 
+            ?? ($firstStage ? $firstStage->id : null);
+
+        $lead = Lead::create($leadData);
+
+       
+
+        broadcast(new LeadUpdated($lead, 'created'));
+
+        return  ApiResponse::success('success' );
+
+    } catch (\Throwable $e) {
+
+    return response()->json([
+        'success' => false,
+        'error' => [
+            'message' => $e->getMessage(),
+            'file'    => $e->getFile(),
+            'line'    => $e->getLine(),
+            'code'    => $e->getCode(),
+            'trace'   => collect($e->getTrace())->take(10), // أول 10 كفاية
+        ]
+    ], 500);
+}}
+
 }
