@@ -6,12 +6,14 @@
             :ghost-class="'ghost'" :drag-class="'dragging'">
             <template #item="{ element: column, index }">
                 <div class="kanban-column radius-12 d-flex flex-column" :style="{ '--column-color': column.color }">
-                    <div class="card p-0 radius-12 overflow-hidden shadow-none border-0 bg-transparent h-100 d-flex flex-column">
+                    <div class=" p-0 overflow-hidden shadow-none border-0 bg-transparent h-100 d-flex flex-column">
                         <div class="card-body p-0 d-flex flex-column h-100">
                             <!-- Column Header -->
                             <div class="column-header d-flex align-items-center justify-content-between p-11 cursor-move flex-shrink-0" :style="{ backgroundColor: column.color }">
                                 <div class="d-flex align-items-center gap-2">
-                                    <img :src="leadsIcon" alt="" class="leads-icon">
+                                    <div class="stage-circle">
+                                        <div class="stage-dot" :style="{ backgroundColor: column.color }"></div>
+                                    </div>
                                     <p class="header-title">{{ column.title }} ({{ column.leads.length }})</p>
                                 </div>
                                 <div class="dropdown">
@@ -786,6 +788,24 @@ const $showNotification = (message, type = 'info') => {
 .ghost {
     opacity: 0.5;
     background: #c8ebfb;
+}
+
+.stage-circle {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    border: 1px solid #E2E8F0;
+    background: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.stage-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
 }
 
 .dragging {
