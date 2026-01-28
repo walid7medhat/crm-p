@@ -97,18 +97,18 @@ class LeadController extends Controller
             $leadData['added_by'] = $user->id;
             $leadData['last_stage_change_at'] = now();
 
-            if (!empty($leadData['responsible_person_id']) && $user->hasRole(['super_admin','admin', 'manager', 'team_lead'])) {
-                $leadData['responsible_person_id'] = $user->id;
-            } else {
-                if (empty($leadData['responsible_person_id'])) {
-                    return ApiResponse::error('Responsible person is required', 422);
-                }
+            // if (!empty($leadData['responsible_person_id']) && $user->hasRole(['super_admin','admin', 'manager', 'team_lead'])) {
+            //     $leadData['responsible_person_id'] = $user->id;
+            // } else {
+            //     if (empty($leadData['responsible_person_id'])) {
+            //         return ApiResponse::error('Responsible person is required', 422);
+            //     }
                 
-                $responsiblePerson = User::find($leadData['responsible_person_id']);
-                if (!$responsiblePerson->hasRole(['admin', 'manager', 'team_lead'])) {
-                    return ApiResponse::error('Responsible person must be an admin, manager, or team lead', 422);
-                }
-            }
+            //     $responsiblePerson = User::find($leadData['responsible_person_id']);
+            //     if (!$responsiblePerson->hasRole(['admin', 'manager', 'team_lead'])) {
+            //         return ApiResponse::error('Responsible person must be an admin, manager, or team lead', 422);
+            //     }
+            // }
           if(!$request->stage_id){
               $leadData['stage_id']=Stage::orderBy('order','asc')->first()->id;
           }

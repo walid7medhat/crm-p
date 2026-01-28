@@ -57,6 +57,12 @@ class SendLeadUpdateNotification
             }
         }
         
+        // 5. Admin & Super Admin 🔥
+    $admins = User::whereHas('roles', function ($q) {
+        $q->whereIn('name', ['admin', 'super_admin']);
+    })->get();
+
+    $users = $users->merge($admins);
         // إزالة التكرارات والقيم الفارغة
         return $users->filter()->unique('id');
     }

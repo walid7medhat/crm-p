@@ -161,7 +161,14 @@ class LeadUpdated implements ShouldBroadcast
                 }
             }
         }
+    // ✅ Admin & Super Admin
+    $admins = User::whereHas('roles', function ($q) {
+        $q->whereIn('name', ['admin', 'super_admin']);
+    })->pluck('id');
 
+    foreach ($admins as $adminId) {
+        $channels[] = new PrivateChannel('user.' . $adminId);
+    }
         return collect($channels)
             ->unique(fn ($channel) => $channel->name)
             ->values()
