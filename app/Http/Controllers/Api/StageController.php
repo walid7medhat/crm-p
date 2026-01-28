@@ -131,10 +131,10 @@ class StageController extends Controller
             
             $stages = Stage::with(['leads' => function($query) use ($user) {
                 // Apply lead visibility based on user role
-                if (($user->hasRole('super_admin') || $user->hasRole('admin'))) {
+                if (($user->hasRole('super_admin') )) {
                     // Admin sees all leads
                 } 
-                elseif ($user->hasRole(['manager', 'team_lead'])) {
+                elseif ($user->hasAnyRole(['manager', 'team_lead','admin'])) {
                     $subordinatesIds = $user->getAllSubordinatesIds();
                     
                     $query->where(function($q) use ($subordinatesIds, $user) {

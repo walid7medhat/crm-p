@@ -15,9 +15,9 @@ class Stage extends Model
         $leads= $this->hasMany(Lead::class);
         
              $user=auth()->user();
-             if ($user->hasAnyRole(['admin', 'super_admin'])) {
+             if ($user->hasAnyRole([ 'super_admin'])) {
              }
-            elseif ($user->hasRole(['manager', 'team_lead'])) {
+            elseif ($user->hasAnyRole(['manager', 'team_lead','admin'])) {
                 $subordinatesIds = $user->getAllSubordinatesIds();
                 
                 $leads = $leads->where(function($query) use ($subordinatesIds, $user) {

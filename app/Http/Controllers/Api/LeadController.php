@@ -47,9 +47,9 @@ class LeadController extends Controller
                     'observers.user'
                 ]);
         
-                if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+                if ($user->hasRole('super_admin') ) {
                     $leads = $leadsQuery->latest()->get();
-                } elseif ($user->hasRole(['manager', 'team_lead'])) {
+                } elseif ($user->hasAnyRole(['manager', 'team_lead','admin'])) {
                     $subordinatesIds = $user->getAllSubordinatesIds();
                     $leads = $leadsQuery->where(function($query) use ($subordinatesIds, $user) {
                                 $query->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]))
@@ -313,13 +313,31 @@ class LeadController extends Controller
             $user = auth()->user();
 
             if (($user->hasRole('admin') || $user->hasRole('super_admin'))) {
-                $responsiblePersons = User::role([ 'team_lead','sales','manager'])->get(['id', 'name', 'email']);
+               $responsiblePersons = User::role(['team_lead', 'sales', 'manager'])
+                ->get(['id', 'name', 'email', 'avatar'])
+                ->map(function($user) {
+                    return [
+                        'id'     => $user->id,
+                        'name'   => $user->name,
+                        'email'  => $user->email,
+                        'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                    ];
+                });
+
             } 
             elseif ($user->hasRole(['manager', 'team_lead'])) {
                 $subordinatesIds = $user->getAllSubordinatesIds();
                 $responsiblePersons = User::role(['team_lead','sales'])
                     ->whereIn('id', $subordinatesIds)
-                    ->get(['id', 'name', 'email']);
+                    ->get(['id', 'name', 'email','avatar'])
+                     ->map(function($user) {
+                    return [
+                                'id'     => $user->id,
+                                'name'   => $user->name,
+                                'email'  => $user->email,
+                                'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                            ];
+                        });
             }
             else {
                 return ApiResponse::error('You are not authorized to view responsible persons list', 403);
