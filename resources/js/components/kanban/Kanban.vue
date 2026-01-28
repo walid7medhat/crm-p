@@ -87,7 +87,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import Leads from './leads.vue'
 import LeadSearchModal from './LeadSearchModal.vue'
 import CreateLeadModal from './CreateLeadModal.vue'
@@ -250,21 +250,46 @@ const cleanup = () => {
     }
 }
 
-const handleLeadCreated = () => {
+const handleLeadCreated = async () => {
+    console.log('🎯 handleLeadCreated triggered')
+    console.log('leadsRef.value:', leadsRef.value)
+    
+    // Wait for DOM to update
+    await nextTick()
+    
     // Refetch leads data when a new lead is created
-    if (leadsRef.value && typeof leadsRef.value.fetchLeads === 'function') {
-        leadsRef.value.fetchLeads()
-        $showNotification('Lead created successfully!', 'success')
+    if (leadsRef.value) {
+        // Handle array of refs (from v-for)
+        const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+        
+        console.log('leadsComponent:', leadsComponent)
+        console.log('fetchLeads method exists:', typeof leadsComponent?.fetchLeads === 'function')
+        
+        if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+            console.log('✅ Calling fetchLeads immediately after lead creation')
+            await leadsComponent.fetchLeads()
+            console.log('✅ fetchLeads completed')
+        } else {
+            console.error('❌ fetchLeads method not found on leads component')
+        }
+    } else {
+        console.error('❌ leadsRef.value is null or undefined')
     }
 }
 
 const handleStageCreated = async (stageData) => {
-    // Handle stage creation here
+    console.log('🎯 handleStageCreated triggered')
     console.log('New stage created:', stageData)
     
     // Refresh the leads view to show the new stage
-    if (leadsRef.value && typeof leadsRef.value.fetchLeads === 'function') {
-        await leadsRef.value.fetchLeads()
+    if (leadsRef.value) {
+        // Handle array of refs (from v-for)
+        const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+        
+        if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+            console.log('✅ Calling fetchLeads immediately after stage creation')
+            await leadsComponent.fetchLeads()
+        }
     }
     
     $showNotification('Stage created successfully!', 'success')

@@ -201,17 +201,20 @@ function getColorByIndex(index) {
 }
 
 const fetchLeads = async () => {
+    console.log('📥 fetchLeads() called - Fetching latest leads from server...')
     try {
         const response = await api.get('/stages/kanban/stages-with-leads')
-        columns.value = response.data.data.map((stage, index) => ({
+        const newData = response.data.data.map((stage, index) => ({
             title: stage.name,
             status: stage.id, // Use ID for stage changes
             color: stage.color || getColorByIndex(index),
             leads: stage.leads || []
         }))
+        
+        columns.value = newData
         loading.value = false
     } catch (error) {
-        console.error('Error fetching stages:', error)
+        console.error('❌ Error fetching stages:', error)
         error.value = error.message || 'Failed to load data'
         loading.value = false
     }

@@ -729,7 +729,9 @@ const submitForm = async () => {
         // Success: close modal, reset form, and emit event to refetch leads
         show.value = false
         resetForm()
-        emit('lead-created')
+        
+        console.log('📤 Emitting lead-created event to parent')
+        emit('lead-created', response.data)
         
         // Show success notification
         $showNotification('Lead created successfully!', 'success')
