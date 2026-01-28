@@ -174,18 +174,25 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import draggable from 'vuedraggable'
 import avatar1 from '@/assets/images/users/user1.png'
 import leadsIcon from '@/assets/images/kanban/svg/leads-icon.png'
 import avatar2 from '@/assets/images/users/user2.png'
 import ViewLeadModal from './ViewLeadModal.vue'
 import api from '@/plugins/axios'
+import Swal from 'sweetalert2'
 
 // Import Bootstrap
 import * as bootstrap from 'bootstrap'
 
 const columns = ref([])
+const responsiblePersons = ref([])
+const loading = ref(true)
+const error = ref(null)
+
+const echoListeners = ref([])
+const pollingInterval = ref(null)
 
 const colors = ['#7BD3EA', '#E3DA32', '#F2C934', '#8EC82F', '#00A74C']
 
@@ -202,19 +209,308 @@ const fetchLeads = async () => {
             color: stage.color || getColorByIndex(index),
             leads: stage.leads || []
         }))
+        loading.value = false
     } catch (error) {
         console.error('Error fetching stages:', error)
+        error.value = error.message || 'Failed to load data'
+        loading.value = false
     }
 }
 
-onMounted(() => {
-    fetchLeads()
+// Fetch responsible persons
+async function fetchResponsiblePersons() {
+    try {
+        console.log('Fetching responsible persons...')
+        const response = await api.get('/available-responsible-persons')
+        
+        if (response.data && response.data.data) {
+            responsiblePersons.value = response.data.data
+            console.log('Responsible persons loaded:', responsiblePersons.value.length)
+        } else {
+            responsiblePersons.value = []
+        }
+    } catch (error) {
+        console.error('Error fetching responsible persons:', error)
+        // Don't throw error for this, we can still work without it
+    }
+}
+
+onMounted(async () => {
+    await Promise.all([
+        fetchLeads(),
+        fetchResponsiblePersons()
+    ])
+    
+    setTimeout(() => {
+        initializeLeadUpdates()
+    }, 1000)
+})
+
+onUnmounted(() => {
+    cleanup()
 })
 
 // Expose fetchLeads so parent can call it
 defineExpose({
     fetchLeads
 })
+
+// Initialize real-time updates with Echo/Pusher
+const initializeLeadUpdates = () => {
+    const user = JSON.parse(localStorage.getItem('user'))
+    if (!user || !window.Echo) {
+        console.log('❌ Real-time updates not available, using polling...')
+        console.log('User:', user ? '✅' : '❌')
+        console.log('Echo:', window.Echo ? '✅' : '❌')
+        startPolling()
+        return
+    }
+
+    console.log('🔔 Leads Kanban: Initializing real-time updates for user:', user.id)
+    console.log('📡 Subscribing to channel:', `user.${user.id}`)
+    console.log('📡 Listening for event:', '.lead.updated')
+
+    try {
+        const channel = window.Echo.private(`user.${user.id}`)
+        
+        // Log subscription success
+        channel.subscribed(() => {
+            console.log('✅ Successfully subscribed to private channel:', `user.${user.id}`)
+        })
+        
+        // Log subscription error
+        channel.error((error) => {
+            console.error('❌ Channel subscription error:', error)
+            console.error('Channel:', `user.${user.id}`)
+            console.error('This usually means authorization failed. Check:')
+            console.error('1. Token is valid:', !!localStorage.getItem('token'))
+            console.error('2. Backend broadcasting/auth route is working')
+            console.error('3. User is authenticated')
+            startPolling()
+        })
+        
+        // Listen for lead updates
+        channel.listen('.lead.updated', (event) => {
+            console.log('🎉 Leads Kanban: Real-time update received!')
+            console.log('Action type:', event.action_type)
+            console.log('Event data:', event)
+            handleLeadUpdate(event)
+        })
+
+        echoListeners.value.push(channel)
+    } catch (error) {
+        console.error('❌ Failed to initialize Echo:', error)
+        startPolling()
+    }
+}
+
+const handleLeadUpdate = (event) => {
+    console.log('📊 Handling lead update:', event.action_type)
+    console.log('📦 Event data:', event)
+    
+    const leadData = event.lead?.data || event.lead
+    
+    if (!leadData || !leadData.id) {
+        console.error('❌ Invalid lead data:', event.lead)
+        return
+    }
+    
+    switch (event.action_type) {
+        case 'created':
+            handleNewLead(leadData)
+            break
+        case 'updated':
+        case 'assigned':
+            handleUpdatedLead(leadData)
+            break
+        case 'deleted':
+            handleDeletedLead(leadData)
+            break
+        case 'stage_changed':
+            handleStageChanged(leadData, event.changes)
+            break
+    }
+    
+    showLeadNotification(event)
+}
+
+const handleNewLead = (lead) => {
+    if (!lead || !lead.id || !lead.stage_id) {
+        console.error('❌ Invalid lead data in handleNewLead:', lead)
+        return
+    }
+    
+    const columnIndex = columns.value.findIndex(col => col.status === lead.stage_id)
+    if (columnIndex !== -1) {
+        if (!columns.value[columnIndex].leads) {
+            columns.value[columnIndex].leads = []
+        }
+        
+        const existingIndex = columns.value[columnIndex].leads.findIndex(l => l && l.id === lead.id)
+        if (existingIndex === -1) {
+            columns.value[columnIndex].leads.unshift(lead)
+        }
+    }
+}
+
+const handleDeletedLead = (lead) => {
+    const leadId = lead?.data?.id || lead?.id
+    if (!leadId) {
+        console.error('❌ Invalid lead data in handleDeletedLead:', lead)
+        return
+    }
+    
+    for (const column of columns.value) {
+        if (column.leads) {
+            const index = column.leads.findIndex(l => l && l.id === leadId)
+            if (index !== -1) {
+                column.leads.splice(index, 1)
+                break
+            }
+        }
+    }
+}
+
+const handleUpdatedLead = (lead) => {
+    for (const column of columns.value) {
+        if (column.leads) {
+            const index = column.leads.findIndex(l => l && l.id === lead.id)
+            if (index !== -1) {
+                if (column.status !== lead.stage_id) {
+                    // Lead moved to different stage
+                    column.leads.splice(index, 1)
+                    const newColumnIndex = columns.value.findIndex(c => c.status === lead.stage_id)
+                    if (newColumnIndex !== -1) {
+                        if (!columns.value[newColumnIndex].leads) {
+                            columns.value[newColumnIndex].leads = []
+                        }
+                        columns.value[newColumnIndex].leads.unshift(lead)
+                    }
+                } else {
+                    // Update in same stage
+                    column.leads[index] = lead
+                }
+                break
+            }
+        }
+    }
+}
+
+const handleStageChanged = (lead, changes) => {
+    console.log('🔄 Stage changed:', lead, changes)
+    
+    const leadId = lead?.data?.id || lead?.id
+    const leadStageId = lead?.data?.stage_id || lead?.stage_id
+    
+    if (!leadId || !leadStageId) {
+        console.error('❌ Lead ID or Stage ID is missing:', lead)
+        return
+    }
+    
+    for (const column of columns.value) {
+        if (column.leads) {
+            const index = column.leads.findIndex(l => l && l.id === leadId)
+            if (index !== -1) {
+                if (column.status !== leadStageId) {
+                    column.leads.splice(index, 1)
+                    
+                    const newColumnIndex = columns.value.findIndex(c => c.status === leadStageId)
+                    if (newColumnIndex !== -1) {
+                        if (!columns.value[newColumnIndex].leads) {
+                            columns.value[newColumnIndex].leads = []
+                        }
+                        columns.value[newColumnIndex].leads.unshift(lead.data || lead)
+                    }
+                }
+                break
+            }
+        }
+    }
+}
+
+const showLeadNotification = (event) => {
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+    })
+
+    const leadData = event.lead?.data || event.lead
+    const leadName = leadData?.lead_name || leadData?.lead_number || 'Unknown Lead'
+    const leadNumber = leadData?.lead_number ? `#${leadData.lead_number}` : ''
+    
+    const userName = event.user_name || 'Someone'
+
+    let title = ''
+    let icon = 'info'
+
+    switch (event.action_type) {
+        case 'created':
+            title = `📝 New Lead: ${leadName} ${leadNumber}`
+            icon = 'success'
+            break
+        case 'updated':
+            title = `✏️ ${userName} updated: ${leadName} ${leadNumber}`
+            icon = 'info'
+            break
+        case 'assigned':
+            title = `👤 ${userName} assigned: ${leadName} ${leadNumber}`
+            icon = 'warning'
+            break
+        case 'stage_changed':
+            title = `🔄 ${userName} moved: ${leadName} ${leadNumber}`
+            icon = 'info'
+            break
+        case 'deleted':
+            title = `🗑️ ${userName} deleted: ${leadName} ${leadNumber}`
+            icon = 'error'
+            break
+        default:
+            title = `📊 Lead updated: ${leadName} ${leadNumber}`
+    }
+
+    Toast.fire({
+        icon: icon,
+        title: title,
+        text: event.message || 'Lead has been updated'
+    })
+}
+
+const startPolling = () => {
+    console.log('🔄 Leads Kanban: Starting polling every 15 seconds')
+    pollingInterval.value = setInterval(async () => {
+        await fetchLeads()
+    }, 15000)
+}
+
+const cleanup = () => {
+    console.log('🧹 Cleaning up Echo listeners and polling...')
+    
+    echoListeners.value.forEach(channel => {
+        if (channel) {
+            try {
+                // Stop listening to specific events
+                channel.stopListening('.lead.updated')
+                console.log('✅ Stopped listening to .lead.updated')
+            } catch (error) {
+                console.error('Error stopping listener:', error)
+            }
+        }
+    })
+    echoListeners.value = []
+
+    if (pollingInterval.value) {
+        clearInterval(pollingInterval.value)
+        pollingInterval.value = null
+        console.log('✅ Polling cleared')
+    }
+}
 
 const currentTask = ref({
     id: null,
@@ -258,7 +554,7 @@ function openModal(task = null, status = '') {
     } else {
         currentTask.value = {
             id: Date.now(),
-            title: 'Compleate CRM From “Mamsha Gardens Plots”',
+            title: 'Compleate CRM From "Mamsha Gardens Plots"',
             name: '',
             source: '',
             branchSource: '',
@@ -319,15 +615,44 @@ async function onLeadDragChange(evt, column) {
             await api.post(`/leads/${lead.id}/change-stage`, {
                 stage_id: newStageId
             })
+            console.log('✅ Lead stage changed successfully')
         } catch (error) {
-            console.error('Error changing lead stage:', error)
-            // Optional: Revert the UI change if API fails
-            // This would require more complex state management
+            console.error('❌ Error changing lead stage:', error)
+            // Revert the UI change if API fails
+            await fetchLeads()
+            $showNotification('Failed to move lead', 'error')
         }
     }
 }
 
-
+// Notification helper
+const $showNotification = (message, type = 'info') => {
+    if (window.$showNotification) {
+        window.$showNotification(message, type)
+    } else {
+        console.log(`${type}: ${message}`)
+        // Fallback notification using Swal
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        })
+        
+        const iconMap = {
+            'success': 'success',
+            'error': 'error',
+            'warning': 'warning',
+            'info': 'info'
+        }
+        
+        Toast.fire({
+            icon: iconMap[type] || 'info',
+            title: message
+        })
+    }
+}
 </script>
 
 

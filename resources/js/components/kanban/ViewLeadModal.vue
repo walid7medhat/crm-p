@@ -55,12 +55,13 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { BModal, BDropdown } from 'bootstrap-vue-3'
 import StageSelector from './StageSelector.vue'
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
+import Swal from 'sweetalert2'
 
 const props = defineProps({
     modelValue: Boolean,
@@ -70,26 +71,98 @@ const props = defineProps({
     }
 })
 const lead = ref(null)
-const emit = defineEmits(['update:modelValue', 'stage-updated'])
+const emit = defineEmits(['update:modelValue', 'stage-updated', 'lead-updated'])
 
 const show = ref(props.modelValue)
 const leadStageId = ref(null)
 const activeTab = ref('general')
+const echoListener = ref(null)
 
 const switchTab = (tab) => {
     activeTab.value = tab
 }
 
-// mounted(() => {
-    // if (props.leadId) {
-    //     fetchLead()
-    // }
-// })
-
 const fetchLead = async () => {
-    const response = await api.get(`/leads/${props.leadId}`)
-    lead.value = response.data.data
+    try {
+        const response = await api.get(`/leads/${props.leadId}`)
+        lead.value = response.data.data
+        console.log('✅ Lead fetched:', lead.value)
+    } catch (error) {
+        console.error('❌ Error fetching lead:', error)
+        $showNotification('Failed to load lead details', 'error')
+    }
 }
+
+// Initialize real-time updates for this specific lead
+const initializeLeadListener = () => {
+    if (!props.leadId) return
+    
+    const user = JSON.parse(localStorage.getItem('user'))
+    if (!user || !window.Echo) {
+        console.log('❌ Real-time updates not available for lead modal')
+        return
+    }
+
+    console.log('🔔 ViewLeadModal: Listening for lead updates:', props.leadId)
+
+    try {
+        echoListener.value = window.Echo.private(`user.${user.id}`)
+            .listen('.lead.updated', (event) => {
+                const leadData = event.lead?.data || event.lead
+                
+                // Only handle updates for this specific lead
+                if (leadData && leadData.id === props.leadId) {
+                    console.log('🎉 ViewLeadModal: Lead update received for current lead')
+                    handleLeadUpdate(event)
+                }
+            })
+    } catch (error) {
+        console.error('❌ Failed to initialize Echo for lead modal:', error)
+    }
+}
+
+const handleLeadUpdate = (event) => {
+    const leadData = event.lead?.data || event.lead
+    
+    if (!leadData) return
+    
+    // Update the local lead data
+    if (event.action_type === 'deleted') {
+        $showNotification('This lead has been deleted', 'warning')
+        show.value = false
+    } else {
+        lead.value = { ...lead.value, ...leadData }
+        
+        if (leadData.stage_id) {
+            leadStageId.value = leadData.stage_id
+        }
+        
+        emit('lead-updated', leadData)
+        
+        const userName = event.user_name || 'Someone'
+        $showNotification(`${userName} updated this lead`, 'info')
+    }
+}
+
+const cleanup = () => {
+    if (echoListener.value && typeof echoListener.value.stopListening === 'function') {
+        echoListener.value.stopListening('.lead.updated')
+        echoListener.value = null
+    }
+}
+
+onMounted(() => {
+    if (show.value && props.leadId) {
+        fetchLead()
+        setTimeout(() => {
+            initializeLeadListener()
+        }, 500)
+    }
+})
+
+onUnmounted(() => {
+    cleanup()
+})
 
 watch(() => props.modelValue, (val) => {
     show.value = val
@@ -99,7 +172,12 @@ watch(show, (val) => {
     if (val) {
         if (props.leadId) {
             fetchLead()
+            setTimeout(() => {
+                initializeLeadListener()
+            }, 500)
         }
+    } else {
+        cleanup()
     }
     emit('update:modelValue', val)
 })
@@ -112,11 +190,52 @@ watch(lead, (newLead) => {
 }, { immediate: true })
 
 // Emit when stage is updated
-watch(leadStageId, (newStageId) => {
-    if (newStageId && props.lead) {
-        emit('stage-updated', { leadId: props.lead.id, stageId: newStageId })
+watch(leadStageId, async (newStageId, oldStageId) => {
+    if (newStageId && oldStageId && newStageId !== oldStageId && lead.value) {
+        try {
+            // Update the stage via API
+            await api.post(`/leads/${lead.value.id}/change-stage`, {
+                stage_id: newStageId
+            })
+            
+            emit('stage-updated', { leadId: lead.value.id, stageId: newStageId })
+            $showNotification('Lead stage updated successfully', 'success')
+        } catch (error) {
+            console.error('❌ Error updating stage:', error)
+            $showNotification('Failed to update lead stage', 'error')
+            // Revert the stage change
+            leadStageId.value = oldStageId
+        }
     }
 })
+
+// Notification helper
+const $showNotification = (message, type = 'info') => {
+    if (window.$showNotification) {
+        window.$showNotification(message, type)
+    } else {
+        console.log(`${type}: ${message}`)
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        })
+        
+        const iconMap = {
+            'success': 'success',
+            'error': 'error',
+            'warning': 'warning',
+            'info': 'info'
+        }
+        
+        Toast.fire({
+            icon: iconMap[type] || 'info',
+            title: message
+        })
+    }
+}
 </script>
 
 <style scoped>

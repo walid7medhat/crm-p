@@ -87,7 +87,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Leads from './leads.vue'
 import LeadSearchModal from './LeadSearchModal.vue'
 import CreateLeadModal from './CreateLeadModal.vue'
@@ -95,12 +95,17 @@ import AddStageModal from './AddStageModal.vue'
 import leadsSettings from '@/assets/images/kanban/svg/leads-setting.svg'
 import addStage from '@/assets/images/kanban/svg/add-stage.svg'
 import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem } from 'bootstrap-vue-3'
+import api from '@/plugins/axios'
+import Swal from 'sweetalert2'
 
 const activeTab = ref('leads')
 const showSearchModal = ref(false)
 const showCreateModal = ref(false)
 const showAddStageModal = ref(false)
 const leadsRef = ref(null)
+
+const echoListeners = ref([])
+const pollingInterval = ref(null)
 
 const tabs = ref([
     { id: 'deals', name: 'Deals', hasChevron: false },
@@ -124,18 +129,174 @@ const activeTabName = computed(() => {
     return tabs.value.find(t => t.id === activeTab.value)?.name || ''
 })
 
+onMounted(() => {
+    setTimeout(() => {
+        initializeStageUpdates()
+    }, 1000)
+})
+
+onUnmounted(() => {
+    cleanup()
+})
+
+// Initialize real-time updates for stages
+const initializeStageUpdates = () => {
+    const user = JSON.parse(localStorage.getItem('user'))
+    if (!user || !window.Echo) {
+        console.log('❌ Real-time stage updates not available, using polling...')
+        startPolling()
+        return
+    }
+
+    console.log('🔔 Kanban: Initializing real-time stage updates for user:', user.id)
+
+    try {
+        const listener = window.Echo.private(`user.${user.id}`)
+            .listen('.stage.updated', (event) => {
+                console.log('🎉 Kanban: Stage update received:', event)
+                handleStageUpdate(event)
+            })
+            .error((error) => {
+                console.error('❌ Echo error for stages:', error)
+                startPolling()
+            })
+
+        echoListeners.value.push(listener)
+    } catch (error) {
+        console.error('❌ Failed to initialize Echo for stages:', error)
+        startPolling()
+    }
+}
+
+const handleStageUpdate = (event) => {
+    console.log('📊 Handling stage update:', event.action_type)
+    
+    // Refresh the leads view when stages are updated
+    if (leadsRef.value && typeof leadsRef.value.fetchLeads === 'function') {
+        leadsRef.value.fetchLeads()
+    }
+    
+    showStageNotification(event)
+}
+
+const showStageNotification = (event) => {
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+    })
+
+    const stageData = event.stage?.data || event.stage
+    const stageName = stageData?.name || 'Unknown Stage'
+    const userName = event.user_name || 'Someone'
+
+    let title = ''
+    let icon = 'info'
+
+    switch (event.action_type) {
+        case 'created':
+            title = `📝 New Stage: ${stageName}`
+            icon = 'success'
+            break
+        case 'updated':
+            title = `✏️ ${userName} updated stage: ${stageName}`
+            icon = 'info'
+            break
+        case 'deleted':
+            title = `🗑️ ${userName} deleted stage: ${stageName}`
+            icon = 'error'
+            break
+        case 'reordered':
+            title = `🔄 ${userName} reordered stages`
+            icon = 'info'
+            break
+        default:
+            title = `📊 Stage updated: ${stageName}`
+    }
+
+    Toast.fire({
+        icon: icon,
+        title: title,
+        text: event.message || 'Stage has been updated'
+    })
+}
+
+const startPolling = () => {
+    console.log('🔄 Kanban: Starting polling for stages every 30 seconds')
+    pollingInterval.value = setInterval(() => {
+        if (leadsRef.value && typeof leadsRef.value.fetchLeads === 'function') {
+            leadsRef.value.fetchLeads()
+        }
+    }, 30000)
+}
+
+const cleanup = () => {
+    echoListeners.value.forEach(listener => {
+        if (listener && typeof listener.stopListening === 'function') {
+            listener.stopListening('.stage.updated')
+        }
+    })
+    echoListeners.value = []
+
+    if (pollingInterval.value) {
+        clearInterval(pollingInterval.value)
+        pollingInterval.value = null
+    }
+}
+
 const handleLeadCreated = () => {
     // Refetch leads data when a new lead is created
     if (leadsRef.value && typeof leadsRef.value.fetchLeads === 'function') {
         leadsRef.value.fetchLeads()
+        $showNotification('Lead created successfully!', 'success')
     }
 }
 
-const handleStageCreated = (stageData) => {
+const handleStageCreated = async (stageData) => {
     // Handle stage creation here
     console.log('New stage created:', stageData)
-    // You can add API call here to save the stage
-    // After saving, you might want to refresh the stages list
+    
+    // Refresh the leads view to show the new stage
+    if (leadsRef.value && typeof leadsRef.value.fetchLeads === 'function') {
+        await leadsRef.value.fetchLeads()
+    }
+    
+    $showNotification('Stage created successfully!', 'success')
+}
+
+// Notification helper
+const $showNotification = (message, type = 'info') => {
+    if (window.$showNotification) {
+        window.$showNotification(message, type)
+    } else {
+        console.log(`${type}: ${message}`)
+        // Fallback notification using Swal
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        })
+        
+        const iconMap = {
+            'success': 'success',
+            'error': 'error',
+            'warning': 'warning',
+            'info': 'info'
+        }
+        
+        Toast.fire({
+            icon: iconMap[type] || 'info',
+            title: message
+        })
+    }
 }
 </script>
 

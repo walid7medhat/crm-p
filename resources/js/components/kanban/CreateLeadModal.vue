@@ -14,6 +14,9 @@
 
             <!-- Stage Selector -->
             <StageSelector class="px-1" v-model="form.stage_id" />
+            <div v-if="validationErrors.stage_id" class="invalid-feedback d-block px-1 mb-2">
+                {{ validationErrors.stage_id[0] }}
+            </div>
 
             <!-- Form Content -->
             <div class="form-scroll-area">
@@ -22,7 +25,15 @@
                         <!-- Lead Name -->
                         <div class="col-12">
                             <label class="form-label-custom">Lead Name</label>
-                            <b-form-input v-model="form.lead_name" placeholder="Enter Lead Name" class="custom-input" />
+                            <b-form-input 
+                                v-model="form.lead_name" 
+                                placeholder="Enter Lead Name" 
+                                class="custom-input"
+                                :class="{ 'is-invalid': validationErrors.lead_name }"
+                            />
+                            <div v-if="validationErrors.lead_name" class="invalid-feedback d-block">
+                                {{ validationErrors.lead_name[0] }}
+                            </div>
                         </div>
 
                         <!-- Salutation, First Name, Last Name, Position -->
@@ -35,6 +46,7 @@
                                 label="text"
                                 placeholder="Not Selected"
                                 class="custom-v-select"
+                                :class="{ 'is-invalid-select': validationErrors.salutation }"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -42,14 +54,33 @@
                                     </span>
                                 </template>
                             </v-select>
+                            <div v-if="validationErrors.salutation" class="invalid-feedback d-block">
+                                {{ validationErrors.salutation[0] }}
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label-custom">First Name</label>
-                            <b-form-input v-model="form.first_name" placeholder="Enter Your First Name *" class="custom-input" />
+                            <b-form-input 
+                                v-model="form.first_name" 
+                                placeholder="Enter Your First Name *" 
+                                class="custom-input"
+                                :class="{ 'is-invalid': validationErrors.first_name }"
+                            />
+                            <div v-if="validationErrors.first_name" class="invalid-feedback d-block">
+                                {{ validationErrors.first_name[0] }}
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label-custom">Last Name</label>
-                            <b-form-input v-model="form.last_name" placeholder="Enter Your Last Name *" class="custom-input" />
+                            <b-form-input 
+                                v-model="form.last_name" 
+                                placeholder="Enter Your Last Name *" 
+                                class="custom-input"
+                                :class="{ 'is-invalid': validationErrors.last_name }"
+                            />
+                            <div v-if="validationErrors.last_name" class="invalid-feedback d-block">
+                                {{ validationErrors.last_name[0] }}
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <!-- Field removed as per new form structure -->
@@ -61,15 +92,39 @@
                                 <div class="d-flex justify-content-between align-items-center gap-2">
                                     <div class="col">
                                         <label class="form-label-custom">Contact</label>
-                                        <b-form-input v-model="form.whatsapp_number" placeholder="Enter Phone Number" class="custom-input" />
+                                        <b-form-input 
+                                            v-model="form.whatsapp_number" 
+                                            placeholder="Enter Phone Number" 
+                                            class="custom-input"
+                                            :class="{ 'is-invalid': validationErrors.whatsapp_number }"
+                                        />
+                                        <div v-if="validationErrors.whatsapp_number" class="invalid-feedback d-block">
+                                            {{ validationErrors.whatsapp_number[0] }}
+                                        </div>
                                     </div>
                                     <div class="col">
                                         <label class="form-label-custom">Email</label>
-                                        <b-form-input v-model="form.email" placeholder="Enter Your Email" class="custom-input" />
+                                        <b-form-input 
+                                            v-model="form.email" 
+                                            placeholder="Enter Your Email" 
+                                            class="custom-input"
+                                            :class="{ 'is-invalid': validationErrors.email }"
+                                        />
+                                        <div v-if="validationErrors.email" class="invalid-feedback d-block">
+                                            {{ validationErrors.email[0] }}
+                                        </div>
                                     </div>
                                     <div class="col">
                                         <label class="form-label-custom">Secondary Phone</label>
-                                        <b-form-input v-model="form.work_phone_2" placeholder="Enter Phone Number" class="custom-input" />
+                                        <b-form-input 
+                                            v-model="form.work_phone_2" 
+                                            placeholder="Enter Phone Number" 
+                                            class="custom-input"
+                                            :class="{ 'is-invalid': validationErrors.work_phone_2 }"
+                                        />
+                                        <div v-if="validationErrors.work_phone_2" class="invalid-feedback d-block">
+                                            {{ validationErrors.work_phone_2[0] }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -82,7 +137,11 @@
                                 placeholder="Text Here" 
                                 rows="4" 
                                 class="custom-textarea"
+                                :class="{ 'is-invalid': validationErrors.comment }"
                             ></b-form-textarea>
+                            <div v-if="validationErrors.comment" class="invalid-feedback d-block">
+                                {{ validationErrors.comment[0] }}
+                            </div>
                         </div>
 
 
@@ -97,6 +156,7 @@
                                 label="text"
                                 placeholder="Select Bedrooms"
                                 class="custom-v-select"
+                                :class="{ 'is-invalid-select': validationErrors.bedrooms }"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -104,11 +164,20 @@
                                     </span>
                                 </template>
                             </v-select>
+                            <div v-if="validationErrors.bedrooms" class="invalid-feedback d-block">
+                                {{ validationErrors.bedrooms[0] }}
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label-custom">Budget</label>
-                            <div class="input-group-custom">
-                                <b-form-input v-model="form.budget"  type="number" placeholder="Enter Budget" class="custom-input" />
+                            <div class="input-group-custom" :class="{ 'is-invalid-group': validationErrors.budget || validationErrors.currency }">
+                                <b-form-input 
+                                    v-model="form.budget"  
+                                    type="number" 
+                                    placeholder="Enter Budget" 
+                                    class="custom-input"
+                                    :class="{ 'is-invalid': validationErrors.budget }"
+                                />
                                 <v-select 
                                     v-model="form.currency" 
                                     :options="currencyOptions" 
@@ -117,6 +186,7 @@
                                     :clearable="false"
                                     :searchable="false"
                                     class="custom-v-select-inline"
+                                    :class="{ 'is-invalid-select': validationErrors.currency }"
                                 >
                                     <template #open-indicator="{ attributes }">
                                         <span v-bind="attributes">
@@ -124,6 +194,12 @@
                                         </span>
                                     </template>
                                 </v-select>
+                            </div>
+                            <div v-if="validationErrors.budget" class="invalid-feedback d-block">
+                                {{ validationErrors.budget[0] }}
+                            </div>
+                            <div v-if="validationErrors.currency" class="invalid-feedback d-block">
+                                {{ validationErrors.currency[0] }}
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -135,6 +211,7 @@
                                 label="text"
                                 placeholder="Select Purpose"
                                 class="custom-v-select"
+                                :class="{ 'is-invalid-select': validationErrors.purpose_buying }"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -142,6 +219,9 @@
                                     </span>
                                 </template>
                             </v-select>
+                            <div v-if="validationErrors.purpose_buying" class="invalid-feedback d-block">
+                                {{ validationErrors.purpose_buying[0] }}
+                            </div>
                         </div>
                          <!-- Source -->
                          <div class="col-md-3">
@@ -153,6 +233,7 @@
                                 label="text"
                                 placeholder="Select Source"
                                 class="custom-v-select"
+                                :class="{ 'is-invalid-select': validationErrors.lead_source }"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -160,12 +241,23 @@
                                     </span>
                                 </template>
                             </v-select>
+                            <div v-if="validationErrors.lead_source" class="invalid-feedback d-block">
+                                {{ validationErrors.lead_source[0] }}
+                            </div>
                         </div>
 
                         <!-- Source Information -->
                         <div class="col-12">
                             <label class="form-label-custom">Source Information</label>
-                            <b-form-textarea v-model="form.source_information" placeholder="Text Here" class="custom-textarea" />
+                            <b-form-textarea 
+                                v-model="form.source_information" 
+                                placeholder="Text Here" 
+                                class="custom-textarea"
+                                :class="{ 'is-invalid': validationErrors.source_information }"
+                            />
+                            <div v-if="validationErrors.source_information" class="invalid-feedback d-block">
+                                {{ validationErrors.source_information[0] }}
+                            </div>
                         </div>
 
                         <!-- Responsible Person Card -->
@@ -195,17 +287,18 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="department-badge">
-                                            Department : Sales
-                                        </div>
-                                        <b-dropdown 
-                                            variant="link" 
-                                            toggle-class="text-decoration-none p-0 no-caret-custom" 
-                                            no-caret
-                                            right
-                                            class="change-person-dropdown"
-                                        >
+                                                    <div class="d-flex flex-column align-items-end gap-2">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="department-badge">
+                                                Department : Sales
+                                            </div>
+                                            <b-dropdown 
+                                                variant="link" 
+                                                toggle-class="text-decoration-none p-0 no-caret-custom" 
+                                                no-caret
+                                                right
+                                                class="change-person-dropdown"
+                                            >
                                             <template #button-content>
                                                 <button class="btn-change-person">
                                                     Change Person
@@ -256,6 +349,10 @@
                                                 </div>
                                             </div>
                                         </b-dropdown>
+                                        </div>
+                                        <div v-if="validationErrors.responsible_person_id" class="invalid-feedback d-block" style="margin-top: -8px;">
+                                            {{ validationErrors.responsible_person_id[0] }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -317,6 +414,7 @@ const isLoadingSources = ref(false)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const sourceOptions = ref([])
+const validationErrors = ref({})
 
 watch(() => props.modelValue, (val) => {
     show.value = val
@@ -326,6 +424,10 @@ watch(show, (val) => {
     if (val) {
         form.value.stage_id = null
         emit('update:modelValue', null)
+    } else {
+        // Clear validation errors when modal is closed
+        validationErrors.value = {}
+        errorMessage.value = ''
     }
 })
 
@@ -338,7 +440,7 @@ const fetchSources = async () => {
             sourceOptions.value = [
                 // { value: null, text: 'Select Source' },
                 ...data.map(source => ({
-                    value: source.id,
+                    value: source.name,
                     text: source.name
                 }))
             ]
@@ -376,11 +478,6 @@ const filteredUsers = computed(() => {
         user.email.toLowerCase().includes(searchQuery.value.toLowerCase())
     )
 })
-
-const selectUser = (user) => {
-    form.value.responsible_person_id = user.id
-    form.value.responsible_person = user
-}
 
 const form = ref({
     lead_name: '',
@@ -462,6 +559,134 @@ const bedroomOptions = [
     { value: 8, text: '8' },
     { value: 9, text: '9' },
 ]
+
+// Select user function
+const selectUser = (user) => {
+    form.value.responsible_person_id = user.id
+    form.value.responsible_person = user
+}
+
+// Helper function to clear error message when all validation errors are fixed
+const clearErrorMessageIfNeeded = () => {
+    // If there are no more validation errors, clear the general error message
+    if (Object.keys(validationErrors.value).length === 0) {
+        errorMessage.value = ''
+    }
+}
+
+// Watch form fields and clear their validation errors when user modifies them
+watch(() => form.value.lead_name, () => {
+    if (validationErrors.value.lead_name) {
+        delete validationErrors.value.lead_name
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.first_name, () => {
+    if (validationErrors.value.first_name) {
+        delete validationErrors.value.first_name
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.last_name, () => {
+    if (validationErrors.value.last_name) {
+        delete validationErrors.value.last_name
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.salutation, () => {
+    if (validationErrors.value.salutation) {
+        delete validationErrors.value.salutation
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.email, () => {
+    if (validationErrors.value.email) {
+        delete validationErrors.value.email
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.whatsapp_number, () => {
+    if (validationErrors.value.whatsapp_number) {
+        delete validationErrors.value.whatsapp_number
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.work_phone_2, () => {
+    if (validationErrors.value.work_phone_2) {
+        delete validationErrors.value.work_phone_2
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.comment, () => {
+    if (validationErrors.value.comment) {
+        delete validationErrors.value.comment
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.bedrooms, () => {
+    if (validationErrors.value.bedrooms) {
+        delete validationErrors.value.bedrooms
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.budget, () => {
+    if (validationErrors.value.budget) {
+        delete validationErrors.value.budget
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.currency, () => {
+    if (validationErrors.value.currency) {
+        delete validationErrors.value.currency
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.purpose_buying, () => {
+    if (validationErrors.value.purpose_buying) {
+        delete validationErrors.value.purpose_buying
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.lead_source, () => {
+    if (validationErrors.value.lead_source) {
+        delete validationErrors.value.lead_source
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.source_information, () => {
+    if (validationErrors.value.source_information) {
+        delete validationErrors.value.source_information
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.stage_id, () => {
+    if (validationErrors.value.stage_id) {
+        delete validationErrors.value.stage_id
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.responsible_person_id, () => {
+    if (validationErrors.value.responsible_person_id) {
+        delete validationErrors.value.responsible_person_id
+        clearErrorMessageIfNeeded()
+    }
+})
+
 const resetForm = () => {
     form.value = {
         lead_name: '',
@@ -481,12 +706,15 @@ const resetForm = () => {
         budget: null,
         currency: null,
     }
+    validationErrors.value = {}
+    errorMessage.value = ''
 }
 
 const submitForm = async () => {
     try {
         isSubmitting.value = true
         errorMessage.value = ''
+        validationErrors.value = {}
         
         const payload = {
             ...form.value,
@@ -496,17 +724,44 @@ const submitForm = async () => {
         
         const response = await api.post('/leads', payload)
         
+        console.log('✅ Lead created successfully:', response.data)
+        
         // Success: close modal, reset form, and emit event to refetch leads
         show.value = false
         resetForm()
         emit('lead-created')
         
+        // Show success notification
+        $showNotification('Lead created successfully!', 'success')
+        
     } catch (error) {
         // Error: show error message, don't close modal, don't reset form
-        console.error('Error creating lead:', error)
-        errorMessage.value = error.response?.data?.message || 'Failed to create lead. Please try again.'
+        console.error('❌ Error creating lead:', error)
+        
+        // Check if it's a validation error (422 status)
+        if (error.response && error.response.status === 422) {
+            // Laravel validation errors format: { field: ["error message"] }
+            const errors = error.response.data.errors || error.response.data
+            validationErrors.value = errors
+            
+            errorMessage.value = 'Please fix the validation errors below.'
+            $showNotification('Please check the form for errors', 'warning')
+        } else {
+            // General error
+            errorMessage.value = error.response?.data?.message || 'Failed to create lead. Please try again.'
+            $showNotification(errorMessage.value, 'error')
+        }
     } finally {
         isSubmitting.value = false
+    }
+}
+
+// Notification helper
+const $showNotification = (message, type = 'info') => {
+    if (window.$showNotification) {
+        window.$showNotification(message, type)
+    } else {
+        console.log(`${type}: ${message}`)
     }
 }
 </script>
@@ -1057,6 +1312,45 @@ const submitForm = async () => {
     font-size: 12px;
     color: #64748B;
     font-family: 'Montserrat';
+}
+
+/* Validation Error Styles */
+.custom-input.is-invalid,
+.custom-textarea.is-invalid {
+    border-color: #DC2626 !important;
+    background-color: #FEF2F2 !important;
+}
+
+.custom-input.is-invalid:focus,
+.custom-textarea.is-invalid:focus {
+    border-color: #DC2626 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.1) !important;
+}
+
+.invalid-feedback {
+    font-size: 12px;
+    color: #DC2626;
+    margin-top: 4px;
+    font-family: 'Montserrat';
+}
+
+/* V-Select Validation Styles */
+:deep(.custom-v-select.is-invalid-select .vs__dropdown-toggle) {
+    border-color: #DC2626 !important;
+    background-color: #FEF2F2 !important;
+}
+
+:deep(.custom-v-select-inline.is-invalid-select .vs__dropdown-toggle) {
+    border-left-color: #DC2626 !important;
+    background-color: #FEF2F2 !important;
+}
+
+.input-group-custom.is-invalid-group {
+    border-color: #DC2626 !important;
+}
+
+.input-group-custom.is-invalid-group .custom-input {
+    background-color: #FEF2F2 !important;
 }
 
 </style>

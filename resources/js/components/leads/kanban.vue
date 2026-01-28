@@ -461,7 +461,7 @@ async function retryLoading() {
 async function fetchStages() {
   try {
     console.log('Fetching stages...')
-    const response = await axios.get('/api/stages')
+    const response = await axios.get('/stages')
     
     if (response.data && response.data.data) {
       stages.value = response.data.data.data.map(stage => ({
@@ -482,7 +482,7 @@ async function fetchStages() {
 async function fetchResponsiblePersons() {
   try {
     console.log('Fetching responsible persons...')
-    const response = await axios.get('/api/available-responsible-persons')
+    const response = await axios.get('/available-responsible-persons')
     
     if (response.data && response.data.data) {
       responsiblePersons.value = response.data.data
@@ -740,8 +740,8 @@ async function saveStage() {
     savingStage.value = true
     
     const url = stageForm.value.id 
-      ? `/api/stages/${stageForm.value.id}` 
-      : '/api/stages'
+      ? `/stages/${stageForm.value.id}` 
+      : '/stages'
     
     const method = stageForm.value.id? 'put' : 'post'
     const data = { ...stageForm.value }
@@ -776,7 +776,7 @@ async function deleteStage(stage) {
   }
 
   try {
-    await axios.delete(`/api/stages/${stage.id}`)
+    await axios.delete(`/stages/${stage.id}`)
     await fetchStages()
     $showNotification('Stage deleted successfully!', 'success')
   } catch (error) {
@@ -847,8 +847,8 @@ async function saveLead() {
     }
     
     const url = editingLead.value 
-      ? `/api/leads/${leadForm.value.id}` 
-      : '/api/leads'
+      ? `/leads/${leadForm.value.id}` 
+      : '/leads'
     
     const method = editingLead.value ? 'put' : 'post'
     
@@ -884,7 +884,7 @@ async function reorderStages() {
       order: index
     }))
     
-    await axios.post('/api/stages/reorder', { stages: stagesData })
+    await axios.post('/stages/reorder', { stages: stagesData })
     $showNotification('Stages reordered successfully!', 'success')
   } catch (error) {
     console.error('Error reordering stages:', error)
@@ -925,7 +925,7 @@ async function onLeadDragEnd(evt, targetStage) {
     
     console.log(`🔄 Moving from ${originalStage.name} to ${targetStage.name}`);
     
-    const response = await axios.post(`/api/leads/${lead.id}/change-stage`, {
+    const response = await axios.post(`/leads/${lead.id}/change-stage`, {
       stage_id: originalStage.id 
     });
     

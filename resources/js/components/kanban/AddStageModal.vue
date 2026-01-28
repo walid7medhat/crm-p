@@ -66,12 +66,20 @@
 
             <!-- Footer Buttons -->
             <div class="modal-footer-custom">
-                <button class="btn-cancel" @click="handleClose">
-                    Cancel
-                </button>
-                <button class="btn-save" @click="handleSave">
-                    Save
-                </button>
+                <!-- Error Message -->
+                <div v-if="errorMessage" class="alert alert-danger mb-2 w-100" role="alert">
+                    {{ errorMessage }}
+                </div>
+                
+                <div class="d-flex align-items-center justify-content-end gap-3 w-100">
+                    <button class="btn-cancel" @click="handleClose" :disabled="isSubmitting">
+                        Cancel
+                    </button>
+                    <button class="btn-save" @click="handleSave" :disabled="isSubmitting">
+                        <span v-if="isSubmitting">Creating...</span>
+                        <span v-else>Save</span>
+                    </button>
+                </div>
             </div>
         </div>
     </b-modal>
@@ -83,6 +91,8 @@ import { BModal, BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import ModalHeader from './ModalHeader.vue'
+import api from '@/plugins/axios'
+import Swal from 'sweetalert2'
 
 const props = defineProps({
     modelValue: {
@@ -103,6 +113,9 @@ const formData = ref({
     order: null,
     roles: null
 })
+
+const isSubmitting = ref(false)
+const errorMessage = ref('')
 
 // Sample options - you can modify these based on your requirements
 const orderOptions = ref([
@@ -125,16 +138,40 @@ const handleClose = () => {
     resetForm()
 }
 
-const handleSave = () => {
+const handleSave = async () => {
     // Validate form
-    if (!formData.value.title || !formData.value.order || !formData.value.roles) {
-        // You can add toast notification here
+    if (!formData.value.title || !formData.value.order) {
+        errorMessage.value = 'Please fill in all required fields'
+        $showNotification('Please fill in all required fields', 'warning')
         return
     }
 
-    // Emit event with form data
-    emit('stage-created', { ...formData.value })
-    handleClose()
+    try {
+        isSubmitting.value = true
+        errorMessage.value = ''
+        
+        const payload = {
+            name: formData.value.title,
+            order: formData.value.order,
+            // Add other fields as needed
+        }
+        
+        const response = await api.post('/stages', payload)
+        
+        console.log('✅ Stage created successfully:', response.data)
+        
+        // Emit event with form data
+        emit('stage-created', response.data)
+        $showNotification('Stage created successfully!', 'success')
+        handleClose()
+        
+    } catch (error) {
+        console.error('❌ Error creating stage:', error)
+        errorMessage.value = error.response?.data?.message || 'Failed to create stage. Please try again.'
+        $showNotification(errorMessage.value, 'error')
+    } finally {
+        isSubmitting.value = false
+    }
 }
 
 const resetForm = () => {
@@ -142,6 +179,35 @@ const resetForm = () => {
         title: '',
         order: null,
         roles: null
+    }
+    errorMessage.value = ''
+}
+
+// Notification helper
+const $showNotification = (message, type = 'info') => {
+    if (window.$showNotification) {
+        window.$showNotification(message, type)
+    } else {
+        console.log(`${type}: ${message}`)
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        })
+        
+        const iconMap = {
+            'success': 'success',
+            'error': 'error',
+            'warning': 'warning',
+            'info': 'info'
+        }
+        
+        Toast.fire({
+            icon: iconMap[type] || 'info',
+            title: message
+        })
     }
 }
 </script>
@@ -294,9 +360,23 @@ const resetForm = () => {
     color: #fff;
 }
 
+.alert {
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-family: 'Montserrat';
+}
+
+.alert-danger {
+    background-color: #FEE2E2;
+    border: 1px solid #FCA5A5;
+    color: #991B1B;
+}
+
 .modal-footer-custom {
     padding-top: 8px;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
     gap: 16px;
