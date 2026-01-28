@@ -54,7 +54,7 @@
                                                 
                                                 <div class="info-item mb-8">
                                                     <div class="info-label text-secondary-light text-xs">Name</div>
-                                                    <div class="info-value">{{ task.salutation + ' ' + task.first_name}}</div>
+                                                    <div class="info-value">{{ task.salutation }} {{ task.first_name}}</div>
                                                 </div>
                                                 
                                                 <div class="info-item mb-8">
@@ -69,7 +69,10 @@
 
                                                 <div class="responsible-info d-flex align-items-center justify-content-between mb-12">
                                                     <div class="d-flex align-items-center gap-2">
-                                                        <img :src="task.responsible_person?.avatar" alt="" class="avatar-sm rounded-circle" />
+                                                        <img v-if="task.responsible_person?.avatar" :src="task.responsible_person.avatar" alt="" class="avatar-sm rounded-circle" />
+                                                        <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
+                                                            <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
+                                                        </div>
                                                         <div>
                                                             <div class="info-label text-secondary-light text-xs">Responsible</div>
                                                             <div class="info-value">{{ task.responsible_person?.name }}</div>
@@ -84,7 +87,10 @@
                                                         <div class="info-label text-secondary-light text-xs mb-1">Assigned By</div>
                                                         <div class="info-value">{{ formatDate(task.responsible_person.created_at) }}</div>
                                                     </div>
-                                                    <img :src="task?.parent?.avatar" alt="" class="avatar-sm rounded-circle" />
+                                                    <img v-if="task?.parent?.avatar" :src="task.parent.avatar" alt="" class="avatar-sm rounded-circle" />
+                                                    <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
+                                                        <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
+                                                    </div>
                                                 </div>
                                             </div>
 
