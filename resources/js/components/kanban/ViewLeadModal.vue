@@ -45,7 +45,12 @@
             <!-- Main Content -->
             <div class="modal-body-custom p-4">
                 <!-- General Tab Content -->
-                <GeneralTab v-show="activeTab === 'general'" :lead="lead" />
+                <GeneralTab 
+                    v-show="activeTab === 'general'" 
+                    :lead="lead" 
+                    :stage-id="leadStageId"
+                    @update:lead="handleLeadUpdateFromTab"
+                />
 
                 <!-- History Tab Content -->
                 <HistoryTab v-show="activeTab === 'history'" :lead="lead" />
@@ -144,6 +149,30 @@ const handleLeadUpdate = (event) => {
     }
 }
 
+const handleLeadUpdateFromTab = (updatedLeadData) => {
+    console.log('📝 ViewLeadModal: Received lead update from GeneralTab:', updatedLeadData)
+    
+    // Completely replace the lead data with the latest response from API
+    // This ensures all fields are updated, including nested objects like responsible_person, stage, etc.
+    lead.value = updatedLeadData
+    
+    // Update stage selector with the latest stage
+    if (updatedLeadData.stage_id) {
+        leadStageId.value = updatedLeadData.stage_id
+    } else if (updatedLeadData.stage?.id) {
+        leadStageId.value = updatedLeadData.stage.id
+    }
+    
+    console.log('✅ ViewLeadModal: Lead data updated successfully')
+    console.log('   - Lead ID:', lead.value.id)
+    console.log('   - Lead Name:', lead.value.lead_name)
+    console.log('   - Stage ID:', leadStageId.value)
+    console.log('   - Responsible Person:', lead.value.responsible_person?.name)
+    
+    // Emit to parent to refresh the kanban board with the latest data
+    emit('lead-updated', updatedLeadData)
+}
+
 const cleanup = () => {
     if (echoListener.value && typeof echoListener.value.stopListening === 'function') {
         echoListener.value.stopListening('.lead.updated')
@@ -190,24 +219,24 @@ watch(lead, (newLead) => {
 }, { immediate: true })
 
 // Emit when stage is updated
-watch(leadStageId, async (newStageId, oldStageId) => {
-    if (newStageId && oldStageId && newStageId !== oldStageId && lead.value) {
-        try {
-            // Update the stage via API
-            await api.post(`/leads/${lead.value.id}/change-stage`, {
-                stage_id: newStageId
-            })
+// watch(leadStageId, async (newStageId, oldStageId) => {
+//     if (newStageId && oldStageId && newStageId !== oldStageId && lead.value) {
+//         try {
+//             // Update the stage via API
+//             await api.post(`/leads/${lead.value.id}/change-stage`, {
+//                 stage_id: newStageId
+//             })
             
-            emit('stage-updated', { leadId: lead.value.id, stageId: newStageId })
-            $showNotification('Lead stage updated successfully', 'success')
-        } catch (error) {
-            console.error('❌ Error updating stage:', error)
-            $showNotification('Failed to update lead stage', 'error')
-            // Revert the stage change
-            leadStageId.value = oldStageId
-        }
-    }
-})
+//             emit('stage-updated', { leadId: lead.value.id, stageId: newStageId })
+//             $showNotification('Lead stage updated successfully', 'success')
+//         } catch (error) {
+//             console.error('❌ Error updating stage:', error)
+//             $showNotification('Failed to update lead stage', 'error')
+//             // Revert the stage change
+//             leadStageId.value = oldStageId
+//         }
+//     }
+// })
 
 // Notification helper
 const $showNotification = (message, type = 'info') => {

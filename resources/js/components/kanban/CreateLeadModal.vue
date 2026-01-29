@@ -275,16 +275,6 @@
                                                 <span class="info-separator">:</span>
                                                 <span class="info-value fw-bold">{{ form.responsible_person?.name || '--' }}</span>
                                             </div>
-                                            <div class="info-row">
-                                                <span class="info-label">Email</span>
-                                                <span class="info-separator">:</span>
-                                                <span class="info-value">{{ form.responsible_person?.email || '--' }}</span>
-                                            </div>
-                                            <div class="info-row">
-                                                <span class="info-label">Position</span>
-                                                <span class="info-separator">:</span>
-                                                <span class="info-value">{{ form.responsible_person?.position || '--' }}</span>
-                                            </div>
                                         </div>
                                     </div>
                                                     <div class="d-flex flex-column align-items-end gap-2">
@@ -334,7 +324,6 @@
                                                             <img :src="user.avatar || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'" class="user-item-avatar" />
                                                             <div class="user-item-info">
                                                                 <div class="user-item-name">{{ user.name }}</div>
-                                                                <div class="user-item-email">{{ user.email }}</div>
                                                             </div>
                                                         </div>
                                                         <iconify-icon 

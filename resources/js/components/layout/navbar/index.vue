@@ -3,10 +3,6 @@
     <div class="row align-items-center justify-content-between">
       <div class="col-auto">
         <div class="d-flex flex-wrap align-items-center gap-4">
-          <button type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
-            <iconify-icon :icon="isSidebarActive ? 'iconoir:arrow-right' : 'heroicons:bars-3-solid'"
-              class="icon text-2xl"></iconify-icon>
-          </button>
 
           <button type="button" @click="toggleSidebarMobile" class="sidebar-mobile-toggle">
             <iconify-icon icon="heroicons:bars-3-solid" class="icon"></iconify-icon>
@@ -280,13 +276,6 @@ function logout() {
 </script>
 
 <style scoped>
-.sidebar-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
-}
-
 .w-40-px {
   width: 40px;
 }

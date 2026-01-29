@@ -5,15 +5,24 @@
       <iconify-icon icon="radix-icons:cross-2" />
     </button>
     
+    <div class="sidebar-toggle-container d-flex align-items-center justify-content-between">
+      <!-- Logo -->
+      <router-link to="/" class="sidebar-logo d-flex flex-wrap align-items-space-between gap-4">
+        <img :src="logo" alt="Logo" class="light-logo" />
+        <img :src="logo" alt="Logo" class="dark-logo" />
+        <img :src="logo" alt="Logo" class="logo-icon" />
+    
+      </router-link>
 
-    <!-- Logo -->
-    <router-link to="/" class="sidebar-logo d-flex flex-wrap align-items-space-between gap-4">
-      <img :src="logo" alt="Logo" class="light-logo" />
-      <img :src="logo" alt="Logo" class="dark-logo" />
-      <img :src="logo" alt="Logo" class="logo-icon" />
-   
-    </router-link>
-
+      <button v-if="!isSidebarActive" type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
+        <iconify-icon icon='heroicons:bars-3-solid'
+          class="icon text-2xl"></iconify-icon>
+      </button>
+    </div>
+    <button v-if="isSidebarActive" type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
+      <iconify-icon icon='iconoir:arrow-right'
+        class="icon text-2xl"></iconify-icon>
+    </button>
     <!-- Menu -->
     <div class="sidebar-menu-area">
       <ul class="sidebar-menu">
@@ -752,6 +761,12 @@ onMounted(() => {
 });
 </script>
 <style scoped>
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+}
 
 /* .sidebar-menu .dropdown.active-parent > a {
   background-color: rgba(59, 130, 246, 0.1);
