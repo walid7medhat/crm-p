@@ -395,10 +395,19 @@ const handleDeletedLead = (lead) => {
 }
 
 const handleUpdatedLead = (lead) => {
+    if (!lead || !lead.id || !lead.stage_id) {
+        console.error('❌ Invalid lead data in handleUpdatedLead:', lead)
+        return
+    }
+    
+    let leadFound = false
+    
+    // First, try to find and update existing lead
     for (const column of columns.value) {
         if (column.leads) {
             const index = column.leads.findIndex(l => l && l.id === lead.id)
             if (index !== -1) {
+                leadFound = true
                 if (column.status !== lead.stage_id) {
                     // Lead moved to different stage
                     column.leads.splice(index, 1)
@@ -407,7 +416,13 @@ const handleUpdatedLead = (lead) => {
                         if (!columns.value[newColumnIndex].leads) {
                             columns.value[newColumnIndex].leads = []
                         }
-                        columns.value[newColumnIndex].leads.unshift(lead)
+                        // Check if lead already exists in new column to avoid duplicates
+                        const existingIndex = columns.value[newColumnIndex].leads.findIndex(l => l && l.id === lead.id)
+                        if (existingIndex === -1) {
+                            columns.value[newColumnIndex].leads.unshift(lead)
+                        } else {
+                            columns.value[newColumnIndex].leads[existingIndex] = lead
+                        }
                     }
                 } else {
                     // Update in same stage
@@ -415,6 +430,28 @@ const handleUpdatedLead = (lead) => {
                 }
                 break
             }
+        }
+    }
+    
+    // If lead not found in any column, add it to the appropriate column (newly assigned lead)
+    if (!leadFound) {
+        console.log('📌 Lead not found in any column, adding to stage:', lead.stage_id)
+        const columnIndex = columns.value.findIndex(col => col.status === lead.stage_id)
+        if (columnIndex !== -1) {
+            if (!columns.value[columnIndex].leads) {
+                columns.value[columnIndex].leads = []
+            }
+            // Check if lead already exists to avoid duplicates
+            const existingIndex = columns.value[columnIndex].leads.findIndex(l => l && l.id === lead.id)
+            if (existingIndex === -1) {
+                columns.value[columnIndex].leads.unshift(lead)
+                console.log('✅ Added newly assigned lead to column')
+            } else {
+                columns.value[columnIndex].leads[existingIndex] = lead
+                console.log('✅ Updated lead in column')
+            }
+        } else {
+            console.warn('⚠️ Column not found for stage_id:', lead.stage_id)
         }
     }
 }
