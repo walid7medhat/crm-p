@@ -17,7 +17,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
-
+use App\Http\Resources\Lead\DuplicateLeadResource;
 class LeadController extends Controller
 {
     public function __construct()
@@ -493,9 +493,22 @@ class LeadController extends Controller
             'file'    => $e->getFile(),
             'line'    => $e->getLine(),
             'code'    => $e->getCode(),
-            'trace'   => collect($e->getTrace())->take(10), // أول 10 كفاية
+            'trace'   => collect($e->getTrace())->take(10), 
         ]
     ], 500);
 }}
-
+    public function getDuplicate($lead_id): JsonResponse
+        {
+            try {
+              $lead=Lead::find($lead_id);
+              $leads=DuplicateLeadResource::collection($lead->duplicate_leads);
+                return ApiResponse::success(
+                    $leads,
+                    'Duplicated Leads retrieved successfully'
+                );
+        
+            } catch (\Exception $e) {
+                return ApiResponse::error('Failed to retrieve leads: ' . $e->getMessage());
+            }
+        }
 }

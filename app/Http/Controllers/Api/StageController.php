@@ -43,7 +43,17 @@ class StageController extends Controller
     public function store(StageRequest $request): JsonResponse
     {
         try {
-            $stage = Stage::create($request->validated()+['added_by'=>auth()->user()->id]);
+            
+            $data = $request->validated();
+
+                if (!isset($data['order'])) {
+                    $lastOrder = Stage::max('order'); 
+                    $data['order'] = $lastOrder ? $lastOrder + 1 : 1;
+                }
+                
+                $stage = Stage::create($data + [
+                    'added_by' => auth()->id(),
+                ]);
 
             return ApiResponse::success(
                 new StageResource($stage),

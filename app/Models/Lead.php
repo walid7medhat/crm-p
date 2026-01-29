@@ -94,4 +94,18 @@ class Lead extends Model
             $q->where('order', 2);
         })->where('last_stage_change_at', '<=', Carbon::now()->subHour());
     }
+     
+     public function getDuplicateLeadsAttribute(){
+         $leadName=$this->lead_name;
+         $phone=$this->work_phone;
+         $leads=Lead::where(function ($q) use ($leadName) {
+            $q->where('lead_name', $leadName);
+        })
+        ->where(function ($q) use ($phone) {
+            $q->where('work_phone', $phone);
+        })->where('id','!=',$this->id)
+        ->get();
+        return $leads;
+     }
+
 }

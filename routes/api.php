@@ -153,6 +153,7 @@ Route::prefix('users/{user}')->group(function () {
 // leadssssss
 
 Route::apiResource('leads', LeadController::class);
+Route::get('leads/get/duplicate/{lead_id}',[LeadController::class,'getDuplicate']);
 Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']);
 Route::post('/leads/{lead}/assign-responsible-person', [LeadController::class, 'assignResponsiblePerson']);
 Route::get('/available-responsible-persons', [LeadController::class, 'getAvailableResponsiblePersons']);

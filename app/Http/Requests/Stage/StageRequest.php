@@ -24,7 +24,7 @@ class StageRequest extends FormRequest
                 'max:255',
                 Rule::unique('stages')->ignore($stageId)
             ],
-            'order' => 'required|integer|min:0',
+            'order' => 'nullable|integer|min:0',
         ];
     }
 
