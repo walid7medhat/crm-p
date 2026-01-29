@@ -16,7 +16,7 @@ class LeadRequest extends FormRequest
         $rules = [
             'lead_name' => 'required|string|max:255',
             'lead_number' => 'string|unique:leads,lead_number',
-            'stage_id' => 'nullable|exists:stages,id',
+            'stage_id' => 'required|exists:stages,id',
             
             // Contact Information
             'salutation' => 'nullable|string|max:10',
@@ -27,7 +27,7 @@ class LeadRequest extends FormRequest
             
             // Contact Details
             'whatsapp_number' => 'nullable|string|max:20',
-            'work_phone' => 'nullable|string|max:20',
+            'work_phone' => 'required|string|max:20',
             'work_phone_2' => 'nullable|string|max:20',
             'email' => 'nullable|email',
             'website' => 'nullable|url',
@@ -46,7 +46,7 @@ class LeadRequest extends FormRequest
             'citizenship_program' => 'nullable|string|max:255',
             
             // Lead Source
-            'lead_source' => 'nullable|string|max:255',
+            'lead_source' => 'required|string|max:255',
             'source_information' => 'nullable|string|max:255',
             'lead_branch_source' => 'nullable|string|max:255',
             'ad_id' => 'nullable|string|max:255',
@@ -67,7 +67,7 @@ class LeadRequest extends FormRequest
             
             // Sales & Management
             // 'sales_id' => 'nullable|exists:users,id', // Sales person (optional)
-            'responsible_person_id' => 'nullable|exists:users,id', // Manager (required)
+            'responsible_person_id' => 'required|exists:users,id', // Manager (required)
             
             // Relationships
             'participants' => 'nullable|array',

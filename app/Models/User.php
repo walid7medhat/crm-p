@@ -275,5 +275,7 @@ public function activeAgent()
 
     return $this;
 }
-
+public function getAvatarUrlAttribute(){
+     return $this->avatar ?  asset('storage/'. $this->avatar) : null;
+}
 }

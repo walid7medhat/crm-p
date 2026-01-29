@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\SourceController;
 use App\Models\UserInvitation;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use App\Http\Controllers\Api\LeadActivityController;
 
 Route::get('/test-email', function () {
     try {
@@ -158,6 +159,31 @@ Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']
 Route::post('/leads/{lead}/assign-responsible-person', [LeadController::class, 'assignResponsiblePerson']);
 Route::get('/available-responsible-persons', [LeadController::class, 'getAvailableResponsiblePersons']);
 Route::post('/check-revert', [LeadController::class, 'checkRevert']);
+Route::prefix('leads')->group(function(){
+  // Lead-specific activities
+    Route::get('/{leadId}/activities', [LeadActivityController::class, 'getLeadActivities']);
+    Route::post('/activities', [LeadActivityController::class, 'storeActivity']);
+    Route::put('/activities/{id}', [LeadActivityController::class, 'updateActivity']);
+    Route::delete('/activities/{id}', [LeadActivityController::class, 'destroyActivity']);
+    
+    // Activity status
+    Route::patch('/activities/{id}/toggle-completion', [LeadActivityController::class, 'toggleActivityCompletion']);
+    
+    // User's activities
+    Route::get('/my-activities/upcoming', [LeadActivityController::class, 'getUpcomingActivities']);
+    Route::get('/my-activities/overdue', [LeadActivityController::class, 'getOverdueActivities']);
+    Route::get('/my-activities/completed', [LeadActivityController::class, 'getCompletedActivities']);
+    
+    // Comments routes
+    Route::get('/{leadId}/comments', [LeadActivityController::class, 'getLeadComments']);
+    Route::post('/add/new/comments', [LeadActivityController::class, 'storeComment']);
+    Route::put('/update/comments/{id}', [LeadActivityController::class, 'updateComment']);
+    Route::delete('/comments/{id}', [LeadActivityController::class, 'destroyComment']);
+    
+    // Comment attachments
+    Route::post('/comments/{commentId}/attachments', [LeadActivityController::class, 'addCommentAttachments']);
+    Route::delete('/comments/{commentId}/attachments/{attachmentId}', [LeadActivityController::class, 'destroyCommentAttachment']);
+});
   // =================sources=============
         Route::apiResource('sources', SourceController::class);
 Route::prefix('listings')->group(function(){

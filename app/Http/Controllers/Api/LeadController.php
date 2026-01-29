@@ -6,6 +6,7 @@ use App\Events\LeadUpdated;
 use App\Http\Controllers\Controller;
 use App\Helpers\ApiResponse;
 use App\Http\Requests\Lead\LeadRequest;
+use App\Http\Requests\Lead\LeadIntegrationRequest;
 use App\Http\Requests\Lead\AssignResponsiblePersonRequest;
 use App\Http\Resources\Lead\LeadResource;
 use App\Http\Resources\Lead\LeadCollection;
@@ -456,7 +457,7 @@ class LeadController extends Controller
             return ApiResponse::error('Failed to check and revert leads: ' . $e->getMessage());
         }
     }
-    public function storeIntegration(LeadRequest $request): JsonResponse
+    public function storeIntegration(LeadIntegrationRequest $request): JsonResponse
 {
 
     try {

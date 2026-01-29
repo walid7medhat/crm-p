@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class LeadComment extends Model
 {
-    //
-       use HasFactory;
-    protected $guarded=[];
-     public function lead()
+    use HasFactory;
+    
+    protected $guarded = [];
+    
+    public function lead()
     {
         return $this->belongsTo(Lead::class);
     }
@@ -20,15 +21,14 @@ class LeadComment extends Model
         return $this->belongsTo(User::class);
     }
 
-   
     public function attachments()
     {
-        return $this->hasMany(CommentAttachment::class);
+        return $this->hasMany(CommentAttachment::class,'comment_id');
     }
 
     public function mentions()
     {
-        return $this->hasMany(CommentMention::class);
+        return $this->hasMany(CommentMention::class,'comment_id');
     }
 
     public function mentionedUsers()
@@ -37,22 +37,23 @@ class LeadComment extends Model
     }
 
     /**
-     * add attachments
+     * Add attachments to comment
      */
     public function addAttachments($files)
     {
         foreach ($files as $file) {
+            // Make sure we have the required array keys
             $this->attachments()->create([
-                'file_name' => $file['name'],
-                'file_path' => $file['path'],
-                'file_type' => $file['type'],
-                'file_size' => $file['size']
+                'file_name' => $file['file_name'] ?? $file['name'] ?? 'untitled',
+                'file_path' => $file['file_path'] ?? $file['path'] ?? '',
+                'file_type' => $file['file_type'] ?? $file['type'] ?? 'unknown',
+                'file_size' => $file['file_size'] ?? $file['size'] ?? 0,
             ]);
         }
     }
 
     /**
-     * add mentions
+     * Add mentions to comment
      */
     public function addMentions($userIds)
     {
