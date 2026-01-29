@@ -1,7 +1,7 @@
 <template>
-    <div class="overflow-hidden pb-8 d-flex gap-24 kanban-container">
+    <div class="kanban-container">
         <!-- Draggable Columns -->
-        <draggable v-model="columns" item-key="status" class="kanban-wrapper d-flex gap-20 overflow-x-auto scroll-sm h-100" :group="'columns'"
+        <draggable v-model="columns" item-key="status" class="kanban-wrapper d-flex gap-20 h-100" :group="'columns'"
             handle=".column-header"
             :ghost-class="'ghost'" :drag-class="'dragging'">
             <template #item="{ element: column, index }">
@@ -14,26 +14,32 @@
                                     <div class="stage-circle">
                                         <div class="stage-dot" :style="{ backgroundColor: column.color }"></div>
                                     </div>
-                                    <p class="header-title">{{ column.title }} ({{ column.leads.length }})</p>
+                                    <div v-if="editingStageId !== column.status" class="header-title-wrapper" @click="startEditingStage(column)">
+                                        <p class="header-title">{{ column.title }} ({{ column.leads.length }})</p>
+                                    </div>
+                                    <input 
+                                        v-else
+                                        v-model="editingStageTitle"
+                                        @keyup.enter="saveStageName(column)"
+                                        @keyup.esc="cancelEditingStage"
+                                        @blur="saveStageName(column)"
+                                        class="header-title-input"
+                                        ref="stageTitleInput"
+                                        type="text"
+                                    />
                                 </div>
                                 <div class="dropdown">
                                     <button type="button" data-bs-toggle="dropdown" aria-expanded="false" class="bg-transparent border-0 p-0 d-flex align-items-center">
                                         <iconify-icon icon="entypo:dots-three-vertical" class="text-xl text-white"></iconify-icon>
                                     </button>
-                                    <ul class="dropdown-menu p-12 border bg-base shadow">
+                                    <!-- <ul class="dropdown-menu p-12 border bg-base shadow">
                                         <li>
                                             <a href="#" class="duplicate-button dropdown-item px-10 py-1 text-secondary-light bg-hover-neutral-200 text-hover-neutral-900 d-flex align-items-center gap-2" @click="editStage(column)">
                                                 <iconify-icon class="text-xs" icon="lucide:edit"></iconify-icon>
                                                 Edit Stage
                                             </a>
                                         </li>
-                                        <!-- <li>
-                                            <a href="#" class="delete-button dropdown-item px-16 py-8 rounded text-secondary-light bg-hover-danger-200 text-hover-danger-900 d-flex align-items-center gap-2" @click="deleteColumn(index)">
-                                                <iconify-icon class="text-xl" icon="mingcute:delete-2-line"></iconify-icon>
-                                                Delete
-                                            </a>
-                                        </li> -->
-                                    </ul>
+                                    </ul> -->
                                 </div>
                             </div>
 
@@ -182,7 +188,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import draggable from 'vuedraggable'
 import avatar1 from '@/assets/images/users/user1.png'
 import leadsIcon from '@/assets/images/kanban/svg/leads-icon.png'
@@ -202,6 +208,11 @@ const error = ref(null)
 const echoListeners = ref([])
 const pollingInterval = ref(null)
 
+// Stage editing state
+const editingStageId = ref(null)
+const editingStageTitle = ref('')
+const stageTitleInput = ref(null)
+
 const colors = ['#7BD3EA', '#E3DA32', '#F2C934', '#8EC82F', '#00A74C']
 
 function getColorByIndex(index) {
@@ -216,6 +227,7 @@ const fetchLeads = async () => {
             title: stage.name,
             status: stage.id, // Use ID for stage changes
             color: stage.color || getColorByIndex(index),
+            order: stage.order || index, // Include order field
             leads: stage.leads || []
         }))
         
@@ -617,6 +629,57 @@ function editStage(stage) {
     console.log(stage)
 }
 
+async function startEditingStage(column) {
+    editingStageId.value = column.status
+    editingStageTitle.value = column.title
+    // Focus the input after it's rendered
+    await nextTick()
+    if (stageTitleInput.value) {
+        stageTitleInput.value.focus()
+        stageTitleInput.value.select()
+    }
+}
+
+function cancelEditingStage() {
+    editingStageId.value = null
+    editingStageTitle.value = ''
+}
+
+async function saveStageName(column) {
+    const newTitle = editingStageTitle.value.trim()
+    
+    // If title is empty or unchanged, cancel editing
+    if (!newTitle || newTitle === column.title) {
+        cancelEditingStage()
+        return
+    }
+    
+    try {
+        // Update stage name via API
+        // Ensure order is included and is a valid number
+        const orderValue = column.order !== undefined && column.order !== null ? column.order : 0
+        
+        await api.put(`/stages/${column.status}`, {
+            name: newTitle,
+            order: orderValue
+        })
+        
+        // Update local state
+        column.title = newTitle
+        
+        // Show success notification
+        $showNotification('Stage name updated successfully', 'success')
+        
+        // Cancel editing
+        cancelEditingStage()
+    } catch (error) {
+        console.error('❌ Error updating stage name:', error)
+        $showNotification('Failed to update stage name', 'error')
+        // Revert to original title on error
+        editingStageTitle.value = column.title
+    }
+}
+
 async function onLeadDragChange(evt, column) {
     if (evt.added) {
         const lead = evt.added.element
@@ -681,19 +744,47 @@ const $showNotification = (message, type = 'info') => {
     /* background-color: transparent; Use background from Index.vue */
     padding: 24px;
     height: calc(100vh - 150px); /* Adjust based on your header height */
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.kanban-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.kanban-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.kanban-container::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 4px;
+}
+
+.kanban-container::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
 }
 
 .kanban-wrapper {
     height: 100%;
+    width: max-content;
+    min-width: 100%;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    flex-shrink: 0;
 }
 
 .kanban-column {
     min-width: 247px;
     width: 247px;
+    max-width: 247px;
     background-color: #E8EDFB;
     border-radius: 12px;
     height: 100%;
+    flex-shrink: 0;
 }
 
 .column-header {
@@ -837,5 +928,33 @@ const $showNotification = (message, type = 'info') => {
     font-size: 13px;
     color: #01062C;
     margin: 0;
+}
+
+.header-title-wrapper {
+    cursor: pointer;
+    flex: 1;
+}
+
+.header-title-wrapper:hover .header-title {
+    text-decoration: underline;
+}
+
+.header-title-input {
+    font-weight: 600;
+    font-style: SemiBold;
+    font-size: 13px;
+    color: #01062C;
+    /* background: rgba(255, 255, 255, 0.2); */
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 4px;
+    padding: 2px 6px;
+    outline: none;
+    flex: 1;
+    min-width: 0;
+}
+
+.header-title-input:focus {
+    /* background: rgba(255, 255, 255, 0.3); */
+    border-color: rgba(255, 255, 255, 0.6);
 }
 </style>

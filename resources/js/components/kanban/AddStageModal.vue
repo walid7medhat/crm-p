@@ -22,15 +22,22 @@
                         v-model="formData.title"
                         placeholder="Enter Title"
                         class="form-input"
+                        :class="{ 'is-invalid': validationErrors.name || validationErrors.title }"
                     />
+                    <div v-if="validationErrors.name" class="invalid-feedback d-block">
+                        {{ validationErrors.name[0] }}
+                    </div>
+                    <div v-if="validationErrors.title" class="invalid-feedback d-block">
+                        {{ validationErrors.title[0] }}
+                    </div>
                 </div>
 
                 <!-- Stage Order -->
-                <div class="form-group">
+                <!-- <div class="form-group">
                     <label class="form-label">Stage Order</label>
                     <v-select 
                         v-model="formData.order" 
-                        :options="orderOptions" 
+                        :options="orderOptions"
                         :reduce="option => option.value"
                         label="text"
                         placeholder="Select Order"
@@ -42,10 +49,9 @@
                             </span>
                         </template>
                     </v-select>
-                </div>
+                </div> -->
 
-                <!-- Stage Rules -->
-                <div class="form-group">
+                <!-- <div class="form-group">
                     <label class="form-label">Stage Rules</label>
                     <v-select 
                         v-model="formData.roles" 
@@ -61,15 +67,11 @@
                             </span>
                         </template>
                     </v-select>
-                </div>
+                </div> -->
             </div>
 
             <!-- Footer Buttons -->
             <div class="modal-footer-custom">
-                <!-- Error Message -->
-                <div v-if="errorMessage" class="alert alert-danger mb-2 w-100" role="alert">
-                    {{ errorMessage }}
-                </div>
                 
                 <div class="d-flex align-items-center justify-content-end gap-3 w-100">
                     <button class="btn-cancel" @click="handleClose" :disabled="isSubmitting">
@@ -86,13 +88,12 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { BModal, BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import ModalHeader from './ModalHeader.vue'
 import api from '@/plugins/axios'
-import Swal from 'sweetalert2'
 
 const props = defineProps({
     modelValue: {
@@ -116,22 +117,52 @@ const formData = ref({
 
 const isSubmitting = ref(false)
 const errorMessage = ref('')
+const validationErrors = ref({})
+const stages = ref([])
 
-// Sample options - you can modify these based on your requirements
-const orderOptions = ref([
-    { value: 1, text: '1' },
-    { value: 2, text: '2' },
-    { value: 3, text: '3' },
-    { value: 4, text: '4' },
-    { value: 5, text: '5' }
-])
+// Fetch stages and create order options
+const fetchStages = async () => {
+    try {
+        const response = await api.get('/stages')
+        stages.value = response.data.data.data || []
+    } catch (error) {
+        console.error('Error fetching stages:', error)
+        stages.value = []
+    }
+}
 
-const rolesOptions = ref([
-    { value: 'admin', text: 'Admin' },
-    { value: 'manager', text: 'Manager' },
-    { value: 'user', text: 'User' },
-    { value: 'all', text: 'All Users' }
-])
+// Computed property for order options based on fetched stages
+const orderOptions = computed(() => {
+    let options = stages.value.map((stage, index) => ({
+        value: stage.order + 1,
+        text: `After ${stage.name}`
+    }))
+    return options;
+})
+
+// Watch for modal opening to fetch stages
+watch(localShow, (newValue) => {
+    if (newValue) {
+        fetchStages()
+    }
+})
+
+// Clear validation errors when user starts typing
+watch(() => formData.value.title, () => {
+    if (validationErrors.value.name) {
+        delete validationErrors.value.name
+    }
+    if (validationErrors.value.title) {
+        delete validationErrors.value.title
+    }
+    if (Object.keys(validationErrors.value).length === 0) {
+        errorMessage.value = ''
+    }
+})
+
+onMounted(() => {
+    fetchStages()
+})
 
 const handleClose = () => {
     localShow.value = false
@@ -139,20 +170,14 @@ const handleClose = () => {
 }
 
 const handleSave = async () => {
-    // Validate form
-    if (!formData.value.title || !formData.value.order) {
-        errorMessage.value = 'Please fill in all required fields'
-        $showNotification('Please fill in all required fields', 'warning')
-        return
-    }
-
     try {
         isSubmitting.value = true
         errorMessage.value = ''
+        validationErrors.value = {}
         
         const payload = {
             name: formData.value.title,
-            order: formData.value.order,
+            // order: formData.value.order,
             // Add other fields as needed
         }
         
@@ -160,15 +185,30 @@ const handleSave = async () => {
         
         console.log('✅ Stage created successfully:', response.data)
         
-        // Emit event with form data
+        // Success: close modal, reset form, and emit event
+        localShow.value = false
+        resetForm()
+        
         emit('stage-created', response.data)
         $showNotification('Stage created successfully!', 'success')
-        handleClose()
         
     } catch (error) {
+        // Error: show error message, don't close modal, don't reset form
         console.error('❌ Error creating stage:', error)
-        errorMessage.value = error.response?.data?.message || 'Failed to create stage. Please try again.'
-        $showNotification(errorMessage.value, 'error')
+        
+        // Check if it's a validation error (422 status)
+        if (error.response && error.response.status === 422) {
+            // Laravel validation errors format: { field: ["error message"] }
+            const errors = error.response.data.errors || error.response.data
+            validationErrors.value = errors
+            
+            errorMessage.value = 'Please fix the validation errors below.'
+            $showNotification('Please check the form for errors', 'warning')
+        } else {
+            // General error
+            errorMessage.value = error.response?.data?.message || 'Failed to create stage. Please try again.'
+            $showNotification(errorMessage.value, 'error')
+        }
     } finally {
         isSubmitting.value = false
     }
@@ -181,6 +221,7 @@ const resetForm = () => {
         roles: null
     }
     errorMessage.value = ''
+    validationErrors.value = {}
 }
 
 // Notification helper
@@ -189,25 +230,6 @@ const $showNotification = (message, type = 'info') => {
         window.$showNotification(message, type)
     } else {
         console.log(`${type}: ${message}`)
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
-        })
-        
-        const iconMap = {
-            'success': 'success',
-            'error': 'error',
-            'warning': 'warning',
-            'info': 'info'
-        }
-        
-        Toast.fire({
-            icon: iconMap[type] || 'info',
-            title: message
-        })
     }
 }
 </script>
@@ -276,6 +298,19 @@ const $showNotification = (message, type = 'info') => {
     color: #64748B !important;
     opacity: 1;
     font-size: 13px !important;
+    font-family: 'Montserrat';
+}
+
+.form-input.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
     font-family: 'Montserrat';
 }
 
