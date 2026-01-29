@@ -37,7 +37,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 
 const props = defineProps({
@@ -71,8 +71,25 @@ const fetchStages = async () => {
     }
 }
 
+// Listen for stage update events
+const handleStageUpdate = () => {
+    fetchStages()
+}
+
 onMounted(() => {
     fetchStages()
+    // Listen for custom event when stages are updated
+    window.addEventListener('stage-updated', handleStageUpdate)
+})
+
+onUnmounted(() => {
+    // Clean up event listener
+    window.removeEventListener('stage-updated', handleStageUpdate)
+})
+
+// Expose refresh method for manual refresh if needed
+defineExpose({
+    refresh: fetchStages
 })
 
 // Compute selected stage index based on stage ID

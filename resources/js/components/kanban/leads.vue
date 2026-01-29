@@ -667,6 +667,11 @@ async function saveStageName(column) {
         // Update local state
         column.title = newTitle
         
+        // Dispatch custom event to notify StageSelector components to refresh
+        window.dispatchEvent(new CustomEvent('stage-updated', {
+            detail: { stageId: column.status, newName: newTitle }
+        }))
+        
         // Show success notification
         $showNotification('Stage name updated successfully', 'success')
         
