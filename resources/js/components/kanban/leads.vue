@@ -314,9 +314,18 @@ const initializeLeadUpdates = () => {
         
         // Listen for lead updates
         channel.listen('.lead.updated', (event) => {
-            console.log('🎉 Leads Kanban: Real-time update received!')
-            console.log('Action type:', event.action_type)
-            console.log('Event data:', event)
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+            console.log('🎉 [PUSHER EVENT RECEIVED] Real-time update received!')
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+            console.log('📡 Event Details:')
+            console.log('  Action Type:', event.action_type)
+            console.log('  User ID:', event.user_id)
+            console.log('  User Name:', event.user_name)
+            console.log('  Timestamp:', event.timestamp)
+            console.log('  Message:', event.message)
+            console.log('  Changes:', event.changes)
+            console.log('  Full Event Object:', JSON.parse(JSON.stringify(event)))
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
             handleLeadUpdate(event)
         })
 
@@ -328,42 +337,114 @@ const initializeLeadUpdates = () => {
 }
 
 const handleLeadUpdate = (event) => {
-    console.log('📊 Handling lead update:', event.action_type)
-    console.log('📦 Event data:', event)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('📊 [LEAD UPDATE HANDLER] Starting lead update processing')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('📋 Action Type:', event.action_type)
+    console.log('📦 Full Event Object:', JSON.parse(JSON.stringify(event)))
+    console.log('🔍 Event Keys:', Object.keys(event))
     
-    const leadData = event.lead?.data || event.lead
+    // Extract lead data - handle different possible structures
+    let leadData = event.lead
+    console.log('🔍 Initial leadData:', leadData)
+    
+    // If lead is wrapped in a data property
+    if (leadData?.data) {
+        console.log('📦 Lead wrapped in .data property, extracting...')
+        leadData = leadData.data
+        console.log('✅ Extracted from .data:', leadData)
+    }
+    
+    // If lead is an object with nested structure
+    if (!leadData && event.lead) {
+        console.log('📦 Using event.lead directly')
+        leadData = event.lead
+    }
     
     if (!leadData || !leadData.id) {
-        console.error('❌ Invalid lead data:', event.lead)
+        console.error('❌ [ERROR] Invalid lead data - missing ID:', {
+            event,
+            leadData,
+            hasId: !!leadData?.id,
+            leadDataKeys: leadData ? Object.keys(leadData) : 'null'
+        })
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
         return
     }
+    
+    console.log('✅ [SUCCESS] Lead data extracted successfully')
+    console.log('📊 Lead Details:', {
+        id: leadData.id,
+        stage_id: leadData.stage_id,
+        stage_nested_id: leadData.stage?.id,
+        lead_name: leadData.lead_name,
+        lead_number: leadData.lead_number,
+        responsible_person_id: leadData.responsible_person_id,
+        responsible_person_name: leadData.responsible_person?.name,
+        allKeys: Object.keys(leadData)
+    })
+    
+    // Log current columns state
+    console.log('📋 Current Columns State:', {
+        totalColumns: columns.value.length,
+        columnStages: columns.value.map(c => ({ status: c.status, title: c.title, leadsCount: c.leads?.length || 0 }))
+    })
     
     switch (event.action_type) {
         case 'created':
+            console.log('🆕 Routing to handleNewLead()')
             handleNewLead(leadData)
             break
         case 'updated':
+            console.log('✏️ Routing to handleUpdatedLead() - action: updated')
+            handleUpdatedLead(leadData)
+            break
         case 'assigned':
+            console.log('👤 Routing to handleUpdatedLead() - action: assigned (NEWLY ASSIGNED LEAD)')
             handleUpdatedLead(leadData)
             break
         case 'deleted':
+            console.log('🗑️ Routing to handleDeletedLead()')
             handleDeletedLead(leadData)
             break
         case 'stage_changed':
+            console.log('🔄 Routing to handleStageChanged()')
             handleStageChanged(leadData, event.changes)
             break
+        default:
+            // For unknown action types, try to handle as update
+            console.log('⚠️ Unknown action type, treating as update:', event.action_type)
+            handleUpdatedLead(leadData)
     }
     
     showLeadNotification(event)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 }
 
 const handleNewLead = (lead) => {
-    if (!lead || !lead.id || !lead.stage_id) {
-        console.error('❌ Invalid lead data in handleNewLead:', lead)
+    if (!lead || !lead.id) {
+        console.error('❌ Invalid lead data in handleNewLead - missing id:', lead)
         return
     }
     
-    const columnIndex = columns.value.findIndex(col => col.status === lead.stage_id)
+    // Extract stage_id from different possible locations
+    const stageId = lead.stage_id || lead.stage?.id || null
+    
+    if (!stageId) {
+        console.warn('⚠️ New lead has no stage_id, using first available stage:', lead)
+        // If no stage_id, try to add to first column as fallback
+        if (columns.value.length > 0 && columns.value[0].status) {
+            const firstStageId = columns.value[0].status
+            const leadWithStage = { ...lead, stage_id: firstStageId }
+            handleNewLead(leadWithStage)
+            return
+        } else {
+            console.error('❌ No stages available and lead has no stage_id:', lead)
+            return
+        }
+    }
+    
+    const columnIndex = columns.value.findIndex(col => col.status === stageId)
     if (columnIndex !== -1) {
         if (!columns.value[columnIndex].leads) {
             columns.value[columnIndex].leads = []
@@ -371,8 +452,16 @@ const handleNewLead = (lead) => {
         
         const existingIndex = columns.value[columnIndex].leads.findIndex(l => l && l.id === lead.id)
         if (existingIndex === -1) {
-            columns.value[columnIndex].leads.unshift(lead)
+            // Ensure lead has stage_id set
+            const leadToAdd = { ...lead, stage_id: stageId }
+            columns.value[columnIndex].leads.unshift(leadToAdd)
+            console.log('✅ Added new lead to column:', columnIndex, 'stage:', stageId)
+        } else {
+            console.log('⚠️ Lead already exists in column, updating instead')
+            columns.value[columnIndex].leads[existingIndex] = { ...lead, stage_id: stageId }
         }
+    } else {
+        console.warn('⚠️ Column not found for stage_id:', stageId, 'Available stages:', columns.value.map(c => c.status))
     }
 }
 
@@ -395,65 +484,229 @@ const handleDeletedLead = (lead) => {
 }
 
 const handleUpdatedLead = (lead) => {
-    if (!lead || !lead.id || !lead.stage_id) {
-        console.error('❌ Invalid lead data in handleUpdatedLead:', lead)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('🔄 [HANDLE UPDATED LEAD] Starting processing')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    
+    if (!lead || !lead.id) {
+        console.error('❌ [ERROR] Invalid lead data - missing ID')
+        console.error('Lead object:', lead)
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
         return
     }
     
+    console.log('📋 Lead Input:', {
+        id: lead.id,
+        lead_name: lead.lead_name,
+        lead_number: lead.lead_number,
+        stage_id: lead.stage_id,
+        stage_object: lead.stage,
+        stage_nested_id: lead.stage?.id,
+        responsible_person_id: lead.responsible_person_id,
+        responsible_person: lead.responsible_person
+    })
+    
+    // Extract stage_id from different possible locations
+    const stageId = lead.stage_id || lead.stage?.id || null
+    
+    console.log('🔍 Stage ID Extraction:', {
+        'lead.stage_id': lead.stage_id,
+        'lead.stage?.id': lead.stage?.id,
+        'extracted_stageId': stageId
+    })
+    
+    if (!stageId) {
+        console.warn('⚠️ [WARNING] Lead has no stage_id')
+        console.log('Lead object:', JSON.parse(JSON.stringify(lead)))
+        console.log('Available columns:', columns.value.map(c => ({ status: c.status, title: c.title })))
+        
+        // If no stage_id, try to add to first column as fallback
+        if (columns.value.length > 0 && columns.value[0].status) {
+            const firstStageId = columns.value[0].status
+            console.log('📌 [FALLBACK] Using first available stage:', firstStageId)
+            // Create a lead copy with the first stage_id
+            const leadWithStage = { ...lead, stage_id: firstStageId }
+            console.log('🔄 Recursing with lead that has stage_id:', leadWithStage)
+            handleUpdatedLead(leadWithStage)
+            return
+        } else {
+            console.error('❌ [ERROR] No stages available and lead has no stage_id')
+            console.log('Columns:', columns.value)
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+            return
+        }
+    }
+    
+    console.log('✅ Stage ID found:', stageId)
+    console.log('📊 Processing lead update:', {
+        leadId: lead.id,
+        stageId: stageId,
+        leadName: lead.lead_name || lead.lead_number
+    })
+    
+    // Log current state of all columns
+    console.log('📋 Current Columns State (before search):')
+    columns.value.forEach((col, idx) => {
+        const leadIds = col.leads?.map(l => l?.id).filter(Boolean) || []
+        console.log(`  Column ${idx}: stage=${col.status}, title="${col.title}", leadsCount=${col.leads?.length || 0}, leadIds=[${leadIds.join(', ')}]`)
+    })
+    
     let leadFound = false
+    let foundInColumnIndex = -1
+    let foundInLeadIndex = -1
     
     // First, try to find and update existing lead
-    for (const column of columns.value) {
+    console.log('🔍 Searching for existing lead in columns...')
+    for (let colIdx = 0; colIdx < columns.value.length; colIdx++) {
+        const column = columns.value[colIdx]
         if (column.leads) {
             const index = column.leads.findIndex(l => l && l.id === lead.id)
             if (index !== -1) {
                 leadFound = true
-                if (column.status !== lead.stage_id) {
+                foundInColumnIndex = colIdx
+                foundInLeadIndex = index
+                console.log(`✅ [FOUND] Lead exists in column ${colIdx} (stage: ${column.status}), lead index: ${index}`)
+                
+                if (column.status !== stageId) {
                     // Lead moved to different stage
+                    console.log(`🔄 [MOVE] Lead needs to move from stage ${column.status} to stage ${stageId}`)
+                    console.log(`  Removing from column ${colIdx}...`)
                     column.leads.splice(index, 1)
-                    const newColumnIndex = columns.value.findIndex(c => c.status === lead.stage_id)
+                    console.log(`  ✅ Removed from column ${colIdx}`)
+                    
+                    const newColumnIndex = columns.value.findIndex(c => c.status === stageId)
+                    console.log(`  Searching for target column with stage_id=${stageId}...`)
+                    
                     if (newColumnIndex !== -1) {
+                        console.log(`  ✅ Found target column at index ${newColumnIndex}`)
                         if (!columns.value[newColumnIndex].leads) {
                             columns.value[newColumnIndex].leads = []
+                            console.log(`  ✅ Initialized leads array for column ${newColumnIndex}`)
                         }
+                        
                         // Check if lead already exists in new column to avoid duplicates
                         const existingIndex = columns.value[newColumnIndex].leads.findIndex(l => l && l.id === lead.id)
                         if (existingIndex === -1) {
                             columns.value[newColumnIndex].leads.unshift(lead)
+                            console.log(`  ✅ [SUCCESS] Moved lead to new column ${newColumnIndex}`)
+                            console.log(`  New column now has ${columns.value[newColumnIndex].leads.length} leads`)
                         } else {
                             columns.value[newColumnIndex].leads[existingIndex] = lead
+                            console.log(`  ✅ Updated lead in new column (was duplicate)`)
                         }
+                    } else {
+                        console.warn(`  ⚠️ [ERROR] Target column not found for stage_id: ${stageId}`)
+                        console.warn(`  Available stages:`, columns.value.map(c => c.status))
                     }
                 } else {
                     // Update in same stage
+                    console.log(`✅ [UPDATE] Lead stays in same column, updating data...`)
                     column.leads[index] = lead
+                    console.log(`  ✅ Updated lead in column ${colIdx}`)
                 }
                 break
             }
+        } else {
+            console.log(`  Column ${colIdx} has no leads array`)
         }
     }
     
     // If lead not found in any column, add it to the appropriate column (newly assigned lead)
     if (!leadFound) {
-        console.log('📌 Lead not found in any column, adding to stage:', lead.stage_id)
-        const columnIndex = columns.value.findIndex(col => col.status === lead.stage_id)
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+        console.log('📌 [NEWLY ASSIGNED LEAD] Lead not found in any column - this is a newly assigned lead!')
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+        console.log('Lead Details:', {
+            id: lead.id,
+            name: lead.lead_name || lead.lead_number,
+            stage_id: stageId,
+            responsible_person_id: lead.responsible_person_id
+        })
+        console.log('Searching for column with stage_id:', stageId)
+        
+        const columnIndex = columns.value.findIndex(col => col.status === stageId)
+        console.log(`Column search result: index=${columnIndex}`)
+        
         if (columnIndex !== -1) {
+            console.log(`✅ Found target column at index ${columnIndex}`)
+            console.log(`Column details:`, {
+                status: columns.value[columnIndex].status,
+                title: columns.value[columnIndex].title,
+                currentLeadsCount: columns.value[columnIndex].leads?.length || 0
+            })
+            
             if (!columns.value[columnIndex].leads) {
                 columns.value[columnIndex].leads = []
+                console.log(`✅ Initialized leads array for column ${columnIndex}`)
             }
+            
             // Check if lead already exists to avoid duplicates
             const existingIndex = columns.value[columnIndex].leads.findIndex(l => l && l.id === lead.id)
+            console.log(`Checking for duplicates: existingIndex=${existingIndex}`)
+            
             if (existingIndex === -1) {
-                columns.value[columnIndex].leads.unshift(lead)
-                console.log('✅ Added newly assigned lead to column')
+                // Ensure lead has stage_id set
+                const leadToAdd = { ...lead, stage_id: stageId }
+                console.log(`✅ No duplicate found, adding lead to column ${columnIndex}...`)
+                columns.value[columnIndex].leads.unshift(leadToAdd)
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+                console.log('✅✅✅ [SUCCESS] NEWLY ASSIGNED LEAD ADDED TO COLUMN! ✅✅✅')
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+                console.log(`Column: ${columnIndex} (${columns.value[columnIndex].title})`)
+                console.log(`Stage ID: ${stageId}`)
+                console.log(`Lead ID: ${lead.id}`)
+                console.log(`Lead Name: ${lead.lead_name || lead.lead_number}`)
+                console.log(`New leads count: ${columns.value[columnIndex].leads.length}`)
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
             } else {
-                columns.value[columnIndex].leads[existingIndex] = lead
-                console.log('✅ Updated lead in column')
+                // Update existing lead
+                console.log(`⚠️ Lead already exists at index ${existingIndex}, updating instead...`)
+                columns.value[columnIndex].leads[existingIndex] = { ...lead, stage_id: stageId }
+                console.log(`✅ Updated existing lead in column`)
             }
         } else {
-            console.warn('⚠️ Column not found for stage_id:', lead.stage_id)
+            console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+            console.warn('⚠️ [ERROR] Column not found for stage_id:', stageId)
+            console.warn('Available stages:', columns.value.map((c, idx) => ({ index: idx, status: c.status, title: c.title })))
+            console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+            
+            // Try to add to first available column as fallback
+            if (columns.value.length > 0) {
+                console.log('🔄 [FALLBACK] Trying to add to first available column...')
+                const firstColumn = columns.value[0]
+                console.log(`First column:`, { status: firstColumn.status, title: firstColumn.title })
+                
+                if (!firstColumn.leads) {
+                    firstColumn.leads = []
+                    console.log(`✅ Initialized leads array for first column`)
+                }
+                
+                const existingIndex = firstColumn.leads.findIndex(l => l && l.id === lead.id)
+                if (existingIndex === -1) {
+                    const leadToAdd = { ...lead, stage_id: firstColumn.status }
+                    firstColumn.leads.unshift(leadToAdd)
+                    console.log(`✅ [FALLBACK SUCCESS] Added lead to first available column as fallback`)
+                    console.log(`New leads count: ${firstColumn.leads.length}`)
+                } else {
+                    console.log(`⚠️ Lead already exists in first column at index ${existingIndex}`)
+                }
+            } else {
+                console.error('❌ [CRITICAL ERROR] No columns available at all!')
+            }
         }
+    } else {
+        console.log(`✅ Lead was found and processed (found in column ${foundInColumnIndex}, lead index ${foundInLeadIndex})`)
     }
+    
+    // Final state log
+    console.log('📋 Final Columns State (after processing):')
+    columns.value.forEach((col, idx) => {
+        const leadIds = col.leads?.map(l => l?.id).filter(Boolean) || []
+        const hasThisLead = leadIds.includes(lead.id)
+        console.log(`  Column ${idx}: stage=${col.status}, title="${col.title}", leadsCount=${col.leads?.length || 0}, hasThisLead=${hasThisLead ? '✅' : '❌'}, leadIds=[${leadIds.join(', ')}]`)
+    })
+    
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 }
 
 const handleStageChanged = (lead, changes) => {
