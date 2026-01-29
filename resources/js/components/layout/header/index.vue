@@ -14,15 +14,15 @@
     
       </router-link>
 
-      <button v-if="!isSidebarActive" type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
+      <!-- <button v-if="!isSidebarActive" type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
         <iconify-icon icon='heroicons:bars-3-solid'
           class="icon text-2xl"></iconify-icon>
-      </button>
+      </button> -->
     </div>
-    <button v-if="isSidebarActive" type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
+    <!-- <button v-if="isSidebarActive" type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
       <iconify-icon icon='iconoir:arrow-right'
         class="icon text-2xl"></iconify-icon>
-    </button>
+    </button> -->
     <!-- Menu -->
     <div class="sidebar-menu-area">
       <ul class="sidebar-menu">
