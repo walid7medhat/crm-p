@@ -14,10 +14,10 @@
     
       </router-link>
 
-      <!-- <button v-if="!isSidebarActive" type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
-        <iconify-icon icon='heroicons:bars-3-solid'
+      <button v-if="!isSidebarActive" type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
+        <iconify-icon icon='heroicons:bars-3-bottom-right'
           class="icon text-2xl"></iconify-icon>
-      </button> -->
+      </button>
     </div>
     <!-- <button v-if="isSidebarActive" type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
       <iconify-icon icon='iconoir:arrow-right'
@@ -344,6 +344,7 @@
 import { ref, computed, onMounted, getCurrentInstance, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/plugins/axios';
+import { useSidebar } from '@/composables/useSidebar.js';
 
 const logo = ref('/assets/images/LogoWhite.png');
 const dashboardIcon=ref('/assets/icons/dashboard-icon.svg');
@@ -361,8 +362,8 @@ const route = useRoute();
 const activeDropdown = ref(null);
 const isMobileOpen = ref(false);
 const countsLoading = ref(false);
-const isSidebarActive = ref(false);
 const { proxy } = getCurrentInstance();
+const { isSidebarActive, toggleSidebarDesktop } = useSidebar();
 
 const getUserFromStorage = () => {
   try {
@@ -643,11 +644,6 @@ const closeSidebar = () => {
   }
 };
 
-function toggleSidebarDesktop() {
-  isSidebarActive.value = !isSidebarActive.value;
-  document.querySelector('.sidebar')?.classList.toggle('active');
-  document.querySelector('.dashboard-main')?.classList.toggle('active');
-}
 
 function toggleSidebarMobile() {
   isMobileOpen.value = true;
@@ -766,6 +762,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   min-width: 40px;
+  margin-right: 20px;
 }
 
 /* .sidebar-menu .dropdown.active-parent > a {
