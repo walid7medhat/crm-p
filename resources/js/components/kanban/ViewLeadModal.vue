@@ -82,6 +82,7 @@ const show = ref(props.modelValue)
 const leadStageId = ref(null)
 const activeTab = ref('general')
 const echoListener = ref(null)
+const echoAssignedListener = ref(null)
 
 const switchTab = (tab) => {
     activeTab.value = tab
@@ -100,52 +101,226 @@ const fetchLead = async () => {
 
 // Initialize real-time updates for this specific lead
 const initializeLeadListener = () => {
-    if (!props.leadId) return
+    if (!props.leadId) {
+        console.log('⚠️ ViewLeadModal: No leadId provided, skipping listener initialization')
+        return
+    }
     
     const user = JSON.parse(localStorage.getItem('user'))
     if (!user || !window.Echo) {
-        console.log('❌ Real-time updates not available for lead modal')
+        console.log('❌ ViewLeadModal: Real-time updates not available - User:', !!user, 'Echo:', !!window.Echo)
         return
     }
 
-    console.log('🔔 ViewLeadModal: Listening for lead updates:', props.leadId)
+    console.log('🔔 ViewLeadModal: Initializing listeners for lead:', props.leadId)
+    console.log('   - User ID:', user.id)
+    console.log('   - Channel: user.' + user.id)
 
     try {
-        echoListener.value = window.Echo.private(`user.${user.id}`)
-            .listen('.lead.updated', (event) => {
-                const leadData = event.lead?.data || event.lead
-                
-                // Only handle updates for this specific lead
-                if (leadData && leadData.id === props.leadId) {
-                    console.log('🎉 ViewLeadModal: Lead update received for current lead')
-                    handleLeadUpdate(event)
-                }
+        const channel = window.Echo.private(`user.${user.id}`)
+        
+        // Listen for lead.updated events
+        console.log('📡 ViewLeadModal: Setting up .lead.updated listener...')
+        echoListener.value = channel.listen('.lead.updated', (event) => {
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+            console.log('🔔 ViewLeadModal: [UPDATED EVENT] Received .lead.updated event')
+            console.log('   📦 Full Event Object:', JSON.stringify(event, null, 2))
+            console.log('   🆔 Event Lead ID:', event.lead?.data?.id || event.lead?.id || 'N/A')
+            console.log('   🎯 Current Modal Lead ID:', props.leadId)
+            console.log('   📋 Action Type:', event.action_type || 'NOT PROVIDED')
+            console.log('   👤 User Name:', event.user_name || 'NOT PROVIDED')
+            console.log('   👤 User ID:', event.user_id || 'NOT PROVIDED')
+            console.log('   ⏰ Timestamp:', new Date().toISOString())
+            
+            const leadData = event.lead?.data || event.lead
+            
+            console.log('   📊 Lead Data Structure:', {
+                hasLeadData: !!leadData,
+                leadId: leadData?.id,
+                leadName: leadData?.lead_name,
+                stageId: leadData?.stage_id,
+                responsiblePersonId: leadData?.responsible_person_id,
+                responsiblePerson: leadData?.responsible_person,
+                hasStage: !!leadData?.stage,
+                allKeys: leadData ? Object.keys(leadData) : []
             })
+            
+            // Only handle updates for this specific lead
+            if (leadData && leadData.id === props.leadId) {
+                console.log('   ✅ MATCH: Event is for current lead, processing update...')
+                handleLeadUpdate(event, 'updated')
+            } else {
+                console.log('   ⏭️  SKIP: Event is not for current lead')
+                if (leadData) {
+                    console.log('      - Event Lead ID:', leadData.id, 'vs Current:', props.leadId)
+                } else {
+                    console.log('      - No lead data found in event')
+                }
+            }
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+        })
+        
+        // Listen for lead.assigned events
+        console.log('📡 ViewLeadModal: Setting up .lead.assigned listener...')
+        echoAssignedListener.value = channel.listen('.lead.assigned', (event) => {
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+            console.log('🔔 ViewLeadModal: [ASSIGNED EVENT] Received .lead.assigned event')
+            console.log('   📦 Full Event Object:', JSON.stringify(event, null, 2))
+            console.log('   🆔 Event Lead ID:', event.lead?.data?.id || event.lead?.id || 'N/A')
+            console.log('   🎯 Current Modal Lead ID:', props.leadId)
+            console.log('   📋 Action Type:', event.action_type || 'NOT PROVIDED')
+            console.log('   👤 User Name:', event.user_name || 'NOT PROVIDED')
+            console.log('   👤 User ID:', event.user_id || 'NOT PROVIDED')
+            console.log('   👤 Assigned To:', event.assigned_to?.name || event.assigned_to_id || 'NOT PROVIDED')
+            console.log('   ⏰ Timestamp:', new Date().toISOString())
+            
+            const leadData = event.lead?.data || event.lead
+            
+            console.log('   📊 Lead Data Structure:', {
+                hasLeadData: !!leadData,
+                leadId: leadData?.id,
+                leadName: leadData?.lead_name,
+                stageId: leadData?.stage_id,
+                responsiblePersonId: leadData?.responsible_person_id,
+                responsiblePerson: leadData?.responsible_person,
+                hasStage: !!leadData?.stage,
+                allKeys: leadData ? Object.keys(leadData) : []
+            })
+            
+            // Only handle assignments for this specific lead
+            if (leadData && leadData.id === props.leadId) {
+                console.log('   ✅ MATCH: Event is for current lead, processing assignment...')
+                handleLeadUpdate(event, 'assigned')
+            } else {
+                console.log('   ⏭️  SKIP: Event is not for current lead')
+                if (leadData) {
+                    console.log('      - Event Lead ID:', leadData.id, 'vs Current:', props.leadId)
+                } else {
+                    console.log('      - No lead data found in event')
+                }
+            }
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+        })
+        
+        console.log('✅ ViewLeadModal: Both listeners initialized successfully')
     } catch (error) {
-        console.error('❌ Failed to initialize Echo for lead modal:', error)
+        console.error('❌ ViewLeadModal: Failed to initialize Echo listeners:', error)
+        console.error('   Error Details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        })
     }
 }
 
-const handleLeadUpdate = (event) => {
+const handleLeadUpdate = (event, eventType = 'unknown') => {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log(`🔄 ViewLeadModal: handleLeadUpdate called [${eventType.toUpperCase()}]`)
+    console.log('   📋 Event Type:', eventType)
+    console.log('   📋 Action Type:', event.action_type || 'NOT PROVIDED')
+    console.log('   📦 Event Structure:', {
+        hasLead: !!event.lead,
+        hasLeadData: !!event.lead?.data,
+        hasActionType: !!event.action_type,
+        hasUserName: !!event.user_name,
+        hasUserId: !!event.user_id,
+        allEventKeys: Object.keys(event)
+    })
+    
     const leadData = event.lead?.data || event.lead
     
-    if (!leadData) return
+    console.log('   📊 Lead Data Check:', {
+        hasLeadData: !!leadData,
+        leadId: leadData?.id,
+        leadName: leadData?.lead_name
+    })
+    
+    if (!leadData) {
+        console.log('   ❌ ERROR: No lead data found in event, aborting update')
+        console.log('   📦 Event object:', event)
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+        return
+    }
+    
+    console.log('   📝 Current Lead State (Before Update):', {
+        id: lead.value?.id,
+        name: lead.value?.lead_name,
+        stageId: lead.value?.stage_id,
+        responsiblePersonId: lead.value?.responsible_person_id,
+        responsiblePersonName: lead.value?.responsible_person?.name
+    })
+    
+    console.log('   📝 New Lead Data (From Event):', {
+        id: leadData.id,
+        name: leadData.lead_name,
+        stageId: leadData.stage_id,
+        responsiblePersonId: leadData.responsible_person_id,
+        responsiblePersonName: leadData.responsible_person?.name,
+        allKeys: Object.keys(leadData)
+    })
     
     // Update the local lead data
     if (event.action_type === 'deleted') {
+        console.log('   🗑️  ACTION: Lead deleted, closing modal')
+        console.log('   ✅ TRIGGER: show.value = false')
         $showNotification('This lead has been deleted', 'warning')
         show.value = false
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     } else {
+        console.log('   🔄 ACTION: Updating lead data...')
+        
+        const previousLead = { ...lead.value }
         lead.value = { ...lead.value, ...leadData }
         
+        console.log('   ✅ TRIGGER: lead.value updated')
+        console.log('   📊 Changes Detected:', {
+            nameChanged: previousLead?.lead_name !== lead.value?.lead_name,
+            stageChanged: previousLead?.stage_id !== lead.value?.stage_id,
+            responsiblePersonChanged: previousLead?.responsible_person_id !== lead.value?.responsible_person_id,
+            previousStageId: previousLead?.stage_id,
+            newStageId: lead.value?.stage_id,
+            previousResponsiblePersonId: previousLead?.responsible_person_id,
+            newResponsiblePersonId: lead.value?.responsible_person_id
+        })
+        
         if (leadData.stage_id) {
+            const previousStageId = leadStageId.value
             leadStageId.value = leadData.stage_id
+            console.log('   ✅ TRIGGER: leadStageId.value updated')
+            console.log('      - Previous Stage ID:', previousStageId)
+            console.log('      - New Stage ID:', leadStageId.value)
+        } else {
+            console.log('   ⚠️  WARNING: No stage_id in leadData, stage selector not updated')
         }
         
+        console.log('   ✅ TRIGGER: Emitting lead-updated event to parent')
+        console.log('      - Emit Data:', {
+            id: leadData.id,
+            name: leadData.lead_name,
+            stageId: leadData.stage_id,
+            responsiblePersonId: leadData.responsible_person_id
+        })
         emit('lead-updated', leadData)
         
         const userName = event.user_name || 'Someone'
-        $showNotification(`${userName} updated this lead`, 'info')
+        const notificationMessage = eventType === 'assigned' 
+            ? `${userName} assigned this lead` 
+            : `${userName} updated this lead`
+        
+        console.log('   ✅ TRIGGER: Showing notification')
+        console.log('      - Message:', notificationMessage)
+        $showNotification(notificationMessage, 'info')
+        
+        console.log('   📝 Final Lead State (After Update):', {
+            id: lead.value?.id,
+            name: lead.value?.lead_name,
+            stageId: lead.value?.stage_id,
+            leadStageIdValue: leadStageId.value,
+            responsiblePersonId: lead.value?.responsible_person_id,
+            responsiblePersonName: lead.value?.responsible_person?.name
+        })
+        
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     }
 }
 
@@ -174,23 +349,58 @@ const handleLeadUpdateFromTab = (updatedLeadData) => {
 }
 
 const cleanup = () => {
-    if (echoListener.value && typeof echoListener.value.stopListening === 'function') {
-        echoListener.value.stopListening('.lead.updated')
+    console.log('🧹 ViewLeadModal: Cleaning up Echo listeners...')
+    
+    if (echoListener.value) {
+        console.log('   🗑️  Removing .lead.updated listener')
+        if (typeof echoListener.value.stopListening === 'function') {
+            echoListener.value.stopListening('.lead.updated')
+            console.log('   ✅ .lead.updated listener stopped')
+        } else {
+            console.log('   ⚠️  stopListening method not available on listener')
+        }
         echoListener.value = null
+    } else {
+        console.log('   ℹ️  No .lead.updated listener to clean up')
     }
+    
+    if (echoAssignedListener.value) {
+        console.log('   🗑️  Removing .lead.assigned listener')
+        if (typeof echoAssignedListener.value.stopListening === 'function') {
+            echoAssignedListener.value.stopListening('.lead.assigned')
+            console.log('   ✅ .lead.assigned listener stopped')
+        } else {
+            console.log('   ⚠️  stopListening method not available on assigned listener')
+        }
+        echoAssignedListener.value = null
+    } else {
+        console.log('   ℹ️  No .lead.assigned listener to clean up')
+    }
+    
+    console.log('✅ ViewLeadModal: Cleanup completed')
 }
 
 onMounted(() => {
+    console.log('🚀 ViewLeadModal: Component mounted')
+    console.log('   - show.value:', show.value)
+    console.log('   - props.leadId:', props.leadId)
+    
     if (show.value && props.leadId) {
+        console.log('   ✅ Initializing lead data and listeners...')
         fetchLead()
         setTimeout(() => {
+            console.log('   ⏰ Timeout completed, initializing listeners...')
             initializeLeadListener()
         }, 500)
+    } else {
+        console.log('   ⏭️  Skipping initialization - modal not shown or no leadId')
     }
 })
 
 onUnmounted(() => {
+    console.log('💀 ViewLeadModal: Component unmounting, cleaning up...')
     cleanup()
+    console.log('✅ ViewLeadModal: Component unmounted')
 })
 
 watch(() => props.modelValue, (val) => {
@@ -198,16 +408,27 @@ watch(() => props.modelValue, (val) => {
 })
 
 watch(show, (val) => {
+    console.log('👀 ViewLeadModal: show watcher triggered')
+    console.log('   - New value:', val)
+    console.log('   - props.leadId:', props.leadId)
+    
     if (val) {
+        console.log('   ✅ Modal opened, initializing...')
         if (props.leadId) {
+            console.log('   📥 Fetching lead data...')
             fetchLead()
             setTimeout(() => {
+                console.log('   ⏰ Timeout completed, initializing listeners...')
                 initializeLeadListener()
             }, 500)
+        } else {
+            console.log('   ⚠️  No leadId provided, cannot fetch or listen')
         }
     } else {
+        console.log('   ❌ Modal closed, cleaning up listeners...')
         cleanup()
     }
+    console.log('   📤 Emitting update:modelValue:', val)
     emit('update:modelValue', val)
 })
 
