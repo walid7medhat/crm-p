@@ -174,7 +174,9 @@ public function permissions(User $user): JsonResponse
                 if ($area) {
                     $childAreaIds = $area->getChildIdsAttribute();
                     $allAreaIds = array_merge([$areaId], $childAreaIds);
-                    $query->whereIn('area_id', $allAreaIds);
+                    $query->whereIn('area_id', $allAreaIds)  ->orWhereHas('project', function ($projectQuery) use ($allAreaIds) {
+                        $projectQuery->whereIn('area_id', $allAreaIds);
+                    });
                 }
             }
 

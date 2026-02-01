@@ -72,10 +72,31 @@ public function getAreaTitleAttribute()
     // Reverse the array and join with commas
     return implode(', ', $parentChain);
 }
+public function getTitleAttribute()
+{
+    // Collecting the names from the current area upwards
+    $parentChain = [];
+    $currentParent = $this;
+    if( $currentParent->type != 'city' ){
+        // Traverse up to the root (collect names)
+        while ($currentParent && $currentParent->type !='city' && $currentParent->type!='country') {
+                $parentChain[] = $currentParent->name;
+                $currentParent = $currentParent->parent;
+            
+        }
+    }else{
+       $parentChain[] = $currentParent->name;  
+    }
+        // array_pop($parentChain);
+
+
+    // Reverse the array and join with commas
+    return implode(', ', $parentChain);
+}
 /**
  * Get area hierarchy attribute
  */
-// في App\Models\Area
+
 public function parentRecursive()
 {
     return $this->belongsTo(Area::class, 'parent_id')->with('parentRecursive');

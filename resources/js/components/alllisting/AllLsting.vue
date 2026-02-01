@@ -139,7 +139,7 @@
 
                 <h5 class="property-title mb-2">{{ property.title || 'No Title' }}</h5>
                 <p class="property-location mb-3">
-                  <i class="ri-map-pin-line me-1"></i>{{ getLocation(property) }}
+                  <i class="ri-map-pin-line me-1"></i>{{ property.area }}
                 </p>
 
                 <div class="property-details d-flex justify-content-between text-muted small mb-3">

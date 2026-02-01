@@ -25,6 +25,7 @@ $duplicatedProject = Project::whereRaw(
         return [
             'id' => $this->id,
             'title' => $this->title,
+            'name' => $this->title.', '.$this->area->title,
             'area_id' => $this->area_id,
             // Developer data
             'developer' => $this->developer ? [

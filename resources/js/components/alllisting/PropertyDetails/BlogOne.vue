@@ -3049,7 +3049,7 @@ const createSlide1 = (currentUser) => {
             </h1>
             <p style="font-size:3mm !important; line-height:4mm !important; margin:0 !important;">
               <span style="display:inline-block !important; width:5% !important; vertical-align:top !important;"><img src="${locationIcon}" style="display:inline-block !important; width:3mm !important;" /></span>
-              <span style="display:inline-block !important; width:85% !important; color:#000000 !important">${property.value?.area?.name || 'Park Valley, Reem Hills, Al Reem Island, Abu Dhabi, UAE'}</span>
+              <span style="display:inline-block !important; width:85% !important; color:#000000 !important">${property.value?.area?.title || 'Park Valley, Reem Hills, Al Reem Island, Abu Dhabi, UAE'}</span>
             </p>
             <h1 style="font-size:6mm !important; margin:3mm 0 0 0 !important; color:#faa300 !important; font-weight:bold !important; text-align:left !important;">AED ${formatPrice(property.value?.price) || '1,345,673'}</h1>
           </div>
@@ -3065,18 +3065,15 @@ const createSlide1 = (currentUser) => {
 };
 
 const createSlide2 = () => {
-  // الحصول على Payment Plans
   const paymentPlans = property.value?.payment_plan_json || property.value?.payment_plan;
   
-  // تحويل البيانات إلى نص بسيط بدون أقواس
   let paymentPlanText = '';
   if (paymentPlans) {
     if (typeof paymentPlans === 'string') {
-      // محاولة تحويل JSON string إلى array
       try {
         const parsed = JSON.parse(paymentPlans);
         if (Array.isArray(parsed)) {
-          paymentPlanText = parsed.join(', '); // بدون أقواس
+          paymentPlanText = parsed.join(', ');
         } else {
           paymentPlanText = paymentPlans;
         }
@@ -3084,7 +3081,7 @@ const createSlide2 = () => {
         paymentPlanText = paymentPlans;
       }
     } else if (Array.isArray(paymentPlans)) {
-      paymentPlanText = paymentPlans.join(', '); // بدون أقواس
+      paymentPlanText = paymentPlans.join(', '); 
     } else {
       paymentPlanText = String(paymentPlans);
     }
@@ -3177,28 +3174,12 @@ const createSlide3 = () => {
            margin-right: 1mm  !important;
         ">
          
-          <div style="
-            height: 15% !important; 
-            min-height: 15mm !important;
-            width: 100% !important; 
-            padding: 5mm !important; 
-            display: flex !important; 
-            align-items: center !important;
-            box-sizing: border-box !important;
-          ">
-            <h1 style="
-              font-size: 6mm !important; 
-              margin: 0 !important;
-              font-weight: bold !important;
-            ">
-              Property Images
-            </h1>
-          </div>
+        
           
           
           <div style="
             width: 100% !important; 
-            height: 85% !important; 
+            height: 100% !important; 
             overflow: hidden !important;
             background: #f5f5f5 !important;
           ">
@@ -3254,7 +3235,24 @@ const createSlide3 = () => {
     </div>
   `;
 };
-
+        //   <div style="
+        //     height: 15% !important; 
+        //     min-height: 15mm !important;
+        //     width: 100% !important; 
+        //     padding: 5mm !important; 
+        //     display: flex !important; 
+        //     align-items: center !important;
+        //     box-sizing: border-box !important;
+        //   ">
+        //     <h1 style="
+        //       font-size: 6mm !important; 
+        //       margin: 0 !important;
+        //       font-weight: bold !important;
+        //     ">
+        //       Property Images
+        //     </h1>
+        //   </div>
+          
 const createSlide4 = () => {
   const images = property.value?.gallery_images || [];
   const mainImage = images.length > 3 ? getImageUrl(images[3].image_url) : 'placeholder.png';
@@ -3290,28 +3288,11 @@ const createSlide4 = () => {
            margin-right: 1mm  !important;
         ">
           
-          <div style="
-            height: 15% !important; 
-            min-height: 15mm !important;
-            width: 100% !important; 
-            padding: 5mm !important; 
-            display: flex !important; 
-            align-items: center !important;
-            box-sizing: border-box !important;
-          ">
-            <h1 style="
-              font-size: 6mm !important; 
-              margin: 0 !important;
-              font-weight: bold !important;
-            ">
-              Property Images
-            </h1>
-          </div>
-          
+
         
           <div style="
             width: 100% !important; 
-            height: 85% !important; 
+            height: 100% !important; 
             overflow: hidden !important;
             background: #f5f5f5 !important;
           ">

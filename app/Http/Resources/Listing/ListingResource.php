@@ -21,6 +21,29 @@ class ListingResource extends JsonResource
                     ($this->agent_id && $user->id == $this->agent_id) || $user->hasRole('super_admin');
             $canDelete = auth()->user()->hasRole('super_admin');
         }
+         $canAssignAgent = false;
+
+    if ($user) {
+        $roleAllowed = in_array($user->role_name, ['admin','super_admin','team_lead','manager']);
+
+        if ($roleAllowed) {
+            if (in_array($user->role_name, ['admin','super_admin'])) {
+                $canAssignAgent = true;
+            } else {
+                $allowedAgentIds = User::where(function($q) use ($user) {
+                    $q->where('id', $user->id)
+                      ->orWhere('parent_id', $user->id)
+                      ->orWhereHas('parent', function($parentQuery) use ($user) {
+                          $parentQuery->where('parent_id', $user->id);
+                      });
+                })->pluck('id')->toArray();
+
+                if ($this->agent_id && in_array($this->agent_id, $allowedAgentIds)) {
+                    $canAssignAgent = true;
+                }
+            }
+        }
+    }
 
         return [
             'id' => $this->id,
@@ -114,6 +137,7 @@ class ListingResource extends JsonResource
                 'can_edit' => $canEdit,
                 'can_delete' => $canDelete,
                 'is_owner' => $this->isOwner($user),
+                   'can_assign_agent' => $canAssignAgent, 
             ],
             'is_owner' => $this->isOwner($user),
 
@@ -145,7 +169,8 @@ class ListingResource extends JsonResource
                     'area_title' => $this->area->area_title,
                     'parent' => $this->area->parent,
                     'children' => $this->area->child,
-                    'hierarchy' => $this->area->full_hierarchy
+                    'hierarchy' => $this->area->full_hierarchy,
+                    'title'=>$this->area->title,
                 ];
             }),
             
