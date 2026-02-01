@@ -50,6 +50,21 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const stages = ref([])
+const isFetching = ref(false)
+const abortController = ref(null)
+const fetchDebounceTimer = ref(null)
+const hasMounted = ref(false)
+const mountTime = ref(null)
+
+// Global request tracker to prevent duplicate calls across component instances
+if (!window.__fetchStagesTracker) {
+    window.__fetchStagesTracker = {
+        isFetching: false,
+        abortController: null,
+        lastFetchTime: 0,
+        mountTimes: []
+    }
+}
 
 // Same color logic from leads.vue
 const colors = ['#7BD3EA', '#E3DA32', '#F2C934', '#8EC82F', '#00A74C']
@@ -58,38 +73,165 @@ function getColorByIndex(index) {
     return colors[index % colors.length]
 }
 
-const fetchStages = async () => {
+const fetchStages = async (immediate = false) => {
+    // Clear any pending debounce
+    if (fetchDebounceTimer.value) {
+        clearTimeout(fetchDebounceTimer.value)
+        fetchDebounceTimer.value = null
+    }
+    
+    // If not immediate, debounce rapid calls
+    if (!immediate) {
+        return new Promise((resolve) => {
+            fetchDebounceTimer.value = setTimeout(async () => {
+                await executeFetchStages()
+                resolve()
+            }, 300) // 300ms debounce
+        })
+    }
+    
+    return executeFetchStages()
+}
+
+const executeFetchStages = async () => {
+    const tracker = window.__fetchStagesTracker
+    const now = Date.now()
+    
+    // Prevent concurrent requests (both local and global)
+    if (isFetching.value || tracker.isFetching) {
+        // If another instance is fetching, wait a bit and check again
+        if (tracker.isFetching && now - tracker.lastFetchTime < 2000) {
+            return
+        }
+    }
+    
+    // Prevent rapid successive calls (within 500ms)
+    if (now - tracker.lastFetchTime < 500) {
+        return
+    }
+    
+    // Cancel any pending request (both local and global)
+    if (abortController.value) {
+        abortController.value.abort()
+    }
+    if (tracker.abortController) {
+        tracker.abortController.abort()
+    }
+    
+    // Create new abort controller for this request
+    abortController.value = new AbortController()
+    tracker.abortController = abortController.value
+    isFetching.value = true
+    tracker.isFetching = true
+    tracker.lastFetchTime = now
+    
     try {
-        const response = await api.get('/stages/kanban/stages-with-leads')
+        const response = await api.get('/stages/kanban/stages-with-leads', {
+            signal: abortController.value.signal
+        })
         stages.value = response.data.data.map((stage, index) => ({
             id: stage.id,
             name: stage.name,
             color: stage.color || getColorByIndex(index)
         }))
     } catch (error) {
-        console.error('Error fetching stages:', error)
+        // Don't log error if request was aborted
+        if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
+            console.error('Error fetching stages:', error)
+        }
+    } finally {
+        isFetching.value = false
+        tracker.isFetching = false
+        abortController.value = null
+        tracker.abortController = null
     }
 }
 
 // Listen for stage update events
-const handleStageUpdate = () => {
-    fetchStages()
+const handleStageUpdate = (event) => {
+    // Ignore events fired immediately after any component mount (within 1 second)
+    const tracker = window.__fetchStagesTracker
+    const now = Date.now()
+    
+    // Check if any component mounted recently
+    const recentMount = tracker.mountTimes.some(mountTime => now - mountTime < 1000)
+    if (recentMount) {
+        // Event fired too soon after mount, ignore it
+        return
+    }
+    
+    // Use debounced version for event-driven updates
+    fetchStages(false)
 }
 
 onMounted(() => {
-    fetchStages()
+    // Prevent multiple mounts from calling fetchStages
+    if (hasMounted.value) {
+        return
+    }
+    
+    const tracker = window.__fetchStagesTracker
+    const now = Date.now()
+    mountTime.value = now
+    
+    // Track this mount time globally
+    if (!tracker.mountTimes) {
+        tracker.mountTimes = []
+    }
+    tracker.mountTimes.push(now)
+    
+    // Clean up old mount times (older than 2 seconds)
+    tracker.mountTimes = tracker.mountTimes.filter(time => now - time < 2000)
+    
+    // Only fetch if no recent fetch (within last 2 seconds)
+    const timeSinceLastFetch = now - (tracker.lastFetchTime || 0)
+    if (timeSinceLastFetch < 2000 && tracker.lastFetchTime > 0) {
+        // Another instance just fetched, skip this one
+        hasMounted.value = true
+        window.addEventListener('stage-updated', handleStageUpdate)
+        return
+    }
+    
+    // Immediate fetch on mount
+    fetchStages(true)
+    hasMounted.value = true
+    
     // Listen for custom event when stages are updated
     window.addEventListener('stage-updated', handleStageUpdate)
 })
 
 onUnmounted(() => {
+    // Cancel any pending request
+    if (abortController.value) {
+        abortController.value.abort()
+        abortController.value = null
+    }
+    
+    // Clear global tracker if this is the last instance
+    const tracker = window.__fetchStagesTracker
+    if (tracker.abortController === abortController.value) {
+        tracker.abortController = null
+        tracker.isFetching = false
+    }
+    
+    // Remove this component's mount time from tracker
+    if (mountTime.value && tracker.mountTimes) {
+        tracker.mountTimes = tracker.mountTimes.filter(time => time !== mountTime.value)
+    }
+    
+    // Clear debounce timer
+    if (fetchDebounceTimer.value) {
+        clearTimeout(fetchDebounceTimer.value)
+        fetchDebounceTimer.value = null
+    }
+    
     // Clean up event listener
     window.removeEventListener('stage-updated', handleStageUpdate)
 })
 
 // Expose refresh method for manual refresh if needed
 defineExpose({
-    refresh: fetchStages
+    refresh: (immediate = true) => fetchStages(immediate)
 })
 
 // Compute selected stage index based on stage ID
