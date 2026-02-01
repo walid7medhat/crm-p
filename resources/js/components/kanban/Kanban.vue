@@ -171,9 +171,16 @@ const initializeStageUpdates = () => {
 const handleStageUpdate = (event) => {
     console.log('📊 Handling stage update:', event.action_type)
     
-    // Refresh the leads view when stages are updated
-    if (leadsRef.value && typeof leadsRef.value.fetchLeads === 'function') {
-        leadsRef.value.fetchLeads()
+    // Only refresh if it's a structural change (created/deleted/reordered)
+    // For updates, the real-time lead updates will handle individual lead changes
+    if (event.action_type === 'created' || event.action_type === 'deleted' || event.action_type === 'reordered') {
+        if (leadsRef.value && typeof leadsRef.value.fetchLeads === 'function') {
+            const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+            if (leadsComponent) {
+                // Immediate execution for real-time events
+                leadsComponent.fetchLeads(true)
+            }
+        }
     }
     
     showStageNotification(event)
@@ -228,10 +235,18 @@ const showStageNotification = (event) => {
 }
 
 const startPolling = () => {
+    // Only start polling if not already polling
+    if (pollingInterval.value) {
+        return
+    }
+    
     console.log('🔄 Kanban: Starting polling for stages every 30 seconds')
     pollingInterval.value = setInterval(() => {
         if (leadsRef.value && typeof leadsRef.value.fetchLeads === 'function') {
-            leadsRef.value.fetchLeads()
+            const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+            if (leadsComponent) {
+                leadsComponent.fetchLeads()
+            }
         }
     }, 30000)
 }
@@ -252,28 +267,19 @@ const cleanup = () => {
 
 const handleLeadCreated = async () => {
     console.log('🎯 handleLeadCreated triggered')
-    console.log('leadsRef.value:', leadsRef.value)
     
     // Wait for DOM to update
     await nextTick()
     
-    // Refetch leads data when a new lead is created
-    if (leadsRef.value) {
-        // Handle array of refs (from v-for)
+    // Don't refetch - real-time updates will handle the new lead via Pusher events
+    // Only refetch if real-time updates are not available (fallback)
+    if (leadsRef.value && (!window.Echo || !JSON.parse(localStorage.getItem('user')))) {
         const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
         
-        console.log('leadsComponent:', leadsComponent)
-        console.log('fetchLeads method exists:', typeof leadsComponent?.fetchLeads === 'function')
-        
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
-            console.log('✅ Calling fetchLeads immediately after lead creation')
-            await leadsComponent.fetchLeads()
-            console.log('✅ fetchLeads completed')
-        } else {
-            console.error('❌ fetchLeads method not found on leads component')
+            console.log('✅ Calling fetchLeads after lead creation (no real-time updates)')
+            await leadsComponent.fetchLeads(true) // Immediate execution
         }
-    } else {
-        console.error('❌ leadsRef.value is null or undefined')
     }
 }
 
@@ -282,13 +288,14 @@ const handleStageCreated = async (stageData) => {
     console.log('New stage created:', stageData)
     
     // Refresh the leads view to show the new stage
+    // This is necessary because we need to fetch the new stage structure
     if (leadsRef.value) {
-        // Handle array of refs (from v-for)
         const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
         
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
-            console.log('✅ Calling fetchLeads immediately after stage creation')
-            await leadsComponent.fetchLeads()
+            console.log('✅ Calling fetchLeads after stage creation')
+            // Pass true for immediate execution (no debounce) since this is a user action
+            await leadsComponent.fetchLeads(true)
         }
     }
     

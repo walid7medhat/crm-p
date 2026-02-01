@@ -229,6 +229,9 @@ const error = ref(null)
 
 const echoListeners = ref([])
 const pollingInterval = ref(null)
+const isFetching = ref(false)
+const abortController = ref(null)
+const fetchDebounceTimer = ref(null)
 
 // Stage editing state
 const editingStageId = ref(null)
@@ -241,9 +244,45 @@ function getColorByIndex(index) {
     return colors[index % colors.length]
 }
 
-const fetchLeads = async () => {
+const fetchLeads = async (immediate = false) => {
+    // Clear any pending debounce
+    if (fetchDebounceTimer.value) {
+        clearTimeout(fetchDebounceTimer.value)
+        fetchDebounceTimer.value = null
+    }
+    
+    // If not immediate, debounce rapid calls
+    if (!immediate) {
+        return new Promise((resolve) => {
+            fetchDebounceTimer.value = setTimeout(async () => {
+                await executeFetchLeads()
+                resolve()
+            }, 300) // 300ms debounce
+        })
+    }
+    
+    return executeFetchLeads()
+}
+
+const executeFetchLeads = async () => {
+    // Prevent concurrent requests
+    if (isFetching.value) {
+        return
+    }
+    
+    // Cancel any pending request
+    if (abortController.value) {
+        abortController.value.abort()
+    }
+    
+    // Create new abort controller for this request
+    abortController.value = new AbortController()
+    isFetching.value = true
+    
     try {
-        const response = await api.get('/stages/kanban/stages-with-leads')
+        const response = await api.get('/stages/kanban/stages-with-leads', {
+            signal: abortController.value.signal
+        })
         const newData = response.data.data.map((stage, index) => ({
             title: stage.name,
             status: stage.id, // Use ID for stage changes
@@ -255,8 +294,14 @@ const fetchLeads = async () => {
         columns.value = newData
         loading.value = false
     } catch (error) {
-        error.value = error.message || 'Failed to load data'
-        loading.value = false
+        // Don't set error if request was aborted
+        if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
+            error.value = error.message || 'Failed to load data'
+            loading.value = false
+        }
+    } finally {
+        isFetching.value = false
+        abortController.value = null
     }
 }
 
@@ -277,7 +322,7 @@ async function fetchResponsiblePersons() {
 
 onMounted(async () => {
     await Promise.all([
-        fetchLeads(),
+        fetchLeads(true), // Immediate on mount
         fetchResponsiblePersons()
     ])
     
@@ -604,12 +649,33 @@ const showLeadNotification = (event) => {
 }
 
 const startPolling = () => {
-    pollingInterval.value = setInterval(async () => {
-        await fetchLeads()
+    // Only start polling if not already polling and Echo is not available
+    if (pollingInterval.value) {
+        return
+    }
+    
+    pollingInterval.value = setInterval(() => {
+        // Only poll if not currently fetching
+        // Use immediate=false to allow debouncing (though polling shouldn't need it)
+        if (!isFetching.value) {
+            fetchLeads(false)
+        }
     }, 15000)
 }
 
 const cleanup = () => {
+    // Cancel any pending request
+    if (abortController.value) {
+        abortController.value.abort()
+        abortController.value = null
+    }
+    
+    // Clear debounce timer
+    if (fetchDebounceTimer.value) {
+        clearTimeout(fetchDebounceTimer.value)
+        fetchDebounceTimer.value = null
+    }
+    
     echoListeners.value.forEach((channel) => {
         if (channel) {
             try {
@@ -804,9 +870,12 @@ async function onLeadDragChange(evt, column) {
             await api.post(`/leads/${lead.id}/change-stage`, {
                 stage_id: newStageId
             })
+            // Don't refetch - real-time updates will handle the UI update
         } catch (error) {
-            // Revert the UI change if API fails
-            await fetchLeads()
+            // Revert the UI change if API fails - only refetch if not already fetching
+            if (!isFetching.value) {
+                await fetchLeads(true) // Immediate refetch on error
+            }
             $showNotification('Failed to move lead', 'error')
         }
     }
