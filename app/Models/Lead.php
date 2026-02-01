@@ -95,17 +95,20 @@ class Lead extends Model
         })->where('last_stage_change_at', '<=', Carbon::now()->subHour());
     }
      
-     public function getDuplicateLeadsAttribute(){
-         $leadName=$this->lead_name;
-         $phone=$this->work_phone;
-         $leads=Lead::where(function ($q) use ($leadName) {
-            $q->where('lead_name', $leadName);
-        })
-        ->where(function ($q) use ($phone) {
-            $q->where('work_phone', $phone);
-        })->where('id','!=',$this->id)
-        ->get();
-        return $leads;
-     }
+     public function getDuplicateLeadsAttribute()
+        {
+            return Lead::where('id', '!=', $this->id)
+                ->where(function ($q) {
+                    if ($this->work_phone) {
+                        $q->orWhere('work_phone', $this->work_phone);
+                    }
+        
+                    if ($this->lead_name) {
+                        $q->orWhere('lead_name', $this->lead_name);
+                    }
+                })
+                ->get();
+        }
+
 
 }
