@@ -11,10 +11,11 @@ class ListingGridResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'title' => collect([
-                $this->project?->title,
-                $this->area?->name,
-            ])->filter()->implode(', '),
+            'title' => $this->project?->title,
+            // collect([
+            //     $this->project?->title,
+            //     $this->area?->name,
+            // ])->filter()->implode(', '),
 
             'is_active'=>(bool)$this->is_active,
             'is_archived'=>(bool)$this->is_archived,
@@ -37,7 +38,7 @@ class ListingGridResource extends JsonResource
             'total_images' => $this->galleryImages->count()+1,
             
             'property_type' => $this->propertyType?->name,
-            'area' => $this->area?->area_title,
+            'area' => $this->area?->title,
           'agent' => $this->whenLoaded('agent', function () {
                 return [
                     'id' => $this->agent->id,

@@ -125,6 +125,22 @@ public function permissions(User $user): JsonResponse
                 ->where('status', '!=', 'draft')
                 ->where('is_archived', false);
         }
+         if ($request->filled('area_id')) {
+                    $areaId = $request->area_id;
+                    $area = Area::find($areaId);
+                
+                    if ($area) {
+                        $childAreaIds = $area->getChildIdsAttribute();
+                        $allAreaIds = array_merge([$areaId], $childAreaIds);
+                
+                        $query->where(function ($q) use ($allAreaIds) {
+                            $q->whereIn('area_id', $allAreaIds)
+                              ->orWhereHas('project', function ($projectQuery) use ($allAreaIds) {
+                                  $projectQuery->whereIn('area_id', $allAreaIds);
+                              });
+                        });
+                    }
+                }
 
         if($request->filled('is_archived')) {
             $query->where('is_archived', $request->boolean('is_archived'));
@@ -168,17 +184,8 @@ public function permissions(User $user): JsonResponse
           if ($request->has('reference_number') && $request->reference_number != '') {
                 $query->where('reference_number', 'like', '%' . $request->reference_number . '%');
             }
-            if ($request->filled('area_id')) {
-                $areaId = $request->area_id;
-                $area = Area::where('id', $areaId)->first();
-                if ($area) {
-                    $childAreaIds = $area->getChildIdsAttribute();
-                    $allAreaIds = array_merge([$areaId], $childAreaIds);
-                    $query->whereIn('area_id', $allAreaIds)  ->orWhereHas('project', function ($projectQuery) use ($allAreaIds) {
-                        $projectQuery->whereIn('area_id', $allAreaIds);
-                    });
-                }
-            }
+             
+
 
             $basicFilters = [
                 'property_type_id',
