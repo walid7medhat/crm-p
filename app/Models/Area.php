@@ -119,4 +119,7 @@ public function getFullHierarchyAttribute()
     
     return $hierarchy->reverse()->values();
 }
+ public function properties_complete(){
+        return $this->hasMany(Listing::Class,'area_id');
+    }
 }

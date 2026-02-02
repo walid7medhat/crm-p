@@ -402,7 +402,7 @@ const searchReferenceNumber = ref("");
     const fetchAreas = async () => {
       try {
         isLoadingAreas.value = true;
-        const response = await api.get("/listings/areas");
+        const response = await api.get("/listings/areas/?has_listings=true");
         
         const areasData = response.data.data || response.data;
         

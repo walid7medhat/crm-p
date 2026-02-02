@@ -76,12 +76,22 @@
                 </div>
 
                 <div class="specs-grid-main">
+                    
+                 <div class="spec-main-item">
+                    <div class="spec-main-info">
+                      <span class="spec-main-value">
+                          <!--<i class="ri-building-line"></i>-->
+                          <img :src="propertyIcon" class="imgicon"/>
+                          {{  property.property_type.name  || 'N/A' }} </span>
+                      <!-- <span class="spec-main-label"></span> -->
+                    </div>
+                  </div>
                    <div class="spec-main-item" v-if="property.number_of_bedrooms">
                     <div class="spec-main-info">
                       <span class="spec-main-value">
                           <!--<i class="ri-hotel-bed-line"></i>-->
                           <img :src="bedIcon" class="imgicon"/>
-                          {{ property.number_of_bedrooms==0?'Studio':property.number_of_bedrooms  +'Bedrooms' }} </span>
+                          {{ property.number_of_bedrooms==0?'Studio':property.number_of_bedrooms  +' Bedrooms' }} </span>
                       <!-- <span class="spec-main-label">Bed</span> -->
                     </div>
                   </div>
@@ -95,15 +105,7 @@
                       <!-- <span class="spec-main-label">Bath</span> -->
                     </div>
                   </div>
-                  <div class="spec-main-item">
-                    <div class="spec-main-info">
-                      <span class="spec-main-value">
-                          <!--<i class="ri-building-line"></i>-->
-                          <img :src="propertyIcon" class="imgicon"/>
-                          {{  property.property_type.name  || 'N/A' }} </span>
-                      <!-- <span class="spec-main-label"></span> -->
-                    </div>
-                  </div>
+
                   <div class="spec-main-item">
                     <div class="spec-main-info">
                       <span class="spec-main-value">

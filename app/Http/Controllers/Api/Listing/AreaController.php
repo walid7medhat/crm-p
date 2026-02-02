@@ -48,7 +48,14 @@ class AreaController extends Controller
                 if ($request->has('with_child')) {
                     $query->with('child');
                 }
-                
+                if($request->has('has_listings')){
+                    $query->Where(function ($subQ) {
+                        $subQ->whereHas('properties_complete')
+                            ->orWhereHas('child.properties_complete')
+                            ->orWhereHas('child.child.properties_complete')
+                            ->orWhereHas('child.child.child.properties_complete');
+                    });
+                }
                 return $query->get();
             });
             
