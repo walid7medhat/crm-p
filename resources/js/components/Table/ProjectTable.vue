@@ -705,9 +705,8 @@ export default {
 
         statusBadgeClass(status) {
             const classes = {
-                'upcoming': 'bg-warning',
-                'ongoing': 'bg-info',
-                'completed': 'bg-success'
+                'Under Construction': 'bg-info',
+                'Ready': 'bg-success'
             };
             return classes[status] || 'bg-secondary';
         },

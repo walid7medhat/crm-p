@@ -136,13 +136,13 @@
                                                       :class="{'is-invalid': errors.status}">
                                                 <template #option="{ label, value, icon }">
                                                     <div class="d-flex align-items-center">
-                                                        <i :class="icon" class="me-2"></i>
+                                                        <!--<i :class="icon" class="me-2"></i>-->
                                                         <span>{{ label }}</span>
                                                     </div>
                                                 </template>
                                                 <template #selected-option="{ label, icon }">
                                                     <div class="d-flex align-items-center">
-                                                        <i :class="icon" class="me-2"></i>
+                                                        <!--<i :class="icon" class="me-2"></i>-->
                                                         <span>{{ label }}</span>
                                                     </div>
                                                 </template>
@@ -182,20 +182,12 @@
                                                   :reduce="developer => developer.id"
                                                   label="name"
                                                   placeholder="Search developer..."
-                                                  @search="loadDevelopers"
                                                   :filterable="false"
-                                                  :loading="developersLoading"
-                                                  :class="{'is-invalid': errors.developer_id}">
+                                                  :loading="developersLoading">
                                             <template #option="{ name, avatar }">
                                                 <div class="d-flex align-items-center">
                                                     <div class="avatar-container me-2">
-                                                        <img v-if="avatar" 
-                                                             :src="avatar" 
-                                                             alt="Developer"
-                                                             class="rounded-circle"
-                                                             width="32"
-                                                             height="32"
-                                                             style="object-fit: cover;">
+                                                        <img v-if="avatar" :src="avatar" alt="Developer" class="rounded-circle" width="32" height="32">
                                                         <div v-else class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center"
                                                              style="width: 32px; height: 32px; background-color: #e9ecef; color: #6c757d;">
                                                             <i class="fas fa-building"></i>
@@ -204,13 +196,8 @@
                                                     <span>{{ name }}</span>
                                                 </div>
                                             </template>
-                                            <template #no-options>
-                                                <div class="text-muted text-center py-3">
-                                                    <i class="fas fa-building me-2"></i>
-                                                    {{ developersLoading ? 'Loading developers...' : 'No developers found' }}
-                                                </div>
-                                            </template>
                                         </v-select>
+
                                         <div class="invalid-feedback" v-if="errors.developer_id">
                                             {{ errors.developer_id[0] }}
                                         </div>
@@ -438,9 +425,8 @@ export default {
 
         // Status options with icons
         const statusOptions = ref([
-            { value: 'upcoming', label: 'Upcoming', icon: 'fas fa-hourglass-start text-warning' },
-            { value: 'ongoing', label: 'Ongoing', icon: 'fas fa-hard-hat text-info' },
-            { value: 'completed', label: 'Completed', icon: 'fas fa-check-circle text-success' }
+            { value: 'Under Construction', label: 'Under Construction', icon: 'fas fa-hourglass-start text-warning' },
+            { value: 'Ready', label: 'Ready', icon: 'fas fa-check-circle text-success' }
         ]);
 
         // Project Form Data (removed price and sqft fields)
@@ -476,45 +462,43 @@ export default {
 
         // Fetch developers
         const loadDevelopers = async (search = '') => {
-            if (developers.value.length > 0 && !search) return;
-            
-            try {
-                developersLoading.value = true;
-                const token = localStorage.getItem('token');
+                    if (developers.value.length > 0 && !search) return; // لا تعيد الكتابة إذا القائمة موجودة
                 
-                let url = '/api/listings/developers';
-                if (search) {
-                    url += `?search=${encodeURIComponent(search)}`;
-                }
+                    try {
+                        developersLoading.value = true;
+                        const token = localStorage.getItem('token');
                 
-                const response = await fetch(url, {
-                    headers: {
-                        'Authorization': 'Bearer ' + token,
-                        'Content-Type': 'application/json'
+                        let url = '/api/listings/developers';
+                        if (search) url += `?search=${encodeURIComponent(search)}`;
+                
+                        const response = await fetch(url, {
+                            headers: {
+                                'Authorization': 'Bearer ' + token,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                
+                        if (!response.ok) {
+                            throw new Error(`Failed to fetch developers: ${response.status} ${response.statusText}`);
+                        }
+                
+                        const data = await response.json();
+                
+                        // إضافة البيانات فقط بدون مسح القائمة
+                        if (search) {
+                            developers.value = data.data || [];
+                        } else {
+                            developers.value = [...developers.value, ...(data.data || [])];
+                        }
+                
+                    } catch (error) {
+                        console.error('❌ Error fetching developers:', error);
+                        showNotification('Failed to load developers: ' + error.message, 'error');
+                    } finally {
+                        developersLoading.value = false;
                     }
-                });
+                };
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Failed to fetch developers: ${response.status} ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                console.log('📊 Developers response:', data);
-                
-                if (search) {
-                    developers.value = data.data || [];
-                } else {
-                    developers.value = [...developers.value, ...(data.data || [])];
-                }
-                
-            } catch (error) {
-                console.error('❌ Error fetching developers:', error);
-                showNotification('Failed to load developers: ' + error.message, 'error');
-            } finally {
-                developersLoading.value = false;
-            }
-        };
 
         // Fetch areas
         const loadAreas = async (search = '') => {
@@ -610,56 +594,70 @@ export default {
         };
 
         // Fetch project data for editing
-        const fetchProject = async () => {
-            try {
-                loading.value = true;
-                const token = localStorage.getItem('token');
-                const response = await fetch(`/api/listings/projects/${projectId.value}`, {
-                    headers: {
-                        'Authorization': 'Bearer ' + token,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Failed to fetch project: ${response.status} ${response.statusText}`);
-                }
+            const fetchProject = async () => {
+                    try {
+                        loading.value = true;
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`/api/listings/projects/${projectId.value}`, {
+                            headers: {
+                                'Authorization': 'Bearer ' + token,
+                                'Content-Type': 'application/json'
+                            }
+                        });
                 
-                const data = await response.json();
-                console.log('📊 Project response:', data);
-                const projectData = data.data;
-
-                // Populate form with area_id (removed price and sqft fields)
-                projectForm.value = {
-                    title: projectData.title || "",
-                    developer_id: projectData.developer?.id || null,
-                    area_id: projectData.area?.id || null,
-                    status: projectData.status || null,
-                    about: projectData.about || "",
-                    features: projectData.features ? projectData.features.map(f => f.id) : []
+                        if (!response.ok) throw new Error('Failed to fetch project');
+                
+                        const data = await response.json();
+                        const projectData = data.data;
+                
+                        // Load areas and features first
+                        await Promise.all([
+                            loadAreas(),
+                            loadFeatures()
+                        ]);
+                
+                        // Set project form basic info
+                        projectForm.value.title = projectData.title || "";
+                        projectForm.value.area_id = projectData.area?.id || null;
+                        projectForm.value.status = projectData.status || null;
+                        projectForm.value.about = projectData.about || "";
+                        projectForm.value.features = projectData.features ? projectData.features.map(f => f.id) : [];
+                
+                        if (projectData.main_image) {
+                            currentImage.value = projectData.main_image;
+                        }
+                
+                        // Load developers separately and **ensure current developer is included**
+                        developersLoading.value = true;
+                        await loadDevelopers();
+                
+                        if (projectData.developer) {
+                            const currentDeveloper = {
+                                id: projectData.developer.id,
+                                name: projectData.developer.name,
+                                avatar: projectData.developer.avatar || null
+                            };
+                
+                            // Add developer to the list if not exists
+                            if (!developers.value.find(d => d.id === currentDeveloper.id)) {
+                                developers.value.unshift(currentDeveloper);
+                            }
+                
+                            // Assign developer_id **after developers array is ready**
+                            projectForm.value.developer_id = currentDeveloper.id;
+                        }
+                
+                    } catch (error) {
+                        console.error(error);
+                        showNotification('Failed to load project', 'error');
+                        router.push('/projects');
+                    } finally {
+                        loading.value = false;
+                        developersLoading.value = false;
+                    }
                 };
 
-                // Set current image if exists
-                if (projectData.main_image) {
-                    currentImage.value = projectData.main_image;
-                }
 
-                // Load dropdowns if not loaded
-                await Promise.all([
-                    loadDevelopers(),
-                    loadAreas(),
-                    loadFeatures()
-                ]);
-
-            } catch (error) {
-                console.error("❌ Error fetching project:", error);
-                showNotification('Failed to load project: ' + error.message, 'error');
-                router.push('/projects');
-            } finally {
-                loading.value = false;
-            }
-        };
 
         // Handle image upload
         const handleImageUpload = (event) => {
@@ -1205,4 +1203,8 @@ export default {
 ::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+:deep(.vs__dropdown-option:hover small) {
+    color: white !important;
+}
+
 </style>

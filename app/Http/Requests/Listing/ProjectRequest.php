@@ -30,7 +30,7 @@ class ProjectRequest extends FormRequest
             // 'to_price' => ['nullable', 'numeric', 'min:0', 'gte:from_price'],
             // 'from_sqft' => ['nullable', 'numeric', 'min:0'],
             // 'to_sqft' => ['nullable', 'numeric', 'min:0', 'gte:from_sqft'],
-            'status' => ['nullable', Rule::in(['upcoming', 'ongoing', 'completed'])],
+            'status' => ['nullable', Rule::in(['Under Construction', 'Ready'])],
             'about' => ['nullable', 'string'],
             'features' => ['nullable', 'array'],
             'features.*' => ['exists:features,id'],
