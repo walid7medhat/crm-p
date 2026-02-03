@@ -86,7 +86,7 @@
                       <!-- <span class="spec-main-label"></span> -->
                     </div>
                   </div>
-                   <div class="spec-main-item" v-if="property.number_of_bedrooms">
+                   <div class="spec-main-item" v-if="!property.property_type.name.toLowerCase().includes('plot') && !property.property_type.name.toLowerCase().includes('land') && property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
                     <div class="spec-main-info">
                       <span class="spec-main-value">
                           <!--<i class="ri-hotel-bed-line"></i>-->
@@ -96,12 +96,12 @@
                     </div>
                   </div>
                   
-                  <div class="spec-main-item"  v-if="property.number_of_bathrooms">
+                  <div class="spec-main-item"  v-if="!property.property_type.name.toLowerCase().includes('plot') && !property.property_type.name.toLowerCase().includes('land') && property.number_of_bathrooms !== null && property.number_of_bathrooms !== undefined && property.number_of_bathrooms!=0">
                     <div class="spec-main-info">
                       <span class="spec-main-value">
                           <!--<i class="ri-contrast-drop-line"></i>-->
                           <img :src="bathIcon" class="imgicon"/>
-                          {{ property.number_of_bathrooms || '0' }} Bathrooms</span>
+                          {{ property.number_of_bathrooms }} Bathrooms</span>
                       <!-- <span class="spec-main-label">Bath</span> -->
                     </div>
                   </div>
@@ -149,12 +149,12 @@
                   </div>
                   
                   
-                  <div class="info-item">
+                  <div class="info-item" v-if="!property.property_type.name.toLowerCase().includes('plot') && !property.property_type.name.toLowerCase().includes('land') && property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
                     <span class="info-label">Bedrooms</span>
                     <span class="info-value"> {{ property.number_of_bedrooms==0?'Studio':property.number_of_bedrooms  +'Bedrooms' }} </span>
                   </div>
                   
-                  <div class="info-item">
+                  <div class="info-item"  v-if="!property.property_type.name.toLowerCase().includes('plot') && !property.property_type.name.toLowerCase().includes('land') && property.number_of_bathrooms !== null && property.number_of_bathrooms !== undefined && property.number_of_bathrooms!=0">
                     <span class="info-label">Bathrooms</span>
                     <span class="info-value">{{ property.number_of_bathrooms || "0" }}</span>
                   </div>
@@ -3057,9 +3057,16 @@ const createSlide1 = (currentUser) => {
           </div>
         </div>
         
-        <div style="width:50% !important; height:100% !important; overflow:hidden !important;">
-          <img src="${getMainImage()}" style="width:100% !important; height:100% !important; object-fit:cover !important; display:block !important; max-height:${PDF_CONFIG.pageHeight}mm !important;" />
-        </div>
+        <div style="
+  width:50%;
+  height:100%;
+  background-image:url('${getMainImage()}');
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  float:right;
+">
+</div>
       </div>
       ${createFooter()}
     </div>
@@ -3125,7 +3132,6 @@ const createSlide2 = () => {
                 <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${property.value?.completion_status || 'Under Construction'}</span>
               </li>
               
-              <!-- هنا Payment Plan بس كتيكست -->
               ${paymentPlanText ? `
                 <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
                   <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Payment Plans</span>
@@ -3176,8 +3182,7 @@ const createSlide3 = () => {
            margin-right: 1mm  !important;
         ">
          
-        
-          
+      
           
           <div style="
             width: 100% !important; 
@@ -3185,12 +3190,19 @@ const createSlide3 = () => {
             overflow: hidden !important;
             background: #f5f5f5 !important;
           ">
-            <img src="${mainImage}" style="
-              width: 100% !important; 
-              height: 100% !important; 
-              object-fit: cover !important; 
-              display: block !important;
-            " />
+
+                        <div style="
+                width: 100% !important;
+                height: 100% !important;
+                margin-bottom: 1mm !important;
+                background-image: url('${mainImage}');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-color: #f5f5f5;
+              ">
+              </div>
+ 
           </div>
         </div>
         
@@ -3209,12 +3221,18 @@ const createSlide3 = () => {
             background: #f5f5f5 !important;
             margin-bottom: 1mm !important;
           ">
-            <img src="${sideImage1}" style="
-              width: 100% !important; 
-              height: 100% !important; 
-              object-fit: cover !important; 
-              display: block !important;
-            " />
+                        <div style="
+                width: 100% !important;
+                height: 100% !important;
+                margin-bottom: 1mm !important;
+                background-image: url('${sideImage1}');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-color: #f5f5f5;
+              ">
+              </div>
+ 
           </div>
           <div style="
             width: 100% !important; 
@@ -3222,12 +3240,19 @@ const createSlide3 = () => {
             overflow: hidden !important;
             background: #f5f5f5 !important;
           ">
-            <img src="${sideImage2}" style="
-              width: 100% !important; 
-              height: 100% !important; 
-              object-fit: cover !important; 
-              display: block !important;
-            " />
+
+          <div style="
+                width: 100% !important;
+                height: 100% !important;
+                margin-bottom: 1mm !important;
+                background-image: url('${sideImage2}');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-color: #f5f5f5;
+              ">
+              </div>
+
           </div>
         </div>
       </div>
@@ -3298,12 +3323,17 @@ const createSlide4 = () => {
             overflow: hidden !important;
             background: #f5f5f5 !important;
           ">
-            <img src="${mainImage}" style="
-              width: 100% !important; 
-              height: 100% !important; 
-              object-fit: cover !important; 
-              display: block !important;
-            " />
+<div style="
+                width: 100% !important;
+                height: 100% !important;
+                margin-bottom: 1mm !important;
+                background-image: url('${mainImage}');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-color: #f5f5f5;
+              ">
+              </div>
           </div>
         </div>
         
@@ -3322,12 +3352,17 @@ const createSlide4 = () => {
             background: #f5f5f5 !important;
             margin-bottom: 1mm !important;
           ">
-            <img src="${sideImage1}" style="
-              width: 100% !important; 
-              height: 100% !important; 
-              object-fit: cover !important; 
-              display: block !important;
-            " />
+          <div style="
+                width: 100% !important;
+                height: 100% !important;
+                margin-bottom: 1mm !important;
+                background-image: url('${sideImage1}');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-color: #f5f5f5;
+              ">
+              </div>
           </div>
           <div style="
             width: 100% !important; 
@@ -3335,12 +3370,17 @@ const createSlide4 = () => {
             overflow: hidden !important;
             background: #f5f5f5 !important;
           ">
-            <img src="${sideImage2}" style="
-              width: 100% !important; 
-              height: 100% !important; 
-              object-fit: cover !important; 
-              display: block !important;
-            " />
+          <div style="
+                width: 100% !important;
+                height: 100% !important;
+                margin-bottom: 1mm !important;
+                background-image: url('${sideImage2}');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-color: #f5f5f5;
+              ">
+              </div>
           </div>
         </div>
       </div>
@@ -3361,11 +3401,33 @@ const createSlide5 = () => {
           <div style="height:15% !important; width:100% !important; text-align:left !important;">
             <h1 style="font-size:6mm !important; margin:0 !important;">Floor Plan</h1>
           </div>
-          <div style="width:100% !important; height:75% !important; overflow:hidden !important; display:flex !important; justify-content:center !important; align-items:center !important;">
-            <div style="width:80% !important; height:100% !important;">
-              <img src="${floorPlan1}" style="width:100% !important; height:100% !important; object-fit:contain !important; display:block !important; background:#f5f5f5 !important;" />
-            </div>
-          </div>
+<div style="
+  width: 100% !important;
+  height: 75% !important;
+  display: table !important;
+  background-color: #f5f5f5;
+">
+
+  <div style="
+    display: table-cell !important;
+    vertical-align: middle !important;
+    text-align: center !important;
+  ">
+
+    <div style="
+      width: 80% !important;
+      height: 100% !important;
+      margin: 0 auto !important;
+      background-image: url('${floorPlan1}');
+      background-size: contain;
+      background-position: center center;
+      background-repeat: no-repeat;
+    ">
+    </div>
+
+  </div>
+
+</div>
         </div>
         ${createFooter()}
       </div>
@@ -3381,14 +3443,61 @@ const createSlide5 = () => {
         <div style="height:15% !important; width:100% !important; text-align:left !important;">
           <h1 style="font-size:6mm !important; margin:0 !important;">Floor Plan</h1>
         </div>
-        <div style="width:100% !important; height:75% !important; overflow:hidden !important; display:flex !important; justify-content:space-between !important; gap:5mm !important;">
-          <div style="width:48% !important; height:100% !important;">
-            <img src="${floorPlan1}" style="width:100% !important; height:100% !important; object-fit:contain !important; display:block !important; background:#f5f5f5 !important;" />
-          </div>
-          <div style="width:48% !important; height:100% !important;">
-            <img src="${floorPlan2}" style="width:100% !important; height:100% !important; object-fit:contain !important; display:block !important; background:#f5f5f5 !important;" />
-          </div>
-        </div>
+<div style="
+  width: 100% !important;
+  height: 75% !important;
+  display: table !important;
+  background-color: #f5f5f5;
+">
+
+  <div style="
+    display: table-row !important;
+  ">
+
+    <!-- LEFT FLOOR PLAN -->
+    <div style="
+      display: table-cell !important;
+      width: 50% !important;
+      vertical-align: middle !important;
+      text-align: center !important;
+      padding-right: 2.5mm !important;
+    ">
+      <div style="
+        width: 90% !important;
+        height: 100% !important;
+        margin: 0 auto !important;
+        background-image: url('${floorPlan1}');
+        background-size: contain;
+        background-position: center center;
+        background-repeat: no-repeat;
+      ">
+      </div>
+    </div>
+
+    <!-- RIGHT FLOOR PLAN -->
+    <div style="
+      display: table-cell !important;
+      width: 50% !important;
+      vertical-align: middle !important;
+      text-align: center !important;
+      padding-left: 2.5mm !important;
+    ">
+      <div style="
+        width: 90% !important;
+        height: 100% !important;
+        margin: 0 auto !important;
+        background-image: url('${floorPlan2}');
+        background-size: contain;
+        background-position: center center;
+        background-repeat: no-repeat;
+      ">
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
       </div>
       ${createFooter()}
     </div>
@@ -3508,10 +3617,17 @@ const hasAbout = projectAbout.trim().length > 0;
 const hasFeatures = features.length > 0;
 const hasDeveloper = !!developer;
 
-const hasAnySection = hasAbout || hasFeatures || hasDeveloper;
+const hasAnySection =
+  hasAbout &&
+  hasFeatures &&
+  hasDeveloper &&
+  !!projectImage;
+
 
 if (!hasAnySection) return '';
+const projectAboutLimited = limitText(projectAbout, 600);
 
+const featuresLimited = features.slice(0, 10);
 
   return `
   <div style="
@@ -3554,13 +3670,15 @@ if (!hasAnySection) return '';
         <div style="margin-top: 32px;">
         <p style="font-size:3mm !important; font-weight:bold !important; margin-bottom:2mm !important; text-decoration: underline !important;">About Project</p>
         <p style="
-          font-size:2.8mm !important;
+           font-size:2.8mm !important;
           line-height:4mm !important;
           text-align:justify !important;
           margin-bottom:6mm !important;
+          max-height:48mm !important;
+          overflow:hidden !important;
           word-break:break-word !important;
         ">
-          ${formatTextForPDF(projectAbout)}
+          ${formatTextForPDF(projectAboutLimited)}
         </p></div>` : ''}
 
         ${features.length ? `
@@ -3568,7 +3686,7 @@ if (!hasAnySection) return '';
           <p style="font-size:3mm !important; font-weight:bold !important; margin-bottom:2mm !important; text-decoration: underline !important;">
             Amenities & Features
           </p>
-          ${features.map(f => `
+          ${featuresLimited.map(f => `
             <span style="
               display:inline-block !important;
               background:#f5f5f5 !important;
@@ -3609,6 +3727,13 @@ if (!hasAnySection) return '';
 
 
 // Helper function to format text
+const limitText = (text = '', max = 600) => {
+  if (!text) return '';
+  return text.length > max
+    ? text.slice(0, max) + '...'
+    : text;
+};
+
 const formatTextForPDF = (text) => {
   if (!text) return '';
   return text.replace(/\n/g, '<br>');

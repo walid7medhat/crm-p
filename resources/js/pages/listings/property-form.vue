@@ -27,26 +27,26 @@
             </div>
             
             <!-- Rented Status -->
-            <div class="col-md-4">
-              <label class="form-label">Rented Status</label>
-              <v-select 
-                v-model="form.rented_status" 
-                :options="rentedStatusOptions" 
-                placeholder="Select Rented Status"
-              />
+            <!--<div class="col-md-4">-->
+            <!--  <label class="form-label">Rented Status</label>-->
+            <!--  <v-select -->
+            <!--    v-model="form.rented_status" -->
+            <!--    :options="rentedStatusOptions" -->
+            <!--    placeholder="Select Rented Status"-->
+            <!--  />-->
              
-            </div>
+            <!--</div>-->
 
             <!-- Rented Until -->
-            <div class="col-md-4" v-if="form.rented_status === 'Rented' ">
-              <label class="form-label">Rented Until</label>
-              <input 
-                v-model="form.rented_until" 
-                type="date" 
-                class="form-control" 
-                placeholder="Select date"
-              />
-            </div>
+            <!--<div class="col-md-4" v-if="form.rented_status === 'Rented' ">-->
+            <!--  <label class="form-label">Rented Until</label>-->
+            <!--  <input -->
+            <!--    v-model="form.rented_until" -->
+            <!--    type="date" -->
+            <!--    class="form-control" -->
+            <!--    placeholder="Select date"-->
+            <!--  />-->
+            <!--</div>-->
 
             <div class="col-md-4">
               <label class="form-label">Property Type</label>

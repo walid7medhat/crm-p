@@ -18,6 +18,9 @@ class StoreActivityRequest extends FormRequest
             'title' => 'required|string|max:255',
             'reminder_date' => 'required|date|after_or_equal:now',
             'is_completed' => 'boolean',
+              'reminders' => 'required|array|min:1',
+           'reminders.*' => 'integer|min:0',
+
         ];
     }
 

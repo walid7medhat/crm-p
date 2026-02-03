@@ -218,14 +218,14 @@
                                                                           </span>
                                                                           
                                                                     </span>
-                                                                      <span class="d-flex justify-content-between icons">
+                                                                      <span class="d-flex justify-content-between icons" v-if="!property.property_type.toLowerCase().includes('plot') && !property.property_type.toLowerCase().includes('land') && property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
                                                                           <!--<i class="ri-hotel-bed-line me-1"></i>-->
                                                                           <img :src="bedIcon" class="imgicon"/>
                                                                            <span>
                                                                           {{ property.number_of_bedrooms || 0 }}
                                                                           </span>
                                                                      </span>
-                                                                      <span class="d-flex justify-content-between icons">
+                                                                      <span class="d-flex justify-content-between icons" v-if="!property.property_type.toLowerCase().includes('plot') && !property.property_type.toLowerCase().includes('land') && property.number_of_bathrooms !== null && property.number_of_bathrooms !== undefined && property.number_of_bathrooms!=0">
                                                                           <!--<i class="ri-water-flash-line me-1"></i>-->
                                                                           <img :src="bathIcon" class="imgicon"/>
                                                                            <span>

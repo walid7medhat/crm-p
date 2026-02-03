@@ -183,6 +183,7 @@ Route::prefix('leads')->group(function(){
     // Comment attachments
     Route::post('/comments/{commentId}/attachments', [LeadActivityController::class, 'addCommentAttachments']);
     Route::delete('/comments/{commentId}/attachments/{attachmentId}', [LeadActivityController::class, 'destroyCommentAttachment']);
+    Route::get('mentions/agents',[LeadActivityController::class,'get_mentions']);
 });
   // =================sources=============
         Route::apiResource('sources', SourceController::class);

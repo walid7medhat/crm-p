@@ -13,12 +13,17 @@ use App\Http\Resources\Lead\CommentAttachmentResource;
 use App\Models\Lead;
 use App\Models\LeadActivity;
 use App\Models\LeadComment;
+use App\Models\User;
 use App\Models\CommentAttachment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Notifications\CommentMentionNotification;
 use Notification;
+use Carbon\Carbon;
+use App\Http\Resources\User\MentionAgentResource;
+use App\Helpers\ApiResponse;
+
 class LeadActivityController extends Controller
 {
     // ==================== ACTIVITY METHODS ====================
@@ -44,13 +49,17 @@ class LeadActivityController extends Controller
     public function storeActivity(StoreActivityRequest $request)
     {
         try {
-            $activity = LeadActivity::create([
+             $activity = LeadActivity::create([
                 'lead_id' => $request->lead_id,
                 'user_id' => auth()->id(),
                 'title' => $request->title,
                 'reminder_date' => $request->reminder_date,
-                'is_completed' => $request->is_completed ?? false,
+                'reminders' => $request->reminders, // [15, 60, 1440]
+                'is_completed' => false,
             ]);
+    
+            $activity->calculateNextReminder();
+            $activity->save();
             
             return response()->json([
                 'success' => true,
@@ -83,7 +92,10 @@ class LeadActivityController extends Controller
         }
         
         try {
-            $activity->update($request->validated());
+           $activity->update($request->validated());
+            
+            $activity->calculateNextReminder();
+            $activity->save();
             
             return response()->json([
                 'success' => true,
@@ -452,5 +464,23 @@ class LeadActivityController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+    
+    public function get_mentions(Request $request){
+        $query = User::query();
+          if ($request->has('search') && $request->search) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%");
+                });
+            }
+                        $users = $query->orderBy('created_at','desc')->where('id','!=',auth()->user()->id)->get();
+
+         return ApiResponse::success(
+                MentionAgentResource::collection($users),
+                'Users retrieved successfully'
+            );
     }
 }

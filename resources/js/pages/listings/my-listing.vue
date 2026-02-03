@@ -163,14 +163,14 @@
                       </span>
                       
                 </span>
-                 <span class="d-flex justify-content-between icons" v-if="property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
+                 <span class="d-flex justify-content-between icons" v-if="!property.property_type.toLowerCase().includes('plot') && !property.property_type.toLowerCase().includes('land') && property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
                       <img :src="bedIcon" class="imgicon"/>
                       <span>
                         {{ property.number_of_bedrooms == 0 ? 'Studio' : property.number_of_bedrooms }}
                       </span>
                     </span>
 
-                  <span class="d-flex justify-content-between icons">
+                  <span class="d-flex justify-content-between icons" v-if="!property.property_type.toLowerCase().includes('plot') && !property.property_type.toLowerCase().includes('land') && property.number_of_bathrooms !== null && property.number_of_bathrooms !== undefined && property.number_of_bathrooms!=0">
                       <!--<i class="ri-water-flash-line me-1"></i>-->
                       <img :src="bathIcon" class="imgicon"/>
                        <span>

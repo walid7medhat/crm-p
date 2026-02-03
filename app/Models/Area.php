@@ -77,17 +77,16 @@ public function getTitleAttribute()
     // Collecting the names from the current area upwards
     $parentChain = [];
     $currentParent = $this;
-    if( $currentParent->type != 'city' ){
         // Traverse up to the root (collect names)
-        while ($currentParent && $currentParent->type !='city' && $currentParent->type!='country') {
+        while ($currentParent && $currentParent->type!='country') {
                 $parentChain[] = $currentParent->name;
                 $currentParent = $currentParent->parent;
             
         }
-    }else{
-       $parentChain[] = $currentParent->name;  
+ 
+    if(count($parentChain)>2){
+        array_pop($parentChain);
     }
-        // array_pop($parentChain);
 
 
     // Reverse the array and join with commas

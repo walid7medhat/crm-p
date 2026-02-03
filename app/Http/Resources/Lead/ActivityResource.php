@@ -17,6 +17,7 @@ class ActivityResource extends JsonResource
             'reminder_date' => $this->reminder_date->format('Y-m-d H:i:s'),
             'is_completed' => $this->is_completed,
             'status' => $this->is_completed ? 'Completed' : ($this->reminder_date < now() ? 'Overdue' : 'Pending'),
+            'reminders'=>$this->reminders,
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
         ];

@@ -17,6 +17,8 @@ class UpdateActivityRequest extends FormRequest
             'title' => 'sometimes|string|max:255',
             'reminder_date' => 'sometimes|date',
             'is_completed' => 'sometimes|boolean',
+            'reminders' => 'required|array|min:1',
+           'reminders.*' => 'integer|min:0',
         ];
     }
 }
