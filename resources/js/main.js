@@ -147,6 +147,11 @@ app.config.globalProperties.$showNotification = function(message, type = 'info')
   })
 }
 
+// Global confirmation function
+import showConfirmation from './composables/useConfirmation'
+app.config.globalProperties.$showConfirmation = showConfirmation
+window.$showConfirmation = showConfirmation
+
 // Permission check function
 app.config.globalProperties.$hasPermission = function(permission) {
   try {
