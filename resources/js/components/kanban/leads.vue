@@ -212,7 +212,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import draggable from 'vuedraggable'
 import avatar1 from '@/assets/images/users/user1.png'
-import leadsIcon from '@/assets/images/kanban/svg/leads-icon.png'
+import leadsIcon from '@/assets/images/kanban/leads-icon.png'
 import avatar2 from '@/assets/images/users/user2.png'
 import ViewLeadModal from './ViewLeadModal.vue'
 import DuplicateLeadsModal from './DuplicateLeadsModal.vue'

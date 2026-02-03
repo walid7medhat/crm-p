@@ -93,13 +93,13 @@
                                     <div class="col">
                                         <label class="form-label-custom">Contact</label>
                                         <b-form-input 
-                                            v-model="form.whatsapp_number" 
+                                            v-model="form.work_phone" 
                                             placeholder="Enter Phone Number" 
                                             class="custom-input"
-                                            :class="{ 'is-invalid': validationErrors.whatsapp_number }"
+                                            :class="{ 'is-invalid': validationErrors.work_phone }"
                                         />
-                                        <div v-if="validationErrors.whatsapp_number" class="invalid-feedback d-block">
-                                            {{ validationErrors.whatsapp_number[0] }}
+                                        <div v-if="validationErrors.work_phone" class="invalid-feedback d-block">
+                                            {{ validationErrors.work_phone[0] }}
                                         </div>
                                     </div>
                                     <div class="col">
@@ -474,7 +474,7 @@ const form = ref({
     salutation: null,
     first_name: '',
     last_name: '',
-    whatsapp_number: '',
+    work_phone: '',
     email: '',
     work_phone_2: '',
     comment: '',
@@ -599,9 +599,9 @@ watch(() => form.value.email, () => {
     }
 })
 
-watch(() => form.value.whatsapp_number, () => {
-    if (validationErrors.value.whatsapp_number) {
-        delete validationErrors.value.whatsapp_number
+watch(() => form.value.work_phone, () => {
+    if (validationErrors.value.work_phone) {
+        delete validationErrors.value.work_phone
         clearErrorMessageIfNeeded()
     }
 })
@@ -683,7 +683,7 @@ const resetForm = () => {
         salutation: null,
         first_name: '',
         last_name: '',
-        whatsapp_number: '',
+        work_phone: '',
         email: '',
         work_phone_2: '',
         comment: '',

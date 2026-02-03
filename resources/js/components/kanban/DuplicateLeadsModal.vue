@@ -15,7 +15,7 @@
             :style="popupStyle"
             @click.stop
         >
-            <div class="duplicate-leads-modal-content px-3">
+            <div class="duplicate-leads-modal-content">
                 <!-- Header -->
                 <div class="modal-header-custom d-flex justify-content-between align-items-center py-3 border-bottom">
                     <picture class="modal-title mb-0">Duplicate Leads ({{ duplicateLeads.length }})</picture>
@@ -25,7 +25,7 @@
                 </div>
 
                 <!-- Content -->
-                <div class="modal-body-custom p-4" style="max-height: 70vh; overflow-y: auto;">
+                <div class="modal-body-custom">
                     <div v-if="loading" class="text-center py-5">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Loading...</span>
@@ -40,15 +40,15 @@
                         <p class="text-secondary">No duplicate leads found</p>
                     </div>
 
-                    <div v-else class="duplicate-leads-list d-flex flex-column gap-3">
+                    <div v-else class="duplicate-leads-list d-flex flex-column">
                         <div 
                             v-for="lead in duplicateLeads" 
                             :key="lead.id"
-                            class="duplicate-lead-card bg-white radius-12 shadow-sm border-0 cursor-pointer"
+                            class="duplicate-lead-card bg-white radius-12 cursor-pointer"
                             @click="openLeadView(lead.id)"
                         >
                             <!-- Lead Title -->
-                            <h6 class="lead-title">{{ lead.lead_name }}</h6>
+                            <p class="lead-title">{{ lead.lead_name }}</p>
                             
                             <!-- Contact Information -->
                             <div class="lead-info d-flex flex-column gap-2">
@@ -61,11 +61,6 @@
                                     </span>
                                 </div>
                                 
-                                <!-- Email -->
-                                <div class="info-row">
-                                    <span class="info-label">Email</span>
-                                    <span class="info-value">{{ lead.email  || '----'}}</span>
-                                </div>
                             </div>
 
                             <!-- Avatar -->
@@ -150,12 +145,20 @@ const calculatePosition = async () => {
         let top = 0
         let left = 0
         
-        // Position horizontally - align to right edge of trigger, adjust if needed
-        const preferredLeft = rect.right - popupWidth
-        if (preferredLeft < 16) {
-            left = 16 // 16px margin from left edge
-        } else if (preferredLeft + popupWidth > viewportWidth - 16) {
-            left = viewportWidth - popupWidth - 16 // 16px margin from right edge
+        // Position horizontally - open on the right side of the icon
+        const gap = 8 // 8px gap from the trigger element
+        const preferredLeft = rect.right + gap
+        
+        // Check if there's enough space on the right side
+        if (preferredLeft + popupWidth > viewportWidth - 16) {
+            // Not enough space on right, try left side
+            const leftSidePosition = rect.left - popupWidth - gap
+            if (leftSidePosition >= 16) {
+                left = leftSidePosition
+            } else {
+                // Not enough space on either side, align to viewport edge
+                left = viewportWidth - popupWidth - 16
+            }
         } else {
             left = preferredLeft
         }
@@ -229,13 +232,12 @@ const fetchDuplicateLeads = async () => {
 }
 
 const getPhoneNumber = (lead) => {
-    return lead.phone_number || lead.work_phone || lead.work_phone_2 || lead.whatsapp_number || lead.phone || null
+    return lead.work_phone || lead.work_phone_2 || null
 }
 
 const getPhoneType = (lead) => {
-    if (lead.work_phone || lead.phone_number) return 'Work Phone'
-    if (lead.whatsapp_number) return 'WhatsApp'
-    if (lead.work_phone_2) return 'Work Phone'
+    if (lead.work_phone) return 'Work Phone'
+    if (lead.work_phone_2) return 'Secondary Phone'
     return lead.phone_type || null
 }
 
@@ -316,14 +318,20 @@ onUnmounted(() => {
 }
 
 .duplicate-leads-modal-content {
+    padding: 0px 18px;
     background-color: #FFFFFF;
     border-radius: 12px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    height: 444px;
+    width: 416px;
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-header-custom {
     background-color: #FFFFFF;
     border-bottom: 1px solid #EBECEF;
+    flex-shrink: 0;
 }
 
 .modal-title {
@@ -352,13 +360,17 @@ onUnmounted(() => {
 
 .modal-body-custom {
     /* background-color: #F5F6FA; */
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 .duplicate-lead-card {
     position: relative;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    padding: 16px;
-    padding-bottom: 48px;
+    border: 1px solid rgba(244, 244, 244, 1);
+    margin: 12px 0px;
+    padding: 12px;
 }
 
 .duplicate-lead-card:hover {
@@ -368,8 +380,8 @@ onUnmounted(() => {
 
 .lead-title {
     font-family: Montserrat;
-    font-weight: 700;
-    font-size: 14px;
+    font-weight: 600;
+    font-size: 12px;
     line-height: 20px;
     color: #01062C;
     margin: 0 0 12px 0;

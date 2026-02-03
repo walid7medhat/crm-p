@@ -88,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { BModal, BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -158,10 +158,6 @@ watch(() => formData.value.title, () => {
     if (Object.keys(validationErrors.value).length === 0) {
         errorMessage.value = ''
     }
-})
-
-onMounted(() => {
-    fetchStages()
 })
 
 const handleClose = () => {
