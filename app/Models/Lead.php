@@ -98,15 +98,8 @@ class Lead extends Model
      public function getDuplicateLeadsAttribute()
         {
             return Lead::where('id', '!=', $this->id)
-                ->where(function ($q) {
-                    if ($this->work_phone) {
-                        $q->orWhere('work_phone', $this->work_phone);
-                    }
-        
-                    if ($this->lead_name) {
-                        $q->orWhere('lead_name', $this->lead_name);
-                    }
-                })
+            ->whereNotNull('work_phone')
+               ->where('work_phone', $this->work_phone)
                 ->get();
         }
 
