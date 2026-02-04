@@ -223,6 +223,10 @@ public function permissions(User $user): JsonResponse
                 case 'size_desc': $query->orderBy('size_sqft', 'desc'); break;
                 case 'off_plan': $query->orderBy('completion_status', 'asc'); break;
                  case 'hot_deal': $query->orderBy('is_hot_deal', 'asc'); break;
+                 case 'created_at_asc':
+                    $query->orderBy('created_at', 'asc');
+                    break;
+                case 'created_at_desc':
                 default: $query->orderBy('created_at', 'desc'); break;
             }
             $perPage = $request->get('per_page', 12);

@@ -166,7 +166,14 @@
 
             <div class="col-md-4">
               <label class="form-label">Price</label>
-              <input v-model="form.price" type="number" class="form-control" placeholder="Enter price" />
+             <input
+              v-model="form.price"
+              @input="form.price = form.price.replace(/[^0-9]/g, '')"
+              type="text"
+              inputmode="numeric"
+              class="form-control"
+              placeholder="Enter price"
+            />
             </div>
           </div>
         </div>

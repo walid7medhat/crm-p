@@ -123,6 +123,9 @@
                     <span v-else-if="property.completion_status === 'Completed'" class="badge-ready">
                       <i class="ri-checkbox-circle-line me-1"></i>Ready
                     </span>
+                    <span v-if="property.listing_status" class="status-badge">
+                             {{ property.listing_status === 'sale' ? 'For Sale' : 'For Rent' }}
+                    </span>
                 </div>
                 
                 <span class="badge-images" v-if="property.gallery_images && property.gallery_images.length">
@@ -132,15 +135,17 @@
 
               <!-- Content -->
               <div class="property-content p-3">
-                <div class="d-flex align-items-end mb-1">
-                  <h6 class="property-price mb-0 me-1">{{ formatPrice(property.price) }}</h6>
-                  <small class="text-muted price-unit">AED</small>
-                </div>
+                    <div class="d-flex align-items-end mb-1">
+                      <h6 class="property-price mb-0 me-1">{{ formatPrice(property.price) }}</h6>
+                      <small class="text-muted price-unit">AED</small>
+                    </div>
+                   
 
                 <h5 class="property-title mb-2">{{ property.title || 'No Title' }}</h5>
                 <p class="property-location mb-3">
                   <i class="ri-map-pin-line me-1"></i>{{ property.area }}
                 </p>
+                 
 
                 <div class="property-details d-flex justify-content-between text-muted small mb-3">
                   <span class="d-flex justify-content-between icons">
@@ -173,11 +178,15 @@
                       </span>
                 </span>
                 </div>
-                
-                <p class="property-agent text-muted small mb-2" v-if="property.agent">
-                  Listed by: {{ getAgentName(property.agent) }}
-                </p>
-
+                <div class="d-flex align-items-end justify-between">
+                    <p class="property-agent text-muted small mb-2" v-if="property.agent">
+                      Listed by: {{ getAgentName(property.agent) }}
+                    </p>
+                    <div class="property-listed-date mb-2">
+                        <i class="ri-calendar-line me-1"></i>
+                        <small class="text-muted">Listed at: {{ formatDate(property.created_at) }}</small>
+                      </div>
+                    </div>
                 <span class="view-more-btn">
                   View Details
                 </span>
@@ -673,6 +682,21 @@ export default {
       return new Intl.NumberFormat().format(price);
     };
 
+    const formatDate = (dateString) => {
+      if (!dateString) return 'N/A';
+      
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      } catch (error) {
+        return 'Invalid Date';
+      }
+    };
+
     const getLocation = (property) => {
       let loc = property.area || property.location;
       if (!loc) return 'Location not specified';
@@ -724,6 +748,7 @@ export default {
       changePage,
       getPropertyImage,
       formatPrice,
+      formatDate,
       getLocation,
       getPropertyType,
       getAreaUnit,
@@ -984,7 +1009,7 @@ export default {
   top: 12px;
   left: 12px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 5px;
 }
 
@@ -1086,4 +1111,32 @@ export default {
   font-size: 0.7rem;
   font-weight: 500;
 }
+/*============*/
+
+
+.status-badge {
+   background: #01062d ;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+
+
+.property-listed-date {
+  font-size: 0.75rem;
+  /*color: #666;*/
+  margin-bottom:0 !important;
+}
+
+.property-listed-date i {
+  font-size: 0.8rem;
+  color: #FAA300;
+}
+.justify-between{
+    justify-content:space-between;
+}
+
 </style>

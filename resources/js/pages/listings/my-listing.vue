@@ -129,11 +129,14 @@
                  Hot Deal
                 </span>
                 <span v-if="property.completion_status === 'Under Construction'" class="badge-offplan">
-                      <i class="ri-building-line me-1"></i>Off Plan
-                    </span>
-                    <span v-else-if="property.completion_status === 'Completed'" class="badge-ready">
-                      <i class="ri-checkbox-circle-line me-1"></i>Ready
-                    </span>
+                  <i class="ri-building-line me-1"></i>Off Plan
+                </span>
+                <span v-else-if="property.completion_status === 'Completed'" class="badge-ready">
+                  <i class="ri-checkbox-circle-line me-1"></i>Ready
+                </span>
+                <span v-if="property.listing_status" class="status-badge">
+                         {{ property.listing_status === 'sale' ? 'For Sale' : 'For Rent' }}
+                </span>
                  
               </div>
               <!-- Images Count Badge Only -->
@@ -186,9 +189,15 @@
                 </span>
                 </div>
               
-              <p class="property-agent text-muted small mb-2" v-if="property.agent">
-                Listed by: {{ getAgentName(property.agent) }}
-              </p>
+             <div class="d-flex align-items-end justify-between">
+                <p class="property-agent text-muted small mb-2" v-if="property.agent">
+                  Listed by: {{ getAgentName(property.agent) }}
+                </p>
+                <div class="property-listed-date mb-2">
+                    <i class="ri-calendar-line me-1"></i>
+                    <small class="text-muted">Listed at: {{ formatDate(property.created_at) }}</small>
+                  </div>
+                </div>
 
               <!-- Action Buttons -->
               <div class="d-flex gap-2">
@@ -594,6 +603,20 @@ const fetchProperties = async (filters = {}, page = 1) => {
       if (!price) return '0';
       return new Intl.NumberFormat().format(price);
     };
+     const formatDate = (dateString) => {
+      if (!dateString) return 'N/A';
+      
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      } catch (error) {
+        return 'Invalid Date';
+      }
+    };
 
      const getLocation = (property) => {
       let loc = property.area || property.location;
@@ -647,6 +670,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
       changePage,
       getPropertyImage,
       formatPrice,
+      formatDate,
       getLocation,
       getPropertyType,
       getAreaUnit,
@@ -916,7 +940,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
   top: 12px;
   left: 12px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 5px;
 }
 
@@ -1017,5 +1041,32 @@ const fetchProperties = async (filters = {}, page = 1) => {
   border-radius: 6px;
   font-size: 0.7rem;
   font-weight: 500;
+}
+/*============*/
+
+
+.status-badge {
+   background: #01062d ;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+
+
+.property-listed-date {
+  font-size: 0.75rem;
+  /*color: #666;*/
+  margin-bottom:0 !important;
+}
+
+.property-listed-date i {
+  font-size: 0.8rem;
+  color: #FAA300;
+}
+.justify-between{
+    justify-content:space-between;
 }
 </style>

@@ -190,6 +190,9 @@
                                                                 <span v-else class="badge bg-success">
                                                                     <i class="ri-checkbox-circle-line me-1"></i>Active
                                                                 </span>
+                                                                <span v-if="property.listing_status" class="status-badge">
+                                                                         {{ property.listing_status === 'sale' ? 'For Sale' : 'For Rent' }}
+                                                                </span>
                                                             </div>
                                                             
                                                             <span class="image-count" v-if="property.gallery_images && property.gallery_images.length">
@@ -240,7 +243,11 @@
                                                                           </span>
                                                                     </span>
                                                                     </div>
-                
+
+                                                                    <div class="property-listed-date mb-2">
+                                                                        <i class="ri-calendar-line me-1"></i>
+                                                                        <small class="text-muted">Listed at: {{ formatDate(property.created_at) }}</small>
+                                                                      </div>
                                                                  <span class="view-more-btn mt-2">
                                                                       View Details
                                                                     </span>
@@ -1003,15 +1010,15 @@ export default {
     top: 0.5rem;
     left: 0.5rem;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 0.25rem;
 }
 
 .status-badges .badge {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.625rem;
+       padding: 4px 8px;
+    border-radius: 6px;
+    font-size: .7rem;
     font-weight: 500;
-    border-radius: 0.25rem;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
@@ -1468,6 +1475,32 @@ export default {
 .capital{
     text-transform: capitalize;
 }
+/*============*/
 
+
+.status-badge {
+   background: #01062d ;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+
+
+.property-listed-date {
+  font-size: 0.75rem;
+  /*color: #666;*/
+  margin-bottom:0 !important;
+}
+
+.property-listed-date i {
+  font-size: 0.8rem;
+  color: #FAA300;
+}
+.justify-between{
+    justify-content:space-between;
+}
 </style>
 

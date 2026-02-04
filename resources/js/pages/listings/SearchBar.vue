@@ -331,9 +331,9 @@ const searchReferenceNumber = ref("");
       { label: "Under Construction", value: "Under Construction" }
     ];
 const sortOptions = [
-             { label: "Hot Deal", value: "hot_deal" },
-
-  { label: "Most Recent", value: "created_at_desc" },
+  { label: "Hot Deal", value: "hot_deal" },
+  { label: "Latest Listings", value: "created_at_desc" },
+//   { label: "Oldest Listings", value: "created_at_asc" },
   { label: "Price: Low to High", value: "price_asc" },
   { label: "Price: High to Low", value: "price_desc" },
   // { label: "Size: Small to Large", value: "size_asc" },

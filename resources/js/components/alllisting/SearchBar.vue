@@ -2,35 +2,7 @@
   <div class="">
     <div class="search-bar">
        <div class="main-search-row">
-                <!--<div class="form-group  col-md-4">-->
-                <!--  <label class="form-label">Reference Number</label>-->
-                <!--  <input -->
-                <!--    v-model="searchReferenceNumber"-->
-                <!--    type="text" -->
-                <!--    class="form-control unified-input"-->
-                <!--    placeholder="Enter reference number"-->
-                <!--    @input="handleFilterChange"-->
-                <!--    @keyup.enter="applyFilters"-->
-                <!--  />-->
-                <!--</div>-->
-                <!-- <div class="form-group col-md-4">-->
-                <!--  <label class="form-label">Project</label>-->
-                <!--  <v-select-->
-                <!--    v-model="selectedProject"-->
-                <!--    :options="projects"-->
-                <!--    :disabled="isLoadingProjects"-->
-                <!--    label="name"-->
-                <!--    placeholder="Select project"-->
-                <!--    class="custom-select unified-input"-->
-                <!--    @update:modelValue="handleFilterChange"-->
-                <!--  >-->
-                <!--    <template #no-options>-->
-                <!--      <div class="text-center p-2">-->
-                <!--        {{ isLoadingProjects ? 'Loading projects...' : 'No projects found' }}-->
-                <!--      </div>-->
-                <!--    </template>-->
-                <!--  </v-select>-->
-                <!--</div>-->
+               
                 <!-- Location -->
                 <div class="form-group col-md-4 col-12">
                   <label class="form-label">Location</label>
@@ -391,10 +363,12 @@ const searchReferenceNumber = ref("");
       { label: "Under Construction", value: "Under Construction" }
     ];
     const sortOptions = [
-         { label: "Hot Deal", value: "hot_deal" },
-      { label: "Most Recent", value: "created_at_desc" },
-      { label: "Price: Low to High", value: "price_asc" },
-      { label: "Price: High to Low", value: "price_desc" },
+          { label: "Hot Deal", value: "hot_deal" },
+          { label: "Latest Listings", value: "created_at_desc" },
+        //   { label: "Oldest Listings", value: "created_at_asc" },
+          { label: "Price: Low to High", value: "price_asc" },
+          { label: "Price: High to Low", value: "price_desc" },
+      
       // { label: "Size: Small to Large", value: "size_asc" },
       // { label: "Size: Large to Small", value: "size_desc" }
     ];
