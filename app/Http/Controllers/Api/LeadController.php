@@ -52,6 +52,44 @@ class LeadController extends Controller
                     'participants',
                     'observers.user'
                 ]);
+                if ($request->filled('responsible_person_id')) {
+                    $leadsQuery->where('responsible_person_id', $request->responsible_person_id);
+                }
+                
+                if ($request->filled('stage_id')) {
+                    $leadsQuery->where('stage_id', $request->stage_id);
+                }
+                
+                if ($request->filled('added_by')) {
+                    $leadsQuery->where('added_by', $request->added_by);
+                }
+                if ($request->filled('created_from')) {
+                    $leadsQuery->whereDate('created_at', '>=', $request->created_from);
+                }
+                
+                if ($request->filled('created_to')) {
+                    $leadsQuery->whereDate('created_at', '<=', $request->created_to);
+                }
+                if ($request->filled('created_at')) {
+                    $leadsQuery->whereDate('created_at', '=', $request->created_to);
+                }
+                
+                if ($request->filled('search')) {
+                    $search = $request->search;
+                    $leadsQuery->where(function($q) use ($search) {
+                        $q->where('lead_name', 'like', "%{$search}%")
+                          ->orWhere('lead_number', 'like', "%{$search}%");
+                    });
+                }
+                
+                // ===============  source =================
+                if ($request->filled('source')) {
+                    $leadsQuery->where('lead_source', $request->source);
+                }
+                
+                if ($request->filled('source_information')) {
+                    $leadsQuery->where('source_information', 'like', "%{$request->source_information}%");
+                }
         
                 if ($user->hasRole('super_admin') ) {
                     $leads = $leadsQuery->latest()->get();
