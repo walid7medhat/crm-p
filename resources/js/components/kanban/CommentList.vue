@@ -201,8 +201,8 @@ const formatFileSize = (bytes) => {
 const downloadAttachment = (attachment) => {
     console.log('Download attachment:', attachment)
     // Add download logic here
-    if (attachment.file_path) {
-        window.open(attachment.file_path, '_blank')
+    if (attachment.file_url) {
+        window.open(attachment.file_url, '_blank')
     }
 }
 

@@ -55,6 +55,7 @@
                                             <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
                                                 <p class="task-title flex-grow-1 mb-0">{{ task.lead_name }}</p>
                                                 <div 
+                                                    v-if="index === 0"
                                                     class="duplicate-badge position-relative cursor-pointer"
                                                     @click.stop="openDuplicateLeadsModal(task.id, $event)"
                                                 >

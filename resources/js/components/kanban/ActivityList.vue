@@ -433,7 +433,6 @@ const transformActivity = (activity) => {
         deadline: formatDeadline(activity.reminder_date),
         userAvatar: activity.user_avatar || null,
         userName: activity.user_name || '',
-        hasComment: false, // Can be updated if API provides this
         date: new Date(activity.created_at),
         dateLabel: formatDateLabel(activity.created_at),
         reminders: activity.reminders || [],
