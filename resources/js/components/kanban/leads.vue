@@ -55,7 +55,7 @@
                                             <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
                                                 <p class="task-title flex-grow-1 mb-0">{{ task.lead_name }}</p>
                                                 <div 
-                                                    v-if="index === 0"
+                                                    v-if="index === 0 && isAdminOrSuperAdmin"
                                                     class="duplicate-badge position-relative cursor-pointer"
                                                     @click.stop="openDuplicateLeadsModal(task.id, $event)"
                                                 >
@@ -210,7 +210,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import draggable from 'vuedraggable'
 import avatar1 from '@/assets/images/users/user1.png'
 import leadsIcon from '@/assets/images/kanban/leads-icon.png'
@@ -222,6 +222,29 @@ import Swal from 'sweetalert2'
 
 // Import Bootstrap
 import * as bootstrap from 'bootstrap'
+
+// Get user from storage (same pattern as header/index.vue)
+const getUserFromStorage = () => {
+    try {
+        const userData = localStorage.getItem('user')
+        return userData ? JSON.parse(userData) : null
+    } catch (error) {
+        console.error('Error getting user from storage:', error)
+        return null
+    }
+}
+
+const user = ref(getUserFromStorage())
+
+// Check if user is admin or super_admin (same pattern as header/index.vue)
+const isAdminOrSuperAdmin = computed(() => {
+    if (!user.value) return false
+    
+    const isAdminUser = user.value.roles?.includes('super_admin') || 
+                       user.value.roles?.includes('admin')
+    
+    return isAdminUser
+})
 
 const columns = ref([])
 const responsiblePersons = ref([])
