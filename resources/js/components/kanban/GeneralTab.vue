@@ -50,7 +50,11 @@
                 </div>
 
                 <!-- Activity View -->
-                <ActivitySection v-if="activeViewTab === 'activity'" :lead-id="lead?.id" />
+                <ActivitySection 
+                    v-if="activeViewTab === 'activity'" 
+                    :lead-id="lead?.id"
+                    @activity-created="handleActivityCreated"
+                />
 
                 <!-- Comments View -->
                 <CommentsSection 
@@ -61,7 +65,11 @@
             </div>
 
             <!-- Lead Activity List -->
-            <ActivityList v-if="activeViewTab === 'activity'" :lead-id="lead?.id" />
+            <ActivityList 
+                v-if="activeViewTab === 'activity'" 
+                ref="activityListRef"
+                :lead-id="lead?.id" 
+            />
             <CommentList 
                 v-if="activeViewTab === 'comments'" 
                 ref="commentListRef"
@@ -97,6 +105,7 @@ const isEditMode = ref(false)
 const selectedStageId = ref(props.stageId || props.lead?.stage?.id || null)
 const activeViewTab = ref('comments') // 'activity' or 'comments'
 const commentListRef = ref(null)
+const activityListRef = ref(null)
 
 // Watch for stageId changes from parent
 watch(() => props.stageId, (newStageId) => {
@@ -147,6 +156,13 @@ const handleCommentCreated = (newComment) => {
     // Add the new comment to the CommentList
     if (commentListRef.value && commentListRef.value.addComment) {
         commentListRef.value.addComment(newComment)
+    }
+}
+
+const handleActivityCreated = (newActivity) => {
+    // Add the new activity to the ActivityList
+    if (activityListRef.value && activityListRef.value.addActivity) {
+        activityListRef.value.addActivity(newActivity)
     }
 }
 

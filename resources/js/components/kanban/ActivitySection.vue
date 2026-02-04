@@ -9,7 +9,7 @@
             <textarea 
                 class="form-control border-0 p-0 text-sm shadow-none custom-textarea"
                 :class="{ 'is-invalid': validationErrors.title }"
-                placeholder="Type @ to mention someone" 
+                placeholder="Type activity title" 
                 rows="4"
                 v-model="activityText"
             ></textarea>
@@ -62,19 +62,6 @@
                             class="reminder-dropdown"
                             @click.stop
                         >
-                            <div class="reminder-header-option" @click="selectReminderOption('when_starts')">
-                                <span class="reminder-header-text">When event starts</span>
-                                <div 
-                                    class="reminder-checkbox"
-                                    :class="{ 'checked': selectedReminder === 'when_starts' }"
-                                >
-                                    <iconify-icon 
-                                        v-if="selectedReminder === 'when_starts'"
-                                        icon="lucide:check" 
-                                        class="check-icon"
-                                    ></iconify-icon>
-                                </div>
-                            </div>
                             <div class="reminder-options">
                                 <div 
                                     class="reminder-option"
@@ -85,10 +72,10 @@
                                     <span class="reminder-option-text">{{ option.label }}</span>
                                     <div 
                                         class="reminder-checkbox"
-                                        :class="{ 'checked': selectedReminder === option.value }"
+                                        :class="{ 'checked': reminders.includes(option.value) }"
                                     >
                                         <iconify-icon 
-                                            v-if="selectedReminder === option.value"
+                                            v-if="reminders.includes(option.value)"
                                             icon="lucide:check" 
                                             class="check-icon"
                                         ></iconify-icon>
@@ -155,13 +142,15 @@ const props = defineProps({
     }
 })
 
+const emit = defineEmits(['activity-created'])
+
 const activityText = ref('')
 const selectedDateTime = ref(new Date())
 const showReminderDropdown = ref(false)
 const selectedReminder = ref(null)
 const showDateTimePicker = ref(false)
 const reminderDate = ref(new Date()) // Default to today's date and current time
-const reminderOption = ref(null)
+const reminders = ref([])
 const avatarError = ref(false)
 const currentUser = ref(null)
 const isSubmitting = ref(false)
@@ -170,11 +159,12 @@ const errorMessage = ref('')
 
 // Reminder options
 const reminderOptions = [
-    { label: '15 minutes before', value: '15min' },
-    { label: '30 minutes before', value: '30min' },
-    { label: '1 hour before', value: '1hour' },
-    { label: '2 hours before', value: '2hours' },
-    { label: '1 day before', value: '1day' }
+    { label: 'When event starts', value: '0' },
+    { label: '15 minutes before', value: '15' },
+    { label: '30 minutes before', value: '30' },
+    { label: '1 hour before', value: '60' },
+    { label: '2 hours before', value: '120' },
+    { label: '1 day before', value: '1440' }
 ]
 
 // Format date/time for display
@@ -216,14 +206,15 @@ const formattedCustomDate = computed(() => {
     return `${dayName}, ${monthName} ${day}, ${displayHours}:${displayMinutes} ${ampm}`
 })
 
-// Select reminder option (single select)
+// Select reminder option (multiple select)
 const selectReminderOption = (value) => {
-    if (selectedReminder.value === value) {
-        selectedReminder.value = null
-        reminderOption.value = null
+    const index = reminders.value.indexOf(value)
+    if (index > -1) {
+        // Remove if already selected
+        reminders.value.splice(index, 1)
     } else {
-        selectedReminder.value = value
-        reminderOption.value = value
+        // Add if not selected
+        reminders.value.push(value)
     }
 }
 
@@ -279,14 +270,14 @@ watch(() => reminderDate.value, () => {
     }
 })
 
-watch(() => reminderOption.value, () => {
+watch(() => reminders.value, () => {
     if (validationErrors.value.reminder_option) {
         delete validationErrors.value.reminder_option
         if (Object.keys(validationErrors.value).length === 0) {
             errorMessage.value = ''
         }
     }
-})
+}, { deep: true })
 
 const handleAvatarError = () => {
     avatarError.value = true
@@ -296,7 +287,7 @@ const handleCancel = () => {
     activityText.value = ''
     reminderDate.value = new Date() // Reset to today's date and current time
     selectedReminder.value = null
-    reminderOption.value = null
+    reminders.value = []
     showReminderDropdown.value = false
     validationErrors.value = {}
     errorMessage.value = ''
@@ -329,9 +320,9 @@ const handleSave = async () => {
             reminder_date: formattedReminderDate,
         }
         
-        // Add reminder_option if selected
-        if (reminderOption.value) {
-            payload.reminder_option = reminderOption.value
+        // Add reminders array if any selected
+        if (reminders.value.length > 0) {
+            payload.reminders = reminders.value
         }
         
         const response = await api.post('/leads/activities', payload)
@@ -342,8 +333,9 @@ const handleSave = async () => {
         handleCancel()
         $showNotification('Activity created successfully!', 'success')
         
-        // Emit event to parent if needed (optional)
-        // emit('activity-created', response.data)
+        // Emit event to parent with the created activity data
+        const activityData = response.data?.data || response.data
+        emit('activity-created', activityData)
         
     } catch (error) {
         console.error('❌ Error saving activity:', error)

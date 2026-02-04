@@ -63,7 +63,7 @@
                         @change="handleFileSelect"
                         class="file-input-hidden"
                     />
-                    <div class="d-flex align-items-center gap-3 w-100">
+                    <div class="d-flex align-items-center gap-2 w-100">
                         <iconify-icon icon="lucide:file-text" class="dropzone-icon"></iconify-icon>
                         <div class="flex-grow-1">
                             <p class="dropzone-text mb-1">Drag and drop your files</p>
@@ -564,8 +564,8 @@ const handleCancelFileModal = () => {
 
 .btn-close-card {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 1px;
+    right: 3px;
     background: transparent;
     border: none;
     padding: 6px;
@@ -589,7 +589,7 @@ const handleCancelFileModal = () => {
 }
 
 .file-upload-content {
-    padding: 24px;
+    padding: 20px;
     flex: 1;
 }
 
@@ -597,10 +597,11 @@ const handleCancelFileModal = () => {
     background: #F8FAFC;
     border: 2px dashed #CBD5E1;
     border-radius: 12px;
-    padding: 32px 24px;
+    padding: 20px;
+    margin: 10px 0;
     cursor: pointer;
     transition: all 0.2s;
-    min-height: 150px;
+    /* min-height: 150px; */
     display: flex;
     align-items: center;
 }
@@ -626,20 +627,20 @@ const handleCancelFileModal = () => {
 }
 
 .dropzone-icon {
-    font-size: 48px;
+    font-size: 35px;
     color: #94A3B8;
     flex-shrink: 0;
 }
 
 .dropzone-text {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
     color: #01062C;
     margin: 0;
 }
 
 .dropzone-subtext {
-    font-size: 13px;
+    font-size: 12px;
     color: #64748B;
     margin: 0;
 }
@@ -647,8 +648,8 @@ const handleCancelFileModal = () => {
 .btn-select-file {
     background: #fff;
     border: 1px solid #E2E8F0;
-    border-radius: 8px;
-    padding: 8px 16px;
+    border-radius: 20px;
+    padding: 8px 10px;
     font-size: 14px;
     font-weight: 400;
     color: #01062C;
