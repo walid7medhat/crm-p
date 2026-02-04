@@ -19,6 +19,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use App\Http\Resources\Lead\DuplicateLeadResource;
+use App\Helpers\LeadHistoryHelper;
+use App\Http\Resources\Lead\LeadHistoryResource;
+use App\Models\LeadHistory;
+
+use Illuminate\Support\Str;
 class LeadController extends Controller
 {
     public function __construct()
@@ -130,6 +135,10 @@ class LeadController extends Controller
                     ]);
                 }
             }
+            LeadHistoryHelper::log(
+                $lead->id,
+                ['action' => 'created']
+            );
         broadcast(new LeadUpdated($lead, 'created'));
 
             return ApiResponse::success(
@@ -164,6 +173,10 @@ class LeadController extends Controller
                 $lead->revertToStageOne();
                 $lead->refresh();
             }
+            // LeadHistoryHelper::log(
+            //     $lead->id,
+            //     ['action' => 'view']
+            // );
 
             return ApiResponse::success(
                 new LeadResource($lead->load([
@@ -223,6 +236,7 @@ class LeadController extends Controller
                 if ($request->has('stage_id') && $lead->stage_id != $request->stage_id) {
                     $leadData['last_stage_change_at'] = now();
                 }
+                $old = $lead->getAttributes();
 
                 $lead->update($leadData);
 
@@ -249,7 +263,29 @@ class LeadController extends Controller
                 } else {
                     broadcast(new LeadUpdated($lead, 'updated'));
                 }
-
+                // ===================history==============
+                $new = $lead->getAttributes();
+                
+                $fields = [];
+                
+                foreach ($new as $key => $value) {
+                    if (!array_key_exists($key, $old)) continue;
+                
+                    if ($old[$key] != $value) {
+                        $fields[$key] = [
+                            'old' => $old[$key],
+                            'new' => $value
+                        ];
+                    }
+                }
+                
+                LeadHistoryHelper::log(
+                    $lead->id,
+                    [
+                        'action' => 'updated',
+                        'fields' => $fields
+                    ]
+                );
                 return ApiResponse::success(
                     new LeadResource($lead->load(['responsiblePerson', 'participants', 'observers.user'])),
                     'Lead updated successfully'
@@ -294,6 +330,15 @@ class LeadController extends Controller
             'new_person' => $responsiblePerson?->name
         ];
         broadcast(new LeadUpdated($lead, 'assigned', null, $changes));
+        //  ==================================hiatory====================
+        LeadHistoryHelper::log(
+            $lead->id,
+            [
+                'action' => 'assigned',
+                'old_person' => $oldPerson?->name,
+                'new_person' => $responsiblePerson?->name
+            ]
+        );
 
 
         return ApiResponse::success(
@@ -413,6 +458,15 @@ class LeadController extends Controller
             'new_stage' => $newStage->name
         ];
         broadcast(new LeadUpdated($lead, 'stage_changed', null, $changes));
+        // =================history=================
+        LeadHistoryHelper::log(
+            $lead->id,
+            [
+                'action' => 'stage_changed',
+                'old_stage' => $oldStage->name,
+                'new_stage' => $newStage->name
+            ]
+        );
 
             return ApiResponse::success(
                 new LeadResource($lead->load('stage')),
@@ -512,4 +566,52 @@ class LeadController extends Controller
                 return ApiResponse::error('Failed to retrieve leads: ' . $e->getMessage());
             }
         }
+        // ======================history =======================
+        public function history(Request $request, $leadId)
+        {
+            $query = LeadHistory::where('lead_id', $leadId)
+                ->with('user:id,name');
+        
+            if ($request->filled('action')) {
+                $query->where('changes->action', $request->action);
+            }
+        
+            if ($request->filled('user_id')) {
+                $query->where('user_id', $request->user_id);
+            }
+        
+            if ($request->filled('from_date')) {
+                $query->whereDate('created_at', '>=', $request->from_date);
+            }
+        
+            if ($request->filled('to_date')) {
+                $query->whereDate('created_at', '<=', $request->to_date);
+            }
+        
+            $histories = $query->latest()->get();
+        
+            $data= LeadHistoryResource::collection($histories);
+             return ApiResponse::success(
+                    $data,
+                    'Lead History retrieved successfully'
+                );
+        
+        }
+          public function view_history($id): JsonResponse
+    {
+        try {
+            $lead=Lead::find($id);
+            LeadHistoryHelper::log(
+                $lead->id,
+                ['action' => 'view']
+            );
+
+            return ApiResponse::success(
+                new LeadResource($lead),
+                'Lead history saved successfully'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to retrieve lead: ' . $e->getMessage());
+        }
+    }
 }

@@ -23,7 +23,9 @@ use Notification;
 use Carbon\Carbon;
 use App\Http\Resources\User\MentionAgentResource;
 use App\Helpers\ApiResponse;
+use App\Helpers\LeadHistoryHelper;
 
+use Illuminate\Support\Str;
 class LeadActivityController extends Controller
 {
     // ==================== ACTIVITY METHODS ====================
@@ -60,7 +62,16 @@ class LeadActivityController extends Controller
     
             $activity->calculateNextReminder();
             $activity->save();
-            
+            // ==================history================
+            LeadHistoryHelper::log(
+                $activity->lead_id,
+                [
+                    'action' => 'activity_created',
+                      'id'=>$activity->id,
+                    'title' => $activity->title
+                ]
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Activity created successfully',
@@ -96,7 +107,15 @@ class LeadActivityController extends Controller
             
             $activity->calculateNextReminder();
             $activity->save();
-            
+             // ==================history================
+            LeadHistoryHelper::log(
+                $activity->lead_id,
+                [
+                    'action' => 'activity_updated',
+                    'id'=>$activity->id,
+                    'title' => $activity->title
+                ]
+            );
             return response()->json([
                 'success' => true,
                 'message' => 'Activity updated successfully',
@@ -122,6 +141,8 @@ class LeadActivityController extends Controller
         $activity->update([
             'is_completed' => !$activity->is_completed
         ]);
+        // ==================================
+        
         
         return response()->json([
             'success' => true,
@@ -144,7 +165,14 @@ class LeadActivityController extends Controller
                 'message' => 'Unauthorized to delete this activity'
             ], 403);
         }
-        
+         LeadHistoryHelper::log(
+                $activity->lead_id,
+                [
+                    'action' => 'activity_deleted',
+                    'id'=>$activity->id,
+                    'title' => $activity->title
+                ]
+            );
         $activity->delete();
         
         return response()->json([
@@ -254,7 +282,15 @@ class LeadActivityController extends Controller
                 // TODO: Send notifications to mentioned users
                 Notification::send($comment->mentionedUsers, new CommentMentionNotification($comment));
             }
-            
+            // ========================history===============
+            LeadHistoryHelper::log(
+                    $comment->lead_id,
+                    [
+                        'action' => 'comment_added',
+                        'comment_id'=>$comment->id,
+                        'comment' => Str::limit($comment->comment, 50)
+                    ]
+                );
             DB::commit();
             
             return response()->json([
@@ -306,7 +342,15 @@ class LeadActivityController extends Controller
                     $comment->addMentions($request->mentioned_users);
                 }
             }
-            
+               // ========================history===============
+            LeadHistoryHelper::log(
+                    $comment->lead_id,
+                    [
+                        'action' => 'comment_updated',
+                        'comment_id'=>$comment->id,
+                        'comment' => Str::limit($comment->comment, 50)
+                    ]
+                );
             DB::commit();
             
             return response()->json([
@@ -348,9 +392,17 @@ class LeadActivityController extends Controller
             foreach ($comment->attachments as $attachment) {
                 Storage::disk('public')->delete($attachment->file_path);
             }
-            
+                     // ========================history===============
+            LeadHistoryHelper::log(
+                    $comment->lead_id,
+                    [
+                        'action' => 'comment_deleted',
+                        'comment_id'=>$comment->id,
+                        'comment' => Str::limit($comment->comment, 50)
+                    ]
+                );
             $comment->delete();
-            
+      
             DB::commit();
             
             return response()->json([

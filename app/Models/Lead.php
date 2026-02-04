@@ -22,6 +22,10 @@ class Lead extends Model
         return $this->belongsTo(User::class, 'added_by');
     }
 
+    public function histories()
+    {
+        return $this->hasMany(LeadHistory::class)->latest();
+    }
 
     
   

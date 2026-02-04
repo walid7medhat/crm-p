@@ -160,6 +160,8 @@ Route::post('/leads/{lead}/assign-responsible-person', [LeadController::class, '
 Route::get('/available-responsible-persons', [LeadController::class, 'getAvailableResponsiblePersons']);
 Route::post('/check-revert', [LeadController::class, 'checkRevert']);
 Route::prefix('leads')->group(function(){
+    Route::get('/{leadId}/history',[LeadController::class, 'history']);
+    Route::get('/{leadId}/history/view',[LeadController::class, 'view_history']);
   // Lead-specific activities
     Route::get('/{leadId}/activities', [LeadActivityController::class, 'getLeadActivities']);
     Route::post('/activities', [LeadActivityController::class, 'storeActivity']);
