@@ -11,6 +11,8 @@ use App\Http\Resources\Stage\StageResource;
 use App\Http\Resources\Stage\StageCollection;
 use App\Models\Stage;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use App\Models\Lead;
 class StageController extends Controller
 {
      public function __construct()
@@ -134,47 +136,94 @@ class StageController extends Controller
         }
     }
 
-      public function getStagesWithLeads(): JsonResponse
-    {
-        try {
-            $user = auth()->user();
-            
-            $stages = Stage::with(['leads' => function($query) use ($user) {
-                // Apply lead visibility based on user role
-                if (($user->hasRole('super_admin') )) {
-                    // Admin sees all leads
-                } 
-                elseif ($user->hasAnyRole(['manager', 'team_lead','admin'])) {
-                    $subordinatesIds = $user->getAllSubordinatesIds();
-                    
-                    $query->where(function($q) use ($subordinatesIds, $user) {
-                        $q->whereIn('responsible_person_id', $subordinatesIds)
-                          ->orWhereIn('added_by', $subordinatesIds)
-                          ->orWhere('responsible_person_id', $user->id);
-                    });
+public function getStagesWithLeads(Request $request): JsonResponse
+{
+    try {
+        $user = auth()->user();
+
+          $leadsQuery = Lead::with([
+                    'stage', 
+                    'addedBy', 
+                    'responsiblePerson', 
+                    'participants',
+                    'observers.user'
+                ]);
+                if ($request->filled('responsible_person_id')) {
+                    $leadsQuery->where('responsible_person_id', $request->responsible_person_id);
                 }
-                else {
-                    $query->where(function($q) use ($user) {
-                        $q->where('responsible_person_id', $user->id)
-                          ->orWhere('added_by', $user->id);
+                
+                if ($request->filled('stage_id')) {
+                    $leadsQuery->where('stage_id', $request->stage_id);
+                }
+                
+                if ($request->filled('added_by')) {
+                    $leadsQuery->where('added_by', $request->added_by);
+                }
+                if ($request->filled('created_from')) {
+                    $leadsQuery->whereDate('created_at', '>=', $request->created_from);
+                }
+                
+                if ($request->filled('created_to')) {
+                    $leadsQuery->whereDate('created_at', '<=', $request->created_to);
+                }
+                if ($request->filled('created_at')) {
+                    $leadsQuery->whereDate('created_at', '=', $request->created_to);
+                }
+                
+                if ($request->filled('search')) {
+                    $search = $request->search;
+                    $leadsQuery->where(function($q) use ($search) {
+                        $q->where('lead_name', 'like', "%{$search}%")
+                          ->orWhere('lead_number', 'like', "%{$search}%");
                     });
                 }
                 
-                $query->with(['responsiblePerson:id,name,email', 'addedBy:id,name'])
-                      ->orderBy('created_at', 'desc');
-            }])
-            ->withCount('leads')
-            ->orderBy('order')
-            ->get();
+                // ================= فلترة حسب source =================
+                if ($request->filled('source')) {
+                    $leadsQuery->where('lead_source', $request->source);
+                }
+                
+                if ($request->filled('source_information')) {
+                    $leadsQuery->where('source_information', 'like', "%{$request->source_information}%");
+                }
+        
+                if ($user->hasRole('super_admin') ) {
+                    $leads = $leadsQuery->latest()->get();
+                } elseif ($user->hasAnyRole(['manager', 'team_lead','admin'])) {
+                    $subordinatesIds = $user->getAllSubordinatesIds();
+                    $leads = $leadsQuery->where(function($query) use ($subordinatesIds, $user) {
+                                $query->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]))
+                                      ->orWhereIn('added_by', $subordinatesIds);
+                            })->latest()->get();
+                } else {
+                    $leads = $leadsQuery->where(function($query) use ($user) {
+                                $query->where('responsible_person_id', $user->id)
+                                      ->orWhere('added_by', $user->id);
+                            })->latest()->get();
+                }
+        
+                $stagesWithLeads = $leads->groupBy('stage_id')->map(function($leadsGroup, $stageId) {
+                    $stage = $leadsGroup->first()->stage; 
+                    return [
+                        'id' => $stage?->id,
+                        'name' => $stage?->name ?? 'No Stage',
+                        'order' => $stage?->order,
+                        'lead_count'=>$leadsGroup->count(),
+                        'leads' => LeadResource::collection($leadsGroup),
+                        'created_at' => $stage->created_at?->toISOString(),
+                         'updated_at' => $stage->updated_at?->toISOString(),
+                    ];
+                })->values();
 
-            return ApiResponse::success(
-                StageResource::collection($stages),
-                'Stages with leads retrieved successfully'
-            );
-        } catch (\Exception $e) {
-            return ApiResponse::error('Failed to retrieve stages with leads: ' . $e->getMessage());
-        }
+        return ApiResponse::success($stagesWithLeads, 'Stages with filtered leads');
+
+    } catch (\Exception $e) {
+        return ApiResponse::error($e->getMessage());
     }
+}
+
+
+
 
     /**
      * Get leads by stage for Kanban board
