@@ -61,7 +61,7 @@
                     <span v-else>Loading...</span>
                     <iconify-icon icon="lucide:chevron-up-down" class="entries-icon"></iconify-icon>
                 </div>
-                <div v-if="totalPages > 1 && totalEntries > 0" class="pagination-controls">
+                <div v-if=" !loading" class="pagination-controls">
                     <button 
                         class="pagination-btn" 
                         :disabled="currentPage === 1 || loading"
@@ -135,12 +135,17 @@ const props = defineProps({
 // History data
 const historyEntries = ref([])
 const loading = ref(false)
+const loadingOlder = ref(false)
+const nextPageUrl = ref(null)
 
 // Pagination state
 const currentPage = ref(1)
 const entriesPerPage = ref(7)
 const totalEntries = ref(0)
 const totalPages = ref(1)
+
+// Computed property for showing "Show older" button
+const hasNextPage = computed(() => !!nextPageUrl.value)
 
 // Computed properties
 const startEntry = computed(() => {
@@ -288,36 +293,56 @@ const fetchHistory = async (page = 1) => {
         const responseData = response.data
         console.log('📊 Full API Response:', responseData)
         
-        // ApiResponse structure: { status: true, message: "...", data: {...}, meta: {...} }
-        // When using ResourceCollection with paginate(), the data structure is:
-        // response.data.data = ResourceCollection which has .data property
+        // Handle new structure: { data: { items: [...], pagination: {...} } }
         let historyData = []
+        let paginationData = null
         
-        // Check different possible structures
-        if (Array.isArray(responseData.data)) {
+        // Check for new structure first (data.items and data.pagination)
+        if (responseData.data && typeof responseData.data === 'object') {
+            if (Array.isArray(responseData.data.items)) {
+                // New structure: data.items and data.pagination
+                historyData = responseData.data.items
+                paginationData = responseData.data.pagination
+            } else if (Array.isArray(responseData.data.data)) {
+                // ResourceCollection structure: { data: { data: [...] } }
+                historyData = responseData.data.data
+                paginationData = responseData.meta || responseData.data.pagination
+            } else if (Array.isArray(responseData.data)) {
+                // Direct array in data
+                historyData = responseData.data
+                paginationData = responseData.meta
+            }
+        } else if (Array.isArray(responseData.data)) {
             // Direct array
             historyData = responseData.data
-        } else if (responseData.data && typeof responseData.data === 'object') {
-            // ResourceCollection structure: { data: [...] }
-            if (Array.isArray(responseData.data.data)) {
-                historyData = responseData.data.data
-            } else if (Array.isArray(responseData.data)) {
-                historyData = responseData.data
-            }
+            paginationData = responseData.meta
         }
         
         console.log('📝 Parsed History Data:', historyData)
-        console.log('📄 Meta Data:', responseData.meta)
+        console.log('📄 Pagination Data:', paginationData)
         
         // Transform history entries
         historyEntries.value = historyData.map(transformHistoryEntry)
         
-        // Update pagination info from meta
-        if (responseData.meta) {
-            totalEntries.value = parseInt(responseData.meta.total) || 0
-            totalPages.value = parseInt(responseData.meta.last_page) || 1
-            currentPage.value = parseInt(responseData.meta.current_page) || page
-            entriesPerPage.value = parseInt(responseData.meta.per_page) || 7
+        // Update pagination info
+        if (paginationData) {
+            totalEntries.value = parseInt(paginationData.total) || 0
+            totalPages.value = parseInt(paginationData.last_page) || 1
+            currentPage.value = parseInt(paginationData.current_page) || page
+            entriesPerPage.value = parseInt(paginationData.per_page) || 7
+            
+            // Set next page URL if available
+            if (paginationData.next_page) {
+                // If next_page is a number, construct the URL
+                if (typeof paginationData.next_page === 'number') {
+                    nextPageUrl.value = `/leads/${props.lead.id}/history?page=${paginationData.next_page}&per_page=${entriesPerPage.value}`
+                } else {
+                    // If it's already a URL, use it
+                    nextPageUrl.value = paginationData.next_page
+                }
+            } else {
+                nextPageUrl.value = null
+            }
             
             console.log('✅ Pagination Set:', {
                 total: totalEntries.value,
@@ -325,15 +350,17 @@ const fetchHistory = async (page = 1) => {
                 currentPage: currentPage.value,
                 perPage: entriesPerPage.value,
                 entriesCount: historyEntries.value.length,
+                nextPageUrl: nextPageUrl.value,
                 shouldShowPagination: totalPages.value > 1
             })
         } else {
-            // Fallback if no pagination meta
+            // Fallback if no pagination data
             totalEntries.value = historyData.length
             totalPages.value = historyData.length > 0 ? Math.ceil(historyData.length / entriesPerPage.value) : 0
             currentPage.value = 1
+            nextPageUrl.value = null
             
-            console.warn('⚠️ No pagination meta found. Using fallback:', {
+            console.warn('⚠️ No pagination data found. Using fallback:', {
                 total: totalEntries.value,
                 lastPage: totalPages.value
             })
@@ -344,11 +371,92 @@ const fetchHistory = async (page = 1) => {
         historyEntries.value = []
         totalEntries.value = 0
         totalPages.value = 1
+        nextPageUrl.value = null
         
         // Show error notification
         $showNotification('Failed to load history', 'error')
     } finally {
         loading.value = false
+    }
+}
+
+// Load older history entries (next page)
+const loadOlderHistory = async () => {
+    if (!nextPageUrl.value || loadingOlder.value) {
+        return
+    }
+    
+    try {
+        loadingOlder.value = true
+        
+        // Handle both absolute and relative URLs
+        let apiPath = nextPageUrl.value
+        try {
+            // If it's an absolute URL, extract the path after /api
+            if (apiPath.startsWith('http')) {
+                const url = new URL(apiPath)
+                apiPath = url.pathname + url.search
+            }
+            
+            // Remove /api prefix if present (since axios baseURL already includes it)
+            if (apiPath.startsWith('/api')) {
+                apiPath = apiPath.substring(4)
+            }
+        } catch (e) {
+            // If URL parsing fails, use as-is
+        }
+        
+        const response = await api.get(apiPath)
+        const responseData = response.data
+        
+        // Handle new structure: { data: { items: [...], pagination: {...} } }
+        let historyData = []
+        let paginationData = null
+        
+        if (responseData.data && typeof responseData.data === 'object') {
+            if (Array.isArray(responseData.data.items)) {
+                historyData = responseData.data.items
+                paginationData = responseData.data.pagination
+            } else if (Array.isArray(responseData.data.data)) {
+                historyData = responseData.data.data
+                paginationData = responseData.meta || responseData.data.pagination
+            } else if (Array.isArray(responseData.data)) {
+                historyData = responseData.data
+                paginationData = responseData.meta
+            }
+        } else if (Array.isArray(responseData.data)) {
+            historyData = responseData.data
+            paginationData = responseData.meta
+        }
+        
+        // Transform and append new history entries
+        const newEntries = historyData.map(transformHistoryEntry)
+        historyEntries.value = [...historyEntries.value, ...newEntries]
+        
+        // Update pagination info
+        if (paginationData) {
+            totalEntries.value = parseInt(paginationData.total) || historyEntries.value.length
+            totalPages.value = parseInt(paginationData.last_page) || 1
+            currentPage.value = parseInt(paginationData.current_page) || currentPage.value
+            
+            // Update next page URL
+            if (paginationData.next_page) {
+                if (typeof paginationData.next_page === 'number') {
+                    nextPageUrl.value = `/leads/${props.lead.id}/history?page=${paginationData.next_page}&per_page=${entriesPerPage.value}`
+                } else {
+                    nextPageUrl.value = paginationData.next_page
+                }
+            } else {
+                nextPageUrl.value = null
+            }
+        } else {
+            nextPageUrl.value = null
+        }
+    } catch (error) {
+        console.error('Error loading older history:', error)
+        $showNotification('Failed to load older history', 'error')
+    } finally {
+        loadingOlder.value = false
     }
 }
 
@@ -364,6 +472,8 @@ watch(() => props.isActive, (isActive) => {
     if (isActive && props.lead?.id) {
         // Reset to first page when tab is opened
         currentPage.value = 1
+        nextPageUrl.value = null
+        historyEntries.value = []
         fetchHistory(1)
     }
 })
@@ -373,6 +483,8 @@ watch(() => props.lead?.id, (newId, oldId) => {
     // Only fetch if tab is active and lead ID actually changed
     if (props.isActive && newId && newId !== oldId) {
         currentPage.value = 1
+        nextPageUrl.value = null
+        historyEntries.value = []
         fetchHistory(1)
     }
 })
@@ -562,6 +674,41 @@ watch(() => props.lead?.id, (newId, oldId) => {
     padding: 0 4px;
     color: #6B7280;
     font-size: 14px;
+}
+
+.show-older-wrapper {
+    padding: 16px 24px;
+    border-top: 1px solid #E5E7EB;
+    display: flex;
+    justify-content: center;
+}
+
+.show-older-link {
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 400;
+    color: #3B82F6;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.show-older-link:hover:not(:disabled) {
+    color: #2563EB;
+}
+
+.show-older-link:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.show-older-icon {
+    font-size: 14px;
+    color: inherit;
 }
 
 .section-title {
