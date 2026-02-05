@@ -159,202 +159,173 @@
                                 </div>
                             </div>
                               <!-- 📐 Floor Plans Images Section -->
-                               <div class="card mb-4">
-                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0 text-dark">
-                                            <i class="fas fa-layer-group me-2"></i>
-                                            Floor Plan Images
-                                            <span v-if="totalFloorPlanImages > 0" class="badge bg-primary ms-2">
-                                                {{ totalFloorPlanImages }}
-                                            </span>
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <!-- Section with existing and new images together -->
-                                        <div class="all-images-section">
-                                            <!-- Images Container -->
-                                            <div class="images-container" v-if="totalFloorPlanImages > 0">
-                                                <!-- Images Grid -->
-                                                <div class="images-grid-combined">
-                                                    <!-- Existing Images -->
-                                                    <div v-for="image in existingFloorPlanImages" 
-                                                         :key="'existing-' + image.id" 
-                                                         class="image-card combined"
-                                                         :class="{'marked-for-delete': floorPlanImagesToDelete.includes(image.id)}">
-                                                        <div class="image-wrapper">
-                                                            <img :src="image.image_url" 
-                                                                 alt="Floor Plan" 
-                                                                 class="preview-img">
-                                                            <!--<div class="image-overlay">-->
-                                                            <!--    <div class="overlay-buttons">-->
-                                                                
-                                                            <!--        <button type="button" -->
-                                                            <!--                class="btn btn-sm btn-danger"-->
-                                                            <!--                @click.stop="markFloorPlanImageForDeletion(image.id)"-->
-                                                            <!--                :title="floorPlanImagesToDelete.includes(image.id) ? 'Cancel deletion' : 'Delete'">-->
-                                                            <!--            <i class="fas" :class="floorPlanImagesToDelete.includes(image.id) ? 'fa-undo' : 'fa-trash'"></i>-->
-                                                            <!--        </button>-->
-                                                            <!--    </div>-->
-                                                            <!--</div>-->
-                                                            <!--<span class="image-badge existing">-->
-                                                            <!--    <i class="fas fa-database me-1"></i>-->
-                                                            <!--    Existing-->
-                                                            <!--</span>-->
-                                                            <span v-if="floorPlanImagesToDelete.includes(image.id)" 
-                                                                  class="image-status delete">
-                                                                <i class="fas fa-exclamation-triangle me-1"></i>
-                                                                Will delete
-                                                            </span>
-                                                        </div>
-                                                        <div class="image-info mt-2">
-                                                            <small class="text-muted d-block">
-                                                                <i class="fas fa-calendar me-1"></i>
-                                                                {{ formatDate(image.created_at) }}
+                            <div class="card mb-4">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 text-dark">
+                                        <i class="fas fa-layer-group me-2"></i>
+                                        Floor Plan Images
+                                        <span v-if="totalFloorPlanImages > 0" class="badge bg-primary ms-2">
+                                            {{ totalFloorPlanImages }}
+                                        </span>
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Section with existing and new images together -->
+                                    <div class="all-images-section">
+                                        <!-- Images Container -->
+                                        <div class="images-container" v-if="totalFloorPlanImages > 0">
+                                            <!-- Images Grid -->
+                                            <div class="images-grid-combined">
+                                                <!-- Existing Images -->
+                                                <div v-for="image in existingFloorPlanImages" 
+                                                     :key="'existing-' + image.id" 
+                                                     class="image-card combined"
+                                                     :class="{'marked-for-delete': floorPlanImagesToDelete.includes(image.id)}">
+                                                    <div class="image-wrapper">
+                                                        <img :src="image.image_url" 
+                                                             alt="Floor Plan" 
+                                                             class="preview-img">
+                                                        <span v-if="floorPlanImagesToDelete.includes(image.id)" 
+                                                              class="image-status delete">
+                                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                                            Will delete
+                                                        </span>
+                                                    </div>
+                                                    <div class="image-info mt-2">
+                                                        <div class="floor-plan-name mb-2">
+                                                            <input type="text" 
+                                                                   class="form-control form-control-sm" 
+                                                                   v-model="image.name"
+                                                                   placeholder="Floor plan name..."
+                                                                   @change="updateFloorPlanName(image)"
+                                                                   @blur="updateFloorPlanName(image)">
+                                                            <small v-if="image.nameError" class="text-danger">
+                                                                {{ image.nameError }}
                                                             </small>
                                                         </div>
+                                                        <small class="text-muted d-block">
+                                                            <i class="fas fa-calendar me-1"></i>
+                                                            {{ formatDate(image.created_at) }}
+                                                        </small>
                                                     </div>
+                                                </div>
                             
-                                                    <!-- New Images -->
-                                                    <div v-for="(image, index) in floorPlanImages" 
-                                                         :key="'new-' + index" 
-                                                         class="image-card combined new">
-                                                        <div class="image-wrapper">
-                                                            <img :src="image.preview" 
-                                                                 alt="Floor Plan" 
-                                                                 class="preview-img">
-                                                            <div class="image-overlay">
-                                                                <div class="overlay-buttons">
-                                                                    <!--<button type="button" -->
-                                                                    <!--        class="btn btn-sm btn-light me-1"-->
-                                                                    <!--        @click.stop="previewImage(image.preview, index)">-->
-                                                                    <!--    <i class="fas fa-search"></i>-->
-                                                                    <!--</button>-->
-                                                                    
-                                                                    <button type="button" 
-                                                                            class="btn btn-sm btn-danger"
-                                                                            @click.stop="removeFloorPlanImage(index)">
-                                                                        <i class="fas fa-trash"></i>
-                                                                    </button>
-                                                                </div>
+                                                <!-- New Images -->
+                                                <div v-for="(image, index) in floorPlanImages" 
+                                                     :key="'new-' + index" 
+                                                     class="image-card combined new">
+                                                    <div class="image-wrapper">
+                                                        <img :src="image.preview" 
+                                                             alt="Floor Plan" 
+                                                             class="preview-img">
+                                                        <div class="image-overlay">
+                                                            <div class="overlay-buttons">
+                                                                <button type="button" 
+                                                                        class="btn btn-sm btn-danger"
+                                                                        @click.stop="removeFloorPlanImage(index)">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </button>
                                                             </div>
-                                                            <span class="image-badge new">
-                                                                <i class="fas fa-plus me-1"></i>
-                                                                New
-                                                            </span>
-                                                            <span class="image-number">{{ totalExistingImages + index + 1 }}</span>
                                                         </div>
-                                                        <div class="image-info mt-2">
-                                                            <small class="text-muted d-block">
-                                                                <i class="fas fa-file me-1"></i>
-                                                                {{ formatFileSize(image.file.size) }}
-                                                            </small>
-                                                            <small class="text-success d-block mt-1">
-                                                                <i class="fas fa-check-circle me-1"></i>
-                                                                Ready to upload
-                                                            </small>
-                                                        </div>
+                                                        <span class="image-badge new">
+                                                            <i class="fas fa-plus me-1"></i>
+                                                            New
+                                                        </span>
+                                                        <span class="image-number">{{ totalExistingImages + index + 1 }}</span>
                                                     </div>
-                            
-                                                    <!-- Add More Button -->
-                                                    <div class="add-more-card" @click="$refs.floorPlanImagesInput.click()">
-                                                        <div class="add-more-content">
-                                                            <i class="fas fa-plus-circle fa-3x text-primary mb-3"></i>
-                                                            <h6 class="text-primary mb-2">Add More Images</h6>
-                                                            <p class="text-muted small mb-0">Click or drag & drop</p>
+                                                    <div class="image-info mt-2">
+                                                        <div class="floor-plan-name mb-2">
+                                                            <input type="text" 
+                                                                   class="form-control form-control-sm" 
+                                                                   v-model="image.name"
+                                                                   placeholder="Enter floor plan name..."
+                                                                   @change="validateFloorPlanName(image, index)"
+                                                                   @blur="validateFloorPlanName(image, index)">
+                                                            <small v-if="image.nameError" class="text-danger">
+                                                                {{ image.nameError }}
+                                                            </small>
                                                         </div>
+                                                        <small class="text-muted d-block">
+                                                            <i class="fas fa-file me-1"></i>
+                                                            {{ formatFileSize(image.file.size) }}
+                                                        </small>
+                                                        <small class="text-success d-block mt-1">
+                                                            <i class="fas fa-check-circle me-1"></i>
+                                                            Ready to upload
+                                                        </small>
                                                     </div>
                                                 </div>
-                                            </div>
                             
-                                            <!-- Empty State -->
-                                            <div v-else class="empty-state text-center py-5">
-                                                <div class="empty-icon mb-4">
-                                                    <i class="fas fa-image fa-4x text-muted"></i>
-                                                </div>
-                                                <h5 class="mb-3 text-muted">No Floor Plan Images</h5>
-                                                <p class="text-muted mb-4">Add floor plan images to showcase different layouts</p>
-                                                <button type="button" 
-                                                        class="btn btn-primary"
-                                                        @click="$refs.floorPlanImagesInput.click()">
-                                                    <i class="fas fa-cloud-upload-alt me-2"></i>
-                                                    Upload Images
-                                                </button>
-                                            </div>
-                            
-                                            <!-- Hidden File Input -->
-                                            <input ref="floorPlanImagesInput"
-                                                   type="file" 
-                                                   class="d-none" 
-                                                   @change="handleFloorPlanImages" 
-                                                   multiple
-                                                   accept="image/*">
-                            
-                                            <!-- Drop Zone Overlay -->
-                                            <div class="drop-zone-overlay"
-                                                 :class="{'active': isDragOver}"
-                                                 @dragover.prevent="handleDragOver"
-                                                 @dragleave.prevent="handleDragLeave"
-                                                 @drop.prevent="handleFloorPlanDrop">
-                                                <div class="drop-zone-content" v-if="isDragOver">
-                                                    <i class="fas fa-cloud-upload-alt fa-4x text-primary mb-3"></i>
-                                                    <h5 class="text-primary mb-2">Drop to upload</h5>
-                                                    <p class="text-muted">Release to add images</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                            
-                                        <!-- Upload Stats -->
-                                        <!--<div class="upload-stats mt-4" v-if="totalFloorPlanImages > 0">-->
-                                        <!--    <div class="row">-->
-                                        <!--        <div class="col-md-6">-->
-                                        <!--            <div class="stat-card">-->
-                                        <!--                <div class="stat-icon text-primary">-->
-                                        <!--                    <i class="fas fa-database"></i>-->
-                                        <!--                </div>-->
-                                        <!--                <div class="stat-content">-->
-                                        <!--                    <h6 class="stat-value">{{ totalExistingImages }}</h6>-->
-                                        <!--                    <p class="stat-label">Existing Images</p>-->
-                                        <!--                </div>-->
-                                        <!--            </div>-->
-                                        <!--        </div>-->
-                                        <!--        <div class="col-md-6">-->
-                                        <!--            <div class="stat-card">-->
-                                        <!--                <div class="stat-icon text-success">-->
-                                        <!--                    <i class="fas fa-plus-circle"></i>-->
-                                        <!--                </div>-->
-                                        <!--                <div class="stat-content">-->
-                                        <!--                    <h6 class="stat-value">{{ floorPlanImages.length }}</h6>-->
-                                        <!--                    <p class="stat-label">New Images</p>-->
-                                        <!--                </div>-->
-                                        <!--            </div>-->
-                                        <!--        </div>-->
-                                        <!--    </div>-->
-                                        <!--</div>-->
-                            
-                                        <!-- Deletion Warning -->
-                                        <div v-if="floorPlanImagesToDelete.length > 0" class="mt-4">
-                                            <div class="alert alert-warning">
-                                                <div class="d-flex align-items-center">
-                                                    <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
-                                                    <div>
-                                                        <h6 class="alert-heading mb-1">
-                                                            {{ floorPlanImagesToDelete.length }} image(s) marked for deletion
-                                                        </h6>
-                                                        <p class="mb-2">These images will be permanently removed when you save changes.</p>
-                                                        <button type="button" 
-                                                                class="btn btn-sm btn-outline-warning"
-                                                                @click="clearAllMarkedForDeletion">
-                                                            <i class="fas fa-times me-1"></i>
-                                                            Clear all deletion marks
-                                                        </button>
+                                                <!-- Add More Button -->
+                                                <div class="add-more-card" @click="$refs.floorPlanImagesInput.click()">
+                                                    <div class="add-more-content">
+                                                        <i class="fas fa-plus-circle fa-3x text-primary mb-3"></i>
+                                                        <h6 class="text-primary mb-2">Add More Images</h6>
+                                                        <p class="text-muted small mb-0">Click or drag & drop</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                             
-                                     
+                                        <!-- Empty State -->
+                                        <div v-else class="empty-state text-center py-5">
+                                            <div class="empty-icon mb-4">
+                                                <i class="fas fa-image fa-4x text-muted"></i>
+                                            </div>
+                                            <h5 class="mb-3 text-muted">No Floor Plan Images</h5>
+                                            <p class="text-muted mb-4">Add floor plan images to showcase different layouts</p>
+                                            <button type="button" 
+                                                    class="btn btn-primary"
+                                                    @click="$refs.floorPlanImagesInput.click()">
+                                                <i class="fas fa-cloud-upload-alt me-2"></i>
+                                                Upload Images
+                                            </button>
+                                        </div>
+                            
+                                        <!-- Hidden File Input -->
+                                        <input ref="floorPlanImagesInput"
+                                               type="file" 
+                                               class="d-none" 
+                                               @change="handleFloorPlanImages" 
+                                               multiple
+                                               accept="image/*">
+                            
+                                        <!-- Drop Zone Overlay -->
+                                        <div class="drop-zone-overlay"
+                                             :class="{'active': isDragOver}"
+                                             @dragover.prevent="handleDragOver"
+                                             @dragleave.prevent="handleDragLeave"
+                                             @drop.prevent="handleFloorPlanDrop">
+                                            <div class="drop-zone-content" v-if="isDragOver">
+                                                <i class="fas fa-cloud-upload-alt fa-4x text-primary mb-3"></i>
+                                                <h5 class="text-primary mb-2">Drop to upload</h5>
+                                                <p class="text-muted">Release to add images</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                            
+                                    <!-- Deletion Warning -->
+                                    <div v-if="floorPlanImagesToDelete.length > 0" class="mt-4">
+                                        <div class="alert alert-warning">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                                                <div>
+                                                    <h6 class="alert-heading mb-1">
+                                                        {{ floorPlanImagesToDelete.length }} image(s) marked for deletion
+                                                    </h6>
+                                                    <p class="mb-2">These images will be permanently removed when you save changes.</p>
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-outline-warning"
+                                                            @click="clearAllMarkedForDeletion">
+                                                        <i class="fas fa-times me-1"></i>
+                                                        Clear all deletion marks
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
                         </div>
 
                         <!-- Right Column -->
@@ -620,6 +591,7 @@ export default {
         const imagePreview = ref('');
         const currentImage = ref('');
         const floorPlanImages = ref([]);
+        const floorPlanNames = ref({});
         const existingFloorPlanImages = ref([]);
         const floorPlanImagesToDelete = ref([]);
         const floorPlanImagesInput = ref(null);
@@ -642,63 +614,159 @@ export default {
             floor_plan_images: []
         });
         const handleFloorPlanImages = (event) => {
-            const files = Array.from(event.target.files);
+                const files = Array.from(event.target.files);
+                
+                if (files.length === 0) return;
             
-            if (files.length === 0) return;
-
-            const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
-            const maxSize = 5 * 1024 * 1024; // 5MB
+                const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+                const maxSize = 5 * 1024 * 1024; // 5MB
+                
+                files.forEach(file => {
+                    if (!validTypes.includes(file.type)) {
+                        showNotification('Please upload valid image files (JPEG, PNG, JPG, GIF)', 'error');
+                        return;
+                    }
             
-            files.forEach(file => {
-                if (!validTypes.includes(file.type)) {
-                    showNotification('Please upload valid image files (JPEG, PNG, JPG, GIF)', 'error');
-                    return;
-                }
+                    if (file.size > maxSize) {
+                        showNotification('Image size should be less than 5MB', 'error');
+                        return;
+                    }
+            
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        floorPlanImages.value.push({
+                            file: file,
+                            preview: e.target.result,
+                            name: '', 
+                            nameError: '', 
+                            defaultName: `Floor Plan ${floorPlanImages.value.length + 1}`
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                });
+            
+                event.target.value = '';
+            };
 
-                if (file.size > maxSize) {
-                    showNotification('Image size should be less than 5MB', 'error');
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    floorPlanImages.value.push({
-                        file: file,
-                        preview: e.target.result
-                    });
-                };
-                reader.readAsDataURL(file);
-            });
-
-            event.target.value = '';
-        };
-
-        const handleFloorPlanDrop = (event) => {
+       const handleFloorPlanDrop = (event) => {
             event.preventDefault();
             const files = Array.from(event.dataTransfer.files);
             
             if (files.length === 0) return;
-
+        
             const validFiles = files.filter(file => 
                 file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
             );
-
+        
             if (validFiles.length === 0) {
                 showNotification('Please drop valid image files (max 5MB each)', 'error');
                 return;
             }
-
+        
             validFiles.forEach(file => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     floorPlanImages.value.push({
                         file: file,
-                        preview: e.target.result
+                        preview: e.target.result,
+                        name: '', 
+                        nameError: '', 
+                        defaultName: `Floor Plan ${floorPlanImages.value.length + 1}`
                     });
                 };
                 reader.readAsDataURL(file);
             });
         };
+        const validateFloorPlanName = (image, index) => {
+                if (!image.name || image.name.trim() === '') {
+                    image.nameError = 'Floor plan name is required';
+                    return false;
+                }
+                
+                if (image.name.length > 100) {
+                    image.nameError = 'Name must be less than 100 characters';
+                    return false;
+                }
+                
+                const allNames = [
+                    ...existingFloorPlanImages.value.map(img => img.name).filter(Boolean),
+                    ...floorPlanImages.value.map(img => img.name).filter(Boolean)
+                ];
+                
+                const duplicateCount = allNames.filter(name => 
+                    name.toLowerCase() === image.name.toLowerCase()
+                ).length;
+                
+                if (duplicateCount > 1) {
+                    image.nameError = 'Floor plan name must be unique';
+                    return false;
+                }
+                
+                image.nameError = '';
+                return true;
+            };
+            
+            const validateAllFloorPlanNames = () => {
+                let isValid = true;
+                
+                floorPlanImages.value.forEach((image, index) => {
+                    if (!validateFloorPlanName(image, index)) {
+                        isValid = false;
+                    }
+                });
+                
+                existingFloorPlanImages.value.forEach((image) => {
+                    if (!image.name || image.name.trim() === '') {
+                        showNotification(`Please enter name for existing floor plan image`, 'error');
+                        isValid = false;
+                    }
+                });
+                
+                return isValid;
+            };
+            
+            const updateFloorPlanName = async (image) => {
+                if (!image.name || image.name.trim() === '') {
+                    image.nameError = 'Floor plan name is required';
+                    return;
+                }
+                
+                if (image.name.length > 100) {
+                    image.nameError = 'Name must be less than 100 characters';
+                    return;
+                }
+                
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`/api/listings/projects/floor-plan-images/${image.id}/name`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': 'Bearer ' + token,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: image.name.trim()
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        image.nameError = '';
+                        showNotification('Floor plan name updated', 'success');
+                    } else {
+                        const errorData = await response.json();
+                        image.nameError = errorData.message || 'Failed to update name';
+                        showNotification('Failed to update floor plan name', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error updating floor plan name:', error);
+                    image.nameError = 'Failed to update name';
+                    showNotification('Failed to update floor plan name', 'error');
+                }
+            };
+
+
+
 
         const removeFloorPlanImage = (index) => {
             floorPlanImages.value.splice(index, 1);
@@ -899,9 +967,17 @@ export default {
                         }
                         
                         // Set existing floor plan images
-                        if (projectData.floor_plan_images) {
-                            existingFloorPlanImages.value = projectData.floor_plan_images;
+                        // if (projectData.floor_plan_images) {
+                        //     existingFloorPlanImages.value = projectData.floor_plan_images;
+                        // }
+                         if (projectData.floor_plan_images) {
+                            existingFloorPlanImages.value = projectData.floor_plan_images.map(img => ({
+                                ...img,
+                                name: img.name || '', 
+                                nameError: '' 
+                            }));
                         }
+
                 
                         // Load developers separately and **ensure current developer is included**
                         developersLoading.value = true;
@@ -984,6 +1060,11 @@ export default {
                     return;
                 }
 
+                if (!validateAllFloorPlanNames()) {
+                            showNotification("Please enter valid names for all floor plans", "error");
+                            loading.value = false;
+                            return;
+                }
                 // if (!projectForm.value.developer_id) {
                 //     showNotification("Please select a developer", "error");
                 //     loading.value = false;
@@ -1038,15 +1119,23 @@ export default {
                 } else if (isEditMode.value && !selectedImage.value) {
                     formData.append('keep_current_image', 'true');
                 }  
-                floorPlanImages.value.forEach((image, index) => {
-                    formData.append(`floor_plan_images[${index}]`, image.file);
-                });
-
+               
                 if (floorPlanImagesToDelete.value.length > 0) {
                     floorPlanImagesToDelete.value.forEach((imageId, index) => {
                         formData.append(`delete_floor_plan_images[${index}]`, imageId);
                     });
                 }
+                 floorPlanImages.value.forEach((image, index) => {
+                    formData.append(`floor_plan_images[${index}][file]`, image.file);
+                    formData.append(`floor_plan_images[${index}][name]`, 
+                        image.name || `Floor Plan ${totalExistingImages.value + index + 1}`);
+                });
+        
+                existingFloorPlanImages.value.forEach((image) => {
+                    if (image.name && image.name.trim() !== '') {
+                        formData.append(`floor_plan_names[${image.id}]`, image.name);
+                    }
+                });
 
                 const token = localStorage.getItem('token');
                 let response;
@@ -1764,6 +1853,9 @@ export default {
     text-align: center;
     padding: 1rem;
 }
+.add-more-content h6{
+   font-size: 14px !important;
+}
 
 .add-more-content i {
     transition: transform 0.3s ease;
@@ -1915,5 +2007,43 @@ export default {
 .images-grid-combined::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+.floor-plan-name input {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    width: 100%;
+    text-align: center;
+}
 
+.floor-plan-name input:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    outline: none;
+}
+
+.image-card .floor-plan-name {
+    padding: 0.25rem 0;
+    margin-bottom: 0.5rem;
+}
+
+.new .floor-plan-name input {
+    border-color: #28a745;
+}
+
+.marked-for-delete .floor-plan-name input {
+    border-color: #dc3545;
+    background-color: #f8f9fa;
+}
+
+.text-danger {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.floor-plan-name small.text-danger {
+    display: block;
+    font-size: 0.7rem;
+    margin-top: 2px;
+}
 </style>

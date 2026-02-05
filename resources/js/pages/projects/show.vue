@@ -138,25 +138,36 @@
                   </div>
                 </div>
               </div>
-            <div class="detailed-info-section mb-16" v-if="project.floor_plan_images && project.floor_plan_images.length > 0">
+     
+              <div class="detailed-info-section mb-16" v-if="project.floor_plan_images && project.floor_plan_images.length > 0">
                 <div class="info-section">
-                    <h3 class="section-title mb-20">Floor Plans</h3>
-                    <div class="row g-3">
-                        <div v-for="(image, index) in project.floor_plan_images" 
-                             :key="image.id" 
-                             class="col-md-4 col-sm-6">
-                            <div class="floor-plan-card border rounded overflow-hidden">
-                                <div class="floor-plan-image" @click="openFloorPlanLightbox(index)">
-                                    <img :src="image.image_url" 
-                                         alt="Floor Plan"
-                                         class="img-fluid w-100"
-                                         style="height: 200px; object-fit: cover; cursor: pointer;">
-                                </div>
-                            </div>
+                  <h3 class="section-title mb-20">Floor Plans</h3>
+                  <div class="row g-3">
+                    <div v-for="(image, index) in project.floor_plan_images" 
+                         :key="image.id" 
+                         class="col-md-4 col-sm-6">
+                      <div class="floor-plan-card border rounded overflow-hidden">
+                        <div class="floor-plan-image" @click="openFloorPlanLightbox(index)">
+                          <img :src="image.image_url" 
+                               :alt="image.name || 'Floor Plan'"
+                               class="img-fluid w-100"
+                               style="height: 200px; object-fit: cover; cursor: pointer;">
                         </div>
+                        <div class="floor-plan-info p-3">
+                          <h6 class="floor-plan-name mb-1">
+                            {{ image.name || `Floor Plan ${index + 1}` }}
+                          </h6>
+                          <small class="text-muted d-block">
+                            <i class="ri-calendar-line me-1"></i>
+                            {{ formatDate(image.created_at) }}
+                          </small>
+                        </div>
+                      </div>
                     </div>
+                  </div>
                 </div>
-            </div>
+              </div>
+  
             </div>
 
             <!-- Loading State -->
@@ -325,7 +336,20 @@ export default {
 
     const canEditProject = ref(true);
     const canDeleteProject = ref(true);
-
+  const openFloorPlanLightbox = (index) => {
+      if (!project.value?.floor_plan_images || project.value.floor_plan_images.length === 0) {
+        Swal.fire({
+          title: 'No Floor Plans',
+          text: 'No floor plan images available.',
+          icon: 'warning',
+          confirmButtonColor: '#01062d'
+        });
+        return;
+      }
+      currentImageIndex.value = index;
+      showLightbox.value = true;
+      document.body.style.overflow = 'hidden';
+    };
     const fetchProject = async () => {
       try {
         loading.value = true;
@@ -526,7 +550,8 @@ export default {
       deleteProject,
       formatPrice,
       formatDate,
-      cleanup
+      cleanup,
+      openFloorPlanLightbox
     };
   },
 
@@ -1176,5 +1201,93 @@ export default {
 .btn-primary:hover, .btn-primary:active, .btn-primary:focus {
   background-color: #FAA300 !important;
   border-color: #FAA300 !important;
+}
+.floor-plan-card {
+  background: white;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  height: 100%;
+}
+
+.floor-plan-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.floor-plan-image {
+  position: relative;
+  overflow: hidden;
+}
+
+.floor-plan-image img {
+  transition: transform 0.3s ease;
+}
+
+.floor-plan-card:hover .floor-plan-image img {
+  transform: scale(1.05);
+}
+
+.floor-plan-info {
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+.floor-plan-name {
+  font-size: 14px !important;
+  font-weight: 600;
+  color: #01062d;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.floor-plan-name:empty::before {
+  content: "Unnamed Floor Plan";
+  color: #6c757d;
+  font-style: italic;
+}
+
+.floor-plan-lightbox .lightbox-content {
+  max-width: 800px;
+}
+
+.floor-plan-lightbox .lightbox-image {
+  max-height: 70vh;
+  object-fit: contain;
+  background: #f8f9fa;
+  padding: 20px;
+}
+
+.floor-plan-lightbox .lightbox-header {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+}
+
+.floor-plan-lightbox-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: white;
+}
+
+.floor-plan-lightbox .lightbox-close {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.floor-plan-lightbox .lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 768px) {
+  .floor-plan-card {
+    margin-bottom: 15px;
+  }
+  
+  .floor-plan-name {
+    font-size: 13px;
+  }
+  
+  .floor-plan-info {
+    padding: 12px;
+  }
 }
 </style>

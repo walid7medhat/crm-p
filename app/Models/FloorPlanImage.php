@@ -10,7 +10,7 @@ class FloorPlanImage extends Model
     protected $fillable = [
         'project_id',
         'image_path',
-        'sort_order'
+        'sort_order','name'
     ];
 
     /**

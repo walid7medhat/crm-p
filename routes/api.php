@@ -190,7 +190,7 @@ Route::prefix('leads')->group(function(){
   // =================sources=============
         Route::apiResource('sources', SourceController::class);
 Route::prefix('listings')->group(function(){
-
+    
     Route::get('/{id}/comments', [ListingCommentController::class, 'index']);
     Route::get('/{id}/comments/stats', [ListingCommentController::class, 'getStats']);
     Route::post('/{id}/comments', [ListingCommentController::class, 'store']);
@@ -275,6 +275,8 @@ Route::prefix('listings')->group(function(){
         Route::apiResource('projects', ProjectController::class);
         Route::get('/projects/{project_id}/areas', [AreaController::class, 'getProjectAreas']);
 
+       Route::get('/projects/{project}/floor-plans', [ProjectController::class, 'getFloorPlans']);
+       Route::put('/projects/floor-plan-images/{id}/name', [ProjectController::class, 'updateFloorPlanName']);
 
 
 

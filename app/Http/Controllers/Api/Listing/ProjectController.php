@@ -214,12 +214,14 @@ class ProjectController extends Controller
                 Log::info('Additional images uploaded');
             }
              // Handle floor plan images upload
-            if ($request->hasFile('floor_plan_images')) {
+          if ($request->has('floor_plan_images') && count($request->floor_plan_images)>0) {
                 Log::info('Processing floor plan images upload', [
                     'count' => count($request->file('floor_plan_images'))
                 ]);
                 
-                foreach ($request->file('floor_plan_images') as $index => $imageFile) {
+                  foreach ($request->floor_plan_images as $index => $data) {
+                    $imageFile = $data['file'];
+                    $name = $data['name'] ?? "Floor Plan " . ($index + 1);
                     $compressionResult = ImageHelper::compressAndConvertToWebP(
                         $imageFile, 
                         "projects/{$project->id}/floor-plans",
@@ -228,7 +230,8 @@ class ProjectController extends Controller
                     
                     $project->floorPlanImages()->create([
                         'image_path' => $compressionResult['path'],
-                        'sort_order' => $index
+                        'sort_order' => $index,
+                        'name'=>$name
                     ]);
                 }
                 
@@ -322,7 +325,8 @@ class ProjectController extends Controller
 
     // PUT: api/listings/projects/{id}
     public function update(ProjectRequest $request, $id): JsonResponse
-    {
+    {          
+
         try {
             Log::info('🔄 UPDATE METHOD CALLED', [
                 'project_id' => $id,
@@ -437,7 +441,7 @@ class ProjectController extends Controller
                 Log::info('✅ Additional images uploaded');
             }
               // Handle floor plan images
-        if ($request->hasFile('floor_plan_images')) {
+        if ($request->has('floor_plan_images') && count($request->floor_plan_images)>0) {
             Log::info('🔄 Processing floor plan images update', [
                 'count' => count($request->file('floor_plan_images'))
             ]);
@@ -445,7 +449,9 @@ class ProjectController extends Controller
             // Get current max order
             $maxOrder = $project->floorPlanImages()->max('sort_order') ?? 0;
             
-            foreach ($request->file('floor_plan_images') as $index => $imageFile) {
+             foreach ($request->floor_plan_images as $index => $data) {
+                    $imageFile = $data['file'];
+                    $name = $data['name'] ?? "Floor Plan " . ($maxOrder + $index + 1);
                 $compressionResult = ImageHelper::compressAndConvertToWebP(
                     $imageFile, 
                     "projects/{$project->id}/floor-plans",
@@ -454,7 +460,8 @@ class ProjectController extends Controller
                 
                 $project->floorPlanImages()->create([
                     'image_path' => $compressionResult['path'],
-                    'sort_order' => $maxOrder + $index + 1
+                    'sort_order' => $maxOrder + $index + 1,
+                    'name'=>$name
                 ]);
             }
             
@@ -462,7 +469,16 @@ class ProjectController extends Controller
                 'count' => count($request->file('floor_plan_images'))
             ]);
         }
-
+            if ($request->has('floor_plan_names')) {
+                foreach ($request->floor_plan_names as $imageId => $name) {
+                    $floorPlanImage = FloorPlanImage::find($imageId);
+                    if ($floorPlanImage ) {
+                        $floorPlanImage->update([
+                            'name' => $name ?: null
+                        ]);
+                    }
+                }
+            }
         // Handle delete floor plan images
         if ($request->has('delete_floor_plan_images') && is_array($request->delete_floor_plan_images)) {
             Log::info('🗑️ Deleting floor plan images', [
@@ -721,5 +737,60 @@ class ProjectController extends Controller
         }
     }
 
+public function getFloorPlans( $id)
+{
+    try {
+        $project=Project::find($id);
+        $floorPlans = $project->floorPlanImages()
+            ->select('id', 'name', 'image_path', 'sort_order')
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function ($floorPlan) use ($id) {
+                return [
+                    'id' => $floorPlan->id,
+                    'name' => $floorPlan->name,
+                    'image_url' => $floorPlan->image_path ? asset('storage/' . $floorPlan->image_path) : null,
+                    'order' => $floorPlan->sort_order,
+                    'sort_order' => $floorPlan->sort_order,
+                    'created_at' => $floorPlan->created_at,
+                    'project_id' => $id
+                ];
+            });
 
+        return response()->json([
+            'success' => true,
+            'data' => $floorPlans
+        ]);
+    } catch (\Exception $e) {
+        dd($e);
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch floor plans'
+        ], 500);
+    }
+}
+public function updateFloorPlanName(Request $request, $id)
+{
+    try {
+        $request->validate([
+            'name' => 'required|string|max:100'
+        ]);
+
+        $floorPlanImage = FloorPlanImage::findOrFail($id);
+        $floorPlanImage->update([
+            'name' => $request->name
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Floor plan name updated successfully'
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Update floor plan name error: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update floor plan name'
+        ], 500);
+    }
+}
 }
