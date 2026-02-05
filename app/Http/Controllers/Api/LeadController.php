@@ -82,7 +82,7 @@ class LeadController extends Controller
                     });
                 }
                 
-                // ===============  source =================
+                // ================= فلترة حسب source =================
                 if ($request->filled('source')) {
                     $leadsQuery->where('lead_source', $request->source);
                 }
@@ -626,13 +626,20 @@ class LeadController extends Controller
                 $query->whereDate('created_at', '<=', $request->to_date);
             }
         
-            $histories = $query->latest()->get();
+            $histories = $query->latest()->paginate(10);
         
             $data= LeadHistoryResource::collection($histories);
-             return ApiResponse::success(
-                    $data,
-                    'Lead History retrieved successfully'
-                );
+             return ApiResponse::success([
+                'items' => LeadHistoryResource::collection($histories),
+                'pagination' => [
+                    'current_page' => $histories->currentPage(),
+                    'last_page'    => $histories->lastPage(),
+                    'per_page'     => $histories->perPage(),
+                    'total'        => $histories->total(),
+                    'next_page'    => $histories->nextPageUrl(),
+                    'prev_page'    => $histories->previousPageUrl(),
+                ]
+            ], 'Lead History retrieved successfully');
         
         }
           public function view_history($id): JsonResponse
