@@ -61,5 +61,9 @@ class Project extends Model
     {
         return $this->hasMany(Listing::class,'project_id');
     }
+      public function floorPlanImages()
+    {
+        return $this->hasMany(FloorPlanImage::class)->orderBy('sort_order');
+    }
 
 }

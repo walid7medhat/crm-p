@@ -138,7 +138,25 @@
                   </div>
                 </div>
               </div>
-
+            <div class="detailed-info-section mb-16" v-if="project.floor_plan_images && project.floor_plan_images.length > 0">
+                <div class="info-section">
+                    <h3 class="section-title mb-20">Floor Plans</h3>
+                    <div class="row g-3">
+                        <div v-for="(image, index) in project.floor_plan_images" 
+                             :key="image.id" 
+                             class="col-md-4 col-sm-6">
+                            <div class="floor-plan-card border rounded overflow-hidden">
+                                <div class="floor-plan-image" @click="openFloorPlanLightbox(index)">
+                                    <img :src="image.image_url" 
+                                         alt="Floor Plan"
+                                         class="img-fluid w-100"
+                                         style="height: 200px; object-fit: cover; cursor: pointer;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             </div>
 
             <!-- Loading State -->
@@ -519,7 +537,6 @@ export default {
 </script>
 
 <style scoped>
-/* استيراد الأنماط الأساسية من مثال البروبرتي */
 .property-gallery {
   position: relative;
   margin-bottom: 20px;

@@ -81,6 +81,7 @@ $duplicatedProject = Project::whereRaw(
                     'id' => $duplicatedProject->id,
                     'title' => $duplicatedProject->title
                 ] : null,
+            'floor_plan_images' => FloorPlanImageResource::collection($this->whenLoaded('floorPlanImages')),
 
         ];
     }

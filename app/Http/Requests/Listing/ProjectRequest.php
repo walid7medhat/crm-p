@@ -46,7 +46,10 @@ class ProjectRequest extends FormRequest
             'images.*' => ['image', 'mimes:jpeg,png,jpg,gif,webp', 'max:5120'],
             
             // Flag to keep current image
-            'keep_current_image' => ['nullable', 'boolean']
+            'keep_current_image' => ['nullable', 'boolean'],
+            
+            'floor_plan_images' => 'nullable|array',
+           'floor_plan_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120',
         ];
 
         return $rules;

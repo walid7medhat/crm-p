@@ -113,32 +113,31 @@
                 @error="handleImageError" 
               />
                 <div class="status-badges">
-                <span v-if="property.status === 'converted'" class="badge-sold">
-                  <i class="ri-checkbox-circle-fill me-1"></i>Sold Out
-                </span>
-                <span v-else-if="property.status === 'draft'" class="badge-sold">
-                  <i class="ri-checkbox-circle-fill me-1"></i>draft
-                </span>
-                <span v-if="property.is_archived" class="badge-archived">
-                  <i class="ri-archive-fill me-1"></i>Archived
-                </span>
-                <span v-if="!property.is_active" class="badge-inactive">
-                  <i class="ri-eye-off-fill me-1"></i>Inactive
-                </span>
-                 <span  v-if="property.is_hot_deal== 'Yes'" class="badge-off_plan">
-                 Hot Deal
-                </span>
-                <span v-if="property.completion_status === 'Under Construction'" class="badge-offplan">
-                  <i class="ri-building-line me-1"></i>Off Plan
-                </span>
-                <span v-else-if="property.completion_status === 'Completed'" class="badge-ready">
-                  <i class="ri-checkbox-circle-line me-1"></i>Ready
-                </span>
-                <span v-if="property.listing_status" class="status-badge">
-                         {{ property.listing_status === 'sale' ? 'For Sale' : 'For Rent' }}
-                </span>
-                 
-              </div>
+                  <span v-if="property.status === 'converted'" class="badge-sold">
+                    <i class="ri-checkbox-circle-fill me-1"></i>Sold Out
+                  </span>
+                  <span v-else-if="property.status === 'draft'" class="badge-sold">
+                    <i class="ri-checkbox-circle-fill me-1"></i>draft
+                  </span>
+                  <span v-if="property.is_archived" class="badge-archived">
+                    <i class="ri-archive-fill me-1"></i>Archived
+                  </span>
+                  <span v-if="!property.is_active" class="badge-inactive">
+                    <i class="ri-eye-off-fill me-1"></i>Inactive
+                  </span>
+                  <span v-if="property.listing_status" class="status-badge">
+                    {{ property.listing_status === 'sale' ? 'For Sale' : 'For Rent' }}
+                  </span>
+                  <span v-if="property.completion_status === 'Under Construction'" class="badge-offplan">
+                    <i class="ri-building-line me-1"></i>Off Plan
+                  </span>
+                  <span v-else-if="property.completion_status === 'Completed'" class="badge-ready">
+                    <i class="ri-checkbox-circle-line me-1"></i>Ready
+                  </span>
+                  <span v-if="property.is_hot_deal== 'Yes'" class="badge-off_plan">
+                    Hot Deal
+                  </span>
+                </div>
               <!-- Images Count Badge Only -->
               <span class="badge-images" v-if="property.gallery_images && property.gallery_images.length">
                 <i class="ri-image-line me-1"></i>{{ property.gallery_images.length }}
@@ -191,7 +190,11 @@
               
              <div class="d-flex align-items-end justify-between">
                 <p class="property-agent text-muted small mb-2" v-if="property.agent">
-                      Listed by: {{ truncateText(getAgentName(property.agent), 20) }}
+                      Listed by: {{ (getAgentName(property.agent) || '').length > 20
+                                        ? (getAgentName(property.agent) || '').slice(0, 20) + '...'
+                                        : getAgentName(property.agent)
+                                    }}
+
                 </p>
                 <div class="property-listed-date mb-2">
                     <i class="ri-calendar-line me-1"></i>

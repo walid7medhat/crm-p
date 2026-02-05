@@ -158,6 +158,111 @@
                                     </div>
                                 </div>
                             </div>
+                              <!-- 📐 Floor Plans Images Section -->
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0 text-dark">
+                                                <i class="fas fa-layer-group me-2"></i>
+                                                Floor Plan Images
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <!-- Upload New Images -->
+                                            <div class="mb-4">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="fas fa-upload me-1 text-primary"></i>
+                                                    Upload Floor Plan Images
+                                                </label>
+                                                
+                                                <div class="file-upload-area" 
+                                                     :class="{'has-preview': floorPlanImages.length > 0}"
+                                                     @click="$refs.floorPlanImagesInput.click()"
+                                                     @dragover.prevent
+                                                     @drop="handleFloorPlanDrop">
+                                                    <input ref="floorPlanImagesInput"
+                                                           type="file" 
+                                                           class="d-none" 
+                                                           @change="handleFloorPlanImages" 
+                                                           multiple
+                                                           accept="image/*">
+                                                    
+                                                    <div v-if="floorPlanImages.length === 0" class="upload-placeholder">
+                                                        <div class="upload-icon">
+                                                            <i class="fas fa-cloud-upload-alt fa-2x text-muted"></i>
+                                                        </div>
+                                                        <div class="upload-text mt-2">
+                                                            <span class="text-primary fw-medium">Click to upload</span>
+                                                            <span class="text-muted d-block">or drag and drop</span>
+                                                        </div>
+                                                        <div class="upload-hint mt-1">
+                                                            <small class="text-muted">PNG, JPG, JPEG up to 5MB</small>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div v-else class="images-grid">
+                                                        <div v-for="(image, index) in floorPlanImages" 
+                                                             :key="index" 
+                                                             class="image-thumbnail">
+                                                            <img :src="image.preview" 
+                                                                 alt="Floor Plan" 
+                                                                 class="thumbnail-image">
+                                                            <div class="thumbnail-overlay">
+                                                                <button type="button" 
+                                                                        class="btn btn-sm btn-danger"
+                                                                        @click.stop="removeFloorPlanImage(index)">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </button>
+                                                            </div>
+                                                            <div class="thumbnail-badge">
+                                                                {{ index + 1 }}
+                                                            </div>
+                                                        </div>
+                                                        <div class="add-more-images" @click.stop="$refs.floorPlanImagesInput.click()">
+                                                            <i class="fas fa-plus fa-2x text-primary"></i>
+                                                            <small class="d-block mt-2">Add More</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="form-text text-muted mt-2">
+                                                    <i class="fas fa-info-circle me-1"></i>
+                                                    Upload floor plan images. You can reorder by drag and drop.
+                                                </div>
+                                            </div>
+                                
+                                            <!-- Existing Images (for edit mode) -->
+                                            <div v-if="existingFloorPlanImages.length > 0" class="existing-images-section">
+                                                <h6 class="fw-semibold mb-3">
+                                                    <i class="fas fa-images me-2"></i>
+                                                    Existing Floor Plan Images
+                                                </h6>
+                                                
+                                                <div class="existing-images-grid">
+                                                    <div v-for="image in existingFloorPlanImages" 
+                                                         :key="image.id" 
+                                                         class="existing-image-item">
+                                                        <img :src="image.image_url" 
+                                                             alt="Floor Plan" 
+                                                             class="existing-image">
+                                                        <div class="existing-image-overlay">
+                                                            <button type="button" 
+                                                                    class="btn btn-sm btn-danger"
+                                                                    @click="markFloorPlanImageForDeletion(image.id)">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div v-if="floorPlanImagesToDelete.length > 0" class="mt-3">
+                                                    <div class="alert alert-warning py-2">
+                                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                                        {{ floorPlanImagesToDelete.length }} image(s) marked for deletion
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                         </div>
 
                         <!-- Right Column -->
@@ -422,6 +527,11 @@ export default {
         const selectedImage = ref(null);
         const imagePreview = ref('');
         const currentImage = ref('');
+        const floorPlanImages = ref([]);
+        const existingFloorPlanImages = ref([]);
+        const floorPlanImagesToDelete = ref([]);
+        const floorPlanImagesInput = ref(null);
+
 
         // Status options with icons
         const statusOptions = ref([
@@ -436,8 +546,78 @@ export default {
             area_id: null,
             status: null,
             about: "",
-            features: []
+            features: [],
+            floor_plan_images: []
         });
+        const handleFloorPlanImages = (event) => {
+            const files = Array.from(event.target.files);
+            
+            if (files.length === 0) return;
+
+            const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            
+            files.forEach(file => {
+                if (!validTypes.includes(file.type)) {
+                    showNotification('Please upload valid image files (JPEG, PNG, JPG, GIF)', 'error');
+                    return;
+                }
+
+                if (file.size > maxSize) {
+                    showNotification('Image size should be less than 5MB', 'error');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    floorPlanImages.value.push({
+                        file: file,
+                        preview: e.target.result
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+
+            event.target.value = '';
+        };
+
+        const handleFloorPlanDrop = (event) => {
+            event.preventDefault();
+            const files = Array.from(event.dataTransfer.files);
+            
+            if (files.length === 0) return;
+
+            const validFiles = files.filter(file => 
+                file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
+            );
+
+            if (validFiles.length === 0) {
+                showNotification('Please drop valid image files (max 5MB each)', 'error');
+                return;
+            }
+
+            validFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    floorPlanImages.value.push({
+                        file: file,
+                        preview: e.target.result
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        const removeFloorPlanImage = (index) => {
+            floorPlanImages.value.splice(index, 1);
+        };
+
+        const markFloorPlanImageForDeletion = (imageId) => {
+            if (!floorPlanImagesToDelete.value.includes(imageId)) {
+                floorPlanImagesToDelete.value.push(imageId);
+            }
+        };
+
 
         // Computed: Filter features based on search
         const filteredFeatures = computed(() => {
@@ -484,7 +664,6 @@ export default {
                 
                         const data = await response.json();
                 
-                        // إضافة البيانات فقط بدون مسح القائمة
                         if (search) {
                             developers.value = data.data || [];
                         } else {
@@ -626,6 +805,11 @@ export default {
                         if (projectData.main_image) {
                             currentImage.value = projectData.main_image;
                         }
+                        
+                        // Set existing floor plan images
+                        if (projectData.floor_plan_images) {
+                            existingFloorPlanImages.value = projectData.floor_plan_images;
+                        }
                 
                         // Load developers separately and **ensure current developer is included**
                         developersLoading.value = true;
@@ -761,6 +945,15 @@ export default {
                     formData.append('main_image', selectedImage.value);
                 } else if (isEditMode.value && !selectedImage.value) {
                     formData.append('keep_current_image', 'true');
+                }  
+                floorPlanImages.value.forEach((image, index) => {
+                    formData.append(`floor_plan_images[${index}]`, image.file);
+                });
+
+                if (floorPlanImagesToDelete.value.length > 0) {
+                    floorPlanImagesToDelete.value.forEach((imageId, index) => {
+                        formData.append(`delete_floor_plan_images[${index}]`, imageId);
+                    });
                 }
 
                 const token = localStorage.getItem('token');
@@ -858,7 +1051,15 @@ export default {
             handleFeatureSearch,
             loadDevelopers,
             loadAreas,
-            loadFeatures
+            loadFeatures,
+            existingFloorPlanImages,
+            floorPlanImagesToDelete,
+            floorPlanImagesInput,
+            handleFloorPlanImages,
+            handleFloorPlanDrop,
+            removeFloorPlanImage,
+            markFloorPlanImageForDeletion,
+            floorPlanImages 
         };
     }
 };
@@ -1205,6 +1406,151 @@ export default {
 }
 :deep(.vs__dropdown-option:hover small) {
     color: white !important;
+}
+
+.file-upload-area {
+    min-height: 200px;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+}
+
+.file-upload-area:hover {
+    border-color: #0d6efd;
+    background-color: #f0f8ff;
+}
+
+.file-upload-area.has-preview {
+    padding: 1rem;
+}
+
+.images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    width:100%;
+}
+
+.image-thumbnail {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 2px solid #e9ecef;
+}
+
+.thumbnail-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.thumbnail-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.image-thumbnail:hover .thumbnail-overlay {
+    opacity: 1;
+}
+
+.thumbnail-badge {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    background: #0d6efd;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.add-more-images {
+    width: 120px;
+    height: 120px;
+    border: 2px dashed #0d6efd;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+.add-more-images:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    border-color: #0a58ca;
+}
+
+.existing-images-section {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.existing-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.existing-image-item {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid #e9ecef;
+}
+
+.existing-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.existing-image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.existing-image-item:hover .existing-image-overlay {
+    opacity: 1;
+}
+
+.alert-warning {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
 }
 
 </style>

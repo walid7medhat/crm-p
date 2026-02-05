@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-
+use App\Models\FloorPlanImage;
 class ProjectController extends Controller
 {
     // Cache constants
@@ -153,7 +153,7 @@ class ProjectController extends Controller
             Log::info('Validated data', array_keys($data));
 
             unset($data['main_image']);
-
+            unset($data['floor_plan_images']);
             Log::info('Creating project with data', $data);
 
             // Create project
@@ -213,11 +213,35 @@ class ProjectController extends Controller
                 }
                 Log::info('Additional images uploaded');
             }
+             // Handle floor plan images upload
+            if ($request->hasFile('floor_plan_images')) {
+                Log::info('Processing floor plan images upload', [
+                    'count' => count($request->file('floor_plan_images'))
+                ]);
+                
+                foreach ($request->file('floor_plan_images') as $index => $imageFile) {
+                    $compressionResult = ImageHelper::compressAndConvertToWebP(
+                        $imageFile, 
+                        "projects/{$project->id}/floor-plans",
+                        ['quality' => 85, 'max_width' => 1920]
+                    );
+                    
+                    $project->floorPlanImages()->create([
+                        'image_path' => $compressionResult['path'],
+                        'sort_order' => $index
+                    ]);
+                }
+                
+                Log::info('Floor plan images uploaded', [
+                    'count' => count($request->file('floor_plan_images'))
+                ]);
+            }
+
 
             DB::commit();
 
             // Load relationships
-            $project->load(['developer', 'images', 'mainImage', 'features']);
+            $project->load(['developer', 'images', 'mainImage', 'features','floorPlanImages']);
 
             // Clear cache
             $this->clearCache();
@@ -280,7 +304,7 @@ class ProjectController extends Controller
             'images', 
             'mainImage', 
             'features',
-            'addedBy'
+            'addedBy','floorPlanImages'
         ])->find($id);
         
         if (!$project) {
@@ -332,6 +356,7 @@ class ProjectController extends Controller
             // Remove files from data array before updating project
             unset($data['main_image']);
             unset($data['images']);
+             unset($data['floor_plan_images']);
 
             // Handle main image upload
             if ($request->hasFile('main_image')) {
@@ -411,11 +436,54 @@ class ProjectController extends Controller
                 }
                 Log::info('✅ Additional images uploaded');
             }
+              // Handle floor plan images
+        if ($request->hasFile('floor_plan_images')) {
+            Log::info('🔄 Processing floor plan images update', [
+                'count' => count($request->file('floor_plan_images'))
+            ]);
+            
+            // Get current max order
+            $maxOrder = $project->floorPlanImages()->max('sort_order') ?? 0;
+            
+            foreach ($request->file('floor_plan_images') as $index => $imageFile) {
+                $compressionResult = ImageHelper::compressAndConvertToWebP(
+                    $imageFile, 
+                    "projects/{$project->id}/floor-plans",
+                    ['quality' => 85, 'max_width' => 1920]
+                );
+                
+                $project->floorPlanImages()->create([
+                    'image_path' => $compressionResult['path'],
+                    'sort_order' => $maxOrder + $index + 1
+                ]);
+            }
+            
+            Log::info('✅ New floor plan images uploaded', [
+                'count' => count($request->file('floor_plan_images'))
+            ]);
+        }
+
+        // Handle delete floor plan images
+        if ($request->has('delete_floor_plan_images') && is_array($request->delete_floor_plan_images)) {
+            Log::info('🗑️ Deleting floor plan images', [
+                'ids' => $request->delete_floor_plan_images
+            ]);
+            
+            foreach ($request->delete_floor_plan_images as $imageId) {
+                $floorPlanImage = FloorPlanImage::find($imageId);
+                if ($floorPlanImage && $floorPlanImage->project_id === $project->id) {
+                    if ($floorPlanImage->image_path) {
+                        ImageHelper::deleteImage($floorPlanImage->image_path);
+                    }
+                    $floorPlanImage->delete();
+                }
+            }
+        }
 
             DB::commit();
 
             // Reload relationships
-            $project->load(['developer', 'images', 'mainImage', 'features']);
+            $project->load(['developer', 'images', 'mainImage', 'features','floorPlanImages']);
 
             // Clear cache
             $this->clearCache();
@@ -462,6 +530,14 @@ class ProjectController extends Controller
                 }
                 $image->delete();
             }
+            // Delete floor plan images
+        foreach ($project->floorPlanImages as $floorPlanImage) {
+            if ($floorPlanImage->image_path) {
+                ImageHelper::deleteImage($floorPlanImage->image_path);
+            }
+            $floorPlanImage->delete();
+        }
+
 
             // Detach all features
             $project->features()->detach();
