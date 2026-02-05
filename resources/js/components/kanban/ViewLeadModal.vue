@@ -53,7 +53,7 @@
                 />
 
                 <!-- History Tab Content -->
-                <HistoryTab v-show="activeTab === 'history'" :lead="lead" />
+                <HistoryTab v-show="activeTab === 'history'" :lead="lead" :is-active="activeTab === 'history'" />
             </div>
         </div>
     </b-modal>

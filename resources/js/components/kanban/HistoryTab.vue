@@ -1,51 +1,70 @@
 <template>
     <div class="info-card bg-white p-3 radius-12 shadow-sm history-content">
         <div class="history-table-wrapper">
-            <table class="history-table">
-                <thead>
-                    <tr>
-                        <th>Date & Time</th>
-                        <th>Created By</th>
-                        <th>Event Type</th>
-                        <th>Client ID</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(entry, index) in paginatedEntries" :key="index">
-                        <td class="date-time-column">{{ entry.dateTime }}</td>
-                        <td class="created-by-column">
-                            <div class="d-flex align-items-center gap-2">
-                                <img 
-                                    v-if="entry.createdBy.avatar" 
-                                    :src="entry.createdBy.avatar" 
-                                    :alt="entry.createdBy.name"
-                                    class="history-avatar rounded-circle"
-                                />
-                                <div 
-                                    v-else 
-                                    class="history-avatar rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center"
-                                >
-                                    <iconify-icon icon="lucide:user" class="text-neutral-500"></iconify-icon>
+            <div v-if="loading && historyEntries.length === 0" class="loading-state">
+                <div class="text-center p-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading history...</p>
+                </div>
+            </div>
+            <template v-else>
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Created By</th>
+                            <th>Event Type</th>
+                            <th>Client ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-if="paginatedEntries.length === 0 && !loading">
+                            <td colspan="4" class="text-center p-4 text-muted">
+                                No history entries found
+                            </td>
+                        </tr>
+                        <tr v-for="(entry, index) in paginatedEntries" :key="entry.id || index">
+                            <td class="date-time-column">{{ entry.dateTime }}</td>
+                            <td class="created-by-column">
+                                <div class="d-flex align-items-center gap-2">
+                                    <img 
+                                        v-if="entry.createdBy.avatar" 
+                                        :src="entry.createdBy.avatar" 
+                                        :alt="entry.createdBy.name"
+                                        class="history-avatar rounded-circle"
+                                    />
+                                    <div 
+                                        v-else 
+                                        class="history-avatar rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center"
+                                    >
+                                        <iconify-icon icon="lucide:user" class="text-neutral-500"></iconify-icon>
+                                    </div>
+                                    <span class="created-by-name">{{ entry.createdBy.name }}</span>
                                 </div>
-                                <span class="created-by-name">{{ entry.createdBy.name }}</span>
-                            </div>
-                        </td>
-                        <td class="event-type-column">{{ entry.eventType }}</td>
-                        <td class="client-id-column">{{ entry.clientId }}</td>
-                    </tr>
-                </tbody>
-            </table>
+                            </td>
+                            <td class="event-type-column">{{ entry.eventType }}</td>
+                            <td class="client-id-column">{{ entry.clientId }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </template>
             
             <!-- Pagination Footer -->
             <div class="history-pagination">
                 <div class="pagination-info">
-                    <span>Showing {{ startEntry }} to {{ endEntry }} of {{ totalEntries }} Entries</span>
+                    <span v-if="totalEntries > 0">
+                        Showing {{ startEntry }} to {{ endEntry }} of {{ totalEntries }} Entries
+                    </span>
+                    <span v-else-if="!loading">No entries</span>
+                    <span v-else>Loading...</span>
                     <iconify-icon icon="lucide:chevron-up-down" class="entries-icon"></iconify-icon>
                 </div>
-                <div class="pagination-controls">
+                <div v-if="totalPages > 1 && totalEntries > 0" class="pagination-controls">
                     <button 
                         class="pagination-btn" 
-                        :disabled="currentPage === 1"
+                        :disabled="currentPage === 1 || loading"
                         @click="goToPage(currentPage - 1)"
                     >
                         <iconify-icon icon="lucide:chevron-left"></iconify-icon>
@@ -57,22 +76,25 @@
                             :key="page"
                             class="pagination-number"
                             :class="{ active: page === currentPage }"
+                            :disabled="loading"
                             @click="goToPage(page)"
                         >
                             {{ page }}
                         </button>
                         <span v-if="showEllipsis" class="pagination-ellipsis">...</span>
                         <button 
+                            v-if="totalPages > 3"
                             class="pagination-number"
-                            :class="{ active: 10 === currentPage }"
-                            @click="goToPage(10)"
+                            :class="{ active: totalPages === currentPage }"
+                            :disabled="loading"
+                            @click="goToPage(totalPages)"
                         >
-                            10
+                            {{ totalPages }}
                         </button>
                     </div>
                     <button 
                         class="pagination-btn" 
-                        :disabled="currentPage === totalPages"
+                        :disabled="currentPage === totalPages || loading"
                         @click="goToPage(currentPage + 1)"
                     >
                         Next
@@ -85,146 +107,275 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue'
+import api from '@/plugins/axios'
+
+const instance = getCurrentInstance()
+
+// Notification helper
+const $showNotification = (message, type = 'info') => {
+    if (instance?.appContext?.config?.globalProperties?.$showNotification) {
+        instance.appContext.config.globalProperties.$showNotification(message, type)
+    } else if (window.$showNotification) {
+        window.$showNotification(message, type)
+    }
+}
 
 const props = defineProps({
     lead: {
         type: Object,
         default: null
+    },
+    isActive: {
+        type: Boolean,
+        default: false
     }
 })
 
-// Dummy data matching the image
-const historyEntries = ref([
-    {
-        id: 1,
-        dateTime: 'Today / 9:45 PM',
-        createdBy: {
-            name: 'Mohammed Shibli',
-            avatar: ''
-        },
-        eventType: 'View',
-        clientId: '---'
-    },
-    {
-        id: 2,
-        dateTime: 'Yesterday / 12:25 PM',
-        createdBy: {
-            name: 'Ahmad Mahfouz',
-            avatar: ''
-        },
-        eventType: 'Status Changed',
-        clientId: 'Unqualified → Assigned'
-    },
-    {
-        id: 3,
-        dateTime: '14 Feb 2025 / 10:25 PM',
-        createdBy: {
-            name: 'Basil Faiz',
-            avatar: ''
-        },
-        eventType: 'Field "Name" changed',
-        clientId: 'Suhail Elarabi → Mohammed Shibli'
-    },
-    {
-        id: 4,
-        dateTime: '14 Feb 2025 / 10:25 PM',
-        createdBy: {
-            name: 'Suhail Elarabi',
-            avatar: ''
-        },
-        eventType: 'Field "Responsible person" Changed',
-        clientId: 'Oia Agent-Vida Residences Saadiyat Island | Oia Properties → test lead'
-    },
-    {
-        id: 5,
-        dateTime: '14 Feb 2025 / 10:25 PM',
-        createdBy: {
-            name: 'Kim Duero',
-            avatar: ''
-        },
-        eventType: 'Activity Created',
-        clientId: 'Vida Residences Saadiyat Island | Oia Properties'
-    },
-    {
-        id: 6,
-        dateTime: '13 Feb 2025 / 3:15 PM',
-        createdBy: {
-            name: 'Mohammed Shibli',
-            avatar: ''
-        },
-        eventType: 'View',
-        clientId: '---'
-    },
-    {
-        id: 7,
-        dateTime: '13 Feb 2025 / 2:30 PM',
-        createdBy: {
-            name: 'Ahmad Mahfouz',
-            avatar: ''
-        },
-        eventType: 'Status Changed',
-        clientId: 'Assigned → Qualified'
-    }
-])
-
-// Add more entries to reach 120 total
-for (let i = 8; i <= 120; i++) {
-    const names = ['Mohammed Shibli', 'Ahmad Mahfouz', 'Basil Faiz', 'Suhail Elarabi', 'Kim Duero']
-    const eventTypes = ['View', 'Status Changed', 'Field "Name" changed', 'Activity Created', 'Comment Added']
-    const clientIds = ['---', 'Unqualified → Assigned', 'Assigned → Qualified', 'Test Lead', 'Vida Residences Saadiyat Island | Oia Properties']
-    
-    const randomDate = new Date(2025, 1, Math.floor(Math.random() * 14) + 1)
-    const dateStr = randomDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-    const timeStr = `${Math.floor(Math.random() * 12) + 1}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')} ${Math.random() > 0.5 ? 'AM' : 'PM'}`
-    
-    historyEntries.value.push({
-        id: i,
-        dateTime: `${dateStr} / ${timeStr}`,
-        createdBy: {
-            name: names[Math.floor(Math.random() * names.length)],
-            avatar: ''
-        },
-        eventType: eventTypes[Math.floor(Math.random() * eventTypes.length)],
-        clientId: clientIds[Math.floor(Math.random() * clientIds.length)]
-    })
-}
+// History data
+const historyEntries = ref([])
+const loading = ref(false)
 
 // Pagination state
 const currentPage = ref(1)
-const entriesPerPage = ref(7) // Matching "Showing 1 to 7" in the image
+const entriesPerPage = ref(7)
+const totalEntries = ref(0)
+const totalPages = ref(1)
 
 // Computed properties
-const totalEntries = computed(() => historyEntries.value.length)
-const totalPages = computed(() => Math.ceil(totalEntries.value / entriesPerPage.value))
-const startEntry = computed(() => (currentPage.value - 1) * entriesPerPage.value + 1)
-const endEntry = computed(() => Math.min(currentPage.value * entriesPerPage.value, totalEntries.value))
+const startEntry = computed(() => {
+    if (totalEntries.value === 0) return 0
+    return (currentPage.value - 1) * entriesPerPage.value + 1
+})
+
+const endEntry = computed(() => {
+    return Math.min(currentPage.value * entriesPerPage.value, totalEntries.value)
+})
 
 const paginatedEntries = computed(() => {
-    const start = (currentPage.value - 1) * entriesPerPage.value
-    const end = start + entriesPerPage.value
-    return historyEntries.value.slice(start, end)
+    return historyEntries.value
 })
 
 const visiblePages = computed(() => {
     const pages = []
-    // Matching the image: show 1, 2, 3, ..., 10
-    // Always show first 3 pages
-    pages.push(1, 2, 3)
+    const maxVisible = 3
+    
+    if (totalPages.value <= maxVisible) {
+        // Show all pages if total is less than max visible
+        for (let i = 1; i <= totalPages.value; i++) {
+            pages.push(i)
+        }
+    } else {
+        // Always show first 3 pages
+        pages.push(1, 2, 3)
+    }
+    
     return pages
 })
 
 const showEllipsis = computed(() => {
-    // Always show ellipsis before the last page (10)
-    return true
+    return totalPages.value > 3
 })
 
-// Methods
-const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages.value) {
-        currentPage.value = page
+// Transform API response to component format
+const transformHistoryEntry = (entry) => {
+    // Format date and time
+    let dateTime = '---'
+    if (entry.date) {
+        const date = new Date(entry.date)
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const entryDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+        
+        const diffTime = today - entryDate
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+        
+        const timeStr = date.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+        })
+        
+        if (diffDays === 0) {
+            dateTime = `Today / ${timeStr}`
+        } else if (diffDays === 1) {
+            dateTime = `Yesterday / ${timeStr}`
+        } else {
+            const dateStr = date.toLocaleDateString('en-GB', { 
+                day: 'numeric', 
+                month: 'short', 
+                year: 'numeric' 
+            })
+            dateTime = `${dateStr} / ${timeStr}`
+        }
+    }
+    
+    // Get created by user info
+    const user = entry.user || {}
+    let avatar = user.avatar || ''
+    
+    // Handle avatar URL - if it's already a full URL, use it; otherwise prepend /storage/
+    if (avatar && !avatar.startsWith('http') && !avatar.startsWith('/')) {
+        avatar = `/storage/${avatar}`
+    }
+    
+    // Get event type from action or changes
+    let eventType = entry.action || '---'
+    if (entry.changes && entry.changes.action) {
+        eventType = entry.changes.action
+    }
+    
+    // Format event type to be more readable
+    if (eventType === 'view') {
+        eventType = 'View'
+    } else if (eventType === 'stage_changed') {
+        eventType = 'Status Changed'
+    } else if (eventType === 'assigned') {
+        eventType = 'Responsible Person Changed'
+    } else if (eventType === 'updated') {
+        eventType = 'Lead Updated'
+    } else if (eventType === 'created') {
+        eventType = 'Lead Created'
+    } else {
+        // Capitalize first letter
+        eventType = eventType.charAt(0).toUpperCase() + eventType.slice(1).replace(/_/g, ' ')
+    }
+    
+    // Get client ID from changes
+    let clientId = '---'
+    if (entry.changes) {
+        if (entry.changes.old_stage && entry.changes.new_stage) {
+            clientId = `${entry.changes.old_stage} → ${entry.changes.new_stage}`
+        } else if (entry.changes.old_person && entry.changes.new_person) {
+            clientId = `${entry.changes.old_person} → ${entry.changes.new_person}`
+        } else if (entry.changes.new_stage) {
+            clientId = entry.changes.new_stage
+        } else if (entry.changes.new_person) {
+            clientId = entry.changes.new_person
+        } else if (entry.changes.action === 'view') {
+            clientId = '---'
+        }
+    }
+    
+    return {
+        id: entry.id,
+        dateTime: dateTime,
+        createdBy: {
+            name: user.name || 'Unknown',
+            avatar: avatar
+        },
+        eventType: eventType,
+        clientId: clientId
     }
 }
+
+// Fetch history from API
+const fetchHistory = async (page = 1) => {
+    if (!props.lead?.id) {
+        return
+    }
+    
+    try {
+        loading.value = true
+        const response = await api.get(`/leads/${props.lead.id}/history`, {
+            params: {
+                page: page,
+                per_page: entriesPerPage.value
+            }
+        })
+        
+        // Handle paginated response
+        const responseData = response.data
+        console.log('📊 Full API Response:', responseData)
+        
+        // ApiResponse structure: { status: true, message: "...", data: {...}, meta: {...} }
+        // When using ResourceCollection with paginate(), the data structure is:
+        // response.data.data = ResourceCollection which has .data property
+        let historyData = []
+        
+        // Check different possible structures
+        if (Array.isArray(responseData.data)) {
+            // Direct array
+            historyData = responseData.data
+        } else if (responseData.data && typeof responseData.data === 'object') {
+            // ResourceCollection structure: { data: [...] }
+            if (Array.isArray(responseData.data.data)) {
+                historyData = responseData.data.data
+            } else if (Array.isArray(responseData.data)) {
+                historyData = responseData.data
+            }
+        }
+        
+        console.log('📝 Parsed History Data:', historyData)
+        console.log('📄 Meta Data:', responseData.meta)
+        
+        // Transform history entries
+        historyEntries.value = historyData.map(transformHistoryEntry)
+        
+        // Update pagination info from meta
+        if (responseData.meta) {
+            totalEntries.value = parseInt(responseData.meta.total) || 0
+            totalPages.value = parseInt(responseData.meta.last_page) || 1
+            currentPage.value = parseInt(responseData.meta.current_page) || page
+            entriesPerPage.value = parseInt(responseData.meta.per_page) || 7
+            
+            console.log('✅ Pagination Set:', {
+                total: totalEntries.value,
+                lastPage: totalPages.value,
+                currentPage: currentPage.value,
+                perPage: entriesPerPage.value,
+                entriesCount: historyEntries.value.length,
+                shouldShowPagination: totalPages.value > 1
+            })
+        } else {
+            // Fallback if no pagination meta
+            totalEntries.value = historyData.length
+            totalPages.value = historyData.length > 0 ? Math.ceil(historyData.length / entriesPerPage.value) : 0
+            currentPage.value = 1
+            
+            console.warn('⚠️ No pagination meta found. Using fallback:', {
+                total: totalEntries.value,
+                lastPage: totalPages.value
+            })
+        }
+        
+    } catch (error) {
+        console.error('Error fetching history:', error)
+        historyEntries.value = []
+        totalEntries.value = 0
+        totalPages.value = 1
+        
+        // Show error notification
+        $showNotification('Failed to load history', 'error')
+    } finally {
+        loading.value = false
+    }
+}
+
+// Methods
+const goToPage = async (page) => {
+    if (page >= 1 && page <= totalPages.value && page !== currentPage.value) {
+        await fetchHistory(page)
+    }
+}
+
+// Watch for tab activation - fetch history only when tab is opened
+watch(() => props.isActive, (isActive) => {
+    if (isActive && props.lead?.id) {
+        // Reset to first page when tab is opened
+        currentPage.value = 1
+        fetchHistory(1)
+    }
+})
+
+// Watch for lead changes when tab is active
+watch(() => props.lead?.id, (newId, oldId) => {
+    // Only fetch if tab is active and lead ID actually changed
+    if (props.isActive && newId && newId !== oldId) {
+        currentPage.value = 1
+        fetchHistory(1)
+    }
+})
 </script>
 
 <style scoped>
@@ -467,4 +618,17 @@ const goToPage = (page) => {
 
 .radius-12 { border-radius: 12px; }
 .radius-100 { border-radius: 100px; }
+
+.loading-state {
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3em;
+}
 </style>
