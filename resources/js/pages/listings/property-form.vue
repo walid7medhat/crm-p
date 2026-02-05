@@ -240,54 +240,57 @@
     </div>
 
     <!-- 💰 Mortgage & Rent Info -->
-    <div class="col-lg-12">
-      <div class="card">
-        <div class="card-header">
-          <h6 class="card-title mb-0">Mortgage & Rent Info</h6>
-        </div>
-        <div class="card-body">
-          <div class="row gy-3">
-            <div class="col-md-4">
-              <label class="form-label">Mortgage Status</label>
-              <v-select 
-                v-model="form.mortgageStatus" 
-                :options="mortgageStatusOptions" 
-                placeholder="Select Mortgage Status"
-              />
+        <div class="col-lg-12">
+          <div class="card">
+            <div class="card-header">
+              <h6 class="card-title mb-0">Mortgage & Rent Info</h6>
             </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Occupancy Status</label>
-              <v-select 
-                v-model="form.occupancyStatus" 
-                :options="occupancyStatusOptions" 
-                placeholder="Select Occupancy Status"
-              />
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Mortgage Amount</label>
-              <input v-model="form.mortgageAmount" type="number" class="form-control" placeholder="Enter Mortgage Amount"/>
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Rent Expiry Date</label>
-              <input v-model="form.rentExpiryDate" type="date" class="form-control" placeholder="Enter Rent Expiry Date" />
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Rent Amount</label>
-              <input v-model="form.rentAmount" type="number" class="form-control" placeholder="Enter Rent Amount" />
-            </div>
-
-            <div class="col-md-12">
-              <label class="form-label">Comment</label>
-              <textarea v-model="form.mortgageComment" rows="3" class="form-control" placeholder="Enter Mortage Comment" ></textarea>
+            <div class="card-body">
+              <div class="row gy-3">
+                <div class="col-md-4">
+                  <label class="form-label">Mortgage Status</label>
+                  <v-select 
+                    v-model="form.mortgageStatus" 
+                    :options="mortgageStatusOptions" 
+                    placeholder="Select Mortgage Status"
+                  />
+                </div>
+    
+                <div class="col-md-4">
+                  <label class="form-label">Mortgage Amount</label>
+                  <input v-model="form.mortgageAmount" type="number" class="form-control" placeholder="Enter Mortgage Amount"/>
+                </div>
+    
+                <!-- Force new row on desktop so first line only has Mortgage fields -->
+                <div class="w-100 d-none d-md-block"></div>
+    
+                <div class="col-md-4">
+                  <label class="form-label">Occupancy Status</label>
+                  <v-select 
+                    v-model="form.occupancyStatus" 
+                    :options="occupancyStatusOptions" 
+                    placeholder="Select Occupancy Status"
+                  />
+                </div>
+    
+                <div class="col-md-4">
+                  <label class="form-label">Rent Expiry Date</label>
+                  <input v-model="form.rentExpiryDate" type="date" class="form-control" placeholder="Enter Rent Expiry Date" />
+                </div>
+    
+                <div class="col-md-4">
+                  <label class="form-label">Rent Amount</label>
+                  <input v-model="form.rentAmount" type="number" class="form-control" placeholder="Enter Rent Amount" />
+                </div>
+    
+                <div class="col-md-12">
+                  <label class="form-label">Comment</label>
+                  <textarea v-model="form.mortgageComment" rows="3" class="form-control" placeholder="Enter Mortage Comment" ></textarea>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
     <!-- 🖼️ Gallery Section -->
     <div class="col-lg-12">

@@ -261,6 +261,14 @@
                   placeholder="Select Mortgage Status"
                 />
               </div>
+              
+              <!-- Mortgage Amount -->
+              <div class="col-md-4">
+                <label class="form-label">Mortgage Amount</label>
+                <input v-model="form.mortgageAmount" type="number" class="form-control" placeholder="Enter Mortgage Amount"/>
+              </div>
+              <!-- Force new row on desktop so first line only has Mortgage fields -->
+                <div class="w-100 d-none d-md-block"></div>
 
               <!-- Occupancy Status -->
               <div class="col-md-4">
@@ -272,11 +280,7 @@
                 />
               </div>
 
-              <!-- Mortgage Amount -->
-              <div class="col-md-4">
-                <label class="form-label">Mortgage Amount</label>
-                <input v-model="form.mortgageAmount" type="number" class="form-control" placeholder="Enter Mortgage Amount"/>
-              </div>
+              
 
               <!-- Rent Expiry Date -->
               <div class="col-md-4">
