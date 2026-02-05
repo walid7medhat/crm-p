@@ -191,7 +191,7 @@
               
              <div class="d-flex align-items-end justify-between">
                 <p class="property-agent text-muted small mb-2" v-if="property.agent">
-                  Listed by: {{ getAgentName(property.agent) }}
+                      Listed by: {{ truncateText(getAgentName(property.agent), 20) }}
                 </p>
                 <div class="property-listed-date mb-2">
                     <i class="ri-calendar-line me-1"></i>
