@@ -132,7 +132,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import DateTimePicker from './DateTimePicker.vue'
+import DateTimePicker from '../shared/DateTimePicker.vue'
 import api from '@/plugins/axios'
 
 const props = defineProps({

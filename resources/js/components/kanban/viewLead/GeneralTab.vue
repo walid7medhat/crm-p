@@ -81,7 +81,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import EditLead from './EditLead.vue'
+import EditLead from '../editLead/EditLead.vue'
 import ViewLead from './ViewLead.vue'
 import ActivitySection from './ActivitySection.vue'
 import CommentsSection from './CommentsSection.vue'

@@ -92,7 +92,7 @@ import { ref, computed, watch } from 'vue'
 import { BModal, BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
-import ModalHeader from './ModalHeader.vue'
+import ModalHeader from '../shared/ModalHeader.vue'
 import api from '@/plugins/axios'
 
 const props = defineProps({

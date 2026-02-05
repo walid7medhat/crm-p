@@ -88,10 +88,10 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import Leads from './leads.vue'
-import LeadSearchModal from './LeadSearchModal.vue'
-import CreateLeadModal from './CreateLeadModal.vue'
-import AddStageModal from './AddStageModal.vue'
+import Leads from './leadList/leads.vue'
+import LeadSearchModal from './leadList/LeadSearchModal.vue'
+import CreateLeadModal from './createLead/CreateLeadModal.vue'
+import AddStageModal from './stage/AddStageModal.vue'
 import leadsSettings from '@/assets/images/kanban/leads-setting.svg'
 import addStage from '@/assets/images/kanban/add-stage.svg'
 import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem } from 'bootstrap-vue-3'

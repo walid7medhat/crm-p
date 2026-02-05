@@ -304,7 +304,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, getCurrentInstance } from 'vue'
 import api from '@/plugins/axios'
 import showConfirmation from '@/composables/useConfirmation'
-import DateTimePicker from './DateTimePicker.vue'
+import DateTimePicker from '../shared/DateTimePicker.vue'
 
 const instance = getCurrentInstance()
 const $showNotification = (message, type = 'info') => {

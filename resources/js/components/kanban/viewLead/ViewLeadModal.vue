@@ -62,7 +62,7 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { BModal, BDropdown } from 'bootstrap-vue-3'
-import StageSelector from './StageSelector.vue'
+import StageSelector from '../shared/StageSelector.vue'
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
