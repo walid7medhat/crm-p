@@ -1,6 +1,7 @@
 <template>
     <LeadSearchModal v-model="showSearchModal" />
     <CreateLeadModal v-model="showCreateModal" @lead-created="handleLeadCreated" />
+    <CreateIntegrationModal v-model="showCreateIntegrationModal" @integration-created="handleIntegrationCreated" />
     <AddStageModal v-model="showAddStageModal" @stage-created="handleStageCreated" />
     <div class="kanban-main-wrapper">
         <b-tabs 
@@ -25,6 +26,7 @@
 
                 <!-- Tab Content -->
                 <Leads v-if="tab.id === 'leads'" ref="leadsRef" />
+                <Integration v-else-if="tab.id === 'integration'" />
                 <div v-else class="p-40 text-center text-secondary-light h-100 d-flex align-items-center justify-content-center">
                     <div class="card p-40 radius-12 border shadow-sm">
                         <h4 class="mb-0">{{ tab.name }} Content coming soon...</h4>
@@ -50,7 +52,7 @@
                     </div>
                     
                     <!-- Create New Button -->
-                    <button class="btn-create-new d-flex align-items-center" @click="showCreateModal = true">
+                    <button class="btn-create-new d-flex align-items-center" @click="handleCreateNew">
                         <span class="btn-create-new-text">Create New</span>
                         <iconify-icon icon="lucide:chevrons-up-down" class="text-warning-600 text-md"></iconify-icon>
                     </button>
@@ -89,8 +91,10 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import Leads from './leadList/leads.vue'
+import Integration from './integration/Integration.vue'
 import LeadSearchModal from './leadList/LeadSearchModal.vue'
 import CreateLeadModal from './createLead/CreateLeadModal.vue'
+import CreateIntegrationModal from './integration/CreateIntegrationModal.vue'
 import AddStageModal from './stage/AddStageModal.vue'
 import leadsSettings from '@/assets/images/kanban/leads-setting.svg'
 import addStage from '@/assets/images/kanban/add-stage.svg'
@@ -101,6 +105,7 @@ import Swal from 'sweetalert2'
 const activeTab = ref('leads')
 const showSearchModal = ref(false)
 const showCreateModal = ref(false)
+const showCreateIntegrationModal = ref(false)
 const showAddStageModal = ref(false)
 const leadsRef = ref(null)
 
@@ -265,6 +270,16 @@ const cleanup = () => {
     }
 }
 
+const handleCreateNew = () => {
+    // Check if we're on the integration tab
+    if (activeTab.value === 'integration') {
+        showCreateIntegrationModal.value = true
+    } else {
+        // Default to showing create lead modal
+        showCreateModal.value = true
+    }
+}
+
 const handleLeadCreated = async () => {
     console.log('🎯 handleLeadCreated triggered')
     
@@ -281,6 +296,13 @@ const handleLeadCreated = async () => {
             await leadsComponent.fetchLeads(true) // Immediate execution
         }
     }
+}
+
+const handleIntegrationCreated = (data) => {
+    console.log('🎯 handleIntegrationCreated triggered', data)
+    // Handle integration creation logic here
+    // You can refresh the integration list or show a notification
+    $showNotification('Integration created successfully!', 'success')
 }
 
 const handleStageCreated = async (stageData) => {
