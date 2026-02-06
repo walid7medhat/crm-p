@@ -278,39 +278,24 @@
                                 <div class="col-12">
                                     <div class="mb-3">
                                         <label class="form-label">Additional Documents</label>
-                                        <input
-                                            type="file"
-                                            class="form-control"
-                                            multiple
-                                            accept="image/*,.pdf"
-                                            @change="handleAdditionalDocumentsUpload"
-                                        >
-                                        <div class="form-text">
-                                            You can upload multiple extra documents (JPG, PNG, PDF, max 5MB each).
+                                        <input type="file" class="form-control" multiple
+                                               accept=".pdf,.jpg,.jpeg,.png,.svg"
+                                               @change="handleAdditionalDocumentsUpload">
+                                        <div v-if="existingAdditionalDocuments && existingAdditionalDocuments.length" class="mt-2">
+                                            <small class="text-muted d-block mb-1">Existing ({{ existingAdditionalDocuments.length }})</small>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <a v-for="doc in existingAdditionalDocuments" :key="doc.id"
+                                                   :href="doc.url" target="_blank" rel="noopener" class="badge bg-secondary text-decoration-none me-1">{{ doc.name }}</a>
+                                            </div>
                                         </div>
-
-                                        <div v-if="ownerForm.additional_documents && ownerForm.additional_documents.length" class="mt-2">
-                                            <span
-                                                v-for="(file, index) in ownerForm.additional_documents"
-                                                :key="index"
-                                                class="badge bg-info text-dark me-1 mb-1 d-inline-flex align-items-center"
-                                            >
-                                                <i class="bi bi-file-earmark-text me-1"></i>
-                                                <span class="text-truncate" style="max-width: 180px;">
-                                                    {{ file.name }}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    class="btn-close btn-close-white btn-sm ms-2"
-                                                    aria-label="Remove"
-                                                    @click.stop="removeAdditionalDocument(index)"
-                                                ></button>
-                                            </span>
+                                        <div v-if="ownerForm.additionalDocuments && ownerForm.additionalDocuments.length" class="mt-2">
+                                            <small class="text-muted d-block mb-1">New uploads</small>
+                                            <div v-for="(item, idx) in ownerForm.additionalDocuments" :key="'new-' + idx" class="d-flex align-items-center justify-content-between small mb-1">
+                                                <span class="text-truncate">{{ item.name || item.file?.name }}</span>
+                                                <button type="button" class="btn btn-sm btn-outline-danger ms-2" @click="removeAdditionalDocument(idx)">Remove</button>
+                                            </div>
                                         </div>
-
-                                        <div v-if="errors.additional_documents" class="text-danger small mt-1">
-                                            {{ errors.additional_documents[0] }}
-                                        </div>
+                                        <small class="text-muted">PDF, JPG, PNG, SVG. Max 10MB per file.</small>
                                     </div>
                                 </div>
 
@@ -402,6 +387,7 @@ export default {
             visa_copy: null,
             passport_copy: null
         });
+        const existingAdditionalDocuments = ref([]);
 
         // Owner Form Data
         const ownerForm = ref({
@@ -421,7 +407,7 @@ export default {
             visa_copy: null,
             passport_copy: null,
             notes: "",
-            additional_documents: [],
+            additionalDocuments: [],
         });
 
       const nationalities = ref([
@@ -545,7 +531,33 @@ export default {
             }
         };
 
-        // Handle single file upload (ID/visa/passport)
+        const MAX_ADDITIONAL_SIZE = 10 * 1024 * 1024;
+        const ALLOWED_ADDITIONAL_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml'];
+
+        const handleAdditionalDocumentsUpload = (event) => {
+            const files = event.target.files ? Array.from(event.target.files) : [];
+            if (!files.length) return;
+            const list = ownerForm.value.additionalDocuments || [];
+            for (const file of files) {
+                if (file.size > MAX_ADDITIONAL_SIZE) {
+                    showNotification(`File "${file.name}" exceeds 10MB`, "error");
+                    continue;
+                }
+                if (!ALLOWED_ADDITIONAL_TYPES.includes(file.type)) {
+                    showNotification(`File "${file.name}" has invalid type. Use PDF, JPG, PNG, SVG.`, "error");
+                    continue;
+                }
+                list.push({ file, name: file.name });
+            }
+            ownerForm.value.additionalDocuments = list;
+            event.target.value = '';
+        };
+
+        const removeAdditionalDocument = (index) => {
+            ownerForm.value.additionalDocuments.splice(index, 1);
+        };
+
+        // Handle file upload
         const handleFileUpload = (event, field) => {
             const file = event.target.files[0];
             if (file) {
@@ -558,35 +570,6 @@ export default {
                 ownerForm.value[field] = file;
                 showNotification(`✅ ${field.replace('_', ' ')} uploaded successfully`, "success");
             }
-        };
-
-        // Handle multiple additional documents
-        const handleAdditionalDocumentsUpload = (event) => {
-            const files = Array.from(event.target.files || []);
-            if (!files.length) return;
-
-            const validFiles = files.filter(file => {
-                if (file.size > 5 * 1024 * 1024) {
-                    showNotification(`❌ File "${file.name}" must be less than 5MB`, "error");
-                    return false;
-                }
-                return true;
-            });
-
-            if (validFiles.length) {
-                ownerForm.value.additional_documents = [
-                    ...(ownerForm.value.additional_documents || []),
-                    ...validFiles,
-                ];
-                showNotification(`✅ Added ${validFiles.length} additional document(s)`, "success");
-            }
-
-            event.target.value = '';
-        };
-
-        const removeAdditionalDocument = (index) => {
-            if (!Array.isArray(ownerForm.value.additional_documents)) return;
-            ownerForm.value.additional_documents.splice(index, 1);
         };
 
         // Fetch owner data for editing
@@ -619,6 +602,8 @@ export default {
                 if (ownerData.id_back) existingFiles.value.id_back = 'Uploaded';
                 if (ownerData.visa_copy) existingFiles.value.visa_copy = 'Uploaded';
                 if (ownerData.passport_copy) existingFiles.value.passport_copy = 'Uploaded';
+                existingAdditionalDocuments.value = ownerData.additional_documents || [];
+                ownerForm.value.additionalDocuments = [];
 
                 // If nationality is UAE, fetch locations
                 if (ownerForm.value.nationality === 'UAE') {
@@ -654,20 +639,22 @@ export default {
 
                 const formData = new FormData();
 
-                // Append all form data including avatar (except additional_documents array)
+                // Append form data (exclude arrays and files that we handle separately)
+                const skipKeys = ['additionalDocuments'];
                 Object.keys(ownerForm.value).forEach(key => {
-                    if (key === 'additional_documents') return;
+                    if (skipKeys.includes(key)) return;
                     const value = ownerForm.value[key];
                     if (value instanceof File) {
                         formData.append(key, value);
-                    } else if (value !== null && value !== "") {
+                    } else if (value !== null && value !== "" && !Array.isArray(value)) {
                         formData.append(key, value);
                     }
                 });
 
-                // Append additional documents as files[]
-                if (Array.isArray(ownerForm.value.additional_documents) && ownerForm.value.additional_documents.length) {
-                    ownerForm.value.additional_documents.forEach((file, index) => {
+                // Append additional documents
+                if (ownerForm.value.additionalDocuments && ownerForm.value.additionalDocuments.length > 0) {
+                    ownerForm.value.additionalDocuments.forEach((item, index) => {
+                        const file = item.file || item;
                         if (file instanceof File) {
                             formData.append(`additional_documents[${index}]`, file);
                         }
@@ -763,6 +750,7 @@ export default {
             getLocationLabel,
             getLocationPlaceholder,
             handleFileUpload,
+            existingAdditionalDocuments,
             handleAdditionalDocumentsUpload,
             removeAdditionalDocument,
             submitForm

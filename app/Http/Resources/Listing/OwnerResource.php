@@ -33,7 +33,13 @@ class OwnerResource extends JsonResource
             'id_back_path' => $this->id_back_path ? asset('storage/' . $this->id_back_path) : null,
             'visa_copy_path' => $this->visa_copy_path ? asset('storage/' . $this->visa_copy_path) : null,
             'passport_copy_path' => $this->passport_copy_path ? asset('storage/' . $this->passport_copy_path) : null,
-            
+            'additional_documents' => $this->whenLoaded('additionalDocuments', function () {
+                return $this->additionalDocuments->map(fn ($doc) => [
+                    'id' => $doc->id,
+                    'url' => asset('storage/' . $doc->path),
+                    'name' => $doc->original_name ?? basename($doc->path),
+                ]);
+            }, []),
             // Additional Information
             'notes' => $this->notes,
             

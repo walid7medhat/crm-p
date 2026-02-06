@@ -9,27 +9,72 @@ Broadcast::routes(['middleware' => ['auth:api']]);
 Route::get('/login', function () {
     return response()->json(['message' => 'Unauthorized'], 401);
 })->name('login');
+// Broadcasting auth route - exclude from CSRF since we use JWT
 Route::post('/broadcasting/auth', function () {
-    return Broadcast::auth(request());
-})->middleware('auth:api'); // إذا تستخدم JWT
+    try {
+        \Log::info('Broadcasting auth request', [
+            'channel' => request()->input('channel_name'),
+            'socket_id' => request()->input('socket_id'),
+            'user' => auth('api')->user()?->id
+        ]);
+        
+        $response = Broadcast::auth(request());
+        
+        // Ensure CORS headers are set
+        return $response->header('Access-Control-Allow-Origin', request()->header('Origin') ?? '*')
+            ->header('Access-Control-Allow-Credentials', 'true')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept, X-Requested-With');
+    } catch (\Exception $e) {
+        \Log::error('Broadcasting auth error: ' . $e->getMessage(), [
+            'trace' => $e->getTraceAsString(),
+            'channel' => request()->input('channel_name'),
+            'user' => auth('api')->user()?->id
+        ]);
+        
+        return response()->json([
+            'error' => 'Authentication failed',
+            'message' => $e->getMessage()
+        ], 500)->header('Access-Control-Allow-Origin', request()->header('Origin') ?? '*')
+            ->header('Access-Control-Allow-Credentials', 'true');
+    }
+})->middleware(['auth:api'])->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 
-// In routes/channels.php - TEMPORARY FIX ONLY
+// Handle OPTIONS preflight request for broadcasting/auth
+Route::options('/broadcasting/auth', function () {
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', request()->header('Origin') ?? '*')
+        ->header('Access-Control-Allow-Credentials', 'true')
+        ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept, X-Requested-With');
+})->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+
+// Broadcast channel definitions
+// Laravel automatically handles 'private-' prefix from Echo.private()
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
-    // For debugging, allow all connections temporarily
-    \Log::info('Channel auth', [
+    \Log::info('App.Models.User channel auth', [
         'user_exists' => !is_null($user),
         'user_id' => $user->id ?? 'null',
         'requested_id' => $id
     ]);
     
-    // Temporarily return true for testing
-    return true;
+    if (!$user) {
+        return false;
+    }
     
-    // Once working, change back to:
-    // return (int) $user->id === (int) $id;
+    return (int) $user->id === (int) $id;
 });
 
 Broadcast::channel('user.{id}', function ($user, $id) {
+    \Log::info('User channel auth', [
+        'user_id' => $user->id ?? 'null',
+        'requested_id' => $id
+    ]);
+    
+    if (!$user) {
+        return false;
+    }
+    
     return (int) $user->id === (int) $id;
 });
 
@@ -38,7 +83,13 @@ Broadcast::channel('leads', function ($user) {
 });
 
 Broadcast::channel('listing.{id}', function ($user, $id) {
-    return true; 
+    \Log::info('Listing channel auth', [
+        'user_id' => $user->id ?? 'null',
+        'listing_id' => $id
+    ]);
+    
+    // Allow authenticated users to listen to listing channels
+    return $user !== null;
 });
 
 Broadcast::channel('lead.{id}', function ($user, $id) {

@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 class OwnerController extends Controller
 {
@@ -168,23 +169,6 @@ public function getOwnerProperties(Owner $owner): JsonResponse
             $filePaths = [];
             $data = array_diff_key($data, array_flip($fileFields));
 
-            // Handle additional documents (multiple)
-            $additionalDocumentsMeta = [];
-            if ($request->hasFile('additional_documents')) {
-                foreach ($request->file('additional_documents') as $file) {
-                    if (!$file) {
-                        continue;
-                    }
-                    $path = $file->store("owners/documents", 'public');
-                    $additionalDocumentsMeta[] = [
-                        'name' => $file->getClientOriginalName(),
-                        'path' => $path,
-                    ];
-                }
-            }
-            // Remove raw additional_documents from data; we'll store metadata instead
-            unset($data['additional_documents']);
-
             foreach ($fileFields as $field) {
                 if ($request->hasFile($field)) {
                     $file = $request->file($field);
@@ -202,17 +186,30 @@ public function getOwnerProperties(Owner $owner): JsonResponse
             
             // Remove avatar from data array as we're using avatar_path
             unset($data['avatar']);
+            unset($data['additional_documents']);
             
-            if (!empty($additionalDocumentsMeta)) {
-                $data['additional_documents'] = $additionalDocumentsMeta;
-            }
-
             // Create owner with file paths
             $owner = Owner::create(array_merge($data, $filePaths, [
                 'added_by' => auth()->user()->id
             ]));
+
+            if ($request->hasFile('additional_documents') && Schema::hasTable('owner_additional_documents')) {
+                foreach ($request->file('additional_documents') as $index => $file) {
+                    if (!$file->isValid()) continue;
+                    $path = $file->store('owners/additional_documents', 'public');
+                    $owner->additionalDocuments()->create([
+                        'path' => $path,
+                        'original_name' => $file->getClientOriginalName(),
+                        'order' => $index
+                    ]);
+                }
+            }
             
-            $owner->load('location');
+            $relationships = ['location'];
+            if (Schema::hasTable('owner_additional_documents')) {
+                $relationships[] = 'additionalDocuments';
+            }
+            $owner->load($relationships);
 
             // مسح الكاش المتعلق بالـ owners
             $this->clearCache();
@@ -242,13 +239,18 @@ public function getOwnerProperties(Owner $owner): JsonResponse
         
         $cacheKey = self::CACHE_PREFIX . 'user_' . $user->id . '_show_' . $owner->id;
         
+        $relationships = ['location', 'addedBy'];
+        if (Schema::hasTable('owner_additional_documents')) {
+            $relationships[] = 'additionalDocuments';
+        }
+        
         if (method_exists(Cache::getStore(), 'tags')) {
-            $cachedOwner = Cache::tags([self::CACHE_TAG, self::CACHE_TAG . '_user_' . $user->id])->remember($cacheKey, self::CACHE_TTL, function () use ($owner) {
-                return $owner->load('location', 'addedBy');
+            $cachedOwner = Cache::tags([self::CACHE_TAG, self::CACHE_TAG . '_user_' . $user->id])->remember($cacheKey, self::CACHE_TTL, function () use ($owner, $relationships) {
+                return $owner->load($relationships);
             });
         } else {
-            $cachedOwner = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($owner) {
-                return $owner->load('location', 'addedBy');
+            $cachedOwner = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($owner, $relationships) {
+                return $owner->load($relationships);
             });
         }
         
@@ -258,8 +260,12 @@ public function getOwnerProperties(Owner $owner): JsonResponse
         );
     } catch (\Exception $e) {
         // Fallback بدون cache
+        $relationships = ['location', 'addedBy'];
+        if (Schema::hasTable('owner_additional_documents')) {
+            $relationships[] = 'additionalDocuments';
+        }
         return ApiResponse::success(
-            new OwnerResource($owner->load('location', 'addedBy')),
+            new OwnerResource($owner->load($relationships)),
             'Owner retrieved successfully (cache fallback)'
         );
     }
@@ -280,7 +286,7 @@ public function getOwnerProperties(Owner $owner): JsonResponse
             $data = $request->validated();
             
             // Remove file fields from data
-            unset($data['id_front'], $data['id_back'], $data['visa_copy'], $data['passport_copy'], $data['additional_documents']);
+            unset($data['id_front'], $data['id_back'], $data['visa_copy'], $data['passport_copy']);
             
             // Handle file uploads
             $fileFields = [
@@ -304,25 +310,6 @@ public function getOwnerProperties(Owner $owner): JsonResponse
                 }
             }
             
-            // Handle additional documents (append to existing)
-            $existingAdditionalDocs = $owner->additional_documents ?? [];
-            $additionalDocumentsMeta = [];
-            if ($request->hasFile('additional_documents')) {
-                foreach ($request->file('additional_documents') as $file) {
-                    if (!$file) {
-                        continue;
-                    }
-                    $path = $file->store("owners/documents", 'public');
-                    $additionalDocumentsMeta[] = [
-                        'name' => $file->getClientOriginalName(),
-                        'path' => $path,
-                    ];
-                }
-            }
-            if (!empty($additionalDocumentsMeta)) {
-                $data['additional_documents'] = array_merge($existingAdditionalDocs, $additionalDocumentsMeta);
-            }
-
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 // Delete old avatar
@@ -338,9 +325,28 @@ public function getOwnerProperties(Owner $owner): JsonResponse
             
             // Remove avatar from data array
             unset($data['avatar']);
+            unset($data['additional_documents']);
             
             $owner->update($data);
-            $owner->load('location');
+
+            if ($request->hasFile('additional_documents') && Schema::hasTable('owner_additional_documents')) {
+                $maxOrder = $owner->additionalDocuments()->max('order') ?? -1;
+                foreach ($request->file('additional_documents') as $index => $file) {
+                    if (!$file->isValid()) continue;
+                    $path = $file->store('owners/additional_documents', 'public');
+                    $owner->additionalDocuments()->create([
+                        'path' => $path,
+                        'original_name' => $file->getClientOriginalName(),
+                        'order' => $maxOrder + $index + 1
+                    ]);
+                }
+            }
+            
+            $relationships = ['location'];
+            if (Schema::hasTable('owner_additional_documents')) {
+                $relationships[] = 'additionalDocuments';
+            }
+            $owner->load($relationships);
 
             // مسح الكاش المتعلق بهذا الـ owner والـ owners عامة
             $this->clearCache();

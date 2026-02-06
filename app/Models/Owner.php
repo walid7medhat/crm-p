@@ -7,13 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Owner extends Model
 {
-    use HasFactory;
-
-    protected $guarded = [];
-
-    protected $casts = [
-        'additional_documents' => 'array',
-    ];
+    //
+       use HasFactory;
+    protected $guarded=[];
       public function getFullNameAttribute(): string
     {
         return "{$this->first_name} {$this->last_name}";
@@ -46,5 +42,10 @@ class Owner extends Model
     public function location()
     {
         return $this->belongsTo(Area::class, 'location_id');
+    }
+
+    public function additionalDocuments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(OwnerAdditionalDocument::class)->orderBy('order');
     }
 }

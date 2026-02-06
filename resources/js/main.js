@@ -94,12 +94,19 @@ Pusher.logToConsole = true
 
 window.Pusher = Pusher
 
+// Get base URL without /api for broadcasting auth
+const getBaseUrl = () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api';
+    // Remove /api from the end if present
+    return apiUrl.replace(/\/api\/?$/, '');
+};
+
 window.Echo = new Echo({
     broadcaster: 'pusher',
     key: import.meta.env.VITE_PUSHER_APP_KEY,
     cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
     forceTLS: true,
-    authEndpoint: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api/broadcasting/auth',
+    authEndpoint: `${getBaseUrl()}/broadcasting/auth`,
     auth: {
         headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,

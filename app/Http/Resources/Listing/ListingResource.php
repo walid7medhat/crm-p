@@ -75,6 +75,13 @@ class ListingResource extends JsonResource
             'spa_document' => $this->spa_document_path ? asset('storage/' . $this->spa_document_path) : null,
             'desk_document' => $this->desk_document_path ? asset('storage/' . $this->desk_document_path) : null,
             'other_document' => $this->other_document_path ? asset('storage/' . $this->other_document_path) : null,
+            'additional_documents' => $this->whenLoaded('additionalDocuments', function () {
+                return $this->additionalDocuments->map(fn ($doc) => [
+                    'id' => $doc->id,
+                    'url' => asset('storage/' . $doc->path),
+                    'name' => $doc->original_name ?? basename($doc->path),
+                ]);
+            }, []),
             'comment' => $this->comment,
             'my_listing' => $this->added_by == auth()->id(),
             'rent_expiry_date' => $this->rent_expiry_date,

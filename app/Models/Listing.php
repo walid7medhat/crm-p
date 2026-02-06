@@ -113,7 +113,12 @@ class Listing extends Model
     {
         return $this->morphMany(GalleryImage::class, 'imageable')->ordered();
     }
-    
+
+    public function additionalDocuments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ListingAdditionalDocument::class)->orderBy('order');
+    }
+
     public function isOwner($user)
     {
         if (!$user) return false;

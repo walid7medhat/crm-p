@@ -367,10 +367,12 @@ export default {
         },
         hasDocuments() {
             if (!this.owner) return false;
-            return this.owner.id_front_path || this.owner.id_back_path || 
+            const hasStandard = this.owner.id_front_path || this.owner.id_back_path ||
                    this.owner.visa_copy_path || this.owner.passport_copy_path ||
                    this.owner.id_front_url || this.owner.id_back_url ||
                    this.owner.visa_copy_url || this.owner.passport_copy_url;
+            const hasAdditional = this.owner.additional_documents && this.owner.additional_documents.length > 0;
+            return hasStandard || hasAdditional;
         },
         totalProperties() {
             return this.properties && Array.isArray(this.properties) ? this.properties.length : 0;
@@ -739,7 +741,16 @@ export default {
                     url: this.owner.passport_copy_path || this.owner.passport_copy_url
                 });
             }
-            
+            // Additional documents
+            if (this.owner.additional_documents && Array.isArray(this.owner.additional_documents)) {
+                this.owner.additional_documents.forEach(doc => {
+                    documents.push({
+                        title: doc.name || 'Document',
+                        type: 'additional',
+                        url: doc.url
+                    });
+                });
+            }
             return documents;
         },
 
@@ -752,7 +763,8 @@ export default {
                 'id_front': 'lucide:id-card',
                 'id_back': 'lucide:id-card',
                 'visa': 'lucide:file-text',
-                'passport': 'mdi:passport'
+                'passport': 'mdi:passport',
+                'additional': 'lucide:file-plus'
             };
             return icons[type] || 'lucide:file';
         },

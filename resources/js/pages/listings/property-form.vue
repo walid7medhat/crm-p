@@ -533,6 +533,29 @@
             </div>
 
             <div class="col-12">
+              <label class="form-label">Additional Documents</label>
+              <input
+                type="file"
+                class="form-control"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png,.svg"
+                @change="handleAdditionalDocumentsUpload"
+              />
+              <div v-if="form.additionalDocuments && form.additionalDocuments.length" class="mt-2">
+                <div
+                  v-for="(item, index) in form.additionalDocuments"
+                  :key="'new-' + index"
+                  class="d-flex align-items-center justify-content-between gap-2 small text-muted mb-1"
+                >
+                  <span class="text-truncate">{{ item.name || item.file?.name }}</span>
+                  <button type="button" class="btn btn-sm btn-outline-danger" @click="removeAdditionalDocument(index)">
+                    Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
               <div class="text-muted small">
                 Allowed types: PDF, JPG, JPEG, PNG, SVG. Max 10MB per file.
               </div>
@@ -922,37 +945,38 @@
               </div>
 
               <!-- Additional Documents -->
-              <div class="col-12 mt-3">
+              <div class="col-md-12 mt-3">
                 <label class="form-label">Additional Documents</label>
-                <div class="file-upload-area" @click="$refs.additionalOwnerDocs.click()">
+                <div class="file-upload-area" @click="$refs.additionalDocs.click()">
                   <div class="file-upload-icon">
                     <i class="fas fa-file-alt"></i>
                   </div>
                   <div class="file-upload-text">Upload Additional Documents</div>
-                  <div class="file-upload-hint">Max 5MB each • JPG, PNG, PDF • Multiple files allowed</div>
+                  <div class="file-upload-hint">You can select multiple files • Max 5MB each • JPG, PNG, PDF</div>
                   <input
-                    ref="additionalOwnerDocs"
+                    ref="additionalDocs"
                     type="file"
                     class="d-none"
                     multiple
-                    @change="handleNewOwnerAdditionalFiles"
+                    @change="handleNewOwnerAdditionalDocuments"
                     accept=".jpg,.jpeg,.png,.pdf"
                   />
                 </div>
                 <div v-if="newOwner.additional_documents && newOwner.additional_documents.length" class="mt-2">
-                  <span
+                  <div
                     v-for="(file, index) in newOwner.additional_documents"
                     :key="index"
-                    class="badge badge-info me-1 mb-1 d-inline-flex align-items-center"
+                    class="badge bg-secondary me-2 mb-2 d-inline-flex align-items-center"
                   >
                     <i class="fas fa-file me-1"></i>
                     <span class="text-truncate" style="max-width: 180px;">{{ file.name }}</span>
                     <button
                       type="button"
-                      class="btn-close btn-close-white btn-sm ms-2"
-                      @click.stop="removeNewOwnerAdditionalFile(index)"
+                      class="btn-close btn-close-white ms-2"
+                      aria-label="Remove"
+                      @click.stop="removeNewOwnerAdditionalDocument(index)"
                     ></button>
-                  </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1083,6 +1107,7 @@ const form = ref({
   mortgageComment: "", projectAreas: [], rented_status: "",      
   rented_until: "", payment_plan: "", payment_plans: [] ,driveLink: "", is_hot_deal: "",
   spa_document: null, desk_document: null, other_document: null,
+  additionalDocuments: [],
 });
 
 const isLoadingUnitNumber = ref(false);
@@ -1387,18 +1412,18 @@ const submitNewOwner = async () => {
   try {
     const formData = new FormData();
     for (const key in newOwner.value) {
-      if (key === 'additional_documents') continue;
       const value = newOwner.value[key];
-      if (value instanceof File) formData.append(key, value);
-      else if (value !== null && value !== "") formData.append(key, value);
-    }
-
-    if (Array.isArray(newOwner.value.additional_documents) && newOwner.value.additional_documents.length) {
-      newOwner.value.additional_documents.forEach((file, index) => {
-        if (file instanceof File) {
-          formData.append(`additional_documents[${index}]`, file);
-        }
-      });
+      if (key === 'additional_documents' && Array.isArray(value)) {
+        value.forEach(file => {
+          if (file instanceof File) {
+            formData.append('additional_documents[]', file);
+          }
+        });
+      } else if (value instanceof File) {
+        formData.append(key, value);
+      } else if (value !== null && value !== "") {
+        formData.append(key, value);
+      }
     }
 
     const response = await api.post("/listings/owners", formData, {
@@ -1437,7 +1462,7 @@ const handleNewOwnerFile = (e, field) => {
   if (file) newOwner.value[field] = file;
 };
 
-const handleNewOwnerAdditionalFiles = (e) => {
+const handleNewOwnerAdditionalDocuments = (e) => {
   const files = Array.from(e.target.files || []);
   if (!files.length) return;
 
@@ -1456,8 +1481,8 @@ const handleNewOwnerAdditionalFiles = (e) => {
 
   if (validFiles.length) {
     newOwner.value.additional_documents = [
-      ...(newOwner.value.additional_documents || []),
-      ...validFiles,
+      ...newOwner.value.additional_documents,
+      ...validFiles
     ];
     proxy.$showNotification(`✅ Added ${validFiles.length} additional document(s)`, "success");
   }
@@ -1465,7 +1490,7 @@ const handleNewOwnerAdditionalFiles = (e) => {
   e.target.value = '';
 };
 
-const removeNewOwnerAdditionalFile = (index) => {
+const removeNewOwnerAdditionalDocument = (index) => {
   if (!Array.isArray(newOwner.value.additional_documents)) return;
   newOwner.value.additional_documents.splice(index, 1);
 };
@@ -1555,6 +1580,32 @@ const handlePropertyDocumentUpload = (e, field) => {
 const removePropertyDocument = (field) => {
   form.value[field] = null;
   proxy.$showNotification("🗑️ Document removed", "info");
+};
+
+const handleAdditionalDocumentsUpload = (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml'];
+  const valid = files.filter(f => {
+    if (!validTypes.includes(f.type)) {
+      proxy.$showNotification(`❌ Invalid type: ${f.name}`, "error");
+      return false;
+    }
+    if (f.size > 10 * 1024 * 1024) {
+      proxy.$showNotification(`❌ File too large: ${f.name}`, "error");
+      return false;
+    }
+    return true;
+  });
+  if (valid.length) {
+    form.value.additionalDocuments = [...(form.value.additionalDocuments || []), ...valid.map(f => ({ file: f, name: f.name }))];
+    proxy.$showNotification(`✅ Added ${valid.length} document(s)`, "success");
+  }
+  e.target.value = '';
+};
+
+const removeAdditionalDocument = (index) => {
+  form.value.additionalDocuments.splice(index, 1);
 };
 
 const getImagePreview = (file) => {
@@ -1759,6 +1810,10 @@ const handleSubmit = async (action = 'draft') => {
     if (form.value.spa_document instanceof File) formData.append('spa_document', form.value.spa_document);
     if (form.value.desk_document instanceof File) formData.append('desk_document', form.value.desk_document);
     if (form.value.other_document instanceof File) formData.append('other_document', form.value.other_document);
+    (form.value.additionalDocuments || []).forEach((item) => {
+      const file = item?.file || item;
+      if (file instanceof File) formData.append('additional_documents[]', file);
+    });
 
     console.log('📤 Sending form data with action:', action);
     console.log('📋 Payment plan JSON:', form.value.payment_plan);
@@ -1807,6 +1862,7 @@ const resetForm = () => {
     rentExpiryDate: "", rentAmount: "", mortgageComment: "", projectAreas: [],
     rented_status: "", rented_until: "", payment_plan: "", payment_plans: []   , driveLink: ""  ,is_hot_deal:"",
     spa_document: null, desk_document: null, other_document: null,
+    additionalDocuments: [],
   };
   selectedOwner.value = null;
   selectedProject.value = null;

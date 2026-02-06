@@ -79,6 +79,8 @@ $listingId = $this->route('property');
         $rules['gallery'] = 'nullable|array';
         $rules['gallery.*'] = 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:10240';
         $rules['hero_image'] = 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:10240';
+        $rules['additional_documents'] = 'nullable|array';
+        $rules['additional_documents.*'] = 'nullable|file|mimes:pdf,jpg,jpeg,png,svg|max:10240';
 
         
 

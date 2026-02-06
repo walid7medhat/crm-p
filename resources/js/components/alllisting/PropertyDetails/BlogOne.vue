@@ -169,7 +169,7 @@
                   </div>
                   <div class="info-item">
                     <span class="info-label">Completion Status</span>
-                    <span class="info-value">{{ property.completion_status || "Not specified" }}</span>
+                    <span class="info-value">{{ property?.completion_status || "Not specified" }}</span>
                   </div>
                   
                   <!--<div class="info-item" v-if="false">-->
@@ -277,6 +277,24 @@
                 <h3 class="section-title mb-20">Notes</h3>
                 <div class="description-content">
                   <p class="description-text">{{ property.comment }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Property Documents -->
+            <div class="detailed-info-section mb-16" v-if="property.additional_documents && property.additional_documents.length > 0">
+              <div class="info-section">
+                <h3 class="section-title mb-20">
+                  <i class="ri-file-text-line me-2"></i>
+                  Property Documents
+                </h3>
+                <div class="documents-grid">
+                  <a v-for="doc in property.additional_documents" :key="doc.id"
+                     :href="doc.url" target="_blank" rel="noopener" class="document-card">
+                    <i class="ri-file-add-line document-icon"></i>
+                    <span class="document-name text-truncate">{{ doc.name || 'Document' }}</span>
+                    <i class="ri-external-link-line document-action"></i>
+                  </a>
                 </div>
               </div>
             </div>
@@ -652,13 +670,13 @@
                     
                               <!-- Active/Inactive -->
                               <button 
-                                v-if="canEditProperty"
+                                v-if="canEditProperty && property"
                                 class="dropdown-item"
                                 @click="toggleActive"
                               >
-                                <i class="ri-toggle-line" v-if="property.is_active"></i>
+                                <i class="ri-toggle-line" v-if="property?.is_active"></i>
                                 <i class="ri-toggle-fill" v-else></i>
-                                {{ property.is_active ? 'Set Inactive' : 'Set Active' }}
+                                {{ property?.is_active ? 'Set Inactive' : 'Set Active' }}
                               </button>
                     
                               <!-- Assign to Agent -->
@@ -673,7 +691,7 @@
                     
                               <!-- Mark as Converted (Sold Out) -->
                               <button 
-                                v-if="canMarkAsConverted && property.status !== 'converted'"
+                                v-if="canMarkAsConverted && property?.status !== 'converted'"
                                 class="dropdown-item success"
                                 @click="openSoldOutModal"
                               >
@@ -683,7 +701,7 @@
                     
                               <!-- Revert from Sold Out -->
                               <button 
-                                v-if="canMarkAsConverted && property.status === 'converted'"
+                                v-if="canMarkAsConverted && property?.status === 'converted'"
                                 class="dropdown-item warning"
                                 @click="revertFromConverted"
                               >
@@ -692,7 +710,7 @@
                               </button>
                               <!-- Viewing -->
             
-                    <div v-if="!isPropertyOwner && property.completion_status=='Completed'" class="dropdown-item-btn">
+                    <div v-if="!isPropertyOwner && property?.completion_status === 'Completed'" class="dropdown-item-btn">
                           <div v-if="requestStatus?.viewing_status === 'approved'" class="dropdown-item approved-info viewing">
                             <div>
                               <i class="ri-checkbox-circle-line text-success"></i>
@@ -1083,6 +1101,12 @@
             <span class="document-name">Visa Copy</span>
             <i class="ri-external-link-line document-action"></i>
           </button>
+          <a v-for="doc in (getOwnerDataForModal()?.additional_documents || [])" :key="doc.id"
+             :href="doc.url" target="_blank" rel="noopener" class="document-card">
+            <i class="ri-file-add-line document-icon"></i>
+            <span class="document-name text-truncate">{{ doc.name || 'Document' }}</span>
+            <i class="ri-external-link-line document-action"></i>
+          </a>
         </div>
       </div>
     </div>
@@ -1095,62 +1119,236 @@
   </div>
 </div>
     <!-- Sold Out Modal -->
-<div v-if="showSoldOutModal" class="modal-overlay" @click="showSoldOutModal = false">
-  <div class="modal-content" @click.stop>
-    <div class="modal-header">
-      <h4>
-        <i class="ri-award-line me-2"></i>
-        Mark as Sold Out
-      </h4>
-      <button class="modal-close" @click="showSoldOutModal = false">
+<!-- Mark as Sold Out Modal -->
+<div v-if="showSoldOutModal" class="modal-overlay" @click="closeSoldOutModal">
+  <div class="modal-content sold-out-modal-content" @click.stop>
+    <div class="modal-header sold-out-modal-header">
+      <div class="sold-out-header-inner">
+        <h4 class="sold-out-modal-title">
+          <i class="ri-award-line me-2"></i>
+          Mark as Sold Out
+        </h4>
+        <p class="sold-out-modal-subtitle">
+          {{ !soldByChoice ? 'Choose who sold this property' : 'Add the new owner for this property' }}
+        </p>
+      </div>
+      <button type="button" class="modal-close" @click="closeSoldOutModal" aria-label="Close">
         <i class="ri-close-line"></i>
       </button>
     </div>
-    
-    <div class="modal-body">
-      <div class="sold-out-options">
-        <div class="option-card" @click="markAsSold('me')">
-          <div class="option-icon">
-            <i class="ri-user-star-line"></i>
-          </div>
-          <div class="option-content">
-            <h6>Sold Out by Me</h6>
-          </div>
-          <div class="option-arrow">
-            <i class="ri-arrow-right-s-line"></i>
-          </div>
-        </div>
-        
-        <div class="option-card" @click="markAsSold('oia')">
-          <div class="option-icon">
-            <i class="ri-award-line"></i>
-          </div>
-          <div class="option-content">
-            <h6>Sold Out by Oia</h6>
-          </div>
-          <div class="option-arrow">
-            <i class="ri-arrow-right-s-line"></i>
-          </div>
-        </div>
-       <div class="option-card" @click="markAsSold('other_company')">
-          <div class="option-icon">
-            <i class="ri-forbid-line"></i>
-          </div>
-          <div class="option-content">
-            <h6>Sold Out by Other Company</h6>
-          </div>
-          <div class="option-arrow">
-            <i class="ri-arrow-right-s-line"></i>
-          </div>
-        </div>
 
+    <div class="modal-body sold-out-modal-body">
+      <!-- Step 1: Choose option -->
+      <template v-if="!soldByChoice">
+        <div class="sold-out-options">
+          <div class="option-card" @click="selectSoldBy('me')">
+            <div class="option-icon">
+              <i class="ri-user-star-line"></i>
+            </div>
+            <div class="option-content">
+              <h6>Sold Out by Me</h6>
+              <p>You closed this deal</p>
+            </div>
+            <div class="option-arrow">
+              <i class="ri-arrow-right-s-line"></i>
+            </div>
+          </div>
+          <div class="option-card" @click="selectSoldBy('oia')">
+            <div class="option-icon">
+              <i class="ri-award-line"></i>
+            </div>
+            <div class="option-content">
+              <h6>Sold Out by Oia</h6>
+              <p>Another Oia agent closed this deal</p>
+            </div>
+            <div class="option-arrow">
+              <i class="ri-arrow-right-s-line"></i>
+            </div>
+          </div>
+          <div class="option-card" @click="selectSoldBy('other_company')">
+            <div class="option-icon">
+              <i class="ri-forbid-line"></i>
+            </div>
+            <div class="option-content">
+              <h6>Sold Out by Other Company</h6>
+              <p>Sold by an external company</p>
+            </div>
+            <div class="option-arrow">
+              <i class="ri-arrow-right-s-line"></i>
+            </div>
+          </div>
+        </div>
+      </template>
 
+      <!-- Step 2: Add new owner (for Sold by Me / Sold by Oia) -->
+      <template v-else>
+        <div class="sold-out-add-owner-step">
+          <p class="sold-out-step-text">
+            Add the new owner details before marking as sold. You can then mark the property as sold.
+          </p>
+          <button type="button" class="btn-modal btn-modal-primary btn-add-owner-inline" @click="openAddOwnerModal">
+            <i class="ri-user-add-line me-2"></i>
+            Add New Owner
+          </button>
+        </div>
+      </template>
+    </div>
+
+    <div class="modal-footer sold-out-modal-footer">
+      <button v-if="soldByChoice" type="button" class="btn-modal btn-modal-secondary" @click="soldByChoice = null">
+        Back
+      </button>
+      <button type="button" class="btn-modal btn-modal-secondary" @click="closeSoldOutModal">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add New Owner Modal (for Sold by Me / Oia) -->
+<div v-if="showAddOwnerModal" class="modal-overlay add-owner-modal-overlay" @click="showAddOwnerModal = false">
+  <div class="modal-content add-owner-modal-content" style="max-width: 1200px; width: 95%; max-height: 95vh; overflow-y: auto;" @click.stop>
+    <div class="modal-header sold-out-modal-header">
+      <div class="sold-out-header-inner">
+        <h4 class="sold-out-modal-title">
+          <i class="ri-user-add-line me-2"></i>
+          Add New Owner
+        </h4>
+        <p class="sold-out-modal-subtitle">Enter the new owner details for this property</p>
+      </div>
+      <button type="button" class="modal-close" @click="showAddOwnerModal = false" aria-label="Close">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body add-owner-modal-body" style="padding: 1.5rem;">
+      <div class="row g-3">
+        <!-- Salutation -->
+        <div class="col-md-4">
+          <label class="form-label">Salutation <span class="text-danger">*</span></label>
+          <select v-model="newOwner.salutation" class="form-select">
+            <option value="">Select...</option>
+            <option>Mr</option>
+            <option>Mrs</option>
+            <option>Ms</option>
+            <option>Dr</option>
+          </select>
+        </div>
+        <!-- First Name -->
+        <div class="col-md-4">
+          <label class="form-label">First Name <span class="text-danger">*</span></label>
+          <input v-model="newOwner.first_name" type="text" class="form-control" placeholder="First name" @input="onlyLettersOwner('first_name')" />
+        </div>
+        <!-- Last Name -->
+        <div class="col-md-4">
+          <label class="form-label">Last Name <span class="text-danger">*</span></label>
+          <input v-model="newOwner.last_name" type="text" class="form-control" placeholder="Last name" @input="onlyLettersOwner('last_name')" />
+        </div>
+        <!-- Email -->
+        <div class="col-md-6">
+          <label class="form-label">Email</label>
+          <input v-model="newOwner.email" type="email" class="form-control" placeholder="Email" />
+        </div>
+        <!-- Phone -->
+        <div class="col-md-6">
+          <label class="form-label">Phone <span class="text-danger">*</span></label>
+          <input v-model="newOwner.phone_number" type="text" class="form-control" placeholder="Phone number" @input="onlyNumbersOwner('phone_number')" />
+        </div>
+        <!-- Whatsapp Number -->
+        <div class="col-md-6">
+          <label class="form-label">Whatsapp Number</label>
+          <input v-model="newOwner.whatsapp_number" type="text" class="form-control" placeholder="Whatsapp number" @input="onlyNumbersOwner('whatsapp_number')" />
+        </div>
+        <!-- Second Phone -->
+        <div class="col-md-6">
+          <label class="form-label">Second Phone</label>
+          <input v-model="newOwner.second_phone_number" type="text" class="form-control" placeholder="Second phone" @input="onlyNumbersOwner('second_phone_number')" />
+        </div>
+        <!-- Nationality -->
+        <div class="col-md-6">
+          <label class="form-label">Nationality</label>
+          <v-select v-model="newOwner.nationality" :options="ownerNationalities" placeholder="Select nationality" @update:modelValue="handleOwnerNationalityChange" />
+        </div>
+        <!-- Residency Status -->
+        <div class="col-md-3">
+          <label class="form-label">Residency Status</label>
+          <select v-model="newOwner.residency_status" class="form-select" :disabled="newOwner.nationality === 'UAE'">
+            <option value="">Select...</option>
+            <option value="resident">Resident</option>
+            <option value="non_resident">Non Resident</option>
+          </select>
+        </div>
+        <!-- Location -->
+        <div class="col-md-3">
+          <label class="form-label">{{ getOwnerLocationLabel() }}</label>
+          <v-select v-model="newOwner.location_id" :options="ownerLocations" label="name" :reduce="(loc) => loc.id" :placeholder="getOwnerLocationPlaceholder()" :disabled="!newOwner.residency_status || ownerLocations.length === 0" />
+        </div>
+        <!-- Documents Section -->
+        <div class="col-12">
+          <hr class="my-3">
+          <h6 class="mb-3">Documents</h6>
+        </div>
+        <!-- ID Front -->
+        <div class="col-md-6 col-lg-3">
+          <label class="form-label">ID Front</label>
+          <input type="file" class="form-control" @change="handleOwnerFileUpload($event, 'id_front')" accept="image/*,.pdf">
+          <div v-if="newOwner.id_front" class="mt-1">
+            <small class="text-success">File selected: {{ newOwner.id_front.name }}</small>
+          </div>
+        </div>
+        <!-- ID Back -->
+        <div class="col-md-6 col-lg-3">
+          <label class="form-label">ID Back</label>
+          <input type="file" class="form-control" @change="handleOwnerFileUpload($event, 'id_back')" accept="image/*,.pdf">
+          <div v-if="newOwner.id_back" class="mt-1">
+            <small class="text-success">File selected: {{ newOwner.id_back.name }}</small>
+          </div>
+        </div>
+        <!-- Visa Copy -->
+        <div class="col-md-6 col-lg-3">
+          <label class="form-label">Visa Copy</label>
+          <input type="file" class="form-control" @change="handleOwnerFileUpload($event, 'visa_copy')" accept="image/*,.pdf">
+          <div v-if="newOwner.visa_copy" class="mt-1">
+            <small class="text-success">File selected: {{ newOwner.visa_copy.name }}</small>
+          </div>
+        </div>
+        <!-- Passport Copy -->
+        <div class="col-md-6 col-lg-3">
+          <label class="form-label">Passport Copy</label>
+          <input type="file" class="form-control" @change="handleOwnerFileUpload($event, 'passport_copy')" accept="image/*,.pdf">
+          <div v-if="newOwner.passport_copy" class="mt-1">
+            <small class="text-success">File selected: {{ newOwner.passport_copy.name }}</small>
+          </div>
+        </div>
+        <!-- Additional Documents -->
+        <div class="col-12">
+          <label class="form-label">Additional Documents</label>
+          <input type="file" class="form-control" multiple accept=".pdf,.jpg,.jpeg,.png,.svg" @change="handleOwnerAdditionalDocumentsUpload">
+          <div v-if="newOwner.additionalDocuments && newOwner.additionalDocuments.length" class="mt-2">
+            <small class="text-muted d-block mb-1">Selected ({{ newOwner.additionalDocuments.length }})</small>
+            <div v-for="(item, idx) in newOwner.additionalDocuments" :key="'new-' + idx" class="d-flex align-items-center justify-content-between small mb-1">
+              <span class="text-truncate">{{ item.name || item.file?.name }}</span>
+              <button type="button" class="btn btn-sm btn-outline-danger ms-2" @click="removeOwnerAdditionalDocument(idx)">Remove</button>
+            </div>
+          </div>
+          <small class="text-muted">PDF, JPG, PNG, SVG. Max 10MB per file.</small>
+        </div>
+        <!-- Notes -->
+        <div class="col-12">
+          <label class="form-label">Notes</label>
+          <textarea v-model="newOwner.notes" rows="3" class="form-control" placeholder="Additional notes..."></textarea>
+        </div>
       </div>
     </div>
-    
-    <div class="modal-footer">
-      <button class="btn-modal btn-modal-secondary" @click="showSoldOutModal = false">
-        Cancel
+    <div class="modal-footer sold-out-modal-footer">
+      <button type="button" class="btn-modal btn-modal-secondary" @click="showAddOwnerModal = false">Cancel</button>
+      <button
+        type="button"
+        class="btn-modal btn-modal-primary"
+        :disabled="isSubmittingOwner || !newOwner.first_name?.trim() || !newOwner.last_name?.trim() || !newOwner.phone_number?.trim() || !newOwner.salutation"
+        @click="submitNewOwnerAndMarkSold"
+      >
+        <span v-if="isSubmittingOwner" class="spinner-border spinner-border-sm me-2"></span>
+        {{ isSubmittingOwner ? 'Saving...' : 'Save Owner' }}
       </button>
     </div>
   </div>
@@ -1394,7 +1592,7 @@
 </template>
 
 <script>
-import { ref, onMounted, getCurrentInstance, computed } from 'vue';
+import { ref, onMounted, getCurrentInstance, computed, watch } from 'vue';
 
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
@@ -1745,8 +1943,10 @@ const cancelViewingRequest = async () => {
     const hasOwnerDocuments = computed(() => {
       const owner = getOwnerDataForModal();
       if (!owner) return false;
-      return owner.id_front_path || owner.id_back_path || owner.passport_copy_path || owner.visa_copy_path ||
+      const hasStandard = owner.id_front_path || owner.id_back_path || owner.passport_copy_path || owner.visa_copy_path ||
              owner.id_front_url || owner.id_back_url || owner.passport_copy_url || owner.visa_copy_url;
+      const hasAdditional = owner.additional_documents && owner.additional_documents.length > 0;
+      return hasStandard || hasAdditional;
     });
 
   // Floor Plan Methods
@@ -1807,15 +2007,15 @@ const isAuthenticated = computed(() => {
 
 // New computed properties for dropdown actions
 const canAssignAgent = computed(() => {
-  const property = props.property; // 
+  const prop = property.value;
   const user = getCurrentUser();
 
-  if (!user || !property) return false;
+  if (!user || !prop) return false;
 
   console.log('User role_name:', user.role_name);
-  console.log('Property can_assign_agent:', property.user_permissions?.can_assign_agent);
+  console.log('Property can_assign_agent:', prop.user_permissions?.can_assign_agent);
 
-  return property.user_permissions?.can_assign_agent || false;
+  return prop.user_permissions?.can_assign_agent || false;
 });
 
 
@@ -2040,9 +2240,269 @@ const closeActionsDropdown = () => {
     };
 const showSoldOutModal = ref(false);
 
+const soldByChoice = ref(null);
+const showAddOwnerModal = ref(false);
+const isSubmittingOwner = ref(false);
+const ownerNationalities = ref([
+  "Afghanistan","Albania","Algeria","Andorra","Angola","Antigua and Barbuda","Argentina","Armenia","Australia","Austria",
+  "Azerbaijan","Bahamas","Bahrain","Bangladesh","Barbados","Belarus","Belgium","Belize","Benin","Bhutan",
+  "Bolivia","Bosnia and Herzegovina","Botswana","Brazil","Brunei","Bulgaria","Burkina Faso","Burundi",
+  "Cabo Verde","Cambodia","Cameroon","Canada","Central African Republic","Chad","Chile","China","Colombia",
+  "Comoros","Congo (Congo-Brazzaville)","Costa Rica","Croatia","Cuba","Cyprus","Czechia","Denmark",
+  "Djibouti","Dominica","Dominican Republic","Ecuador","Egypt","El Salvador","Equatorial Guinea","Eritrea",
+  "Estonia","Eswatini","Ethiopia","Fiji","Finland","France","Gabon","Gambia","Georgia","Germany","Ghana",
+  "Greece","Grenada","Guatemala","Guinea","Guinea-Bissau","Guyana","Haiti","Honduras","Hungary","Iceland",
+  "India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan",
+  "Kenya","Kiribati","Kuwait","Kyrgyzstan","Laos","Latvia","Lebanon","Lesotho","Liberia","Libya",
+  "Liechtenstein","Lithuania","Luxembourg","Madagascar","Malawi","Malaysia","Maldives","Mali","Malta",
+  "Marshall Islands","Mauritania","Mauritius","Mexico","Micronesia","Moldova","Monaco","Mongolia",
+  "Montenegro","Morocco","Mozambique","Myanmar","Namibia","Nauru","Nepal","Netherlands","New Zealand",
+  "Nicaragua","Niger","Nigeria","North Korea","North Macedonia","Norway","Oman","Pakistan","Palau",
+  "Palestine","Panama","Papua New Guinea","Paraguay","Peru","Philippines","Poland","Portugal","Qatar",
+  "Romania","Russia","Rwanda","Saint Kitts and Nevis","Saint Lucia","Saint Vincent and the Grenadines",
+  "Samoa","San Marino","Sao Tome and Principe","Saudi Arabia","Senegal","Serbia","Seychelles",
+  "Sierra Leone","Singapore","Slovakia","Slovenia","Solomon Islands","Somalia","South Africa","South Korea",
+  "South Sudan","Spain","Sri Lanka","Sudan","Suriname","Sweden","Switzerland","Syria","Taiwan","Tajikistan",
+  "Tanzania","Thailand","Timor-Leste","Togo","Tonga","Trinidad and Tobago","Tunisia","Turkey",
+  "Turkmenistan","Tuvalu","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States",
+  "Uruguay","Uzbekistan","Vanuatu","Vatican City","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"
+]);
+const ownerLocations = ref([]);
+const newOwner = ref({
+  salutation: '',
+  first_name: '',
+  last_name: '',
+  email: '',
+  phone_number: '',
+  whatsapp_number: '',
+  second_phone_number: '',
+  nationality: '',
+  residency_status: '',
+  location_id: '',
+  id_front: null,
+  id_back: null,
+  visa_copy: null,
+  passport_copy: null,
+  notes: '',
+  additionalDocuments: []
+});
+
 const openSoldOutModal = () => {
   showSoldOutModal.value = true;
+  soldByChoice.value = null;
   closeActionsDropdown();
+};
+
+const closeSoldOutModal = () => {
+  showSoldOutModal.value = false;
+  soldByChoice.value = null;
+};
+
+const selectSoldBy = (soldBy) => {
+  if (soldBy === 'other_company') {
+    markAsSold('other_company');
+    return;
+  }
+  soldByChoice.value = soldBy;
+};
+
+const openAddOwnerModal = () => {
+  showAddOwnerModal.value = true;
+};
+
+const resetNewOwnerForm = () => {
+  newOwner.value = {
+    salutation: '',
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone_number: '',
+    whatsapp_number: '',
+    second_phone_number: '',
+    nationality: '',
+    residency_status: '',
+    location_id: '',
+    id_front: null,
+    id_back: null,
+    visa_copy: null,
+    passport_copy: null,
+    notes: '',
+    additionalDocuments: []
+  };
+  ownerLocations.value = [];
+};
+
+const onlyLettersOwner = (field) => {
+  newOwner.value[field] = newOwner.value[field].replace(/[^a-zA-Z\u0600-\u06FF\s]/g, '').replace(/[0-9\u0660-\u0669]/g, '');
+};
+
+const onlyNumbersOwner = (field) => {
+  newOwner.value[field] = newOwner.value[field].replace(/[^0-9]/g, '');
+};
+
+const handleOwnerNationalityChange = (newNationality) => {
+  if (newNationality === 'UAE') {
+    newOwner.value.residency_status = 'resident';
+    fetchOwnerLocations('resident');
+  } else {
+    newOwner.value.residency_status = '';
+    newOwner.value.location_id = '';
+    ownerLocations.value = [];
+  }
+};
+
+const getOwnerLocationLabel = () => {
+  if (newOwner.value.nationality === 'UAE') {
+    return 'City';
+  } else if (newOwner.value.residency_status === 'resident') {
+    return 'Emirate';
+  } else if (newOwner.value.residency_status === 'non_resident') {
+    return 'Country';
+  }
+  return 'Location';
+};
+
+const getOwnerLocationPlaceholder = () => {
+  if (newOwner.value.nationality === 'UAE') {
+    return 'Select City';
+  } else if (newOwner.value.residency_status === 'resident') {
+    return 'Select Emirate';
+  } else if (newOwner.value.residency_status === 'non_resident') {
+    return 'Select Country';
+  }
+  return 'Select location';
+};
+
+const fetchOwnerLocations = async (residencyStatus) => {
+  try {
+    const response = await api.get(`/listings/owners/locations/available?residency_status=${residencyStatus}`);
+    ownerLocations.value = response.data.data || response.data;
+  } catch (error) {
+    console.error("❌ Error fetching locations:", error);
+    proxy.$showNotification("❌ Failed to load locations.", "error");
+  }
+};
+
+watch(() => newOwner.value.residency_status, async (newStatus) => {
+  if (newOwner.value.nationality === 'UAE') return;
+  if (newStatus) {
+    await fetchOwnerLocations(newStatus);
+  } else {
+    ownerLocations.value = [];
+    newOwner.value.location_id = '';
+  }
+});
+
+const MAX_OWNER_ADDITIONAL_SIZE = 10 * 1024 * 1024;
+const ALLOWED_OWNER_ADDITIONAL_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml'];
+
+const handleOwnerAdditionalDocumentsUpload = (event) => {
+  const files = event.target.files ? Array.from(event.target.files) : [];
+  if (!files.length) return;
+  const list = newOwner.value.additionalDocuments || [];
+  for (const file of files) {
+    if (file.size > MAX_OWNER_ADDITIONAL_SIZE) {
+      proxy.$showNotification(`File "${file.name}" exceeds 10MB`, "error");
+      continue;
+    }
+    if (!ALLOWED_OWNER_ADDITIONAL_TYPES.includes(file.type)) {
+      proxy.$showNotification(`File "${file.name}" has invalid type. Use PDF, JPG, PNG, SVG.`, "error");
+      continue;
+    }
+    list.push({ file, name: file.name });
+  }
+  newOwner.value.additionalDocuments = list;
+  event.target.value = '';
+};
+
+const removeOwnerAdditionalDocument = (index) => {
+  newOwner.value.additionalDocuments.splice(index, 1);
+};
+
+const handleOwnerFileUpload = (event, field) => {
+  const file = event.target.files[0];
+  if (file) {
+    if (file.size > 5 * 1024 * 1024) {
+      proxy.$showNotification("❌ File size must be less than 5MB", "error");
+      event.target.value = '';
+      return;
+    }
+    newOwner.value[field] = file;
+    proxy.$showNotification(`✅ ${field.replace('_', ' ')} uploaded successfully`, "success");
+  }
+};
+
+const submitNewOwnerAndMarkSold = async () => {
+  if (!newOwner.value.first_name?.trim() || !newOwner.value.last_name?.trim() || !newOwner.value.phone_number?.trim() || !newOwner.value.salutation) {
+    proxy.$showNotification('Please fill required fields: Salutation, First name, Last name, Phone', 'warning');
+    return;
+  }
+  const soldBy = soldByChoice.value;
+  if (!soldBy || !property.value?.id) return;
+
+  try {
+    isSubmittingOwner.value = true;
+    const formData = new FormData();
+    
+    // Append all form fields
+    if (newOwner.value.salutation) formData.append('salutation', newOwner.value.salutation);
+    formData.append('first_name', newOwner.value.first_name.trim());
+    formData.append('last_name', newOwner.value.last_name.trim());
+    if (newOwner.value.email?.trim()) formData.append('email', newOwner.value.email.trim());
+    formData.append('phone_number', newOwner.value.phone_number.trim());
+    if (newOwner.value.whatsapp_number?.trim()) formData.append('whatsapp_number', newOwner.value.whatsapp_number.trim());
+    if (newOwner.value.second_phone_number?.trim()) formData.append('second_phone_number', newOwner.value.second_phone_number.trim());
+    if (newOwner.value.nationality) formData.append('nationality', newOwner.value.nationality);
+    if (newOwner.value.residency_status) formData.append('residency_status', newOwner.value.residency_status);
+    if (newOwner.value.location_id) formData.append('location_id', newOwner.value.location_id);
+    if (newOwner.value.notes?.trim()) formData.append('notes', newOwner.value.notes.trim());
+    
+    // Append document files
+    if (newOwner.value.id_front instanceof File) formData.append('id_front', newOwner.value.id_front);
+    if (newOwner.value.id_back instanceof File) formData.append('id_back', newOwner.value.id_back);
+    if (newOwner.value.visa_copy instanceof File) formData.append('visa_copy', newOwner.value.visa_copy);
+    if (newOwner.value.passport_copy instanceof File) formData.append('passport_copy', newOwner.value.passport_copy);
+    
+    // Append additional documents
+    if (newOwner.value.additionalDocuments && newOwner.value.additionalDocuments.length > 0) {
+      newOwner.value.additionalDocuments.forEach((item, index) => {
+        const file = item.file || item;
+        if (file instanceof File) {
+          formData.append(`additional_documents[${index}]`, file);
+        }
+      });
+    }
+
+    const createRes = await api.post('/listings/owners', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    const createdOwner = createRes.data?.data || createRes.data;
+    if (!createdOwner?.id) throw new Error('Owner created but no ID returned');
+
+    await api.patch(`/listings/properties/${property.value.id}/owner`, {
+      owner_id: createdOwner.id
+    }, { headers: { 'Content-Type': 'application/json' } });
+
+    const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, {
+      sold_by: soldBy
+    });
+    if (response.data?.data || response.data?.status !== false) {
+      property.value.status = 'converted';
+      property.value.sold_by = soldBy;
+      property.value.owner_id = createdOwner.id;
+      if (property.value.owner) property.value.owner = createdOwner;
+      else property.value.owner = { id: createdOwner.id, full_name: `${createdOwner.first_name} ${createdOwner.last_name}` };
+      proxy.$showNotification('New owner added and property marked as sold!', 'success');
+    }
+    showAddOwnerModal.value = false;
+    showSoldOutModal.value = false;
+    soldByChoice.value = null;
+    resetNewOwnerForm();
+  } catch (error) {
+    handleApiError(error, 'Failed to add owner or mark as sold');
+  } finally {
+    isSubmittingOwner.value = false;
+  }
 };
 
 const markAsSold = async (soldBy) => {
@@ -2050,7 +2510,8 @@ const markAsSold = async (soldBy) => {
                     soldBy === 'other_company' ? 'Other Company' : 
                     'you';
   showSoldOutModal.value = false;
-  
+  soldByChoice.value = null;
+
   const result = await Swal.fire({
     title: `Mark as Sold by ${soldByText}?`,
     text: `This property will be marked as sold by ${soldByText}.`,
@@ -2212,10 +2673,15 @@ const revertFromConverted = async () => {
         error.value = null;
         const propertyId = route.params.id;
         
+        if (!propertyId) {
+          throw new Error('Property ID is missing');
+        }
+        
         const response = await api.get(`/listings/properties/${propertyId}`);
         
-        if (response.data.status) {
-          property.value = response.data.data;
+        // Handle both response formats: {status: true, data: ...} or direct data
+        if (response.data && (response.data.status === true || response.data.data)) {
+          property.value = response.data.data || response.data;
           
           console.log('Property Data:', property.value);
           console.log('Area Data:', property.value.area);
@@ -2228,11 +2694,17 @@ const revertFromConverted = async () => {
           
           await fetchRequestStatus();
           
+        } else if (response.data && response.data.status === false) {
+          // API returned an error response
+          throw new Error(response.data.message || 'Failed to retrieve listing');
         } else {
-          throw new Error(response.data.message || 'Failed to fetch property');
+          throw new Error('Invalid response format');
         }
       } catch (err) {
-        handleApiError(err, 'Failed to load property details');
+        console.error('Error fetching property:', err);
+        const errorMessage = err.response?.data?.message || err.message || 'Failed to load property details';
+        error.value = errorMessage;
+        handleApiError(err, errorMessage);
       } finally {
         loading.value = false;
       }
@@ -2868,10 +3340,23 @@ ${owner.address ? `Address: ${owner.address}` : ''}
     // Utility functions
     const handleApiError = (error, defaultMessage = 'An error occurred') => {
       console.error('API Error:', error);
+      console.error('Error Response:', error.response);
+      console.error('Error Data:', error.response?.data);
       
-      const errorMessage = error.response?.data?.message || 
-                      error.message || 
-                      defaultMessage;
+      let errorMessage = defaultMessage;
+      
+      if (error.response) {
+        // Server responded with an error
+        errorMessage = error.response.data?.message || 
+                      error.response.data?.error ||
+                      `Server error: ${error.response.status} ${error.response.statusText}`;
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = 'No response from server. Please check your connection.';
+      } else {
+        // Something else happened
+        errorMessage = error.message || defaultMessage;
+      }
       
       proxy.$showNotification(errorMessage, 'error');
       error.value = errorMessage;
@@ -4082,7 +4567,27 @@ const openDriveLink = () => {
         markAsSold,
         revertFromConverted,
         openSoldOutModal,
-        showSoldOutModal, 
+        showSoldOutModal,
+        soldByChoice,
+        showAddOwnerModal,
+        newOwner,
+        isSubmittingOwner,
+        ownerNationalities,
+        ownerLocations,
+        selectSoldBy,
+        closeSoldOutModal,
+        openAddOwnerModal,
+        submitNewOwnerAndMarkSold,
+        resetNewOwnerForm,
+        onlyLettersOwner,
+        onlyNumbersOwner,
+        handleOwnerNationalityChange,
+        getOwnerLocationLabel,
+        getOwnerLocationPlaceholder,
+        fetchOwnerLocations,
+        handleOwnerFileUpload,
+        handleOwnerAdditionalDocumentsUpload,
+        removeOwnerAdditionalDocument, 
 
 
           openFloorPlanSlider,
@@ -4103,9 +4608,11 @@ const openDriveLink = () => {
   openViewingModal,
   submitViewingRequest,
   formatTime,
-  canRequestViewing,
-  cancelViewingRequest,
-  getPaymentPlans,
+      canRequestViewing,
+      cancelViewingRequest,
+      showCancelViewingModal,
+      closeCancelReasonModal,
+      getPaymentPlans,
   hasPaymentPlans,
   isArrayPaymentPlan ,
   formatPaymentPlan,
@@ -6621,6 +7128,115 @@ margin-top: 20px;
   }
 }
 /* Sold Out Modal Styles */
+.sold-out-modal-content {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.sold-out-modal-header {
+  padding: 20px 24px;
+  background: linear-gradient(180deg, #fff 0%, #141e50c9 0%, #050a28f2 100%);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.sold-out-header-inner {
+  flex: 1;
+}
+
+.sold-out-modal-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: white !important;
+  line-height: 1.3;
+}
+
+.sold-out-modal-subtitle {
+  margin: 8px 0 0 0;
+  font-size: 1.05rem;
+  opacity: 0.92;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.sold-out-modal-body {
+  padding: 24px;
+  font-size: 1.05rem;
+  min-height: 120px;
+}
+
+.sold-out-modal-footer {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.sold-out-add-owner-step {
+  text-align: center;
+  padding: 12px 0;
+}
+
+.sold-out-step-text {
+  margin: 0 0 20px 0;
+  font-size: 1.05rem;
+  color: #495057;
+  line-height: 1.6;
+}
+
+.btn-add-owner-inline {
+  display: inline-flex;
+  align-items: center;
+  padding: 14px 28px;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+/* Add New Owner modal (from Sold Out flow) */
+.add-owner-modal-content {
+  width: 95%;
+  max-width: 1200px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.add-owner-modal-body {
+  padding: 24px 32px;
+}
+
+.add-owner-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.add-owner-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.add-owner-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.add-owner-input {
+  font-size: 1rem;
+  padding: 12px 14px;
+  border-radius: 8px;
+}
+
+/* Sold Out options list */
 .sold-out-options {
   display: flex;
   flex-direction: column;
@@ -6658,28 +7274,23 @@ margin-top: 20px;
   flex-shrink: 0;
 }
 
-.option-card:nth-child(1) .option-icon {
-  /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
-}
-
-.option-card:nth-child(2) .option-icon {
-  /* background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); */
-}
-
 .option-content {
   flex: 1;
 }
 
-.option-content h5 {
-  margin: 0 0 4px 0;
+.option-content h5,
+.option-content h6 {
+  margin: 0 0 6px 0;
   font-weight: 600;
+  font-size: 1.2rem;
   color: #01062d;
 }
 
 .option-content p {
   margin: 0;
-  font-size: 13px;
+  font-size: 0.95rem;
   color: #6c757d;
+  line-height: 1.4;
 }
 
 .option-arrow {

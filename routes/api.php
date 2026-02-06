@@ -237,10 +237,12 @@ Route::prefix('listings')->group(function(){
                 Route::patch('/{id}/assign-agent', [ListingController::class, 'assignAgent']);
                 Route::patch('/{id}/mark-converted', [ListingController::class, 'markAsConverted']);
                 Route::patch('/{id}/revert-converted', [ListingController::class, 'revertFromConverted']);
+                Route::patch('/{id}/owner', [ListingController::class, 'updateOwner']);
                Route::post('/{property}/set-hero-image', [ListingController::class, 'setHeroImage']);
             Route::get('/statistics/summary', [ListingController::class, 'getStatistics'])->name('listings.statistics');
            Route::delete('/{listing}/floor-plans/{floorPlan}', [ListingController::class, 'deleteFloorPlan'])->name('floor-plans.destroy');
            Route::delete('/{listing}/gallery/{gallery}', [ListingController::class, 'deleteGalleryImage'])->name('gallery.destroy');
+           Route::delete('/{listing}/additional-documents/{document}', [ListingController::class, 'deleteAdditionalDocument'])->name('listings.additional-documents.destroy');
            Route::post('/validate-unit-number',  [ListingController::class, 'validateUnitNumber']);
          });
          Route::get('/agents', [ListingController::class, 'getAgents']);

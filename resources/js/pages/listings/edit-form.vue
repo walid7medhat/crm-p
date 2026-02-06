@@ -566,6 +566,50 @@
         </div>
       </div>
 
+      <!-- 📄 Property Documents -->
+      <div class="col-lg-12">
+        <div class="card">
+          <div class="card-header">
+            <h6 class="card-title mb-0">Property Documents</h6>
+          </div>
+          <div class="card-body">
+            <div class="row gy-3">
+              <div class="col-12">
+                <label class="form-label">Additional Documents</label>
+                <input
+                  type="file"
+                  class="form-control"
+                  multiple
+                  accept=".pdf,.jpg,.jpeg,.png,.svg"
+                  @change="handleAdditionalDocumentsUpload"
+                />
+                <div v-if="existingAdditionalDocuments.length" class="mt-3">
+                  <label class="form-label small text-muted">Existing ({{ existingAdditionalDocuments.length }})</label>
+                  <div class="list-group list-group-flush">
+                    <div
+                      v-for="doc in existingAdditionalDocuments"
+                      :key="doc.id"
+                      class="list-group-item d-flex align-items-center justify-content-between"
+                    >
+                      <a :href="doc.url" target="_blank" rel="noopener" class="text-truncate flex-grow-1 me-2">{{ doc.name }}</a>
+                      <button type="button" class="btn btn-sm btn-outline-danger" @click="deleteExistingAdditionalDocument(doc.id)">Remove</button>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="form.additionalDocuments && form.additionalDocuments.length" class="mt-2">
+                  <label class="form-label small text-muted">New uploads</label>
+                  <div v-for="(item, index) in form.additionalDocuments" :key="'new-' + index" class="d-flex align-items-center justify-content-between gap-2 small mb-1">
+                    <span class="text-truncate">{{ item.name || item.file?.name }}</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger" @click="removeAdditionalDocument(index)">Remove</button>
+                  </div>
+                </div>
+                <div class="text-muted small mt-1">PDF, JPG, PNG, SVG. Max 10MB per file.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!--  Owner Section -->
       <div class="col-lg-12">
         <div class="card">
@@ -862,6 +906,7 @@ const paymentPlanOptions = [
 // Existing Data
 const existingFloorPlans = ref([]);
 const existingGalleryImages = ref([]);
+const existingAdditionalDocuments = ref([]);
 const currentHeroImage = ref(null);
 
 // Projects and Areas
@@ -1009,6 +1054,7 @@ const form = ref({
   payment_plans: [],
   payment_plan: "",
    is_hot_deal: "",
+  additionalDocuments: [],
 });
 
 // Computed Properties
@@ -1254,6 +1300,8 @@ const fetchPropertyData = async (id) => {
     
     existingFloorPlans.value = propertyData.floor_plans || [];
     existingGalleryImages.value = propertyData.gallery_images || [];
+    existingAdditionalDocuments.value = propertyData.additional_documents || [];
+    form.value.additionalDocuments = [];
     currentHeroImage.value = propertyData.hero_image || propertyData.main_image || null;
 
     if (propertyData.owner) {
@@ -1936,6 +1984,43 @@ const removeExistingGalleryImage = async (galleryId) => {
   }
 };
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_ADDITIONAL_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml'];
+
+const handleAdditionalDocumentsUpload = (event) => {
+  const files = event.target.files ? Array.from(event.target.files) : [];
+  if (!files.length) return;
+  const list = form.value.additionalDocuments || [];
+  for (const file of files) {
+    if (file.size > MAX_FILE_SIZE) {
+      proxy.$showNotification(`File "${file.name}" exceeds 10MB`, "error");
+      continue;
+    }
+    if (!ALLOWED_ADDITIONAL_TYPES.includes(file.type)) {
+      proxy.$showNotification(`File "${file.name}" has invalid type. Use PDF, JPG, PNG, SVG.`, "error");
+      continue;
+    }
+    list.push({ file, name: file.name });
+  }
+  form.value.additionalDocuments = list;
+  event.target.value = '';
+};
+
+const removeAdditionalDocument = (index) => {
+  form.value.additionalDocuments.splice(index, 1);
+};
+
+const deleteExistingAdditionalDocument = async (documentId) => {
+  try {
+    await api.delete(`/listings/properties/${propertyId.value}/additional-documents/${documentId}`);
+    existingAdditionalDocuments.value = existingAdditionalDocuments.value.filter(d => d.id !== documentId);
+    proxy.$showNotification("Document removed", "success");
+  } catch (error) {
+    console.error("❌ Error deleting additional document:", error);
+    proxy.$showNotification("❌ Failed to remove document", "error");
+  }
+};
+
 const getImagePreview = (file) => {
   if (file instanceof File) {
     return URL.createObjectURL(file);
@@ -2139,6 +2224,16 @@ const handleSubmit = async (action = 'draft') => {
         const file = item.file || item;
         if (file instanceof File) {
           formData.append(`gallery[${index}]`, file);
+        }
+      });
+    }
+
+    // Add additional documents
+    if (form.value.additionalDocuments && form.value.additionalDocuments.length > 0) {
+      form.value.additionalDocuments.forEach((item, index) => {
+        const file = item.file || item;
+        if (file instanceof File) {
+          formData.append(`additional_documents[${index}]`, file);
         }
       });
     }
