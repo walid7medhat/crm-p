@@ -168,6 +168,23 @@ public function getOwnerProperties(Owner $owner): JsonResponse
             $filePaths = [];
             $data = array_diff_key($data, array_flip($fileFields));
 
+            // Handle additional documents (multiple)
+            $additionalDocumentsMeta = [];
+            if ($request->hasFile('additional_documents')) {
+                foreach ($request->file('additional_documents') as $file) {
+                    if (!$file) {
+                        continue;
+                    }
+                    $path = $file->store("owners/documents", 'public');
+                    $additionalDocumentsMeta[] = [
+                        'name' => $file->getClientOriginalName(),
+                        'path' => $path,
+                    ];
+                }
+            }
+            // Remove raw additional_documents from data; we'll store metadata instead
+            unset($data['additional_documents']);
+
             foreach ($fileFields as $field) {
                 if ($request->hasFile($field)) {
                     $file = $request->file($field);
@@ -186,6 +203,10 @@ public function getOwnerProperties(Owner $owner): JsonResponse
             // Remove avatar from data array as we're using avatar_path
             unset($data['avatar']);
             
+            if (!empty($additionalDocumentsMeta)) {
+                $data['additional_documents'] = $additionalDocumentsMeta;
+            }
+
             // Create owner with file paths
             $owner = Owner::create(array_merge($data, $filePaths, [
                 'added_by' => auth()->user()->id
@@ -259,7 +280,7 @@ public function getOwnerProperties(Owner $owner): JsonResponse
             $data = $request->validated();
             
             // Remove file fields from data
-            unset($data['id_front'], $data['id_back'], $data['visa_copy'], $data['passport_copy']);
+            unset($data['id_front'], $data['id_back'], $data['visa_copy'], $data['passport_copy'], $data['additional_documents']);
             
             // Handle file uploads
             $fileFields = [
@@ -283,6 +304,25 @@ public function getOwnerProperties(Owner $owner): JsonResponse
                 }
             }
             
+            // Handle additional documents (append to existing)
+            $existingAdditionalDocs = $owner->additional_documents ?? [];
+            $additionalDocumentsMeta = [];
+            if ($request->hasFile('additional_documents')) {
+                foreach ($request->file('additional_documents') as $file) {
+                    if (!$file) {
+                        continue;
+                    }
+                    $path = $file->store("owners/documents", 'public');
+                    $additionalDocumentsMeta[] = [
+                        'name' => $file->getClientOriginalName(),
+                        'path' => $path,
+                    ];
+                }
+            }
+            if (!empty($additionalDocumentsMeta)) {
+                $data['additional_documents'] = array_merge($existingAdditionalDocs, $additionalDocumentsMeta);
+            }
+
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 // Delete old avatar

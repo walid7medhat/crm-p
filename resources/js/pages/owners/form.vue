@@ -274,6 +274,46 @@
                                     </div>
                                 </div>
 
+                                <!-- Additional Documents -->
+                                <div class="col-12">
+                                    <div class="mb-3">
+                                        <label class="form-label">Additional Documents</label>
+                                        <input
+                                            type="file"
+                                            class="form-control"
+                                            multiple
+                                            accept="image/*,.pdf"
+                                            @change="handleAdditionalDocumentsUpload"
+                                        >
+                                        <div class="form-text">
+                                            You can upload multiple extra documents (JPG, PNG, PDF, max 5MB each).
+                                        </div>
+
+                                        <div v-if="ownerForm.additional_documents && ownerForm.additional_documents.length" class="mt-2">
+                                            <span
+                                                v-for="(file, index) in ownerForm.additional_documents"
+                                                :key="index"
+                                                class="badge bg-info text-dark me-1 mb-1 d-inline-flex align-items-center"
+                                            >
+                                                <i class="bi bi-file-earmark-text me-1"></i>
+                                                <span class="text-truncate" style="max-width: 180px;">
+                                                    {{ file.name }}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    class="btn-close btn-close-white btn-sm ms-2"
+                                                    aria-label="Remove"
+                                                    @click.stop="removeAdditionalDocument(index)"
+                                                ></button>
+                                            </span>
+                                        </div>
+
+                                        <div v-if="errors.additional_documents" class="text-danger small mt-1">
+                                            {{ errors.additional_documents[0] }}
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Notes -->
                                 <div class="col-12">
                                     <div class="mb-3">
@@ -381,6 +421,7 @@ export default {
             visa_copy: null,
             passport_copy: null,
             notes: "",
+            additional_documents: [],
         });
 
       const nationalities = ref([
@@ -504,7 +545,7 @@ export default {
             }
         };
 
-        // Handle file upload
+        // Handle single file upload (ID/visa/passport)
         const handleFileUpload = (event, field) => {
             const file = event.target.files[0];
             if (file) {
@@ -517,6 +558,35 @@ export default {
                 ownerForm.value[field] = file;
                 showNotification(`✅ ${field.replace('_', ' ')} uploaded successfully`, "success");
             }
+        };
+
+        // Handle multiple additional documents
+        const handleAdditionalDocumentsUpload = (event) => {
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
+
+            const validFiles = files.filter(file => {
+                if (file.size > 5 * 1024 * 1024) {
+                    showNotification(`❌ File "${file.name}" must be less than 5MB`, "error");
+                    return false;
+                }
+                return true;
+            });
+
+            if (validFiles.length) {
+                ownerForm.value.additional_documents = [
+                    ...(ownerForm.value.additional_documents || []),
+                    ...validFiles,
+                ];
+                showNotification(`✅ Added ${validFiles.length} additional document(s)`, "success");
+            }
+
+            event.target.value = '';
+        };
+
+        const removeAdditionalDocument = (index) => {
+            if (!Array.isArray(ownerForm.value.additional_documents)) return;
+            ownerForm.value.additional_documents.splice(index, 1);
         };
 
         // Fetch owner data for editing
@@ -584,8 +654,9 @@ export default {
 
                 const formData = new FormData();
 
-                // Append all form data including avatar
+                // Append all form data including avatar (except additional_documents array)
                 Object.keys(ownerForm.value).forEach(key => {
+                    if (key === 'additional_documents') return;
                     const value = ownerForm.value[key];
                     if (value instanceof File) {
                         formData.append(key, value);
@@ -593,6 +664,15 @@ export default {
                         formData.append(key, value);
                     }
                 });
+
+                // Append additional documents as files[]
+                if (Array.isArray(ownerForm.value.additional_documents) && ownerForm.value.additional_documents.length) {
+                    ownerForm.value.additional_documents.forEach((file, index) => {
+                        if (file instanceof File) {
+                            formData.append(`additional_documents[${index}]`, file);
+                        }
+                    });
+                }
 
                 console.log('Submitting form data...');
                 let response;
@@ -683,6 +763,8 @@ export default {
             getLocationLabel,
             getLocationPlaceholder,
             handleFileUpload,
+            handleAdditionalDocumentsUpload,
+            removeAdditionalDocument,
             submitForm
         };
     }

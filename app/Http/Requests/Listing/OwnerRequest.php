@@ -30,6 +30,8 @@ class OwnerRequest extends FormRequest
             'id_back' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
             'visa_copy' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
             'passport_copy' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'additional_documents' => 'nullable|array',
+            'additional_documents.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
             
             'notes' => 'nullable|string',
             'avatar' =>'nullable|mimes:jpeg,png,jpg,gif',

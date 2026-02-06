@@ -7,9 +7,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Owner extends Model
 {
-    //
-       use HasFactory;
-    protected $guarded=[];
+    use HasFactory;
+
+    protected $guarded = [];
+
+    protected $casts = [
+        'additional_documents' => 'array',
+    ];
       public function getFullNameAttribute(): string
     {
         return "{$this->first_name} {$this->last_name}";

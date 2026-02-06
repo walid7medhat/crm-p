@@ -492,6 +492,56 @@
       </div>
     </div>
 
+    <!-- 📄 Property Documents Section -->
+    <div class="col-lg-12">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="card-title mb-0">Property Documents</h6>
+        </div>
+        <div class="card-body">
+          <div class="row gy-3">
+            <div class="col-md-4">
+              <label class="form-label">SPA Document</label>
+              <input
+                type="file"
+                class="form-control"
+                accept=".pdf,.jpg,.jpeg,.png,.svg"
+                @change="handlePropertyDocumentUpload($event, 'spa_document')"
+              />
+              <div v-if="form.spa_document" class="small text-muted mt-1 d-flex align-items-center justify-content-between gap-2">
+                <span class="text-truncate">{{ form.spa_document.name }}</span>
+                <button type="button" class="btn btn-sm btn-outline-danger" @click="removePropertyDocument('spa_document')">
+                  Remove
+                </button>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Other Document</label>
+              <input
+                type="file"
+                class="form-control"
+                accept=".pdf,.jpg,.jpeg,.png,.svg"
+                @change="handlePropertyDocumentUpload($event, 'other_document')"
+              />
+              <div v-if="form.other_document" class="small text-muted mt-1 d-flex align-items-center justify-content-between gap-2">
+                <span class="text-truncate">{{ form.other_document.name }}</span>
+                <button type="button" class="btn btn-sm btn-outline-danger" @click="removePropertyDocument('other_document')">
+                  Remove
+                </button>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="text-muted small">
+                Allowed types: PDF, JPG, JPEG, PNG, SVG. Max 10MB per file.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Owner Section -->
     <div class="col-lg-12">
       <div class="card">
@@ -870,6 +920,41 @@
                   </span>
                 </div>
               </div>
+
+              <!-- Additional Documents -->
+              <div class="col-12 mt-3">
+                <label class="form-label">Additional Documents</label>
+                <div class="file-upload-area" @click="$refs.additionalOwnerDocs.click()">
+                  <div class="file-upload-icon">
+                    <i class="fas fa-file-alt"></i>
+                  </div>
+                  <div class="file-upload-text">Upload Additional Documents</div>
+                  <div class="file-upload-hint">Max 5MB each • JPG, PNG, PDF • Multiple files allowed</div>
+                  <input
+                    ref="additionalOwnerDocs"
+                    type="file"
+                    class="d-none"
+                    multiple
+                    @change="handleNewOwnerAdditionalFiles"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                  />
+                </div>
+                <div v-if="newOwner.additional_documents && newOwner.additional_documents.length" class="mt-2">
+                  <span
+                    v-for="(file, index) in newOwner.additional_documents"
+                    :key="index"
+                    class="badge badge-info me-1 mb-1 d-inline-flex align-items-center"
+                  >
+                    <i class="fas fa-file me-1"></i>
+                    <span class="text-truncate" style="max-width: 180px;">{{ file.name }}</span>
+                    <button
+                      type="button"
+                      class="btn-close btn-close-white btn-sm ms-2"
+                      @click.stop="removeNewOwnerAdditionalFile(index)"
+                    ></button>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -980,6 +1065,7 @@ const newOwner = ref({
   phone_number: "", whatsapp_number: "", second_phone_number: "",
   nationality: "", residency_status: "", location_id: "",
   id_front: null, id_back: null, visa_copy: null, passport_copy: null, notes: "",
+  additional_documents: [],
 });
 const locations = ref([]);
 const isLoadingLocations = ref(false);
@@ -995,7 +1081,8 @@ const form = ref({
   comment: "", mortgageStatus: "", occupancyStatus: "",
   mortgageAmount: "", rentExpiryDate: "", rentAmount: "",
   mortgageComment: "", projectAreas: [], rented_status: "",      
-  rented_until: "", payment_plan: "", payment_plans: [] ,driveLink: "", is_hot_deal: ""
+  rented_until: "", payment_plan: "", payment_plans: [] ,driveLink: "", is_hot_deal: "",
+  spa_document: null, desk_document: null, other_document: null,
 });
 
 const isLoadingUnitNumber = ref(false);
@@ -1300,9 +1387,18 @@ const submitNewOwner = async () => {
   try {
     const formData = new FormData();
     for (const key in newOwner.value) {
+      if (key === 'additional_documents') continue;
       const value = newOwner.value[key];
       if (value instanceof File) formData.append(key, value);
       else if (value !== null && value !== "") formData.append(key, value);
+    }
+
+    if (Array.isArray(newOwner.value.additional_documents) && newOwner.value.additional_documents.length) {
+      newOwner.value.additional_documents.forEach((file, index) => {
+        if (file instanceof File) {
+          formData.append(`additional_documents[${index}]`, file);
+        }
+      });
     }
 
     const response = await api.post("/listings/owners", formData, {
@@ -1320,6 +1416,7 @@ const submitNewOwner = async () => {
       phone_number: "", whatsapp_number: "", second_phone_number: "",
       nationality: "", residency_status: "", location_id: "",
       id_front: null, id_back: null, visa_copy: null, passport_copy: null, notes: "",
+      additional_documents: [],
     };
     locations.value = [];
     showAddOwner.value = false;
@@ -1338,6 +1435,39 @@ const submitNewOwner = async () => {
 const handleNewOwnerFile = (e, field) => {
   const file = e.target.files[0];
   if (file) newOwner.value[field] = file;
+};
+
+const handleNewOwnerAdditionalFiles = (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+  const validFiles = files.filter(file => {
+    if (!validTypes.includes(file.type)) {
+      proxy.$showNotification(`❌ File "${file.name}" is not a valid type.`, "error");
+      return false;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      proxy.$showNotification(`❌ File "${file.name}" is too large. Max size is 5MB.`, "error");
+      return false;
+    }
+    return true;
+  });
+
+  if (validFiles.length) {
+    newOwner.value.additional_documents = [
+      ...(newOwner.value.additional_documents || []),
+      ...validFiles,
+    ];
+    proxy.$showNotification(`✅ Added ${validFiles.length} additional document(s)`, "success");
+  }
+
+  e.target.value = '';
+};
+
+const removeNewOwnerAdditionalFile = (index) => {
+  if (!Array.isArray(newOwner.value.additional_documents)) return;
+  newOwner.value.additional_documents.splice(index, 1);
 };
 
 const handleFloorPlanUpload = (e) => {
@@ -1398,6 +1528,33 @@ const handleGalleryUpload = (e) => {
       proxy.$showNotification(`✅ Added ${validFiles.length} image(s) to gallery`, "success");
     }
   }
+};
+
+const handlePropertyDocumentUpload = (e, field) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml'];
+  if (!validTypes.includes(file.type)) {
+    proxy.$showNotification(`❌ File "${file.name}" is not a valid type.`, "error");
+    e.target.value = '';
+    return;
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    proxy.$showNotification(`❌ File "${file.name}" is too large. Max size is 10MB.`, "error");
+    e.target.value = '';
+    return;
+  }
+
+  form.value[field] = file;
+  e.target.value = '';
+  proxy.$showNotification(`✅ Added document: ${file.name}`, "success");
+};
+
+const removePropertyDocument = (field) => {
+  form.value[field] = null;
+  proxy.$showNotification("🗑️ Document removed", "info");
 };
 
 const getImagePreview = (file) => {
@@ -1599,6 +1756,10 @@ const handleSubmit = async (action = 'draft') => {
       });
     }
 
+    if (form.value.spa_document instanceof File) formData.append('spa_document', form.value.spa_document);
+    if (form.value.desk_document instanceof File) formData.append('desk_document', form.value.desk_document);
+    if (form.value.other_document instanceof File) formData.append('other_document', form.value.other_document);
+
     console.log('📤 Sending form data with action:', action);
     console.log('📋 Payment plan JSON:', form.value.payment_plan);
 
@@ -1644,7 +1805,8 @@ const resetForm = () => {
     size_sqmt: "", size_sqft: "", hero_image: null, floorPlans: [], gallery: [],
     comment: "", mortgageStatus: "", occupancyStatus: "", mortgageAmount: "",
     rentExpiryDate: "", rentAmount: "", mortgageComment: "", projectAreas: [],
-    rented_status: "", rented_until: "", payment_plan: "", payment_plans: []   , driveLink: ""  ,is_hot_deal:""
+    rented_status: "", rented_until: "", payment_plan: "", payment_plans: []   , driveLink: ""  ,is_hot_deal:"",
+    spa_document: null, desk_document: null, other_document: null,
   };
   selectedOwner.value = null;
   selectedProject.value = null;
