@@ -41,6 +41,16 @@
                     v-model:model-duplicate-handling="duplicateHandling"
                 />
 
+                <!-- Hidden Field Values Tab Content -->
+                <HiddenFieldValuesTab
+                    v-else-if="activeTab === 'hidden-fields'"
+                />
+
+                <!-- Facebook Lead Ads Tab Content -->
+                <!-- <FacebookLeadAdsTab
+                    v-else-if="activeTab === 'facebook-leads'"
+                /> -->
+
                 <!-- Other Tabs Content (Placeholder) -->
                 <div v-else class="tab-content">
                     <h4 class="section-title">{{ tabs.find(t => t.id === activeTab)?.name }}</h4>
@@ -61,6 +71,8 @@
 import { ref, watch } from 'vue'
 import { BModal } from 'bootstrap-vue-3'
 import CrmEntitiesTab from './CrmEntitiesTab.vue'
+import HiddenFieldValuesTab from './HiddenFieldValuesTab.vue'
+// import FacebookLeadAdsTab from './FacebookLeadAdsTab.vue'
 
 const props = defineProps({
     modelValue: {
