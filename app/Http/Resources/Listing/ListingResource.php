@@ -1,5 +1,4 @@
 <?php
-// app/Http/Resources/Listing/ListingResource.php
 
 namespace App\Http\Resources\Listing;
 
@@ -15,11 +14,14 @@ class ListingResource extends JsonResource
         // Manual permission check
         $canEdit = false;
         $canDelete = false;
+        $showDocuments=false;
         
         if ($user) {
             $canEdit = $user->id == $this->added_by || 
                     ($this->agent_id && $user->id == $this->agent_id) || $user->hasRole('super_admin');
             $canDelete = auth()->user()->hasRole('super_admin');
+            $showDocuments= $user->id == $this->added_by || 
+                    ($this->agent_id && $user->id == $this->agent_id) || $user->hasRole('super_admin');
         }
          $canAssignAgent = false;
 
@@ -108,6 +110,7 @@ class ListingResource extends JsonResource
                     'developer'=>$this->project->developer_id,
                      'developer_name'=>$this->project->developer?->name,
                         'image' => $this->project->mainImage ? asset('storage/' . $this->project->mainImage->image_path) : null,
+                    'floor_plan_images' => FloorPlanImageResource::collection($this->project->floorPlanImages),
                 ];
             }),
             
@@ -120,9 +123,16 @@ class ListingResource extends JsonResource
                     'name' => $floorPlan->name,
                     'image_url' => $floorPlan->image_path ? asset('storage/' . $floorPlan->image_path) : null,
                     'order' => $floorPlan->order,
+                      'created_at' => $floorPlan->created_at,
+                    'project_id' => $floorPlan->project_floor_plan_id
                 ];
             }),
-
+            'floor_plans_source' => $this->floor_plans_source ?? [
+                'from_project' => 0,
+                'uploaded' => 0,
+                'total' => 0,
+                'selected_project_plans' => []
+            ],
             'converted_at' => $this->converted_at?->format('Y-m-d H:i:s'),
             'converted_by' => $this->whenLoaded('convertedBy', function () {
                 return [
@@ -145,6 +155,7 @@ class ListingResource extends JsonResource
                 'can_delete' => $canDelete,
                 'is_owner' => $this->isOwner($user),
                    'can_assign_agent' => $canAssignAgent, 
+                 'showDocuments'=>$showDocuments
             ],
             'is_owner' => $this->isOwner($user),
 

@@ -26,8 +26,28 @@ class Listing extends Model
         'converted_at'=>'datetime',
         //  'rented_until' => 'date',
           'payment_plan' => 'array',
+             'floor_plans_source' => 'array',
+      
     ];
-
+ public function getFloorPlansSourcesAttribute()
+    {
+        $sources = [
+            'from_project' => 0,
+            'uploaded' => 0,
+            'total' => 0
+        ];
+        
+        foreach ($this->floorPlans as $floorPlan) {
+            if ($floorPlan->is_from_project) {
+                $sources['from_project']++;
+            } else {
+                $sources['uploaded']++;
+            }
+            $sources['total']++;
+        }
+        
+        return $sources;
+    }
     protected static function boot()
     {
         parent::boot();
@@ -113,12 +133,7 @@ class Listing extends Model
     {
         return $this->morphMany(GalleryImage::class, 'imageable')->ordered();
     }
-
-    public function additionalDocuments(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(ListingAdditionalDocument::class)->orderBy('order');
-    }
-
+    
     public function isOwner($user)
     {
         if (!$user) return false;
@@ -305,5 +320,9 @@ class Listing extends Model
     }
     public function accessRequests(){
         return $this->hasMany(ListingAccessRequest::class,'listing_id');
+    }
+    public function additionalDocuments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ListingAdditionalDocument::class)->orderBy('order');
     }
 }

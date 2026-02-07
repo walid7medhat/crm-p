@@ -83,7 +83,7 @@
               </div>
 
               <!-- Payment Plan -->
-              <div class="col-md-4">
+              <div class="col-md-4" v-if="form.completionStatus === 'Under Construction'">
                 <label class="form-label">Payment Plans</label>
                 <v-select 
                   v-model="form.payment_plans" 
@@ -454,117 +454,419 @@
       </div>
 
       <!-- 📐 Floor Plans Section -->
-      <div class="col-lg-12">
-        <div class="card">
-          <div class="card-header">
-            <h6 class="card-title mb-0">Floor Plans</h6>
-          </div>
-          <div class="card-body">
-            <div class="row gy-3">
-              <div class="col-12">
-                <label class="form-label">Upload New Floor Plans</label>
-                <input 
-                  type="file" 
-                  class="form-control" 
-                  multiple 
-                  @change="handleFloorPlanUpload" 
-                  accept="image/*"
-                  ref="floorPlanInput"
-                />
-                <div class="text-muted small mt-1">
-                  You can choose multiple floor plan images (PNG, JPG, JPEG, SVG, WebP). Max 10MB per image.
+            <div class="col-lg-12">
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h6 class="card-title mb-0">Floor Plans</h6>
+                  <div class="d-flex align-items-center gap-2">
+                    <!-- Project Floor Plans Button -->
+                    <button 
+                      v-if="selectedProject && projectFloorPlans.length > 0" 
+                      type="button" 
+                      class="btn btn-sm btn-outline-primary"
+                      @click="showProjectFloorPlans = !showProjectFloorPlans"
+                      :title="showProjectFloorPlans ? 'Hide project floor plans' : 'Show project floor plans'"
+                    >
+                      <i class="fas fa-building me-1"></i>
+                      {{ showProjectFloorPlans ? 'Hide Project Plans' : 'Show Project Plans' }}
+                      <span class="badge bg-primary ms-1">{{ projectFloorPlans.length }}</span>
+                    </button>
+                    
+                    <!-- Add Floor Plans Button -->
+                    <button 
+                      type="button" 
+                      class="btn btn-sm btn-primary"
+                      @click="$refs.floorPlanInput.click()"
+                    >
+                      <i class="fas fa-plus me-1"></i>
+                      Add New Plans
+                    </button>
+                  </div>
                 </div>
-              </div>
-
-              <!-- Existing Floor Plans -->
-              <div class="col-12" v-if="existingFloorPlans.length > 0">
-                <label class="form-label mb-3 text-primary">Existing Floor Plans ({{ existingFloorPlans.length }})</label>
-                <div class="row g-3">
-                  <div 
-                    v-for="(floorPlan, index) in existingFloorPlans" 
-                    :key="floorPlan.id"
-                    class="col-xl-3 col-lg-4 col-md-6"
-                  >
-                    <div class="floor-plan-item position-relative">
-                      <div class="card h-100">
-                        <img 
-                          :src="floorPlan.image_url" 
-                          class="card-img-top floor-plan-image" 
-                          alt="Floor plan image"
-                          style="height: 200px; object-fit: cover;"
-                          @error="handleImageError"
-                        />
-                        <div class="card-body p-3">
-                          <p class="card-text small text-truncate mb-1">{{ floorPlan.name }}</p>
-                          <p class="card-text small text-muted">Uploaded: {{ formatDate(floorPlan.created_at) }}</p>
+                
+                <div class="card-body">
+                  <!-- Project Floor Plans Section -->
+                  <div v-if="selectedProject && showProjectFloorPlans && projectFloorPlans.length > 0" class="mb-4">
+                    <div class="alert alert-info">
+                      <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                          <i class="fas fa-info-circle me-2"></i>
+                          <strong>Project Floor Plans:</strong> {{ selectedProject.name }}
                         </div>
                         <button 
                           type="button" 
-                          class="btn-close position-absolute top-0 end-0 m-2 bg-danger rounded-circle p-1"
-                          @click="removeExistingFloorPlan(floorPlan.id)"
-                          style="--bs-bg-opacity: 0.8;"
-                          title="Delete floor plan"
-                        ></button>
+                          class="btn btn-sm btn-outline-info"
+                          @click="loadAllProjectFloorPlans"
+                        >
+                          <i class="fas fa-sync-alt me-1"></i>
+                          Load All
+                        </button>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- New Floor Plans Preview -->
-              <div class="col-12" v-if="form.floorPlans.length > 0">
-                <label class="form-label mb-3 text-success">New Floor Plans ({{ form.floorPlans.length }})</label>
-                <div class="row g-3">
-                  <div 
-                    v-for="(item, index) in form.floorPlans" 
-                    :key="index"
-                    class="col-xl-3 col-lg-4 col-md-6"
-                  >
-                    <div class="floor-plan-item position-relative">
-                      <div class="card h-100">
-                        <img 
-                          :src="item.preview || getImagePreview(item.file || item)" 
-                          class="card-img-top floor-plan-image" 
-                          alt="Floor plan image"
-                          style="height: 200px; object-fit: cover;"
-                          @error="handleImageError"
-                        />
-                        <div class="card-body p-3">
-                          <div class="mb-2">
-                            <label class="form-label small">Plan Name</label>
-                            <input 
-                              v-model="item.customName" 
-                              type="text" 
-                              class="form-control form-control-sm" 
-                              placeholder="Enter plan name"
+                    
+                    <div class="row g-3">
+                      <div 
+                        v-for="(floorPlan, index) in projectFloorPlans" 
+                        :key="`project-${floorPlan.id}`"
+                        class="col-xl-3 col-lg-4 col-md-6"
+                      >
+                        <div class="project-floor-plan-item position-relative">
+                          <div class="card h-100 border-info">
+                            <img 
+                              :src="floorPlan.image_url" 
+                              class="card-img-top floor-plan-image" 
+                              alt="Project floor plan"
+                              style="height: 180px; object-fit: cover;"
+                              @error="handleImageError"
+                              loading="lazy"
                             />
+                            <div class="card-body p-3">
+                              <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                  <p class="card-text small text-truncate mb-1 fw-semibold">
+                                    {{ floorPlan.name || 'Unnamed Plan' }}
+                                  </p>
+                                  <p class="card-text small text-muted">
+                                    <i class="fas fa-project-diagram me-1"></i>
+                                    Project Plan
+                                  </p>
+                                </div>
+                                
+                                <button 
+                                  type="button" 
+                                  class="btn btn-sm btn-success"
+                                  @click="importProjectFloorPlan(floorPlan)"
+                                  :disabled="isFloorPlanImported(floorPlan.id)"
+                                  :title="isFloorPlanImported(floorPlan.id) ? 'Already imported' : 'Import to property'"
+                                >
+                                  <i class="fas" :class="isFloorPlanImported(floorPlan.id) ? 'fa-check' : 'fa-download'"></i>
+                                </button>
+                              </div>
+                              
+                             
+                              
+                              <div class="mt-2 d-flex justify-content-between">
+                                <small class="text-muted">
+                                  <i class="fas fa-sort-numeric-down me-1"></i>
+                                  Order: {{ floorPlan.sort_order || 0 }}
+                                </small>
+                                <small class="text-muted">
+                                  <i class="fas fa-calendar me-1"></i>
+                                  {{ formatDate(floorPlan.created_at) }}
+                                </small>
+                              </div>
+                            </div>
                           </div>
-                          <p class="card-text small text-truncate mb-1">{{ item.name || item.file?.name }}</p>
-                          <p class="card-text small text-muted">{{ formatFileSize(item.size || item.file?.size) }}</p>
+                          
+                          <!-- Imported Badge -->
+                          <span 
+                            v-if="isFloorPlanImported(floorPlan.id)" 
+                            class="position-absolute top-0 start-0 badge bg-success"
+                            style="transform: translate(-5px, -5px);"
+                          >
+                            <i class="fas fa-check me-1"></i>
+                            Imported
+                          </span>
                         </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Load More Button -->
+                    <div v-if="projectFloorPlans.length < totalProjectFloorPlans" class="text-center mt-3">
+                      <button 
+                        type="button" 
+                        class="btn btn-sm btn-outline-secondary"
+                        @click="loadMoreProjectFloorPlans"
+                        :disabled="loadingProjectFloorPlans"
+                      >
+                        <span v-if="loadingProjectFloorPlans">
+                          <span class="spinner-border spinner-border-sm me-2"></span>
+                          Loading...
+                        </span>
+                        <span v-else>
+                          <i class="fas fa-arrow-down me-1"></i>
+                          Load More ({{ totalProjectFloorPlans - projectFloorPlans.length }} remaining)
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+            
+                  <div class="row gy-3">
+                    <!-- New Floor Plans Upload -->
+                    <div class="col-12">
+                      <div class="mb-3">
+                        <label class="form-label">Upload New Floor Plans</label>
+                        <div class="input-group">
+                          <input 
+                            type="file" 
+                            class="form-control" 
+                            multiple 
+                            @change="handleFloorPlanUpload" 
+                            accept="image/*"
+                            ref="floorPlanInput"
+                          />
+                          <button 
+                            class="btn btn-outline-secondary" 
+                            type="button"
+                            @click="$refs.floorPlanInput.click()"
+                          >
+                            <i class="fas fa-cloud-upload-alt"></i>
+                          </button>
+                        </div>
+                        <div class="text-muted small mt-1">
+                          You can choose multiple floor plan images (PNG, JPG, JPEG, SVG, WebP). Max 10MB per image.
+                        </div>
+                      </div>
+                    </div>
+            
+                    <!-- Property Floor Plans -->
+                    <div class="col-12">
+                      <!-- Tabs for Floor Plans -->
+                      <div class="nav nav-tabs mb-3" role="tablist">
                         <button 
-                          type="button" 
-                          class="btn-close position-absolute top-0 end-0 m-2 bg-danger rounded-circle p-1"
-                          @click="removeFloorPlan(index)"
-                          style="--bs-bg-opacity: 0.8;"
-                        ></button>
+                          class="nav-link active" 
+                          :class="{ 'active': floorPlanTab === 'existing' }"
+                          @click="floorPlanTab = 'existing'"
+                          type="button"
+                        >
+                          <i class="fas fa-database me-1"></i>
+                          Existing Plans
+                          <span class="badge bg-primary ms-1">{{ existingFloorPlans.length }}</span>
+                        </button>
+                        <button 
+                          class="nav-link" 
+                          :class="{ 'active': floorPlanTab === 'new' }"
+                          @click="floorPlanTab = 'new'"
+                          type="button"
+                        >
+                          <i class="fas fa-plus-circle me-1"></i>
+                          New Plans
+                          <span class="badge bg-success ms-1">{{ form.floorPlans.length }}</span>
+                        </button>
+                        <button 
+                          v-if="importedFloorPlans.length > 0"
+                          class="nav-link" 
+                          :class="{ 'active': floorPlanTab === 'imported' }"
+                          @click="floorPlanTab = 'imported'"
+                          type="button"
+                        >
+                          <i class="fas fa-download me-1"></i>
+                          Imported from Project
+                          <span class="badge bg-info ms-1">{{ importedFloorPlans.length }}</span>
+                        </button>
+                      </div>
+            
+                      <!-- Tab Content -->
+                      <div class="tab-content">
+                        <!-- Existing Floor Plans Tab -->
+                        <div v-if="floorPlanTab === 'existing'" class="tab-pane fade show active">
+                          <div v-if="existingFloorPlans.length > 0" class="row g-3">
+                            <div 
+                              v-for="(floorPlan, index) in existingFloorPlans" 
+                              :key="floorPlan.id"
+                              class="col-xl-3 col-lg-4 col-md-6"
+                            >
+                              <div class="floor-plan-item position-relative">
+                                <div class="card h-100">
+                                  <img 
+                                    :src="floorPlan.image_url" 
+                                    class="card-img-top floor-plan-image" 
+                                    alt="Floor plan image"
+                                    style="height: 200px; object-fit: cover;"
+                                    @error="handleImageError"
+                                  />
+                                  <div class="card-body p-3">
+                                    <p class="card-text small text-truncate mb-1 fw-semibold">
+                                      {{ floorPlan.name || 'Unnamed Plan' }}
+                                    </p>
+                                    <p class="card-text small text-muted">Uploaded: {{ formatDate(floorPlan.created_at) }}</p>
+                                    
+                                    <!-- Edit Name -->
+                                    <!--<div class="mt-2">-->
+                                    <!--  <input -->
+                                    <!--    type="text" -->
+                                    <!--    class="form-control form-control-sm" -->
+                                    <!--    v-model="floorPlan.editName"-->
+                                    <!--    placeholder="Edit plan name..."-->
+                                    <!--    @change="updateFloorPlanName(floorPlan.id, floorPlan.editName)"-->
+                                    <!--  />-->
+                                    <!--</div>-->
+                                    
+                                    <!-- Source Badge -->
+                                    <div v-if="floorPlan.source === 'project'" class="mt-2">
+                                      <span class="badge bg-info">
+                                        <i class="fas fa-building me-1"></i>
+                                        From Project
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <button 
+                                    type="button" 
+                                    class="btn-close position-absolute top-0 end-0 m-2 bg-danger rounded-circle p-1"
+                                    @click="removeExistingFloorPlan(floorPlan.id)"
+                                    style="--bs-bg-opacity: 0.8;"
+                                    title="Delete floor plan"
+                                  ></button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div v-else class="text-center py-5 border rounded bg-light">
+                            <i class="fas fa-blueprint fa-3x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">No existing floor plans</p>
+                          </div>
+                        </div>
+            
+                        <!-- New Floor Plans Tab -->
+                        <div v-if="floorPlanTab === 'new'" class="tab-pane fade show active">
+                          <div v-if="form.floorPlans.length > 0" class="row g-3">
+                            <div 
+                              v-for="(item, index) in form.floorPlans" 
+                              :key="index"
+                              class="col-xl-3 col-lg-4 col-md-6"
+                            >
+                              <div class="floor-plan-item position-relative">
+                                <div class="card h-100 border-success">
+                                  <img 
+                                    :src="item.preview || getImagePreview(item.file || item)" 
+                                    class="card-img-top floor-plan-image" 
+                                    alt="Floor plan image"
+                                    style="height: 200px; object-fit: cover;"
+                                    @error="handleImageError"
+                                  />
+                                  <div class="card-body p-3">
+                                    <div class="mb-2">
+                                      <label class="form-label small">Plan Name</label>
+                                      <input 
+                                        v-model="item.customName" 
+                                        type="text" 
+                                        class="form-control form-control-sm" 
+                                        placeholder="Enter plan name"
+                                        @change="validateFloorPlanName(item, index)"
+                                      />
+                                      <small v-if="item.nameError" class="text-danger">{{ item.nameError }}</small>
+                                    </div>
+                                    <p class="card-text small text-truncate mb-1">{{ item.name || item.file?.name }}</p>
+                                    <p class="card-text small text-muted">{{ formatFileSize(item.size || item.file?.size) }}</p>
+                                    
+                                   
+                                  </div>
+                                  <button 
+                                    type="button" 
+                                    class="btn-close position-absolute top-0 end-0 m-2 bg-danger rounded-circle p-1"
+                                    @click="removeFloorPlan(index)"
+                                    style="--bs-bg-opacity: 0.8;"
+                                    title="Remove floor plan"
+                                  ></button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div v-else class="text-center py-5 border rounded bg-light">
+                            <i class="fas fa-plus-circle fa-3x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">No new floor plans uploaded</p>
+                            <p class="text-muted small mt-2">Click "Add New Plans" button above</p>
+                          </div>
+                        </div>
+            
+                        <!-- Imported Floor Plans Tab -->
+                        <div v-if="floorPlanTab === 'imported'" class="tab-pane fade show active">
+                          <div v-if="importedFloorPlans.length > 0" class="row g-3">
+                            <div 
+                              v-for="(item, index) in importedFloorPlans" 
+                              :key="`imported-${index}`"
+                              class="col-xl-3 col-lg-4 col-md-6"
+                            >
+                              <div class="floor-plan-item position-relative">
+                                <div class="card h-100 border-info">
+                                  <div class="card-header bg-info text-white py-2 text-center">
+                                    <small>
+                                      <i class="fas fa-building me-1"></i>
+                                      From Project
+                                    </small>
+                                  </div>
+                                  <img 
+                                    :src="item.image_url" 
+                                    class="card-img-top floor-plan-image" 
+                                    alt="Imported floor plan"
+                                    style="height: 180px; object-fit: cover;"
+                                    @error="handleImageError"
+                                  />
+                                  <div class="card-body p-3">
+                                    <p class="card-text small text-truncate mb-1 fw-semibold">
+                                      {{ item.name || 'Imported Plan' }}
+                                    </p>
+                                    
+                                    <!-- Edit Name for Imported Plans -->
+                                    <div class="mb-2">
+                                      <input 
+                                        type="text" 
+                                        class="form-control form-control-sm" 
+                                        v-model="item.editName"
+                                        placeholder="Edit plan name..."
+                                        @change="updateImportedPlanName(item)"
+                                      />
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                      <small class="text-muted">
+                                        <i class="fas fa-project-diagram me-1"></i>
+                                        Project ID: {{ item.project_id }}
+                                      </small>
+                                      
+                                      <button 
+                                        type="button" 
+                                        class="btn btn-sm btn-danger"
+                                        @click="removeImportedFloorPlan(index)"
+                                        title="Remove imported plan"
+                                      >
+                                        <i class="fas fa-trash"></i>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div v-else class="text-center py-5 border rounded bg-light">
+                            <i class="fas fa-download fa-3x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">No imported floor plans</p>
+                            <p class="text-muted small mt-2">Import floor plans from the project above</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+            
+                    <!-- Empty State -->
+                    <div class="col-12" v-if="existingFloorPlans.length === 0 && form.floorPlans.length === 0 && importedFloorPlans.length === 0">
+                      <div class="text-center py-5 border rounded bg-light">
+                        <i class="fas fa-blueprint fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No floor plans uploaded yet. Add floor plans to showcase your property layout!</p>
+                        <div class="mt-3">
+                          <button 
+                            type="button" 
+                            class="btn btn-primary me-2"
+                            @click="$refs.floorPlanInput.click()"
+                          >
+                            <i class="fas fa-upload me-1"></i>
+                            Upload Floor Plans
+                          </button>
+                          <button 
+                            v-if="selectedProject"
+                            type="button" 
+                            class="btn btn-outline-primary"
+                            @click="showProjectFloorPlans = true"
+                          >
+                            <i class="fas fa-building me-1"></i>
+                            Import from Project
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              <!-- Empty State -->
-              <div class="col-12" v-if="existingFloorPlans.length === 0 && form.floorPlans.length === 0">
-                <div class="text-center py-5 border rounded bg-light">
-                  <i class="fas fa-blueprint fa-3x text-muted mb-3"></i>
-                  <p class="text-muted mb-0">No floor plans uploaded yet. Add floor plans to showcase your property layout!</p>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
 
       <!-- 📄 Property Documents -->
       <div class="col-lg-12">
@@ -609,7 +911,6 @@
           </div>
         </div>
       </div>
-
       <!--  Owner Section -->
       <div class="col-lg-12">
         <div class="card">
@@ -915,6 +1216,16 @@ const isLoadingProjects = ref(false);
 const selectedProject = ref(null);
 const areaSelectKey = ref(0);
 
+
+const showProjectFloorPlans = ref(false);
+const projectFloorPlans = ref([]);
+const totalProjectFloorPlans = ref(0);
+const loadingProjectFloorPlans = ref(false);
+const currentProjectPage = ref(1);
+const floorPlanTab = ref('existing');
+const importedFloorPlans = ref([]);
+
+
 // Options for v-select fields
 const saleRentOptions = ['Sale', 'Rent'];
 const completionStatusOptions = ['Completed', 'Under Construction'];
@@ -1054,7 +1365,6 @@ const form = ref({
   payment_plans: [],
   payment_plan: "",
    is_hot_deal: "",
-  additionalDocuments: [],
 });
 
 // Computed Properties
@@ -1106,7 +1416,18 @@ watch(() => form.value.saleOrRent, (newValue) => {
     form.value.rented_until = "";
   }
 });
-
+watch(() => form.value.saleOrRent, (newValue) => {
+  if (newValue === 'Sale') {
+    form.value.rented_status = "";
+    form.value.rented_until = "";
+    
+    // If sale and completed, clear payment plans
+    if (form.value.completionStatus === 'Completed') {
+      form.value.payment_plans = [];
+      form.value.payment_plan = null;
+    }
+  }
+});
 // Watch for payment_plans changes to convert to payment_plan string
 watch(() => form.value.payment_plans, (newValue) => {
   console.log('🔄 Payment plans changed:', newValue);
@@ -1180,6 +1501,12 @@ const fetchPropertyData = async (id) => {
     if (propertyData.project && propertyData.project.id) {
       matchedProject = projects.value.find(p => p.id === propertyData.project.id);
     }
+     if (propertyData.imported_floor_plans) {
+        importedFloorPlans.value = propertyData.imported_floor_plans.map(plan => ({
+          ...plan,
+          editName: plan.name
+        }));
+      }
     
     selectedProject.value = matchedProject;
     
@@ -1301,7 +1628,6 @@ const fetchPropertyData = async (id) => {
     existingFloorPlans.value = propertyData.floor_plans || [];
     existingGalleryImages.value = propertyData.gallery_images || [];
     existingAdditionalDocuments.value = propertyData.additional_documents || [];
-    form.value.additionalDocuments = [];
     currentHeroImage.value = propertyData.hero_image || propertyData.main_image || null;
 
     if (propertyData.owner) {
@@ -1409,6 +1735,11 @@ watch(() => selectedProject.value, async (newProject, oldProject) => {
       }
       
       areaSelectKey.value++;
+          await fetchProjectFloorPlans(1);
+    
+            importedFloorPlans.value = [];
+            
+            showProjectFloorPlans.value = false;
       
     } catch (error) {
       console.error('❌ Error fetching project areas:', error);
@@ -1423,6 +1754,10 @@ watch(() => selectedProject.value, async (newProject, oldProject) => {
     }
     
     areaSelectKey.value++;
+       projectFloorPlans.value = [];
+    totalProjectFloorPlans.value = 0;
+    importedFloorPlans.value = [];
+    showProjectFloorPlans.value = false;
   }
 });
 
@@ -1866,7 +2201,180 @@ const handleNewOwnerFile = (e, field) => {
   const file = e.target.files[0];
   if (file) newOwner.value[field] = file;
 };
+const fetchProjectFloorPlans = async (page = 1) => {
+  if (!selectedProject.value) return;
+  
+  try {
+    loadingProjectFloorPlans.value = true;
+    
+    const response = await api.get(`/listings/projects/${selectedProject.value.id}/floor-plans`, {
+      params: {
+        page: page,
+        per_page: 12
+      }
+    });
+    
+    const data = response.data.data || response.data;
+    
+    if (Array.isArray(data)) {
+      if (page === 1) {
+        projectFloorPlans.value = data;
+      } else {
+        projectFloorPlans.value = [...projectFloorPlans.value, ...data];
+      }
+      totalProjectFloorPlans.value = response.data.total || data.length;
+      currentProjectPage.value = page;
+    } else if (data.floor_plans) {
+      if (page === 1) {
+        projectFloorPlans.value = data.floor_plans;
+      } else {
+        projectFloorPlans.value = [...projectFloorPlans.value, ...data.floor_plans];
+      }
+      totalProjectFloorPlans.value = data.total || data.floor_plans.length;
+      currentProjectPage.value = page;
+    }
+    
+    console.log(`✅ Loaded ${projectFloorPlans.value.length} project floor plans`);
+    
+  } catch (error) {
+    console.error("❌ Error fetching project floor plans:", error);
+    proxy.$showNotification("❌ Failed to load project floor plans", "error");
+  } finally {
+    loadingProjectFloorPlans.value = false;
+  }
+};
 
+// دالة لجلب جميع فلور بلان المشروع
+const loadAllProjectFloorPlans = async () => {
+  if (!selectedProject.value) return;
+  
+  try {
+    loadingProjectFloorPlans.value = true;
+    
+    const response = await api.get(`/listings/projects/${selectedProject.value.id}/floor-plans`, {
+      params: {
+        all: true
+      }
+    });
+    
+    const data = response.data.data || response.data;
+    
+    if (Array.isArray(data)) {
+      projectFloorPlans.value = data;
+      totalProjectFloorPlans.value = data.length;
+    } else if (data.floor_plans) {
+      projectFloorPlans.value = data.floor_plans;
+      totalProjectFloorPlans.value = data.total || data.floor_plans.length;
+    }
+    
+    proxy.$showNotification(`✅ Loaded ${projectFloorPlans.value.length} floor plans from project`, "success");
+    
+  } catch (error) {
+    console.error("❌ Error loading all project floor plans:", error);
+    proxy.$showNotification("❌ Failed to load project floor plans", "error");
+  } finally {
+    loadingProjectFloorPlans.value = false;
+  }
+};
+
+const loadMoreProjectFloorPlans = async () => {
+  if (!selectedProject.value || loadingProjectFloorPlans.value) return;
+  
+  await fetchProjectFloorPlans(currentProjectPage.value + 1);
+};
+
+const isFloorPlanImported = (projectFloorPlanId) => {
+  const isImported = importedFloorPlans.value.some(
+    plan => plan.project_floor_plan_id === projectFloorPlanId
+  );
+  
+  const isExisting = existingFloorPlans.value.some(
+    plan => plan.project_floor_plan_id === projectFloorPlanId
+  );
+  
+  const isNew = form.value.floorPlans.some(
+    plan => plan.project_floor_plan_id === projectFloorPlanId
+  );
+  
+  return isImported || isExisting || isNew;
+};
+
+const importProjectFloorPlan = async (projectFloorPlan) => {
+  try {
+    const importedPlan = {
+      id: `imported-${Date.now()}-${projectFloorPlan.id}`,
+      name: projectFloorPlan.name,
+      editName: projectFloorPlan.name,
+      image_url: projectFloorPlan.image_url,
+      project_id: selectedProject.value.id,
+      project_floor_plan_id: projectFloorPlan.id,
+      sort_order: projectFloorPlan.sort_order || 0,
+      created_at: new Date().toISOString(),
+      is_imported: true
+    };
+    
+    importedFloorPlans.value.push(importedPlan);
+    
+    floorPlanTab.value = 'imported';
+    
+    proxy.$showNotification(`✅ Floor plan "${projectFloorPlan.name}" imported successfully`, "success");
+    
+  } catch (error) {
+    console.error("❌ Error importing floor plan:", error);
+    proxy.$showNotification("❌ Failed to import floor plan", "error");
+  }
+};
+
+const updateImportedPlanName = (item) => {
+  if (item.editName && item.editName.trim() !== '') {
+    item.name = item.editName.trim();
+    proxy.$showNotification("✅ Plan name updated", "info");
+  }
+};
+
+const removeImportedFloorPlan = (index) => {
+  importedFloorPlans.value.splice(index, 1);
+  proxy.$showNotification("🗑️ Imported plan removed", "info");
+};
+
+const updateFloorPlanName = async (floorPlanId, newName) => {
+  if (!newName || newName.trim() === '') {
+    proxy.$showNotification("❌ Plan name cannot be empty", "error");
+    return;
+  }
+  
+  try {
+    await api.put(`/listings/properties/${propertyId.value}/floor-plans/${floorPlanId}`, {
+      name: newName.trim()
+    });
+    
+    const planIndex = existingFloorPlans.value.findIndex(fp => fp.id === floorPlanId);
+    if (planIndex !== -1) {
+      existingFloorPlans.value[planIndex].name = newName.trim();
+    }
+    
+    proxy.$showNotification("✅ Floor plan name updated successfully", "success");
+    
+  } catch (error) {
+    console.error("❌ Error updating floor plan name:", error);
+    proxy.$showNotification("❌ Failed to update floor plan name", "error");
+  }
+};
+
+const validateFloorPlanName = (item, index) => {
+  if (!item.customName || item.customName.trim() === '') {
+    item.nameError = 'Floor plan name is required';
+    return false;
+  }
+  
+  if (item.customName.length > 100) {
+    item.nameError = 'Name must be less than 100 characters';
+    return false;
+  }
+  
+  item.nameError = '';
+  return true;
+};
 // Floor Plan Functions
 const handleFloorPlanUpload = (e) => {
   const files = Array.from(e.target.files);
@@ -1892,15 +2400,21 @@ const handleFloorPlanUpload = (e) => {
         size: file.size,
         type: file.type,
         customName: file.name.replace(/\.[^/.]+$/, ""),
-        preview: URL.createObjectURL(file)
+     
+        preview: URL.createObjectURL(file),
+        is_new: true
       }));
       
       form.value.floorPlans = [...form.value.floorPlans, ...filesWithNames];
+      
+      floorPlanTab.value = 'new';
+      
       e.target.value = '';
       proxy.$showNotification(`✅ Added ${validFiles.length} floor plan(s)`, "success");
     }
   }
 };
+
 
 const removeFloorPlan = (index) => {
   if (form.value.floorPlans[index] && form.value.floorPlans[index].preview) {
@@ -1983,7 +2497,6 @@ const removeExistingGalleryImage = async (galleryId) => {
     proxy.$showNotification("❌ Failed to delete gallery image", "error");
   }
 };
-
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_ADDITIONAL_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml'];
 
@@ -2020,7 +2533,6 @@ const deleteExistingAdditionalDocument = async (documentId) => {
     proxy.$showNotification("❌ Failed to remove document", "error");
   }
 };
-
 const getImagePreview = (file) => {
   if (file instanceof File) {
     return URL.createObjectURL(file);
@@ -2155,8 +2667,18 @@ const handleSubmit = async (action = 'draft') => {
       formData.append('rented_until', form.value.rented_until);
     }
     
-    if (form.value.payment_plan) {
-      formData.append('payment_plan', form.value.payment_plan);
+    // if (form.value.payment_plan ) {
+    //   formData.append('payment_plan', form.value.payment_plan);
+    // }
+     if (form.value.completionStatus === 'Under Construction') {
+      // Payment plans are allowed for under construction
+      if (form.value.payment_plans.length > 0) {
+        formData.append('payment_plan', form.value.payment_plan);
+      }
+    } else if (form.value.completionStatus === 'Completed') {
+      // Clear any payment plans for completed properties
+      form.value.payment_plans = [];
+      form.value.payment_plan = null;
     }
 
     // Add project ID if selected
@@ -2178,7 +2700,15 @@ const handleSubmit = async (action = 'draft') => {
   if (form.value.drive_link) {
       formData.append('drive_link', form.value.drive_link);
     }
- 
+  if (importedFloorPlans.value.length > 0) {
+      importedFloorPlans.value.forEach((plan, index) => {
+        formData.append(`imported_floor_plans[${index}][name]`, plan.name);
+        formData.append(`imported_floor_plans[${index}][image_url]`, plan.image_url);
+        formData.append(`imported_floor_plans[${index}][project_id]`, plan.project_id);
+        formData.append(`imported_floor_plans[${index}][project_floor_plan_id]`, plan.project_floor_plan_id);
+        formData.append(`imported_floor_plans[${index}][sort_order]`, plan.sort_order || index);
+      });
+    }
     formData.append('is_hot_deal', form.value.is_hot_deal || 'No');
     
     const textFields = {
@@ -2227,8 +2757,7 @@ const handleSubmit = async (action = 'draft') => {
         }
       });
     }
-
-    // Add additional documents
+     // Add additional documents
     if (form.value.additionalDocuments && form.value.additionalDocuments.length > 0) {
       form.value.additionalDocuments.forEach((item, index) => {
         const file = item.file || item;
@@ -2335,7 +2864,17 @@ const cleanupObjectURLs = () => {
       URL.revokeObjectURL(item.preview);
     }
   });
+   importedFloorPlans.value.forEach(item => {
+    if (item.preview) {
+      URL.revokeObjectURL(item.preview);
+    }
+  });
 };
+const totalFloorPlans = computed(() => {
+  return existingFloorPlans.value.length + 
+         form.value.floorPlans.length + 
+         importedFloorPlans.value.length;
+});
 const debugFormData = () => {
   console.log('🔍 Debug Form Data:', {
     payment_plans: form.value.payment_plans,
@@ -2596,5 +3135,102 @@ onUnmounted(() => {
 body.swal2-toast-shown  {
     z-index: 10000 !important;
 }
+/* أضف في نهاية الـ style */
+.project-floor-plan-item .card {
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+}
+
+.project-floor-plan-item .card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 123, 255, 0.2);
+  border-color: #0d6efd;
+}
+
+.project-floor-plan-item .btn-success {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.nav-tabs {
+  border-bottom: 2px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+  border: none;
+  color: #6c757d;
+  font-weight: 500;
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.nav-tabs .nav-link:hover {
+  color: #0d6efd;
+  border: none;
+}
+
+.nav-tabs .nav-link.active {
+  color: #0d6efd;
+  background-color: transparent;
+  border: none;
+  border-bottom: 3px solid #0d6efd;
+  font-weight: 600;
+}
+
+.tab-content {
+  padding: 1.5rem 0;
+}
+
+.floor-plan-item .card {
+  transition: all 0.3s ease;
+}
+
+.floor-plan-item .card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.floor-plan-item .btn-close {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.floor-plan-item:hover .btn-close {
+  opacity: 1;
+}
+
+.border-info {
+  border-color: #0dcaf0 !important;
+}
+
+.border-success {
+  border-color: #198754 !important;
+}
+
+.bg-info {
+  background-color: #0dcaf0 !important;
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.form-control-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.badge {
+  font-size: 0.65em;
+  padding: 0.25em 0.6em;
+}
+
 
 </style>

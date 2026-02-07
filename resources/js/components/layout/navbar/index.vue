@@ -19,14 +19,13 @@
       </div>
       <div class="col-auto">
         <div class="d-flex flex-wrap align-items-center gap-3">
-          <!-- زر Create Property - يظهر فقط في صفحات العقارات -->
           <router-link 
             v-if="showCreatePropertyButton"
             to="/property-form" 
             class="btn btn-primary btn-sm create-property-btn d-flex align-items-center gap-2"
           >
             <i class="ri-add-line"></i>
-            Create Property
+            Create Listing
           </router-link>
 
           <!-- Notification dropdown -->

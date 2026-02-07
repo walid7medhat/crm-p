@@ -70,30 +70,38 @@
             </div>
             
             <!-- Payment Plan -->
-              <div class="col-md-4">
-            <label class="form-label">Payment Plans</label>
-            <v-select 
-              v-model="form.payment_plans" 
-              :options="paymentPlanOptions"
-              multiple
-              placeholder="Select Payment Plans"
-              :clearable="true"
-              :close-on-select="false"
-              :searchable="true"
-            >
-              <template #selected-option-container="{ option, deselect }">
-                <div class="selected-tag">
-                  {{ option.label || option }}
-                  <button @click="deselect(option)" class="tag-close">
-                    ×
-                  </button>
+              <div class="col-md-4"  v-if="form.completionStatus === 'Under Construction'">
+                <label class="form-label">Payment Plans</label>
+                <v-select 
+                  v-model="form.payment_plans" 
+                  :options="paymentPlanOptions"
+                  multiple
+                  placeholder="Select Payment Plans"
+                  :clearable="true"
+                  :close-on-select="false"
+                  :searchable="true"
+                >
+                  <template #selected-option-container="{ option, deselect }">
+                    <div class="selected-tag">
+                      {{ option.label || option }}
+                      <button @click="deselect(option)" class="tag-close">
+                        ×
+                      </button>
+                    </div>
+                  </template>
+                </v-select>
+                <div class="text-muted small mt-1">
+                  <small>You can select multiple payment plans</small>
                 </div>
-              </template>
-            </v-select>
-            <div class="text-muted small mt-1">
-              <small>You can select multiple payment plans</small>
-            </div>
-          </div>
+              </div>
+              <!-- Hide payment plan when Completed -->
+                <!--<div class="col-md-4" v-if="form.completionStatus === 'Completed'">-->
+                <!--  <div class="alert alert-info mt-2">-->
+                <!--    <i class="fas fa-info-circle me-2"></i>-->
+                <!--    <small>Payment plans are not available for completed properties</small>-->
+                <!--  </div>-->
+                <!--</div>-->
+
             
             <div class="col-md-4">
               <label class="form-label">Project 
@@ -421,6 +429,58 @@
         </div>
         <div class="card-body">
           <div class="row gy-3">
+            <div class="col-md-12" v-if="selectedProject && projectFloorPlans.length > 0">
+              <div class="card">
+                <div class="card-header bg-light">
+                  <h6 class="card-title mb-0">Select Project Floor Plans</h6>
+                </div>
+                <div class="card-body">
+                  <div class="row gy-3">
+                    <div class="col-12">
+                      <label class="form-label">Choose Floor Plans</label>
+                      <v-select
+                        v-model="selectedProjectFloorPlans"
+                        :options="projectFloorPlans"
+                        label="name"
+                        multiple
+                        placeholder="Select floor plans from project"
+                        :clearable="true"
+                        :close-on-select="false"
+                        @input="handleProjectFloorPlanSelection"
+                      >
+                        <template #option="floorPlan">
+                          <div class="d-flex align-items-center">
+                            <img 
+                              v-if="floorPlan.image_url" 
+                              :src="floorPlan.image_url" 
+                              alt="Floor plan" 
+                              class="me-2"
+                              style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;"
+                            />
+                            <div>
+                              <strong>{{ floorPlan.name }}</strong>
+                              <small class="text-muted d-block">{{ floorPlan.order ? `Order: ${floorPlan.order}` : '' }}</small>
+                            </div>
+                          </div>
+                        </template>
+                        <template #selected-option-container="{ option, deselect }">
+                          <div class="selected-tag">
+                            {{ option.name }}
+                            <button @click="deselect(option)" class="tag-close">
+                              ×
+                            </button>
+                          </div>
+                        </template>
+                      </v-select>
+                      <div class="text-muted small mt-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        You can select multiple floor plans from the project. Selected plans will be added to the property floor plans.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="col-12">
               <label class="form-label">Upload Floor Plans</label>
               <input 
@@ -491,8 +551,7 @@
         </div>
       </div>
     </div>
-
-    <!-- 📄 Property Documents Section -->
+   <!-- 📄 Property Documents Section -->
     <div class="col-lg-12">
       <div class="card">
         <div class="card-header">
@@ -500,37 +559,37 @@
         </div>
         <div class="card-body">
           <div class="row gy-3">
-            <div class="col-md-4">
-              <label class="form-label">SPA Document</label>
-              <input
-                type="file"
-                class="form-control"
-                accept=".pdf,.jpg,.jpeg,.png,.svg"
-                @change="handlePropertyDocumentUpload($event, 'spa_document')"
-              />
-              <div v-if="form.spa_document" class="small text-muted mt-1 d-flex align-items-center justify-content-between gap-2">
-                <span class="text-truncate">{{ form.spa_document.name }}</span>
-                <button type="button" class="btn btn-sm btn-outline-danger" @click="removePropertyDocument('spa_document')">
-                  Remove
-                </button>
-              </div>
-            </div>
+            <!--<div class="col-md-4">-->
+            <!--  <label class="form-label">SPA Document</label>-->
+            <!--  <input-->
+            <!--    type="file"-->
+            <!--    class="form-control"-->
+            <!--    accept=".pdf,.jpg,.jpeg,.png,.svg"-->
+            <!--    @change="handlePropertyDocumentUpload($event, 'spa_document')"-->
+            <!--  />-->
+            <!--  <div v-if="form.spa_document" class="small text-muted mt-1 d-flex align-items-center justify-content-between gap-2">-->
+            <!--    <span class="text-truncate">{{ form.spa_document.name }}</span>-->
+            <!--    <button type="button" class="btn btn-sm btn-outline-danger" @click="removePropertyDocument('spa_document')">-->
+            <!--      Remove-->
+            <!--    </button>-->
+            <!--  </div>-->
+            <!--</div>-->
 
-            <div class="col-md-4">
-              <label class="form-label">Other Document</label>
-              <input
-                type="file"
-                class="form-control"
-                accept=".pdf,.jpg,.jpeg,.png,.svg"
-                @change="handlePropertyDocumentUpload($event, 'other_document')"
-              />
-              <div v-if="form.other_document" class="small text-muted mt-1 d-flex align-items-center justify-content-between gap-2">
-                <span class="text-truncate">{{ form.other_document.name }}</span>
-                <button type="button" class="btn btn-sm btn-outline-danger" @click="removePropertyDocument('other_document')">
-                  Remove
-                </button>
-              </div>
-            </div>
+            <!--<div class="col-md-4">-->
+            <!--  <label class="form-label">Other Document</label>-->
+            <!--  <input-->
+            <!--    type="file"-->
+            <!--    class="form-control"-->
+            <!--    accept=".pdf,.jpg,.jpeg,.png,.svg"-->
+            <!--    @change="handlePropertyDocumentUpload($event, 'other_document')"-->
+            <!--  />-->
+            <!--  <div v-if="form.other_document" class="small text-muted mt-1 d-flex align-items-center justify-content-between gap-2">-->
+            <!--    <span class="text-truncate">{{ form.other_document.name }}</span>-->
+            <!--    <button type="button" class="btn btn-sm btn-outline-danger" @click="removePropertyDocument('other_document')">-->
+            <!--      Remove-->
+            <!--    </button>-->
+            <!--  </div>-->
+            <!--</div>-->
 
             <div class="col-12">
               <label class="form-label">Additional Documents</label>
@@ -564,7 +623,6 @@
         </div>
       </div>
     </div>
-
     <!-- Owner Section -->
     <div class="col-lg-12">
       <div class="card">
@@ -943,8 +1001,7 @@
                   </span>
                 </div>
               </div>
-
-              <!-- Additional Documents -->
+                <!-- Additional Documents -->
               <div class="col-md-12 mt-3">
                 <label class="form-label">Additional Documents</label>
                 <div class="file-upload-area" @click="$refs.additionalDocs.click()">
@@ -1084,12 +1141,17 @@ const developers = ref([]);
 const isLoadingDevelopers = ref(false);
 const areas = ref([]);
 const isLoadingAreas = ref(false);
+
+const projectFloorPlans = ref([]);
+const selectedProjectFloorPlans = ref([]);
+const isLoadingProjectFloorPlans = ref(false);
+
+
 const newOwner = ref({
   salutation: "", first_name: "", last_name: "", email: "",
   phone_number: "", whatsapp_number: "", second_phone_number: "",
   nationality: "", residency_status: "", location_id: "",
-  id_front: null, id_back: null, visa_copy: null, passport_copy: null, notes: "",
-  additional_documents: [],
+  id_front: null, id_back: null, visa_copy: null, passport_copy: null,additional_documents: [], notes: "",
 });
 const locations = ref([]);
 const isLoadingLocations = ref(false);
@@ -1106,7 +1168,7 @@ const form = ref({
   mortgageAmount: "", rentExpiryDate: "", rentAmount: "",
   mortgageComment: "", projectAreas: [], rented_status: "",      
   rented_until: "", payment_plan: "", payment_plans: [] ,driveLink: "", is_hot_deal: "",
-  spa_document: null, desk_document: null, other_document: null,
+    spa_document: null, desk_document: null, other_document: null,
   additionalDocuments: [],
 });
 
@@ -1121,6 +1183,20 @@ watch(() => [form.value.unit_number, selectedProject.value, form.value.saleOrRen
     }, 500);
   }
 }, { deep: true });
+watch(() => form.value.completionStatus, (newStatus) => {
+  console.log('🔄 Completion status changed:', newStatus);
+  
+  if (newStatus === 'Completed') {
+    // Clear payment plans when status changes to Completed
+    form.value.payment_plans = [];
+    form.value.payment_plan = null;
+    
+    // Show notification
+    if (form.value.payment_plans.length > 0) {
+      proxy.$showNotification('Payment plans cleared for completed property', 'info');
+    }
+  }
+});
 watch(() => form.value.payment_plans, (newValue) => {
   if (newValue && newValue.length > 0) {
     form.value.payment_plan = JSON.stringify(newValue.map(item => item.value || item));
@@ -1167,6 +1243,84 @@ watch(() => selectedProject.value, async (newProject, oldProject) => {
     form.value.area = null;
   }
 });
+watch(() => selectedProject.value, async (newProject) => {
+  if (newProject) {
+    await fetchProjectFloorPlans(newProject.id);
+  } else {
+    projectFloorPlans.value = [];
+    selectedProjectFloorPlans.value = [];
+  }
+}, { immediate: true });
+
+const fetchProjectFloorPlans = async (projectId) => {
+  try {
+    isLoadingProjectFloorPlans.value = true;
+    const response = await api.get(`/listings/projects/${projectId}/floor-plans`);
+    projectFloorPlans.value = response.data.data || response.data;
+    console.log('✅ Project floor plans loaded:', projectFloorPlans.value.length);
+  } catch (error) {
+    console.error('❌ Error fetching project floor plans:', error);
+    projectFloorPlans.value = [];
+    proxy.$showNotification("⚠️ Could not load project floor plans", "warning");
+  } finally {
+    isLoadingProjectFloorPlans.value = false;
+  }
+};
+
+const handleProjectFloorPlanSelection = (selectedPlans) => {
+  selectedPlans.forEach(plan => {
+    const alreadyExists = form.value.floorPlans.some(fp => 
+      fp.id === plan.id || fp.name === plan.name
+    );
+    
+    if (!alreadyExists) {
+      form.value.floorPlans.push({
+        id: plan.id,
+        name: plan.name,
+        image_url: plan.image_url,
+        order: plan.order,
+        customName: plan.name,
+        fromProject: true,
+        projectFloorPlanId: plan.id
+      });
+    }
+  });
+  
+  const removedPlans = selectedProjectFloorPlans.value.filter(sp => 
+    !selectedPlans.some(p => p.id === sp.id)
+  );
+  
+  removedPlans.forEach(removedPlan => {
+    const index = form.value.floorPlans.findIndex(fp => 
+      fp.projectFloorPlanId === removedPlan.id
+    );
+    if (index !== -1) {
+      form.value.floorPlans.splice(index, 1);
+    }
+  });
+  
+  selectedProjectFloorPlans.value = selectedPlans;
+};
+
+const removeFloorPlan = (index) => {
+  const removedPlan = form.value.floorPlans[index];
+  
+  if (removedPlan.fromProject) {
+    const selectedIndex = selectedProjectFloorPlans.value.findIndex(
+      plan => plan.id === removedPlan.projectFloorPlanId
+    );
+    if (selectedIndex !== -1) {
+      selectedProjectFloorPlans.value.splice(selectedIndex, 1);
+    }
+  }
+  
+  if (form.value.floorPlans[index] && form.value.floorPlans[index].preview) {
+    URL.revokeObjectURL(form.value.floorPlans[index].preview);
+  }
+  form.value.floorPlans.splice(index, 1);
+  proxy.$showNotification("🗑️ Floor plan removed", "info");
+};
+
 
 // 6. computed properties
 const agentId = computed(() => {
@@ -1419,11 +1573,8 @@ const submitNewOwner = async () => {
             formData.append('additional_documents[]', file);
           }
         });
-      } else if (value instanceof File) {
-        formData.append(key, value);
-      } else if (value !== null && value !== "") {
-        formData.append(key, value);
-      }
+      } else if (value instanceof File) formData.append(key, value);
+      else if (value !== null && value !== "") formData.append(key, value);
     }
 
     const response = await api.post("/listings/owners", formData, {
@@ -1461,7 +1612,6 @@ const handleNewOwnerFile = (e, field) => {
   const file = e.target.files[0];
   if (file) newOwner.value[field] = file;
 };
-
 const handleNewOwnerAdditionalDocuments = (e) => {
   const files = Array.from(e.target.files || []);
   if (!files.length) return;
@@ -1494,7 +1644,6 @@ const removeNewOwnerAdditionalDocument = (index) => {
   if (!Array.isArray(newOwner.value.additional_documents)) return;
   newOwner.value.additional_documents.splice(index, 1);
 };
-
 const handleFloorPlanUpload = (e) => {
   const files = Array.from(e.target.files);
   if (files.length > 0) {
@@ -1513,12 +1662,17 @@ const handleFloorPlanUpload = (e) => {
 
     if (validFiles.length > 0) {
       const filesWithNames = validFiles.map(file => ({
-        file: file, name: file.name, size: file.size, type: file.type,
-        customName: file.name.replace(/\.[^/.]+$/, ""), preview: URL.createObjectURL(file)
+        file: file, 
+        name: file.name, 
+        size: file.size, 
+        type: file.type,
+        customName: file.name.replace(/\.[^/.]+$/, ""), 
+        preview: URL.createObjectURL(file),
+        isNewUpload: true
       }));
       form.value.floorPlans = [...form.value.floorPlans, ...filesWithNames];
       e.target.value = '';
-      proxy.$showNotification(`✅ Added ${validFiles.length} floor plan(s)`, "success");
+      proxy.$showNotification(`✅ Added ${validFiles.length} new floor plan(s)`, "success");
     }
   }
 };
@@ -1554,7 +1708,6 @@ const handleGalleryUpload = (e) => {
     }
   }
 };
-
 const handlePropertyDocumentUpload = (e, field) => {
   const file = e.target.files?.[0];
   if (!file) return;
@@ -1607,7 +1760,6 @@ const handleAdditionalDocumentsUpload = (e) => {
 const removeAdditionalDocument = (index) => {
   form.value.additionalDocuments.splice(index, 1);
 };
-
 const getImagePreview = (file) => {
   if (file instanceof File) return URL.createObjectURL(file);
   if (file && file.image_url) return file.image_url;
@@ -1636,13 +1788,13 @@ const removeHeroImage = () => {
   proxy.$showNotification("🗑️ Hero image removed", "info");
 };
 
-const removeFloorPlan = (index) => {
-  if (form.value.floorPlans[index] && form.value.floorPlans[index].preview) {
-    URL.revokeObjectURL(form.value.floorPlans[index].preview);
-  }
-  form.value.floorPlans.splice(index, 1);
-  proxy.$showNotification("🗑️ Floor plan removed", "info");
-};
+// const removeFloorPlan = (index) => {
+//   if (form.value.floorPlans[index] && form.value.floorPlans[index].preview) {
+//     URL.revokeObjectURL(form.value.floorPlans[index].preview);
+//   }
+//   form.value.floorPlans.splice(index, 1);
+//   proxy.$showNotification("🗑️ Floor plan removed", "info");
+// };
 
 const removeGalleryImage = (index) => {
   if (form.value.gallery[index] && form.value.gallery[index].preview) {
@@ -1667,7 +1819,19 @@ const setAsHeroImage = (index) => {
   form.value.gallery.unshift(selectedImage);
   proxy.$showNotification("✅ Image set as hero property image", "success");
 };
-
+const getFloorPlansStats = computed(() => {
+  const projectPlans = form.value.floorPlans.filter(fp => fp.fromProject).length;
+  const uploadedPlans = form.value.floorPlans.filter(fp => fp.isNewUpload).length;
+  const totalPlans = form.value.floorPlans.length;
+  
+  return {
+    projectPlans,
+    uploadedPlans,
+    totalPlans,
+    hasProjectPlans: projectPlans > 0,
+    hasUploadedPlans: uploadedPlans > 0,
+  };
+});
 const handleSubmit = async (action = 'draft') => {
   try {
     isSubmitting.value = true;
@@ -1700,7 +1864,12 @@ const handleSubmit = async (action = 'draft') => {
       isSubmitting.value = false;
       return;
     }
-
+    const floorPlansSource = {
+      project_plans_count: selectedProjectFloorPlans.value.length,
+      uploaded_plans_count: form.value.floorPlans.filter(fp => fp.isNewUpload).length,
+      total_plans: form.value.floorPlans.length,
+      selected_project_plans: selectedProjectFloorPlans.value.map(p => p.id),
+    };
     const requiredFields = [
       { value: form.value.property_type, message: "❌ Please select a property type!" },
       { value: form.value.area, message: "❌ Please select an area!" },
@@ -1746,6 +1915,7 @@ const handleSubmit = async (action = 'draft') => {
         }
 
     }
+
     
  
     const formData = new FormData();
@@ -1760,6 +1930,14 @@ const handleSubmit = async (action = 'draft') => {
     if (form.value.rented_status) formData.append('rented_status', form.value.rented_status);
     if (form.value.rented_until) formData.append('rented_until', form.value.rented_until);
     if (form.value.payment_plan) formData.append('payment_plan', form.value.payment_plan);
+    
+    if (form.value.spa_document instanceof File) formData.append('spa_document', form.value.spa_document);
+    if (form.value.desk_document instanceof File) formData.append('desk_document', form.value.desk_document);
+    if (form.value.other_document instanceof File) formData.append('other_document', form.value.other_document);
+    (form.value.additionalDocuments || []).forEach((item) => {
+      const file = item?.file || item;
+      if (file instanceof File) formData.append('additional_documents[]', file);
+    });
 
     if (form.value.gallery.length > 0) {
       const firstImage = form.value.gallery[0].file || form.value.gallery[0];
@@ -1790,15 +1968,20 @@ const handleSubmit = async (action = 'draft') => {
     if (form.value.developer) formData.append('developer_id', form.value.developer.id);
     if (selectedProject.value) formData.append('project_id', selectedProject.value.id);
 
-    if (form.value.floorPlans.length > 0) {
-      form.value.floorPlans.forEach((item, index) => {
-        const file = item.file || item;
-        if (file instanceof File) {
-          formData.append(`floor_plans[${index}]`, file);
-          formData.append(`floor_plan_names[${index}]`, item.customName || file.name.replace(/\.[^/.]+$/, ""));
+        if (form.value.floorPlans.length > 0) {
+          let floorPlanIndex = 0;
+          
+          form.value.floorPlans.forEach((item) => {
+            if (item.isNewUpload && item.file instanceof File) {
+              formData.append(`floor_plans[${floorPlanIndex}]`, item.file);
+              formData.append(`floor_plan_names[${floorPlanIndex}]`, item.customName || item.name.replace(/\.[^/.]+$/, ""));
+              floorPlanIndex++;
+            }
+            else if (item.fromProject && item.projectFloorPlanId) {
+              formData.append(`project_floor_plan_ids[]`, item.projectFloorPlanId);
+            }
+          });
         }
-      });
-    }
 
     if (form.value.gallery.length > 0) {
       form.value.gallery.forEach((item, index) => {
@@ -1806,14 +1989,11 @@ const handleSubmit = async (action = 'draft') => {
         if (file instanceof File) formData.append(`gallery[${index}]`, file);
       });
     }
-
-    if (form.value.spa_document instanceof File) formData.append('spa_document', form.value.spa_document);
-    if (form.value.desk_document instanceof File) formData.append('desk_document', form.value.desk_document);
-    if (form.value.other_document instanceof File) formData.append('other_document', form.value.other_document);
-    (form.value.additionalDocuments || []).forEach((item) => {
-      const file = item?.file || item;
-      if (file instanceof File) formData.append('additional_documents[]', file);
-    });
+    if (selectedProjectFloorPlans.value.length > 0) {
+      selectedProjectFloorPlans.value.forEach(plan => {
+        formData.append('project_floor_plan_ids[]', plan.id);
+      });
+    }
 
     console.log('📤 Sending form data with action:', action);
     console.log('📋 Payment plan JSON:', form.value.payment_plan);
@@ -1861,7 +2041,7 @@ const resetForm = () => {
     comment: "", mortgageStatus: "", occupancyStatus: "", mortgageAmount: "",
     rentExpiryDate: "", rentAmount: "", mortgageComment: "", projectAreas: [],
     rented_status: "", rented_until: "", payment_plan: "", payment_plans: []   , driveLink: ""  ,is_hot_deal:"",
-    spa_document: null, desk_document: null, other_document: null,
+     spa_document: null, desk_document: null, other_document: null,
     additionalDocuments: [],
   };
   selectedOwner.value = null;
@@ -2831,5 +3011,26 @@ body.swal2-toast-shown  {
   font-size: 0.875em;
   color: #198754;
 }
+.project-floor-plan-tag {
+  background-color: #e8f4fd !important;
+  border-color: #0d6efd !important;
+  color: #0d6efd !important;
+}
 
+.project-floor-plan-tag .tag-close {
+  color: #0d6efd !important;
+}
+
+.floor-plan-source-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(13, 110, 253, 0.9);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  z-index: 1;
+}
 </style>

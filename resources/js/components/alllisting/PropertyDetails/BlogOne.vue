@@ -169,7 +169,7 @@
                   </div>
                   <div class="info-item">
                     <span class="info-label">Completion Status</span>
-                    <span class="info-value">{{ property?.completion_status || "Not specified" }}</span>
+                    <span class="info-value">{{ property.completion_status || "Not specified" }}</span>
                   </div>
                   
                   <!--<div class="info-item" v-if="false">-->
@@ -280,9 +280,8 @@
                 </div>
               </div>
             </div>
-
-            <!-- Property Documents -->
-            <div class="detailed-info-section mb-16" v-if="property.additional_documents && property.additional_documents.length > 0">
+  <!-- Property Documents -->
+            <div class="detailed-info-section mb-16" v-if="property.additional_documents && property.additional_documents.length > 0 && property.user_permissions?.showDocuments">
               <div class="info-section">
                 <h3 class="section-title mb-20">
                   <i class="ri-file-text-line me-2"></i>
@@ -298,7 +297,6 @@
                 </div>
               </div>
             </div>
-
               <div class="comment-container">
                 <!-- Comments Section -->
                 <div class="comments-section " v-if="property">
@@ -670,13 +668,13 @@
                     
                               <!-- Active/Inactive -->
                               <button 
-                                v-if="canEditProperty && property"
+                                v-if="canEditProperty"
                                 class="dropdown-item"
                                 @click="toggleActive"
                               >
-                                <i class="ri-toggle-line" v-if="property?.is_active"></i>
+                                <i class="ri-toggle-line" v-if="property.is_active"></i>
                                 <i class="ri-toggle-fill" v-else></i>
-                                {{ property?.is_active ? 'Set Inactive' : 'Set Active' }}
+                                {{ property.is_active ? 'Set Inactive' : 'Set Active' }}
                               </button>
                     
                               <!-- Assign to Agent -->
@@ -691,7 +689,7 @@
                     
                               <!-- Mark as Converted (Sold Out) -->
                               <button 
-                                v-if="canMarkAsConverted && property?.status !== 'converted'"
+                                v-if="canMarkAsConverted && property.status !== 'converted'"
                                 class="dropdown-item success"
                                 @click="openSoldOutModal"
                               >
@@ -701,7 +699,7 @@
                     
                               <!-- Revert from Sold Out -->
                               <button 
-                                v-if="canMarkAsConverted && property?.status === 'converted'"
+                                v-if="canMarkAsConverted && property.status === 'converted'"
                                 class="dropdown-item warning"
                                 @click="revertFromConverted"
                               >
@@ -710,7 +708,7 @@
                               </button>
                               <!-- Viewing -->
             
-                    <div v-if="!isPropertyOwner && property?.completion_status === 'Completed'" class="dropdown-item-btn">
+                    <div v-if="!isPropertyOwner && property.completion_status=='Completed'" class="dropdown-item-btn">
                           <div v-if="requestStatus?.viewing_status === 'approved'" class="dropdown-item approved-info viewing">
                             <div>
                               <i class="ri-checkbox-circle-line text-success"></i>
@@ -1101,12 +1099,6 @@
             <span class="document-name">Visa Copy</span>
             <i class="ri-external-link-line document-action"></i>
           </button>
-          <a v-for="doc in (getOwnerDataForModal()?.additional_documents || [])" :key="doc.id"
-             :href="doc.url" target="_blank" rel="noopener" class="document-card">
-            <i class="ri-file-add-line document-icon"></i>
-            <span class="document-name text-truncate">{{ doc.name || 'Document' }}</span>
-            <i class="ri-external-link-line document-action"></i>
-          </a>
         </div>
       </div>
     </div>
@@ -1353,7 +1345,6 @@
     </div>
   </div>
 </div>
-
     <!-- Lightbox Modal -->
     <div v-if="showLightbox && property && property.gallery_images" class="lightbox-overlay" @click="closeLightbox">
       <div class="lightbox-content" @click.stop>
@@ -1592,7 +1583,7 @@
 </template>
 
 <script>
-import { ref, onMounted, getCurrentInstance, computed, watch } from 'vue';
+import { ref, onMounted, getCurrentInstance, computed ,watch } from 'vue';
 
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
@@ -1943,10 +1934,8 @@ const cancelViewingRequest = async () => {
     const hasOwnerDocuments = computed(() => {
       const owner = getOwnerDataForModal();
       if (!owner) return false;
-      const hasStandard = owner.id_front_path || owner.id_back_path || owner.passport_copy_path || owner.visa_copy_path ||
+      return owner.id_front_path || owner.id_back_path || owner.passport_copy_path || owner.visa_copy_path ||
              owner.id_front_url || owner.id_back_url || owner.passport_copy_url || owner.visa_copy_url;
-      const hasAdditional = owner.additional_documents && owner.additional_documents.length > 0;
-      return hasStandard || hasAdditional;
     });
 
   // Floor Plan Methods
@@ -2007,15 +1996,15 @@ const isAuthenticated = computed(() => {
 
 // New computed properties for dropdown actions
 const canAssignAgent = computed(() => {
-  const prop = property.value;
+  const property = props.property; // 
   const user = getCurrentUser();
 
-  if (!user || !prop) return false;
+  if (!user || !property) return false;
 
   console.log('User role_name:', user.role_name);
-  console.log('Property can_assign_agent:', prop.user_permissions?.can_assign_agent);
+  console.log('Property can_assign_agent:', property.user_permissions?.can_assign_agent);
 
-  return prop.user_permissions?.can_assign_agent || false;
+  return property.user_permissions?.can_assign_agent || false;
 });
 
 
@@ -2479,7 +2468,7 @@ const submitNewOwnerAndMarkSold = async () => {
     const createdOwner = createRes.data?.data || createRes.data;
     if (!createdOwner?.id) throw new Error('Owner created but no ID returned');
 
-    await api.patch(`/listings/properties/${property.value.id}/owner`, {
+    await api.post(`/listings/properties/${property.value.id}/soldBy`, {
       owner_id: createdOwner.id
     }, { headers: { 'Content-Type': 'application/json' } });
 
@@ -2574,7 +2563,6 @@ const revertFromConverted = async () => {
   router.push(`/users/${agentId}`);
 
 };
-
 
 
     // Real-time updates methods
@@ -2673,15 +2661,10 @@ const revertFromConverted = async () => {
         error.value = null;
         const propertyId = route.params.id;
         
-        if (!propertyId) {
-          throw new Error('Property ID is missing');
-        }
-        
         const response = await api.get(`/listings/properties/${propertyId}`);
         
-        // Handle both response formats: {status: true, data: ...} or direct data
-        if (response.data && (response.data.status === true || response.data.data)) {
-          property.value = response.data.data || response.data;
+        if (response.data.status) {
+          property.value = response.data.data;
           
           console.log('Property Data:', property.value);
           console.log('Area Data:', property.value.area);
@@ -2694,17 +2677,11 @@ const revertFromConverted = async () => {
           
           await fetchRequestStatus();
           
-        } else if (response.data && response.data.status === false) {
-          // API returned an error response
-          throw new Error(response.data.message || 'Failed to retrieve listing');
         } else {
-          throw new Error('Invalid response format');
+          throw new Error(response.data.message || 'Failed to fetch property');
         }
       } catch (err) {
-        console.error('Error fetching property:', err);
-        const errorMessage = err.response?.data?.message || err.message || 'Failed to load property details';
-        error.value = errorMessage;
-        handleApiError(err, errorMessage);
+        handleApiError(err, 'Failed to load property details');
       } finally {
         loading.value = false;
       }
@@ -3340,23 +3317,10 @@ ${owner.address ? `Address: ${owner.address}` : ''}
     // Utility functions
     const handleApiError = (error, defaultMessage = 'An error occurred') => {
       console.error('API Error:', error);
-      console.error('Error Response:', error.response);
-      console.error('Error Data:', error.response?.data);
       
-      let errorMessage = defaultMessage;
-      
-      if (error.response) {
-        // Server responded with an error
-        errorMessage = error.response.data?.message || 
-                      error.response.data?.error ||
-                      `Server error: ${error.response.status} ${error.response.statusText}`;
-      } else if (error.request) {
-        // Request was made but no response received
-        errorMessage = 'No response from server. Please check your connection.';
-      } else {
-        // Something else happened
-        errorMessage = error.message || defaultMessage;
-      }
+      const errorMessage = error.response?.data?.message || 
+                      error.message || 
+                      defaultMessage;
       
       proxy.$showNotification(errorMessage, 'error');
       error.value = errorMessage;
@@ -4567,8 +4531,8 @@ const openDriveLink = () => {
         markAsSold,
         revertFromConverted,
         openSoldOutModal,
-        showSoldOutModal,
-        soldByChoice,
+        showSoldOutModal, 
+ soldByChoice,
         showAddOwnerModal,
         newOwner,
         isSubmittingOwner,
@@ -4589,7 +4553,6 @@ const openDriveLink = () => {
         handleOwnerAdditionalDocumentsUpload,
         removeOwnerAdditionalDocument, 
 
-
           openFloorPlanSlider,
     closeFloorPlanSlider,
     nextFloorPlan,
@@ -4608,11 +4571,9 @@ const openDriveLink = () => {
   openViewingModal,
   submitViewingRequest,
   formatTime,
-      canRequestViewing,
-      cancelViewingRequest,
-      showCancelViewingModal,
-      closeCancelReasonModal,
-      getPaymentPlans,
+  canRequestViewing,
+  cancelViewingRequest,
+  getPaymentPlans,
   hasPaymentPlans,
   isArrayPaymentPlan ,
   formatPaymentPlan,
@@ -7128,115 +7089,6 @@ margin-top: 20px;
   }
 }
 /* Sold Out Modal Styles */
-.sold-out-modal-content {
-  width: 100%;
-  max-width: 480px;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-}
-
-.sold-out-modal-header {
-  padding: 20px 24px;
-  background: linear-gradient(180deg, #fff 0%, #141e50c9 0%, #050a28f2 100%);
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.sold-out-header-inner {
-  flex: 1;
-}
-
-.sold-out-modal-title {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 600;
-  color: white !important;
-  line-height: 1.3;
-}
-
-.sold-out-modal-subtitle {
-  margin: 8px 0 0 0;
-  font-size: 1.05rem;
-  opacity: 0.92;
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.sold-out-modal-body {
-  padding: 24px;
-  font-size: 1.05rem;
-  min-height: 120px;
-}
-
-.sold-out-modal-footer {
-  padding: 16px 24px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  border-top: 1px solid #eee;
-  background: #f8f9fa;
-}
-
-.sold-out-add-owner-step {
-  text-align: center;
-  padding: 12px 0;
-}
-
-.sold-out-step-text {
-  margin: 0 0 20px 0;
-  font-size: 1.05rem;
-  color: #495057;
-  line-height: 1.6;
-}
-
-.btn-add-owner-inline {
-  display: inline-flex;
-  align-items: center;
-  padding: 14px 28px;
-  font-size: 1.05rem;
-  font-weight: 500;
-}
-
-/* Add New Owner modal (from Sold Out flow) */
-.add-owner-modal-content {
-  width: 95%;
-  max-width: 1200px;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-}
-
-.add-owner-modal-body {
-  padding: 24px 32px;
-}
-
-.add-owner-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.add-owner-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.add-owner-label {
-  font-size: 1rem;
-  font-weight: 500;
-  color: #333;
-}
-
-.add-owner-input {
-  font-size: 1rem;
-  padding: 12px 14px;
-  border-radius: 8px;
-}
-
-/* Sold Out options list */
 .sold-out-options {
   display: flex;
   flex-direction: column;
@@ -7274,23 +7126,28 @@ margin-top: 20px;
   flex-shrink: 0;
 }
 
+.option-card:nth-child(1) .option-icon {
+  /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+}
+
+.option-card:nth-child(2) .option-icon {
+  /* background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); */
+}
+
 .option-content {
   flex: 1;
 }
 
-.option-content h5,
-.option-content h6 {
-  margin: 0 0 6px 0;
+.option-content h5 {
+  margin: 0 0 4px 0;
   font-weight: 600;
-  font-size: 1.2rem;
   color: #01062d;
 }
 
 .option-content p {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 13px;
   color: #6c757d;
-  line-height: 1.4;
 }
 
 .option-arrow {
@@ -7558,5 +7415,8 @@ ease;
 .image-overlay-right{
     right:16px;
    left:auto;
+}
+.sold-out-modal-title{
+    color:#fff !important;
 }
 </style>

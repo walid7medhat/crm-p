@@ -1,5 +1,4 @@
 <?php
-// app/Http/Requests/Listing/ListingRequest.php
 
 namespace App\Http\Requests\Listing;
 
@@ -70,7 +69,11 @@ $listingId = $this->route('property');
             // 'rented_until' => 'nullable|date|after_or_equal:today',
             'payment_plan' => 'nullable|string', 
             'drive_link' => 'nullable|url|max:500',
-            'is_hot_deal'=>'nullable|in:No,Yes'
+            'is_hot_deal'=>'nullable|in:No,Yes',
+            'project_floor_plan_ids' => 'nullable|array',
+            'project_floor_plan_ids.*' => 'nullable|exists:floor_plan_images,id',
+            
+            'floor_plans_source' => 'nullable|array',
         ];
 
         // File upload rules - always nullable for updates
@@ -81,7 +84,6 @@ $listingId = $this->route('property');
         $rules['hero_image'] = 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:10240';
         $rules['additional_documents'] = 'nullable|array';
         $rules['additional_documents.*'] = 'nullable|file|mimes:pdf,jpg,jpeg,png,svg|max:10240';
-
         
 
 
@@ -99,7 +101,7 @@ $listingId = $this->route('property');
                             // Plots only need 1+ gallery image
                             $rules['gallery'] = 'required|array|min:1|max:15';
                         }
-                        $rules['floor_plans'] = 'required|array|min:1';
+                        $rules['floor_plans'] = 'nullable|array|min:1';
                     }
                 }
             }
@@ -185,5 +187,19 @@ $listingId = $this->route('property');
                 'payment_plan' => json_encode($this->payment_plan)
             ]);
         }
+         $floorPlansSource = [
+            'project_plans_count' => count($this->project_floor_plan_ids ?? []),
+            'uploaded_plans_count' => $this->hasFile('floor_plans') ? count($this->file('floor_plans')) : 0,
+            'total_plans' => 0,
+            'selected_project_plans' => $this->project_floor_plan_ids ?? [],
+        ];
+        
+        $floorPlansSource['total_plans'] = 
+            $floorPlansSource['project_plans_count'] + 
+            $floorPlansSource['uploaded_plans_count'];
+        
+        $this->merge([
+            'floor_plans_source' => $floorPlansSource,
+        ]);
     }
 }

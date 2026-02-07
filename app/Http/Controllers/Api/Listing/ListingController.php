@@ -22,9 +22,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Schema;
+
 class ListingController extends Controller
 {
     // Cache constants
@@ -273,9 +274,12 @@ public function permissions(User $user): JsonResponse
 
                 // Remove files from data array before creating listing
                 unset($data['floor_plans']);
+                unset($data['project_floor_plan_ids']);
+                unset($data['floor_plans_source']);
                 unset($data['floor_plan_names']);
                 unset($data['gallery']);
                 unset($data['hero_image']);
+                unset($data['additional_documents']);
 
                 \Log::info('Files removed from data array');
 
@@ -321,7 +325,9 @@ public function permissions(User $user): JsonResponse
                 }
 
                 \Log::info('Creating listing with data', $data);
-
+               if ($request->has('floor_plans_source')) {
+                    $data['floor_plans_source'] = json_encode($request->floor_plans_source);
+                }
                 // Create listing
                 $listing = Listing::create(array_merge($data, [
                     'added_by' => auth()->id(),
@@ -368,6 +374,20 @@ public function permissions(User $user): JsonResponse
                     }
                     \Log::info('Floor plans processed');
                 }
+                if ($request->has('project_floor_plan_ids') && is_array($request->project_floor_plan_ids)) {
+                    foreach ($request->project_floor_plan_ids as $projectFloorPlanId) {
+                        $projectFloorPlan = \App\Models\FloorPlanImage::find($projectFloorPlanId);
+                        if ($projectFloorPlan) {
+                            $listing->floorPlans()->create([
+                                'name' => $projectFloorPlan->name,
+                                'image_path' => $projectFloorPlan->image_path,
+                                'order' => $projectFloorPlan->sort_order,
+                                'is_from_project' => true,
+                                'project_floor_plan_id' => $projectFloorPlanId
+                            ]);
+                        }
+                    }
+                }
 
                 // Handle gallery images upload with compression
                 if ($request->hasFile('gallery')) {
@@ -397,8 +417,7 @@ public function permissions(User $user): JsonResponse
                     }
                     \Log::info('Gallery images processed');
                 }
-
-                // Handle additional documents (PDF/images, no compression)
+                  // Handle additional documents (PDF/images, no compression)
             if ($request->hasFile('additional_documents') && Schema::hasTable('listing_additional_documents')) {
                 foreach ($request->file('additional_documents') as $index => $file) {
                     if (!$file->isValid()) continue;
@@ -413,13 +432,8 @@ public function permissions(User $user): JsonResponse
                 
                 DB::commit();
 
-                $relationships = ['propertyType', 'area', 'agent', 'owner', 'developer', 'addedBy', 'floorPlans', 'galleryImages'];
-                if (Schema::hasTable('listing_additional_documents')) {
-                    $relationships[] = 'additionalDocuments';
-                }
-                $listing->load($relationships);
+                $listing->load(['propertyType', 'area', 'agent', 'owner', 'developer', 'addedBy', 'floorPlans', 'galleryImages','additionalDocuments']);
 
-                // مسح الكاش المتعلق بالـ listings
                 $this->clearCache();
 
                 \Log::info('Property creation completed successfully');
@@ -439,8 +453,6 @@ public function permissions(User $user): JsonResponse
     public function show($listing): JsonResponse
     {
         try {
-            \Log::info('Listing show request', ['listing_id' => $listing, 'user_id' => Auth::id()]);
-            
             $cacheKey = self::CACHE_PREFIX . 'show_' . $listing;
             
             if (method_exists(Cache::getStore(), 'tags')) {
@@ -460,11 +472,7 @@ public function permissions(User $user): JsonResponse
                 $result['permissions']
             );
         } catch (\Exception $e) {
-            \Log::error('Listing show error: ' . $e->getMessage(), [
-                'listing_id' => $listing,
-                'trace' => $e->getTraceAsString(),
-                'user_id' => Auth::id()
-            ]);
+            dd($e->getMessage());
             return $this->fallbackShow($listing, $e);
         }
     }
@@ -472,66 +480,42 @@ public function permissions(User $user): JsonResponse
     private function getListingData($listingId): array
     {
         $user = Auth::user();
+        $listing = Listing::with([
+            'propertyType', 
+            'agent', 
+            'owner', 
+            'developer', 
+            'addedBy', 
+            'floorPlans', 
+            'galleryImages',
+            'project',
+             'additionalDocuments',
+            'area' => function($query) {
+                $query->with(['parent.parent.parent', 'child']);
+            }
+        ])->find($listingId);
         
-        try {
-            // Check if additional_documents table exists
-            $hasAdditionalDocsTable = \Schema::hasTable('listing_additional_documents');
-            
-            $relationships = [
-                'propertyType', 
-                'agent', 
-                'owner', 
-                'developer', 
-                'addedBy', 
-                'floorPlans', 
-                'galleryImages',
-                'project',
-                'area' => function($query) {
-                    $query->with(['parent.parent.parent', 'child']);
-                }
-            ];
-            
-            // Only include additionalDocuments if table exists
-            if ($hasAdditionalDocsTable) {
-                $relationships[] = 'additionalDocuments';
-            }
-            
-            $listing = Listing::with($relationships)->find($listingId);
-            
-            if (!$listing) {
-                throw new \Exception('Listing not found');
-            }
+        if (!$listing) {
+            throw new \Exception('Listing not found');
+        }
 
-            // Try to load area.parentRecursive, but don't fail if it doesn't exist
-            try {
-                $listing->load(['area.parentRecursive']);
-            } catch (\Exception $e) {
-                \Log::warning('Could not load area.parentRecursive: ' . $e->getMessage());
-                // Continue without this relationship
-            }
-            
-            $canEdit = $user ? $user->can('update', $listing) : false;
-            $canDelete = $user ? $user->can('delete', $listing) : false;
-            
-            $listing->user_permissions = [
+        $listing->load(['area.parentRecursive'],'area');
+        
+        $canEdit = $user ? $user->can('update', $listing) : false;
+        $canDelete = $user ? $user->can('delete', $listing) : false;
+        
+        $listing->user_permissions = [
+            'can_edit' => $canEdit,
+            'can_delete' => $canDelete,
+        ];
+        
+        return [
+            'listing' => $listing,
+            'permissions' => [
                 'can_edit' => $canEdit,
                 'can_delete' => $canDelete,
-            ];
-            
-            return [
-                'listing' => $listing,
-                'permissions' => [
-                    'can_edit' => $canEdit,
-                    'can_delete' => $canDelete,
-                ]
-            ];
-        } catch (\Exception $e) {
-            \Log::error('getListingData error: ' . $e->getMessage(), [
-                'listing_id' => $listingId,
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw $e;
-        }
+            ]
+        ];
     }
 
 public function update(ListingRequest $request, $listingId): JsonResponse
@@ -569,14 +553,17 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                 $data['status'] = 'draft';
             }
         }
+         
 
         // Remove files from data array before updating listing
         unset($data['floor_plans']);
         unset($data['floor_plan_names']);
         unset($data['gallery']);
         unset($data['hero_image']);
-        unset($data['additional_documents']);
-
+         unset($data['additional_documents']);
+   if($listing->completion_status=='Completed'){
+            $data['payment_plan']=null;
+        }
         $heroImageProcessed = false;
         
         if ($request->hasFile('hero_image')) {
@@ -653,7 +640,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         // dd($data,$listing);
 
         // Handle floor plans upload with compression
-        if ($request->hasFile('floor_plans')) {
+        if ($request->hasFile('floor_plans') ) {
             $floorPlanNames = $request->floor_plan_names ?? [];
             
             // Get current max order to continue from there
@@ -685,6 +672,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                 ]);
             }
         }
+     
 
         if ($request->hasFile('gallery')) {
 
@@ -752,8 +740,21 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                 // ]);
             }
         }
-
-        // Append additional documents (new uploads only; existing kept)
+         if ($request->has('imported_floor_plans')) {
+            foreach ($request->imported_floor_plans as $importedPlanData) {
+               $projectFloorPlan = \App\Models\FloorPlanImage::find($importedPlanData['project_floor_plan_id']);
+                        if ($projectFloorPlan) {
+                            $listing->floorPlans()->create([
+                                'name' => $importedPlanData['name']??$projectFloorPlan->name,
+                                'image_path' => $projectFloorPlan->image_path,
+                                'order' => $projectFloorPlan->sort_order,
+                                'is_from_project' => true,
+                                'project_floor_plan_id' => $importedPlanData['project_floor_plan_id']
+                            ]);
+                        }
+            }
+        }
+ // Append additional documents (new uploads only; existing kept)
         if ($request->hasFile('additional_documents') && Schema::hasTable('listing_additional_documents')) {
             $maxOrder = $listing->additionalDocuments()->max('order') ?? -1;
             foreach ($request->file('additional_documents') as $index => $file) {
@@ -770,11 +771,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         DB::commit();
 
         // Reload relationships
-        $relationships = ['propertyType', 'area', 'agent', 'owner', 'developer', 'addedBy', 'floorPlans', 'galleryImages'];
-        if (Schema::hasTable('listing_additional_documents')) {
-            $relationships[] = 'additionalDocuments';
-        }
-        $listing->load($relationships);
+        $listing->load(['propertyType', 'area', 'agent', 'owner', 'developer', 'addedBy', 'floorPlans', 'galleryImages','additionalDocuments']);
 
         $this->clearCache();
         $this->clearSpecificCache($listing->id);
@@ -834,7 +831,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             }
             
             // Delete floor plans
-            foreach ($listing->floorPlans as $floorPlan) {
+            foreach ($listing->floorPlans->whereNull('project_floor_plan_id') as $floorPlan) {
                 if ($floorPlan->image_path) {
                     ImageHelper::deleteImage($floorPlan->image_path);
                 }
@@ -845,6 +842,12 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             foreach ($listing->galleryImages as $galleryImage) {
                 if ($galleryImage->image_path) {
                     ImageHelper::deleteImage($galleryImage->image_path);
+                }
+                $galleryImage->delete();
+            }
+            foreach ($listing->additionalDocuments as $galleryImage) {
+                if ($galleryImage->path) {
+                    ImageHelper::deleteImage($galleryImage->path);
                 }
                 $galleryImage->delete();
             }
@@ -1044,7 +1047,6 @@ public function update(ListingRequest $request, $listingId): JsonResponse
     private function fallbackShow($listing, \Exception $e = null): JsonResponse
     {
         try {
-            \Log::info('Using fallback show for listing', ['listing_id' => $listing]);
             $result = $this->getListingData($listing);
             return ApiResponse::success(
                 new ListingResource($result['listing']),
@@ -1053,12 +1055,8 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                 $result['permissions']
             );
         } catch (\Exception $fallbackError) {
-            \Log::error('Listing fallback error: ' . $fallbackError->getMessage(), [
-                'listing_id' => $listing,
-                'original_error' => $e?->getMessage(),
-                'fallback_trace' => $fallbackError->getTraceAsString()
-            ]);
-            return ApiResponse::error('Failed to retrieve listing: ' . $fallbackError->getMessage(), 400);
+            \Log::error('Listing fallback error: ' . $fallbackError->getMessage());
+            return ApiResponse::error('Failed to retrieve listing');
         }
     }
 
@@ -1154,32 +1152,6 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             return ApiResponse::success(null, 'Gallery image deleted successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to delete gallery image: ' . $e->getMessage());
-        }
-    }
-
-    public function deleteAdditionalDocument($listing, $document): JsonResponse
-    {
-        try {
-            $user = Auth::user();
-            $listing = Listing::find($listing);
-            $doc = ListingAdditionalDocument::find($document);
-            if (!$listing || !$doc) {
-                return ApiResponse::error('Listing or document not found', 404);
-            }
-            if ($doc->listing_id != $listing->id) {
-                return ApiResponse::error('Document not found for this listing', 404);
-            }
-            if ($user->hasRole('sales') && $listing->agent_id !== $user->id) {
-                return ApiResponse::error('Access denied', 403);
-            }
-            if ($doc->path && Storage::disk('public')->exists($doc->path)) {
-                Storage::disk('public')->delete($doc->path);
-            }
-            $doc->delete();
-            $this->clearCache();
-            return ApiResponse::success(null, 'Additional document deleted successfully');
-        } catch (\Exception $e) {
-            return ApiResponse::error('Failed to delete document: ' . $e->getMessage());
         }
     }
 
@@ -1418,32 +1390,6 @@ public function revertFromConverted($id)
         return ApiResponse::error('Failed to revert from converted: ' . $e->getMessage());
     }
 }
-
-/**
- * Update only the owner_id of a listing (e.g. when adding new owner on mark as sold).
- */
-public function updateOwner(Request $request, $id): JsonResponse
-{
-    try {
-        $request->validate(['owner_id' => 'required|exists:owners,id']);
-        $listing = Listing::findOrFail($id);
-
-        if (Auth::user()->hasRole('sales') && $listing->agent_id !== Auth::id()) {
-            return ApiResponse::error('Access denied', 403);
-        }
-
-        $listing->update(['owner_id' => $request->owner_id]);
-        $this->clearCache();
-
-        return ApiResponse::success(
-            new ListingResource($listing->fresh(['owner'])),
-            'Listing owner updated successfully'
-        );
-    } catch (\Exception $e) {
-        return ApiResponse::error('Failed to update listing owner: ' . $e->getMessage());
-    }
-}
-
 public function getAgents(Request $request)
 {
     try {
@@ -1545,4 +1491,48 @@ public function validateUnitNumber(Request $request)
         'message' => 'Unit number is available'
     ]);
 }
+ public function deleteAdditionalDocument($listing, $document): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $listing = Listing::find($listing);
+            $doc = ListingAdditionalDocument::find($document);
+            if (!$listing || !$doc) {
+                return ApiResponse::error('Listing or document not found', 404);
+            }
+            if ($doc->listing_id != $listing->id) {
+                return ApiResponse::error('Document not found for this listing', 404);
+            }
+            if ($user->hasRole('sales') && $listing->agent_id !== $user->id) {
+                return ApiResponse::error('Access denied', 403);
+            }
+            if ($doc->path && Storage::disk('public')->exists($doc->path)) {
+                Storage::disk('public')->delete($doc->path);
+            }
+            $doc->delete();
+            $this->clearCache();
+            return ApiResponse::success(null, 'Additional document deleted successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to delete document: ' . $e->getMessage());
+        }
+    }
+    public function changeOwner(Request $request, $id)
+        {
+            $request->validate([
+                'owner_id' => 'required|exists:owners,id',
+            ]);
+        
+            $listing = Listing::findOrFail($id);
+        
+            $listing->previous_owner_id = $listing->owner_id;
+        
+            $listing->owner_id = $request->owner_id;
+        
+            $listing->save();
+        
+            return response()->json([
+                'message' => 'Owner changed successfully'
+            ]);
+        }
+
 }

@@ -237,6 +237,7 @@ Route::prefix('listings')->group(function(){
                 Route::patch('/{id}/assign-agent', [ListingController::class, 'assignAgent']);
                 Route::patch('/{id}/mark-converted', [ListingController::class, 'markAsConverted']);
                 Route::patch('/{id}/revert-converted', [ListingController::class, 'revertFromConverted']);
+                Route::post('/{owner}/soldBy', [ListingController::class, 'changeOwner']);
                 Route::patch('/{id}/owner', [ListingController::class, 'updateOwner']);
                Route::post('/{property}/set-hero-image', [ListingController::class, 'setHeroImage']);
             Route::get('/statistics/summary', [ListingController::class, 'getStatistics'])->name('listings.statistics');
