@@ -2,16 +2,55 @@
     <div class="comment-input-section">
         <label class="mb-2 d-block modal-title">Contact Customer</label>
         <div 
-            class="comment-box border radius-12 p-3"
+            ref="commentBoxRef"
+            class="comment-box border radius-12 p-3 position-relative"
             :class="{ 'has-error': validationErrors.comment || validationErrors.lead_id }"
         >
             <textarea 
+                ref="textareaRef"
                 class="form-control border-0 p-0 text-sm shadow-none custom-textarea" 
                 :class="{ 'is-invalid': validationErrors.comment || validationErrors.lead_id }"
                 placeholder="Type @ to mention someone" 
                 rows="4"
-                v-model="commentText"
+                :value="commentText"
+                @input="onCommentInput"
+                @keydown="onCommentKeydown"
             ></textarea>
+            <!-- Mention dropdown -->
+            <Transition name="mention-fade">
+                <div 
+                    v-if="showMentionDropdown && (mentionAgents.length > 0 || mentionLoading)"
+                    class="mention-dropdown"
+                >
+                    <div v-if="mentionLoading" class="mention-loading">
+                        <span class="mention-loading-text">Searching...</span>
+                    </div>
+                    <template v-else>
+                        <button 
+                            v-for="(agent, index) in mentionAgents" 
+                            :key="agent.id"
+                            type="button"
+                            class="mention-item"
+                            :class="{ 'mention-item-active': index === mentionHighlightedIndex }"
+                            @mousedown.prevent="selectMention(agent)"
+                        >
+                            <img 
+                                v-if="agent.avatar" 
+                                :src="agent.avatar" 
+                                class="mention-avatar"
+                                alt=""
+                            />
+                            <div v-else class="mention-avatar mention-avatar-placeholder">
+                                <iconify-icon icon="lucide:user" class="mention-avatar-icon"></iconify-icon>
+                            </div>
+                            <div class="mention-item-info">
+                                <span class="mention-item-name">{{ agent.name }}</span>
+                                <!-- <span v-if="agent.email" class="mention-item-email">{{ agent.email }}</span> -->
+                            </div>
+                        </button>
+                    </template>
+                </div>
+            </Transition>
             <!-- Comment Error -->
             <div v-if="validationErrors.comment" class="invalid-feedback">
                 {{ validationErrors.comment[0] }}
@@ -135,7 +174,7 @@
 </template>
 
 <script setup>
-import { ref, computed, getCurrentInstance } from 'vue'
+import { ref, computed, getCurrentInstance, nextTick, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 
 const props = defineProps({
@@ -158,6 +197,17 @@ const validationErrors = ref({})
 const errorMessage = ref('')
 const fileUploadError = ref('')
 
+// Mention state
+const textareaRef = ref(null)
+const showMentionDropdown = ref(false)
+const mentionQuery = ref('')
+const mentionAgents = ref([])
+const mentionLoading = ref(false)
+const mentionHighlightedIndex = ref(0)
+const mentionedUsers = ref([]) // { id, name } for display; we send ids in API
+let mentionFetchTimer = null
+const MENTION_DEBOUNCE_MS = 200
+
 // Get current instance for accessing global properties
 const instance = getCurrentInstance()
 const $showNotification = (message, type = 'info') => {
@@ -170,16 +220,124 @@ const $showNotification = (message, type = 'info') => {
     }
 }
 
+// Fetch agents for mention dropdown
+const fetchMentionAgents = async () => {
+    const search = mentionQuery.value.trim()
+    if (search.length === 0) {
+        mentionAgents.value = []
+        return
+    }
+    try {
+        mentionLoading.value = true
+        const response = await api.get('/leads/mentions/agents', { params: { search } })
+        const data = response.data?.data ?? response.data
+        mentionAgents.value = Array.isArray(data) ? data : []
+        mentionHighlightedIndex.value = 0
+    } catch (err) {
+        console.error('Mention agents fetch error:', err)
+        mentionAgents.value = []
+    } finally {
+        mentionLoading.value = false
+    }
+}
+
+const onCommentInput = (e) => {
+    const el = e.target
+    const value = el.value
+    const cursor = el.selectionStart ?? value.length
+    commentText.value = value
+
+    const textBefore = value.slice(0, cursor)
+    const lastAt = textBefore.lastIndexOf('@')
+    if (lastAt === -1) {
+        showMentionDropdown.value = false
+        return
+    }
+    const query = textBefore.slice(lastAt + 1)
+    const hasSpace = /\s/.test(query)
+    if (hasSpace) {
+        showMentionDropdown.value = false
+        return
+    }
+    mentionQuery.value = query
+    showMentionDropdown.value = true
+    mentionHighlightedIndex.value = 0
+
+    clearTimeout(mentionFetchTimer)
+    mentionFetchTimer = setTimeout(() => {
+        fetchMentionAgents()
+    }, MENTION_DEBOUNCE_MS)
+}
+
+const onCommentKeydown = (e) => {
+    if (!showMentionDropdown.value || mentionAgents.value.length === 0) {
+        if (e.key === 'Escape') showMentionDropdown.value = false
+        return
+    }
+    if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        mentionHighlightedIndex.value = Math.min(mentionHighlightedIndex.value + 1, mentionAgents.value.length - 1)
+        return
+    }
+    if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        mentionHighlightedIndex.value = Math.max(mentionHighlightedIndex.value - 1, 0)
+        return
+    }
+    if (e.key === 'Enter' && mentionAgents.value[mentionHighlightedIndex.value]) {
+        e.preventDefault()
+        selectMention(mentionAgents.value[mentionHighlightedIndex.value])
+        return
+    }
+    if (e.key === 'Escape') {
+        e.preventDefault()
+        showMentionDropdown.value = false
+    }
+}
+
+const selectMention = (agent) => {
+    const el = textareaRef.value
+    if (!el) return
+    const value = commentText.value
+    const cursor = el.selectionStart ?? value.length
+    const textBefore = value.slice(0, cursor)
+    const lastAt = textBefore.lastIndexOf('@')
+    const textAfter = value.slice(cursor)
+    const insert = `@${agent.name} `
+    const newText = value.slice(0, lastAt) + insert + textAfter
+    commentText.value = newText
+    mentionedUsers.value = [...mentionedUsers.value, { id: agent.id, name: agent.name }]
+    showMentionDropdown.value = false
+    mentionAgents.value = []
+    nextTick(() => {
+        el.focus()
+        const newCursor = lastAt + insert.length
+        el.setSelectionRange(newCursor, newCursor)
+    })
+}
+
 const handleCancel = () => {
     commentText.value = ''
+    mentionedUsers.value = []
     selectedFiles.value = []
     showFileModal.value = false
     isDragging.value = false
     fileUploadError.value = ''
+    showMentionDropdown.value = false
     if (fileInput.value) {
         fileInput.value.value = ''
     }
 }
+
+// Close mention dropdown when clicking outside
+const commentBoxRef = ref(null)
+const onDocumentClick = (e) => {
+    if (showMentionDropdown.value && commentBoxRef.value && !commentBoxRef.value.contains(e.target)) {
+        showMentionDropdown.value = false
+    }
+}
+onMounted(() => document.addEventListener('click', onDocumentClick))
+onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 
 const handleSave = async () => {
     try {
@@ -236,10 +394,12 @@ const handleSave = async () => {
         selectedFiles.value.forEach((file) => {
             formData.append('attachments[]', file)
         })
-        
-        // Add mentioned_users array (only if there are mentioned users)
-        // For now, we'll skip this since it's empty - Laravel will handle it as optional
-        
+
+        // Add mentioned_users array (user ids)
+        mentionedUsers.value.forEach((u) => {
+            formData.append('mentioned_users[]', u.id)
+        })
+
         // Make API call
         const response = await api.post('/leads/add/new/comments', formData, {
             headers: {
@@ -774,5 +934,103 @@ const handleCancelFileModal = () => {
     color: #DC2626;
     font-weight: 500;
     margin: 0;
+}
+
+/* Mention dropdown */
+.mention-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(1, 6, 44, 0.08);
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 20;
+}
+
+.mention-loading {
+    padding: 12px 14px;
+    text-align: center;
+}
+
+.mention-loading-text {
+    font-size: 13px;
+    color: #64748B;
+}
+
+.mention-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 13px;
+    color: #01062C;
+    transition: background 0.15s;
+    border-radius: 0;
+}
+
+.mention-item:hover,
+.mention-item.mention-item-active {
+    background: #F1F5F9;
+}
+
+.mention-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.mention-avatar-placeholder {
+    background: #E2E8F0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mention-avatar-icon {
+    font-size: 16px;
+    color: #64748B;
+}
+
+.mention-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.mention-item-name {
+    font-weight: 500;
+    color: #01062C;
+}
+
+.mention-item-email {
+    font-size: 11px;
+    color: #64748B;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mention-fade-enter-active,
+.mention-fade-leave-active {
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.mention-fade-enter-from,
+.mention-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-4px);
 }
 </style>
