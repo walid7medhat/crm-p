@@ -253,6 +253,14 @@ const onCommentInput = (e) => {
         showMentionDropdown.value = false
         return
     }
+    // Only show if no non-whitespace character is attached before @ (e.g. allow "@ma" or " @ma", not "word@ma")
+    if (lastAt > 0) {
+        const charBeforeAt = textBefore[lastAt - 1]
+        if (charBeforeAt && !/\s/.test(charBeforeAt)) {
+            showMentionDropdown.value = false
+            return
+        }
+    }
     const query = textBefore.slice(lastAt + 1)
     const hasSpace = /\s/.test(query)
     if (hasSpace) {
