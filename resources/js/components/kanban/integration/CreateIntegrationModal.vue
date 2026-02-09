@@ -47,19 +47,24 @@
                 />
 
                 <!-- Facebook Lead Ads Tab Content -->
-                <!-- <FacebookLeadAdsTab
+                <FacebookLeadAdsTab
                     v-else-if="activeTab === 'facebook-leads'"
-                /> -->
+                />
 
-                <!-- Other Tabs Content (Placeholder) -->
-                <div v-else class="tab-content">
-                    <h4 class="section-title">{{ tabs.find(t => t.id === activeTab)?.name }}</h4>
-                    <p class="tab-placeholder">Content for {{ tabs.find(t => t.id === activeTab)?.name }} coming soon...</p>
-                </div>
+                <!-- Other Settings Tab Content -->
+                <OtherSettingsTab
+                    v-else-if="activeTab === 'other-settings'"
+                    v-model:model-form-name="otherSettingsFormName"
+                    v-model:model-responsible-person-id="otherSettingsResponsiblePersonId"
+                    v-model:model-responsible-person="otherSettingsResponsiblePerson"
+                    v-model:model-dont-make-responsible-if-not-clocked-in="otherSettingsDontMakeResponsibleIfNotClockedIn"
+                    @cancel="show = false"
+                    @save="handleOtherSettingsSave"
+                />
             </div>
 
-            <!-- Footer Buttons -->
-            <div class="modal-footer-section">
+            <!-- Footer Buttons (hidden on Other Settings - that tab has its own Cancel/Save) -->
+            <div v-if="activeTab !== 'other-settings'" class="modal-footer-section">
                 <button class="footer-btn cancel-btn" @click="show = false">Cancel</button>
                 <button class="footer-btn apply-btn" @click="handleApply">Apply</button>
             </div>
@@ -72,7 +77,8 @@ import { ref, watch } from 'vue'
 import { BModal } from 'bootstrap-vue-3'
 import CrmEntitiesTab from './CrmEntitiesTab.vue'
 import HiddenFieldValuesTab from './HiddenFieldValuesTab.vue'
-// import FacebookLeadAdsTab from './FacebookLeadAdsTab.vue'
+import FacebookLeadAdsTab from './FacebookLeadAdsTab.vue'
+import OtherSettingsTab from './OtherSettingsTab.vue'
 
 const props = defineProps({
     modelValue: {
@@ -88,6 +94,12 @@ const activeTab = ref('crm-entities')
 const selectedEntity = ref(null)
 const expertMode = ref(false)
 const duplicateHandling = ref('merge')
+
+// Other Settings tab state
+const otherSettingsFormName = ref('')
+const otherSettingsResponsiblePersonId = ref(null)
+const otherSettingsResponsiblePerson = ref(null)
+const otherSettingsDontMakeResponsibleIfNotClockedIn = ref(true)
 
 const tabs = [
     { id: 'crm-entities', name: 'CRM Entities' },
@@ -108,6 +120,10 @@ watch(show, (newVal) => {
         selectedEntity.value = null
         expertMode.value = false
         duplicateHandling.value = 'merge'
+        otherSettingsFormName.value = ''
+        otherSettingsResponsiblePersonId.value = null
+        otherSettingsResponsiblePerson.value = null
+        otherSettingsDontMakeResponsibleIfNotClockedIn.value = true
     }
 })
 
@@ -116,6 +132,14 @@ const handleApply = () => {
     emit('integration-created', {
         entity: selectedEntity.value,
         expertMode: expertMode.value
+    })
+    show.value = false
+}
+
+const handleOtherSettingsSave = (payload) => {
+    emit('integration-created', {
+        ...payload,
+        tab: 'other-settings'
     })
     show.value = false
 }
