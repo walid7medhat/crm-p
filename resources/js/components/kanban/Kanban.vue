@@ -1,5 +1,5 @@
 <template>
-    <LeadSearchModal v-model="showSearchModal" />
+    <LeadSearchModal v-model="showSearchModal" @search="onLeadSearch" />
     <CreateLeadModal v-model="showCreateModal" @lead-created="handleLeadCreated" />
     <CreateIntegrationModal v-model="showCreateIntegrationModal" @integration-created="handleIntegrationCreated" />
     <AddStageModal v-model="showAddStageModal" @stage-created="handleStageCreated" />
@@ -267,6 +267,15 @@ const cleanup = () => {
     if (pollingInterval.value) {
         clearInterval(pollingInterval.value)
         pollingInterval.value = null
+    }
+}
+
+const onLeadSearch = (query) => {
+    if (leadsRef.value) {
+        const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+        if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+            leadsComponent.fetchLeads(true, query || null)
+        }
     }
 }
 

@@ -236,6 +236,9 @@ const getUserFromStorage = () => {
 
 const user = ref(getUserFromStorage())
 
+// Applied search params (from search modal, not from URL)
+const appliedSearchParams = ref(null)
+
 // Check if user is admin or super_admin (same pattern as header/index.vue)
 const isAdminOrSuperAdmin = computed(() => {
     if (!user.value) return false
@@ -268,7 +271,10 @@ function getColorByIndex(index) {
     return colors[index % colors.length]
 }
 
-const fetchLeads = async (immediate = false) => {
+const fetchLeads = async (immediate = false, queryOverride = undefined) => {
+    if (queryOverride !== undefined) {
+        appliedSearchParams.value = queryOverride && Object.keys(queryOverride).length ? queryOverride : null
+    }
     // Clear any pending debounce
     if (fetchDebounceTimer.value) {
         clearTimeout(fetchDebounceTimer.value)
@@ -304,7 +310,14 @@ const executeFetchLeads = async () => {
     isFetching.value = true
     
     try {
+        const q = appliedSearchParams.value || {}
+        const params = {}
+        if (q.search) params.search = q.search
+        if (q.responsible_person_id != null && q.responsible_person_id !== '') params.responsible_person_id = q.responsible_person_id
+        if (q.created_at) params.created_at = q.created_at
+        if (q.source) params.source = q.source
         const response = await api.get('/stages/kanban/stages-with-leads', {
+            params,
             signal: abortController.value.signal
         })
         const newData = response.data.data.map((stage, index) => ({

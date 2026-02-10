@@ -32,7 +32,7 @@
                         <!-- Lead Name -->
                         <div class="col-md-6 mt-3">
                             <label class="form-label-custom">Lead Name</label>
-                            <b-form-input placeholder="Enter Lead Name" class="custom-input" />
+                            <b-form-input v-model="form.search" placeholder="Enter Lead Name" class="custom-input" />
                         </div>
                         <!-- Responsible Person -->
                         <div class="col-md-6 mt-3">
@@ -54,30 +54,14 @@
                         <!-- ID -->
                         <div class="col-md-6 mt-3">
                             <label class="form-label-custom">ID</label>
-                            <b-form-input placeholder="Enter ID" class="custom-input" />
+                            <b-form-input v-model="form.id" placeholder="Enter ID" class="custom-input" />
                         </div>
-                        <!-- Modified By -->
-                        <div class="col-md-6 mt-3">
-                            <label class="form-label-custom">Modified By</label>
-                            <b-form-select v-model="form.modifiedBy" :options="personOptions" class="custom-select" />
-                        </div>
-
                         <!-- Stage Changed By -->
                         <div class="col-md-6 mt-3">
                             <label class="form-label-custom">Stage Changed By</label>
                             <b-form-select v-model="form.stageChangedBy" :options="personOptions" class="custom-select" />
                         </div>
-                        <!-- Date -->
-                        <div class="col-md-6 mt-3">
-                            <label class="form-label-custom">Date</label>
-                            <b-form-select v-model="form.date" :options="dateOptions" class="custom-select" />
-                        </div>
 
-                        <!-- Source -->
-                        <div class="col-md-6 mt-3">
-                            <label class="form-label-custom">Source</label>
-                            <b-form-select v-model="form.source" :options="personOptions" class="custom-select" />
-                        </div>
                         <!-- Lead Branch Source -->
                         <div class="col-md-6 mt-3">
                             <label class="form-label-custom">Lead Branch Source</label>
@@ -93,7 +77,7 @@
                         </div>
                         <div class="d-flex gap-3">
                             <button class="btn-reset" @click="resetForm">Reset</button>
-                            <button class="btn-search">Search</button>
+                            <button class="btn-search" @click="applySearch">Search</button>
                         </div>
                     </div>
             </div>
@@ -104,15 +88,16 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { BModal, BFormInput, BFormSelect } from 'bootstrap-vue-3'
 import FilterFieldSettingsModal from './FilterFieldSettingsModal.vue'
+import api from '@/plugins/axios'
 
 const props = defineProps({
     modelValue: Boolean
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'search'])
 
 const show = ref(props.modelValue)
 const showFilterSettings = ref(false)
@@ -136,19 +121,23 @@ const sidebarPills = [
 ]
 
 const form = ref({
+    search: '',
+    id: '',
     responsible: null,
     createdOn: null,
     status: null,
-    modifiedBy: null,
     stageChangedBy: null,
-    date: null,
-    source: null,
     branchSource: null
 })
 
-const personOptions = [
-    { value: null, text: 'Select Person' }
-]
+const responsiblePersons = ref([])
+const personOptions = computed(() => {
+    const opts = [{ value: null, text: 'Select Person' }]
+    responsiblePersons.value.forEach(p => {
+        opts.push({ value: p.id, text: p.name || `User ${p.id}` })
+    })
+    return opts
+})
 
 const dateOptions = [
     { value: null, text: 'Any Date' }
@@ -158,18 +147,41 @@ const statusOptions = [
     { value: null, text: 'Not Specified' }
 ]
 
+function applySearch() {
+    const query = {
+        search: form.value.search || undefined,
+        responsible_person_id: form.value.responsible ?? undefined,
+        created_at: form.value.createdOn || undefined,
+        source: form.value.branchSource || undefined
+    }
+    Object.keys(query).forEach(k => { if (query[k] === '' || query[k] === undefined) delete query[k] })
+    emit('search', query)
+    show.value = false
+}
+
+async function fetchResponsiblePersons() {
+    try {
+        const res = await api.get('/available-responsible-persons')
+        if (res.data?.data) responsiblePersons.value = res.data.data
+    } catch (_) {}
+}
+
 const resetForm = () => {
     form.value = {
+        search: '',
+        id: '',
         responsible: null,
         createdOn: null,
         status: null,
-        modifiedBy: null,
         stageChangedBy: null,
-        date: null,
-        source: null,
         branchSource: null
     }
+    emit('search', null)
 }
+
+onMounted(() => {
+    fetchResponsiblePersons()
+})
 </script>
 
 <style scoped>

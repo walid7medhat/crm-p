@@ -123,9 +123,7 @@ const leadFields = ref([
     { id: 'last_name', label: 'Last Name', checked: true },
     { id: 'company_name', label: 'Company Name', checked: false },
     { id: 'lead_name', label: 'Lead Name', checked: true },
-    { id: 'created_on', label: 'Created On', checked: false },
     { id: 'position', label: 'Position', checked: true },
-    { id: 'source', label: 'Source', checked: false },
     { id: 'status', label: 'Status', checked: false },
     { id: 'last_updated', label: 'Last Updated', checked: false },
     { id: 'name', label: 'Name', checked: false },
@@ -137,16 +135,13 @@ const leadFields = ref([
     { id: 'stage', label: 'Stage', checked: false },
     { id: 'email', label: 'Email', checked: false },
     { id: 'bedrooms', label: 'Bedrooms', checked: false },
-    { id: 'created_by', label: 'Created By', checked: false },
 ])
 
 const activityFields = ref([
-    { id: 'date_created', label: 'Date Created', checked: true },
     { id: 'responsible_person', label: 'Responsible Person', checked: true },
     { id: 'status', label: 'Status', checked: true },
     { id: 'activity_source', label: 'Activity Source', checked: true },
     { id: 'deadline', label: 'DeadLine', checked: true },
-    { id: 'created_by', label: 'Created By', checked: true },
     { id: 'activity_type', label: 'Activity Type', checked: true },
     { id: 'closed', label: 'Closed', checked: true },
 ])
