@@ -13,6 +13,7 @@ use App\Models\Stage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Lead;
+use App\Models\User;
 class StageController extends Controller
 {
      public function __construct()
@@ -151,7 +152,6 @@ public function getStagesWithLeads(Request $request): JsonResponse
 
         // ================= الصلاحيات =================
         if ($user->hasRole('super_admin')) {
-            // لا شيء
         } 
         elseif ($user->hasAnyRole(['manager', 'team_lead','admin'])) {
             $subordinatesIds = $user->getAllSubordinatesIds();
@@ -168,15 +168,26 @@ public function getStagesWithLeads(Request $request): JsonResponse
             });
         }
 
-        // ================= الفلاتر (كلها مع بعض) =================
+        // ================= filters =================
         $leadsQuery->where(function ($q) use ($request) {
-
+          if ($request->filled('changed_by') ) {
+                  $leadsQuery->whereHas('histories',function($query) use($request){
+                            $query->where('changes->action', 'stage_changed')->where('user_id',$request->changed_by);
+                  });
+              
+                }
             if ($request->filled('responsible_person_id')) {
                 $q->where('responsible_person_id', $request->responsible_person_id);
             }
 
             if ($request->filled('stage_id')) {
                 $q->where('stage_id', $request->stage_id);
+            }
+            if ($request->filled('email')) {
+                $q->where('email', $request->email);
+            }
+            if ($request->filled('work_phone')) {
+                $q->where('work_phone', $request->work_phone);
             }
 
             if ($request->filled('added_by')) {
@@ -194,11 +205,28 @@ public function getStagesWithLeads(Request $request): JsonResponse
             if ($request->filled('source')) {
                 $q->where('lead_source', $request->source);
             }
+            if ($request->filled('bedrooms')) {
+                $q->where('bedrooms', $request->bedrooms);
+            }
 
             if ($request->filled('source_information')) {
                 $q->where('source_information', 'like', "%{$request->source_information}%");
             }
-
+             if ($request->filled('closed')) {
+                 $closed = Stage::orderBy('order', 'desc')->first();
+                $q->where('stage_id', $closed->id);
+            }
+            if ($request->filled('lead_name')) {
+                $q->where('lead_name', 'like', "%{$request->lead_name}%");
+            }
+            if ($request->filled('first_name')) {
+                $q->where('first_name', 'like', "%{$request->first_name}%");
+            }
+             if ($request->filled('lead_branch_source')) {
+                 $branch_team=User::where('id',$request->lead_branch_source)->first();
+                 $team=$branch_team->getAllSubordinatesIds();
+                $q->whereIn('responsible_person_id',$team);
+            }
             if ($request->filled('search')) {
                 $search = $request->search;
                 $q->where(function ($s) use ($search) {
@@ -213,28 +241,46 @@ public function getStagesWithLeads(Request $request): JsonResponse
             ->get();
 
         // ================= Group by Stage =================
-        $stagesWithLeads = $leads
-            ->groupBy('stage_id')
-            ->map(function ($group) {
-                $stage = $group->first()->stage;
+       $filteredLeadsQuery = $leadsQuery;
 
-                return [
-                    'id' => $stage?->id,
-                    'name' => $stage?->name ?? 'No Stage',
-                    'order' => $stage?->order,
-                    'lead_count' => $group->count(),
-                    'leads' => LeadResource::collection($group),
-                    'created_at' => $stage?->created_at?->toISOString(),
-                    'updated_at' => $stage?->updated_at?->toISOString(),
-                ];
-            })
-            ->values();
+        $stages = Stage::orderBy('order')->get();
+        
+        $stagesWithLeads = $stages->map(function ($stage) use ($filteredLeadsQuery) {
+        
+            $leads = (clone $filteredLeadsQuery)
+                ->where('stage_id', $stage->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+        
+            return [
+                'id' => $stage->id,
+                'name' => $stage->name,
+                'order' => $stage->order,
+                'lead_count' => $leads->count(),
+                'leads' => LeadResource::collection($leads),
+                'created_at' => $stage->created_at?->toISOString(),
+                'updated_at' => $stage->updated_at?->toISOString(),
+            ];
+        });
 
         return ApiResponse::success($stagesWithLeads, 'Stages with filtered leads');
 
     } catch (\Exception $e) {
         return ApiResponse::error($e->getMessage());
     }
+}
+
+
+public function getLeadBranchSource()
+{
+    $branches = User::role('admin')
+        ->whereHas('parent', function ($q) {
+            $q->whereNull('parent_id');
+        })        
+        ->select('name', 'id')
+        ->get();
+
+    return ApiResponse::success($branches, 'Lead Branches');
 }
 
 

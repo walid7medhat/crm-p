@@ -159,6 +159,7 @@ Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']
 Route::post('/leads/{lead}/assign-responsible-person', [LeadController::class, 'assignResponsiblePerson']);
 Route::get('/available-responsible-persons', [LeadController::class, 'getAvailableResponsiblePersons']);
 Route::post('/check-revert', [LeadController::class, 'checkRevert']);
+Route::get('get/lead/branch_source',[StageController::class,'getLeadBranchSource']);
 Route::prefix('leads')->group(function(){
     Route::get('/{leadId}/history',[LeadController::class, 'history']);
     Route::get('/{leadId}/history/view',[LeadController::class, 'view_history']);
@@ -238,13 +239,13 @@ Route::prefix('listings')->group(function(){
                 Route::patch('/{id}/mark-converted', [ListingController::class, 'markAsConverted']);
                 Route::patch('/{id}/revert-converted', [ListingController::class, 'revertFromConverted']);
                 Route::post('/{owner}/soldBy', [ListingController::class, 'changeOwner']);
-                Route::patch('/{id}/owner', [ListingController::class, 'updateOwner']);
-               Route::post('/{property}/set-hero-image', [ListingController::class, 'setHeroImage']);
-            Route::get('/statistics/summary', [ListingController::class, 'getStatistics'])->name('listings.statistics');
-           Route::delete('/{listing}/floor-plans/{floorPlan}', [ListingController::class, 'deleteFloorPlan'])->name('floor-plans.destroy');
-           Route::delete('/{listing}/gallery/{gallery}', [ListingController::class, 'deleteGalleryImage'])->name('gallery.destroy');
-           Route::delete('/{listing}/additional-documents/{document}', [ListingController::class, 'deleteAdditionalDocument'])->name('listings.additional-documents.destroy');
-           Route::post('/validate-unit-number',  [ListingController::class, 'validateUnitNumber']);
+
+                Route::post('/{property}/set-hero-image', [ListingController::class, 'setHeroImage']);
+                Route::get('/statistics/summary', [ListingController::class, 'getStatistics'])->name('listings.statistics');
+                Route::delete('/{listing}/floor-plans/{floorPlan}', [ListingController::class, 'deleteFloorPlan'])->name('floor-plans.destroy');
+                Route::delete('/{listing}/gallery/{gallery}', [ListingController::class, 'deleteGalleryImage'])->name('gallery.destroy');
+                Route::delete('/{listing}/additional-documents/{document}', [ListingController::class, 'deleteAdditionalDocument'])->name('listings.additional-documents.destroy');
+                Route::post('/validate-unit-number',  [ListingController::class, 'validateUnitNumber']);
          });
          Route::get('/agents', [ListingController::class, 'getAgents']);
          Route::post('/agent/vacation',[ListingAccessRequestController::class,'setVacationMode']);
