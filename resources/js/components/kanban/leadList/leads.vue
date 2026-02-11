@@ -313,12 +313,16 @@ const executeFetchLeads = async () => {
         const q = appliedSearchParams.value || {}
         const params = {}
         if (q.search) params.search = q.search
+        if (q.first_name) params.first_name = q.first_name
         if (q.responsible_person_id != null && q.responsible_person_id !== '') params.responsible_person_id = q.responsible_person_id
         if (q.created_at) params.created_at = q.created_at
         if (q.source) params.source = q.source
         if (q.lead_branch_source) params.lead_branch_source = q.lead_branch_source
         if (q.stage_id != null && q.stage_id !== '') params.stage_id = q.stage_id
         if (q.closed !== undefined && q.closed !== null && q.closed !== '') params.closed = q.closed
+        if (q.work_phone) params.work_phone = q.work_phone
+        if (q.email) params.email = q.email
+        if (q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '') params.bedrooms = q.bedrooms
         const response = await api.get('/stages/kanban/stages-with-leads', {
             params,
             signal: abortController.value.signal
