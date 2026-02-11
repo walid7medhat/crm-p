@@ -91,7 +91,12 @@ import { ref, watch, computed } from 'vue'
 import { BModal, BFormCheckbox } from 'bootstrap-vue-3'
 
 const props = defineProps({
-    modelValue: Boolean
+    modelValue: Boolean,
+    /** When provided, lead field checkboxes are synced to this list when modal opens */
+    initialSelectedLeadIds: {
+        type: Array,
+        default: undefined
+    }
 })
 
 const emit = defineEmits(['update:modelValue', 'apply'])
@@ -105,6 +110,11 @@ watch(() => props.modelValue, (val) => {
 
 watch(show, (val) => {
     emit('update:modelValue', val)
+    if (val && props.initialSelectedLeadIds && Array.isArray(props.initialSelectedLeadIds)) {
+        leadFields.value.forEach(f => {
+            f.checked = props.initialSelectedLeadIds.includes(f.id)
+        })
+    }
 })
 
 const toggleTab = (tab) => {
@@ -119,22 +129,15 @@ const toggleTab = (tab) => {
 }
 
 const leadFields = ref([
-    { id: 'id', label: 'ID', checked: true },
-    { id: 'last_name', label: 'Last Name', checked: true },
-    { id: 'company_name', label: 'Company Name', checked: false },
+    { id: 'first_name', label: 'First Name', checked: true },
     { id: 'lead_name', label: 'Lead Name', checked: true },
-    { id: 'position', label: 'Position', checked: true },
-    { id: 'status', label: 'Status', checked: false },
-    { id: 'last_updated', label: 'Last Updated', checked: false },
-    { id: 'name', label: 'Name', checked: false },
-    { id: 'closed', label: 'Closed', checked: false },
-    { id: 'work_phone', label: 'Work Phone', checked: false },
-    { id: 'responsible_person', label: 'Responsible Person', checked: false },
-    { id: 'phone', label: 'Phone', checked: true },
-    { id: 'lead_source', label: 'Lead Source', checked: false },
-    { id: 'stage', label: 'Stage', checked: false },
-    { id: 'email', label: 'Email', checked: false },
-    { id: 'bedrooms', label: 'Bedrooms', checked: false },
+    { id: 'closed', label: 'Closed', checked: true },
+    { id: 'work_phone', label: 'Work Phone', checked: true },
+    { id: 'responsible_person', label: 'Responsible Person', checked: true },
+    { id: 'lead_branch_source', label: 'Lead Branch Source', checked: true },
+    { id: 'stage', label: 'Stage', checked: true },
+    { id: 'email', label: 'Email', checked: true },
+    { id: 'bedrooms', label: 'Bedrooms', checked: true },
 ])
 
 const activityFields = ref([

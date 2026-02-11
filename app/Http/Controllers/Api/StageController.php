@@ -168,7 +168,7 @@ public function getStagesWithLeads(Request $request): JsonResponse
             });
         }
 
-        // ================= filters =================
+        // ================= Lead filters only (stage_id filters both stages and leads when present) =================
         $leadsQuery->where(function ($q) use ($request) {
           if ($request->filled('changed_by') ) {
                   $leadsQuery->whereHas('histories',function($query) use($request){
@@ -208,7 +208,7 @@ public function getStagesWithLeads(Request $request): JsonResponse
             if ($request->filled('bedrooms')) {
                 $q->where('bedrooms', $request->bedrooms);
             }
-
+            
             if ($request->filled('source_information')) {
                 $q->where('source_information', 'like', "%{$request->source_information}%");
             }
@@ -240,28 +240,30 @@ public function getStagesWithLeads(Request $request): JsonResponse
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // ================= Group by Stage =================
-       $filteredLeadsQuery = $leadsQuery;
+        // ================= Stages: all by default, or only stage_id when in request =================
+        $stagesQuery = Stage::orderBy('order');
+        if ($request->filled('stage_id')) {
+            $stagesQuery->where('id', $request->stage_id);
+        }
+        $stages = $stagesQuery->get();
 
-        $stages = Stage::orderBy('order')->get();
-        
-        $stagesWithLeads = $stages->map(function ($stage) use ($filteredLeadsQuery) {
-        
-            $leads = (clone $filteredLeadsQuery)
-                ->where('stage_id', $stage->id)
-                ->orderBy('created_at', 'desc')
-                ->get();
-        
+        // Group filtered leads by stage_id for lookup
+        $leadsByStageId = $leads->groupBy('stage_id');
+
+        // ================= Build response: every stage with its filtered leads =================
+        $stagesWithLeads = $stages->map(function ($stage) use ($leadsByStageId) {
+            $stageLeads = $leadsByStageId->get($stage->id, collect());
+
             return [
                 'id' => $stage->id,
                 'name' => $stage->name,
                 'order' => $stage->order,
-                'lead_count' => $leads->count(),
-                'leads' => LeadResource::collection($leads),
+                'lead_count' => $stageLeads->count(),
+                'leads' => LeadResource::collection($stageLeads),
                 'created_at' => $stage->created_at?->toISOString(),
                 'updated_at' => $stage->updated_at?->toISOString(),
             ];
-        });
+        })->values();
 
         return ApiResponse::success($stagesWithLeads, 'Stages with filtered leads');
 
