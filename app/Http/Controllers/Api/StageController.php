@@ -202,6 +202,9 @@ public function getStagesWithLeads(Request $request): JsonResponse
                 $q->whereDate('created_at', '<=', $request->created_to);
             }
 
+            if ($request->filled('created_at')) {
+                $q->whereDate('created_at',  $request->created_at);
+            }
             if ($request->filled('source')) {
                 $q->where('lead_source', $request->source);
             }

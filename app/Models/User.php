@@ -154,7 +154,7 @@ function getAdminParentAttribute()
     while ($current->parent_id) {
         $current = $current->parent; 
 
-        if ($current && $current->hasRole('admin')) {
+        if ($current && $current->hasRole('admin') && $current->parent && $current->parent->parent_id==null ) {
             return $current; 
         }
     }
