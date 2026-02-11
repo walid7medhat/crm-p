@@ -1,6 +1,8 @@
 <template>
-    <b-modal 
-        id="lead-search-modal" 
+    <!-- Modal mode -->
+    <b-modal
+        v-if="!asDropdown"
+        id="lead-search-modal"
         v-model="show"
         hide-header
         hide-footer
@@ -8,71 +10,127 @@
         centered
         body-class="p-0"
     >
-            <div class="lead-search-container d-flex">
-                <!-- Left Sidebar -->
-                <div class="sidebar-pills p-4 d-flex flex-column gap-3 border-end">
-                    <button 
-                        v-for="pill in sidebarPills" 
-                        :key="pill.id"
-                        class="pill-btn"
-                        :class="{ 'active': activePill === pill.id }"
-                        @click="activePill = pill.id"
-                    >
-                        {{ pill.label }}
-                    </button>
+        <div class="lead-search-container d-flex">
+            <div class="sidebar-pills p-4 d-flex flex-column gap-3 border-end">
+                <button
+                    v-for="pill in sidebarPills"
+                    :key="pill.id"
+                    class="pill-btn"
+                    :class="{ 'active': activePill === pill.id }"
+                    @click="activePill = pill.id"
+                >
+                    {{ pill.label }}
+                </button>
+            </div>
+            <div class="form-content-wrapper flex-grow-1 position-relative">
+                <button class="close-btn" @click="show = false">
+                    <iconify-icon icon="lucide:x"></iconify-icon>
+                </button>
+                <div class="row g-4">
+                    <template v-for="field in visibleSearchFields" :key="field.id">
+                        <div class="col-md-6 mt-3">
+                            <label class="form-label-custom">{{ field.label }}</label>
+                            <b-form-input
+                                v-if="field.type === 'text'"
+                                v-model="form[field.formKey]"
+                                :placeholder="field.placeholder"
+                                class="custom-input"
+                            />
+                            <v-select
+                                v-else-if="field.type === 'select'"
+                                v-model="form[field.formKey]"
+                                :options="field.options"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                :placeholder="field.placeholder || 'Select'"
+                                :clearable="hasValue(form[field.formKey])"
+                                append-to-body
+                                class="custom-v-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                        </div>
+                    </template>
                 </div>
-
-                <!-- Right Content -->
-                <div class="form-content-wrapper flex-grow-1 position-relative">
-                    <button class="close-btn" @click="show = false">
-                        <iconify-icon icon="lucide:x"></iconify-icon>
-                    </button>
-
-                    <div class="row g-4">
-                        <template v-for="field in visibleSearchFields" :key="field.id">
-                            <div class="col-md-6 mt-3">
-                                <label class="form-label-custom">{{ field.label }}</label>
-                                <b-form-input
-                                    v-if="field.type === 'text'"
-                                    v-model="form[field.formKey]"
-                                    :placeholder="field.placeholder"
-                                    class="custom-input"
-                                />
-                                <v-select
-                                    v-else-if="field.type === 'select'"
-                                    v-model="form[field.formKey]"
-                                    :options="field.options"
-                                    :reduce="opt => opt.value"
-                                    label="text"
-                                    :placeholder="field.placeholder || 'Select'"
-                                    :clearable="hasValue(form[field.formKey])"
-                                    append-to-body
-                                    class="custom-v-select"
-                                >
-                                    <template #open-indicator="{ attributes }">
-                                        <span v-bind="attributes">
-                                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                        </span>
-                                    </template>
-                                </v-select>
-                            </div>
-                        </template>
+                <div class="d-flex align-items-center justify-content-between mt-3 pt-4">
+                    <div class="d-flex gap-4">
+                        <a href="#" class="footer-link text-decoration-underline" @click.prevent="showFilterSettings = true">Add Field</a>
+                        <a href="#" class="footer-link text-secondary" @click.prevent="restoreDefaultFields">Restore default fields</a>
                     </div>
-
-                    <!-- Footer Actions -->
-                    <div class="d-flex align-items-center justify-content-between mt-3 pt-4">
-                        <div class="d-flex gap-4">
-                            <a href="#" class="footer-link text-decoration-underline" @click.prevent="showFilterSettings = true">Add Field</a>
-                            <a href="#" class="footer-link text-secondary" @click.prevent="restoreDefaultFields">Restore default fields</a>
-                        </div>
-                        <div class="d-flex gap-3">
-                            <button class="btn-reset" @click="resetForm">Reset</button>
-                            <button class="btn-search" @click="applySearch">Search</button>
-                        </div>
+                    <div class="d-flex gap-3">
+                        <button class="btn-reset" @click="resetForm">Reset</button>
+                        <button class="btn-search" @click="applySearch">Search</button>
                     </div>
+                </div>
             </div>
         </div>
     </b-modal>
+
+    <!-- Dropdown mode: panel under search input -->
+    <div v-else class="lead-search-dropdown-panel">
+        <div class="lead-search-container d-flex">
+            <div class="sidebar-pills p-4 d-flex flex-column gap-3 border-end">
+                <button
+                    v-for="pill in sidebarPills"
+                    :key="pill.id"
+                    class="pill-btn"
+                    :class="{ 'active': activePill === pill.id }"
+                    @click="activePill = pill.id"
+                >
+                    {{ pill.label }}
+                </button>
+            </div>
+            <div class="form-content-wrapper flex-grow-1 position-relative">
+                <button class="close-btn" @click="emit('update:modelValue', false)">
+                    <iconify-icon icon="lucide:x"></iconify-icon>
+                </button>
+                <div class="row g-4">
+                    <template v-for="field in visibleSearchFields" :key="field.id">
+                        <div class="col-md-6 mt-3">
+                            <label class="form-label-custom">{{ field.label }}</label>
+                            <b-form-input
+                                v-if="field.type === 'text'"
+                                v-model="form[field.formKey]"
+                                :placeholder="field.placeholder"
+                                class="custom-input"
+                            />
+                            <v-select
+                                v-else-if="field.type === 'select'"
+                                v-model="form[field.formKey]"
+                                :options="field.options"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                :placeholder="field.placeholder || 'Select'"
+                                :clearable="hasValue(form[field.formKey])"
+                                append-to-body
+                                class="custom-v-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                        </div>
+                    </template>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mt-3 pt-4">
+                    <div class="d-flex gap-4">
+                        <a href="#" class="footer-link text-decoration-underline" @click.prevent="showFilterSettings = true">Add Field</a>
+                        <a href="#" class="footer-link text-secondary" @click.prevent="restoreDefaultFields">Restore default fields</a>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <button class="btn-reset" @click="resetForm">Reset</button>
+                        <button class="btn-search" @click="applySearch">Search</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <FilterFieldSettingsModal
         v-model="showFilterSettings"
@@ -82,7 +140,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, onMounted, computed, nextTick } from 'vue'
 import { BModal, BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -90,7 +148,15 @@ import FilterFieldSettingsModal from './FilterFieldSettingsModal.vue'
 import api from '@/plugins/axios'
 
 const props = defineProps({
-    modelValue: Boolean
+    modelValue: Boolean,
+    /** When true, render as dropdown panel instead of modal */
+    asDropdown: { type: Boolean, default: false },
+    /** When provided, this pill is selected when the modal opens */
+    initialActivePill: { type: String, default: undefined },
+    /** When false, form is reset when modal opens (e.g. filters were cleared in parent) */
+    hasActiveFilters: { type: Boolean, default: true },
+    /** Current search query from parent; form is synced from this when modal opens or when it changes */
+    currentQuery: { type: Object, default: null }
 })
 
 const emit = defineEmits(['update:modelValue', 'search'])
@@ -103,9 +169,74 @@ watch(() => props.modelValue, (val) => {
     show.value = val
 })
 
+watch(() => props.modelValue, (val) => {
+    if (val) {
+        nextTick(() => {
+            if (!props.hasActiveFilters) resetFormValues()
+            else syncFormFromQuery(props.currentQuery)
+        })
+    }
+}, { immediate: true })
+
+const queryToFormKeys = {
+    lead_name: 'leadName',
+    first_name: 'firstName',
+    responsible_person_id: 'responsible',
+    created_at: 'createdOn',
+    lead_branch_source: 'branchSource',
+    closed: 'closed',
+    work_phone: 'workPhone',
+    stage_id: 'stage',
+    email: 'email',
+    bedrooms: 'bedrooms',
+    search: 'search'
+}
+
+function syncFormFromQuery(query) {
+    if (!query || typeof query !== 'object' || Object.keys(query).length === 0) {
+        resetFormValues()
+        return
+    }
+    const next = {
+        search: '',
+        id: '',
+        firstName: '',
+        responsible: '',
+        createdOn: '',
+        stageChangedBy: '',
+        branchSource: '',
+        closed: '',
+        workPhone: '',
+        stage: '',
+        email: '',
+        bedrooms: '',
+        leadName: ''
+    }
+    Object.keys(queryToFormKeys).forEach(qKey => {
+        const formKey = queryToFormKeys[qKey]
+        if (query[qKey] !== undefined && query[qKey] !== '') {
+            next[formKey] = query[qKey]
+        }
+    })
+    form.value = next
+}
+
 watch(show, (val) => {
     emit('update:modelValue', val)
+    if (val) {
+        if (props.initialActivePill) activePill.value = props.initialActivePill
+        if (!props.hasActiveFilters) resetFormValues()
+        else syncFormFromQuery(props.currentQuery)
+    }
 })
+
+watch(() => props.hasActiveFilters, (val) => {
+    if (!val && show.value) resetFormValues()
+})
+
+watch(() => props.currentQuery, (query) => {
+    if (show.value && props.hasActiveFilters) syncFormFromQuery(query)
+}, { deep: true })
 
 const activePill = ref('leads-in-progress')
 
@@ -129,7 +260,8 @@ const form = ref({
     workPhone: '',
     stage: '',
     email: '',
-    bedrooms: ''
+    bedrooms: '',
+    leadName: ''
 })
 
 const responsiblePersons = ref([])
@@ -163,15 +295,15 @@ const bedroomsOptions = [
 ]
 
 const searchFieldsConfig = [
-    { id: 'first_name', label: 'First Name', formKey: 'firstName', type: 'text', placeholder: 'Enter First Name' },
-    { id: 'lead_name', label: 'Lead Name', formKey: 'search', type: 'text', placeholder: 'Enter Lead Name' },
-    { id: 'closed', label: 'Closed', formKey: 'closed', type: 'select', options: yesNoOptions },
-    { id: 'work_phone', label: 'Work Phone', formKey: 'workPhone', type: 'text', placeholder: 'Enter Work Phone' },
-    { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', type: 'select', options: [] },
-    { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', type: 'select', options: [] },
-    { id: 'stage', label: 'Stage', formKey: 'stage', type: 'select', options: [] },
-    { id: 'email', label: 'Email', formKey: 'email', type: 'text', placeholder: 'Enter Email' },
-    { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', type: 'select', options: bedroomsOptions }
+    { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
+    { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
+    { id: 'closed', label: 'Closed', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
+    { id: 'work_phone', label: 'Work Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
+    { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] },
+    { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
+    { id: 'stage', label: 'Stage', formKey: 'stage', queryKey: 'stage_id', type: 'select', options: [] },
+    { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
+    { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions }
 ]
 
 const visibleSearchFields = computed(() => {
@@ -200,9 +332,19 @@ function hasValue(val) {
     return val !== null && val !== undefined && val !== ''
 }
 
+function getDisplayValue(field, rawValue) {
+    if (rawValue === null || rawValue === undefined || rawValue === '') return null
+    if (field.type === 'select') {
+        const opts = field.formKey === 'responsible' ? personOptions.value : (field.formKey === 'branchSource' ? branchSourceOptions.value : (field.formKey === 'stage' ? stageOptions.value : (field.options || [])))
+        const opt = opts.find(o => o.value === rawValue)
+        return opt ? opt.text : String(rawValue)
+    }
+    return String(rawValue)
+}
+
 function applySearch() {
     const query = {
-        search: form.value.search || undefined,
+        lead_name: form.value.leadName || undefined,
         first_name: form.value.firstName || undefined,
         responsible_person_id: form.value.responsible ?? undefined,
         created_at: form.value.createdOn || undefined,
@@ -211,10 +353,32 @@ function applySearch() {
         work_phone: form.value.workPhone || undefined,
         stage_id: form.value.stage ?? undefined,
         email: form.value.email || undefined,
-        bedrooms: form.value.bedrooms ?? undefined
+        bedrooms: form.value.bedrooms ?? undefined,
+        search: form.value.search || undefined,
     }
     Object.keys(query).forEach(k => { if (query[k] === '' || query[k] === undefined) delete query[k] })
-    emit('search', query)
+
+    const activeFilters = []
+    const visibleFields = searchFieldsConfig.filter(f => selectedLeadFieldIds.value.includes(f.id))
+    visibleFields.forEach(field => {
+        const raw = form.value[field.formKey]
+        if (!hasValue(raw)) return
+        const displayValue = getDisplayValue(
+            { ...field, options: field.formKey === 'responsible' ? personOptions.value : (field.formKey === 'branchSource' ? branchSourceOptions.value : (field.formKey === 'stage' ? stageOptions.value : (field.options || []))) },
+            raw
+        )
+        if (displayValue) {
+            activeFilters.push({
+                id: field.id,
+                queryKey: field.queryKey,
+                label: field.label,
+                value: displayValue
+            })
+        }
+    })
+
+    const pill = sidebarPills.find(p => p.id === activePill.value)
+    emit('search', { query, activePill: pill ? { id: pill.id, label: pill.label } : null, activeFilters })
     show.value = false
 }
 
@@ -252,7 +416,7 @@ async function fetchStages() {
     } catch (_) {}
 }
 
-const resetForm = () => {
+function resetFormValues() {
     form.value = {
         search: '',
         id: '',
@@ -267,7 +431,12 @@ const resetForm = () => {
         email: '',
         bedrooms: ''
     }
-    emit('search', null)
+}
+
+const resetForm = () => {
+    resetFormValues()
+    show.value = false
+    emit('search', { query: null, activePill: null, activeFilters: [] })
 }
 
 onMounted(() => {
@@ -278,6 +447,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.lead-search-dropdown-panel {
+    width: 1140px;
+    max-width: calc(100vw - 32px);
+    min-height: 507px;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+    background: #fff;
+    overflow: hidden;
+}
+
 .lead-search-container {
     min-height: 507px;
     background: #fff;

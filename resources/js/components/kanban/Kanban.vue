@@ -1,5 +1,26 @@
 <template>
-    <LeadSearchModal v-model="showSearchModal" @search="onLeadSearch" />
+    <b-modal
+        v-model="showSelectedFiltersModal"
+        title="Selected filters"
+        hide-footer
+        body-class="p-4"
+        header-class="border-0 pb-0"
+    >
+        <div class="selected-filters-list d-flex flex-column gap-2">
+            <div
+                v-for="f in activeFilters"
+                :key="f.id"
+                class="selected-filter-row d-flex align-items-center justify-content-between py-2 px-3 rounded"
+            >
+                <span class="text-dark">{{ f.label }}: {{ f.value }}</span>
+                <iconify-icon icon="lucide:x" class="filter-remove-icon" @click="removeFilter(f)" />
+            </div>
+        </div>
+        <div class="d-flex justify-content-end gap-2 mt-3 pt-3 border-top">
+            <b-button variant="outline-secondary" @click="showSelectedFiltersModal = false">Close</b-button>
+            <b-button variant="primary" @click="showSelectedFiltersModal = false; showSearchModal = true">Edit search</b-button>
+        </div>
+    </b-modal>
     <CreateLeadModal v-model="showCreateModal" @lead-created="handleLeadCreated" />
     <CreateIntegrationModal v-model="showCreateIntegrationModal" @integration-created="handleIntegrationCreated" />
     <AddStageModal v-model="showAddStageModal" @stage-created="handleStageCreated" />
@@ -38,17 +59,45 @@
             <template #tabs-end>
                 <div class="header-actions ms-auto d-flex align-items-center gap-11">
 
-                    <!-- Search Input Wrapper -->
-                    <div class="search-wrapper d-flex align-items-center">
-                        <div class="search-tag d-flex align-items-center gap-2">
-                            <span>Deals in progress</span>
-                            <iconify-icon icon="lucide:x" class="close-tag-icon"></iconify-icon>
+                    <!-- Search: dropdown under input -->
+                    <div class="search-area-column d-flex flex-column align-items-end position-relative" ref="searchDropdownAnchorRef">
+                        <div
+                            class="search-wrapper d-flex align-items-center"
+                            :class="{ 'search-wrapper-expanded': activeFilters && activeFilters.length }"
+                        >
+                            <div v-if="activeFilters.length" class="search-filters-pills d-flex align-items-center">
+                                <div
+                                    v-for="f in visibleFilterPills"
+                                    :key="f.id"
+                                    class="search-tag d-flex align-items-center gap-2"
+                                >
+                                    <span>{{ f.label }}: {{ f.value }}</span>
+                                    <iconify-icon icon="lucide:x" class="close-tag-icon" @click.stop="removeFilter(f)" style="cursor: pointer;"></iconify-icon>
+                                </div>
+                                <div
+                                    v-if="moreFiltersCount > 0"
+                                    class="search-tag search-tag-more d-flex align-items-center gap-2"
+                                >
+                                    <span class="search-tag-more-text" @click="showSearchModal = true">+{{ moreFiltersCount }} more</span>
+                                    <iconify-icon icon="lucide:x" class="close-tag-icon" @click.stop="clearMoreFilters" style="cursor: pointer;"></iconify-icon>
+                                </div>
+                            </div>
+                            <div class="search-input-container d-flex align-items-center" @click="showSearchModal = true">
+                                <iconify-icon icon="lucide:plus" class="search-plus-icon" style="cursor: pointer;"></iconify-icon>
+                                <b-form-input placeholder="Search" v-model="search" class="search-input" @focus="showSearchModal = true" @input="showSearchModal = false" />
+                            </div>
+                            <iconify-icon v-if="activeFilter || (activeFilters && activeFilters.length || search)" icon="lucide:x" class="clear-search-icon" @click="clearSearchFilter" style="cursor: pointer;"></iconify-icon>
                         </div>
-                        <div class="search-input-container d-flex align-items-center">
-                            <iconify-icon icon="lucide:plus" class="search-plus-icon" @click="showSearchModal = true" style="cursor: pointer;"></iconify-icon>
-                            <b-form-input placeholder="Search" class="search-input" />
+                        <div v-if="showSearchModal" class="lead-search-dropdown-outer">
+                            <LeadSearchModal
+                                v-model="showSearchModal"
+                                :as-dropdown="true"
+                                :initial-active-pill="activeFilter?.id"
+                                :has-active-filters="(activeFilters && activeFilters.length) > 0"
+                                :current-query="lastQuery"
+                                @search="onLeadSearch"
+                            />
                         </div>
-                        <iconify-icon icon="lucide:x" class="clear-search-icon"></iconify-icon>
                     </div>
                     
                     <!-- Create New Button -->
@@ -89,7 +138,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import Leads from './leadList/leads.vue'
 import Integration from './integration/Integration.vue'
 import LeadSearchModal from './leadList/LeadSearchModal.vue'
@@ -98,16 +147,21 @@ import CreateIntegrationModal from './integration/CreateIntegrationModal.vue'
 import AddStageModal from './stage/AddStageModal.vue'
 import leadsSettings from '@/assets/images/kanban/leads-setting.svg'
 import addStage from '@/assets/images/kanban/add-stage.svg'
-import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem } from 'bootstrap-vue-3'
+import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem, BModal, BButton } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 
 const activeTab = ref('leads')
 const showSearchModal = ref(false)
+const showSelectedFiltersModal = ref(false)
 const showCreateModal = ref(false)
 const showCreateIntegrationModal = ref(false)
 const showAddStageModal = ref(false)
 const leadsRef = ref(null)
+const searchDropdownAnchorRef = ref(null)
+const search = ref('')
+const searchDebounceTimer = ref(null)
+const SEARCH_DEBOUNCE_MS = 400
 
 const echoListeners = ref([])
 const pollingInterval = ref(null)
@@ -115,10 +169,10 @@ const pollingInterval = ref(null)
 const tabs = ref([
     { id: 'deals', name: 'Deals', hasChevron: false },
     { id: 'leads', name: 'Leads', hasChevron: false },
-    { id: 'inventory', name: 'Inventory', hasChevron: true },
-    { id: 'costumers', name: 'Costumers', hasChevron: true },
+    // { id: 'inventory', name: 'Inventory', hasChevron: true },
+    // { id: 'costumers', name: 'Costumers', hasChevron: true },
     { id: 'integration', name: 'Integration', hasChevron: false },
-    { id: 'analytics', name: 'Analytics', hasChevron: false }
+    // { id: 'analytics', name: 'Analytics', hasChevron: false }
 ])
 
 const activeTabIndex = computed({
@@ -134,13 +188,50 @@ const activeTabName = computed(() => {
     return tabs.value.find(t => t.id === activeTab.value)?.name || ''
 })
 
+function applySearchToApi() {
+    const base = lastQuery.value && Object.keys(lastQuery.value).length ? { ...lastQuery.value } : {}
+    const term = (search.value || '').trim()
+    const query = term ? { ...base, search: term } : base
+    if (!leadsRef.value) return
+    const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+    if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+        leadsComponent.fetchLeads(true, Object.keys(query).length ? query : null)
+    }
+}
+
+watch(search, () => {
+    if (searchDebounceTimer.value) {
+        clearTimeout(searchDebounceTimer.value)
+        searchDebounceTimer.value = null
+    }
+    searchDebounceTimer.value = setTimeout(() => {
+        searchDebounceTimer.value = null
+        applySearchToApi()
+    }, SEARCH_DEBOUNCE_MS)
+})
+
+function onDocumentClick(e) {
+    if (!showSearchModal.value) return
+    if (e.target.closest && e.target.closest('.modal')) return
+    const el = searchDropdownAnchorRef.value
+    if (el && !el.contains(e.target)) {
+        showSearchModal.value = false
+    }
+}
+
 onMounted(() => {
     setTimeout(() => {
         initializeStageUpdates()
     }, 1000)
+    document.addEventListener('click', onDocumentClick)
 })
 
 onUnmounted(() => {
+    document.removeEventListener('click', onDocumentClick)
+    if (searchDebounceTimer.value) {
+        clearTimeout(searchDebounceTimer.value)
+        searchDebounceTimer.value = null
+    }
     cleanup()
 })
 
@@ -270,13 +361,88 @@ const cleanup = () => {
     }
 }
 
-const onLeadSearch = (query) => {
+const defaultFilter = { id: 'leads-in-progress', label: 'Leads In Progress' }
+const activeFilter = ref({ ...defaultFilter })
+const activeFilters = ref([])
+const lastQuery = ref(null)
+
+const onLeadSearch = (payload) => {
+    if (payload === null || payload?.query === null) {
+        activeFilter.value = null
+        activeFilters.value = []
+        lastQuery.value = null
+        if (leadsRef.value) {
+            const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+            if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+                leadsComponent.fetchLeads(true, null)
+            }
+        }
+        return
+    }
+    const query = payload?.query !== undefined ? payload.query : payload
+    const pill = payload?.activePill
+    if (pill) {
+        activeFilter.value = { id: pill.id, label: pill.label }
+    } else if (!activeFilter.value) {
+        activeFilter.value = { ...defaultFilter }
+    }
+    activeFilters.value = Array.isArray(payload?.activeFilters) ? payload.activeFilters : []
+    lastQuery.value = query && Object.keys(query).length ? { ...query } : null
     if (leadsRef.value) {
         const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
             leadsComponent.fetchLeads(true, query || null)
         }
     }
+}
+
+const visibleFilterPills = computed(() => {
+    const list = activeFilters.value || []
+    return list.slice(0, 2)
+})
+
+const moreFiltersCount = computed(() => {
+    const n = (activeFilters.value || []).length - 2
+    return n > 0 ? n : 0
+})
+
+const removeFilter = (f) => {
+    if (!lastQuery.value) return
+    const nextQuery = { ...lastQuery.value }
+    delete nextQuery[f.queryKey]
+    activeFilters.value = activeFilters.value.filter(x => x.id !== f.id)
+    lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null
+    if (leadsRef.value) {
+        const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+        if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+            leadsComponent.fetchLeads(true, Object.keys(nextQuery).length ? nextQuery : null)
+        }
+    }
+}
+
+const clearMoreFilters = () => {
+    const list = activeFilters.value || []
+    if (list.length <= 2) return
+    const keep = list.slice(0, 2)
+    const remove = list.slice(2)
+    const nextQuery = lastQuery.value ? { ...lastQuery.value } : {}
+    remove.forEach(f => { delete nextQuery[f.queryKey] })
+    activeFilters.value = keep
+    lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null
+    if (leadsRef.value) {
+        const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+        if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+            leadsComponent.fetchLeads(true, Object.keys(nextQuery).length ? nextQuery : null)
+        }
+    }
+}
+
+const clearSearchFilter = () => {
+    activeFilter.value = null
+    activeFilters.value = []
+    lastQuery.value = null
+    search.value = ''
+    onLeadSearch(null)
 }
 
 const handleCreateNew = () => {
@@ -499,26 +665,80 @@ const $showNotification = (message, type = 'info') => {
 }
 
 /* Search Input Styles */
+.search-area-column {
+    align-items: flex-end;
+}
+
+.lead-search-dropdown-outer {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    z-index: 1050;
+    width: 1140px;
+    max-width: calc(100vw - 32px);
+}
+
 .search-wrapper {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
     border-radius: 100px;
-    max-width: 438px;
-    gap: 5px;
-    height: 38px;
+    min-height: 38px;
+    gap: 8px;
+    padding: 5px 8px 5px 5px;
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
+    width: max-content;
+    max-width: 220px;
+    transition: max-width 0.35s ease;
+}
+
+.search-wrapper-expanded {
+    max-width: 1020px;
+}
+
+.search-filters-pills {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 6px 8px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+
+.search-tag-more {
+    flex-shrink: 0;
+}
+
+.search-tag-more-text {
+    cursor: pointer;
+    user-select: none;
+}
+
+.selected-filter-row {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+}
+
+.filter-remove-icon {
+    font-size: 16px;
+    color: #64748B;
+    cursor: pointer;
+}
+
+.filter-remove-icon:hover {
+    color: #1E293B;
 }
 
 .search-tag {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
     border-radius: 100px;
-    margin: 5px;
-    padding: 5px 10px;
+    padding: 4px 10px;
     font-size: 12px;
     color: #475569;
     white-space: nowrap;
+    width: fit-content;
 }
 
 .close-tag-icon {
@@ -537,10 +757,12 @@ const $showNotification = (message, type = 'info') => {
 
 .search-input-container {
     color: #94A3B8;
-    height: 100%;
+    height: 32px;
     display: flex;
     align-items: center;
-    flex-grow: 1;
+    flex-shrink: 0;
+    width: 180px;
+    min-width: 180px;
 }
 
 .search-plus-icon {
@@ -555,7 +777,7 @@ const $showNotification = (message, type = 'info') => {
     outline: none !important;
     box-shadow: none !important;
     width: 100%;
-    font-size: 11px;
+    font-size: 14px;
     color: #1E293B;
     background: transparent !important;
     padding: 0 !important;
@@ -566,7 +788,7 @@ const $showNotification = (message, type = 'info') => {
 
 .search-input::placeholder {
     color: #94A3B8;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .clear-search-icon {
@@ -574,6 +796,9 @@ const $showNotification = (message, type = 'info') => {
     font-size: 20px;
     cursor: pointer;
     margin-right: 8px;
+    flex-shrink: 0;
+    min-width: 20px;
+    min-height: 20px;
 }
 
 /* Dropdown Styles */

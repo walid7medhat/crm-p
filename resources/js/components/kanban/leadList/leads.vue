@@ -313,6 +313,7 @@ const executeFetchLeads = async () => {
         const q = appliedSearchParams.value || {}
         const params = {}
         if (q.search) params.search = q.search
+        if (q.lead_name) params.lead_name = q.lead_name
         if (q.first_name) params.first_name = q.first_name
         if (q.responsible_person_id != null && q.responsible_person_id !== '') params.responsible_person_id = q.responsible_person_id
         if (q.created_at) params.created_at = q.created_at
