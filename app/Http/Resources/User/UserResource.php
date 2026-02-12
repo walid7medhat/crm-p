@@ -21,13 +21,13 @@ class UserResource extends JsonResource
               'status' => $this->status,
              'parent_id' => $this->parent_id,
             'parent_name' => $this->parent?->name,
-            'parent_role'=>$this->parent?->roles->first()?->name,
+            'parent_role'=>ucwords(str_replace('_', ' ',$this->parent?->roles->first()?->name)),
              'parent_avatar' => $this->parent && $this->parent->avatar ?  asset('storage/'. $this->parent->avatar) : null,
-            'admin_parent_name'=>$this->admin_parent?->name,
+            'admin_parent_name'=>ucwords(str_replace('_', ' ',$this->admin_parent?->name)),
             'admin_parent_id'=>$this->admin_parent?->id,
             'added_by' => $this->added_by,
             'added_by_name' => $this->addedBy?->name,
-            'role_name' => $this->roles->first()?->name,
+            'role_name' => ucwords(str_replace('_', ' ',$this->roles->first()?->name)),
            'role_id' => $this->roles->first()?->id,
             'roles' => $this->whenLoaded('roles', function () {
                 return $this->roles->pluck('name');

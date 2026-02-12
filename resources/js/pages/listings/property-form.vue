@@ -274,7 +274,7 @@
                 <!-- Force new row on desktop so first line only has Mortgage fields -->
                 <div class="w-100 d-none d-md-block"></div>
     
-                <div class="col-md-4">
+                <div class="col-md-4" v-if="form.completionStatus !== 'Under Construction'">
                   <label class="form-label">Occupancy Status</label>
                   <v-select 
                     v-model="form.occupancyStatus" 
@@ -283,7 +283,7 @@
                   />
                 </div>
     
-                <template v-if="form.occupancyStatus !== 'Vacant'">
+                <template v-if="form.occupancyStatus !== 'Vacant' && form.completionStatus !== 'Under Construction'">
                   <div class="col-md-4">
                     <label class="form-label">Rent Expiry Date</label>
                     <input v-model="form.rentExpiryDate" type="date" class="form-control" placeholder="Enter Rent Expiry Date" :min="minRentExpiryDate" />
@@ -1470,7 +1470,15 @@ watch(() => form.value.completionStatus, (newStatus) => {
       proxy.$showNotification('Payment plans cleared for completed property', 'info');
     }
   }
+    if (newStatus === 'Under Construction') {
+    form.value.occupancyStatus = '';
+    form.value.rentExpiryDate = '';
+    form.value.rentAmount = '';
+    
+    console.log('🏗️ Property under construction - occupancy status cleared');
+  }
 });
+
 watch(() => form.value.payment_plans, (newValue) => {
   if (newValue && newValue.length > 0) {
     form.value.payment_plan = JSON.stringify(newValue.map(item => item.value || item));
@@ -2300,6 +2308,12 @@ const handleSubmit = async (action = 'draft') => {
            plotTypes.some(type => 
                form.value.property_type.name.toLowerCase().includes(type.toLowerCase())
            );
+           
+          if (form.value.completionStatus !== 'Under Construction' && !form.value.occupancyStatus) {
+            proxy.$showNotification("❌ Please select occupancy status!", "error");
+            isSubmitting.value = false;
+            return;
+          }
     if (!selectedOwner.value) {
       proxy.$showNotification("❌ Please select an owner first!", "error");
       isSubmitting.value = false;

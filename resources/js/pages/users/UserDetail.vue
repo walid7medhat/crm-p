@@ -196,7 +196,7 @@
                                                                  <span v-if="property.is_hot_deal== 'Yes'" class="badge-off_plan">
                                                                     Hot Deal
                                                                   </span>
-                                                                   <span v-if="property.occupancy_status" class="badge-occupancy_status">
+                                                                 <span v-if="property.occupancy_status && property.completion_status != 'Under Construction'" class="badge-occupancy_status">
                                                                     {{property.occupancy_status}}
                                                                   </span>
                                                             </div>

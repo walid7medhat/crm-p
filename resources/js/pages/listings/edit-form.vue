@@ -273,7 +273,7 @@
                 <div class="w-100 d-none d-md-block"></div>
 
               <!-- Occupancy Status -->
-              <div class="col-md-4">
+              <div class="col-md-4" v-if="form.completionStatus !== 'Under Construction'">
                 <label class="form-label">Occupancy Status</label>
                 <v-select 
                   v-model="form.occupancyStatus" 
@@ -283,7 +283,7 @@
               </div>
 
               <!-- Rent fields: hidden when Vacant -->
-              <template v-if="form.occupancyStatus !== 'Vacant'">
+              <template v-if="form.occupancyStatus !== 'Vacant' && form.completionStatus !== 'Under Construction'">
                 <div class="col-md-4">
                   <label class="form-label">Rent Expiry Date</label>
                   <input v-model="form.rentExpiryDate" type="date" class="form-control" placeholder="Enter Rent Expiry Date" :min="minRentExpiryDate" />
@@ -1553,6 +1553,15 @@ watch(() => form.value.saleOrRent, (newValue) => {
     }
   }
 });
+watch(() => form.value.completionStatus, (newStatus) => {
+  if (newStatus === 'Under Construction') {
+    form.value.occupancyStatus = '';
+    form.value.rentExpiryDate = '';
+    form.value.rentAmount = '';
+    
+    console.log('🏗️ Property under construction - occupancy status cleared');
+  }
+});
 // Watch for payment_plans changes to convert to payment_plan string
 watch(() => form.value.payment_plans, (newValue) => {
   console.log('🔄 Payment plans changed:', newValue);
@@ -2813,6 +2822,11 @@ const handleSubmit = async (action = 'draft') => {
                form.value.property_type.name.toLowerCase().includes(type.toLowerCase())
            );
     console.log('🔄 Submitting form with action:', action);
+     if (form.value.completionStatus !== 'Under Construction' && !form.value.occupancyStatus) {
+    proxy.$showNotification("❌ Please select occupancy status!", "error");
+    isSubmitting.value = false;
+    return;
+  }
 
     // Validation للـ rented fields
     if (form.value.saleOrRent === 'Rent' && form.value.rented_status === 'Rented' && !form.value.rented_until) {
