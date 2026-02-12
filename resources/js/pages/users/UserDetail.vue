@@ -193,6 +193,12 @@
                                                                 <span v-if="property.listing_status" class="status-badge">
                                                                          {{ property.listing_status === 'sale' ? 'For Sale' : 'For Rent' }}
                                                                 </span>
+                                                                 <span v-if="property.is_hot_deal== 'Yes'" class="badge-off_plan">
+                                                                    Hot Deal
+                                                                  </span>
+                                                                   <span v-if="property.occupancy_status" class="badge-occupancy_status">
+                                                                    {{property.occupancy_status}}
+                                                                  </span>
                                                             </div>
                                                             
                                                             <span class="image-count" v-if="property.gallery_images && property.gallery_images.length">
@@ -1501,6 +1507,22 @@ export default {
 }
 .justify-between{
     justify-content:space-between;
+}
+.badge-off_plan {
+  background: #faa300;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+.badge-occupancy_status{
+    background: #EDEBEB !important;
+    color: #01062C !important;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;  
 }
 </style>
 

@@ -225,6 +225,7 @@
                 type="number"
                 class="form-control"
                 @blur="convertSqmToSqft"
+                @keydown="preventNumberInvalidKeys"
               />
             </div>
 
@@ -235,6 +236,7 @@
                 type="number"
                 class="form-control"
                 @blur="convertSqftToSqm" placeholder="Enter Size (sqft)"
+                @keydown="preventNumberInvalidKeys"
               />
             </div>
 
@@ -248,7 +250,7 @@
     </div>
 
     <!-- 💰 Mortgage & Rent Info -->
-        <div class="col-lg-12">
+          <div class="col-lg-12">
           <div class="card">
             <div class="card-header">
               <h6 class="card-title mb-0">Mortgage & Rent Info</h6>
@@ -264,9 +266,9 @@
                   />
                 </div>
     
-                <div class="col-md-4">
+                <div v-if="form.mortgageStatus !== 'Non-Mortgaged'" class="col-md-4">
                   <label class="form-label">Mortgage Amount</label>
-                  <input v-model="form.mortgageAmount" type="number" class="form-control" placeholder="Enter Mortgage Amount"/>
+                  <input v-model="form.mortgageAmount" type="number" class="form-control" placeholder="Enter Mortgage Amount" @keydown="preventNumberInvalidKeys" />
                 </div>
     
                 <!-- Force new row on desktop so first line only has Mortgage fields -->
@@ -281,19 +283,20 @@
                   />
                 </div>
     
-                <div class="col-md-4">
-                  <label class="form-label">Rent Expiry Date</label>
-                  <input v-model="form.rentExpiryDate" type="date" class="form-control" placeholder="Enter Rent Expiry Date" />
-                </div>
+                <template v-if="form.occupancyStatus !== 'Vacant'">
+                  <div class="col-md-4">
+                    <label class="form-label">Rent Expiry Date</label>
+                    <input v-model="form.rentExpiryDate" type="date" class="form-control" placeholder="Enter Rent Expiry Date" :min="minRentExpiryDate" />
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Rent Amount</label>
+                    <input v-model="form.rentAmount" type="number" class="form-control" placeholder="Enter Rent Amount" @keydown="preventNumberInvalidKeys" />
+                  </div>
+                </template>
     
-                <div class="col-md-4">
-                  <label class="form-label">Rent Amount</label>
-                  <input v-model="form.rentAmount" type="number" class="form-control" placeholder="Enter Rent Amount" />
-                </div>
-    
-                <div class="col-md-12">
+                <div v-if="form.mortgageStatus !== 'Non-Mortgaged'" class="col-md-12">
                   <label class="form-label">Comment</label>
-                  <textarea v-model="form.mortgageComment" rows="3" class="form-control" placeholder="Enter Mortage Comment" ></textarea>
+                  <textarea v-model="form.mortgageComment" rows="3" class="form-control" placeholder="Enter Mortgage Comment" ></textarea>
                 </div>
               </div>
             </div>
@@ -338,7 +341,7 @@
               />
               <div class="text-muted small mt-1">
                 You can choose multiple images (PNG, JPG, JPEG, SVG, WebP). Max 10MB per image.
-                <strong>First image will be set as the hero hero image.</strong>
+                <strong>First image will be set as the hero image.</strong>
               </div>
             </div>
 
@@ -422,135 +425,352 @@
     </div>
 
     <!-- Floor Plans Section -->
-    <div class="col-lg-12">
-      <div class="card">
-        <div class="card-header">
-          <h6 class="card-title mb-0">Floor Plans</h6>
-        </div>
-        <div class="card-body">
-          <div class="row gy-3">
-            <div class="col-md-12" v-if="selectedProject && projectFloorPlans.length > 0">
-              <div class="card">
-                <div class="card-header bg-light">
-                  <h6 class="card-title mb-0">Select Project Floor Plans</h6>
-                </div>
-                <div class="card-body">
-                  <div class="row gy-3">
-                    <div class="col-12">
-                      <label class="form-label">Choose Floor Plans</label>
-                      <v-select
-                        v-model="selectedProjectFloorPlans"
-                        :options="projectFloorPlans"
-                        label="name"
-                        multiple
-                        placeholder="Select floor plans from project"
-                        :clearable="true"
-                        :close-on-select="false"
-                        @input="handleProjectFloorPlanSelection"
+        <!-- Floor Plans Section -->
+<div class="col-lg-12">
+  <div class="card">
+    <div class="card-header">
+      <h6 class="card-title mb-0">Floor Plans</h6>
+    </div>
+    <div class="card-body">
+      <div class="row gy-3">
+        <!-- Project Floor Plans Gallery - Single Selection -->
+        <div class="col-md-12" v-if="selectedProject && projectFloorPlans.length > 0">
+          <div class="card">
+            <div class="card-header bg-light">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">Select One Floor Plan from Project</h6>
+                <span class="badge bg-primary" v-if="selectedProjectFloorPlan">
+                  <i class="fas fa-check me-1"></i>
+                  Selected
+                </span>
+                <span class="badge bg-secondary" v-else>
+                  <i class="fas fa-times me-1"></i>
+                  Not Selected
+                </span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="row gy-3">
+                <div class="col-12">
+                  <div class="mb-3">
+                    <label class="form-label mb-1">Choose One Floor Plan</label>
+                    <div class="text-muted small">
+                      Click on a plan to select it. Only one plan can be selected from the project.
+                    </div>
+                  </div>
+                  
+                  <!-- Floor Plans Gallery Grid - Single Selection -->
+                  <div class="floor-plans-gallery">
+                    <div class="row g-3">
+                      <div 
+                        v-for="(floorPlan, index) in projectFloorPlans" 
+                        :key="'project-plan-' + floorPlan.id"
+                        class="col-xl-2-4 col-lg-3 col-md-4 col-6"
                       >
-                        <template #option="floorPlan">
-                          <div class="d-flex align-items-center">
-                            <img 
-                              v-if="floorPlan.image_url" 
-                              :src="floorPlan.image_url" 
-                              alt="Floor plan" 
-                              class="me-2"
-                              style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;"
-                            />
-                            <div>
-                              <strong>{{ floorPlan.name }}</strong>
-                              <small class="text-muted d-block">{{ floorPlan.order ? `Order: ${floorPlan.order}` : '' }}</small>
+                        <div 
+                          class="floor-plan-card position-relative h-100"
+                          :class="{ 
+                            'selected-single': isSelectedProjectFloorPlan(floorPlan),
+                            'not-selected': selectedProjectFloorPlan && !isSelectedProjectFloorPlan(floorPlan)
+                          }"
+                        >
+                          <div class="card h-100 border cursor-pointer">
+                            <!-- Selection Badge -->
+                            <div 
+                              v-if="isSelectedProjectFloorPlan(floorPlan)" 
+                              class="position-absolute top-0 end-0 m-2 z-1"
+                            >
+                              <span class="badge bg-success">
+                                <i class="fas fa-check-circle me-1"></i>
+                                Selected
+                              </span>
+                            </div>
+                            
+                            <!-- Floor Plan Image -->
+                            <div class="floor-plan-image-container position-relative">
+                              <img 
+                                :src="floorPlan.image_url" 
+                                :alt="floorPlan.name"
+                                class="floor-plan-image w-100"
+                                :style="{ 
+                                  height: '150px', 
+                                  objectFit: 'cover',
+                                  cursor: 'pointer'
+                                }"
+                                @error="handleFloorPlanImageError($event, floorPlan)"
+                               @click.stop="openFloorPlanViewer(floorPlan)"
+                              />
+                              
+                              <!-- Selection Overlay -->
+                              <div 
+                                v-if="isSelectedProjectFloorPlan(floorPlan)"
+                                class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                                style="background: rgba(25, 135, 84, 0.2); pointer-events: none;"
+                              >
+                                <div class="selection-check">
+                                  <i class="fas fa-check-circle fa-2x text-white"></i>
+                                </div>
+                              </div>
+                              
+                              <!-- Click to Select Overlay -->
+                              <div 
+                                v-else
+                                class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                                style="background: rgba(13, 110, 253, 0.1); opacity: 0; transition: opacity 0.3s; pointer-events: none;"
+                                :style="{ opacity: floorPlan.isHovered ? 1 : 0 }"
+                              >
+                                <div class="selection-hint">
+                                  <i class="fas fa-mouse-pointer fa-2x text-primary"></i>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <!-- Floor Plan Info -->
+                            <div class="card-body p-3">
+                              <h6 
+                                class="floor-plan-name text-truncate mb-2"
+                                style="font-size: 0.9rem !important; font-weight: 600;"
+                                :title="floorPlan.name"
+                              >
+                                {{ floorPlan.name }}
+                              </h6>
+                              
+                              <!-- Plan Details -->
+                              <div class="plan-details small text-muted">
+                               
+                                <div v-if="floorPlan.dimensions" class="mb-1">
+                                  <i class="fas fa-ruler-combined me-1"></i>
+                                  {{ floorPlan.dimensions }}
+                                </div>
+                              </div>
+                              
+                              <!-- Action Buttons -->
+                              <div class="floor-plan-actions mt-3">
+                                <div class="d-grid">
+                                  <button 
+                                    type="button"
+                                    class="btn btn-sm"
+                                    :class="isSelectedProjectFloorPlan(floorPlan) ? 'btn-danger' : 'btn-outline-primary'"
+                                    @click.stop="isSelectedProjectFloorPlan(floorPlan) ? clearSelectedProjectFloorPlan() : selectSingleProjectFloorPlan(floorPlan)"
+                                  >
+                                    <i 
+                                      class="fas fa-fw me-1"
+                                      :class="isSelectedProjectFloorPlan(floorPlan) ? 'fa-times' : 'fa-check'"
+                                    ></i>
+                                    {{ isSelectedProjectFloorPlan(floorPlan) ? 'Deselect' : 'Select This Plan' }}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <!-- Selected Border -->
+                            <div 
+                              v-if="isSelectedProjectFloorPlan(floorPlan)"
+                              class="position-absolute top-0 start-0 w-100 h-100 border-3 border-success"
+                              style="pointer-events: none; border-radius: inherit;"
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div 
+                      v-if="projectFloorPlans.length === 0" 
+                      class="text-center py-5"
+                    >
+                      <i class="fas fa-blueprint fa-3x text-muted mb-3"></i>
+                      <p class="text-muted mb-0">No floor plans available for this project</p>
+                    </div>
+                    
+                    <!-- Selected Plan Display -->
+                    <div v-if="selectedProjectFloorPlan" class="mt-4">
+                      <div class="alert alert-success">
+                        <div class="d-flex align-items-center">
+                          <div class="flex-shrink-0">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                          </div>
+                          <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-1">Selected Floor Plan</h6>
+                            <p class="mb-0">
+                              <strong>{{ selectedProjectFloorPlan.name }}</strong>
+                              <span v-if="selectedProjectFloorPlan.order" class="ms-2">
+                                (Order #{{ selectedProjectFloorPlan.order }})
+                              </span>
+                            </p>
+                          </div>
+                          <button 
+                            class="btn btn-sm btn-outline-danger"
+                            @click="clearSelectedProjectFloorPlan"
+                          >
+                            <i class="fas fa-times me-1"></i>
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Upload Floor Plans Section - Multiple Uploads Allowed -->
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">Upload Custom Floor Plans</h6>
+                <span class="badge bg-info" v-if="customFloorPlansCount > 0">
+                  {{ customFloorPlansCount }} uploaded
+                </span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="row gy-3">
+                <div class="col-12">
+                  <div class="mb-3">
+                    <!--<label class="form-label">Upload Your Own Floor Plans</label>-->
+                    <!--<div class="text-muted small mb-2">-->
+                    <!--  You can upload multiple floor plan images. These will be added alongside any selected project plan.-->
+                    <!--</div>-->
+                    <input 
+                      type="file" 
+                      class="form-control" 
+                      multiple 
+                      @change="handleFloorPlanUpload" 
+                      accept="image/*"
+                      ref="floorPlanInput"
+                    />
+                  </div>
+                  
+                  <!-- Current Floor Plans Display -->
+                  <div v-if="form.floorPlans.length > 0">
+                    <label class="form-label mb-3">Current Floor Plans</label>
+                    
+                    <!-- Stats -->
+                    <div class="row mb-3">
+                      <div class="col-md-4">
+                        <div class="card bg-light">
+                          <div class="card-body text-center py-2">
+                            <h5 class="mb-0">{{ form.floorPlans.length }}</h5>
+                            <small class="text-muted">Total Plans</small>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="card bg-light">
+                          <div class="card-body text-center py-2">
+                            <h5 class="mb-0">{{ selectedProjectFloorPlan ? 1 : 0 }}</h5>
+                            <small class="text-muted">From Project</small>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="card bg-light">
+                          <div class="card-body text-center py-2">
+                            <h5 class="mb-0">{{ customFloorPlansCount }}</h5>
+                            <small class="text-muted">Custom Uploads</small>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Floor Plans Grid -->
+                    <div class="floor-plans-preview">
+                      <div class="row g-3">
+                        <div 
+                          v-for="(item, index) in form.floorPlans" 
+                          :key="index"
+                          class="col-xl-2-4 col-lg-3 col-md-4 col-6"
+                        >
+                          <div class="floor-plan-item position-relative">
+                            <div class="card h-100">
+                              <!-- Source Badge -->
+                              <div class="position-absolute top-0 start-0 m-2 z-1">
+                                <span 
+                                  class="badge"
+                                  :class="item.fromProject ? 'bg-success' : 'bg-primary'"
+                                >
+                                  <i 
+                                    class="fas fa-fw me-1"
+                                    :class="item.fromProject ? 'fa-building' : 'fa-upload'"
+                                  ></i>
+                                  {{ item.fromProject ? 'Project' : 'Custom' }}
+                                </span>
+                              </div>
+                              
+                              <!-- Image -->
+                              <img 
+                                :src="item.preview || getImagePreview(item.file || item)" 
+                                class="card-img-top" 
+                                alt="Floor plan"
+                                style="height: 150px; object-fit: cover;"
+                                @error="handleImageError"
+                              />
+                              
+                              <!-- Content -->
+                              <div class="card-body p-3">
+                                <div class="mb-2">
+                                  <label class="form-label small">Plan Name</label>
+                                  <input 
+                                    v-model="item.customName" 
+                                    type="text" 
+                                    class="form-control form-control-sm" 
+                                    placeholder="Enter plan name"
+                                    @change="updateFloorPlanName(index, $event)"
+                                  />
+                                </div>
+                                <p class="small text-truncate mb-1" :title="item.name || item.file?.name">
+                                  {{ item.name || item.file?.name }}
+                                </p>
+                                <p class="small text-muted">
+                                  {{ formatFileSize(item.size || item.file?.size) }}
+                                </p>
+                              </div>
+                              
+                              <!-- Remove Button -->
+                              <button 
+                                type="button" 
+                                class="btn-close position-absolute top-0 end-0 m-2 bg-danger rounded-circle p-1"
+                                @click="removeFloorPlan(index)"
+                                style="--bs-bg-opacity: 0.8;"
+                                :title="item.fromProject ? 'Remove project plan' : 'Remove custom plan'"
+                              ></button>
                             </div>
                           </div>
-                        </template>
-                        <template #selected-option-container="{ option, deselect }">
-                          <div class="selected-tag">
-                            {{ option.name }}
-                            <button @click="deselect(option)" class="tag-close">
-                              ×
-                            </button>
-                          </div>
-                        </template>
-                      </v-select>
-                      <div class="text-muted small mt-2">
-                        <i class="fas fa-info-circle me-1"></i>
-                        You can select multiple floor plans from the project. Selected plans will be added to the property floor plans.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-12">
-              <label class="form-label">Upload Floor Plans</label>
-              <input 
-                type="file" 
-                class="form-control" 
-                multiple 
-                @change="handleFloorPlanUpload" 
-                accept="image/*"
-                ref="floorPlanInput"
-              />
-              <div class="text-muted small mt-1">
-                You can choose multiple floor plan images (PNG, JPG, JPEG, SVG, WebP). Max 10MB per image.
-              </div>
-            </div>
-
-            <!-- Floor Plans Preview -->
-            <div class="col-12" v-if="form.floorPlans.length > 0">
-              <label class="form-label mb-3">Floor Plans Preview</label>
-              <div class="row g-3">
-                <div 
-                  v-for="(item, index) in form.floorPlans" 
-                  :key="index"
-                  class="col-xl-3 col-lg-4 col-md-6"
-                >
-                  <div class="floor-plan-item position-relative">
-                    <div class="card h-100">
-                      <img 
-                        :src="item.preview || getImagePreview(item.file || item)" 
-                        class="card-img-top floor-plan-image" 
-                        alt="Floor plan image"
-                        style="height: 200px; object-fit: cover;"
-                        @error="handleImageError"
-                      />
-                      <div class="card-body p-3">
-                        <div class="mb-2">
-                          <label class="form-label small">Plan Name</label>
-                          <input 
-                            v-model="item.customName" 
-                            type="text" 
-                            class="form-control form-control-sm" 
-                            placeholder="Enter plan name"
-                            @change="updateFloorPlanName(index, $event)"
-                          />
                         </div>
-                        <p class="card-text small text-truncate mb-1">{{ item.name || item.file?.name }}</p>
-                        <p class="card-text small text-muted">{{ formatFileSize(item.size || item.file?.size) }}</p>
                       </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Empty State -->
+                  <div class="col-12" v-if="form.floorPlans.length === 0">
+                    <div class="text-center py-5 border rounded bg-light">
+                      <i class="fas fa-blueprint fa-3x text-muted mb-3"></i>
+                      <h6 class="text-muted mb-2">No Floor Plans Added</h6>
+                      <p class="text-muted small mb-3">
+                        Select one plan from the project or upload your own floor plans.
+                      </p>
                       <button 
-                        type="button" 
-                        class="btn-close position-absolute top-0 end-0 m-2 bg-danger rounded-circle p-1"
-                        @click="removeFloorPlan(index)"
-                        style="--bs-bg-opacity: 0.8;"
-                      ></button>
+                        class="btn btn-outline-primary"
+                        @click="$refs.floorPlanInput.click()"
+                      >
+                        <i class="fas fa-upload me-2"></i>
+                        Upload Floor Plans
+                      </button>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            <!-- Empty State -->
-            <div class="col-12" v-else>
-              <div class="text-center py-5 border rounded bg-light">
-                <i class="fas fa-blueprint fa-3x text-muted mb-3"></i>
-                <p class="text-muted mb-0">No floor plans uploaded yet. Add floor plans to showcase your property layout!</p>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+  </div>
+</div>
    <!-- 📄 Property Documents Section -->
     <div class="col-lg-12">
       <div class="card">
@@ -1094,6 +1314,43 @@
         </div>
       </div>
     </div>
+    <!-- Floor Plan Image Viewer Modal -->
+<Teleport to="body">
+  <div v-if="showFloorPlanViewer" class="floor-plan-viewer-modal" @click.self="closeFloorPlanViewer">
+    <div class="viewer-container">
+      <div class="viewer-header">
+        <h5 class="viewer-title">
+          {{ selectedFloorPlanForViewer?.name }}
+          <span v-if="selectedFloorPlanForViewer?.dimensions" class="ms-2 text-muted">
+            {{ selectedFloorPlanForViewer.dimensions }}
+          </span>
+        </h5>
+        <button class="btn-close btn-close-white" @click="closeFloorPlanViewer">
+          <!--<i class="fas fa-times"></i>-->
+        </button>
+      </div>
+      
+      <div class="viewer-body">
+        <img 
+          :src="selectedFloorPlanForViewer?.image_url" 
+          :alt="selectedFloorPlanForViewer?.name"
+          class="viewer-image"
+          @error="handleFloorPlanImageError"
+        />
+      </div>
+      
+      <div class="viewer-footer">
+        <div class="viewer-controls">
+          <button class="btn btn-light" @click="closeFloorPlanViewer">
+            <i class="fas fa-times me-2"></i>
+            Close
+          </button>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+</Teleport>
   </div>
 </template>
 
@@ -1115,9 +1372,14 @@ const paymentPlanOptions = [
 ];
 const completionStatusOptions = ['Completed', 'Under Construction'];
 const furnishedStatusOptions = ['Furnished', 'Unfurnished'];
-const ownershipTypeOptions = ['freehold', 'leasehold'];
-const mortgageStatusOptions = ['Mortgage', 'Non Mortgage'];
-const occupancyStatusOptions = ['Occupied', 'Vacant'];
+const ownershipTypeOptions = ['Freehold', 'Leasehold'];
+const mortgageStatusOptions = ['Mortgaged', 'Non-Mortgaged'];
+const occupancyStatusOptions = [
+  'Owner Occupied',
+  'Holiday Home',
+  'Rented',
+  'Vacant'
+];
 const salutationOptions = ['Mr', 'Mrs', 'Ms'];
 const residencyStatusOptions = [
   { value: 'resident', label: 'Resident' },
@@ -1146,6 +1408,18 @@ const projectFloorPlans = ref([]);
 const selectedProjectFloorPlans = ref([]);
 const isLoadingProjectFloorPlans = ref(false);
 
+const showFloorPlanViewer = ref(false);
+const selectedFloorPlanForViewer = ref(null);
+
+const openFloorPlanViewer = (floorPlan) => {
+  selectedFloorPlanForViewer.value = floorPlan;
+  showFloorPlanViewer.value = true;
+};
+
+const closeFloorPlanViewer = () => {
+  showFloorPlanViewer.value = false;
+  selectedFloorPlanForViewer.value = null;
+};
 
 const newOwner = ref({
   salutation: "", first_name: "", last_name: "", email: "",
@@ -1243,14 +1517,14 @@ watch(() => selectedProject.value, async (newProject, oldProject) => {
     form.value.area = null;
   }
 });
-watch(() => selectedProject.value, async (newProject) => {
-  if (newProject) {
-    await fetchProjectFloorPlans(newProject.id);
-  } else {
-    projectFloorPlans.value = [];
-    selectedProjectFloorPlans.value = [];
-  }
-}, { immediate: true });
+// watch(() => selectedProject.value, async (newProject) => {
+//   if (newProject) {
+//     await fetchProjectFloorPlans(newProject.id);
+//   } else {
+//     projectFloorPlans.value = [];
+//     selectedProjectFloorPlans.value = [];
+//   }
+// }, { immediate: true });
 
 const fetchProjectFloorPlans = async (projectId) => {
   try {
@@ -1302,26 +1576,212 @@ const handleProjectFloorPlanSelection = (selectedPlans) => {
   selectedProjectFloorPlans.value = selectedPlans;
 };
 
+// const removeFloorPlan = (index) => {
+//   const removedPlan = form.value.floorPlans[index];
+  
+//   if (removedPlan.fromProject) {
+//     const selectedIndex = selectedProjectFloorPlans.value.findIndex(
+//       plan => plan.id === removedPlan.projectFloorPlanId
+//     );
+//     if (selectedIndex !== -1) {
+//       selectedProjectFloorPlans.value.splice(selectedIndex, 1);
+//     }
+//   }
+  
+//   if (form.value.floorPlans[index] && form.value.floorPlans[index].preview) {
+//     URL.revokeObjectURL(form.value.floorPlans[index].preview);
+//   }
+//   form.value.floorPlans.splice(index, 1);
+//   proxy.$showNotification("🗑️ Floor plan removed", "info");
+// };
+// Variables for single project floor plan selection
+const selectedProjectFloorPlan = ref(null);
+
+// Computed property
+const customFloorPlansCount = computed(() => {
+  return form.value.floorPlans.filter(fp => !fp.fromProject).length;
+});
+
+// Functions for handling single project floor plan selection
+const isSelectedProjectFloorPlan = (floorPlan) => {
+  return selectedProjectFloorPlan.value?.id === floorPlan.id;
+};
+
+const selectSingleProjectFloorPlan = (floorPlan) => {
+  // Remove any existing project plan from form.floorPlans
+  form.value.floorPlans = form.value.floorPlans.filter(fp => !fp.fromProject);
+  
+  // Update selected project floor plan
+  selectedProjectFloorPlan.value = floorPlan;
+  
+  // Add to form.floorPlans
+  const newPlan = {
+    id: floorPlan.id,
+    name: floorPlan.name,
+    image_url: floorPlan.image_url,
+    order: floorPlan.order,
+    dimensions: floorPlan.dimensions,
+    customName: floorPlan.name,
+    fromProject: true,
+    projectFloorPlanId: floorPlan.id
+  };
+  
+  form.value.floorPlans.unshift(newPlan); // Add at beginning
+  proxy.$showNotification(`✅ Selected project floor plan: "${floorPlan.name}"`, "success");
+};
+
+const clearSelectedProjectFloorPlan = () => {
+  if (selectedProjectFloorPlan.value) {
+    const planName = selectedProjectFloorPlan.value.name;
+    
+    // Remove from form.floorPlans
+    form.value.floorPlans = form.value.floorPlans.filter(fp => !fp.fromProject);
+    
+    // Clear selection
+    selectedProjectFloorPlan.value = null;
+    
+    proxy.$showNotification(`🗑️ Removed project floor plan: "${planName}"`, "info");
+  }
+};
+
+// Update the existing removeFloorPlan function
 const removeFloorPlan = (index) => {
   const removedPlan = form.value.floorPlans[index];
   
   if (removedPlan.fromProject) {
-    const selectedIndex = selectedProjectFloorPlans.value.findIndex(
-      plan => plan.id === removedPlan.projectFloorPlanId
-    );
-    if (selectedIndex !== -1) {
-      selectedProjectFloorPlans.value.splice(selectedIndex, 1);
+    // If removing a project plan, clear the selection
+    clearSelectedProjectFloorPlan();
+  } else {
+    // Remove custom plan
+    if (form.value.floorPlans[index] && form.value.floorPlans[index].preview) {
+      URL.revokeObjectURL(form.value.floorPlans[index].preview);
     }
+    form.value.floorPlans.splice(index, 1);
+    proxy.$showNotification("🗑️ Custom floor plan removed", "info");
   }
-  
-  if (form.value.floorPlans[index] && form.value.floorPlans[index].preview) {
-    URL.revokeObjectURL(form.value.floorPlans[index].preview);
-  }
-  form.value.floorPlans.splice(index, 1);
-  proxy.$showNotification("🗑️ Floor plan removed", "info");
 };
 
+// Update the existing handleFloorPlanUpload function
+const handleFloorPlanUpload = (e) => {
+  const files = Array.from(e.target.files);
+  if (files.length > 0) {
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml', 'image/webp'];
+    const validFiles = files.filter(file => {
+      if (!validTypes.includes(file.type)) {
+        proxy.$showNotification(`❌ File "${file.name}" is not a valid image type.`, "error");
+        return false;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        proxy.$showNotification(`❌ Floor plan "${file.name}" is too large. Max size is 10MB.`, "error");
+        return false;
+      }
+      return true;
+    });
 
+    if (validFiles.length > 0) {
+      const filesWithNames = validFiles.map(file => ({
+        file: file, 
+        name: file.name, 
+        size: file.size, 
+        type: file.type,
+        customName: file.name.replace(/\.[^/.]+$/, ""), 
+        preview: URL.createObjectURL(file),
+        isNewUpload: true
+      }));
+      
+      // Add custom plans to form.floorPlans
+      form.value.floorPlans = [...form.value.floorPlans, ...filesWithNames];
+      e.target.value = '';
+      proxy.$showNotification(`✅ Added ${validFiles.length} custom floor plan(s)`, "success");
+    }
+  }
+};
+
+// Update watch for project change
+watch(() => selectedProject.value, async (newProject) => {
+  if (newProject) {
+    await fetchProjectFloorPlans(newProject.id);
+    // Clear selected project floor plan when project changes
+    clearSelectedProjectFloorPlan();
+  } else {
+    projectFloorPlans.value = [];
+    clearSelectedProjectFloorPlan();
+  }
+}, { immediate: true });
+// Functions for handling project floor plans selection
+const isProjectFloorPlanSelected = (floorPlan) => {
+  return selectedProjectFloorPlans.value.some(
+    plan => plan.id === floorPlan.id
+  );
+};
+
+const toggleProjectFloorPlanSelection = (floorPlan) => {
+  const index = selectedProjectFloorPlans.value.findIndex(
+    plan => plan.id === floorPlan.id
+  );
+  
+  if (index === -1) {
+    // Add to selection
+    selectedProjectFloorPlans.value.push(floorPlan);
+    
+    // Add to form.floorPlans if not already there
+    const alreadyInForm = form.value.floorPlans.some(
+      fp => fp.projectFloorPlanId === floorPlan.id
+    );
+    
+    if (!alreadyInForm) {
+      form.value.floorPlans.push({
+        id: floorPlan.id,
+        name: floorPlan.name,
+        image_url: floorPlan.image_url,
+        order: floorPlan.order,
+        dimensions: floorPlan.dimensions,
+        rooms: floorPlan.rooms,
+        customName: floorPlan.name,
+        fromProject: true,
+        projectFloorPlanId: floorPlan.id
+      });
+    }
+    
+    proxy.$showNotification(`✅ Added "${floorPlan.name}" to floor plans`, "success");
+  } else {
+    // Remove from selection
+    selectedProjectFloorPlans.value.splice(index, 1);
+    
+    // Remove from form.floorPlans
+    const formIndex = form.value.floorPlans.findIndex(
+      fp => fp.projectFloorPlanId === floorPlan.id
+    );
+    if (formIndex !== -1) {
+      form.value.floorPlans.splice(formIndex, 1);
+    }
+    
+    proxy.$showNotification(`🗑️ Removed "${floorPlan.name}" from floor plans`, "info");
+  }
+};
+
+const clearAllProjectFloorPlans = () => {
+  // Remove from form.floorPlans
+  form.value.floorPlans = form.value.floorPlans.filter(
+    fp => !fp.fromProject
+  );
+  
+  // Clear selection
+  selectedProjectFloorPlans.value = [];
+  
+  proxy.$showNotification("🗑️ All project floor plans cleared", "info");
+};
+
+const previewFloorPlanImage = (floorPlan) => {
+  if (floorPlan.image_url) {
+    window.open(floorPlan.image_url, '_blank');
+  }
+};
+
+const handleFloorPlanImageError = (event, floorPlan) => {
+  console.error('❌ Floor plan image failed to load:', floorPlan.name);
+  event.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5GTE9PUiBQTEFOPC90ZXh0Pjx0ZXh0IHg9IjUwJSIgeT0iNjUlIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzg4OCI+SW1hZ2Ugbm90IGF2YWlsYWJsZTwvdGV4dD48L3N2Zz4=';
+};
 // 6. computed properties
 const agentId = computed(() => {
   try {
@@ -1644,38 +2104,38 @@ const removeNewOwnerAdditionalDocument = (index) => {
   if (!Array.isArray(newOwner.value.additional_documents)) return;
   newOwner.value.additional_documents.splice(index, 1);
 };
-const handleFloorPlanUpload = (e) => {
-  const files = Array.from(e.target.files);
-  if (files.length > 0) {
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml', 'image/webp'];
-    const validFiles = files.filter(file => {
-      if (!validTypes.includes(file.type)) {
-        proxy.$showNotification(`❌ File "${file.name}" is not a valid image type.`, "error");
-        return false;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        proxy.$showNotification(`❌ Floor plan "${file.name}" is too large. Max size is 10MB.`, "error");
-        return false;
-      }
-      return true;
-    });
+// const handleFloorPlanUpload = (e) => {
+//   const files = Array.from(e.target.files);
+//   if (files.length > 0) {
+//     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml', 'image/webp'];
+//     const validFiles = files.filter(file => {
+//       if (!validTypes.includes(file.type)) {
+//         proxy.$showNotification(`❌ File "${file.name}" is not a valid image type.`, "error");
+//         return false;
+//       }
+//       if (file.size > 10 * 1024 * 1024) {
+//         proxy.$showNotification(`❌ Floor plan "${file.name}" is too large. Max size is 10MB.`, "error");
+//         return false;
+//       }
+//       return true;
+//     });
 
-    if (validFiles.length > 0) {
-      const filesWithNames = validFiles.map(file => ({
-        file: file, 
-        name: file.name, 
-        size: file.size, 
-        type: file.type,
-        customName: file.name.replace(/\.[^/.]+$/, ""), 
-        preview: URL.createObjectURL(file),
-        isNewUpload: true
-      }));
-      form.value.floorPlans = [...form.value.floorPlans, ...filesWithNames];
-      e.target.value = '';
-      proxy.$showNotification(`✅ Added ${validFiles.length} new floor plan(s)`, "success");
-    }
-  }
-};
+//     if (validFiles.length > 0) {
+//       const filesWithNames = validFiles.map(file => ({
+//         file: file, 
+//         name: file.name, 
+//         size: file.size, 
+//         type: file.type,
+//         customName: file.name.replace(/\.[^/.]+$/, ""), 
+//         preview: URL.createObjectURL(file),
+//         isNewUpload: true
+//       }));
+//       form.value.floorPlans = [...form.value.floorPlans, ...filesWithNames];
+//       e.target.value = '';
+//       proxy.$showNotification(`✅ Added ${validFiles.length} new floor plan(s)`, "success");
+//     }
+//   }
+// };
 
 const updateFloorPlanName = (index, event) => {
   form.value.floorPlans[index].customName = event.target.value;
@@ -2068,6 +2528,12 @@ const convertSqmToSqft = () => {
   }
 };
 
+const preventNumberInvalidKeys = (event) => {
+  if (['e', 'E', '+', '-'].includes(event.key)) {
+    event.preventDefault();
+  }
+};
+
 const convertSqftToSqm = () => {
   if (form.value.size_sqft && !isNaN(form.value.size_sqft)) {
     form.value.size_sqmt = (form.value.size_sqft / 10.7639).toFixed(2);
@@ -2075,6 +2541,15 @@ const convertSqftToSqm = () => {
     form.value.size_sqmt = "";
   }
 };
+
+/** Minimum date for rent expiry (today, local) – no backdated entries */
+const minRentExpiryDate = computed(() => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+});
 
 const bedroomOptions = [
   { label: "Studio", value: 0 }, { label: "1", value: 1 }, { label: "2", value: 2 }, { label: "3", value: 3 },
@@ -3032,5 +3507,392 @@ body.swal2-toast-shown  {
   font-size: 0.7rem;
   font-weight: 500;
   z-index: 1;
+}
+/* Custom column for 5 items per row on extra large screens */
+.col-xl-2-4 {
+  flex: 0 0 20%;
+  max-width: 20%;
+}
+
+/* Floor Plan Card Styles */
+.floor-plan-card {
+  transition: all 0.3s ease;
+}
+
+.floor-plan-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.floor-plan-card.selected {
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+}
+
+.floor-plan-card .cursor-pointer {
+  cursor: pointer;
+}
+
+.floor-plan-image-container {
+  position: relative;
+  overflow: hidden;
+  background-color: #f8f9fa;
+}
+
+.floor-plan-image {
+  transition: all 0.3s ease;
+}
+
+.floor-plan-card:hover .floor-plan-image {
+  transform: scale(1.05);
+}
+
+.selection-toggle {
+  opacity: 0;
+  background: rgba(13, 110, 253, 0.1);
+  transition: all 0.3s ease;
+}
+
+.floor-plan-card:hover .selection-toggle {
+  opacity: 1;
+}
+
+.selection-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.floor-plan-card.selected .selection-toggle {
+  opacity: 1;
+  background: rgba(13, 110, 253, 0.2);
+}
+
+.floor-plan-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.plan-details {
+  font-size: 0.8rem;
+}
+
+.plan-details i {
+  width: 16px;
+  text-align: center;
+}
+
+/* Selected Plans Summary */
+.selected-plans-summary {
+  border-left: 4px solid #0d6efd;
+}
+
+.selected-plan-item {
+  border: 1px solid #dee2e6;
+  transition: all 0.3s ease;
+}
+
+.selected-plan-item:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-2px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+  .col-xl-2-4 {
+    flex: 0 0 25%;
+    max-width: 25%; /* 4 per row on smaller desktops */
+  }
+}
+
+@media (max-width: 992px) {
+  .col-xl-2-4 {
+    flex: 0 0 33.333%;
+    max-width: 33.333%; /* 3 per row on tablets */
+  }
+}
+
+@media (max-width: 768px) {
+  .col-xl-2-4 {
+    flex: 0 0 50%;
+    max-width: 50%; /* 2 per row on mobile */
+  }
+}
+
+@media (max-width: 576px) {
+  .col-xl-2-4 {
+    flex: 0 0 100%;
+    max-width: 100%; /* 1 per row on very small screens */
+  }
+}
+
+/* Badge styles */
+.badge.bg-primary {
+  background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%) !important;
+}
+
+.z-1 {
+  z-index: 1;
+}
+
+.border-2 {
+  border-width: 2px !important;
+}
+/* Single Selection Styles */
+.selected-single {
+  transform: scale(1.02);
+  transition: all 0.3s ease;
+  /*z-index: 10;*/
+}
+
+.selected-single .card {
+  border-color: #198754 !important;
+  box-shadow: 0 0 20px rgba(25, 135, 84, 0.3) !important;
+}
+
+.not-selected {
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.not-selected:hover {
+  opacity: 0.8;
+}
+
+/* Selection Check */
+.selection-check {
+  background: rgba(25, 135, 84, 0.8);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulseCheck 1.5s infinite;
+}
+
+@keyframes pulseCheck {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Selection Hint */
+.selection-hint {
+  background: rgba(13, 110, 253, 0.8);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Custom column for 5 items per row */
+.col-xl-2-4 {
+  flex: 0 0 20%;
+  max-width: 20%;
+}
+
+/* Border Styles */
+.border-3 {
+  border-width: 3px !important;
+}
+
+/* Alert Styles */
+.alert-success {
+  background: linear-gradient(135deg, #d1e7dd 0%, #badbcc 100%);
+  border-color: #a3cfbb;
+}
+
+/* Badge Styles */
+.badge.bg-success {
+  background: linear-gradient(135deg, #198754 0%, #157347 100%) !important;
+}
+
+.badge.bg-primary {
+  background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%) !important;
+}
+
+.badge.bg-info {
+  background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%) !important;
+}
+
+/* Floor Plan Card Hover Effect */
+.floor-plan-card:hover .selection-hint-container {
+  opacity: 1 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+  .col-xl-2-4 {
+    flex: 0 0 25%;
+    max-width: 25%;
+  }
+}
+
+@media (max-width: 1200px) {
+  .col-xl-2-4 {
+    flex: 0 0 33.333%;
+    max-width: 33.333%;
+  }
+}
+
+@media (max-width: 992px) {
+  .col-xl-2-4 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+}
+
+@media (max-width: 576px) {
+  .col-xl-2-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+/* Button hover effects */
+.btn-outline-primary:hover {
+  background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+  color: white;
+  border-color: #0c2461;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white;
+}
+/* Floor Plan Viewer Modal */
+.floor-plan-viewer-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: viewerFadeIn 0.3s ease;
+}
+
+.viewer-container {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 1200px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: viewerSlideUp 0.4s ease;
+}
+
+.viewer-header {
+  background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+  color: white;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.viewer-title {
+  margin: 0;
+  font-size: 1.2rem !important;
+  font-weight: 600;
+  color:#fff !important;
+}
+
+.viewer-body {
+  flex: 1;
+  padding: 24px;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f8f9fa;
+}
+
+.viewer-image {
+  max-width: 100%;
+  max-height: calc(90vh - 140px);
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.viewer-footer {
+  padding: 16px 24px;
+  background: white;
+  border-top: 1px solid #eaeaea;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.viewer-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-close-white {
+  color: white;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+}
+
+.btn-close-white:hover {
+  opacity: 1;
+  transform: rotate(90deg);
+}
+
+@keyframes viewerFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes viewerSlideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .viewer-container {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .viewer-body {
+    padding: 16px;
+  }
+  
+  .viewer-header {
+    padding: 12px 16px;
+  }
+  
+  .viewer-footer {
+    padding: 12px 16px;
+  }
+  
+  .viewer-title {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .viewer-controls {
+    width: 100%;
+  }
+  
+  .viewer-controls .btn {
+    flex: 1;
+  }
 }
 </style>

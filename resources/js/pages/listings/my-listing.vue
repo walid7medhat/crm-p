@@ -137,6 +137,9 @@
                   <span v-if="property.is_hot_deal== 'Yes'" class="badge-off_plan">
                     Hot Deal
                   </span>
+                   <span v-if="property.occupancy_status" class="badge-occupancy_status">
+                    {{property.occupancy_status}}
+                  </span>
                 </div>
               <!-- Images Count Badge Only -->
               <span class="badge-images" v-if="property.gallery_images && property.gallery_images.length">
@@ -1044,6 +1047,14 @@ const fetchProperties = async (filters = {}, page = 1) => {
   border-radius: 6px;
   font-size: 0.7rem;
   font-weight: 500;
+}
+.badge-occupancy_status{
+    background: #EDEBEB !important;
+    color: #01062C !important;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;  
 }
 /*============*/
 
