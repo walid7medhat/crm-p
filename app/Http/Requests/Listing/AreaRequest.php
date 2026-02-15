@@ -17,6 +17,7 @@ class AreaRequest extends FormRequest
             'parent_id' => 'nullable|exists:areas,id',
             'name' => 'required|string|max:255',
             'type' => 'required|string|max:255',
+             'create_project' => 'sometimes|boolean',
         ];
     }
 }

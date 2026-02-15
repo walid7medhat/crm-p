@@ -186,6 +186,12 @@
                                         title="Edit Project">
                                         <iconify-icon icon="lucide:edit"></iconify-icon>
                                     </a>
+                                    <a v-if="this.$hasPermission('projects-edit')" href="javascript:void(0)"
+                                        class="w-32-px h-32-px bg-success-focus text-success-main rounded-circle d-inline-flex align-items-center justify-content-center"
+                                        @click="projectFloorPlan(project.id)"
+                                        title="Project Floor Plans">
+                                        <i class="fas fa-layer-group me-1"></i>
+                                    </a>
 
                                     <a v-if="this.$hasPermission('projects-delete')" href="javascript:void(0)"
                                         class="w-32-px h-32-px bg-danger-focus text-danger-main rounded-circle d-inline-flex align-items-center justify-content-center"
@@ -595,7 +601,14 @@ export default {
             }
             this.$router.push(`/projects/${id}/edit`);
         },
-
+        
+        projectFloorPlan(id) {
+            if (!this.$hasPermission('projects-edit')) {
+                this.$showNotification('You do not have permission to edit projects floor-plans', 'warning');
+                return;
+            }
+            this.$router.push(`/projects/${id}/floor-plans`);
+        },
         async deleteProject(project) {
             if (!this.$hasPermission('projects-delete')) {
                 this.$showNotification('You do not have permission to delete projects', 'warning');

@@ -283,7 +283,11 @@ Route::prefix('listings')->group(function(){
        Route::put('/projects/floor-plan-images/{id}/name', [ProjectController::class, 'updateFloorPlanName']);
 
 
-
+            Route::get('projects/{projectId}/floor-plans/{areaId}', [ProjectController::class, 'getFloorPlansByArea'])
+                 ->whereNumber(['projectId', 'areaId']); 
+            
+            Route::post('projects/{id}/update/floor-plans', [ProjectController::class, 'updateFloorPlans']);
+            Route::put('projects/floor-plan-images/{id}/name', [ProjectController::class, 'updateFloorPlanName']);
 });    
 
 });

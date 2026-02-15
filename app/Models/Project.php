@@ -65,5 +65,15 @@ class Project extends Model
     {
         return $this->hasMany(FloorPlanImage::class)->orderBy('sort_order');
     }
+    public function getAllFloorPlanImages()
+{
+    $projectImages = $this->floorPlanImages;
+    
+    $areaImages = FloorPlanImage::whereIn('area_id', $this->area->children->pluck('id'))
+                                ->orWhere('area_id', $this->area_id)
+                                ->get();
+    
+    return $projectImages->merge($areaImages)->unique('id');
+}
 
 }

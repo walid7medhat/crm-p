@@ -15,6 +15,7 @@ class FloorPlanImageResource extends JsonResource
             'image_url' => $this->image_url,
             'sort_order' => $this->sort_order,
             'created_at' => $this->created_at,
-        ];
+            'area_id'=>$this->area_id,
+            ];
     }
 }

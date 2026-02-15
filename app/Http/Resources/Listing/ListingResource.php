@@ -191,6 +191,7 @@ class ListingResource extends JsonResource
                     'title'=>$this->area->title,
                 ];
             }),
+            'old_area'=>$this->old_area?->area_title,
             
             'agent' => $this->whenLoaded('agent', function () {
                 return [

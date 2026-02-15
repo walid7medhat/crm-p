@@ -25,32 +25,32 @@
                             <!-- 🏢 Basic Information Section -->
                             <div class="card mb-4">
                                 <div class="card-header bg-light">
-                                    <h6 class="mb-0 text-dark">
+                                    <h6 class="mb-0 text-dark card-title">
                                         <i class="fas fa-building me-2"></i>
                                         Project Information
                                     </h6>
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
-                                        <div class="col-md-12 mb-3">
-                                            <label class="form-label fw-semibold">
-                                                <i class="fas fa-heading me-1 text-primary"></i>
-                                                Project Title
-                                                <span class="text-danger">*</span>
-                                            </label>
-                                            <input type="text" class="form-control form-control-lg" 
-                                                   v-model="projectForm.title" 
-                                                   :class="{'is-invalid': errors.title}"
-                                                   placeholder="Enter project title"
-                                                   autofocus>
-                                            <div class="invalid-feedback" v-if="errors.title">
-                                                {{ errors.title[0] }}
-                                            </div>
-                                            <div class="form-text text-muted mt-1">
-                                                <i class="fas fa-info-circle me-1"></i>
-                                                Enter a descriptive title for the project
-                                            </div>
-                                        </div>
+                                        <!--<div class="col-md-12 mb-3">-->
+                                        <!--    <label class="form-label fw-semibold">-->
+                                        <!--        <i class="fas fa-heading me-1 text-primary"></i>-->
+                                        <!--        Project Title-->
+                                        <!--        <span class="text-danger">*</span>-->
+                                        <!--    </label>-->
+                                        <!--    <input type="text" class="form-control form-control-lg" -->
+                                        <!--           v-model="projectForm.title" -->
+                                        <!--           :class="{'is-invalid': errors.title}"-->
+                                        <!--           placeholder="Enter project title"-->
+                                        <!--           autofocus>-->
+                                        <!--    <div class="invalid-feedback" v-if="errors.title">-->
+                                        <!--        {{ errors.title[0] }}-->
+                                        <!--    </div>-->
+                                        <!--    <div class="form-text text-muted mt-1">-->
+                                        <!--        <i class="fas fa-info-circle me-1"></i>-->
+                                        <!--        Enter a descriptive title for the project-->
+                                        <!--    </div>-->
+                                        <!--</div>-->
 
                                         <div class="col-md-12 mb-3">
                                             <label class="form-label fw-semibold">
@@ -66,7 +66,7 @@
                                                       :loading="areasLoading"
                                                       :class="{'is-invalid': errors.area_id}"
                                                       :filterable="true"
-                                                      @search="loadAreas">
+                                                      @search="loadAreas"  @update:modelValue="updateTitleFromArea">
                                                 <template #option="{ name, full_name, children_count }">
                                                     <div class="d-flex flex-column">
                                                         <strong>{{ name }}</strong>
@@ -86,7 +86,12 @@
                                             <div class="invalid-feedback" v-if="errors.area_id">
                                                 {{ errors.area_id[0] }}
                                             </div>
-                                            <div class="form-text text-muted mt-1">
+                                            
+                                            <div v-if="selectedAreaName" class="mt-2 text-success">
+                                                <i class="fas fa-check-circle me-1"></i>
+                                                Project will be titled: <strong>{{ selectedAreaName }}</strong>
+                                            </div>
+                                            <div v-else class="form-text text-muted mt-1">
                                                 <i class="fas fa-info-circle me-1"></i>
                                                 Select the main location of the project
                                             </div>
@@ -115,7 +120,7 @@
                             <!-- 📋 Project Details Section -->
                             <div class="card mb-4">
                                 <div class="card-header bg-light">
-                                    <h6 class="mb-0 text-dark">
+                                    <h6 class="mb-0 text-dark card-title">
                                         <i class="fas fa-clipboard-list me-2"></i>
                                         Project Details
                                     </h6>
@@ -159,173 +164,205 @@
                                 </div>
                             </div>
                               <!-- 📐 Floor Plans Images Section -->
-                            <div class="card mb-4">
-                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0 text-dark">
-                                        <i class="fas fa-layer-group me-2"></i>
-                                        Floor Plan Images
-                                        <span v-if="totalFloorPlanImages > 0" class="badge bg-primary ms-2">
-                                            {{ totalFloorPlanImages }}
-                                        </span>
-                                    </h6>
-                                </div>
-                                <div class="card-body">
+                            <!--<div class="card mb-4">-->
+                            <!--    <div class="card-header bg-light d-flex justify-content-between align-items-center">-->
+                            <!--        <h6 class="mb-0 text-dark card-title">-->
+                            <!--            <i class="fas fa-layer-group me-2"></i>-->
+                            <!--            Floor Plan Images-->
+                            <!--            <span v-if="totalFloorPlanImages > 0" class="badge bg-primary ms-2">-->
+                            <!--                {{ totalFloorPlanImages }}-->
+                            <!--            </span>-->
+                            <!--        </h6>-->
+                            <!--    </div>-->
+                            <!--    <div class="card-body">-->
                                     <!-- Section with existing and new images together -->
-                                    <div class="all-images-section">
+                            <!--        <div class="all-images-section">-->
                                         <!-- Images Container -->
-                                        <div class="images-container" v-if="totalFloorPlanImages > 0">
+                            <!--            <div class="images-container" v-if="totalFloorPlanImages > 0">-->
                                             <!-- Images Grid -->
-                                            <div class="images-grid-combined">
+                            <!--                <div class="images-grid-combined">-->
                                                 <!-- Existing Images -->
-                                                <div v-for="image in existingFloorPlanImages" 
-                                                     :key="'existing-' + image.id" 
-                                                     class="image-card combined"
-                                                     :class="{'marked-for-delete': floorPlanImagesToDelete.includes(image.id)}">
-                                                    <div class="image-wrapper">
-                                                        <img :src="image.image_url" 
-                                                             alt="Floor Plan" 
-                                                             class="preview-img">
-                                                        <span v-if="floorPlanImagesToDelete.includes(image.id)" 
-                                                              class="image-status delete">
-                                                            <i class="fas fa-exclamation-triangle me-1"></i>
-                                                            Will delete
-                                                        </span>
-                                                    </div>
-                                                    <div class="image-info mt-2">
-                                                        <div class="floor-plan-name mb-2">
-                                                            <input type="text" 
-                                                                   class="form-control form-control-sm" 
-                                                                   v-model="image.name"
-                                                                   placeholder="Floor plan name..."
-                                                                   @change="updateFloorPlanName(image)"
-                                                                   @blur="updateFloorPlanName(image)">
-                                                            <small v-if="image.nameError" class="text-danger">
-                                                                {{ image.nameError }}
-                                                            </small>
-                                                        </div>
-                                                        <small class="text-muted d-block">
-                                                            <i class="fas fa-calendar me-1"></i>
-                                                            {{ formatDate(image.created_at) }}
-                                                        </small>
-                                                    </div>
-                                                </div>
+                            <!--                <div v-for="image in existingFloorPlanImages" -->
+                            <!--                     :key="'existing-' + image.id" -->
+                            <!--                     class="image-card combined"-->
+                            <!--                     :class="{'marked-for-delete': floorPlanImagesToDelete.includes(image.id)}">-->
+                            <!--                    <div class="image-wrapper">-->
+                            <!--                        <img :src="image.image_url" -->
+                            <!--                             alt="Floor Plan" -->
+                            <!--                             class="preview-img">-->
+                                                    
+                            <!--                        <div class="image-overlay">-->
+                            <!--                            <div class="overlay-buttons">-->
+                            <!--                                <button type="button" -->
+                            <!--                                        class="btn btn-sm btn-danger"-->
+                            <!--                                        @click.stop="toggleDeleteImage(image.id)"-->
+                            <!--                                        :title="floorPlanImagesToDelete.includes(image.id) ? 'Restore image' : 'Delete image'">-->
+                            <!--                                    <i :class="floorPlanImagesToDelete.includes(image.id) ? 'fas fa-undo' : 'fas fa-trash'"></i>-->
+                            <!--                                </button>-->
+                                                            
+                                                           
+                            <!--                            </div>-->
+                            <!--                        </div>-->
+                                                    
+                            <!--                        <span v-if="floorPlanImagesToDelete.includes(image.id)" -->
+                            <!--                              class="image-status delete">-->
+                            <!--                            <i class="fas fa-exclamation-triangle me-1"></i>-->
+                            <!--                            Will delete-->
+                            <!--                        </span>-->
+                                                    
+                                                    <!--<span class="image-badge existing">-->
+                                                    <!--    <i class="fas fa-history me-1"></i>-->
+                                                    <!--    Existing-->
+                                                    <!--</span>-->
+                            <!--                    </div>-->
+                                                
+                            <!--                    <div class="image-info mt-2">-->
+                            <!--                        <div class="floor-plan-name mb-2">-->
+                            <!--                            <div class="input-group input-group-sm">-->
+                            <!--                                <input type="text" -->
+                            <!--                                       class="form-control" -->
+                            <!--                                       v-model="image.name"-->
+                            <!--                                       placeholder="Floor plan name..."-->
+                            <!--                                       @change="updateFloorPlanName(image)"-->
+                            <!--                                       @blur="updateFloorPlanName(image)">-->
+                                                            
+                                                            
+                            <!--                            </div>-->
+                                                        
+                            <!--                            <small v-if="image.nameError" class="text-danger">-->
+                            <!--                                {{ image.nameError }}-->
+                            <!--                            </small>-->
+                            <!--                        </div>-->
+                                                    
+                            <!--                        <small class="text-muted d-block">-->
+                            <!--                            <i class="fas fa-calendar me-1"></i>-->
+                            <!--                            {{ formatDate(image.created_at) }}-->
+                            <!--                        </small>-->
+                                                    
+                                                    <!-- حجم الصورة (إذا كان متوفراً) -->
+                            <!--                        <small v-if="image.file_size" class="text-muted d-block">-->
+                            <!--                            <i class="fas fa-file me-1"></i>-->
+                            <!--                            {{ formatFileSize(image.file_size) }}-->
+                            <!--                        </small>-->
+                            <!--                    </div>-->
+                            <!--                </div>-->
                             
                                                 <!-- New Images -->
-                                                <div v-for="(image, index) in floorPlanImages" 
-                                                     :key="'new-' + index" 
-                                                     class="image-card combined new">
-                                                    <div class="image-wrapper">
-                                                        <img :src="image.preview" 
-                                                             alt="Floor Plan" 
-                                                             class="preview-img">
-                                                        <div class="image-overlay">
-                                                            <div class="overlay-buttons">
-                                                                <button type="button" 
-                                                                        class="btn btn-sm btn-danger"
-                                                                        @click.stop="removeFloorPlanImage(index)">
-                                                                    <i class="fas fa-trash"></i>
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        <span class="image-badge new">
-                                                            <i class="fas fa-plus me-1"></i>
-                                                            New
-                                                        </span>
-                                                        <span class="image-number">{{ totalExistingImages + index + 1 }}</span>
-                                                    </div>
-                                                    <div class="image-info mt-2">
-                                                        <div class="floor-plan-name mb-2">
-                                                            <input type="text" 
-                                                                   class="form-control form-control-sm" 
-                                                                   v-model="image.name"
-                                                                   placeholder="Enter floor plan name..."
-                                                                   @change="validateFloorPlanName(image, index)"
-                                                                   @blur="validateFloorPlanName(image, index)">
-                                                            <small v-if="image.nameError" class="text-danger">
-                                                                {{ image.nameError }}
-                                                            </small>
-                                                        </div>
-                                                        <small class="text-muted d-block">
-                                                            <i class="fas fa-file me-1"></i>
-                                                            {{ formatFileSize(image.file.size) }}
-                                                        </small>
-                                                        <small class="text-success d-block mt-1">
-                                                            <i class="fas fa-check-circle me-1"></i>
-                                                            Ready to upload
-                                                        </small>
-                                                    </div>
-                                                </div>
+                            <!--                    <div v-for="(image, index) in floorPlanImages" -->
+                            <!--                         :key="'new-' + index" -->
+                            <!--                         class="image-card combined new">-->
+                            <!--                        <div class="image-wrapper">-->
+                            <!--                            <img :src="image.preview" -->
+                            <!--                                 alt="Floor Plan" -->
+                            <!--                                 class="preview-img">-->
+                            <!--                            <div class="image-overlay">-->
+                            <!--                                <div class="overlay-buttons">-->
+                            <!--                                    <button type="button" -->
+                            <!--                                            class="btn btn-sm btn-danger"-->
+                            <!--                                            @click.stop="removeFloorPlanImage(index)">-->
+                            <!--                                        <i class="fas fa-trash"></i>-->
+                            <!--                                    </button>-->
+                            <!--                                </div>-->
+                            <!--                            </div>-->
+                            <!--                            <span class="image-badge new">-->
+                            <!--                                <i class="fas fa-plus me-1"></i>-->
+                            <!--                                New-->
+                            <!--                            </span>-->
+                            <!--                            <span class="image-number">{{ totalExistingImages + index + 1 }}</span>-->
+                            <!--                        </div>-->
+                            <!--                        <div class="image-info mt-2">-->
+                            <!--                            <div class="floor-plan-name mb-2">-->
+                            <!--                                <input type="text" -->
+                            <!--                                       class="form-control form-control-sm" -->
+                            <!--                                       v-model="image.name"-->
+                            <!--                                       placeholder="Enter floor plan name..."-->
+                            <!--                                       @change="validateFloorPlanName(image, index)"-->
+                            <!--                                       @blur="validateFloorPlanName(image, index)">-->
+                            <!--                                <small v-if="image.nameError" class="text-danger">-->
+                            <!--                                    {{ image.nameError }}-->
+                            <!--                                </small>-->
+                            <!--                            </div>-->
+                            <!--                            <small class="text-muted d-block">-->
+                            <!--                                <i class="fas fa-file me-1"></i>-->
+                            <!--                                {{ formatFileSize(image.file.size) }}-->
+                            <!--                            </small>-->
+                            <!--                            <small class="text-success d-block mt-1">-->
+                            <!--                                <i class="fas fa-check-circle me-1"></i>-->
+                            <!--                                Ready to upload-->
+                            <!--                            </small>-->
+                            <!--                        </div>-->
+                            <!--                    </div>-->
                             
                                                 <!-- Add More Button -->
-                                                <div class="add-more-card" @click="$refs.floorPlanImagesInput.click()">
-                                                    <div class="add-more-content">
-                                                        <i class="fas fa-plus-circle fa-3x text-primary mb-3"></i>
-                                                        <h6 class="text-primary mb-2">Add More Images</h6>
-                                                        <p class="text-muted small mb-0">Click or drag & drop</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                            <!--                    <div class="add-more-card" @click="$refs.floorPlanImagesInput.click()">-->
+                            <!--                        <div class="add-more-content">-->
+                            <!--                            <i class="fas fa-plus-circle fa-3x text-primary mb-3"></i>-->
+                            <!--                            <h6 class="text-primary mb-2">Add More Images</h6>-->
+                            <!--                            <p class="text-muted small mb-0">Click or drag & drop</p>-->
+                            <!--                        </div>-->
+                            <!--                    </div>-->
+                            <!--                </div>-->
+                            <!--            </div>-->
                             
                                         <!-- Empty State -->
-                                        <div v-else class="empty-state text-center py-5">
-                                            <div class="empty-icon mb-4">
-                                                <i class="fas fa-image fa-4x text-muted"></i>
-                                            </div>
-                                            <h5 class="mb-3 text-muted">No Floor Plan Images</h5>
-                                            <p class="text-muted mb-4">Add floor plan images to showcase different layouts</p>
-                                            <button type="button" 
-                                                    class="btn btn-primary"
-                                                    @click="$refs.floorPlanImagesInput.click()">
-                                                <i class="fas fa-cloud-upload-alt me-2"></i>
-                                                Upload Images
-                                            </button>
-                                        </div>
+                            <!--            <div v-else class="empty-state text-center py-5">-->
+                            <!--                <div class="empty-icon mb-4">-->
+                            <!--                    <i class="fas fa-image fa-4x text-muted"></i>-->
+                            <!--                </div>-->
+                            <!--                <h5 class="mb-3 text-muted">No Floor Plan Images</h5>-->
+                            <!--                <p class="text-muted mb-4">Add floor plan images to showcase different layouts</p>-->
+                            <!--                <button type="button" -->
+                            <!--                        class="btn btn-primary"-->
+                            <!--                        @click="$refs.floorPlanImagesInput.click()">-->
+                            <!--                    <i class="fas fa-cloud-upload-alt me-2"></i>-->
+                            <!--                    Upload Images-->
+                            <!--                </button>-->
+                            <!--            </div>-->
                             
                                         <!-- Hidden File Input -->
-                                        <input ref="floorPlanImagesInput"
-                                               type="file" 
-                                               class="d-none" 
-                                               @change="handleFloorPlanImages" 
-                                               multiple
-                                               accept="image/*">
+                            <!--            <input ref="floorPlanImagesInput"-->
+                            <!--                   type="file" -->
+                            <!--                   class="d-none" -->
+                            <!--                   @change="handleFloorPlanImages" -->
+                            <!--                   multiple-->
+                            <!--                   accept="image/*">-->
                             
                                         <!-- Drop Zone Overlay -->
-                                        <div class="drop-zone-overlay"
-                                             :class="{'active': isDragOver}"
-                                             @dragover.prevent="handleDragOver"
-                                             @dragleave.prevent="handleDragLeave"
-                                             @drop.prevent="handleFloorPlanDrop">
-                                            <div class="drop-zone-content" v-if="isDragOver">
-                                                <i class="fas fa-cloud-upload-alt fa-4x text-primary mb-3"></i>
-                                                <h5 class="text-primary mb-2">Drop to upload</h5>
-                                                <p class="text-muted">Release to add images</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                            <!--            <div class="drop-zone-overlay"-->
+                            <!--                 :class="{'active': isDragOver}"-->
+                            <!--                 @dragover.prevent="handleDragOver"-->
+                            <!--                 @dragleave.prevent="handleDragLeave"-->
+                            <!--                 @drop.prevent="handleFloorPlanDrop">-->
+                            <!--                <div class="drop-zone-content" v-if="isDragOver">-->
+                            <!--                    <i class="fas fa-cloud-upload-alt fa-4x text-primary mb-3"></i>-->
+                            <!--                    <h5 class="text-primary mb-2">Drop to upload</h5>-->
+                            <!--                    <p class="text-muted">Release to add images</p>-->
+                            <!--                </div>-->
+                            <!--            </div>-->
+                            <!--        </div>-->
                             
                                     <!-- Deletion Warning -->
-                                    <div v-if="floorPlanImagesToDelete.length > 0" class="mt-4">
-                                        <div class="alert alert-warning">
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
-                                                <div>
-                                                    <h6 class="alert-heading mb-1">
-                                                        {{ floorPlanImagesToDelete.length }} image(s) marked for deletion
-                                                    </h6>
-                                                    <p class="mb-2">These images will be permanently removed when you save changes.</p>
-                                                    <button type="button" 
-                                                            class="btn btn-sm btn-outline-warning"
-                                                            @click="clearAllMarkedForDeletion">
-                                                        <i class="fas fa-times me-1"></i>
-                                                        Clear all deletion marks
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <!--        <div v-if="floorPlanImagesToDelete.length > 0" class="mt-4">-->
+                            <!--            <div class="alert alert-warning">-->
+                            <!--                <div class="d-flex align-items-center">-->
+                            <!--                    <i class="fas fa-exclamation-triangle fa-2x me-3"></i>-->
+                            <!--                    <div>-->
+                            <!--                        <h6 class="alert-heading mb-1">-->
+                            <!--                            {{ floorPlanImagesToDelete.length }} image(s) marked for deletion-->
+                            <!--                        </h6>-->
+                            <!--                        <p class="mb-2">These images will be permanently removed when you save changes.</p>-->
+                            <!--                        <button type="button" -->
+                            <!--                                class="btn btn-sm btn-outline-warning"-->
+                            <!--                                @click="clearAllMarkedForDeletion">-->
+                            <!--                            <i class="fas fa-times me-1"></i>-->
+                            <!--                            Clear all deletion marks-->
+                            <!--                        </button>-->
+                            <!--                    </div>-->
+                            <!--                </div>-->
+                            <!--            </div>-->
+                            <!--        </div>-->
+                            <!--    </div>-->
+                            <!--</div>-->
                         </div>
 
                         <!-- Right Column -->
@@ -333,7 +370,7 @@
                             <!-- 🏗️ Developer Information Section -->
                             <div class="card mb-4">
                                 <div class="card-header bg-light">
-                                    <h6 class="mb-0 text-dark">
+                                    <h6 class="mb-0 text-dark card-title">
                                         <i class="fas fa-hard-hat me-2"></i>
                                         Developer Information
                                     </h6>
@@ -380,7 +417,7 @@
                             <!-- ✨ Features & Amenities Section -->
                             <div class="card mb-4">
                                 <div class="card-header bg-light">
-                                    <h6 class="mb-0 text-dark">
+                                    <h6 class="mb-0 text-dark card-title">
                                         <i class="fas fa-star me-2"></i>
                                         Features & Amenities
                                     </h6>
@@ -463,7 +500,7 @@
                             <!-- 🖼️ Project Image Section -->
                             <div class="card mb-4">
                                 <div class="card-header bg-light">
-                                    <h6 class="mb-0 text-dark">
+                                    <h6 class="mb-0 text-dark card-title">
                                         <i class="fas fa-image me-2"></i>
                                         Project Image
                                     </h6>
@@ -557,7 +594,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed, getCurrentInstance } from "vue";
+import { ref, onMounted, computed, getCurrentInstance ,watch} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
@@ -595,7 +632,7 @@ export default {
         const existingFloorPlanImages = ref([]);
         const floorPlanImagesToDelete = ref([]);
         const floorPlanImagesInput = ref(null);
-
+const selectedAreaName = ref('');
 
         // Status options with icons
         const statusOptions = ref([
@@ -613,42 +650,72 @@ export default {
             features: [],
             floor_plan_images: []
         });
+     const updateTitleFromArea = (selectedId) => {
+            console.log('🟢 Selected ID:', selectedId);
+            console.log('📋 Areas loaded:', areas.value);
+            
+            if (!selectedId) {
+                projectForm.value.title = '';
+                selectedAreaName.value = '';
+                return;
+            }
+            
+            if (!areas.value || areas.value.length === 0) {
+                console.log('⏳ Areas not loaded yet, will try again after loading');
+                return;
+            }
+            
+            const fullArea = areas.value.find(area => area.id === selectedId);
+            console.log('🔍 Found area:', fullArea);
+            
+            if (fullArea) {
+                projectForm.value.title = fullArea.name;
+                selectedAreaName.value = fullArea.name;
+                console.log('✅ Title updated to:', fullArea.name);
+            } else {
+                console.log('⚠️ No area found with ID:', selectedId);
+            }
+        };
         const handleFloorPlanImages = (event) => {
-                const files = Array.from(event.target.files);
+            const files = Array.from(event.target.files);
+            
+            if (files.length === 0) return;
+        
+            const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            
+            files.forEach(file => {
+                if (!validTypes.includes(file.type)) {
+                    showNotification('Please upload valid image files (JPEG, PNG, JPG, GIF)', 'error');
+                    return;
+                }
+        
+                if (file.size > maxSize) {
+                    showNotification('Image size should be less than 5MB', 'error');
+                    return;
+                }
+        
+                const fileName = file.name.replace(/\.[^/.]+$/, ""); 
+                const cleanFileName = fileName.replace(/[^\w\s-]/g, " ").trim(); 
                 
-                if (files.length === 0) return;
-            
-                const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
-                const maxSize = 5 * 1024 * 1024; // 5MB
-                
-                files.forEach(file => {
-                    if (!validTypes.includes(file.type)) {
-                        showNotification('Please upload valid image files (JPEG, PNG, JPG, GIF)', 'error');
-                        return;
-                    }
-            
-                    if (file.size > maxSize) {
-                        showNotification('Image size should be less than 5MB', 'error');
-                        return;
-                    }
-            
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        floorPlanImages.value.push({
-                            file: file,
-                            preview: e.target.result,
-                            name: '', 
-                            nameError: '', 
-                            defaultName: `Floor Plan ${floorPlanImages.value.length + 1}`
-                        });
-                    };
-                    reader.readAsDataURL(file);
-                });
-            
-                event.target.value = '';
-            };
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    floorPlanImages.value.push({
+                        file: file,
+                        preview: e.target.result,
+                        name: cleanFileName || `Floor Plan ${floorPlanImages.value.length + 1}`, 
+                        originalName: cleanFileName, 
+                        nameError: '', 
+                        defaultName: cleanFileName || `Floor Plan ${floorPlanImages.value.length + 1}`
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+        
+            event.target.value = '';
+        };
 
-       const handleFloorPlanDrop = (event) => {
+     const handleFloorPlanDrop = (event) => {
             event.preventDefault();
             const files = Array.from(event.dataTransfer.files);
             
@@ -664,14 +731,19 @@ export default {
             }
         
             validFiles.forEach(file => {
+                // استخراج اسم الملف بدون الامتداد
+                const fileName = file.name.replace(/\.[^/.]+$/, "");
+                const cleanFileName = fileName.replace(/[^\w\s-]/g, " ").trim(); 
+                
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     floorPlanImages.value.push({
                         file: file,
                         preview: e.target.result,
-                        name: '', 
+                        name: cleanFileName || `Floor Plan ${floorPlanImages.value.length + 1}`, 
+                        originalName: cleanFileName, 
                         nameError: '', 
-                        defaultName: `Floor Plan ${floorPlanImages.value.length + 1}`
+                        defaultName: cleanFileName || `Floor Plan ${floorPlanImages.value.length + 1}`
                     });
                 };
                 reader.readAsDataURL(file);
@@ -705,7 +777,17 @@ export default {
                 image.nameError = '';
                 return true;
             };
-            
+            const toggleDeleteImage = (imageId) => {
+                const index = floorPlanImagesToDelete.value.indexOf(imageId);
+                
+                if (index === -1) {
+                    floorPlanImagesToDelete.value.push(imageId);
+                    showNotification('Image marked for deletion', 'warning');
+                } else {
+                    floorPlanImagesToDelete.value.splice(index, 1);
+                    showNotification('Image restored', 'success');
+                }
+            };
             const validateAllFloorPlanNames = () => {
                 let isValid = true;
                 
@@ -965,7 +1047,7 @@ export default {
                         if (projectData.main_image) {
                             currentImage.value = projectData.main_image;
                         }
-                        
+                    
                         // Set existing floor plan images
                         // if (projectData.floor_plan_images) {
                         //     existingFloorPlanImages.value = projectData.floor_plan_images;
@@ -997,6 +1079,10 @@ export default {
                 
                             // Assign developer_id **after developers array is ready**
                             projectForm.value.developer_id = currentDeveloper.id;
+                        }
+                        if (projectData.area && projectData.area.name) {
+                            selectedAreaName.value = projectData.area.name;
+                            projectForm.value.title = projectData.area.name;
                         }
                 
                     } catch (error) {
@@ -1054,28 +1140,36 @@ export default {
                 errors.value = {};
 
                 // Validation
-                if (!projectForm.value.title?.trim()) {
-                    showNotification("Please enter project title", "error");
+                
+                   if (!projectForm.value.area_id) {
+                    showNotification("Please select a location", "error");
                     loading.value = false;
                     return;
                 }
 
-                if (!validateAllFloorPlanNames()) {
-                            showNotification("Please enter valid names for all floor plans", "error");
-                            loading.value = false;
-                            return;
+                if (!projectForm.value.title || projectForm.value.title.trim() === '') {
+                    showNotification("Please select a valid location title", "error");
+                    loading.value = false;
+                    return;
                 }
+                // if (!projectForm.value.title?.trim()) {
+                //     showNotification("Please enter project title", "error");
+                //     loading.value = false;
+                //     return;
+                // }
+
+                // if (!validateAllFloorPlanNames()) {
+                //             showNotification("Please enter valid names for all floor plans", "error");
+                //             loading.value = false;
+                //             return;
+                // }
                 // if (!projectForm.value.developer_id) {
                 //     showNotification("Please select a developer", "error");
                 //     loading.value = false;
                 //     return;
                 // }
 
-                if (!projectForm.value.area_id) {
-                    showNotification("Please select a location", "error");
-                    loading.value = false;
-                    return;
-                }
+               
 
                 // if (!projectForm.value.status) {
                 //     showNotification("Please select a status", "error");
@@ -1268,6 +1362,24 @@ export default {
                 return 'Unknown date';
             }
         };
+        // Watch for changes in area_id
+        watch(() => projectForm.value.area_id, (newAreaId) => {
+            console.log('🟢 Area ID changed:', newAreaId);
+            
+            if (newAreaId) {
+                const fullArea = areas.value.find(area => area.id === newAreaId);
+                console.log('🔍 Found area:', fullArea);
+                
+                if (fullArea) {
+                    projectForm.value.title = fullArea.name;
+                    selectedAreaName.value = fullArea.name;
+                    console.log('✅ Title updated to:', fullArea.name);
+                }
+            } else {
+                projectForm.value.title = '';
+                selectedAreaName.value = '';
+            }
+        });
         // Initialize component
         onMounted(() => {
             console.log('🚀 ProjectForm component mounted');
@@ -1315,6 +1427,8 @@ export default {
             clearAllMarkedForDeletion,
             formatFileSize,
             formatDate,
+            toggleDeleteImage ,
+            updateTitleFromArea 
         };
     }
 };

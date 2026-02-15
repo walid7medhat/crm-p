@@ -21,80 +21,271 @@
                 <form @submit.prevent="submitForm">
                     <div class="row justify-content-center">
                         <div class="col-md-6">
-                            <!-- Name Field -->
-                            <div class="mb-4">
-                                <label class="form-label">Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" v-model="areaForm.name" 
-                                       :class="{'is-invalid': errors.name}"
-                                       placeholder="Enter area name"
-                                       autofocus>
-                                <div class="invalid-feedback" v-if="errors.name">
-                                    {{ errors.name[0] }}
+                            <!-- Edit Mode - Show Current Path -->
+                            <div v-if="isEditMode" class="mb-4">
+                                <label class="form-label">Current Path</label>
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="d-flex align-items-center flex-wrap gap-2">
+                                        <span v-if="selectedCountry" class="badge bg-primary">
+                                            <iconify-icon icon="lucide:globe" class="me-1"></iconify-icon>
+                                            {{ selectedCountry.name }}
+                                        </span>
+                                        <iconify-icon v-if="selectedCity" icon="lucide:chevron-right" class="text-muted"></iconify-icon>
+                                        <span v-if="selectedCity" class="badge bg-success">
+                                            <iconify-icon icon="lucide:building" class="me-1"></iconify-icon>
+                                            {{ selectedCity.name }}
+                                        </span>
+                                        <iconify-icon v-if="selectedArea" icon="lucide:chevron-right" class="text-muted"></iconify-icon>
+                                        <span v-if="selectedArea" class="badge bg-info">
+                                            <iconify-icon icon="lucide:map-pin" class="me-1"></iconify-icon>
+                                            {{ selectedArea.name }}
+                                        </span>
+                                        <iconify-icon v-if="selectedCommunity" icon="lucide:chevron-right" class="text-muted"></iconify-icon>
+                                        <span v-if="selectedCommunity" class="badge bg-warning">
+                                            <iconify-icon icon="lucide:users" class="me-1"></iconify-icon>
+                                            {{ selectedCommunity.name }}
+                                        </span>
+                                        <iconify-icon v-if="selectedSubCommunity" icon="lucide:chevron-right" class="text-muted"></iconify-icon>
+                                        <span v-if="selectedSubCommunity" class="badge bg-secondary">
+                                            <iconify-icon icon="lucide:user-plus" class="me-1"></iconify-icon>
+                                            {{ selectedSubCommunity.name }}
+                                        </span>
+                                        <iconify-icon v-if="selectedCluster" icon="lucide:chevron-right" class="text-muted"></iconify-icon>
+                                        <span v-if="selectedCluster" class="badge bg-dark">
+                                            <iconify-icon icon="lucide:group" class="me-1"></iconify-icon>
+                                            {{ selectedCluster.name }}
+                                        </span>
+                                        <iconify-icon v-if="selectedBuilding" icon="lucide:chevron-right" class="text-muted"></iconify-icon>
+                                        <span v-if="selectedBuilding" class="badge bg-danger">
+                                            <iconify-icon icon="lucide:home" class="me-1"></iconify-icon>
+                                            {{ selectedBuilding.name }}
+                                        </span>
+                                        <iconify-icon v-if="areaForm.name" icon="lucide:chevron-right" class="text-muted"></iconify-icon>
+                                        <span v-if="areaForm.name" class="badge bg-primary">
+                                            <iconify-icon icon="lucide:edit" class="me-1"></iconify-icon>
+                                            {{ areaForm.name }} (Current)
+                                        </span>
+                                    </div>
                                 </div>
+                                <small class="text-muted">You are editing: <strong>{{ areaForm.name }}</strong> ({{ formatType(areaForm.type) }})</small>
                             </div>
 
-                            <!-- Type Field -->
-                            <div class="mb-4">
-                                <label class="form-label">Type <span class="text-danger">*</span></label>
-                                <v-select
-                                    v-model="areaForm.type"
-                                    :options="availableTypes"
-                                    label="label"
-                                    :reduce="(type) => type.value"
-                                    placeholder="Select area type"
-                                    :class="{'is-invalid': errors.type}"
-                                    :disabled="loading"
-                                >
-                                    <template #option="{ label, value, description }">
-                                        <div>
-                                            <div class="fw-medium">{{ label }}</div>
-                                            <small class="text-muted">{{ description }}</small>
-                                        </div>
-                                    </template>
-                                </v-select>
-                                <div class="invalid-feedback" v-if="errors.type">
-                                    {{ errors.type[0] }}
-                                </div>
-                            </div>
+                            <!-- Country Selection -->
+                            <!--<div class="mb-4">-->
+                            <!--    <label class="form-label">Country <span class="text-danger">*</span></label>-->
+                            <!--    <v-select-->
+                            <!--        v-model="selectedCountry"-->
+                            <!--        :options="countries"-->
+                            <!--        label="name"-->
+                            <!--        :reduce="(area) => area"-->
+                            <!--        placeholder="Select country"-->
+                            <!--        :class="{'is-invalid': errors.country}"-->
+                            <!--        :disabled="loading || (isEditMode && !canEditCountry)"-->
+                            <!--        @update:modelValue="onCountryChange"-->
+                            <!--    >-->
+                            <!--        <template #option="{ name }">-->
+                            <!--            <div>-->
+                            <!--                <iconify-icon icon="lucide:globe" class="text-primary me-2"></iconify-icon>-->
+                            <!--                {{ name }}-->
+                            <!--            </div>-->
+                            <!--        </template>-->
+                            <!--    </v-select>-->
+                            <!--    <div class="invalid-feedback" v-if="errors.country">-->
+                            <!--        {{ errors.country[0] }}-->
+                            <!--    </div>-->
+                            <!--    <small v-if="isEditMode && !canEditCountry" class="text-muted">-->
+                            <!--        Country cannot be changed because this area has children-->
+                            <!--    </small>-->
+                            <!--</div>-->
 
-                            <!-- Parent Field -->
+                            <!-- City Selection -->
                             <div class="mb-4">
-                                <label class="form-label">Parent</label>
+                                <label class="form-label">City <span class="text-danger">*</span></label>
                                 <v-select
-                                    v-model="areaForm.parent_id"
-                                    :options="availableParentAreas"
+                                    v-model="selectedCity"
+                                    :options="cities"
                                     label="name"
-                                    :reduce="(area) => area.id"
-                                    placeholder="Select parent (optional)"
-                                    :class="{'is-invalid': errors.parent_id || circularReferenceWarning}"
-                                    :disabled="loading"
+                                    :reduce="(area) => area"
+                                    placeholder="Select city"
+                                    :class="{'is-invalid': errors.city}"
+                                    :disabled="loading || loadingCities"
+                                    @update:modelValue="onCityChange"
                                 >
-                                    <template #option="{ name, type, area_parents_title }">
-                                        <div class="d-flex align-items-center">
-                                            <iconify-icon :icon="getTypeIcon(type)" 
-                                                         :class="'text-' + getTypeColor(type)"
-                                                         class="me-2"></iconify-icon>
-                                            <div>
-                                                <div>{{ name }}</div>
-                                                <small class="text-muted">{{ area_parents_title }} • {{ type }}</small>
-                                            </div>
+                                    <template #option="{ name }">
+                                        <div>
+                                            <iconify-icon icon="lucide:building" class="text-success me-2"></iconify-icon>
+                                            {{ name }}
                                         </div>
                                     </template>
                                     <template #no-options>
                                         <div class="text-center text-muted py-2">
-                                            No available parent areas
+                                            {{ loadingCities ? 'Loading cities...' : 'No cities available' }}
                                         </div>
                                     </template>
                                 </v-select>
-                                <div class="invalid-feedback" v-if="errors.parent_id">
-                                    {{ errors.parent_id[0] }}
+                                <div class="invalid-feedback" v-if="errors.city">
+                                    {{ errors.city[0] }}
                                 </div>
-                                <div v-if="circularReferenceWarning" class="text-danger small mt-1">
-                                    <iconify-icon icon="lucide:alert-triangle" class="me-1"></iconify-icon>
-                                    This selection would create a circular reference
-                                </div>
-                                <small class="text-muted">Leave empty for top-level area (country)</small>
                             </div>
+
+                            <!-- Area Selection -->
+                            <div class="mb-4" v-if="selectedCity">
+                                <label class="form-label">Area</label>
+                                <v-select
+                                    v-model="selectedArea"
+                                    :options="areas"
+                                    label="name"
+                                    :reduce="(area) => area"
+                                    placeholder="Select area (optional)"
+                                    :class="{'is-invalid': errors.area}"
+                                    :disabled="loading || loadingAreas || (isEditMode && !canEditArea)"
+                                    @update:modelValue="onAreaChange"
+                                >
+                                    <template #option="{ name }">
+                                        <div>
+                                            <iconify-icon icon="lucide:map-pin" class="text-info me-2"></iconify-icon>
+                                            {{ name }}
+                                        </div>
+                                    </template>
+                                </v-select>
+                            </div>
+
+                            <!-- Community Selection -->
+                            <div class="mb-4" v-if="selectedArea">
+                                <label class="form-label">Community</label>
+                                <v-select
+                                    v-model="selectedCommunity"
+                                    :options="communities"
+                                    label="name"
+                                    :reduce="(area) => area"
+                                    placeholder="Select community (optional)"
+                                    :class="{'is-invalid': errors.community}"
+                                    :disabled="loading || loadingCommunities || (isEditMode && !canEditCommunity)"
+                                    @update:modelValue="onCommunityChange"
+                                >
+                                    <template #option="{ name }">
+                                        <div>
+                                            <iconify-icon icon="lucide:users" class="text-warning me-2"></iconify-icon>
+                                            {{ name }}
+                                        </div>
+                                    </template>
+                                </v-select>
+                            </div>
+
+                            <!-- Sub Community Selection -->
+                            <div class="mb-4" v-if="selectedCommunity">
+                                <label class="form-label">Sub Community</label>
+                                <v-select
+                                    v-model="selectedSubCommunity"
+                                    :options="subCommunities"
+                                    label="name"
+                                    :reduce="(area) => area"
+                                    placeholder="Select sub community (optional)"
+                                    :class="{'is-invalid': errors.subCommunity}"
+                                    :disabled="loading || loadingSubCommunities || (isEditMode && !canEditSubCommunity)"
+                                    @update:modelValue="onSubCommunityChange"
+                                >
+                                    <template #option="{ name }">
+                                        <div>
+                                            <iconify-icon icon="lucide:user-plus" class="text-secondary me-2"></iconify-icon>
+                                            {{ name }}
+                                        </div>
+                                    </template>
+                                </v-select>
+                            </div>
+
+                            <div class="mb-4" v-if="shouldShowTypeSelection">
+                                <label class="form-label">Type to Create <span class="text-danger">*</span></label>
+                                <div class="d-flex gap-3 flex-wrap">
+                                    <!-- Cluster option -->
+                                    <div class="form-check" v-if="typeOptions.includes('cluster')">
+                                        <input 
+                                            type="radio" 
+                                            class="form-check-input" 
+                                            id="typeCluster"
+                                            value="cluster"
+                                            v-model="selectedType"
+                                        >
+                                        <label class="form-check-label" for="typeCluster">
+                                            <iconify-icon icon="lucide:group" class="text-dark me-1"></iconify-icon>
+                                            Cluster
+                                        </label>
+                                    </div>
+                                    
+                                    <!-- Building option -->
+                                    <div class="form-check" v-if="typeOptions.includes('building')">
+                                        <input 
+                                            type="radio" 
+                                            class="form-check-input" 
+                                            id="typeBuilding"
+                                            value="building"
+                                            v-model="selectedType"
+                                        >
+                                        <label class="form-check-label" for="typeBuilding">
+                                            <iconify-icon icon="lucide:home" class="text-danger me-1"></iconify-icon>
+                                            Building
+                                        </label>
+                                    </div>
+                                    
+                                    <!-- Phase option -->
+                                    <div class="form-check" v-if="typeOptions.includes('phaces')">
+                                        <input 
+                                            type="radio" 
+                                            class="form-check-input" 
+                                            id="typePhase"
+                                            value="phaces"
+                                            v-model="selectedType"
+                                        >
+                                        <label class="form-check-label" for="typePhase">
+                                            <iconify-icon icon="lucide:layers" class="text-purple me-1"></iconify-icon>
+                                            Phase
+                                        </label>
+                                    </div>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    {{ getTypeSelectionDescription }}
+                                </small>
+                            </div>
+
+                            <!-- Name Field -->
+                            <div class="mb-4">
+                                <label class="form-label d-flex gap-4">
+                                 <div>Add New {{ getFinalLevelLabel }} <span class="text-danger">*</span></div> 
+                                    <div class="form-check" v-if="!isEditMode && shouldShowProjectCheckbox">
+                                        <input 
+                                            type="checkbox" 
+                                            class="form-check-input" 
+                                            id="createAsProject"
+                                            v-model="createAsProject"
+                                        >
+                                        <label class="form-check-label" for="createAsProject">
+                                            <strong>Create as Project also</strong>
+                                            <!--<br>-->
+                                            <!--<small class="text-muted">-->
+                                            <!--    This will create a new project with the same name in the selected location-->
+                                            <!--</small>-->
+                                        </label>
+                                    </div>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    v-model="areaForm.name" 
+                                    :class="{'is-invalid': errors.name}"
+                                    :placeholder="`Enter ${getFinalLevelLabel.toLowerCase()} name`"
+                                    autofocus>
+                                <div class="invalid-feedback" v-if="errors.name">
+                                    {{ errors.name[0] }}
+                                </div>
+                                <small class="text-muted">
+                                    {{ getFinalLevelDescription }}
+                                </small>
+                            </div>
+
+
+
+                            <!-- Hidden parent_id field -->
+                            <input type="hidden" v-model="areaForm.parent_id">
 
                             <!-- Action Buttons -->
                             <div class="d-flex gap-2 justify-content-end border-top pt-4 mt-4">
@@ -102,7 +293,7 @@
                                     Cancel
                                 </button>
                               
-                                <button type="submit" class="btn btn-primary" :disabled="loading || circularReferenceWarning">
+                                <button type="submit" class="btn btn-primary" :disabled="loading || !isFormValid">
                                     <span v-if="loading">
                                         <iconify-icon icon="lucide:loader-2" class="me-2 spin"></iconify-icon>
                                         {{ isEditMode ? 'Updating...' : 'Creating...' }}
@@ -122,7 +313,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "@/plugins/axios";
 import vSelect from "vue-select";
@@ -145,215 +336,659 @@ export default {
         // Refs
         const errors = ref({});
         const loading = ref(false);
-        const parentAreas = ref([]);
-        const allAreas = ref([]);
-        const currentAreaChildren = ref([]);
+        const createAsProject = ref(false);
+        
+        // Loading states
+        const loadingCities = ref(false);
+        const loadingAreas = ref(false);
+        const loadingCommunities = ref(false);
+        const loadingSubCommunities = ref(false);
+        const loadingClusters = ref(false);
+        const loadingBuildings = ref(false);
 
-        // Area Types
-        const availableTypes = ref([
-            { value: 'country', label: 'Country', description: 'Top-level country' },
-            { value: 'city', label: 'City', description: 'City within a country' },
-            { value: 'area', label: 'Area', description: 'Area within a city' },
-            { value: 'community', label: 'Community', description: 'Community within an area' },
-            { value: 'sub_community', label: 'Sub Community', description: 'Sub-community within a community' },
-            { value: 'cluster', label: 'Cluster', description: 'Cluster of buildings' },
-            { value: 'building', label: 'Building', description: 'Individual building' },
-            { value: 'phaces', label: 'Phaces', description: 'Building phaces/units' }
-        ]);
+        // Selected values
+        const selectedCountry = ref(null);
+        const selectedCity = ref(null);
+        const selectedArea = ref(null);
+        const selectedCommunity = ref(null);
+        const selectedSubCommunity = ref(null);
+        const selectedCluster = ref(null);
+        const selectedBuilding = ref(null);
+        const selectedType = ref('cluster');
+
+        // Lists
+        const countries = ref([]);
+        const cities = ref([]);
+        const areas = ref([]);
+        const communities = ref([]);
+        const subCommunities = ref([]);
+        const clusters = ref([]);
+        const buildings = ref([]);
 
         // Area Form Data
         const areaForm = ref({
             name: "",
             type: "",
-            parent_id: null
+            parent_id: null,
+            parent_name: null
         });
 
-        // Computed: Filter available parent areas based on type hierarchy
-        const availableParentAreas = computed(() => {
-            if (!areaForm.value.type) return [];
+        // UAE ID (assuming it's 1, you might need to adjust this)
+        const UAE_ID = 1;
 
-            const typeHierarchy = {
-                country: [],
-                city: ['country'],
-                area: ['city'],
-                community: ['area'],
-                sub_community: ['community'],
-                cluster: ['sub_community'],
-                building: ['cluster', 'sub_community'],
-                phaces: ['building']
-            };
+        // Type hierarchy levels
+        const typeLevels = {
+            'country': 1,
+            'city': 2,
+            'area': 3,
+            'community': 4,
+            'sub_community': 5,
+            'cluster': 6,
+            'building': 7,
+            'phaces': 8
+        };
 
-            const allowedParentTypes = typeHierarchy[areaForm.value.type] || [];
-            
-            return parentAreas.value.filter(area => {
-                // In edit mode, cannot select self or children
-                if (isEditMode.value) {
-                    if (area.id == areaId.value) return false;
-                    if (isAreaAChild(area.id)) return false;
-                }
-                
-                return allowedParentTypes.includes(area.type);
-            });
+        // Computed: Current area type level
+        const areaTypeLevel = computed(() => {
+            return typeLevels[areaForm.value.type] || 0;
         });
 
-        // Computed: Check for circular reference
-        const circularReferenceWarning = computed(() => {
-            if (!isEditMode.value || !areaForm.value.parent_id) return false;
-            
-            const selectedParentId = areaForm.value.parent_id;
-            return isAreaAChild(selectedParentId);
+        // Computed: Can edit country?
+        const canEditCountry = computed(() => {
+            return areaTypeLevel.value <= 1;
         });
 
-        // Check if an area is a child (direct or indirect) of current area
-        const isAreaAChild = (areaId) => {
-            const checkChildren = (children, targetId) => {
-                for (const child of children) {
-                    if (child.id === targetId) return true;
-                    if (child.children && checkChildren(child.children, targetId)) return true;
-                }
+        const canEditCity = computed(() => {
+            return areaTypeLevel.value <= 2;
+        });
+
+        const canEditArea = computed(() => {
+            return areaTypeLevel.value <= 3;
+        });
+
+        const canEditCommunity = computed(() => {
+            return areaTypeLevel.value <= 4;
+        });
+
+        const canEditSubCommunity = computed(() => {
+            return areaTypeLevel.value <= 5;
+        });
+
+        const canEditCluster = computed(() => {
+            return areaTypeLevel.value <= 6;
+        });
+
+        const canEditBuilding = computed(() => {
+            return areaTypeLevel.value <= 7;
+        });
+
+        const shouldShowTypeSelection = computed(() => {
+            if (isEditMode.value) {
                 return false;
-            };
-            
-            return checkChildren(currentAreaChildren.value, areaId);
-        };
-
-        // Helper functions
-        const getTypeIcon = (type) => {
-            const icons = {
-                country: 'lucide:globe',
-                city: 'lucide:building',
-                area: 'lucide:map-pin',
-                community: 'lucide:users',
-                sub_community: 'lucide:user-plus',
-                cluster: 'lucide:group',
-                building: 'lucide:home',
-                phaces: 'lucide:layers'
-            };
-            return icons[type] || 'lucide:map-pin';
-        };
-
-        const getTypeColor = (type) => {
-            const colors = {
-                country: 'primary',
-                city: 'success',
-                area: 'info',
-                community: 'warning',
-                sub_community: 'secondary',
-                cluster: 'dark',
-                building: 'danger',
-                phaces: 'muted'
-            };
-            return colors[type] || 'muted';
-        };
-
-        // Fetch all areas
-        const fetchAllAreas = async () => {
-            try {
-                const response = await api.get('/listings/areas');
-                allAreas.value = response.data.data || response.data || [];
-            } catch (error) {
-                console.error("❌ Error fetching all areas:", error);
             }
-        };
+            
+            if (selectedSubCommunity.value && !selectedCluster.value && !selectedBuilding.value) {
+                return true; 
+            }
+            if (selectedCluster.value && !selectedBuilding.value) {
+                return true; 
+            }
+            if (selectedBuilding.value) {
+                return true; 
+            }
+            
+            return false;
+        });
 
-        // Fetch parent areas (for dropdown)
-        const fetchParentAreas = async () => {
-            try {
-                const response = await api.get('/listings/areas');
-                parentAreas.value = response.data.data || response.data || [];
+        const typeOptions = computed(() => {
+            const options = [];
+            
+            if (!isEditMode.value) {
+                if (selectedSubCommunity.value && !selectedCluster.value && !selectedBuilding.value) {
+                    options.push('cluster', 'building', 'phaces');
+                } else if (selectedCluster.value && !selectedBuilding.value) {
+                    options.push('building', 'phaces');
+                } else if (selectedBuilding.value) {
+                    options.push('phaces');
+                }
+            }
+            
+            return options;
+        });
+
+        const getTypeSelectionDescription = computed(() => {
+            if (selectedSubCommunity.value && !selectedCluster.value && !selectedBuilding.value) {
+                return 'Select what you want to create under this Sub Community';
+            }
+            if (selectedCluster.value && !selectedBuilding.value) {
+                return 'Select what you want to create under this Cluster';
+            }
+            if (selectedBuilding.value) {
+                return 'You can only create Phase under a Building';
+            }
+            return '';
+        });
+
+        // Computed: Should show project checkbox
+        const shouldShowProjectCheckbox = computed(() => {
+            // Don't show in edit mode
+            if (isEditMode.value) return false;
+            
+            // Must have country and city selected
+            // if (!selectedCountry.value || !selectedCity.value) return false;
+            
+            // Show for specific levels based on selections
+            
+            // Creating Area (when city is selected and no area)
+            // if (selectedCity.value && !selectedArea.value && !selectedCommunity.value && !selectedSubCommunity.value) {
+            //     return true;
+            // }
+            
+            // Creating Community (when area is selected)
+            if (selectedArea.value && !selectedCommunity.value && !selectedSubCommunity.value) {
+                return true;
+            }
+            
+            // Creating Sub Community (when community is selected)
+            if (selectedCommunity.value && !selectedSubCommunity.value) {
+                return true;
+            }
+            
+            // Creating Cluster (when sub community is selected AND type is cluster)
+            // if (selectedSubCommunity.value && selectedType.value === 'cluster' && !selectedCluster.value) {
+            //     return true;
+            // }
+            
+            return false;
+        });
+
+        // Computed: Get final level label
+        // Computed: Get final level label
+        const getFinalLevelLabel = computed(() => {
+            if (isEditMode.value && areaForm.value.type) {
+                return formatType(areaForm.value.type);
+            }
+            
+            if (!isEditMode.value) {
+                if (selectedType.value) {
+                    return formatType(selectedType.value);
+                }
                 
-                console.log('📁 Parent areas loaded:', parentAreas.value);
-            } catch (error) {
-                console.error("❌ Error fetching parent areas:", error);
-                showNotification("❌ Failed to load parent areas.", "error");
+                if (selectedBuilding.value) {
+                    return 'Phase';
+                }
+                if (selectedCluster.value) {
+                    return 'Building';
+                }
+                if (selectedSubCommunity.value) {
+                    return 'Cluster';
+                }
+                if (selectedCommunity.value) {
+                    return 'Sub Community';
+                }
+                if (selectedArea.value) {
+                    return 'Community';
+                }
+                if (selectedCity.value) {
+                    return 'Area';
+                }
+                if (selectedCountry.value) {
+                    return 'City';
+                }
+            }
+            
+            return 'Country';
+        });
+
+        const getFinalLevelDescription = computed(() => {
+            if (isEditMode.value) {
+                return `Update the ${getFinalLevelLabel.value.toLowerCase()} name`;
+            }
+            return `Enter the ${getFinalLevelLabel.value.toLowerCase()} name you want to create`;
+        });
+
+        // Computed: Determine parent_id for submission
+        const determineParentId = computed(() => {
+            // In edit mode, preserve original parent_id unless changed
+            if (isEditMode.value) {
+                // Check if user changed any selection by comparing with original areaForm.parent_id
+                const currentParent = getCurrentSelectedParent();
+                
+                // If current selection is different from original, use new parent
+                if (currentParent && currentParent.id !== areaForm.value.parent_id) {
+                    return currentParent.id;
+                }
+                
+                // No changes, keep original
+                return areaForm.value.parent_id;
+            }
+            
+            // Create mode - determine from selections
+            return getCurrentSelectedParent()?.id || null;
+        });
+        
+        // Helper function to get current selected parent
+        const getCurrentSelectedParent = () => {
+            if (selectedBuilding.value) return selectedBuilding.value;
+            if (selectedCluster.value) return selectedCluster.value;
+            if (selectedSubCommunity.value) return selectedSubCommunity.value;
+            if (selectedCommunity.value) return selectedCommunity.value;
+            if (selectedArea.value) return selectedArea.value;
+            if (selectedCity.value) return selectedCity.value;
+            // if (selectedCountry.value) return selectedCountry.value;
+            // return default country id
+            return 1;
+        };
+
+        // Computed: Form validity
+        const isFormValid = computed(() => {
+            if (!areaForm.value.name?.trim()) return false;
+            
+            // In edit mode, always valid if name is filled
+            if (isEditMode.value) return true;
+            
+            // In create mode, require country and city
+            // if (!selectedCountry.value) return false;
+            if (!selectedCity.value) return false;
+            
+            // Require type selection when needed
+            if (shouldShowTypeSelection.value && !selectedType.value) return false;
+            
+            return true;
+        });
+
+        // Determine type based on selections
+        const determineType = computed(() => {
+            if (isEditMode.value) {
+                return areaForm.value.type;
+            }
+            
+            if (selectedType.value) {
+                return selectedType.value;
+            }
+            
+            if (selectedBuilding.value) return 'phaces';
+            if (selectedCluster.value) return 'building';
+            if (selectedSubCommunity.value) return 'cluster';
+            if (selectedCommunity.value) return 'sub_community';
+            if (selectedArea.value) return 'community';
+            if (selectedCity.value) return 'area';
+            if (selectedCountry.value) return 'city';
+    
+            
+            return 'country';
+        });
+
+        // Helper: Get icon for type
+        const getTypeIcon = (type) => {
+            switch(type) {
+                case 'cluster': return 'lucide:group';
+                case 'building': return 'lucide:home';
+                case 'phaces': return 'lucide:layers';
+                default: return 'lucide:map-pin';
             }
         };
 
-        // Find all children of current area recursively
-        const findChildrenRecursively = (parentId, allAreasList) => {
-            const directChildren = allAreasList.filter(area => area.parent_id == parentId);
-            let allChildren = [...directChildren];
-            
-            directChildren.forEach(child => {
-                const grandChildren = findChildrenRecursively(child.id, allAreasList);
-                allChildren = [...allChildren, ...grandChildren];
-            });
-            
-            return allChildren;
+        const getTypeClass = (type) => {
+            switch(type) {
+                case 'cluster': return 'text-dark';
+                case 'building': return 'text-danger';
+                case 'phaces': return 'text-purple';
+                default: return 'text-info';
+            }
         };
 
-        // Fetch area data for editing
+        // Helper: Format type string
+        const formatType = (type) => {
+            if (!type) return '';
+            return type.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        };
+
+        // Set UAE as default country
+        const setUAEDefault = () => {
+            if (!isEditMode.value && countries.value.length > 0) {
+                const uae = countries.value.find(c => 
+                    c.name.toLowerCase() === 'uae' || 
+                    c.name.toLowerCase() === 'united arab emirates' ||
+                    c.id === UAE_ID
+                );
+                
+                if (uae) {
+                    selectedCountry.value = uae;
+                    onCountryChange(uae);
+                }
+            }
+        };
+
+        // Fetch countries
+        const fetchCountries = async () => {
+            try {
+                const response = await api.get('/listings/areas', {
+                    params: { type: 'country' }
+                });
+                countries.value = response.data.data || response.data || [];
+                
+                if (!isEditMode.value) {
+                    setUAEDefault();
+                }
+                
+            } catch (error) {
+                console.error("Error fetching countries:", error);
+                showNotification("Failed to load countries.", "error");
+            }
+        };
+        const fetchCities = async () => {
+            try {
+                loadingCities.value = true;
+                
+                const response = await api.get('/listings/areas', {
+                        params: { parent_id: 1 } 
+                });
+        
+                cities.value = response.data.data || response.data || [];
+                
+                if (cities.value.length > 0 && !selectedCity.value) {
+                    const abuDhabi = cities.value.find(c => 
+                        c.name.toLowerCase() === 'abu dhabi'
+                     
+                     
+                    );
+                    
+                    if (abuDhabi) {
+                        selectedCity.value = abuDhabi;
+                        onCityChange(abuDhabi);
+                    }
+                }
+                
+            } catch (error) {
+                console.error("Error fetching cities:", error);
+                showNotification("Failed to load cities.", "error");
+            } finally {
+                loadingCities.value = false;
+            }
+        };
+      
+        // Fetch children
+        const fetchChildren = async (parentId, type) => {
+            try {
+                switch(type) {
+                    case 'city': loadingCities.value = true; break;
+                    case 'area': loadingAreas.value = true; break;
+                    case 'community': loadingCommunities.value = true; break;
+                    case 'sub_community': loadingSubCommunities.value = true; break;
+                    case 'cluster': loadingClusters.value = true; break;
+                    case 'building': loadingBuildings.value = true; break;
+                }
+
+                const response = await api.get('/listings/areas', {
+                    params: { parent_id: parentId }
+                });
+
+                const children = response.data.data || response.data || [];
+
+                switch(type) {
+                    case 'city': cities.value = children; break;
+                    case 'area': areas.value = children; break;
+                    case 'community': communities.value = children; break;
+                    case 'sub_community': subCommunities.value = children; break;
+                    case 'cluster': clusters.value = children; break;
+                    case 'building': buildings.value = children; break;
+                }
+            } catch (error) {
+                console.error(`Error fetching ${type}s:`, error);
+                showNotification(`Failed to load ${type}s.`, "error");
+            } finally {
+                switch(type) {
+                    case 'city': loadingCities.value = false; break;
+                    case 'area': loadingAreas.value = false; break;
+                    case 'community': loadingCommunities.value = false; break;
+                    case 'sub_community': loadingSubCommunities.value = false; break;
+                    case 'cluster': loadingClusters.value = false; break;
+                    case 'building': loadingBuildings.value = false; break;
+                }
+            }
+        };
+
+        // Event handlers
+        const onCountryChange = async (country) => {
+            selectedCountry.value = country;
+            selectedCity.value = null;
+            selectedArea.value = null;
+            selectedCommunity.value = null;
+            selectedSubCommunity.value = null;
+            selectedCluster.value = null;
+            selectedBuilding.value = null;
+            selectedType.value = 'city';
+            cities.value = [];
+            areas.value = [];
+            communities.value = [];
+            subCommunities.value = [];
+            clusters.value = [];
+            buildings.value = [];
+            
+            if (country) {
+                await fetchChildren(country.id, 'city');
+            }
+        };
+
+        const onCityChange = async (city) => {
+                selectedCity.value = city;
+                selectedArea.value = null;
+                selectedCommunity.value = null;
+                selectedSubCommunity.value = null;
+                selectedCluster.value = null;
+                selectedBuilding.value = null;
+                selectedType.value = 'area';
+                areas.value = [];
+                communities.value = [];
+                subCommunities.value = [];
+                clusters.value = [];
+                buildings.value = [];
+                
+                if (city) {
+                    await fetchChildren(city.id, 'area');
+                }
+            };
+
+        const onAreaChange = async (area) => {
+            selectedArea.value = area;
+            selectedCommunity.value = null;
+            selectedSubCommunity.value = null;
+            selectedCluster.value = null;
+            selectedBuilding.value = null;
+            selectedType.value = 'community';
+            communities.value = [];
+            subCommunities.value = [];
+            clusters.value = [];
+            buildings.value = [];
+            
+            if (area) {
+                await fetchChildren(area.id, 'community');
+            }
+        };
+
+        const onCommunityChange = async (community) => {
+            selectedCommunity.value = community;
+            selectedSubCommunity.value = null;
+            selectedCluster.value = null;
+            selectedBuilding.value = null;
+            selectedType.value = 'sub_community';
+            subCommunities.value = [];
+            clusters.value = [];
+            buildings.value = [];
+            
+            if (community) {
+                await fetchChildren(community.id, 'sub_community');
+            }
+        };
+
+        const onSubCommunityChange = async (subCommunity) => {
+            selectedSubCommunity.value = subCommunity;
+            selectedCluster.value = null;
+            selectedBuilding.value = null;
+            selectedType.value = 'cluster';
+            clusters.value = [];
+            buildings.value = [];
+            
+            if (subCommunity) {
+                await fetchChildren(subCommunity.id, 'cluster');
+            }
+        };
+
+        const onClusterChange = async (cluster) => {
+            selectedCluster.value = cluster;
+            selectedBuilding.value = null;
+            selectedType.value = 'building';
+            buildings.value = [];
+            
+            if (cluster) {
+                await fetchChildren(cluster.id, 'building');
+            }
+        };
+
+        const onBuildingChange = (building) => {
+            selectedBuilding.value = building;
+            selectedType.value = 'phaces';
+        };
+
+        // تحديث selectedType تلقائياً عندما يتغير المستوى
+        watch([selectedSubCommunity, selectedCluster, selectedBuilding], () => {
+            if (!isEditMode.value) {
+                if (selectedSubCommunity.value && !selectedCluster.value && !selectedBuilding.value) {
+                    if (!selectedType.value || !['cluster', 'building', 'phaces'].includes(selectedType.value)) {
+                        selectedType.value = 'cluster';
+                    }
+                } else if (selectedCluster.value && !selectedBuilding.value) {
+                    if (!selectedType.value || !['building', 'phaces'].includes(selectedType.value)) {
+                        selectedType.value = 'building';
+                    }
+                } else if (selectedBuilding.value) {
+                    selectedType.value = 'phaces';
+                }
+            }
+        });
+
+        // Fetch area for editing
         const fetchArea = async () => {
             try {
                 loading.value = true;
-                console.log('🔍 Fetching area data for ID:', areaId.value);
                 
                 const response = await api.get(`/listings/areas/${areaId.value}`);
                 const areaData = response.data.data || response.data;
-
+        
                 if (!areaData) {
                     throw new Error('Area not found');
                 }
-
-                // Populate form with existing data
+        
+                // Populate form
                 areaForm.value = {
                     name: areaData.name || "",
                     type: areaData.type || "",
-                    parent_id: areaData.parent_id || null
+                    parent_id: areaData.parent_id || null,
+                    parent_name: areaData.parent_name || null
                 };
-
-                // Find all children of current area for circular reference prevention
-                if (allAreas.value.length > 0) {
-                    currentAreaChildren.value = findChildrenRecursively(areaId.value, allAreas.value);
-                    console.log('👶 Current area children:', currentAreaChildren.value);
+        
+                // Set selectedType based on area type
+                selectedType.value = areaData.type;
+        
+                // Load hierarchy based on parent_id
+                if (areaData.parent_id) {
+                    await loadParentHierarchy(areaData.parent_id, areaData.type);
+                } else {
+                    await fetchCountries();
                 }
-
-                console.log('📝 Form populated with data:', areaForm.value);
-                showNotification("✅ Area data loaded", "success");
-
+        
             } catch (error) {
-                console.error("❌ Error fetching area:", error);
-                showNotification("❌ Failed to load area.", "error");
+                console.error("Error fetching area:", error);
+                showNotification("Failed to load area.", "error");
                 router.push('/areas');
             } finally {
                 loading.value = false;
             }
         };
+        
+        // Load parent hierarchy
+        const loadParentHierarchy = async (parentId, currentType = null) => {
+            try {
+                const response = await api.get(`/listings/areas/${parentId}`);
+                const parent = response.data.data || response.data;
+                
+                if (!parent) return;
+        
+                if (parent.parent_id) {
+                    await loadParentHierarchy(parent.parent_id);
+                }
+        
+                switch(parent.type) {
+                    case 'country':
+                        selectedCountry.value = parent;
+                        await fetchChildren(parent.id, 'city');
+                        break;
+                    case 'city':
+                        selectedCity.value = parent;
+                        await fetchChildren(parent.id, 'area');
+                        break;
+                    case 'area':
+                        selectedArea.value = parent;
+                        await fetchChildren(parent.id, 'community');
+                        break;
+                    case 'community':
+                        selectedCommunity.value = parent;
+                        await fetchChildren(parent.id, 'sub_community');
+                        break;
+                    case 'sub_community':
+                        selectedSubCommunity.value = parent;
+                        await fetchChildren(parent.id, 'cluster');
+                        break;
+                    case 'cluster':
+                        selectedCluster.value = parent;
+                        await fetchChildren(parent.id, 'building');
+                        break;
+                    case 'building':
+                        selectedBuilding.value = parent;
+                        break;
+                }
+        
+                if (currentType === 'phaces' && parent.type === 'building') {
+                    selectedBuilding.value = parent;
+                }
+            } catch (error) {
+                console.error('Error loading parent hierarchy:', error);
+            }
+        };
 
-        // Submit area form
+        // Submit form
         const submitForm = async () => {
             try {
                 loading.value = true;
                 errors.value = {};
 
-                // Prevent submission if circular reference detected
-                if (circularReferenceWarning.value) {
-                    showNotification("❌ Cannot set a child area as parent to avoid circular reference.", "error");
-                    loading.value = false;
-                    return;
+                if (!isEditMode.value) {
+                    areaForm.value.type = determineType.value;
                 }
 
-                // Validation
                 if (!areaForm.value.name?.trim()) {
-                    showNotification("❌ Please enter area name", "error");
+                    showNotification("Please enter area name", "error");
                     loading.value = false;
                     return;
                 }
 
-                if (!areaForm.value.type) {
-                    showNotification("❌ Please select area type", "error");
-                    loading.value = false;
-                    return;
-                }
-
-                // Prepare data - ensure parent_id is null if empty
                 const submitData = {
                     name: areaForm.value.name.trim(),
                     type: areaForm.value.type,
-                    parent_id: areaForm.value.parent_id || null
+                    parent_id: determineParentId.value,
                 };
 
-                console.log('🚀 Submitting data:', submitData);
+                // Only add create_project if it's true
+                if (createAsProject.value) {
+                    submitData.create_project = true;
+                }
+
+                if (submitData.type === 'country') {
+                    submitData.parent_id = null;
+                }
 
                 let response;
                 
@@ -363,32 +998,33 @@ export default {
                     response = await api.post("/listings/areas", submitData);
                 }
 
-                const successMessage = isEditMode.value ? "Area updated!" : "Area created!";
-                showNotification(`✅ ${successMessage}`, "success");
+                let successMessage = isEditMode.value ? "Area updated successfully!" : "Area created successfully!";
+                
+                if (!isEditMode.value && createAsProject.value) {
+                    successMessage = "Area and project created successfully! You can edit the project later from Projects section.";
+                }
+                
+                showNotification(successMessage, "success");
 
                 setTimeout(() => {
                     router.push('/areas');
                 }, 1000);
 
             } catch (error) {
-                console.error("❌ Error saving area:", error);
+                console.error("Error saving area:", error);
                 
-                // Handle specific backend errors
-                if (error.response?.data?.message?.includes('circular')) {
-                    showNotification("❌ Cannot set this parent area as it would create a circular reference.", "error");
-                }
-                else if (error.response?.data?.errors) {
+                if (error.response?.data?.errors) {
                     errors.value = error.response.data.errors;
-                    showNotification("❌ Please check the form for errors.", "error");
+                    showNotification("Please check the form for errors.", "error");
                 } else {
-                    showNotification("❌ Failed to save area.", "error");
+                    showNotification("Failed to save area.", "error");
                 }
             } finally {
                 loading.value = false;
             }
         };
 
-        // Helper function for notifications
+        // Helper: Show notification
         const showNotification = (message, type = 'info') => {
             if (window.$showNotification) {
                 window.$showNotification(message, type);
@@ -397,22 +1033,34 @@ export default {
             }
         };
 
-        // Initialize component
+        // Watch for cities loaded in create mode
+        watch(cities, (newCities) => {
+            if (!isEditMode.value && newCities.length > 0 && !selectedCity.value) {
+                const defaultCity = newCities.find(c => 
+                    c.name.toLowerCase() === 'abu dhabi'
+                );
+                if (defaultCity) {
+                    selectedCity.value = defaultCity;
+                    onCityChange(defaultCity);
+                }
+            }
+        });
+
+        // Initialize
         onMounted(async () => {
             try {
                 loading.value = true;
                 
-                // Fetch all data in parallel for better performance
-                await Promise.all([
-                    fetchAllAreas(),
-                    fetchParentAreas()
-                ]);
-
                 if (isEditMode.value) {
                     await fetchArea();
                 }
+                
+                // await fetchCountries();
+                 await fetchCities();
+        
+
             } catch (error) {
-                console.error('❌ Error initializing component:', error);
+                console.error('Error initializing component:', error);
             } finally {
                 loading.value = false;
             }
@@ -421,14 +1069,57 @@ export default {
         return {
             isEditMode,
             loading,
+            loadingCities,
+            loadingAreas,
+            loadingCommunities,
+            loadingSubCommunities,
+            loadingClusters,
+            loadingBuildings,
             areaForm,
             errors,
-            availableTypes,
-            availableParentAreas,
-            circularReferenceWarning,
+            countries,
+            cities,
+            areas,
+            communities,
+            subCommunities,
+            clusters,
+            buildings,
+            selectedCountry,
+            selectedCity,
+            selectedArea,
+            selectedCommunity,
+            selectedSubCommunity,
+            selectedCluster,
+            selectedBuilding,
+            selectedType,
+            areaTypeLevel,
+            canEditCountry,
+            canEditCity,
+            canEditArea,
+            canEditCommunity,
+            canEditSubCommunity,
+            canEditCluster,
+            canEditBuilding,
+            shouldShowTypeSelection,
+            typeOptions,
+            getTypeSelectionDescription,
+            shouldShowProjectCheckbox,
+            getFinalLevelLabel,
+            getFinalLevelDescription,
+            isFormValid,
+            createAsProject,
+            formatType,
             getTypeIcon,
-            getTypeColor,
-            submitForm
+            getTypeClass,
+            onCountryChange,
+            onCityChange,
+            onAreaChange,
+            onCommunityChange,
+            onSubCommunityChange,
+            onClusterChange,
+            onBuildingChange,
+            submitForm,
+            getCurrentSelectedParent,
         };
     }
 };
@@ -469,7 +1160,22 @@ export default {
     font-size: 0.875rem;
 }
 
-.text-danger small {
-    font-size: 0.8rem;
+.text-purple {
+    color: #6f42c1;
+}
+
+.form-check-input {
+    cursor: pointer;
+}
+
+.form-check-label {
+    cursor: pointer;
+}
+
+.alert-info {
+    background-color: #cff4fc;
+    border-color: #b6effb;
+    color: #055160;
+    border-radius: 0.375rem;
 }
 </style>

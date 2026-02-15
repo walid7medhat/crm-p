@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Area extends Model
+class OldArea extends Model
 {
     //
     use HasFactory;
     protected $guarded=[];
+    protected $table="old_areas";
        public function addedBy()
     {
         return $this->belongsTo(User::class, 'added_by');
@@ -38,11 +39,11 @@ class Area extends Model
 
      
     public function parent(){
-        return $this->belongsTo(Area::class,'parent_id');
+        return $this->belongsTo(OldArea::class,'parent_id');
       }
   
       public function child(){
-          return $this->hasMany(Area::class,'parent_id');
+          return $this->hasMany(OldArea::class,'parent_id');
       }
 public function getChildIdsAttribute()
 {
@@ -98,7 +99,7 @@ public function getTitleAttribute()
 
 public function parentRecursive()
 {
-    return $this->belongsTo(Area::class, 'parent_id')->with('parentRecursive');
+    return $this->belongsTo(OldArea::class, 'parent_id')->with('parentRecursive');
 }
 
 public function getFullHierarchyAttribute()
@@ -121,8 +122,4 @@ public function getFullHierarchyAttribute()
  public function properties_complete(){
         return $this->hasMany(Listing::Class,'area_id');
     }
-    public function floorPlanImages()
-{
-    return $this->hasMany(FloorPlanImage::class);
-}
 }

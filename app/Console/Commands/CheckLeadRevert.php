@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Lead;
 use Illuminate\Support\Facades\Log;
+use App\Events\LeadUpdated;
 
 class CheckLeadRevert extends Command
 {
@@ -32,10 +33,16 @@ class CheckLeadRevert extends Command
         $revertedCount = 0;
         
         foreach ($leadsToRevert as $lead) {
+            $oldStage=$lead->stage;
             $lead->revertToStageOne();
             $revertedCount++;
-            
+            $newStage=$lead->stage;
             $this->info("Lead ID {$lead->id} reverted to stage 1");
+               $changes = [
+                'old_stage' => $oldStage->name,
+                'new_stage' => $newStage->name
+            ];
+            broadcast(new LeadUpdated($lead, 'stage_changed', null, $changes));
             Log::info("Lead ID {$lead->id} reverted to stage 1 due to inactivity");
         }
 

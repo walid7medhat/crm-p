@@ -17,7 +17,7 @@ class ProjectResource extends JsonResource
 $duplicatedProject = Project::whereRaw(
         'LOWER(TRIM(title)) = ?',
         [strtolower(trim($this->title))]
-    )
+    )->where('area_id',$this->area_id)
     ->where('id', '!=', $this->id)
     ->first();
 

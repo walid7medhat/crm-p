@@ -82,7 +82,7 @@ class LeadController extends Controller
                     });
                 }
                 
-                // ================= فلترة حسب source =================
+                // =================   source =================
                 if ($request->filled('source')) {
                     $leadsQuery->where('lead_source', $request->source);
                 }
@@ -90,6 +90,12 @@ class LeadController extends Controller
                 if ($request->filled('source_information')) {
                     $leadsQuery->where('source_information', 'like', "%{$request->source_information}%");
                 }
+                  if ($request->filled('changed_by') ) {
+                      $leadsQuery->whereHas('histories',function($query) use($request){
+                                $query->where('changes->action', 'stage_changed')->where('user_id',$request->changed_by);
+                      });
+                  
+                    }
         
                 if ($user->hasRole('super_admin') ) {
                     $leads = $leadsQuery->latest()->get();

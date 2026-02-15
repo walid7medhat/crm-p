@@ -7,15 +7,18 @@ use App\Helpers\ApiResponse;
 use App\Http\Requests\Listing\AreaRequest;
 use App\Http\Resources\Listing\AreaResource;
 use App\Models\Area;
+use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use App\Models\Project;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
 class AreaController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:areas-list', ['only' => ['show']]);
+        $this->middleware('permission:areas-list', ['only' => ['show', 'index', 'byType', 'children', 'getProjectAreas']]);
         $this->middleware('permission:areas-create', ['only' => ['store']]);
         $this->middleware('permission:areas-edit', ['only' => ['update']]);
         $this->middleware('permission:areas-delete', ['only' => ['destroy']]);
@@ -27,7 +30,7 @@ class AreaController extends Controller
         try {
             $cacheKey = 'areas_' . md5(serialize($request->all()));
             
-            $areas = Cache::remember($cacheKey, 3600, function () use ($request) {
+            $areas = Cache::tags(['areas'])->remember($cacheKey, 3600, function () use ($request) {
                 $query = Area::withCount('child');
                 
                 // Filter by type if provided
@@ -48,14 +51,16 @@ class AreaController extends Controller
                 if ($request->has('with_child')) {
                     $query->with('child');
                 }
+                
                 if($request->has('has_listings')){
-                    $query->Where(function ($subQ) {
+                    $query->where(function ($subQ) {
                         $subQ->whereHas('properties_complete')
                             ->orWhereHas('child.properties_complete')
                             ->orWhereHas('child.child.properties_complete')
                             ->orWhereHas('child.child.child.properties_complete');
                     });
                 }
+                
                 return $query->get();
             });
             
@@ -64,6 +69,8 @@ class AreaController extends Controller
                 'Areas retrieved successfully'
             );
         } catch (\Exception $e) {
+            Log::error('Error fetching areas: ' . $e->getMessage());
+            
             $query = Area::withCount('child');
             
             if ($request->has('type')) {
@@ -87,16 +94,48 @@ class AreaController extends Controller
     public function store(AreaRequest $request): JsonResponse
     {
         try {
-            $area = Area::create($request->validated() + ['added_by' => auth()->user()->id]);
+            DB::beginTransaction();
+            
+            // Create the area
+            $area = Area::create([
+                'name' => $request->name,
+                'type' => $request->type,
+                'parent_id' => $request->parent_id,
+                'added_by' => auth()->user()->id
+            ]);
+
+        // dd($request->boolean('create_project'),$request->input());
+            $project = null;
+            if ($request->boolean('create_project')) {
+                $project = $this->createProjectFromArea($area);
+                // dd($project);
+                 Cache::flush();
+            }
 
             $this->clearAreasCache();
 
-            return ApiResponse::success(
-                new AreaResource($area->loadCount('child')),
-                'Area created successfully', 
-                201
-            );
+            DB::commit();
+
+            $responseData = [
+                'area' => new AreaResource($area->loadCount('child'))
+            ];
+
+            if ($project) {
+                $responseData['project'] = [
+                    'id' => $project->id,
+                    'name' => $project->title,
+                    'message' => 'Project created successfully. You can edit it later from Projects section.'
+                ];
+                $responseData['message'] = 'Area and project created successfully';
+            } else {
+                $responseData['message'] = 'Area created successfully';
+            }
+
+            return ApiResponse::success($responseData, $responseData['message'], 201);
+            
         } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to create area: ' . $e->getMessage());
             return ApiResponse::error('Failed to create area: ' . $e->getMessage());
         }
     }
@@ -107,8 +146,8 @@ class AreaController extends Controller
         try {
             $cacheKey = 'area_' . $area->id;
             
-            $cachedArea = Cache::remember($cacheKey, 3600, function () use ($area) {
-                return $area->loadCount('child');
+            $cachedArea = Cache::tags(['areas'])->remember($cacheKey, 3600, function () use ($area) {
+                return $area->loadCount('child')->load('parent');
             });
             
             return ApiResponse::success(
@@ -116,8 +155,9 @@ class AreaController extends Controller
                 'Area retrieved successfully'
             );
         } catch (\Exception $e) {
+            Log::error('Error fetching area: ' . $e->getMessage());
             return ApiResponse::success(
-                new AreaResource($area->loadCount('child')),
+                new AreaResource($area->loadCount('child')->load('parent')),
                 'Area retrieved successfully (cache fallback)'
             );
         }
@@ -132,16 +172,28 @@ class AreaController extends Controller
                 return ApiResponse::error('Area cannot be its own parent');
             }
             
-            $area->update($request->validated());
+            DB::beginTransaction();
+            
+            $area->update([
+                'name' => $request->name,
+                'type' => $request->type,
+                'parent_id' => $request->parent_id,
+            ]);
 
+            // Note: We don't create projects on update, only on create
+            
             $this->clearAreaCache($area->id);
             $this->clearAreasCache();
+
+            DB::commit();
 
             return ApiResponse::success(
                 new AreaResource($area->loadCount('child')),
                 'Area updated successfully'
             );
         } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to update area: ' . $e->getMessage());
             return ApiResponse::error('Failed to update area: ' . $e->getMessage());
         }
     }
@@ -154,14 +206,27 @@ class AreaController extends Controller
                 return ApiResponse::error('Cannot delete area that has child areas. Please delete or move the child first.');
             }
             
+            DB::beginTransaction();
+            
             $areaId = $area->id;
+            
+            // Check if this area is used in any project
+            $projectCount = Project::where('area_id', $areaId)->count();
+            if ($projectCount > 0) {
+                return ApiResponse::error('Cannot delete area that is associated with projects.');
+            }
+            
             $area->delete();
 
             $this->clearAreaCache($areaId);
             $this->clearAreasCache();
 
+            DB::commit();
+
             return ApiResponse::success(null, 'Area deleted successfully');
         } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to delete area: ' . $e->getMessage());
             return ApiResponse::error('Failed to delete area: ' . $e->getMessage());
         }
     }
@@ -184,7 +249,8 @@ class AreaController extends Controller
                 "{$type} areas retrieved successfully"
             );
         } catch (\Exception $e) {
-            // Fallback بدون cache
+            Log::error("Error fetching {$type} areas: " . $e->getMessage());
+            
             $areas = Area::withCount('child')
                 ->where('type', $type)
                 ->orderBy('name')
@@ -211,7 +277,8 @@ class AreaController extends Controller
                 'Child areas retrieved successfully'
             );
         } catch (\Exception $e) {
-            // Fallback بدون cache
+            Log::error('Error fetching children: ' . $e->getMessage());
+            
             $children = $area->child()->withCount('child')->orderBy('name')->get();
             
             return ApiResponse::success(
@@ -225,21 +292,16 @@ class AreaController extends Controller
     private function clearAreasCache(): void
     {
         try {
-            Cache::forget('areas_list_all');
+            Cache::tags(['areas'])->flush();
             
-            $prefix = config('cache.prefix');
-            $keysToForget = [
-                'areas_*',
-                'areas_type_*',
-                'area_*',
-                'area_children_*'
-            ];
+            // Also clear specific keys
+            Cache::forget('areas_list_all');
             
             if (config('cache.default') === 'file') {
                 Cache::forget('areas_list');
             }
         } catch (\Exception $e) {
-            \Log::warning('Cache clear error: ' . $e->getMessage());
+            Log::warning('Cache clear error: ' . $e->getMessage());
         }
     }
 
@@ -250,7 +312,7 @@ class AreaController extends Controller
             Cache::forget('area_' . $areaId);
             Cache::forget('area_children_' . $areaId);
         } catch (\Exception $e) {
-            \Log::warning('Area cache clear error: ' . $e->getMessage());
+            Log::warning('Area cache clear error: ' . $e->getMessage());
         }
     }
 
@@ -261,105 +323,128 @@ class AreaController extends Controller
             $this->clearAreasCache();
             return ApiResponse::success(null, 'Areas cache cleared successfully');
         } catch (\Exception $e) {
+            Log::error('Failed to clear cache: ' . $e->getMessage());
             return ApiResponse::error('Failed to clear cache: ' . $e->getMessage());
         }
     }
-    //  public function getProjectAreas( $projectId)
-    // {
-    //     try {
-    //         $project=Project::find($projectId);
-    //       $areass = Area::where('id', $project->area_id)->first();
-    //       $areas = Area::whereIn('id', $areass->child_ids)->get();
+
+    /**
+     * Create a project from an area - مبسط جداً
+     */
+    private function createProjectFromArea(Area $area): ?Project
+    {
+        try {
+            $project = Project::create([
+                'title' => $area->name,
+                'area_id' => $area->id,
+                'added_by' => auth()->user()->id,
+             
+            ]);
+
+            Log::info('Project created from area', [
+                'area_id' => $area->id,
+                'project_id' => $project->id,
+                'user_id' => auth()->user()->id
+            ]);
+
+            return $project;
             
-    //         return response()->json([
-    //             'success' => true,
-    //             'data' => AreaResource::collection($areas),
-    //             'message' => 'Project areas retrieved successfully'
-    //         ]);
-            
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Failed to retrieve project areas',
-    //             'error' => $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
+        } catch (\Exception $e) {
+            Log::error('Failed to create project from area: ' . $e->getMessage(), [
+                'area_id' => $area->id
+            ]);
+            throw $e; // Re-throw to trigger rollback
+        }
+    }
+
     public function getProjectAreas($projectId)
-{
-    try {
-        $project = Project::find($projectId);
-        
-        if (!$project) {
+    {
+        try {
+            $project = Project::find($projectId);
+            
+            if (!$project) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Project not found'
+                ], 404);
+            }
+            
+            $area = Area::where('id', $project->area_id)->first();
+            
+            if (!$area) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Area not found'
+                ], 404);
+            }
+            
+            // $allAreas = Area::whereIn('id', $area->child_ids ?? [])->get();
+            // $matchedArea = null;
+            
+            // foreach ($allAreas as $areaItem) {
+            //     if ($this->stringsMatch($project->title, $areaItem->name)) {
+            //         $matchedArea = $areaItem;
+            //         break;
+            //     }
+            // }
+            
+            // if (!$matchedArea) {
+            //     $areas = Area::whereIn('id', [$project->area_id])->get();
+            //     return response()->json([
+            //         'success' => true,
+            //         'data' => AreaResource::collection($areas),
+            //         'message' => 'Project areas retrieved successfully'
+            //     ]);
+            // }
+            
+            // $childIds = is_array($matchedArea->child_ids) 
+            //     ? $matchedArea->child_ids 
+            //     : json_decode($matchedArea->child_ids, true);
+            
+            // $childIds = array_values(
+            //     array_diff($childIds, [$matchedArea->id])
+            // );
+            
+            // if (!empty($childIds)) {
+            //     $areas = Area::whereIn('id', $childIds)->get();
+            // } else {
+            //     $areas = Area::where('id', $matchedArea->id)->get();
+            // }
+         $childIds=$area->child_ids;
+          $areas = Area::whereIn('id', $childIds)->where('id','!=',$area->id)->get();
+          if($areas->count()==0){
+              $areas=Area::whereIn('id', $childIds)->get();
+          }
+            return response()->json([
+                'success' => true,
+                'data' => AreaResource::collection($areas),
+                'message' => 'Project areas retrieved successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve project areas: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Project not found'
-            ], 404);
+                'message' => 'Failed to retrieve project areas',
+                'error' => $e->getMessage()
+            ], 500);
         }
-        $area=Area::where('id',$project->area_id)->first();
-        $allAreas = Area::whereIn('id',$area->child_ids)->get();
-        $matchedArea = null;
-        
-        foreach ($allAreas as $area) {
-            if ($this->stringsMatch($project->title, $area->name)) {
-                $matchedArea = $area;
-                break;
-            }
-        }
-        
-        if (!$matchedArea) {
-          $areas = Area::whereIn('id', [$project->area_id])->get();
-          return response()->json([
-            'success' => true,
-            'data' => AreaResource::collection($areas),
-            'message' => 'Project areas retrieved successfully'
-        ]);
-        }
-        
-        $childIds = is_array($matchedArea->child_ids) 
-            ? $matchedArea->child_ids 
-            : json_decode($matchedArea->child_ids, true);
-        
-    $childIds = array_values(
-    array_diff($childIds, [$matchedArea->id])
-);
-        
-        if (!empty($childIds)) {
-            $areas = Area::whereIn('id', $childIds)->get();
-        } else {
-            $areas = Area::where('id', $matchedArea->id)->get();
-        }
-
-        
-        return response()->json([
-            'success' => true,
-            'data' => AreaResource::collection($areas),
-            'message' => 'Project areas retrieved successfully'
-        ]);
-        
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to retrieve project areas',
-            'error' => $e->getMessage()
-        ], 500);
     }
-}
 
-private function stringsMatch($str1, $str2)
-{
-    $cleanStr1 = $this->normalizeString($str1);
-    $cleanStr2 = $this->normalizeString($str2);
-    
-    return $cleanStr1 === $cleanStr2 || 
-           strpos($cleanStr1, $cleanStr2) !== false || 
-           strpos($cleanStr2, $cleanStr1) !== false;
-}
+    private function stringsMatch($str1, $str2)
+    {
+        $cleanStr1 = $this->normalizeString($str1);
+        $cleanStr2 = $this->normalizeString($str2);
+        
+        return $cleanStr1 === $cleanStr2 || 
+               strpos($cleanStr1, $cleanStr2) !== false || 
+               strpos($cleanStr2, $cleanStr1) !== false;
+    }
 
-private function normalizeString($string)
-{
-    $string = strtolower($string);
-    $string = preg_replace("/[^a-z0-9]/", '', $string);
-    return $string;
-}
+    private function normalizeString($string)
+    {
+        $string = strtolower($string);
+        $string = preg_replace("/[^a-z0-9]/", '', $string);
+        return $string;
+    }
 }

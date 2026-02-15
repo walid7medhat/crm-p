@@ -10,7 +10,7 @@ class FloorPlanImage extends Model
     protected $fillable = [
         'project_id',
         'image_path',
-        'sort_order','name'
+        'sort_order','name','area_id'
     ];
 
     /**
@@ -20,7 +20,10 @@ class FloorPlanImage extends Model
     {
         return $this->belongsTo(Project::class);
     }
-
+   public function area()
+    {
+        return $this->belongsTo(Area::class);
+    }
     /**
      * Get the image URL.
      */

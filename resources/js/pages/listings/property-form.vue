@@ -426,7 +426,7 @@
 
     <!-- Floor Plans Section -->
         <!-- Floor Plans Section -->
-<div class="col-lg-12">
+<div class="col-lg-12"  v-if="selectedProject && filteredFloorPlans.length > 0">
   <div class="card">
     <div class="card-header">
       <h6 class="card-title mb-0">Floor Plans</h6>
@@ -434,7 +434,7 @@
     <div class="card-body">
       <div class="row gy-3">
         <!-- Project Floor Plans Gallery - Single Selection -->
-        <div class="col-md-12" v-if="selectedProject && projectFloorPlans.length > 0">
+        <div class="col-md-12" v-if="selectedProject && filteredFloorPlans.length > 0">
           <div class="card">
             <div class="card-header bg-light">
               <div class="d-flex justify-content-between align-items-center">
@@ -463,7 +463,7 @@
                   <div class="floor-plans-gallery">
                     <div class="row g-3">
                       <div 
-                        v-for="(floorPlan, index) in projectFloorPlans" 
+                        v-for="(floorPlan, index) in filteredFloorPlans" 
                         :key="'project-plan-' + floorPlan.id"
                         class="col-xl-2-4 col-lg-3 col-md-4 col-6"
                       >
@@ -582,6 +582,12 @@
                       <i class="fas fa-blueprint fa-3x text-muted mb-3"></i>
                       <p class="text-muted mb-0">No floor plans available for this project</p>
                     </div>
+                      <div v-if="form.area && form.area.id && filteredFloorPlans.length === 0" 
+                           class="text-center py-4 mt-3 bg-light rounded">
+                        <i class="fas fa-map-marked-alt fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No floor plans available for the selected area</p>
+                        <small class="text-muted">Try selecting a different area or clear the area filter</small>
+                      </div>
                     
                     <!-- Selected Plan Display -->
                     <div v-if="selectedProjectFloorPlan" class="mt-4">
@@ -594,9 +600,9 @@
                             <h6 class="mb-1">Selected Floor Plan</h6>
                             <p class="mb-0">
                               <strong>{{ selectedProjectFloorPlan.name }}</strong>
-                              <span v-if="selectedProjectFloorPlan.order" class="ms-2">
-                                (Order #{{ selectedProjectFloorPlan.order }})
-                              </span>
+                              <!--<span v-if="selectedProjectFloorPlan.order" class="ms-2">-->
+                              <!--  (Order #{{ selectedProjectFloorPlan.order }})-->
+                              <!--</span>-->
                             </p>
                           </div>
                           <button 
@@ -617,156 +623,156 @@
         </div>
         
         <!-- Upload Floor Plans Section - Multiple Uploads Allowed -->
-        <div class="col-12">
-          <div class="card">
-            <div class="card-header">
-              <div class="d-flex justify-content-between align-items-center">
-                <h6 class="card-title mb-0">Upload Custom Floor Plans</h6>
-                <span class="badge bg-info" v-if="customFloorPlansCount > 0">
-                  {{ customFloorPlansCount }} uploaded
-                </span>
-              </div>
-            </div>
-            <div class="card-body">
-              <div class="row gy-3">
-                <div class="col-12">
-                  <div class="mb-3">
+        <!--<div class="col-12">-->
+        <!--  <div class="card">-->
+        <!--    <div class="card-header">-->
+        <!--      <div class="d-flex justify-content-between align-items-center">-->
+        <!--        <h6 class="card-title mb-0">Upload Custom Floor Plans</h6>-->
+        <!--        <span class="badge bg-info" v-if="customFloorPlansCount > 0">-->
+        <!--          {{ customFloorPlansCount }} uploaded-->
+        <!--        </span>-->
+        <!--      </div>-->
+        <!--    </div>-->
+        <!--    <div class="card-body">-->
+        <!--      <div class="row gy-3">-->
+        <!--        <div class="col-12">-->
+        <!--          <div class="mb-3">-->
                     <!--<label class="form-label">Upload Your Own Floor Plans</label>-->
                     <!--<div class="text-muted small mb-2">-->
                     <!--  You can upload multiple floor plan images. These will be added alongside any selected project plan.-->
                     <!--</div>-->
-                    <input 
-                      type="file" 
-                      class="form-control" 
-                      multiple 
-                      @change="handleFloorPlanUpload" 
-                      accept="image/*"
-                      ref="floorPlanInput"
-                    />
-                  </div>
+        <!--            <input -->
+        <!--              type="file" -->
+        <!--              class="form-control" -->
+        <!--              multiple -->
+        <!--              @change="handleFloorPlanUpload" -->
+        <!--              accept="image/*"-->
+        <!--              ref="floorPlanInput"-->
+        <!--            />-->
+        <!--          </div>-->
                   
                   <!-- Current Floor Plans Display -->
-                  <div v-if="form.floorPlans.length > 0">
-                    <label class="form-label mb-3">Current Floor Plans</label>
+        <!--          <div v-if="form.floorPlans.length > 0">-->
+        <!--            <label class="form-label mb-3">Current Floor Plans</label>-->
                     
                     <!-- Stats -->
-                    <div class="row mb-3">
-                      <div class="col-md-4">
-                        <div class="card bg-light">
-                          <div class="card-body text-center py-2">
-                            <h5 class="mb-0">{{ form.floorPlans.length }}</h5>
-                            <small class="text-muted">Total Plans</small>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-md-4">
-                        <div class="card bg-light">
-                          <div class="card-body text-center py-2">
-                            <h5 class="mb-0">{{ selectedProjectFloorPlan ? 1 : 0 }}</h5>
-                            <small class="text-muted">From Project</small>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-md-4">
-                        <div class="card bg-light">
-                          <div class="card-body text-center py-2">
-                            <h5 class="mb-0">{{ customFloorPlansCount }}</h5>
-                            <small class="text-muted">Custom Uploads</small>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+        <!--            <div class="row mb-3">-->
+        <!--              <div class="col-md-4">-->
+        <!--                <div class="card bg-light">-->
+        <!--                  <div class="card-body text-center py-2">-->
+        <!--                    <h5 class="mb-0">{{ form.floorPlans.length }}</h5>-->
+        <!--                    <small class="text-muted">Total Plans</small>-->
+        <!--                  </div>-->
+        <!--                </div>-->
+        <!--              </div>-->
+        <!--              <div class="col-md-4">-->
+        <!--                <div class="card bg-light">-->
+        <!--                  <div class="card-body text-center py-2">-->
+        <!--                    <h5 class="mb-0">{{ selectedProjectFloorPlan ? 1 : 0 }}</h5>-->
+        <!--                    <small class="text-muted">From Project</small>-->
+        <!--                  </div>-->
+        <!--                </div>-->
+        <!--              </div>-->
+        <!--              <div class="col-md-4">-->
+        <!--                <div class="card bg-light">-->
+        <!--                  <div class="card-body text-center py-2">-->
+        <!--                    <h5 class="mb-0">{{ customFloorPlansCount }}</h5>-->
+        <!--                    <small class="text-muted">Custom Uploads</small>-->
+        <!--                  </div>-->
+        <!--                </div>-->
+        <!--              </div>-->
+        <!--            </div>-->
                     
                     <!-- Floor Plans Grid -->
-                    <div class="floor-plans-preview">
-                      <div class="row g-3">
-                        <div 
-                          v-for="(item, index) in form.floorPlans" 
-                          :key="index"
-                          class="col-xl-2-4 col-lg-3 col-md-4 col-6"
-                        >
-                          <div class="floor-plan-item position-relative">
-                            <div class="card h-100">
+        <!--            <div class="floor-plans-preview">-->
+        <!--              <div class="row g-3">-->
+        <!--                <div -->
+        <!--                  v-for="(item, index) in form.floorPlans" -->
+        <!--                  :key="index"-->
+        <!--                  class="col-xl-2-4 col-lg-3 col-md-4 col-6"-->
+        <!--                >-->
+        <!--                  <div class="floor-plan-item position-relative">-->
+        <!--                    <div class="card h-100">-->
                               <!-- Source Badge -->
-                              <div class="position-absolute top-0 start-0 m-2 z-1">
-                                <span 
-                                  class="badge"
-                                  :class="item.fromProject ? 'bg-success' : 'bg-primary'"
-                                >
-                                  <i 
-                                    class="fas fa-fw me-1"
-                                    :class="item.fromProject ? 'fa-building' : 'fa-upload'"
-                                  ></i>
-                                  {{ item.fromProject ? 'Project' : 'Custom' }}
-                                </span>
-                              </div>
+        <!--                      <div class="position-absolute top-0 start-0 m-2 z-1">-->
+        <!--                        <span -->
+        <!--                          class="badge"-->
+        <!--                          :class="item.fromProject ? 'bg-success' : 'bg-primary'"-->
+        <!--                        >-->
+        <!--                          <i -->
+        <!--                            class="fas fa-fw me-1"-->
+        <!--                            :class="item.fromProject ? 'fa-building' : 'fa-upload'"-->
+        <!--                          ></i>-->
+        <!--                          {{ item.fromProject ? 'Project' : 'Custom' }}-->
+        <!--                        </span>-->
+        <!--                      </div>-->
                               
                               <!-- Image -->
-                              <img 
-                                :src="item.preview || getImagePreview(item.file || item)" 
-                                class="card-img-top" 
-                                alt="Floor plan"
-                                style="height: 150px; object-fit: cover;"
-                                @error="handleImageError"
-                              />
+        <!--                      <img -->
+        <!--                        :src="item.preview || getImagePreview(item.file || item)" -->
+        <!--                        class="card-img-top" -->
+        <!--                        alt="Floor plan"-->
+        <!--                        style="height: 150px; object-fit: cover;"-->
+        <!--                        @error="handleImageError"-->
+        <!--                      />-->
                               
                               <!-- Content -->
-                              <div class="card-body p-3">
-                                <div class="mb-2">
-                                  <label class="form-label small">Plan Name</label>
-                                  <input 
-                                    v-model="item.customName" 
-                                    type="text" 
-                                    class="form-control form-control-sm" 
-                                    placeholder="Enter plan name"
-                                    @change="updateFloorPlanName(index, $event)"
-                                  />
-                                </div>
-                                <p class="small text-truncate mb-1" :title="item.name || item.file?.name">
-                                  {{ item.name || item.file?.name }}
-                                </p>
-                                <p class="small text-muted">
-                                  {{ formatFileSize(item.size || item.file?.size) }}
-                                </p>
-                              </div>
+        <!--                      <div class="card-body p-3">-->
+        <!--                        <div class="mb-2">-->
+        <!--                          <label class="form-label small">Plan Name</label>-->
+        <!--                          <input -->
+        <!--                            v-model="item.customName" -->
+        <!--                            type="text" -->
+        <!--                            class="form-control form-control-sm" -->
+        <!--                            placeholder="Enter plan name"-->
+        <!--                            @change="updateFloorPlanName(index, $event)"-->
+        <!--                          />-->
+        <!--                        </div>-->
+        <!--                        <p class="small text-truncate mb-1" :title="item.name || item.file?.name">-->
+        <!--                          {{ item.name || item.file?.name }}-->
+        <!--                        </p>-->
+        <!--                        <p class="small text-muted">-->
+        <!--                          {{ formatFileSize(item.size || item.file?.size) }}-->
+        <!--                        </p>-->
+        <!--                      </div>-->
                               
                               <!-- Remove Button -->
-                              <button 
-                                type="button" 
-                                class="btn-close position-absolute top-0 end-0 m-2 bg-danger rounded-circle p-1"
-                                @click="removeFloorPlan(index)"
-                                style="--bs-bg-opacity: 0.8;"
-                                :title="item.fromProject ? 'Remove project plan' : 'Remove custom plan'"
-                              ></button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+        <!--                      <button -->
+        <!--                        type="button" -->
+        <!--                        class="btn-close position-absolute top-0 end-0 m-2 bg-danger rounded-circle p-1"-->
+        <!--                        @click="removeFloorPlan(index)"-->
+        <!--                        style="--bs-bg-opacity: 0.8;"-->
+        <!--                        :title="item.fromProject ? 'Remove project plan' : 'Remove custom plan'"-->
+        <!--                      ></button>-->
+        <!--                    </div>-->
+        <!--                  </div>-->
+        <!--                </div>-->
+        <!--              </div>-->
+        <!--            </div>-->
+        <!--          </div>-->
                   
                   <!-- Empty State -->
-                  <div class="col-12" v-if="form.floorPlans.length === 0">
-                    <div class="text-center py-5 border rounded bg-light">
-                      <i class="fas fa-blueprint fa-3x text-muted mb-3"></i>
-                      <h6 class="text-muted mb-2">No Floor Plans Added</h6>
-                      <p class="text-muted small mb-3">
-                        Select one plan from the project or upload your own floor plans.
-                      </p>
-                      <button 
-                        class="btn btn-outline-primary"
-                        @click="$refs.floorPlanInput.click()"
-                      >
-                        <i class="fas fa-upload me-2"></i>
-                        Upload Floor Plans
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!--          <div class="col-12" v-if="form.floorPlans.length === 0">-->
+        <!--            <div class="text-center py-5 border rounded bg-light">-->
+        <!--              <i class="fas fa-blueprint fa-3x text-muted mb-3"></i>-->
+        <!--              <h6 class="text-muted mb-2">No Floor Plans Added</h6>-->
+        <!--              <p class="text-muted small mb-3">-->
+        <!--                Select one plan from the project or upload your own floor plans.-->
+        <!--              </p>-->
+        <!--              <button -->
+        <!--                class="btn btn-outline-primary"-->
+        <!--                @click="$refs.floorPlanInput.click()"-->
+        <!--              >-->
+        <!--                <i class="fas fa-upload me-2"></i>-->
+        <!--                Upload Floor Plans-->
+        <!--              </button>-->
+        <!--            </div>-->
+        <!--          </div>-->
+        <!--        </div>-->
+        <!--      </div>-->
+        <!--    </div>-->
+        <!--  </div>-->
+        <!--</div>-->
       </div>
     </div>
   </div>
@@ -1411,6 +1417,12 @@ const isLoadingProjectFloorPlans = ref(false);
 const showFloorPlanViewer = ref(false);
 const selectedFloorPlanForViewer = ref(null);
 
+
+const projectAreasForFilter = ref([]);
+const selectedAreaForFilter = ref(null);
+const filteredFloorPlans = ref([]);
+
+
 const openFloorPlanViewer = (floorPlan) => {
   selectedFloorPlanForViewer.value = floorPlan;
   showFloorPlanViewer.value = true;
@@ -1534,20 +1546,66 @@ watch(() => selectedProject.value, async (newProject, oldProject) => {
 //   }
 // }, { immediate: true });
 
+
+const fetchProjectAreasForFilter = async (projectId) => {
+  try {
+    const response = await api.get(`/listings/projects/${projectId}/areas`);
+    projectAreasForFilter.value = response.data.data || response.data;
+    console.log('✅ Project areas for filter:', projectAreasForFilter.value);
+  } catch (error) {
+    console.error('❌ Error fetching project areas for filter:', error);
+    projectAreasForFilter.value = [];
+  }
+};
+
 const fetchProjectFloorPlans = async (projectId) => {
   try {
     isLoadingProjectFloorPlans.value = true;
+    
+    await fetchProjectAreasForFilter(projectId);
+    
     const response = await api.get(`/listings/projects/${projectId}/floor-plans`);
-    projectFloorPlans.value = response.data.data || response.data;
+    const allFloorPlans = response.data.data || response.data;
+    console.log(allFloorPlans);
+    projectFloorPlans.value = allFloorPlans.map(plan => ({
+      ...plan,
+      area_id: plan.area_id || null 
+    }));
+    console.log(projectFloorPlans);
+    if (form.value.area && form.value.area.id) {
+      filteredFloorPlans.value = projectFloorPlans.value.filter(
+        plan => plan.area_id === form.value.area.id
+      );
+    } else {
+      filteredFloorPlans.value = projectFloorPlans.value;
+    }
+    
     console.log('✅ Project floor plans loaded:', projectFloorPlans.value.length);
+    console.log('📊 Filtered floor plans:', filteredFloorPlans.value.length);
   } catch (error) {
     console.error('❌ Error fetching project floor plans:', error);
     projectFloorPlans.value = [];
+    filteredFloorPlans.value = [];
     proxy.$showNotification("⚠️ Could not load project floor plans", "warning");
   } finally {
     isLoadingProjectFloorPlans.value = false;
   }
 };
+const filterFloorPlansByArea = (areaId) => {
+  if (!areaId) {
+    filteredFloorPlans.value = projectFloorPlans.value;
+  } else {
+    filteredFloorPlans.value = projectFloorPlans.value.filter(
+      plan => plan.area_id === areaId
+    );
+  }
+  console.log(`✅ Filtered floor plans for area ${areaId}:`, filteredFloorPlans.value.length);
+};
+
+
+
+
+
 
 const handleProjectFloorPlanSelection = (selectedPlans) => {
   selectedPlans.forEach(plan => {
@@ -1616,6 +1674,18 @@ const isSelectedProjectFloorPlan = (floorPlan) => {
 };
 
 const selectSingleProjectFloorPlan = (floorPlan) => {
+  if (form.value.area && form.value.area.id) {
+    if (!floorPlan.area_id) {
+      proxy.$showNotification(`⚠️ This floor plan doesn't have an area assigned`, "warning");
+      return;
+    }
+    
+    if (floorPlan.area_id !== form.value.area.id) {
+      proxy.$showNotification(`⚠️ This floor plan is not available in the selected area`, "warning");
+      return;
+    }
+  }
+  
   // Remove any existing project plan from form.floorPlans
   form.value.floorPlans = form.value.floorPlans.filter(fp => !fp.fromProject);
   
@@ -1629,12 +1699,13 @@ const selectSingleProjectFloorPlan = (floorPlan) => {
     image_url: floorPlan.image_url,
     order: floorPlan.order,
     dimensions: floorPlan.dimensions,
+    area_id: floorPlan.area_id,
     customName: floorPlan.name,
     fromProject: true,
     projectFloorPlanId: floorPlan.id
   };
   
-  form.value.floorPlans.unshift(newPlan); // Add at beginning
+  form.value.floorPlans.unshift(newPlan);
   proxy.$showNotification(`✅ Selected project floor plan: "${floorPlan.name}"`, "success");
 };
 
@@ -1706,22 +1777,65 @@ const handleFloorPlanUpload = (e) => {
 };
 
 // Update watch for project change
+
 watch(() => selectedProject.value, async (newProject) => {
   if (newProject) {
     await fetchProjectFloorPlans(newProject.id);
-    // Clear selected project floor plan when project changes
+    
+    selectedAreaForFilter.value = null; // Reset filter
     clearSelectedProjectFloorPlan();
   } else {
     projectFloorPlans.value = [];
+    filteredFloorPlans.value = [];
+    projectAreasForFilter.value = [];
     clearSelectedProjectFloorPlan();
   }
 }, { immediate: true });
+
+watch(() => form.value.area, (newArea) => {
+  console.log('🔄 Area changed value in form:', newArea);
+  
+  if (!selectedProject.value) {
+    console.log('⚠️ No project selected, cannot filter floor plans');
+    return;
+  }
+  console.log(newArea);
+  
+  if (!newArea || !newArea.id) {
+    filteredFloorPlans.value = projectFloorPlans.value;
+    console.log('Showing all floor plans:', filteredFloorPlans.value.length);
+  } else {
+    filteredFloorPlans.value = projectFloorPlans.value.filter(
+      plan => plan.area_id === newArea.id
+    );
+    console.log(`Filtered floor plans for area ${newArea.name}:`, filteredFloorPlans.value.length);
+    
+    if (selectedProjectFloorPlan.value && 
+        selectedProjectFloorPlan.value.area_id !== newArea.id) {
+      clearSelectedProjectFloorPlan();
+    }
+  }
+}, { immediate: true, deep: true });
 // Functions for handling project floor plans selection
 const isProjectFloorPlanSelected = (floorPlan) => {
   return selectedProjectFloorPlans.value.some(
     plan => plan.id === floorPlan.id
   );
 };
+
+
+
+watch(() => projectFloorPlans.value, (newPlans) => {
+  console.log('🔄 Project floor plans updated:', newPlans.length);
+  
+  if (selectedAreaForFilter.value) {
+    filteredFloorPlans.value = newPlans.filter(
+      plan => plan.area_id === selectedAreaForFilter.value
+    );
+  } else {
+    filteredFloorPlans.value = newPlans;
+  }
+}, { deep: true });
 
 const toggleProjectFloorPlanSelection = (floorPlan) => {
   const index = selectedProjectFloorPlans.value.findIndex(

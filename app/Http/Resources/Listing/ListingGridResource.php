@@ -39,7 +39,7 @@ class ListingGridResource extends JsonResource
             'total_images' => $this->galleryImages->count()+1,
             
             'property_type' => $this->propertyType?->name,
-            'area' => $this->area?->title,
+            'area' => $this->area? $this->area->title: $this->old_area?->title,
           'agent' => $this->whenLoaded('agent', function () {
                 return [
                     'id' => $this->agent->id,

@@ -90,6 +90,10 @@ class Listing extends Model
     {
         return $this->belongsTo(Area::class);
     }
+    public function old_area(): BelongsTo
+    {
+        return $this->belongsTo(OldArea::class);
+    }
     public function project()
     {
         return $this->belongsTo(Project::class);

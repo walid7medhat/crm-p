@@ -25,7 +25,6 @@ class Owner extends Model
 
   public function properties()
     {
-        // إذا كان اسم الجدول هو 'properties' والعمود هو 'owner_id'
         return $this->hasMany(\App\Models\Property::class, 'owner_id');
     }
     /**

@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Cache;
 class PropertyTypeController extends Controller
 {
     // Cache constants
-    const CACHE_TTL = 3600; // ساعة واحدة
+    const CACHE_TTL = 3600; 
     const CACHE_PREFIX = 'property_types_';
 
     public function __construct()
@@ -26,7 +26,7 @@ class PropertyTypeController extends Controller
     }
 
     /**
-     * Get all property types - مع الكاش
+     * Get all property types 
      */
     public function index(Request $request): JsonResponse
     {
@@ -78,7 +78,6 @@ class PropertyTypeController extends Controller
                 'added_by' => auth()->user()->id
             ]);
 
-            // مسح كل الكاش المتعلق بالـ property types
             $this->clearAllCache();
 
             return ApiResponse::success(
@@ -92,7 +91,6 @@ class PropertyTypeController extends Controller
     }
 
     /**
-     * Get a single property type - مع الكاش
      */
     public function show(PropertyType $propertyType): JsonResponse
     {
@@ -108,7 +106,6 @@ class PropertyTypeController extends Controller
                 'Property type retrieved successfully'
             );
         } catch (\Exception $e) {
-            // Fallback بدون cache
             return ApiResponse::success(
                 new PropertyTypeResource($propertyType->loadCount('children')),
                 'Property type retrieved successfully (cache fallback)'
@@ -117,7 +114,6 @@ class PropertyTypeController extends Controller
     }
 
     /**
-     * Update a property type - مع clear للكاش
      */
     public function update(PropertyTypeRequest $request, PropertyType $propertyType): JsonResponse
     {
@@ -130,7 +126,6 @@ class PropertyTypeController extends Controller
             $oldParentId = $propertyType->parent_id;
             $propertyType->update($request->validated());
 
-            // مسح كل الكاش المتعلق بالـ property types
             $this->clearAllCache();
 
             return ApiResponse::success(
@@ -143,7 +138,6 @@ class PropertyTypeController extends Controller
     }
 
     /**
-     * Delete a property type - مع clear للكاش
      */
     public function destroy(PropertyType $propertyType): JsonResponse
     {
@@ -157,7 +151,6 @@ class PropertyTypeController extends Controller
             $parentId = $propertyType->parent_id;
             $propertyType->delete();
 
-            // مسح كل الكاش المتعلق بالـ property types
             $this->clearAllCache();
 
             return ApiResponse::success(null, 'Property type deleted successfully');
@@ -167,7 +160,6 @@ class PropertyTypeController extends Controller
     }
 
     /**
-     * Get child property types - مع الكاش
      */
     public function children(PropertyType $propertyType): JsonResponse
     {
@@ -183,7 +175,6 @@ class PropertyTypeController extends Controller
                 'Child property types retrieved successfully'
             );
         } catch (\Exception $e) {
-            // Fallback بدون cache
             $children = $propertyType->children()->withCount('children')->orderBy('name')->get();
             
             return ApiResponse::success(
@@ -194,7 +185,6 @@ class PropertyTypeController extends Controller
     }
 
     /**
-     * Get root property types only - مع الكاش
      */
     public function roots(): JsonResponse
     {
@@ -213,7 +203,6 @@ class PropertyTypeController extends Controller
                 'Root property types retrieved successfully'
             );
         } catch (\Exception $e) {
-            // Fallback بدون cache
             $roots = PropertyType::withCount('children')
                 ->whereNull('parent_id')
                 ->orderBy('name')
@@ -227,16 +216,13 @@ class PropertyTypeController extends Controller
     }
 
     /**
-     * دالة مساعدة لمسح كل الكاش - محسنة
      */
     private function clearAllCache(): void
     {
         try {
-            // إذا كان Redis أو driver يدعم tags
             if (config('cache.default') === 'redis') {
                 Cache::tags([self::CACHE_PREFIX . 'tag'])->flush();
             } else {
-                // لـ file cache أو drivers أخرى - نمسح كل المفاتيح يدوياً
                 $this->clearCacheByPattern(self::CACHE_PREFIX . '*');
             }
             
@@ -247,13 +233,11 @@ class PropertyTypeController extends Controller
     }
 
     /**
-     * دالة مساعدة لمسح الكاش بناءً على pattern - محسنة
      */
     private function clearCacheByPattern(string $pattern): void
     {
         try {
             if (config('cache.default') === 'redis') {
-                // لـ Redis نستخدم scan
                 $redis = Cache::getRedis();
                 $cursor = 0;
                 
@@ -264,18 +248,15 @@ class PropertyTypeController extends Controller
                     }
                 } while ($cursor != 0);
             } else {
-                // لـ file cache أو drivers أخرى - نمسح الكاش كله (أقرب حل)
                 Cache::flush();
             }
         } catch (\Exception $e) {
             \Log::warning('Pattern cache clear error: ' . $e->getMessage());
-            // Fallback - مسح الكاش كله
             Cache::flush();
         }
     }
 
     /**
-     * Fallback للـ index بدون cache
      */
     private function fallbackIndex(Request $request, \Exception $e = null): JsonResponse
     {
@@ -305,7 +286,6 @@ class PropertyTypeController extends Controller
     }
 
     /**
-     * دالة لمسح الكاش يدوياً
      */
     public function clearCacheManual(): JsonResponse
     {

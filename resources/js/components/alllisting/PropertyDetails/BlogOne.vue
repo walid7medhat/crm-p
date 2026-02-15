@@ -73,6 +73,7 @@
                 <div class="price-main">
                   <h3 class="property-price">AED {{ formatPrice(property.price) }}</h3>
                   <h4 class="property-title">{{ property.project?.title || "" }}{{ property.area && property.project ?', ' :''}} {{ property.area?.name || '' }}</h4>
+                   <!--<h4 class="property-title"> Old Area {{ property.old_area || "" }}</h4>-->
                 </div>
 
                 <div class="specs-grid-main">

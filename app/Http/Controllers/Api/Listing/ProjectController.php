@@ -450,19 +450,21 @@ class ProjectController extends Controller
             $maxOrder = $project->floorPlanImages()->max('sort_order') ?? 0;
             
              foreach ($request->floor_plan_images as $index => $data) {
+                 if(isset($data['file'])){
                     $imageFile = $data['file'];
                     $name = $data['name'] ?? "Floor Plan " . ($maxOrder + $index + 1);
-                $compressionResult = ImageHelper::compressAndConvertToWebP(
-                    $imageFile, 
-                    "projects/{$project->id}/floor-plans",
-                    ['quality' => 85, 'max_width' => 1920]
-                );
-                
-                $project->floorPlanImages()->create([
-                    'image_path' => $compressionResult['path'],
-                    'sort_order' => $maxOrder + $index + 1,
-                    'name'=>$name
-                ]);
+                    $compressionResult = ImageHelper::compressAndConvertToWebP(
+                        $imageFile, 
+                        "projects/{$project->id}/floor-plans",
+                        ['quality' => 85, 'max_width' => 1920]
+                    );
+                    
+                    $project->floorPlanImages()->create([
+                        'image_path' => $compressionResult['path'],
+                        'sort_order' => $maxOrder + $index + 1,
+                        'name'=>$name
+                    ]);
+                 }
             }
             
             Log::info('✅ New floor plan images uploaded', [
@@ -742,7 +744,7 @@ public function getFloorPlans( $id)
     try {
         $project=Project::find($id);
         $floorPlans = $project->floorPlanImages()
-            ->select('id', 'name', 'image_path', 'sort_order')
+            ->select('id', 'name', 'image_path', 'sort_order','area_id')
             ->orderBy('sort_order')
             ->get()
             ->map(function ($floorPlan) use ($id) {
@@ -753,7 +755,8 @@ public function getFloorPlans( $id)
                     'order' => $floorPlan->sort_order,
                     'sort_order' => $floorPlan->sort_order,
                     'created_at' => $floorPlan->created_at,
-                    'project_id' => $id
+                    'project_id' => $id,
+                    'area_id'=>$floorPlan->area_id
                 ];
             });
 
@@ -769,27 +772,228 @@ public function getFloorPlans( $id)
         ], 500);
     }
 }
-public function updateFloorPlanName(Request $request, $id)
+   public function updateFloorPlanName(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'name' => 'required|string|max:100'
+            ]);
+
+            $floorPlanImage = FloorPlanImage::findOrFail($id);
+            $floorPlanImage->update([
+                'name' => $request->name
+            ]);
+
+            Log::info('Floor plan name updated', [
+                'id' => $id,
+                'name' => $request->name
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Floor plan name updated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Update floor plan name error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update floor plan name'
+            ], 500);
+        }
+    }
+
+ public function getFloorPlansByArea($projectId, $areaId)
+    {
+        try {
+            Log::info('Fetching floor plans for area', [
+                'project_id' => $projectId,
+                'area_id' => $areaId
+            ]);
+
+            $project = Project::findOrFail($projectId);
+            
+            // بنجيب الصور اللي project_id = projectId AND area_id = areaId
+            $floorPlans = FloorPlanImage::where('project_id', $projectId)
+                ->where('area_id', $areaId)
+                ->orderBy('sort_order')
+                ->get()
+                ->map(function ($floorPlan) {
+                    return [
+                        'id' => $floorPlan->id,
+                        'name' => $floorPlan->name ?? '',
+                        'image_url' => $floorPlan->image_url,
+                        'area_id' => $floorPlan->area_id,
+                        'area_name' => $floorPlan->area?->name,
+                        'sort_order' => $floorPlan->sort_order,
+                        'created_at' => $floorPlan->created_at ? $floorPlan->created_at->format('Y-m-d H:i:s') : null,
+                        'file_size' => $floorPlan->file_size
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $floorPlans,
+                'area_id' => (int)$areaId,
+                'total' => $floorPlans->count()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get floor plans error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch floor plans',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+     
+     
+     
+ public function updateFloorPlans(Request $request, $id)
 {
     try {
-        $request->validate([
-            'name' => 'required|string|max:100'
-        ]);
+        DB::beginTransaction();
 
-        $floorPlanImage = FloorPlanImage::findOrFail($id);
-        $floorPlanImage->update([
-            'name' => $request->name
-        ]);
+        $project = Project::findOrFail($id);
+        $areaId = $request->input('area_id');
+
+        if (!$areaId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Area ID is required'
+            ], 400);
+        }
+
+        Log::info('=== START UPDATE FLOOR PLANS ===');
+        Log::info('Project ID: ' . $id);
+        Log::info('Area ID: ' . $areaId);
+        
+        // 🔴 الحل: نستخدم file() مباشرة ونتأكد منها يدوياً
+        $uploadedFiles = $request->file('floor_plan_images');
+        
+        if (!empty($uploadedFiles) && is_array($uploadedFiles)) {
+            Log::info('Files found!', ['count' => count($uploadedFiles)]);
+            
+            // نجيب أقصى ترتيب للصور في المنطقة دي
+            $maxOrder = FloorPlanImage::where('project_id', $project->id)
+                ->where('area_id', $areaId)
+                ->max('sort_order') ?? 0;
+            
+            $processedCount = 0;
+            
+            foreach ($uploadedFiles as $index => $fileData) {
+                Log::info('Processing index ' . $index);
+                
+                // الفايل جوا array مع key 'file'
+                if (isset($fileData['file']) && $fileData['file'] instanceof \Illuminate\Http\UploadedFile) {
+                    $file = $fileData['file'];
+                    
+                    // نجيب الاسم من الـ request (لو موجود)
+                    $name = $request->input("floor_plan_images.{$index}.name") ?? 
+                           "Floor Plan " . ($maxOrder + $processedCount + 1);
+                    
+                    Log::info('File details:', [
+                        'original_name' => $file->getClientOriginalName(),
+                        'name' => $name,
+                        'size' => $file->getSize(),
+                        'mime' => $file->getMimeType(),
+                        'is_valid' => $file->isValid() ? 'Yes' : 'No'
+                    ]);
+                    
+                    if ($file->isValid()) {
+                        // نضغط الصورة
+                        $compressionResult = ImageHelper::compressAndConvertToWebP(
+                            $file, 
+                            "projects/{$project->id}/floor-plans/area-{$areaId}",
+                            ['quality' => 85, 'max_width' => 1920]
+                        );
+                        
+                        // نضيف الصورة
+                        $newImage = FloorPlanImage::create([
+                            'project_id' => $project->id,
+                            'area_id' => $areaId,
+                            'image_path' => $compressionResult['path'],
+                            'sort_order' => $maxOrder + $processedCount + 1,
+                            'name' => $name,
+                            'file_size' => $file->getSize()
+                        ]);
+                        
+                        Log::info('✅ Added image: ' . $newImage->id . ' - ' . $name);
+                        $processedCount++;
+                    }
+                }
+            }
+            
+            Log::info("Processed {$processedCount} files");
+        } else {
+            Log::info('No files found');
+        }
+
+        // 1. حذف الصور المحددة
+        if ($request->has('delete_floor_plan_images')) {
+            $imageIds = $request->input('delete_floor_plan_images');
+            if (is_array($imageIds)) {
+                foreach ($imageIds as $imageId) {
+                    $floorPlanImage = FloorPlanImage::find($imageId);
+                    if ($floorPlanImage && $floorPlanImage->project_id == $project->id) {
+                        
+                        if ($floorPlanImage->image_path) {
+                            ImageHelper::deleteImage($floorPlanImage->image_path);
+                        }
+                        $floorPlanImage->delete();
+                        Log::info('Deleted image: ' . $imageId);
+                    }
+                }
+            }
+        }
+
+        // 3. تحديث أسماء الصور الموجودة
+        if ($request->has('floor_plan_names')) {
+            $names = $request->input('floor_plan_names');
+            if (is_array($names)) {
+                foreach ($names as $imageId => $name) {
+                    FloorPlanImage::where('id', $imageId)
+                        ->where('project_id', $project->id)
+                        ->update(['name' => $name]);
+                }
+            }
+        }
+
+        DB::commit();
+        Log::info('=== END UPDATE FLOOR PLANS - SUCCESS ===');
+
+        // نجيب الصور المحدثة
+        $updatedFloorPlans = FloorPlanImage::where('project_id', $project->id)
+            ->where('area_id', $areaId)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function ($floorPlan) {
+                return [
+                    'id' => $floorPlan->id,
+                    'name' => $floorPlan->name,
+                    'image_url' => $floorPlan->image_url,
+                    'area_id' => $floorPlan->area_id,
+                    'sort_order' => $floorPlan->sort_order,
+                    'created_at' => $floorPlan->created_at ? $floorPlan->created_at->format('Y-m-d H:i:s') : null,
+                    'file_size' => $floorPlan->file_size
+                ];
+            });
 
         return response()->json([
             'success' => true,
-            'message' => 'Floor plan name updated successfully'
+            'message' => 'Floor plans updated successfully',
+            'data' => $updatedFloorPlans
         ]);
+
     } catch (\Exception $e) {
-        Log::error('Update floor plan name error: ' . $e->getMessage());
+        DB::rollBack();
+        Log::error('❌ Error: ' . $e->getMessage());
+        Log::error('Stack trace: ' . $e->getTraceAsString());
+        
         return response()->json([
             'success' => false,
-            'message' => 'Failed to update floor plan name'
+            'message' => 'Failed: ' . $e->getMessage()
         ], 500);
     }
 }

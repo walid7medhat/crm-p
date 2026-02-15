@@ -72,7 +72,7 @@ import FeatureForm from './pages/features/form.vue'
 import ProjectsTable from './pages/projects/projects-list.vue'
 import ProjectForm from './pages/projects/form.vue'
 import ProjectDetails from './pages/projects/show.vue'
-
+import FloorPlans from './pages/projects/FloorPlans.vue'
 const routes = [
   // Khanban Route
   { path: '/kanban', component: Kanban },
@@ -167,6 +167,12 @@ const routes = [
   component: ProjectDetails,
   name: 'show-project',
   meta: { requiresAuth: true }
+},
+{
+    path:'/projects/:id/floor-plans',
+    component:FloorPlans,
+    name:'project-floorplan',
+    meta:{ requiresAuth: true }
 }
 ]
 
