@@ -430,6 +430,12 @@ const removeFilter = (f) => {
     if (!lastQuery.value) return
     const nextQuery = { ...lastQuery.value }
     delete nextQuery[f.queryKey]
+    
+    if (f.queryKey === 'created_at') {
+        delete nextQuery.created_from
+        delete nextQuery.created_to
+    }
+    
     activeFilters.value = activeFilters.value.filter(x => x.id !== f.id)
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null
     if (leadsRef.value) {
@@ -446,7 +452,15 @@ const clearMoreFilters = () => {
     const keep = list.slice(0, 2)
     const remove = list.slice(2)
     const nextQuery = lastQuery.value ? { ...lastQuery.value } : {}
-    remove.forEach(f => { delete nextQuery[f.queryKey] })
+    
+    remove.forEach(f => { 
+        delete nextQuery[f.queryKey]
+        if (f.queryKey === 'created_at') {
+            delete nextQuery.created_from
+            delete nextQuery.created_to
+        }
+    })
+    
     activeFilters.value = keep
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null
     if (leadsRef.value) {
@@ -462,6 +476,8 @@ const clearSearchFilter = () => {
     activeFilters.value = []
     lastQuery.value = null
     search.value = ''
+        showSearchModal.value = false
+
     onLeadSearch(null)
 }
 
@@ -735,9 +751,9 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .search-wrapper-tall {
-    min-height: 72px;
-    padding: 12px 12px 12px 14px;
-    border-radius: 16px;
+    /*min-height: 72px;*/
+    /*padding: 12px 12px 12px 14px;*/
+    /*border-radius: 16px;*/
 }
 
 .search-filters-pills {
@@ -809,10 +825,10 @@ const $showNotification = (message, type = 'info') => {
     transition: height 0.3s ease, min-height 0.3s ease;
 }
 
-.search-input-container-tall {
-    height: 48px;
-    min-height: 48px;
-}
+/*.search-input-container-tall {*/
+/*    height: 48px;*/
+/*    min-height: 48px;*/
+/*}*/
 
 .search-plus-icon {
     font-size: 18px;
@@ -837,10 +853,10 @@ const $showNotification = (message, type = 'info') => {
     transition: min-height 0.3s ease;
 }
 
-.search-input-container-tall .search-input {
-    min-height: 48px;
-    font-size: 15px;
-}
+/*.search-input-container-tall .search-input {*/
+/*    min-height: 48px;*/
+/*    font-size: 15px;*/
+/*}*/
 
 .search-input::placeholder {
     color: #94A3B8;
