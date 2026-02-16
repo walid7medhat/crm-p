@@ -84,7 +84,7 @@ public function getTitleAttribute()
             
         }
  
-    if(count($parentChain)>2){
+    if(count($parentChain)>3){
         array_pop($parentChain);
     }
 
