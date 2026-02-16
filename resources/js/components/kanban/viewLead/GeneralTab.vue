@@ -80,7 +80,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch ,onMounted} from 'vue'
 import EditLead from '../editLead/EditLead.vue'
 import ViewLead from './ViewLead.vue'
 import ActivitySection from './ActivitySection.vue'
@@ -106,7 +106,14 @@ const selectedStageId = ref(props.stageId || props.lead?.stage?.id || null)
 const activeViewTab = ref('comments') // 'activity' or 'comments'
 const commentListRef = ref(null)
 const activityListRef = ref(null)
+const resetEditMode = () => {
+    console.log('🔄 GeneralTab: Resetting edit mode to false')
+    isEditMode.value = false
+}
 
+defineExpose({
+    resetEditMode
+})
 // Watch for stageId changes from parent
 watch(() => props.stageId, (newStageId) => {
     if (newStageId) {
@@ -118,6 +125,36 @@ watch(() => props.stageId, (newStageId) => {
 watch(() => props.lead?.stage?.id, (newStageId) => {
     if (newStageId && !props.stageId) {
         selectedStageId.value = newStageId
+    }
+})
+
+// مراقبة تغييرات lead
+watch(() => props.lead, (newLead, oldLead) => {
+    console.log('📝 GeneralTab: lead changed from', oldLead?.id, 'to', newLead?.id)
+    if (newLead && (!oldLead || newLead.id !== oldLead.id)) {
+        // إعادة تعيين وضع التعديل عند تغيير الليد
+        isEditMode.value = false
+        // إعادة تعيين التبويب النشط إلى comments (أو أي تبويب افتراضي)
+        activeViewTab.value = 'comments'
+    }
+    
+    // تحديث selectedStageId
+    if (newLead) {
+        if (newLead.stage_id) {
+            selectedStageId.value = newLead.stage_id
+        } else if (newLead.stage?.id) {
+            selectedStageId.value = newLead.stage.id
+        }
+    }
+}, { deep: true, immediate: true })
+
+
+
+watch(() => props.lead?.id, (newId, oldId) => {
+    console.log('📝 GeneralTab: lead.id changed from', oldId, 'to', newId)
+    if (newId && newId !== oldId) {
+        // تأكيد إعادة تعيين وضع التعديل
+        isEditMode.value = false
     }
 })
 
@@ -165,7 +202,10 @@ const handleActivityCreated = (newActivity) => {
         activityListRef.value.addActivity(newActivity)
     }
 }
-
+onMounted(() => {
+    console.log('📝 GeneralTab: Component mounted, isEditMode = false')
+    isEditMode.value = false
+})
 </script>
 
 <style scoped>

@@ -317,6 +317,8 @@ const executeFetchLeads = async () => {
         if (q.first_name) params.first_name = q.first_name
         if (q.responsible_person_id != null && q.responsible_person_id !== '') params.responsible_person_id = q.responsible_person_id
         if (q.created_at) params.created_at = q.created_at
+        if (q.created_from) params.created_from = q.created_from
+        if (q.created_to) params.created_to = q.created_to
         if (q.source) params.source = q.source
         if (q.lead_branch_source) params.lead_branch_source = q.lead_branch_source
         if (q.stage_id != null && q.stage_id !== '') params.stage_id = q.stage_id

@@ -163,7 +163,10 @@ const emit = defineEmits(['update:modelValue', 'search'])
 
 const show = ref(props.modelValue)
 const showFilterSettings = ref(false)
-const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'closed', 'work_phone', 'responsible_person', 'lead_branch_source', 'stage', 'email', 'bedrooms'])
+const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'work_phone', 'responsible_person', 'lead_branch_source', 'stage', 'email', 'bedrooms','source'])
+// const activePill = ref('leads-in-progress')
+const activePill = ref(props.initialActivePill || 'leads-in-progress')
+
 
 watch(() => props.modelValue, (val) => {
     show.value = val
@@ -183,13 +186,16 @@ const queryToFormKeys = {
     first_name: 'firstName',
     responsible_person_id: 'responsible',
     created_at: 'createdOn',
+    created_from: 'createdFrom',    
+    created_to: 'createdTo',
     lead_branch_source: 'branchSource',
     closed: 'closed',
     work_phone: 'workPhone',
     stage_id: 'stage',
     email: 'email',
     bedrooms: 'bedrooms',
-    search: 'search'
+    search: 'search',
+    source: 'source'
 }
 
 function syncFormFromQuery(query) {
@@ -203,6 +209,8 @@ function syncFormFromQuery(query) {
         firstName: '',
         responsible: '',
         createdOn: '',
+        createdFrom: '',   
+        createdTo: '', 
         stageChangedBy: '',
         branchSource: '',
         closed: '',
@@ -220,16 +228,24 @@ function syncFormFromQuery(query) {
     })
     form.value = next
 }
-
+watch(() => props.initialActivePill, (newVal) => {
+    console.log('initialActivePill changed:', newVal)
+    if (newVal && show.value) {
+        activePill.value = newVal
+    }
+}, { immediate: true })
 watch(show, (val) => {
     emit('update:modelValue', val)
     if (val) {
-        if (props.initialActivePill) activePill.value = props.initialActivePill
+        console.log('Modal opening with initialActivePill:', props.initialActivePill) 
+        if (props.initialActivePill) {
+            activePill.value = props.initialActivePill
+            console.log('Setting activePill to:', props.initialActivePill)
+        }
         if (!props.hasActiveFilters) resetFormValues()
         else syncFormFromQuery(props.currentQuery)
     }
 })
-
 watch(() => props.hasActiveFilters, (val) => {
     if (!val && show.value) resetFormValues()
 })
@@ -238,7 +254,6 @@ watch(() => props.currentQuery, (query) => {
     if (show.value && props.hasActiveFilters) syncFormFromQuery(query)
 }, { deep: true })
 
-const activePill = ref('leads-in-progress')
 
 const sidebarPills = [
     { id: 'closed-leads', label: 'Closed Leads' },
@@ -261,7 +276,10 @@ const form = ref({
     stage: '',
     email: '',
     bedrooms: '',
-    leadName: ''
+    leadName: '',
+     source: '',
+       createdFrom: '',    
+    createdTo: '',  
 })
 
 const responsiblePersons = ref([])
@@ -293,17 +311,38 @@ const bedroomsOptions = [
     { value: 3, text: '3' },
     { value: 4, text: '4+' }
 ]
+const createdOnOptions = [
+    { value: null, text: 'Any Date' },
+    { value: 'today', text: 'Today' },
+    { value: 'yesterday', text: 'Yesterday' },
+    { value: 'tomorrow', text: 'Tomorrow' },
+    { value: 'this_week', text: 'This Week' },
+    { value: 'this_month', text: 'This Month' },
+    { value: 'current_quarter', text: 'Current Quarter' },
+    { value: 'last_7_days', text: 'Last 7 Days' },
+    { value: 'last_30_days', text: 'Last 30 Days' },
+    { value: 'last_60_days', text: 'Last 60 Days' },
+    { value: 'last_90_days', text: 'Last 90 Days' },
+    { value: 'last_week', text: 'Last Week' },
+    { value: 'last_month', text: 'Last Month' },
+    { value: 'next_week', text: 'Next Week' },
+    { value: 'next_month', text: 'Next Month' },
+    { value: 'exact_date', text: 'Exact Date' }
+]
 
+const sourceOptions = ref([{ value: null, text: 'Select Source' }])
 const searchFieldsConfig = [
     { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
     { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
-    { id: 'closed', label: 'Closed', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
+    // { id: 'closed', label: 'Closed', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
+     { id: 'created_on', label: 'Created On', formKey: 'createdOn', queryKey: 'created_at', type: 'select', options: createdOnOptions },
     { id: 'work_phone', label: 'Work Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
     { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] },
-    { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
-    { id: 'stage', label: 'Stage', formKey: 'stage', queryKey: 'stage_id', type: 'select', options: [] },
     { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
-    { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions }
+    { id: 'stage', label: 'Stage', formKey: 'stage', queryKey: 'stage_id', type: 'select', options: [] },
+    { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
+    { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions },
+    { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] }
 ]
 
 const visibleSearchFields = computed(() => {
@@ -311,7 +350,12 @@ const visibleSearchFields = computed(() => {
         .filter(f => selectedLeadFieldIds.value.includes(f.id))
         .map(f => ({
             ...f,
-            options: f.formKey === 'responsible' ? personOptions.value : (f.formKey === 'branchSource' ? branchSourceOptions.value : (f.formKey === 'stage' ? stageOptions.value : (f.options || []))),
+              options: f.formKey === 'responsible' ? personOptions.value : 
+                    (f.formKey === 'branchSource' ? branchSourceOptions.value : 
+                    (f.formKey === 'stage' ? stageOptions.value : 
+                    (f.formKey === 'source' ? sourceOptions.value : 
+                    (f.formKey === 'createdOn' ? createdOnOptions : 
+                    (f.options || []))))),
             placeholder: f.placeholder || (f.type === 'select' ? 'Select' : '')
         }))
 })
@@ -343,20 +387,167 @@ function getDisplayValue(field, rawValue) {
 }
 
 function applySearch() {
+   
+    
+       let createdFrom = undefined
+    let createdTo = undefined
+    let createdAt = undefined
+      let branchSource = form.value.branchSource || undefined
+    let responsiblePersonId = form.value.responsible ?? undefined
+    let closed = form.value.closed ?? undefined
+    
+    switch (activePill.value) {
+        case 'dubai':
+            const dubaiOption = branchSourceOptions.value.find(opt => 
+                opt.text?.toLowerCase().includes('dubai')
+            )
+            branchSource = dubaiOption?.value
+            break
+            
+        case 'abu-dhabi':
+            const abuDhabiOption = branchSourceOptions.value.find(opt => 
+                opt.text?.toLowerCase().includes('abu dhabi')
+            )
+            branchSource = abuDhabiOption?.value
+            break
+            
+        case 'my-leads':
+            const user = JSON.parse(localStorage.getItem('user') || '{}')
+            responsiblePersonId = user.id
+            break
+            
+        case 'closed-leads':
+            closed = 1 
+            break
+    }
+    if (form.value.createdOn) {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0) // بداية اليوم
+        
+        switch (form.value.createdOn) {
+            case 'today':
+                createdAt = today.toISOString().split('T')[0] // YYYY-MM-DD
+                break
+                
+            case 'yesterday':
+                const yesterday = new Date(today)
+                yesterday.setDate(yesterday.getDate() - 1)
+                createdAt = yesterday.toISOString().split('T')[0]
+                break
+                
+            case 'tomorrow':
+                const tomorrow = new Date(today)
+                tomorrow.setDate(tomorrow.getDate() + 1)
+                createdAt = tomorrow.toISOString().split('T')[0]
+                break
+                
+            case 'this_week':
+                const startOfWeek = new Date(today)
+                startOfWeek.setDate(today.getDate() - today.getDay()) // الأحد
+                const endOfWeek = new Date(startOfWeek)
+                endOfWeek.setDate(startOfWeek.getDate() + 6)
+                createdFrom = startOfWeek.toISOString().split('T')[0]
+                createdTo = endOfWeek.toISOString().split('T')[0]
+                break
+                
+            case 'this_month':
+                createdFrom = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
+                createdTo = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+                break
+                
+            case 'current_quarter':
+                const quarter = Math.floor(today.getMonth() / 3)
+                createdFrom = new Date(today.getFullYear(), quarter * 3, 1).toISOString().split('T')[0]
+                createdTo = new Date(today.getFullYear(), (quarter + 1) * 3, 0).toISOString().split('T')[0]
+                break
+                
+            case 'last_7_days':
+                createdTo = today.toISOString().split('T')[0]
+                const last7Days = new Date(today)
+                last7Days.setDate(last7Days.getDate() - 7)
+                createdFrom = last7Days.toISOString().split('T')[0]
+                break
+                
+            case 'last_30_days':
+                createdTo = today.toISOString().split('T')[0]
+                const last30Days = new Date(today)
+                last30Days.setDate(last30Days.getDate() - 30)
+                createdFrom = last30Days.toISOString().split('T')[0]
+                break
+                
+            case 'last_60_days':
+                createdTo = today.toISOString().split('T')[0]
+                const last60Days = new Date(today)
+                last60Days.setDate(last60Days.getDate() - 60)
+                createdFrom = last60Days.toISOString().split('T')[0]
+                break
+                
+            case 'last_90_days':
+                createdTo = today.toISOString().split('T')[0]
+                const last90Days = new Date(today)
+                last90Days.setDate(last90Days.getDate() - 90)
+                createdFrom = last90Days.toISOString().split('T')[0]
+                break
+                
+            case 'last_week':
+                const lastWeek = new Date(today)
+                lastWeek.setDate(lastWeek.getDate() - 7)
+                const startOfLastWeek = new Date(lastWeek)
+                startOfLastWeek.setDate(lastWeek.getDate() - lastWeek.getDay())
+                const endOfLastWeek = new Date(startOfLastWeek)
+                endOfLastWeek.setDate(startOfLastWeek.getDate() + 6)
+                createdFrom = startOfLastWeek.toISOString().split('T')[0]
+                createdTo = endOfLastWeek.toISOString().split('T')[0]
+                break
+                
+            case 'last_month':
+                createdFrom = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().split('T')[0]
+                createdTo = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split('T')[0]
+                break
+                
+            case 'next_week':
+                const nextWeek = new Date(today)
+                nextWeek.setDate(nextWeek.getDate() + 7)
+                const startOfNextWeek = new Date(nextWeek)
+                startOfNextWeek.setDate(nextWeek.getDate() - nextWeek.getDay())
+                const endOfNextWeek = new Date(startOfNextWeek)
+                endOfNextWeek.setDate(startOfNextWeek.getDate() + 6)
+                createdFrom = startOfNextWeek.toISOString().split('T')[0]
+                createdTo = endOfNextWeek.toISOString().split('T')[0]
+                break
+                
+            case 'next_month':
+                createdFrom = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString().split('T')[0]
+                createdTo = new Date(today.getFullYear(), today.getMonth() + 2, 0).toISOString().split('T')[0]
+                break
+                
+            case 'exact_date':
+                if (form.value.exactDate) {
+                    createdAt = form.value.exactDate
+                }
+                break
+        }
+    }
+
     const query = {
         lead_name: form.value.leadName || undefined,
         first_name: form.value.firstName || undefined,
-        responsible_person_id: form.value.responsible ?? undefined,
-        created_at: form.value.createdOn || undefined,
-        lead_branch_source: form.value.branchSource || undefined,
-        closed: form.value.closed ?? undefined,
+         responsible_person_id: responsiblePersonId,
+        lead_branch_source: branchSource,
+        closed: closed,
+        // created_at: form.value.createdOn || undefined,
         work_phone: form.value.workPhone || undefined,
         stage_id: form.value.stage ?? undefined,
         email: form.value.email || undefined,
         bedrooms: form.value.bedrooms ?? undefined,
         search: form.value.search || undefined,
+       source: form.value.source || undefined ,
+        created_from: createdFrom  || undefined,  
+        created_to: createdTo || undefined,     
+        created_at: createdAt  || undefined,   
     }
     Object.keys(query).forEach(k => { if (query[k] === '' || query[k] === undefined) delete query[k] })
+    console.log('Search Query:', query)
 
     const activeFilters = []
     const visibleFields = searchFieldsConfig.filter(f => selectedLeadFieldIds.value.includes(f.id))
@@ -376,8 +567,9 @@ function applySearch() {
             })
         }
     })
-
+console.log(activePill);
     const pill = sidebarPills.find(p => p.id === activePill.value)
+    console.log(pill.id);
     emit('search', { query, activePill: pill ? { id: pill.id, label: pill.label } : null, activeFilters })
     show.value = false
 }
@@ -415,7 +607,20 @@ async function fetchStages() {
         }
     } catch (_) {}
 }
-
+async function fetchSources() {
+    try {
+        const res = await api.get('/sources')
+        const data = res.data?.data
+        if (Array.isArray(data) && data.length) {
+            sourceOptions.value = [
+                { value: null, text: 'Select Source' },
+                ...data.map(s => ({ value: s.name, text: s.name }))
+            ]
+        }
+    } catch (error) {
+        console.error('Error fetching sources:', error)
+    }
+}
 function resetFormValues() {
     form.value = {
         search: '',
@@ -423,13 +628,18 @@ function resetFormValues() {
         firstName: '',
         responsible: '',
         createdOn: '',
+         createdFrom: '',     
+        createdTo: '',  
+         created_from: '',     
+        created_to: '',  
         stageChangedBy: '',
         branchSource: '',
         closed: '',
         workPhone: '',
         stage: '',
         email: '',
-        bedrooms: ''
+        bedrooms: '',
+         source: ''
     }
 }
 
@@ -443,6 +653,7 @@ onMounted(() => {
     fetchResponsiblePersons()
     fetchBranchSources()
     fetchStages()
+    fetchSources()
 })
 </script>
 

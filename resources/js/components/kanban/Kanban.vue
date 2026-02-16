@@ -400,6 +400,7 @@ const onLeadSearch = (payload) => {
     }
     const query = payload?.query !== undefined ? payload.query : payload
     const pill = payload?.activePill
+    console.log("pill"+pill.id);
     if (pill) {
         activeFilter.value = { id: pill.id, label: pill.label }
     } else if (!activeFilter.value) {
