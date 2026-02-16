@@ -3853,9 +3853,8 @@ const createSlide5 = () => {
           </div>
 <div style="
   width: 100% !important;
-  height: 75% !important;
+  height: 80% !important;
   display: table !important;
-  background-color: #f5f5f5;
 ">
 
   <div style="
@@ -3865,7 +3864,7 @@ const createSlide5 = () => {
   ">
 
     <div style="
-      width: 80% !important;
+      width: 100% !important;
       height: 100% !important;
       margin: 0 auto !important;
       background-image: url('${floorPlan1}');
