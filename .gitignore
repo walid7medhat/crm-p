@@ -55,6 +55,9 @@ typings/
 *.tgz
 
 
+# Cursor / IDE – do not push to GitHub
+.cursor/
+
 # dotenv environment variables file
 .env
 

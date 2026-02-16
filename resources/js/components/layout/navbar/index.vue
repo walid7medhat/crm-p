@@ -36,12 +36,12 @@
             @toggle="handleNotificationToggle"
           />
 
-          <!-- Profile dropdown -->
-          <div class="dropdown" ref="profileDropdown">
+          <!-- Profile: avatar opens BIG Profile Details modal (slide-in from right) -->
+          <div class="profile-trigger-wrap" ref="profileDropdown">
             <button 
-              class="d-flex justify-content-center align-items-center rounded-circle" 
+              class="profile-avatar-btn rounded-circle" 
               type="button"
-              @click.stop="toggleProfileDropdown"
+              @click.stop="openProfilePanel"
             >
               <img 
                 v-if="user && user.avatar" 
@@ -56,65 +56,175 @@
                 class="w-40-px h-40-px object-fit-cover rounded-circle"
               >
             </button>
-            <div 
-              class="dropdown-menu to-top dropdown-menu-sm"
-              :class="{ 'show': isProfileDropdownOpen }"
-            >
-              <div
-                class="py-12 px-16 radius-8 bg-primary-50 mb-16 d-flex align-items-center justify-content-between gap-2">
-                <div class="d-flex align-items-center gap-3">
-                  <img 
-                    v-if="user && user.avatar" 
-                    :src="user.avatar" 
-                    alt="User Avatar" 
-                    class="w-40-px h-40-px object-fit-cover rounded-circle"
-                  >
-                  <img 
-                    v-else 
-                    :src="userPlaceholder" 
-                    alt="User Avatar" 
-                    class="w-40-px h-40-px object-fit-cover rounded-circle"
-                  >
-                  <div>
-                    <h6 class="text-lg text-primary-light fw-semibold mb-2">
-                      {{ user ? user.name : 'User' }}
-                    </h6>
-                    <span class="text-secondary-light fw-medium text-sm">
-                      {{ user && user.role_name  ? user.role_name : 'User' }}
-                    </span>
+          </div>
+
+          <!-- BIG Profile Details modal (like the picture) -->
+          <Teleport to="body">
+            <Transition name="profile-panel">
+              <div v-if="isProfilePanelOpen" class="profile-panel-backdrop" @click="closeProfilePanel">
+                <div ref="profilePanel" class="profile-panel" @click.stop>
+                  <header class="profile-panel-header">
+                    <h2 class="profile-panel-title">Profile Details</h2>
+                    <button type="button" class="profile-panel-close" @click="closeProfilePanel" aria-label="Close">
+                      <iconify-icon icon="lucide:x" class="icon"></iconify-icon>
+                    </button>
+                  </header>
+
+                  <div class="profile-panel-body">
+                    <div v-if="profileLoading" class="profile-panel-loading">
+                      <span class="profile-panel-spinner"></span>
+                      <span>Loading...</span>
+                    </div>
+                    <template v-else>
+                    <div class="profile-summary-card">
+                      <div class="profile-summary-left">
+                        <div class="profile-avatar-wrap">
+                          <img v-if="user && user.avatar" :src="user.avatar" alt="Avatar" class="profile-summary-avatar">
+                          <img v-else :src="userPlaceholder" alt="Avatar" class="profile-summary-avatar">
+                          <label class="profile-avatar-camera">
+                            <input
+                              ref="avatarInput"
+                              type="file"
+                              accept="image/*"
+                              class="profile-avatar-file-input"
+                              @change="onAvatarChange"
+                            >
+                            <iconify-icon icon="solar:camera-outline" class="icon"></iconify-icon>
+                          </label>
+                        </div>
+                        <div class="profile-summary-info">
+                          <h6 class="profile-summary-name">{{ user ? user.name : 'User' }}</h6>
+                          <p class="profile-summary-email">{{ user && user.email ? user.email : '—' }}</p>
+                          <p class="profile-summary-role">{{ user && user.role_name ? user.role_name : 'User' }}</p>
+                        </div>
+                      </div>
+                      <div class="profile-summary-right">
+                        <div class="profile-status-row">
+                          <span class="profile-status-dot" :class="user && user.status === 'active' ? 'status-online' : 'offline'"></span>
+                          <span class="profile-status-text">{{ user && user.status === 'active' ? 'Active' : 'Offline' }}</span>
+                        </div>
+                        <p class="profile-last-active">Last Active: {{ lastActiveText }}</p>
+                      </div>
+                    </div>
+
+                    <section class="profile-section profile-section-contact">
+                      <div class="profile-section-head">
+                        <h4 class="profile-section-title">Personal Info</h4>
+                        <template v-if="!isPersonalInfoEditing">
+                          <button type="button" class="profile-edit-icon" aria-label="Edit" @click="startPersonalInfoEdit">
+                            <iconify-icon icon="lucide:pencil" class="icon"></iconify-icon>
+                          </button>
+                        </template>
+                        <div v-else class="profile-contact-actions">
+                          <button type="button" class="profile-contact-btn profile-contact-cancel" @click="cancelPersonalInfoEdit">Cancel</button>
+                          <button type="button" class="profile-contact-btn profile-contact-save" @click="savePersonalInfoEdit">Save</button>
+                        </div>
+                      </div>
+                      <div class="profile-contact-grid profile-personal-info-grid">
+                        <div class="profile-contact-item">
+                          <span class="profile-contact-label">Full Name</span>
+                          <input
+                            v-if="isPersonalInfoEditing"
+                            v-model="personalInfoEdit.full_name"
+                            type="text"
+                            class="profile-contact-input"
+                            placeholder="Full Name"
+                          >
+                          <span v-else class="profile-contact-value">{{ user && user.name ? user.name : '—' }}</span>
+                        </div>
+                        <div class="profile-contact-item">
+                          <span class="profile-contact-label">Email</span>
+                          <input
+                            v-if="isPersonalInfoEditing"
+                            v-model="personalInfoEdit.email"
+                            type="email"
+                            class="profile-contact-input"
+                            placeholder="Email"
+                          >
+                          <span v-else class="profile-contact-value">{{ user && user.email ? user.email : '—' }}</span>
+                        </div>
+                        <div class="profile-contact-item">
+                          <span class="profile-contact-label">Phone Number</span>
+                          <input
+                            v-if="isPersonalInfoEditing"
+                            v-model="personalInfoEdit.phone"
+                            type="tel"
+                            class="profile-contact-input"
+                            placeholder="Phone Number"
+                          >
+                          <span v-else class="profile-contact-value">{{ user && user.phone ? user.phone : '—' }}</span>
+                        </div>
+                        <div class="profile-contact-item">
+                          <span class="profile-contact-label">Role</span>
+                          <span class="profile-contact-value profile-contact-readonly">{{ user && user.role_name ? user.role_name : '—' }}</span>
+                        </div>
+                        <div class="profile-contact-item">
+                          <span class="profile-contact-label">Status</span>
+                          <span class="profile-contact-value profile-contact-readonly">{{ user && user.status ? user.status : 'active' }}</span>
+                        </div>
+                        <div class="profile-contact-item">
+                          <span class="profile-contact-label">Member Since</span>
+                          <span class="profile-contact-value profile-contact-readonly">{{ memberSinceFormatted }}</span>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section class="profile-section profile-section-team">
+                      <div class="profile-section-head">
+                        <h4 class="profile-section-title">Your Team</h4>
+                        <span class="profile-section-badge"># TEAM</span>
+                      </div>
+                      <div class="profile-team-grid">
+                        <div
+                          v-for="member in visibleTeamMembers"
+                          :key="member.id"
+                          class="profile-team-card profile-team-pill"
+                        >
+                          <div class="profile-team-avatar-wrap">
+                            <img v-if="member.avatar" :src="member.avatar" :alt="member.name" class="profile-team-avatar">
+                            <span v-else class="profile-team-agent-icon">
+                              <iconify-icon icon="lucide:user-round" class="icon"></iconify-icon>
+                            </span>
+                            <span
+                              class="profile-team-status-dot"
+                              :class="member.status === 'away' ? 'status-away' : member.online ? 'status-online' : 'status-offline'"
+                            ></span>
+                          </div>
+                          <div class="profile-team-info">
+                            <span class="profile-team-name">{{ member.name }}</span>
+                            <span class="profile-team-role">{{ member.role_name || member.role || '—' }}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div v-if="teamMembersList.length > teamPageSize" class="profile-team-see-more-wrap">
+                        <button
+                          v-if="hasMoreTeamMembers"
+                          type="button"
+                          class="profile-show-all-team profile-see-more-btn"
+                          @click="loadMoreTeamMembers"
+                        >
+                          See more
+                        </button>
+                      </div>
+                      <p v-if="teamMembersList.length === 0 && !profileLoading" class="profile-team-empty">No team members under you.</p>
+                    </section>
+
+                    <div class="profile-panel-actions">
+                      <router-link to="/view-profile" class="profile-action-link" @click="closeProfilePanel">
+                        <iconify-icon icon="solar:user-linear" class="icon"></iconify-icon>
+                        My Profile
+                      </router-link>
+                      <button type="button" class="profile-action-link profile-action-logout" @click="logout">
+                        <iconify-icon icon="lucide:power" class="icon"></iconify-icon>
+                        Log out
+                      </button>
+                    </div>
+                    </template>
                   </div>
                 </div>
-                <button 
-                  type="button" 
-                  class="hover-text-danger"
-                  @click.stop="closeProfileDropdown"
-                >
-                  <iconify-icon icon="radix-icons:cross-1" class="icon text-xl"></iconify-icon>
-                </button>
               </div>
-              <ul class="to-top-list">
-                <li>
-                  <router-link
-                    class="dropdown-item text-black px-0 py-8 hover-bg-transparent hover-text-primary d-flex align-items-center gap-3"
-                    to="/view-profile"
-                    @click="closeProfileDropdown">
-                    <iconify-icon icon="solar:user-linear" class="icon text-xl"></iconify-icon> 
-                    My Profile
-                  </router-link>
-                </li>
-                <li>
-                  <a
-                    class="dropdown-item text-black px-0 py-8 hover-bg-transparent hover-text-danger d-flex align-items-center gap-3"
-                    href="javascript:void(0)"
-                    @click="logout"
-                  >
-                    <iconify-icon icon="lucide:power" class="icon text-xl"></iconify-icon> 
-                    Log out
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div><!-- Profile dropdown end -->
+            </Transition>
+          </Teleport>
         </div>
       </div>
     </div>
@@ -122,12 +232,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onUnmounted } from 'vue';
+import { ref, onMounted, computed, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useTheme } from '@/composables/useTheme.js';
 import { useSidebar } from '@/composables/useSidebar.js';
 import NotificationBell from '@/components/NotificationBell.vue';
 import userPlaceholder from '@/assets/images/user.png';
+import api from '@/plugins/axios';
 
 const { theme, toggleTheme } = useTheme();
 const { isSidebarActive, toggleSidebarDesktop } = useSidebar();
@@ -155,32 +266,181 @@ const showCreatePropertyButton = computed(() => {
   );
 });
 
-// حالة dropdowns
-const isProfileDropdownOpen = ref(false);
+// BIG Profile Details panel (slide-in from right)
+const isProfilePanelOpen = ref(false);
+const profilePanel = ref(null);
 
-// مراجع للـ dropdowns
 const notificationBell = ref(null);
 const profileDropdown = ref(null);
 
-// إدارة dropdown الملف الشخصي
-function toggleProfileDropdown() {
-  // إغلاق dropdown الإشعارات إذا كان مفتوحًا
+function openProfilePanel() {
   if (notificationBell.value && notificationBell.value.showDropdown) {
     notificationBell.value.closeNotifications();
   }
-  
-  isProfileDropdownOpen.value = !isProfileDropdownOpen.value;
+  if (isProfilePanelOpen.value) {
+    closeProfilePanel();
+    return;
+  }
+  isProfilePanelOpen.value = true;
 }
 
-function closeProfileDropdown() {
-  isProfileDropdownOpen.value = false;
+function closeProfilePanel() {
+  isProfilePanelOpen.value = false;
 }
 
 function handleNotificationToggle() {
-  // إغلاق dropdown الملف الشخصي إذا كان مفتوحًا
-  if (isProfileDropdownOpen.value) {
-    closeProfileDropdown();
+  if (isProfilePanelOpen.value) {
+    closeProfilePanel();
   }
+}
+
+const lastActiveText = computed(() => {
+  const raw = user.value?.last_login_at || user.value?.last_active;
+  if (!raw) return '—';
+  const d = new Date(raw);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+});
+
+const memberSinceFormatted = computed(() => {
+  const raw = user.value?.created_at || user.value?.member_since || user.value?.created_at;
+  if (!raw) return '—';
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${day} ${h}:${min}`;
+});
+
+// Personal Info edit mode (only Full Name, Email, Phone editable; Role, Status, Member Since read-only)
+const isPersonalInfoEditing = ref(false);
+const personalInfoEdit = ref({
+  full_name: '',
+  email: '',
+  phone: '',
+});
+
+function startPersonalInfoEdit() {
+  const u = user.value;
+  personalInfoEdit.value = {
+    full_name: (u?.name || '').trim(),
+    email: u?.email || '',
+    phone: u?.phone || '',
+  };
+  isPersonalInfoEditing.value = true;
+}
+
+function cancelPersonalInfoEdit() {
+  isPersonalInfoEditing.value = false;
+}
+
+function savePersonalInfoEdit() {
+  const u = user.value;
+  if (!u) return;
+  user.value = {
+    ...u,
+    name: (personalInfoEdit.value.full_name || '').trim() || u.name,
+    email: (personalInfoEdit.value.email || '').trim() || u.email,
+    phone: (personalInfoEdit.value.phone || '').trim() || u.phone,
+  };
+  try {
+    localStorage.setItem('user', JSON.stringify(user.value));
+  } catch (e) {
+    console.warn('Could not persist user to localStorage', e);
+  }
+  isPersonalInfoEditing.value = false;
+}
+
+const avatarInput = ref(null);
+
+function onAvatarChange(event) {
+  const file = event.target?.files?.[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const u = user.value;
+    if (!u) return;
+    user.value = { ...u, avatar: reader.result };
+    try {
+      localStorage.setItem('user', JSON.stringify(user.value));
+    } catch (e) {
+      console.warn('Could not persist user to localStorage', e);
+    }
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+// Fetched from API: current user profile + team members (who is under this user by role)
+const profileLoading = ref(false);
+const fetchedTeamMembers = ref([]);
+
+async function fetchProfileAndTeam() {
+  const currentUser = user.value;
+  if (!currentUser?.id) return;
+  profileLoading.value = true;
+  fetchedTeamMembers.value = [];
+  try {
+    const [profileRes, teamRes] = await Promise.all([
+      api.get(`/users/${currentUser.id}`),
+      api.get(`/users/${currentUser.id}/team-members/recursive`).catch(() => ({ data: { data: [] } })),
+    ]);
+    if (profileRes.data?.data) {
+      const apiUser = profileRes.data.data;
+      user.value = { ...currentUser, ...apiUser, name: apiUser.name ?? currentUser.name, email: apiUser.email ?? currentUser.email, phone: apiUser.phone ?? currentUser.phone, role_name: apiUser.role_name ?? currentUser.role_name, status: apiUser.status ?? currentUser.status, created_at: apiUser.created_at ?? currentUser.created_at, avatar: apiUser.avatar ?? currentUser.avatar };
+    }
+    const list = teamRes.data?.data;
+    if (Array.isArray(list)) {
+      fetchedTeamMembers.value = list.map((m) => ({
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        phone: m.phone,
+        avatar: m.avatar,
+        role_name: m.role_name,
+        role: m.role_name,
+        status: m.status,
+        online: m.status === 'active',
+        created_at: m.created_at,
+      }));
+    }
+  } catch (e) {
+    console.warn('Profile/team fetch failed:', e);
+  } finally {
+    profileLoading.value = false;
+  }
+}
+
+const teamMembersList = computed(() => {
+  if (fetchedTeamMembers.value.length > 0) return fetchedTeamMembers.value;
+  const list = user.value?.team_members || [];
+  if (Array.isArray(list) && list.length) return list;
+  return [];
+});
+
+const teamPageSize = 6;
+const visibleTeamCount = ref(teamPageSize);
+
+const visibleTeamMembers = computed(() => teamMembersList.value.slice(0, visibleTeamCount.value));
+
+const hasMoreTeamMembers = computed(() => teamMembersList.value.length > visibleTeamCount.value);
+
+function loadMoreTeamMembers() {
+  visibleTeamCount.value += teamPageSize;
+}
+
+function showAllTeamMembers() {
+  visibleTeamCount.value = teamMembersList.value.length;
 }
 
 // إعداد listener للنقر خارج dropdowns
@@ -197,11 +457,17 @@ function handleClickOutside(event) {
     notificationBell.value.closeNotifications();
   }
   
-  // التحقق إذا كان النقر خارج dropdown الملف الشخصي
-  if (profileDropdown.value && !profileDropdown.value.contains(event.target) && isProfileDropdownOpen.value) {
-    closeProfileDropdown();
+  if (isProfilePanelOpen.value && profilePanel.value && !profilePanel.value.contains(event.target) && profileDropdown.value && !profileDropdown.value.contains(event.target)) {
+    closeProfilePanel();
   }
 }
+
+watch(isProfilePanelOpen, (open) => {
+  if (open && user.value?.id) {
+    visibleTeamCount.value = teamPageSize;
+    fetchProfileAndTeam();
+  }
+});
 
 // تحميل بيانات المستخدم والإعدادات
 onMounted(() => {
@@ -320,5 +586,644 @@ function logout() {
 .create-property-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Profile trigger */
+.profile-trigger-wrap {
+  position: relative;
+}
+
+.profile-avatar-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* BIG Profile Details panel – match design image (font sizes, spacing, colors) */
+.profile-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 9999;
+  display: flex;
+  justify-content: flex-end;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.profile-panel {
+  width: 520px;
+  max-width: 95vw;
+  height: 100%;
+  background: #ffffff;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
+  border-radius: 12px 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.profile-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.profile-panel-title {
+  margin: 0 !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.3 !important;
+}
+
+.profile-panel-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+.profile-panel-close:hover {
+  color: #111827;
+  background: #f3f4f6;
+}
+
+.profile-panel-close .icon {
+  font-size: 20px;
+}
+
+.profile-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.profile-panel-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.profile-panel-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: profile-spin 0.8s linear infinite;
+}
+
+@keyframes profile-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Summary card – like design image */
+.profile-summary-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  margin-bottom: 28px;
+  border: 1px solid #e5e7eb;
+}
+
+.profile-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.profile-summary-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-avatar-camera {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 28px;
+  height: 28px;
+  background: #22c55e;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #f3f4f6;
+  cursor: pointer;
+}
+
+.profile-avatar-file-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.profile-avatar-camera .icon {
+  font-size: 20px;
+}
+
+.profile-summary-info {
+  min-width: 0;
+}
+
+.profile-summary-name {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.profile-summary-email,
+.profile-summary-role {
+  margin: 0 !important;
+  font-size: 13px !important;
+  color: #6b7280 !important;
+  line-height: 1.45 !important;
+}
+
+.profile-summary-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.profile-status-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.profile-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9ca3af;
+}
+
+.profile-status-dot.offline {
+  background: #9ca3af;
+}
+
+.profile-status-dot.status-online {
+  background: #22c55e;
+}
+
+.profile-status-text {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.profile-more-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.profile-more-btn:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.profile-more-btn .icon {
+  font-size: 20px;
+}
+
+.profile-last-active {
+  margin: 0;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+/* Sections – base */
+.profile-section {
+  margin-bottom: 0;
+}
+
+.profile-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+/* Contact Information – same light blue border as image, rounded corners */
+.profile-section-contact {
+  margin-bottom: 28px;
+  padding: 20px 22px;
+  background: #ffffff;
+  border: 1px solid #60a5fa;
+  border-radius: 12px;
+}
+
+.profile-section-contact .profile-section-head {
+  margin-bottom: 18px;
+}
+
+/* Your Team – same blue: thick left, thin top/right/bottom */
+.profile-section-team {
+  padding: 20px 22px;
+  background: #ffffff;
+  border: 1px solid #60a5fa;
+  border-left-width: 4px;
+  border-left-color: #60a5fa;
+  border-radius: 12px;
+}
+
+.profile-section-team .profile-section-head {
+  margin-bottom: 16px;
+}
+
+.profile-section-title {
+  margin: 0 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #111827 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.3 !important;
+}
+
+.profile-section-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  background: #e5e7eb;
+  padding: 4px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+.profile-edit-icon {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.profile-edit-icon:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.profile-edit-icon .icon {
+  font-size: 20px;
+}
+
+.profile-contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 32px;
+}
+
+.profile-personal-info-grid {
+  grid-template-columns: 1fr;
+  gap: 14px 0;
+}
+
+.profile-contact-readonly {
+  color: #374151;
+}
+
+.profile-contact-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-contact-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.profile-contact-value {
+  font-size: 15px;
+  color: #111827;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.profile-contact-input {
+  width: 100%;
+  font-size: 15px;
+  color: #111827;
+  font-weight: 500;
+  line-height: 1.45;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.profile-contact-input:focus {
+  border-color: #60a5fa;
+}
+
+.profile-contact-input::placeholder {
+  color: #9ca3af;
+}
+
+.profile-contact-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-contact-btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.profile-contact-cancel {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.profile-contact-cancel:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.profile-contact-save {
+  background: #2563eb;
+  color: #fff;
+}
+
+.profile-contact-save:hover {
+  background: #1d4ed8;
+}
+
+.profile-phone-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.profile-phone-link:hover {
+  text-decoration: underline;
+}
+
+/* Your Team – 3-column grid, oval pill cards, avatar + name + role, status dot */
+.profile-team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px 12px;
+  margin-bottom: 20px;
+}
+
+.profile-team-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  text-align: left;
+  min-width: 0;
+}
+
+.profile-team-avatar-wrap {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.profile-team-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-team-agent-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-team-agent-icon .icon {
+  font-size: 20px;
+}
+
+.profile-team-status-dot {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+}
+
+.profile-team-status-dot.status-online {
+  background: #22c55e;
+}
+
+.profile-team-status-dot.status-offline {
+  background: #ef4444;
+}
+
+.profile-team-status-dot.status-away {
+  background: #38bdf8;
+}
+
+.profile-team-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-team-pill .profile-team-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-team-role {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-team-see-more-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.profile-see-more-btn {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2563eb;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 0;
+  text-align: left;
+}
+
+.profile-see-more-btn:hover {
+  text-decoration: underline;
+}
+
+.profile-show-all-team {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.profile-show-all-team:hover {
+  text-decoration: underline;
+}
+
+.profile-team-empty {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+  padding: 12px 0;
+}
+
+/* Footer actions – My Profile / Log out */
+.profile-panel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 6px;
+}
+
+.profile-action-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  text-decoration: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.profile-action-link:hover {
+  background: #f3f4f6;
+  color: #2563eb;
+}
+
+.profile-action-link .icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.profile-action-logout:hover {
+  color: #dc2626;
+}
+
+/* Panel transition */
+.profile-panel-enter-active,
+.profile-panel-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.profile-panel-enter-active .profile-panel,
+.profile-panel-leave-active .profile-panel {
+  transition: transform 0.25s ease;
+}
+
+.profile-panel-enter-from,
+.profile-panel-leave-to {
+  opacity: 0;
+}
+
+.profile-panel-enter-from .profile-panel,
+.profile-panel-leave-to .profile-panel {
+  transform: translateX(100%);
 }
 </style>

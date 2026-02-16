@@ -462,7 +462,7 @@ public function show(User $user): JsonResponse
     }
 
     /**
-     * Get team members for a user
+     * Get team members for a user (direct children only)
      */
     public function getTeamMembers(User $user): JsonResponse
     {
@@ -486,6 +486,57 @@ public function show(User $user): JsonResponse
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve team members: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Get ALL team members under a user (full hierarchy: team leads + sales + etc.)
+     * Returns a flat list of every user who reports to this user, at any level.
+     */
+    public function getTeamMembersRecursive(User $user): JsonResponse
+    {
+        try {
+            $currentUser = Auth::user();
+
+            if (!$this->canAccessUser($currentUser, $user)) {
+                return ApiResponse::error('Access denied', 403);
+            }
+
+            $descendantIds = $this->collectDescendantIds($user->id);
+
+            if (empty($descendantIds)) {
+                return ApiResponse::success([], 'Team members retrieved successfully');
+            }
+
+            $teamMembers = User::whereIn('id', $descendantIds)
+                ->with(['roles', 'parent'])
+                ->get()
+                ->sortBy(function ($u) use ($descendantIds) {
+                    $pos = array_search($u->id, $descendantIds);
+                    return $pos !== false ? $pos : 9999;
+                })
+                ->values();
+
+            return ApiResponse::success(
+                UserResource::collection($teamMembers),
+                'Team members retrieved successfully'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to retrieve team members: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Collect all descendant user IDs (everyone under this user, any depth).
+     */
+    private function collectDescendantIds(int $parentId): array
+    {
+        $ids = [];
+        $queue = User::where('parent_id', $parentId)->pluck('id')->toArray();
+        while (!empty($queue)) {
+            $ids = array_merge($ids, $queue);
+            $queue = User::whereIn('parent_id', $queue)->pluck('id')->toArray();
+        }
+        return $ids;
     }
 
     /**

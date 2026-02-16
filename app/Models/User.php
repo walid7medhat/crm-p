@@ -86,6 +86,7 @@ class User extends Authenticatable implements JWTSubject
         return $subordinatesIds;
     }
 
+
     public function canViewLead(Lead $lead): bool
     {
         if ($this->hasRole('admin') || $this->hasRole('super_admin')) {

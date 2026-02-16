@@ -137,6 +137,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/users/managers/available', [UserController::class, 'getAvailableManagers']);
     Route::get('/users/statistics', [UserController::class, 'getStatistics']);
     Route::get('/users/{user}/team-members', [UserController::class, 'getTeamMembers']);
+    Route::get('/users/{user}/team-members/recursive', [UserController::class, 'getTeamMembersRecursive']);
         Route::get('/users/online/current', [UserController::class, 'getOnlineUsers']);
     Route::get('/users/login-activity', [UserController::class, 'getLoginActivity']);
 // Role Routes

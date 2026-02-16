@@ -1,6 +1,6 @@
 {
-  "_html2canvas-ByOsSqxb.js": {
-    "file": "assets/html2canvas-ByOsSqxb.js",
+  "_html2canvas-_8yBgjou.js": {
+    "file": "assets/html2canvas-_8yBgjou.js",
     "name": "html2canvas",
     "isDynamicEntry": true,
     "imports": [
@@ -8,27 +8,27 @@
     ]
   },
   "_sweetalert2.esm.all-!~{004}~.js": {
-    "file": "assets/sweetalert2.esm-CyX7bHpw.css",
+    "file": "assets/sweetalert2.esm.B0w2bEnQ.css",
     "src": "_sweetalert2.esm.all-!~{004}~.js"
   },
-  "_sweetalert2.esm.all-C3RWJrIl.js": {
-    "file": "assets/sweetalert2.esm.all-C3RWJrIl.js",
+  "_sweetalert2.esm.all-DD9qEe1K.js": {
+    "file": "assets/sweetalert2.esm.all-DD9qEe1K.js",
     "name": "sweetalert2.esm.all",
     "css": [
-      "assets/sweetalert2.esm-CyX7bHpw.css"
+      "assets/sweetalert2.esm.B0w2bEnQ.css"
     ],
     "assets": [
-      "assets/user-g8XIt7bn.png"
+      "assets/user.g8XIt7bn.png"
     ]
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-Bw3QEjvX.js",
+    "file": "assets/index.es-CNRizKnI.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/main.js",
-      "_sweetalert2.esm.all-C3RWJrIl.js"
+      "_sweetalert2.esm.all-DD9qEe1K.js"
     ]
   },
   "node_modules/dompurify/dist/purify.es.mjs": {
@@ -38,191 +38,185 @@
     "isDynamicEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app-eCxRmb9p.css",
+    "file": "assets/app.Cl2N5Zfk.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-UaFyif5a.js",
+    "file": "assets/app-CKMlUzWH.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_sweetalert2.esm.all-C3RWJrIl.js"
+      "_sweetalert2.esm.all-DD9qEe1K.js"
     ]
   },
   "resources/js/assets/images/a.jpeg": {
-    "file": "assets/a-CNSB645Y.jpeg",
+    "file": "assets/a.CNSB645Y.jpeg",
     "src": "resources/js/assets/images/a.jpeg"
   },
   "resources/js/assets/images/auth/envelop-icon.png": {
-    "file": "assets/envelop-icon-BC-dOgaD.png",
+    "file": "assets/envelop-icon.BC-dOgaD.png",
     "src": "resources/js/assets/images/auth/envelop-icon.png"
   },
   "resources/js/assets/images/auth/forgot-pass-img.png": {
-    "file": "assets/forgot-pass-img-BLwoaPgo.png",
+    "file": "assets/forgot-pass-img.BLwoaPgo.png",
     "src": "resources/js/assets/images/auth/forgot-pass-img.png"
   },
   "resources/js/assets/images/avatar/avatar1.png": {
-    "file": "assets/avatar1-scz5y5rp.png",
+    "file": "assets/avatar1.scz5y5rp.png",
     "src": "resources/js/assets/images/avatar/avatar1.png"
   },
   "resources/js/assets/images/b.jpeg": {
-    "file": "assets/b-B4mY67FF.jpeg",
+    "file": "assets/b.B4mY67FF.jpeg",
     "src": "resources/js/assets/images/b.jpeg"
   },
   "resources/js/assets/images/c.jpeg": {
-    "file": "assets/c-Ca3l_2-q.jpeg",
+    "file": "assets/c.Ca3l_2-q.jpeg",
     "src": "resources/js/assets/images/c.jpeg"
   },
   "resources/js/assets/images/flags/flag1.png": {
-    "file": "assets/flag1-CFmrKp4B.png",
+    "file": "assets/flag1.CFmrKp4B.png",
     "src": "resources/js/assets/images/flags/flag1.png"
   },
   "resources/js/assets/images/flags/flag2.png": {
-    "file": "assets/flag1-CFmrKp4B.png",
+    "file": "assets/flag1.CFmrKp4B.png",
     "src": "resources/js/assets/images/flags/flag1.png"
   },
   "resources/js/assets/images/flags/flag3.png": {
-    "file": "assets/flag1-CFmrKp4B.png",
+    "file": "assets/flag1.CFmrKp4B.png",
     "src": "resources/js/assets/images/flags/flag1.png"
   },
   "resources/js/assets/images/flags/flag4.png": {
-    "file": "assets/flag1-CFmrKp4B.png",
+    "file": "assets/flag1.CFmrKp4B.png",
     "src": "resources/js/assets/images/flags/flag1.png"
   },
   "resources/js/assets/images/flags/flag5.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
-  "resources/js/assets/images/kanban/svg/leads-icon.png": {
-    "file": "assets/leads-icon-D03NU8br.png",
-    "src": "resources/js/assets/images/kanban/svg/leads-icon.png"
-  },
-  "resources/js/assets/images/kanban/svg/leads-setting.svg": {
-    "file": "assets/leads-setting-BjGx_oMu.svg",
-    "src": "resources/js/assets/images/kanban/svg/leads-setting.svg"
+  "resources/js/assets/images/kanban/leads-icon.png": {
+    "file": "assets/leads-icon.D03NU8br.png",
+    "src": "resources/js/assets/images/kanban/leads-icon.png"
   },
   "resources/js/assets/images/product/product-img1.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/product/product-img2.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/product/product-img3.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/product/product-img4.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/product/product-img5.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/user-grid/user-grid-img13.png": {
-    "file": "assets/user-grid-img13-BFWLT_VE.png",
+    "file": "assets/user-grid-img13.BFWLT_VE.png",
     "src": "resources/js/assets/images/user-grid/user-grid-img13.png"
   },
   "resources/js/assets/images/user-grid/user-grid-img14.png": {
-    "file": "assets/user-grid-img14-BGOE21rx.png",
+    "file": "assets/user-grid-img14.BGOE21rx.png",
     "src": "resources/js/assets/images/user-grid/user-grid-img14.png"
   },
   "resources/js/assets/images/user-list/user-list1.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/user-list/user-list10.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/user-list/user-list2.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/user-list/user-list3.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/user-list/user-list4.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/user-list/user-list5.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/user-list/user-list6.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/user-list/user-list7.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/user-list/user-list8.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/user-list/user-list9.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/user.png": {
-    "file": "assets/user-g8XIt7bn.png",
+    "file": "assets/user.g8XIt7bn.png",
     "src": "resources/js/assets/images/user.png"
   },
   "resources/js/assets/images/users/user1.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/users/user2.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/users/user3.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/users/user4.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/assets/images/users/user5.png": {
-    "file": "assets/flag5-BD-cC3Ws.png",
+    "file": "assets/flag5.BD-cC3Ws.png",
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/main.js": {
-    "file": "assets/main-DMaol61M.js",
+    "file": "assets/main-Cv1dklpG.js",
     "name": "main",
     "src": "resources/js/main.js",
     "isEntry": true,
     "imports": [
-      "_sweetalert2.esm.all-C3RWJrIl.js"
+      "_sweetalert2.esm.all-DD9qEe1K.js"
     ],
     "dynamicImports": [
-      "_html2canvas-ByOsSqxb.js",
+      "_html2canvas-_8yBgjou.js",
       "node_modules/dompurify/dist/purify.es.mjs",
       "node_modules/canvg/lib/index.es.js"
     ],
     "css": [
-      "assets/main-CGCJwRV7.css"
+      "assets/main.9rm-L7RZ.css"
     ],
     "assets": [
-      "assets/flag5-BD-cC3Ws.png",
-      "assets/a-CNSB645Y.jpeg",
-      "assets/b-B4mY67FF.jpeg",
-      "assets/c-Ca3l_2-q.jpeg",
-      "assets/user-grid-img14-BGOE21rx.png",
-      "assets/user-grid-img13-BFWLT_VE.png",
-      "assets/avatar1-scz5y5rp.png",
-      "assets/forgot-pass-img-BLwoaPgo.png",
-      "assets/envelop-icon-BC-dOgaD.png",
-      "assets/leads-icon-D03NU8br.png",
-      "assets/leads-setting-BjGx_oMu.svg"
+      "assets/flag5.BD-cC3Ws.png",
+      "assets/a.CNSB645Y.jpeg",
+      "assets/b.B4mY67FF.jpeg",
+      "assets/c.Ca3l_2-q.jpeg",
+      "assets/user-grid-img14.BGOE21rx.png",
+      "assets/user-grid-img13.BFWLT_VE.png",
+      "assets/avatar1.scz5y5rp.png",
+      "assets/forgot-pass-img.BLwoaPgo.png",
+      "assets/envelop-icon.BC-dOgaD.png"
     ]
   }
 }

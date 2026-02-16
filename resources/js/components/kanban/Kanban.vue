@@ -46,24 +46,23 @@
                 </template>
 
                 <!-- Tab Content -->
-                <Leads v-if="tab.id === 'leads'" ref="leadsRef" />
+                <Deals v-if="tab.id === 'deals'" />
+                <Leads v-else-if="tab.id === 'leads'" ref="leadsRef" />
                 <Integration v-else-if="tab.id === 'integration'" />
-                <div v-else class="p-40 text-center text-secondary-light h-100 d-flex align-items-center justify-content-center">
-                    <div class="card p-40 radius-12 border shadow-sm">
-                        <h4 class="mb-0">{{ tab.name }} Content coming soon...</h4>
-                    </div>
-                </div>
             </b-tab>
 
             <!-- Header Actions at the end of the tabs row -->
             <template #tabs-end>
-                <div class="header-actions ms-auto d-flex align-items-center gap-11">
+                <div class="header-actions ms-auto d-flex align-items-center gap-11">   
 
                     <!-- Search: dropdown under input -->
                     <div class="search-area-column d-flex flex-column align-items-end position-relative" ref="searchDropdownAnchorRef">
                         <div
                             class="search-wrapper d-flex align-items-center"
-                            :class="{ 'search-wrapper-expanded': activeFilters && activeFilters.length }"
+                            :class="{
+                                'search-wrapper-expanded': activeFilters && activeFilters.length,
+                                'search-wrapper-tall': searchInputFocused
+                            }"
                         >
                             <div v-if="activeFilters.length" class="search-filters-pills d-flex align-items-center">
                                 <div
@@ -82,9 +81,20 @@
                                     <iconify-icon icon="lucide:x" class="close-tag-icon" @click.stop="clearMoreFilters" style="cursor: pointer;"></iconify-icon>
                                 </div>
                             </div>
-                            <div class="search-input-container d-flex align-items-center" @click="showSearchModal = true">
+                            <div
+                                class="search-input-container d-flex align-items-center"
+                                :class="{ 'search-input-container-tall': searchInputFocused }"
+                                @click="showSearchModal = true"
+                            >
                                 <iconify-icon icon="lucide:plus" class="search-plus-icon" style="cursor: pointer;"></iconify-icon>
-                                <b-form-input placeholder="Search" v-model="search" class="search-input" @focus="showSearchModal = true" @input="showSearchModal = false" />
+                                <b-form-input
+                                    placeholder="Search"
+                                    v-model="search"
+                                    class="search-input"
+                                    @focus="onSearchFocus"
+                                    @blur="onSearchBlur"
+                                    @input="showSearchModal = false"
+                                />
                             </div>
                             <iconify-icon v-if="activeFilter || (activeFilters && activeFilters.length || search)" icon="lucide:x" class="clear-search-icon" @click="clearSearchFilter" style="cursor: pointer;"></iconify-icon>
                         </div>
@@ -139,6 +149,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import Deals from './deals/Deals.vue'
 import Leads from './leadList/leads.vue'
 import Integration from './integration/Integration.vue'
 import LeadSearchModal from './leadList/LeadSearchModal.vue'
@@ -157,6 +168,7 @@ const showSelectedFiltersModal = ref(false)
 const showCreateModal = ref(false)
 const showCreateIntegrationModal = ref(false)
 const showAddStageModal = ref(false)
+const searchInputFocused = ref(false)
 const leadsRef = ref(null)
 const searchDropdownAnchorRef = ref(null)
 const search = ref('')
@@ -208,6 +220,13 @@ watch(search, () => {
         searchDebounceTimer.value = null
         applySearchToApi()
     }, SEARCH_DEBOUNCE_MS)
+})
+
+watch(showSearchModal, (isOpen) => {
+    if (!isOpen) {
+        if (searchBlurTimeout) clearTimeout(searchBlurTimeout)
+        searchInputFocused.value = false
+    }
 })
 
 function onDocumentClick(e) {
@@ -443,6 +462,22 @@ const clearSearchFilter = () => {
     lastQuery.value = null
     search.value = ''
     onLeadSearch(null)
+}
+
+let searchBlurTimeout = null
+function onSearchFocus() {
+    if (searchBlurTimeout) {
+        clearTimeout(searchBlurTimeout)
+        searchBlurTimeout = null
+    }
+    searchInputFocused.value = true
+    showSearchModal.value = true
+}
+function onSearchBlur() {
+    searchBlurTimeout = setTimeout(() => {
+        searchInputFocused.value = false
+        searchBlurTimeout = null
+    }, 200)
 }
 
 const handleCreateNew = () => {
@@ -691,11 +726,17 @@ const $showNotification = (message, type = 'info') => {
     flex-wrap: nowrap;
     width: max-content;
     max-width: 220px;
-    transition: max-width 0.35s ease;
+    transition: max-width 0.35s ease, min-height 0.3s ease, padding 0.3s ease, border-radius 0.3s ease;
 }
 
 .search-wrapper-expanded {
     max-width: 1020px;
+}
+
+.search-wrapper-tall {
+    min-height: 72px;
+    padding: 12px 12px 12px 14px;
+    border-radius: 16px;
 }
 
 .search-filters-pills {
@@ -758,11 +799,18 @@ const $showNotification = (message, type = 'info') => {
 .search-input-container {
     color: #94A3B8;
     height: 32px;
+    min-height: 32px;
     display: flex;
     align-items: center;
     flex-shrink: 0;
     width: 180px;
     min-width: 180px;
+    transition: height 0.3s ease, min-height 0.3s ease;
+}
+
+.search-input-container-tall {
+    height: 48px;
+    min-height: 48px;
 }
 
 .search-plus-icon {
@@ -782,8 +830,15 @@ const $showNotification = (message, type = 'info') => {
     background: transparent !important;
     padding: 0 !important;
     height: 100% !important;
+    min-height: 32px;
     display: flex;
     align-items: center;
+    transition: min-height 0.3s ease;
+}
+
+.search-input-container-tall .search-input {
+    min-height: 48px;
+    font-size: 15px;
 }
 
 .search-input::placeholder {
