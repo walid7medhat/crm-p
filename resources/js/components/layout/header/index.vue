@@ -492,7 +492,7 @@ const featuresItems = [
 ]
 const projectsItems = [
   { path: '/projects', label: 'Projects List', colorClass: 'text-white w-auto', permission: 'projects-list' },
-  { path: '/add-projects', label: 'Add Project', colorClass: 'text-white w-auto', permission: 'projects-create' },
+//   { path: '/add-projects', label: 'Add Project', colorClass: 'text-white w-auto', permission: 'projects-create' },
 ]
 
 const unitViewsItems = [

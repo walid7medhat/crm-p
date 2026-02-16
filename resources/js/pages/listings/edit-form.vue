@@ -1114,37 +1114,7 @@ const importedFloorPlansCount = computed(() => {
 });
 
 
-// ============ FLOOR PLANS - COMPUTED ============
-const allPropertyFloorPlans = computed(() => {
-  const all = [];
-  
-  existingFloorPlans.value.forEach(plan => {
-    all.push({
-      ...plan,
-      type: 'existing',
-      customName: plan.name
-    });
-  });
-  
-  importedFloorPlans.value.forEach(plan => {
-    all.push({
-      ...plan,
-      type: 'imported',
-      customName: plan.customName || plan.name
-    });
-  });
-  
-  newFloorPlans.value.forEach(plan => {
-    all.push({
-      ...plan,
-      type: 'new',
-      customName: plan.customName || plan.name,
-      tempId: `new-${Date.now()}-${Math.random()}`
-    });
-  });
-  
-  return all;
-});
+
 
 
 
@@ -1290,6 +1260,10 @@ const isLoadingPropertyTypes = ref(false);
 const areas = ref([]);
 const isLoadingAreas = ref(false);
 const hotDealOptions = ['Yes', 'No'];
+
+const selectedProjectFloorPlan = ref(null);
+const uploadedFloorPlan = ref(null);
+
 
 const form = ref({
   title: "",
@@ -2325,17 +2299,30 @@ const isExistingFloorPlan = (projectFloorPlanId) => {
 };
 
 const toggleImportFloorPlan = (projectFloorPlan) => {
-  if (isFloorPlanImported(projectFloorPlan.id)) {
-    // Remove from imported
-    const index = importedFloorPlans.value.findIndex(
-      plan => plan.project_floor_plan_id === projectFloorPlan.id
+  if (existingFloorPlans.value.length > 0) {
+    proxy.$showNotification(
+      "❌ Cannot select floor plan. This property already has an existing floor plan. Please delete it first.",
+      "error"
     );
-    if (index !== -1) {
-      importedFloorPlans.value.splice(index, 1);
-      proxy.$showNotification(`🗑️ Removed "${projectFloorPlan.name}"`, "info");
-    }
+    return;
+  }
+  
+  if (selectedProjectFloorPlan.value?.project_floor_plan_id === projectFloorPlan.id) {
+    selectedProjectFloorPlan.value = null;
+    importedFloorPlans.value = [];
+    proxy.$showNotification(`🗑️ Removed "${projectFloorPlan.name}"`, "info");
   } else {
-    // Add to imported
+    if (newFloorPlans.value.length > 0) {
+      if (!confirm('You have an uploaded floor plan. Replace it with this project floor plan?')) {
+        return;
+      }
+      if (newFloorPlans.value[0].preview) {
+        URL.revokeObjectURL(newFloorPlans.value[0].preview);
+      }
+      newFloorPlans.value = [];
+      uploadedFloorPlan.value = null;
+    }
+    
     const importedPlan = {
       id: `imported-${Date.now()}-${projectFloorPlan.id}`,
       name: projectFloorPlan.name,
@@ -2348,46 +2335,121 @@ const toggleImportFloorPlan = (projectFloorPlan) => {
       type: 'imported'
     };
     
-    importedFloorPlans.value.push(importedPlan);
-    proxy.$showNotification(`✅ Added "${projectFloorPlan.name}"`, "success");
+    importedFloorPlans.value = [importedPlan];
+    selectedProjectFloorPlan.value = importedPlan;
+    
+    proxy.$showNotification(`✅ Selected "${projectFloorPlan.name}" as floor plan`, "success");
   }
 };
 
 const handleFloorPlanUpload = (e) => {
+  if (existingFloorPlans.value.length > 0) {
+    proxy.$showNotification(
+      "❌ Cannot upload floor plan. This property already has an existing floor plan. Please delete it first.",
+      "error"
+    );
+    e.target.value = '';
+    return;
+  }
+  
   const files = Array.from(e.target.files);
   if (files.length > 0) {
+    const file = files[0];
+    
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml', 'image/webp'];
-    const validFiles = files.filter(file => {
-      if (!validTypes.includes(file.type)) {
-        proxy.$showNotification(`❌ File "${file.name}" is not a valid image type.`, "error");
-        return false;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        proxy.$showNotification(`❌ Floor plan "${file.name}" is too large. Max size is 10MB.`, "error");
-        return false;
-      }
-      return true;
-    });
-
-    if (validFiles.length > 0) {
-      const filesWithNames = validFiles.map(file => ({
-        file: file,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        customName: file.name.replace(/\.[^/.]+$/, ""),
-        preview: URL.createObjectURL(file),
-        is_new: true,
-        type: 'new'
-      }));
-      
-      newFloorPlans.value = [...newFloorPlans.value, ...filesWithNames];
+    
+    if (!validTypes.includes(file.type)) {
+      proxy.$showNotification(`❌ File "${file.name}" is not a valid image type.`, "error");
       e.target.value = '';
-      proxy.$showNotification(`✅ Added ${validFiles.length} floor plan(s)`, "success");
+      return;
     }
+    
+    if (file.size > 10 * 1024 * 1024) {
+      proxy.$showNotification(`❌ Floor plan "${file.name}" is too large. Max size is 10MB.`, "error");
+      e.target.value = '';
+      return;
+    }
+
+    if (selectedProjectFloorPlan.value) {
+      if (!confirm('You have a project floor plan selected. Replace it with this uploaded file?')) {
+        e.target.value = '';
+        return;
+      }
+      selectedProjectFloorPlan.value = null;
+      importedFloorPlans.value = [];
+    }
+
+    const newPlan = {
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      customName: file.name.replace(/\.[^/.]+$/, ""),
+      preview: URL.createObjectURL(file),
+      is_new: true,
+      type: 'new'
+    };
+    
+    newFloorPlans.value = [newPlan];
+    uploadedFloorPlan.value = newPlan;
+    
+    e.target.value = '';
+    proxy.$showNotification(`✅ Floor plan uploaded: ${file.name}`, "success");
   }
 };
 
+
+const hasExistingFloorPlan = computed(() => {
+  return existingFloorPlans.value.length > 0;
+});
+
+const allPropertyFloorPlans = computed(() => {
+  const all = [];
+  
+  if (existingFloorPlans.value.length > 0) {
+    all.push({
+      ...existingFloorPlans.value[0],
+      type: 'existing',
+      customName: existingFloorPlans.value[0].name
+    });
+  } 
+  else if (importedFloorPlans.value.length > 0) {
+    all.push({
+      ...importedFloorPlans.value[0],
+      type: 'imported',
+      customName: importedFloorPlans.value[0].customName || importedFloorPlans.value[0].name
+    });
+  } 
+  else if (newFloorPlans.value.length > 0) {
+    all.push({
+      ...newFloorPlans.value[0],
+      type: 'new',
+      customName: newFloorPlans.value[0].customName || newFloorPlans.value[0].name,
+      tempId: `new-${Date.now()}-${Math.random()}`
+    });
+  }
+  
+  return all;
+});
+
+const removeCurrentFloorPlan = () => {
+  if (existingFloorPlans.value.length > 0) {
+    if (confirm('Are you sure you want to delete the existing floor plan?')) {
+      deleteFloorPlan(existingFloorPlans.value[0].id);
+    }
+  } else if (importedFloorPlans.value.length > 0) {
+    selectedProjectFloorPlan.value = null;
+    importedFloorPlans.value = [];
+    proxy.$showNotification("🗑️ Project floor plan removed", "info");
+  } else if (newFloorPlans.value.length > 0) {
+    if (newFloorPlans.value[0].preview) {
+      URL.revokeObjectURL(newFloorPlans.value[0].preview);
+    }
+    newFloorPlans.value = [];
+    uploadedFloorPlan.value = null;
+    proxy.$showNotification("🗑️ Uploaded floor plan removed", "info");
+  }
+};
 const updatePlanName = (plan) => {
   if (plan.customName && plan.customName.trim() !== '') {
     plan.name = plan.customName.trim();
@@ -2430,25 +2492,18 @@ const editFloorPlanName = async (plan) => {
 
 const removePlan = (plan, index) => {
   if (plan.type === 'existing' && plan.id) {
-    // Delete from server
     if (confirm('Are you sure you want to delete this floor plan?')) {
       deleteFloorPlan(plan.id);
     }
   } else if (plan.type === 'imported') {
-    // Remove from imported
-    const importedIndex = importedFloorPlans.value.findIndex(p => p.id === plan.id);
-    if (importedIndex !== -1) {
-      importedFloorPlans.value.splice(importedIndex, 1);
-      proxy.$showNotification("🗑️ Imported plan removed", "info");
-    }
+    selectedProjectFloorPlan.value = null;
+    importedFloorPlans.value = [];
+    proxy.$showNotification("🗑️ Project floor plan removed", "info");
   } else if (plan.type === 'new') {
-    // Remove new upload
     if (plan.preview) URL.revokeObjectURL(plan.preview);
-    const newIndex = newFloorPlans.value.findIndex(p => p.tempId === plan.tempId);
-    if (newIndex !== -1) {
-      newFloorPlans.value.splice(newIndex, 1);
-      proxy.$showNotification("🗑️ Floor plan removed", "info");
-    }
+    newFloorPlans.value = [];
+    uploadedFloorPlan.value = null;
+    proxy.$showNotification("🗑️ Uploaded floor plan removed", "info");
   }
 };
 

@@ -26,12 +26,12 @@
                 </div>
 
                 <div class="d-flex gap-2">
-                    <button v-if="this.$hasPermission('projects-create')" 
-                        class="btn btn-primary"
-                        @click="addProject">
-                        <iconify-icon icon="lucide:plus" class="me-2"></iconify-icon>
-                        Add Project
-                    </button>
+                    <!--<button v-if="this.$hasPermission('projects-create')" -->
+                    <!--    class="btn btn-primary"-->
+                    <!--    @click="addProject">-->
+                    <!--    <iconify-icon icon="lucide:plus" class="me-2"></iconify-icon>-->
+                    <!--    Add Project-->
+                    <!--</button>-->
                     
                     <div class="icon-field d-flex align-items-center" style="padding-bottom: 5px;">
                         <span class="me-13">Search:</span>
@@ -74,6 +74,7 @@
                                     <th @click="sortBy('status')" class="sortable">Status</th>
                                     <th @click="sortBy('count_listing')" class="sortable">Count of Listing</th>
                                     <th @click="sortBy('duplicated')" class="sortable">Duplicated</th>
+                                    <th>Completed</th>
                                     <th @click="sortBy('created_at')" class="sortable">Created Date</th>
 
                                 <th scope="col">Actions</th>

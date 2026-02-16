@@ -1110,7 +1110,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                 return ApiResponse::error('Floor plan not found for this listing', 404);
             }
             
-            if ($floorPlan->image_path) {
+            if ($floorPlan->image_path && $floorPlan->is_from_project==0) {
                 ImageHelper::deleteImage($floorPlan->image_path);
             }
             
