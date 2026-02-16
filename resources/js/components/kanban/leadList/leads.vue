@@ -410,6 +410,7 @@ const initializeLeadUpdates = () => {
             handleLeadUpdate(event, 'assigned')
         })
 
+
         echoListeners.value.push(channel)
     } catch (error) {
         startPolling()
@@ -449,6 +450,10 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
             break
         case 'stage_changed':
             handleStageChanged(leadData, event.changes)
+            break
+        case 'revert':
+            console.log("revert");
+            handleUpdatedLead(leadData, 'revert')
             break
         default:
             // For unknown action types, try to handle as update

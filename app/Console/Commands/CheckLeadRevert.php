@@ -34,15 +34,20 @@ class CheckLeadRevert extends Command
         
         foreach ($leadsToRevert as $lead) {
             $oldStage=$lead->stage;
+            $oldPerson=$lead->responsiblePerson;
             $lead->revertToStageOne();
+            $lead->refresh();
             $revertedCount++;
             $newStage=$lead->stage;
             $this->info("Lead ID {$lead->id} reverted to stage 1");
                $changes = [
                 'old_stage' => $oldStage->name,
-                'new_stage' => $newStage->name
+                'new_stage' => $newStage->name,
+                 'old_person' => $oldPerson?->name,
+                    'new_person' => $lead->initialResponsiblePerson?->name,
             ];
-            broadcast(new LeadUpdated($lead, 'stage_changed', null, $changes));
+            
+            // broadcast(new LeadUpdated($lead, 'revert', null, $changes));
             Log::info("Lead ID {$lead->id} reverted to stage 1 due to inactivity");
         }
 

@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Carbon\Carbon;
+use App\Helpers\LeadHistoryHelper;
+use App\Events\LeadUpdated;
+
 class Lead extends Model
 {
     // 
@@ -16,6 +19,22 @@ class Lead extends Model
         'last_stage_change_at' => 'datetime'
 
     ];
+    protected static function booted()
+    {
+            static::creating(function ($lead) {
+                if ($lead->responsible_person_id && !$lead->initial_responsible_person_id) {
+                    $lead->initial_responsible_person_id = $lead->responsible_person_id;
+                }
+            });
+        // static::updating(function ($lead) {
+        //     if (
+        //         $lead->isDirty('responsible_person_id') &&
+        //         !$lead->initial_responsible_person_id
+        //     ) {
+        //         $lead->initial_responsible_person_id = $lead->getOriginal('responsible_person_id');
+        //     }
+        // });
+    }
 
         public function addedBy()
     {
@@ -39,6 +58,11 @@ class Lead extends Model
     {
         return $this->belongsTo(User::class, 'responsible_person_id');
     }
+    public function initialResponsiblePerson()
+{
+    return $this->belongsTo(User::class, 'initial_responsible_person_id');
+}
+
 
  
     public function participants()
@@ -80,17 +104,52 @@ class Lead extends Model
         return false;
     }
 
-    public function revertToStageOne(): void
-    {
-        $stageOne = Stage::where('order', 1)->first();
+         public function revertToStageOne(): void
+        {
+            $stageOne = Stage::where('order', 1)->first();
+            $response = $this->initial_responsible_person_id;
+            $responseName = $this->initialResponsiblePerson?->name;
         
-        if ($stageOne) {
-            $this->update([
-                'stage_id' => $stageOne->id,
-                'last_stage_change_at' => now()
-            ]);
+            $oldPerson = $this->responsiblePerson;
+            $oldStage  = $this->stage;
+        
+            if (!$response) {
+                $response = $this->responsiblePerson?->admin_parent?->id;
+                $responseName=$this->responsiblePerson?->admin_parent?->name;
+            }
+        
+            if ($stageOne) {
+        
+                $this->updateQuietly([
+                    'stage_id' => $stageOne->id,
+                    'last_stage_change_at' => now(),
+                    'responsible_person_id' => $response,
+                ]);
+        
+                $this->refresh(); // 🔥 مهم
+        
+                LeadHistoryHelper::log(
+                    $this->id,
+                    [
+                        'action' => 'revert',
+                        'old_person' => $oldPerson?->name,
+                        'new_person' => $this->initialResponsiblePerson?->name,
+                        'old_stage'  => $oldStage?->name,
+                        'new_stage'  => $this->stage?->name
+                    ]
+                );
+        
+                $changes = [
+                    'old_stage'  => $oldStage?->name,
+                    'new_stage'  => $this->stage?->name,
+                    'old_person' => $oldPerson?->name,
+                    'new_person' => $this->initialResponsiblePerson?->name,
+                ];
+        
+                broadcast(new LeadUpdated($this, 'revert', null, $changes));
+            }
         }
-    }
+
 
     public function scopeNeedsRevert($query)
     {

@@ -98,7 +98,7 @@ class LeadUpdated implements ShouldBroadcast
     {
         $userName = $this->getActorName();
         $leadName = $this->lead->lead_name ?: "Lead #{$this->lead->lead_number}";
-
+\Log::info($this->actionType);
         switch ($this->actionType) {
             case 'created':
                 return "{$userName} created a new lead: {$leadName}";
@@ -113,6 +113,12 @@ class LeadUpdated implements ShouldBroadcast
                 $oldStage = $this->changes['old_stage'] ?? 'Previous Stage';
                 $newStage = $this->lead->stage?->name ?? 'New Stage';
                 return "{$userName} moved lead {$leadName} from {$oldStage} to {$newStage}";
+                
+           case 'revert':
+               $oldStage = $this->changes['old_stage'] ?? 'Previous Stage';
+               $newStage = $this->lead->stage?->name ?? 'New Stage';
+               $newPerson=$this->changes['new_person']?? $this->lead->responsiblePerson?->name;
+               return "lead #{$leadName} reverted to {$newStage} and assign to {$newPerson}";
 
             case 'assigned':
                 $oldPerson = $this->changes['old_person'] ?? 'Previous Person';
