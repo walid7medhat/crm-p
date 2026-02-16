@@ -155,7 +155,7 @@
               </div>
 
               <h5 class="property-title mb-2">{{ property.title || 'No Title' }}</h5>
-              <p class="property-location mb-3">
+              <p class="property-location mb-3" :title="property.area">
                 <i class="ri-map-pin-line me-1"></i>{{ property.area }}
               </p>
 
@@ -802,6 +802,9 @@ const fetchProperties = async (filters = {}, page = 1) => {
 .property-location {
   font-size: 0.8rem;
   color: #777;
+   overflow: hidden;
+  text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .view-more-btn {

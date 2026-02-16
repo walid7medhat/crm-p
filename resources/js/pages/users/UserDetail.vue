@@ -214,7 +214,7 @@
                                                             </div>
 
                                                             <h6 class="property-title mb-2">{{ property.title || 'No Title' }}</h6>
-                                                            <p class="property-location mb-3 text-muted">
+                                                            <p class="property-location mb-3 text-muted" :title="property.area">
                                                                 <i class="ri-map-pin-line me-1"></i>{{ getPropertyLocation(property) }}
                                                             </p>
 
@@ -1079,6 +1079,9 @@ export default {
     font-size: 0.75rem;
     margin-bottom: 0.75rem;
     color: #6c757d;
+     overflow: hidden;
+  text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .property-details {
