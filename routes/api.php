@@ -311,3 +311,7 @@ Route::middleware('auth:api')->group(function () {
 // Public routes for invitation registration
 Route::get('/invitation/{token}', [UserInvitationController::class, 'validateInvitation']);
 Route::post('/register', [UserInvitationController::class, 'registerWithInvitation']);
+
+
+Route::get('/webhook/facebook', [IntegrationController::class, 'verify']);
+Route::post('/webhook/facebook', [IntegrationController::class, 'handle']);

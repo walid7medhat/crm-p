@@ -37,7 +37,6 @@ class LeadUpdated implements ShouldBroadcast
         $this->userId = $userId;
         $this->changes = $changes;
 
-        // تحميل العلاقات بدون كسر لو null
         $this->lead->loadMissing([
             'stage',
             'responsiblePerson',
@@ -47,25 +46,19 @@ class LeadUpdated implements ShouldBroadcast
         ]);
     }
 
-    /**
-     * القنوات اللي هيتبعت عليها الحدث
-     */
+ 
     public function broadcastOn()
     {
         return $this->getUserChannels();
     }
 
-    /**
-     * اسم الحدث
-     */
+ 
     public function broadcastAs()
     {
         return 'lead.updated';
     }
 
-    /**
-     * الداتا اللي بتتبعت
-     */
+  
     public function broadcastWith(): array
     {
         return [
@@ -79,9 +72,7 @@ class LeadUpdated implements ShouldBroadcast
         ];
     }
 
-    /**
-     * اسم الشخص اللي عمل الأكشن
-     */
+   
     private function getActorName(): string
     {
         if ($this->userId) {
@@ -91,9 +82,7 @@ class LeadUpdated implements ShouldBroadcast
         return 'Integration';
     }
 
-    /**
-     * رسالة الحدث
-     */
+    
     private function getMessage(): string
     {
         $userName = $this->getActorName();
@@ -130,9 +119,7 @@ class LeadUpdated implements ShouldBroadcast
         }
     }
 
-    /**
-     * قنوات المستخدمين اللي ليهم علاقة بالـ lead
-     */
+   
     private function getUserChannels(): array
     {
         $channels = [];
@@ -157,7 +144,7 @@ class LeadUpdated implements ShouldBroadcast
             }
         }
 
-        // hierarchy managers
+        // // hierarchy managers
         if ($this->lead->responsible_person_id) {
             $responsibleUser = User::find($this->lead->responsible_person_id);
 
@@ -169,7 +156,7 @@ class LeadUpdated implements ShouldBroadcast
         }
     // ✅ Admin & Super Admin
     $admins = User::whereHas('roles', function ($q) {
-        $q->whereIn('name', ['admin', 'super_admin']);
+        $q->whereIn('name', [ 'super_admin','admin']);
     })->pluck('id');
 
     foreach ($admins as $adminId) {
