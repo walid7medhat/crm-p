@@ -1,7 +1,7 @@
 <template>
     <div class="row g-4">
         <!-- Left Column: Lead Information -->
-        <div class="col-md-4">
+        <div class="col-md-5">
             <div class="info-card bg-white p-3 radius-12 shadow-sm">
                 <div class="modal-header-custom d-flex justify-content-between align-items-center pb-9 mb-3 border-bottom">
                 <div class="d-flex align-items-center gap-2">
@@ -27,10 +27,18 @@
         </div>
 
         <!-- Right Column: Activity & Comments -->
-        <div class="col-md-8">
+        <div class="col-md-7">
             <div class="activity-card bg-white p-3 radius-12 shadow-sm">
                 <!-- Activity/Comments Toggle -->
                 <div class="d-flex gap-2 mb-4 p-1 radius-100 w-fit-content toggle-buttons-container">
+                      <button 
+                        class="btn-toggle d-flex align-items-center gap-2 px-3 py-1 radius-100"
+                        :class="{ active: activeViewTab === 'comments' }"
+                        @click="activeViewTab = 'comments'"
+                    >
+                        <iconify-icon icon="lucide:message-square"></iconify-icon>
+                        Comments
+                    </button>
                     <button 
                         class="btn-toggle d-flex align-items-center gap-2 px-3 py-1 radius-100"
                         :class="{ active: activeViewTab === 'activity' }"
@@ -39,14 +47,7 @@
                         <iconify-icon icon="lucide:clock-3"></iconify-icon>
                         Activity
                     </button>
-                    <button 
-                        class="btn-toggle d-flex align-items-center gap-2 px-3 py-1 radius-100"
-                        :class="{ active: activeViewTab === 'comments' }"
-                        @click="activeViewTab = 'comments'"
-                    >
-                        <iconify-icon icon="lucide:message-square"></iconify-icon>
-                        Comments
-                    </button>
+                  
                 </div>
 
                 <!-- Activity View -->

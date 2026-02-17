@@ -8,6 +8,7 @@
         centered
         body-class="p-0"
             @cancel="onModalCancel" 
+            @hidden="onModalHidden"
     >
         <div class="view-lead-modal-content p-3">
             <!-- Header -->
@@ -47,14 +48,14 @@
             <div class="modal-body-custom p-4">
                 <!-- General Tab Content -->
                 <GeneralTab 
-                    v-show="activeTab === 'general'" 
+                    v-if="activeTab === 'general'" 
                     :lead="lead" 
                     :stage-id="leadStageId"
                     @update:lead="handleLeadUpdateFromTab"
                 />
 
                 <!-- History Tab Content -->
-                <HistoryTab v-show="activeTab === 'history'" :lead="lead" :is-active="activeTab === 'history'" />
+                <HistoryTab v-if="activeTab === 'history'" :lead="lead" :is-active="activeTab === 'history'" />
             </div>
         </div>
     </b-modal>
@@ -84,24 +85,42 @@ const leadStageId = ref(null)
 const activeTab = ref('general')
 const echoListener = ref(null)
 const echoAssignedListener = ref(null)
+watch(() => show.value, (val) => {
+    if (!val) {
+        activeTab.value = 'general'
+    }
+})
 
 const switchTab = (tab) => {
     activeTab.value = tab
 }
+const resetActiveTab = () => {
+    console.log('🔄 ViewLeadModal: Resetting active tab to General')
+    activeTab.value = 'general'
+}
+
 const onModalClose = () => {
     console.log('❌ ViewLeadModal: Close button clicked')
     if (generalTabRef.value && typeof generalTabRef.value.resetEditMode === 'function') {
         generalTabRef.value.resetEditMode()
     }
+    resetActiveTab() 
 }
 
-// ✅ عند الضغط على ESC أو النقر خارج المودال
 const onModalCancel = () => {
     console.log('🚫 ViewLeadModal: Modal cancelled (ESC or backdrop click)')
     if (generalTabRef.value && typeof generalTabRef.value.resetEditMode === 'function') {
         generalTabRef.value.resetEditMode()
     }
+    resetActiveTab()
 }
+
+const onModalHidden = () => {
+    console.log('👻 ViewLeadModal: Modal hidden completely')
+        resetActiveTab()
+}
+
+
 const fetchLead = async () => {
     try {
         const response = await api.get(`/leads/${props.leadId}`)
@@ -441,6 +460,7 @@ watch(show, (val) => {
     } else {
         console.log('   ❌ Modal closed, cleaning up listeners...')
         cleanup()
+         resetActiveTab()
     }
     console.log('   📤 Emitting update:modelValue:', val)
     emit('update:modelValue', val)

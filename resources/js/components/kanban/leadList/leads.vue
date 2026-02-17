@@ -463,7 +463,8 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
             handleUpdatedLead(leadData, 'updated')
             break
         case 'assigned':
-            handleUpdatedLead(leadData, 'assigned')
+            handleAssignedLead(leadData, event.changes)
+
             break
         case 'deleted':
             handleDeletedLead(leadData)
@@ -481,6 +482,27 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
     }
     
     showLeadNotification(event)
+}
+const handleAssignedLead = (lead, changes) => {
+    const user = JSON.parse(localStorage.getItem('user'))
+    const currentUserId = user?.id
+
+    if (!lead || !lead.id) return
+
+    const oldPersonId = changes?.old_person_id ?? null
+    const newPersonId = lead.responsible_person_id
+
+    // لو أنا الشخص القديم → امسح
+    if (oldPersonId && oldPersonId === currentUserId) {
+        removeLeadFromColumns(lead.id)
+        return
+    }
+
+    // لو أنا الشخص الجديد → أضف أو حدّث
+    if (newPersonId === currentUserId) {
+        handleUpdatedLead(lead, 'assigned')
+        return
+    }
 }
 
 const handleNewLead = (lead) => {

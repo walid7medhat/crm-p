@@ -263,6 +263,7 @@ class LeadController extends Controller
                     $newPerson = User::find($leadData['responsible_person_id']);
                     
                     $changes = [
+                        'old_person_id'=>$oldPerson?->id,
                         'old_person' => $oldPerson?->name,
                         'new_person' => $newPerson?->name,
                         'action' => 'assigned'
@@ -371,6 +372,7 @@ class LeadController extends Controller
             'revert'=>null,
         ]);
                 $changes = [
+                    'old_person_id'=>$oldPerson?->id,
             'old_person' => $oldPerson?->name,
             'new_person' => $responsiblePerson?->name
         ];

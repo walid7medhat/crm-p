@@ -46,14 +46,14 @@
             <div class="modal-body-custom p-4">
                 <!-- General Tab Content -->
                 <GeneralTab 
-                    v-show="activeTab === 'general'" 
+                    v-if="activeTab === 'general'" 
                     :lead="lead" 
                     :stage-id="leadStageId"
                     @update:lead="handleLeadUpdateFromTab"
                 />
 
                 <!-- History Tab Content -->
-                <HistoryTab v-show="activeTab === 'history'" :lead="lead" :is-active="activeTab === 'history'" />
+                <HistoryTab v-if="activeTab === 'history'" :lead="lead" :is-active="activeTab === 'history'" />
             </div>
         </div>
     </b-modal>
@@ -426,6 +426,9 @@ watch(show, (val) => {
     } else {
         console.log('   ❌ Modal closed, cleaning up listeners...')
         cleanup()
+                activeTab.value = 'general'
+                
+
     }
     console.log('   📤 Emitting update:modelValue:', val)
     emit('update:modelValue', val)

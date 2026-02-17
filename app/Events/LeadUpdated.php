@@ -123,7 +123,9 @@ class LeadUpdated implements ShouldBroadcast
     private function getUserChannels(): array
     {
         $channels = [];
-
+        if($this->actionType=='assigned'){
+              $channels[] = new PrivateChannel('user.' . $this->changes['old_person_id']);
+        }
         if ($this->lead->responsible_person_id) {
             $channels[] = new PrivateChannel('user.' . $this->lead->responsible_person_id);
         }
@@ -155,6 +157,7 @@ class LeadUpdated implements ShouldBroadcast
             }
         }
     // ✅ Admin & Super Admin
+// only super admin
     $admins = User::whereHas('roles', function ($q) {
         $q->whereIn('name', [ 'super_admin','admin']);
     })->pluck('id');
