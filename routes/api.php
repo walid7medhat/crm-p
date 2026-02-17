@@ -30,6 +30,7 @@ use App\Models\UserInvitation;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Http\Controllers\Api\LeadActivityController;
+use App\Http\Controllers\Api\IntegrationController;
 
 Route::get('/test-email', function () {
     try {
@@ -191,6 +192,15 @@ Route::prefix('leads')->group(function(){
 });
   // =================sources=============
         Route::apiResource('sources', SourceController::class);
+
+    // Integrations (Meta forms connect)
+    Route::get('integrations', [IntegrationController::class, 'index']);
+    Route::post('integrations/meta/pages', [IntegrationController::class, 'fetchMetaPages']);
+    Route::post('integrations/meta/forms', [IntegrationController::class, 'fetchMetaForms']);
+    Route::post('integrations/meta', [IntegrationController::class, 'fetchMetaForms']); // alias for same action
+    Route::post('integrations', [IntegrationController::class, 'store']);
+    Route::patch('integrations/{integration}/toggle-active', [IntegrationController::class, 'toggleActive']);
+    Route::delete('integrations/{integration}', [IntegrationController::class, 'destroy']);
 Route::prefix('listings')->group(function(){
     
     Route::get('/{id}/comments', [ListingCommentController::class, 'index']);

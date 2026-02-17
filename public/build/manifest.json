@@ -1,6 +1,6 @@
 {
-  "_html2canvas-_8yBgjou.js": {
-    "file": "assets/html2canvas-_8yBgjou.js",
+  "_html2canvas-CJ5tLpNs.js": {
+    "file": "assets/html2canvas-CJ5tLpNs.js",
     "name": "html2canvas",
     "isDynamicEntry": true,
     "imports": [
@@ -8,27 +8,27 @@
     ]
   },
   "_sweetalert2.esm.all-!~{004}~.js": {
-    "file": "assets/sweetalert2.esm.B0w2bEnQ.css",
+    "file": "assets/sweetalert2.esm.CJy4pkoV.css",
     "src": "_sweetalert2.esm.all-!~{004}~.js"
   },
-  "_sweetalert2.esm.all-DD9qEe1K.js": {
-    "file": "assets/sweetalert2.esm.all-DD9qEe1K.js",
+  "_sweetalert2.esm.all-D917OO_H.js": {
+    "file": "assets/sweetalert2.esm.all-D917OO_H.js",
     "name": "sweetalert2.esm.all",
     "css": [
-      "assets/sweetalert2.esm.B0w2bEnQ.css"
+      "assets/sweetalert2.esm.CJy4pkoV.css"
     ],
     "assets": [
       "assets/user.g8XIt7bn.png"
     ]
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-CNRizKnI.js",
+    "file": "assets/index.es-BAxG3ehg.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/main.js",
-      "_sweetalert2.esm.all-DD9qEe1K.js"
+      "_sweetalert2.esm.all-D917OO_H.js"
     ]
   },
   "node_modules/dompurify/dist/purify.es.mjs": {
@@ -43,12 +43,12 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-CKMlUzWH.js",
+    "file": "assets/app-DOeWPv0F.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_sweetalert2.esm.all-DD9qEe1K.js"
+      "_sweetalert2.esm.all-D917OO_H.js"
     ]
   },
   "resources/js/assets/images/a.jpeg": {
@@ -192,20 +192,20 @@
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/main.js": {
-    "file": "assets/main-Cv1dklpG.js",
+    "file": "assets/main-D9DzcFj7.js",
     "name": "main",
     "src": "resources/js/main.js",
     "isEntry": true,
     "imports": [
-      "_sweetalert2.esm.all-DD9qEe1K.js"
+      "_sweetalert2.esm.all-D917OO_H.js"
     ],
     "dynamicImports": [
-      "_html2canvas-_8yBgjou.js",
+      "_html2canvas-CJ5tLpNs.js",
       "node_modules/dompurify/dist/purify.es.mjs",
       "node_modules/canvg/lib/index.es.js"
     ],
     "css": [
-      "assets/main.9rm-L7RZ.css"
+      "assets/main.9bPUzaZB.css"
     ],
     "assets": [
       "assets/flag5.BD-cC3Ws.png",

@@ -121,40 +121,24 @@ watch(() => props.stageId, (newStageId) => {
     }
 })
 
-// Watch for lead changes
+// Watch for lead stage id (for stage selector)
 watch(() => props.lead?.stage?.id, (newStageId) => {
     if (newStageId && !props.stageId) {
         selectedStageId.value = newStageId
     }
 })
 
-// مراقبة تغييرات lead
-watch(() => props.lead, (newLead, oldLead) => {
-    console.log('📝 GeneralTab: lead changed from', oldLead?.id, 'to', newLead?.id)
-    if (newLead && (!oldLead || newLead.id !== oldLead.id)) {
-        // إعادة تعيين وضع التعديل عند تغيير الليد
+// Watch only lead id to avoid deep reactivity and repeated runs when lead is undefined (fixes SweetAlert2 stack overflow)
+watch(() => props.lead?.id, (newId, oldId) => {
+    if (newId == null && oldId == null) return
+    if (newId && newId !== oldId) {
         isEditMode.value = false
-        // إعادة تعيين التبويب النشط إلى comments (أو أي تبويب افتراضي)
         activeViewTab.value = 'comments'
     }
-    
-    // تحديث selectedStageId
-    if (newLead) {
-        if (newLead.stage_id) {
-            selectedStageId.value = newLead.stage_id
-        } else if (newLead.stage?.id) {
-            selectedStageId.value = newLead.stage.id
-        }
-    }
-}, { deep: true, immediate: true })
-
-
-
-watch(() => props.lead?.id, (newId, oldId) => {
-    console.log('📝 GeneralTab: lead.id changed from', oldId, 'to', newId)
-    if (newId && newId !== oldId) {
-        // تأكيد إعادة تعيين وضع التعديل
-        isEditMode.value = false
+    const lead = props.lead
+    if (lead) {
+        if (lead.stage_id) selectedStageId.value = lead.stage_id
+        else if (lead.stage?.id) selectedStageId.value = lead.stage.id
     }
 })
 

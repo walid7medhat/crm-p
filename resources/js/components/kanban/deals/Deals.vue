@@ -155,7 +155,12 @@ const columns = computed(() => {
 })
 
 function viewDeal(deal, column) {
-  selectedDeal.value = { ...deal, stageTitle: column?.title }
+  selectedDeal.value = {
+    ...deal,
+    stageTitle: column?.title,
+    stageId: column?.id,
+    deal_type: activeTypeTab.value
+  }
   showViewDealModal.value = true
 }
 

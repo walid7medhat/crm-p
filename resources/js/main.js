@@ -117,7 +117,14 @@ window.Echo = new Echo({
 
 
 const app = createApp(App)
-app.config.devtools = true 
+app.config.devtools = true
+
+app.config.errorHandler = (err, instance, info) => {
+  console.error('[Vue Error]', info, err)
+  if (instance && instance.type) {
+    console.error('[Vue Error] Component:', instance.type.__name || instance.type.name || instance.type)
+  }
+}
 
 // Global components
 app.component('iconify-icon', Icon)
@@ -145,14 +152,16 @@ const Toast = Swal.mixin({
   }
 })
 
-// Global notification function
-app.config.globalProperties.$showNotification = function(message, type = 'info') {
+// Global notification – always defer so SweetAlert2 never runs in same turn as a closing Bootstrap modal (avoids focus-trap stack overflow)
+function showNotificationDeferred(message, type = 'info') {
+  const msg = typeof message === 'string' ? message : String(message)
   const icon = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info'
-  Toast.fire({ 
-    icon, 
-    title: message
-  })
+  setTimeout(() => {
+    Toast.fire({ icon, title: msg })
+  }, 150)
 }
+app.config.globalProperties.$showNotification = showNotificationDeferred
+window.$showNotification = showNotificationDeferred
 
 // Global confirmation function
 import showConfirmation from './composables/useConfirmation'

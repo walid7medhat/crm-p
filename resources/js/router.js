@@ -61,7 +61,6 @@ import MyOrders from './pages/listings/my_order.vue'
 import AllRequests from './pages/listings/AllRequests.vue'
 
 import allNotifications from './components/allNotifications.vue'
-import leads from './components/leads/kanban.vue'
 
 // Kanban
 import Kanban from './pages/kanban.vue'
@@ -77,8 +76,6 @@ const routes = [
   // Khanban Route
   { path: '/kanban', component: Kanban },
   { path: '/', component: Ai, meta: { requiresAuth: true } },
-
-  { path: '/leads', component: leads, meta: { requiresAuth: true } },
 
   { path: '/table-basic', component: BasicTable, meta: { requiresAuth: true } },
   { path: '/table-data', component: DataTable, meta: { requiresAuth: true } },
@@ -239,22 +236,20 @@ router.beforeEach((to, from, next) => {
   if (token && !isValidToken) {
     console.log('Token exists but is invalid, logging out...')
     logout()
+    next('/sign-in')
     return
   }
 
   if (to.meta.requiresAuth && !isValidToken) {
     console.log('Auth required, redirecting to sign-in')
     next('/sign-in')
-  } 
-  else if (to.path === '/sign-in' && isValidToken) {
+  } else if (to.path === '/sign-in' && isValidToken) {
     console.log('User authenticated, redirecting to home')
     next('/')
-  } 
-  else if ((to.path === '/sign-up' || to.path === '/forgot-password') && isValidToken) {
+  } else if ((to.path === '/sign-up' || to.path === '/forgot-password') && isValidToken) {
     console.log('User authenticated, redirecting from auth pages to home')
     next('/')
-  }
-  else {
+  } else {
     console.log('Navigation allowed')
     next()
   }

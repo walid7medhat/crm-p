@@ -1,7 +1,25 @@
 <template>
     <div class="kanban-container">
+        <!-- Loading state -->
+        <div v-if="loading && columns.length === 0" class="kanban-empty-state kanban-loading">
+            <div class="kanban-empty-spinner"></div>
+            <p class="kanban-empty-title">Loading stages…</p>
+        </div>
+        <!-- Error state -->
+        <div v-else-if="error && columns.length === 0" class="kanban-empty-state kanban-error-state">
+            <iconify-icon icon="lucide:alert-circle" class="kanban-empty-icon"></iconify-icon>
+            <p class="kanban-empty-title">Could not load stages</p>
+            <p class="kanban-empty-text">{{ error }}</p>
+            <button type="button" class="kanban-empty-btn" @click="fetchLeads(true)">Try again</button>
+        </div>
+        <!-- No stages yet -->
+        <div v-else-if="!loading && columns.length === 0" class="kanban-empty-state">
+            <iconify-icon icon="lucide:columns-3" class="kanban-empty-icon"></iconify-icon>
+            <p class="kanban-empty-title">No stages yet</p>
+            <p class="kanban-empty-text">Use the menu above to add a new stage and start organizing your leads.</p>
+        </div>
         <!-- Draggable Columns -->
-        <draggable v-model="columns" item-key="status" class="kanban-wrapper d-flex gap-20 h-100" :group="'columns'"
+        <draggable v-else v-model="columns" item-key="status" class="kanban-wrapper d-flex gap-20 h-100" :group="'columns'"
             handle=".column-header"
             :ghost-class="'ghost'" :drag-class="'dragging'">
             <template #item="{ element: column, index }">
@@ -330,20 +348,22 @@ const executeFetchLeads = async () => {
             params,
             signal: abortController.value.signal
         })
-        const newData = response.data.data.map((stage, index) => ({
+        const raw = response?.data?.data
+        const list = Array.isArray(raw) ? raw : []
+        const newData = list.map((stage, index) => ({
             title: stage.name,
             status: stage.id, // Use ID for stage changes
             color: stage.color || getColorByIndex(index),
-            order: stage.order || index, // Include order field
+            order: stage.order ?? index,
             leads: stage.leads || []
         }))
-        
         columns.value = newData
+        error.value = null
         loading.value = false
-    } catch (error) {
+    } catch (err) {
         // Don't set error if request was aborted
-        if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
-            error.value = error.message || 'Failed to load data'
+        if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+            error.value = err.message || 'Failed to load data'
             loading.value = false
         }
     } finally {
@@ -1000,6 +1020,66 @@ const $showNotification = (message, type = 'info') => {
     width: 100%;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
+    position: relative;
+}
+
+/* Empty / loading / error states */
+.kanban-empty-state {
+    position: absolute;
+    inset: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: #64748B;
+    text-align: center;
+    padding: 24px;
+}
+.kanban-empty-icon {
+    font-size: 48px;
+    color: #94a3b8;
+}
+.kanban-empty-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #334155;
+}
+.kanban-empty-text {
+    margin: 0;
+    font-size: 14px;
+    max-width: 360px;
+}
+.kanban-empty-btn {
+    margin-top: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #334155;
+    font-size: 14px;
+    cursor: pointer;
+}
+.kanban-empty-btn:hover {
+    background: #f8fafc;
+}
+.kanban-loading .kanban-empty-title {
+    color: #64748B;
+}
+.kanban-empty-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: kanban-spin 0.8s linear infinite;
+}
+@keyframes kanban-spin {
+    to { transform: rotate(360deg); }
+}
+.kanban-error-state .kanban-empty-icon {
+    color: #ef4444;
 }
 
 .kanban-container::-webkit-scrollbar {

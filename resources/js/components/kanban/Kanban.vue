@@ -22,6 +22,7 @@
         </div>
     </b-modal>
     <CreateLeadModal v-model="showCreateModal" @lead-created="handleLeadCreated" />
+    <CreateDealModal v-model="showCreateDealModal" @deal-created="handleDealCreated" />
     <CreateIntegrationModal v-model="showCreateIntegrationModal" @integration-created="handleIntegrationCreated" />
     <AddStageModal v-model="showAddStageModal" @stage-created="handleStageCreated" />
     <div class="kanban-main-wrapper">
@@ -48,7 +49,7 @@
                 <!-- Tab Content -->
                 <Deals v-if="tab.id === 'deals'" />
                 <Leads v-else-if="tab.id === 'leads'" ref="leadsRef" />
-                <Integration v-else-if="tab.id === 'integration'" />
+                <Integration v-else-if="tab.id === 'integration'" ref="integrationRef" />
             </b-tab>
 
             <!-- Header Actions at the end of the tabs row -->
@@ -154,6 +155,7 @@ import Leads from './leadList/leads.vue'
 import Integration from './integration/Integration.vue'
 import LeadSearchModal from './leadList/LeadSearchModal.vue'
 import CreateLeadModal from './createLead/CreateLeadModal.vue'
+import CreateDealModal from './deals/CreateDealModal.vue'
 import CreateIntegrationModal from './integration/CreateIntegrationModal.vue'
 import AddStageModal from './stage/AddStageModal.vue'
 const leadsSettings = '/assets/images/kanban/leads-setting.svg'
@@ -166,10 +168,12 @@ const activeTab = ref('leads')
 const showSearchModal = ref(false)
 const showSelectedFiltersModal = ref(false)
 const showCreateModal = ref(false)
+const showCreateDealModal = ref(false)
 const showCreateIntegrationModal = ref(false)
 const showAddStageModal = ref(false)
 const searchInputFocused = ref(false)
 const leadsRef = ref(null)
+const integrationRef = ref(null)
 const searchDropdownAnchorRef = ref(null)
 const search = ref('')
 const searchDebounceTimer = ref(null)
@@ -498,12 +502,18 @@ function onSearchBlur() {
 }
 
 const handleCreateNew = () => {
-    // Check if we're on the integration tab
-    if (activeTab.value === 'integration') {
+    if (activeTab.value === 'deals') {
+        showCreateDealModal.value = true
+    } else if (activeTab.value === 'integration') {
         showCreateIntegrationModal.value = true
     } else {
-        // Default to showing create lead modal
         showCreateModal.value = true
+    }
+}
+
+const handleDealCreated = (payload) => {
+    if (window.$showNotification) {
+        setTimeout(() => window.$showNotification('Deal created successfully!', 'success'), 200)
     }
 }
 
@@ -526,10 +536,9 @@ const handleLeadCreated = async () => {
 }
 
 const handleIntegrationCreated = (data) => {
-    console.log('🎯 handleIntegrationCreated triggered', data)
-    // Handle integration creation logic here
-    // You can refresh the integration list or show a notification
     $showNotification('Integration created successfully!', 'success')
+    const comp = integrationRef.value && (Array.isArray(integrationRef.value) ? integrationRef.value[0] : integrationRef.value)
+    if (comp && typeof comp.loadIntegrations === 'function') comp.loadIntegrations()
 }
 
 const handleStageCreated = async (stageData) => {

@@ -2,65 +2,97 @@
     <div class="tab-content">
         <p class="main-section-title">Facebook Lead Ads</p>
         
-        <!-- Account Section -->
-        <div class="account-card">
-            <div class="account-info">
-                <div class="profile-picture-wrapper">
-                    <div class="profile-picture-placeholder">
-                        <iconify-icon icon="lucide:user" class="profile-icon"></iconify-icon>
-                    </div>
-                </div>
-                <div class="account-details">
-                    <span class="account-label">Account</span>
-                    <span class="account-name">Ahmad Mahfoz</span>
+        <!-- Connect with token: credentials + fetch forms -->
+        <div class="page-from-card">
+            <div class="field-group">
+                <label class="field-label">Meta App ID</label>
+                <input v-model="metaAppId" type="text" class="form-input" placeholder="e.g. 89238010" />
+            </div>
+            <div class="field-group">
+                <label class="field-label">Meta App Secret</label>
+                <input v-model="metaAppSecret" type="password" class="form-input" placeholder="Optional for connect" />
+            </div>
+            <div class="field-group">
+                <label class="field-label">Access Token</label>
+                <input v-model="accessToken" type="password" class="form-input" placeholder="Paste your Meta access token" />
+            </div>
+            <div class="field-group">
+                <label class="field-label">Meta Account / Page ID</label>
+                <input v-model="metaAccountId" type="text" class="form-input" placeholder="Pick a page below or paste Page ID (must be a Page, not your User ID)" />
+                <p class="field-hint">Lead forms exist only on <strong>Facebook Pages</strong>, not on personal profiles. Use "Load my Pages" to pick the correct Page.</p>
+            </div>
+            <div class="field-group">
+                <button
+                    type="button"
+                    class="fetch-forms-btn secondary"
+                    :disabled="fetchingPages || !accessToken"
+                    @click="() => fetchPages()"
+                >
+                    <span v-if="fetchingPages">Loading…</span>
+                    <span v-else>Load my Pages</span>
+                </button>
+                <p v-if="fetchPagesError" class="error-text">{{ fetchPagesError }}</p>
+            </div>
+            <div v-if="metaPages.length > 0" class="field-group">
+                <label class="field-label">Select a Page (then click Fetch forms)</label>
+                <div class="pages-list">
+                    <label
+                        v-for="page in metaPages"
+                        :key="page.id"
+                        class="form-option"
+                        :class="{ selected: metaAccountId === page.id }"
+                    >
+                        <input v-model="metaAccountId" type="radio" :value="page.id" class="form-radio" />
+                        <span class="form-option-name">{{ page.name }}</span>
+                        <span class="form-option-meta">ID: {{ page.id }}</span>
+                    </label>
                 </div>
             </div>
-            <button class="disconnect-btn">
-                <iconify-icon icon="lucide:link-off" class="disconnect-icon"></iconify-icon>
-                <span>Disconnect</span>
-            </button>
+            <div class="field-group">
+                <button
+                    class="fetch-forms-btn"
+                    :disabled="fetchingForms || !accessToken || !metaAccountId"
+                    @click="() => fetchForms()"
+                >
+                    <span v-if="fetchingForms">Loading…</span>
+                    <span v-else>Fetch forms</span>
+                </button>
+                <p v-if="fetchFormsError" class="error-text">{{ fetchFormsError }}</p>
+            </div>
         </div>
 
-        <!-- Page and From Section -->
-        <div class="page-from-card">
-            <!-- Page Selection -->
-            <div class="field-group">
-                <label class="field-label">Page</label>
-                <v-select 
-                    v-model="selectedPage" 
-                    :options="pageOptions" 
-                    :reduce="option => option.value"
-                    label="text"
-                    placeholder="Select Pages"
-                    class="custom-v-select from-select"
+        <!-- Forms list: select one then Connect -->
+        <div v-if="metaForms.length > 0" class="page-from-card">
+            <label class="field-label">Select a form to connect</label>
+            <div class="forms-list">
+                <label
+                    v-for="form in metaForms"
+                    :key="form.id"
+                    class="form-option"
+                    :class="{ selected: selectedFormId === form.id }"
                 >
-                    <template #open-indicator="{ attributes }">
-                        <span v-bind="attributes" class="from-indicator-wrapper">
-                            <iconify-icon icon="lucide:chevron-up" class="vs__open-indicator-icon up-icon"></iconify-icon>
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon down-icon"></iconify-icon>
-                        </span>
-                    </template>
-                </v-select>
+                    <input v-model="selectedFormId" type="radio" :value="form.id" class="form-radio" />
+                    <span class="form-option-name">{{ form.name }}</span>
+                    <span class="form-option-meta">ID: {{ form.id }} · Leads: {{ form.leads_count ?? 0 }}</span>
+                </label>
             </div>
-
-            <!-- From Selection -->
-            <div class="field-group">
-                <label class="field-label">From</label>
-                <v-select 
-                    v-model="selectedFrom" 
-                    :options="fromOptions" 
-                    :reduce="option => option.value"
-                    label="text"
-                    placeholder="Select From"
-                    class="custom-v-select from-select"
+            <div class="field-group connect-row">
+                <button
+                    class="connect-btn"
+                    :disabled="connecting || !selectedFormId"
+                    @click="connectForm"
                 >
-                    <template #open-indicator="{ attributes }">
-                        <span v-bind="attributes" class="from-indicator-wrapper">
-                            <iconify-icon icon="lucide:chevron-up" class="vs__open-indicator-icon up-icon"></iconify-icon>
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon down-icon"></iconify-icon>
-                        </span>
-                    </template>
-                </v-select>
+                    <span v-if="connecting">Connecting…</span>
+                    <span v-else>Connect</span>
+                </button>
+                <p v-if="connectError" class="error-text">{{ connectError }}</p>
+                <p v-if="connectSuccess" class="success-text">{{ connectSuccess }}</p>
+            </div>
+            <!-- Pagination: load more forms -->
+            <div v-if="nextCursor" class="field-group">
+                <button class="fetch-forms-btn secondary" :disabled="fetchingForms" @click="fetchForms(nextCursor)">
+                    Load more forms
+                </button>
             </div>
         </div>
 
@@ -150,9 +182,109 @@ import { ref } from 'vue'
 import { BModal } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
+import api from '@/plugins/axios'
 
-const selectedPage = ref([])
-const selectedFrom = ref('al-reem-island')
+const emit = defineEmits(['connected'])
+
+const metaAppId = ref('')
+const metaAppSecret = ref('')
+const accessToken = ref('')
+const metaAccountId = ref('')
+const metaPages = ref([])
+const fetchingPages = ref(false)
+const fetchPagesError = ref('')
+const metaForms = ref([])
+const selectedFormId = ref(null)
+const nextCursor = ref(null)
+const fetchingForms = ref(false)
+const fetchFormsError = ref('')
+const connecting = ref(false)
+const connectError = ref('')
+const connectSuccess = ref('')
+
+async function fetchPages() {
+    fetchPagesError.value = ''
+    if (!accessToken.value) return
+    fetchingPages.value = true
+    try {
+        const { data } = await api.post('/integrations/meta/pages', {
+            access_token: accessToken.value,
+        })
+        if (data?.data?.pages) {
+            metaPages.value = data.data.pages
+        } else {
+            metaPages.value = []
+        }
+    } catch (err) {
+        const d = err.response?.data
+        fetchPagesError.value = d?.message || err.message || 'Failed to load pages'
+    } finally {
+        fetchingPages.value = false
+    }
+}
+
+async function fetchForms(cursor = null) {
+    fetchFormsError.value = ''
+    if (!accessToken.value || !metaAccountId.value) return
+    fetchingForms.value = true
+    try {
+        const body = {
+            access_token: accessToken.value,
+            meta_account_id: metaAccountId.value,
+        }
+        if (cursor && typeof cursor === 'string') {
+            body.cursor = cursor
+        }
+        const { data } = await api.post('/integrations/meta/forms', body)
+        if (data?.data) {
+            const forms = data.data.forms || []
+            const newCursor = data.data.next_cursor
+            if (cursor) {
+                metaForms.value = [...metaForms.value, ...forms]
+            } else {
+                metaForms.value = forms
+            }
+            nextCursor.value = newCursor || null
+        }
+    } catch (err) {
+        const d = err.response?.data
+        if (d?.message) {
+            fetchFormsError.value = d.message
+        } else if (d?.errors && typeof d.errors === 'object') {
+            const first = Object.values(d.errors).flat()
+            fetchFormsError.value = first.length ? first[0] : 'Validation failed'
+        } else {
+            fetchFormsError.value = err.message || 'Failed to fetch forms'
+        }
+    } finally {
+        fetchingForms.value = false
+    }
+}
+
+async function connectForm() {
+    if (!selectedFormId.value || !accessToken.value || !metaAccountId.value) return
+    const form = metaForms.value.find(f => f.id === selectedFormId.value)
+    if (!form) return
+    connectError.value = ''
+    connectSuccess.value = ''
+    connecting.value = true
+    try {
+        await api.post('/integrations', {
+            form_id: form.id,
+            form_name: form.name,
+            meta_account_id: metaAccountId.value,
+            access_token: accessToken.value,
+            meta_app_id: metaAppId.value || undefined,
+        })
+        connectSuccess.value = 'Form connected successfully.'
+        emit('connected')
+    } catch (err) {
+        connectError.value = err.response?.data?.message || err.message || 'Failed to connect'
+    } finally {
+        connecting.value = false
+    }
+}
+
 const showSelectFieldsModal = ref(false)
 const currentFieldMapping = ref(null)
 const selectedFieldIds = ref([])
@@ -403,6 +535,133 @@ const handleCreateField = () => {
     font-size: 13px;
     font-weight: 500;
     color: #000000;
+}
+
+.form-input {
+    width: 100%;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    color: #000;
+}
+
+.form-input::placeholder {
+    color: #94A3B8;
+}
+
+.field-hint {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    color: #64748B;
+    margin: 6px 0 0;
+}
+
+.fetch-forms-btn {
+    padding: 10px 24px;
+    background: #01062C;
+    color: #fff;
+    border: none;
+    border-radius: 25px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.fetch-forms-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.fetch-forms-btn.secondary {
+    background: #F1F5F9;
+    color: #64748B;
+}
+
+.connect-btn {
+    padding: 10px 24px;
+    background: #FAA300;
+    color: #01062C;
+    border: none;
+    border-radius: 25px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.connect-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.connect-row {
+    margin-top: 16px;
+}
+
+.error-text {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    color: #EF4444;
+    margin: 8px 0 0;
+}
+
+.success-text {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    color: #22C55E;
+    margin: 8px 0 0;
+}
+
+.pages-list,
+.forms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+    margin-top: 8px;
+}
+
+.form-option {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #fff;
+}
+
+.form-option:hover,
+.form-option.selected {
+    border-color: #FAA300;
+    background: #FFFBF5;
+}
+
+.form-radio {
+    margin: 0;
+    accent-color: #FAA300;
+}
+
+.form-option-name {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #000;
+}
+
+.form-option-meta {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    color: #64748B;
+    width: 100%;
+    margin-left: 28px;
 }
 
 /* Page Select - Matching From Select Style */

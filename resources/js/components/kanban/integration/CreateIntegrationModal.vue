@@ -49,6 +49,7 @@
                 <!-- Facebook Lead Ads Tab Content -->
                 <FacebookLeadAdsTab
                     v-else-if="activeTab === 'facebook-leads'"
+                    @connected="handleIntegrationConnected"
                 />
 
                 <!-- Other Settings Tab Content -->
@@ -141,6 +142,11 @@ const handleOtherSettingsSave = (payload) => {
         ...payload,
         tab: 'other-settings'
     })
+    show.value = false
+}
+
+const handleIntegrationConnected = () => {
+    emit('integration-created', { tab: 'facebook-leads' })
     show.value = false
 }
 </script>

@@ -5,8 +5,12 @@
             <p class="integration-title">CRM Forms</p>
         </div>
 
+        <!-- Loading / Error -->
+        <div v-if="loading" class="loading-state">Loading integrations…</div>
+        <div v-else-if="loadError" class="error-state">{{ loadError }}</div>
+
         <!-- Table Container -->
-        <div class="table-container">
+        <div v-else class="table-container">
             <table class="integration-table">
                 <thead>
                     <tr>
@@ -43,7 +47,7 @@
                         </td>
                         <td>
                             <span class="form-id-link" @click="viewForm(form.id)">
-                                {{ form.id }}
+                                {{ form.form_id || form.id }}
                             </span>
                         </td>
                         <td class="form-name">{{ form.name }}</td>
@@ -95,8 +99,13 @@
             </table>
         </div>
 
-        <!-- Pagination -->
-        <div class="pagination-container">
+        <!-- Empty state -->
+        <div v-if="!loading && !loadError && forms.length === 0" class="empty-state">
+            No integrations yet. Use "Create Integration" and connect a Meta form.
+        </div>
+
+        <!-- Pagination (hide when empty) -->
+        <div v-if="!loading && forms.length > 0" class="pagination-container">
             <div class="pagination-info">
                 <span>Showing {{ startIndex + 1 }} to {{ endIndex }} of {{ totalEntries }} Entries</span>
                 <iconify-icon icon="lucide:chevron-up" class="entries-icon"></iconify-icon>
@@ -140,127 +149,46 @@ import { ref, computed, onMounted } from 'vue'
 import { BDropdown, BDropdownItem } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
 
-const forms = ref([
-    { 
-        id: '024844', 
-        name: 'Contact info of January 21', 
-        createdOn: new Date(), 
-        active: true, 
-        activeDate: new Date('2026-01-12'),
-        conversation: 2548, 
-        platform: 'Meta Ads' 
-    },
-    { 
-        id: '024845', 
-        name: 'ORA Jan Ar', 
-        createdOn: new Date(Date.now() - 86400000), 
-        active: false, 
-        activeDate: new Date('2026-01-12'),
-        conversation: 45875, 
-        platform: 'Self Leads' 
-    },
-    { 
-        id: '024846', 
-        name: 'Upcoming new Project - Yas Island', 
-        createdOn: new Date('2025-02-14T19:15:00'), 
-        active: true, 
-        activeDate: new Date('2026-01-12'),
-        conversation: 1234, 
-        platform: 'WhatsApp from bayut' 
-    },
-    { 
-        id: '024847', 
-        name: 'Contact of January 15', 
-        createdOn: new Date('2025-01-15T10:30:00'), 
-        active: true, 
-        activeDate: new Date('2026-01-12'),
-        conversation: 5678, 
-        platform: 'Land Line' 
-    },
-    { 
-        id: '024848', 
-        name: 'Contact info of November 10', 
-        createdOn: new Date('2024-11-10T14:20:00'), 
-        active: true, 
-        activeDate: new Date('2026-01-12'),
-        conversation: 9012, 
-        platform: 'Meta Ads' 
-    },
-    { 
-        id: '024849', 
-        name: 'Contact info of September 11', 
-        createdOn: new Date('2024-09-11T16:45:00'), 
-        active: true, 
-        activeDate: new Date('2026-01-12'),
-        conversation: 3456, 
-        platform: 'Self Leads' 
-    },
-    { 
-        id: '024850', 
-        name: 'Contact info of August 5', 
-        createdOn: new Date('2024-08-05T09:00:00'), 
-        active: false, 
-        activeDate: new Date('2026-01-12'),
-        conversation: 7890, 
-        platform: 'WhatsApp from bayut' 
-    },
-    { 
-        id: '024851', 
-        name: 'Contact info of July 20', 
-        createdOn: new Date('2024-07-20T11:30:00'), 
-        active: false, 
-        activeDate: new Date('2026-01-12'),
-        conversation: 2345, 
-        platform: 'Land Line' 
-    },
-    { 
-        id: '024852', 
-        name: 'Contact info of June 15', 
-        createdOn: new Date('2024-06-15T13:15:00'), 
-        active: true, 
-        activeDate: new Date('2026-01-12'),
-        conversation: 6789, 
-        platform: 'Meta Ads' 
-    },
-    { 
-        id: '024853', 
-        name: 'Contact info of May 10', 
-        createdOn: new Date('2024-05-10T15:45:00'), 
-        active: false, 
-        activeDate: new Date('2026-01-12'),
-        conversation: 1234, 
-        platform: 'Self Leads' 
-    }
-])
+const forms = ref([])
+const loading = ref(true)
+const loadError = ref('')
 
-// Generate more sample data to reach 120 entries
-const generateSampleData = () => {
-    const platforms = ['Meta Ads', 'Self Leads', 'WhatsApp from bayut', 'Land Line']
-    const sampleData = []
-    
-    for (let i = 0; i < 120; i++) {
-        const daysAgo = Math.floor(Math.random() * 365)
-        const createdDate = new Date()
-        createdDate.setDate(createdDate.getDate() - daysAgo)
-        
-        sampleData.push({
-            id: String(Math.floor(100000 + Math.random() * 900000)),
-            name: `Contact info of ${createdDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`,
-            createdOn: createdDate,
-            active: Math.random() > 0.5,
-            activeDate: new Date('2026-01-12'),
-            conversation: Math.floor(Math.random() * 50000),
-            platform: platforms[Math.floor(Math.random() * platforms.length)]
-        })
+function mapIntegrationToForm(integration) {
+    return {
+        id: integration.id,
+        form_id: integration.form_id,
+        name: integration.form_name,
+        createdOn: integration.created_at ? new Date(integration.created_at) : new Date(),
+        active: integration.active ?? true,
+        activeDate: integration.created_at ? new Date(integration.created_at) : new Date(),
+        conversation: '-',
+        platform: integration.platform === 'meta' ? 'Meta Ads' : integration.platform || 'Meta',
     }
-    
-    return sampleData
+}
+
+async function loadIntegrations() {
+    loading.value = true
+    loadError.value = ''
+    try {
+        const { data } = await api.get('/integrations')
+        if (data?.data) {
+            forms.value = data.data.map(mapIntegrationToForm)
+        } else {
+            forms.value = []
+        }
+    } catch (err) {
+        loadError.value = err.response?.data?.message || err.message || 'Failed to load integrations'
+        forms.value = []
+    } finally {
+        loading.value = false
+    }
 }
 
 onMounted(() => {
-    // Uncomment to use generated data
-    // forms.value = generateSampleData()
+    loadIntegrations()
 })
+
+defineExpose({ loadIntegrations })
 
 const selectAll = ref(false)
 const selectedIds = ref([])
@@ -365,9 +293,13 @@ const formatDateShort = (date) => {
     return d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
 }
 
-const toggleActive = (form) => {
-    // Handle toggle action
-    console.log('Toggle active for form:', form.id, form.active)
+const toggleActive = async (form) => {
+    try {
+        await api.patch(`/integrations/${form.id}/toggle-active`)
+        form.active = !form.active
+    } catch (err) {
+        console.error('Toggle active failed', err)
+    }
 }
 
 const viewForm = (id) => {
@@ -380,9 +312,14 @@ const editForm = (form) => {
     console.log('Edit form:', form)
 }
 
-const deleteForm = (form) => {
-    // Handle delete action
-    console.log('Delete form:', form)
+const deleteForm = async (form) => {
+    if (!confirm('Remove this integration?')) return
+    try {
+        await api.delete(`/integrations/${form.id}`)
+        await loadIntegrations()
+    } catch (err) {
+        console.error('Delete failed', err)
+    }
 }
 </script>
 
@@ -407,6 +344,23 @@ const deleteForm = (form) => {
     font-weight: 600;
     color: #343A40;
     margin: 0;
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    padding: 24px;
+    text-align: center;
+}
+
+.error-state {
+    color: #EF4444;
+}
+
+.empty-state {
+    color: #64748B;
 }
 
 .table-container {

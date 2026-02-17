@@ -100,16 +100,19 @@
                       </div>
                       <div class="profile-summary-right">
                         <div class="profile-status-row">
-                          <span class="profile-status-dot" :class="user && user.status === 'active' ? 'status-online' : 'offline'"></span>
-                          <span class="profile-status-text">{{ user && user.status === 'active' ? 'Active' : 'Offline' }}</span>
+                          <span class="profile-status-dot" :class="user && user.status === 'active' ? 'status-online' : 'status-offline'"></span>
+                          <span class="profile-status-text">{{ user && user.status === 'active' ? 'Online' : 'Offline' }}</span>
+                          <button type="button" class="profile-more-btn" aria-label="Options">
+                            <iconify-icon icon="lucide:more-vertical" class="icon"></iconify-icon>
+                          </button>
                         </div>
-                        <p class="profile-last-active">Last Active: {{ lastActiveText }}</p>
+                        <p class="profile-last-active">Last Active : {{ lastActiveText }}</p>
                       </div>
                     </div>
 
                     <section class="profile-section profile-section-contact">
                       <div class="profile-section-head">
-                        <h4 class="profile-section-title">Personal Info</h4>
+                        <h4 class="profile-section-title">Contact Information</h4>
                         <template v-if="!isPersonalInfoEditing">
                           <button type="button" class="profile-edit-icon" aria-label="Edit" @click="startPersonalInfoEdit">
                             <iconify-icon icon="lucide:pencil" class="icon"></iconify-icon>
@@ -120,17 +123,36 @@
                           <button type="button" class="profile-contact-btn profile-contact-save" @click="savePersonalInfoEdit">Save</button>
                         </div>
                       </div>
-                      <div class="profile-contact-grid profile-personal-info-grid">
+                      <div class="profile-contact-grid profile-contact-two-cols">
                         <div class="profile-contact-item">
-                          <span class="profile-contact-label">Full Name</span>
+                          <span class="profile-contact-label">First Name</span>
                           <input
                             v-if="isPersonalInfoEditing"
-                            v-model="personalInfoEdit.full_name"
+                            v-model="personalInfoEdit.first_name"
                             type="text"
                             class="profile-contact-input"
-                            placeholder="Full Name"
+                            placeholder="First Name"
                           >
-                          <span v-else class="profile-contact-value">{{ user && user.name ? user.name : '—' }}</span>
+                          <span v-else class="profile-contact-value">{{ firstName }}</span>
+                        </div>
+                        <div class="profile-contact-item">
+                          <span class="profile-contact-label">Departments</span>
+                          <span class="profile-contact-value profile-contact-readonly">{{ user && user.role_name ? user.role_name : '—' }}</span>
+                        </div>
+                        <div class="profile-contact-item">
+                          <span class="profile-contact-label">Last Name</span>
+                          <input
+                            v-if="isPersonalInfoEditing"
+                            v-model="personalInfoEdit.last_name"
+                            type="text"
+                            class="profile-contact-input"
+                            placeholder="Last Name"
+                          >
+                          <span v-else class="profile-contact-value">{{ lastName }}</span>
+                        </div>
+                        <div class="profile-contact-item">
+                          <span class="profile-contact-label">Notification Language</span>
+                          <span class="profile-contact-value profile-contact-readonly">{{ notificationLanguage }}</span>
                         </div>
                         <div class="profile-contact-item">
                           <span class="profile-contact-label">Email</span>
@@ -154,21 +176,8 @@
                           >
                           <span v-else class="profile-contact-value">{{ user && user.phone ? user.phone : '—' }}</span>
                         </div>
-                        <div class="profile-contact-item">
-                          <span class="profile-contact-label">Role</span>
-                          <span class="profile-contact-value profile-contact-readonly">{{ user && user.role_name ? user.role_name : '—' }}</span>
-                        </div>
-                        <div class="profile-contact-item">
-                          <span class="profile-contact-label">Status</span>
-                          <span class="profile-contact-value profile-contact-readonly">{{ user && user.status ? user.status : 'active' }}</span>
-                        </div>
-                        <div class="profile-contact-item">
-                          <span class="profile-contact-label">Member Since</span>
-                          <span class="profile-contact-value profile-contact-readonly">{{ memberSinceFormatted }}</span>
-                        </div>
                       </div>
                     </section>
-
                     <section class="profile-section profile-section-team">
                       <div class="profile-section-head">
                         <h4 class="profile-section-title">Your Team</h4>
@@ -191,7 +200,7 @@
                             ></span>
                           </div>
                           <div class="profile-team-info">
-                            <span class="profile-team-name">{{ member.name }}</span>
+                            <span class="profile-team-name">{{ teamMemberDisplayName(member) }}</span>
                             <span class="profile-team-role">{{ member.role_name || member.role || '—' }}</span>
                           </div>
                         </div>
@@ -203,7 +212,7 @@
                           class="profile-show-all-team profile-see-more-btn"
                           @click="loadMoreTeamMembers"
                         >
-                          See more
+                          Show All Team
                         </button>
                       </div>
                       <p v-if="teamMembersList.length === 0 && !profileLoading" class="profile-team-empty">No team members under you.</p>
@@ -322,18 +331,38 @@ const memberSinceFormatted = computed(() => {
   return `${y}-${m}-${day} ${h}:${min}`;
 });
 
-// Personal Info edit mode (only Full Name, Email, Phone editable; Role, Status, Member Since read-only)
+const firstName = computed(() => {
+  const u = user.value;
+  if (!u?.name) return '—';
+  const parts = (u.name || '').trim().split(/\s+/);
+  return parts[0] || '—';
+});
+const lastName = computed(() => {
+  const u = user.value;
+  if (!u?.name) return '—';
+  const parts = (u.name || '').trim().split(/\s+/);
+  return parts.length > 1 ? parts.slice(1).join(' ') : '—';
+});
+const notificationLanguage = computed(() => {
+  const u = user.value;
+  return u?.notification_language || u?.locale || 'English';
+});
+
+// Personal Info edit mode (First Name, Last Name, Email, Phone)
 const isPersonalInfoEditing = ref(false);
 const personalInfoEdit = ref({
-  full_name: '',
+  first_name: '',
+  last_name: '',
   email: '',
   phone: '',
 });
 
 function startPersonalInfoEdit() {
   const u = user.value;
+  const parts = (u?.name || '').trim().split(/\s+/);
   personalInfoEdit.value = {
-    full_name: (u?.name || '').trim(),
+    first_name: parts[0] || '',
+    last_name: parts.length > 1 ? parts.slice(1).join(' ') : '',
     email: u?.email || '',
     phone: u?.phone || '',
   };
@@ -347,9 +376,12 @@ function cancelPersonalInfoEdit() {
 function savePersonalInfoEdit() {
   const u = user.value;
   if (!u) return;
+  const first = (personalInfoEdit.value.first_name || '').trim();
+  const last = (personalInfoEdit.value.last_name || '').trim();
+  const fullName = [first, last].filter(Boolean).join(' ') || u.name;
   user.value = {
     ...u,
-    name: (personalInfoEdit.value.full_name || '').trim() || u.name,
+    name: fullName,
     email: (personalInfoEdit.value.email || '').trim() || u.email,
     phone: (personalInfoEdit.value.phone || '').trim() || u.phone,
   };
@@ -359,6 +391,13 @@ function savePersonalInfoEdit() {
     console.warn('Could not persist user to localStorage', e);
   }
   isPersonalInfoEditing.value = false;
+}
+
+function teamMemberDisplayName(member) {
+  if (member.first_name != null || member.last_name != null) {
+    return [member.first_name, member.last_name].filter(Boolean).join(' ').trim() || member.name || '—';
+  }
+  return member.name || '—';
 }
 
 const avatarInput = ref(null);
@@ -404,6 +443,8 @@ async function fetchProfileAndTeam() {
       fetchedTeamMembers.value = list.map((m) => ({
         id: m.id,
         name: m.name,
+        first_name: m.first_name,
+        last_name: m.last_name,
         email: m.email,
         phone: m.phone,
         avatar: m.avatar,
@@ -615,7 +656,7 @@ function logout() {
 }
 
 .profile-panel {
-  width: 520px;
+  width: 713px;
   max-width: 95vw;
   height: 100%;
   background: #ffffff;
@@ -798,8 +839,8 @@ function logout() {
   background: #9ca3af;
 }
 
-.profile-status-dot.offline {
-  background: #9ca3af;
+.profile-status-dot.status-offline {
+  background: #ef4444;
 }
 
 .profile-status-dot.status-online {
@@ -852,12 +893,12 @@ function logout() {
   margin-bottom: 14px;
 }
 
-/* Contact Information – same light blue border as image, rounded corners */
+/* Contact Information – no blue borders */
 .profile-section-contact {
   margin-bottom: 28px;
   padding: 20px 22px;
   background: #ffffff;
-  border: 1px solid #60a5fa;
+  border: 1px solid #e5e7eb;
   border-radius: 12px;
 }
 
@@ -865,13 +906,11 @@ function logout() {
   margin-bottom: 18px;
 }
 
-/* Your Team – same blue: thick left, thin top/right/bottom */
+/* Your Team – no blue borders */
 .profile-section-team {
   padding: 20px 22px;
   background: #ffffff;
-  border: 1px solid #60a5fa;
-  border-left-width: 4px;
-  border-left-color: #60a5fa;
+  border: 1px solid #e5e7eb;
   border-radius: 12px;
 }
 
@@ -926,9 +965,9 @@ function logout() {
   gap: 18px 32px;
 }
 
-.profile-personal-info-grid {
-  grid-template-columns: 1fr;
-  gap: 14px 0;
+.profile-contact-two-cols {
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 32px;
 }
 
 .profile-contact-readonly {

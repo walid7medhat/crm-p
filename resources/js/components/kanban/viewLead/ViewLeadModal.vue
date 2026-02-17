@@ -8,7 +8,7 @@
         centered
         body-class="p-0"
     >
-        <div class="view-lead-modal-content p-3">
+        <div v-if="show" class="view-lead-modal-content p-3">
             <!-- Header -->
             <div class="modal-header-custom d-flex justify-content-between align-items-center px-1">
                 <div class="d-flex align-items-center gap-3">
