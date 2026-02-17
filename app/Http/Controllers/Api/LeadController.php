@@ -612,42 +612,64 @@ class LeadController extends Controller
         }
         // ======================history =======================
         public function history(Request $request, $leadId)
-        {
-            $query = LeadHistory::where('lead_id', $leadId)
-                ->with('user:id,name');
-        
-            if ($request->filled('action')) {
-                $query->where('changes->action', $request->action);
-            }
-        
-            if ($request->filled('user_id')) {
-                $query->where('user_id', $request->user_id);
-            }
-        
-            if ($request->filled('from_date')) {
-                $query->whereDate('created_at', '>=', $request->from_date);
-            }
-        
-            if ($request->filled('to_date')) {
-                $query->whereDate('created_at', '<=', $request->to_date);
-            }
-        
-            $histories = $query->latest()->paginate(10);
-        
-            $data= LeadHistoryResource::collection($histories);
-             return ApiResponse::success([
-                'items' => LeadHistoryResource::collection($histories),
-                'pagination' => [
-                    'current_page' => $histories->currentPage(),
-                    'last_page'    => $histories->lastPage(),
-                    'per_page'     => $histories->perPage(),
-                    'total'        => $histories->total(),
-                    'next_page'    => $histories->nextPageUrl(),
-                    'prev_page'    => $histories->previousPageUrl(),
-                ]
-            ], 'Lead History retrieved successfully');
-        
-        }
+{
+    $query = LeadHistory::where('lead_id', $leadId)
+        ->with('user:id,name');
+    
+    // Search functionality - search in multiple fields
+    if ($request->filled('search')) {
+        $searchTerm = $request->search;
+        $query->where(function($q) use ($searchTerm) {
+            // Search in action field inside changes JSON
+            $q->where('changes->action', 'LIKE', "%{$searchTerm}%")
+              // Search in user name
+              ->orWhereHas('user', function($userQuery) use ($searchTerm) {
+                  $userQuery->where('name', 'LIKE', "%{$searchTerm}%");
+              })
+              // Search in old_stage
+              ->orWhereRaw("JSON_EXTRACT(changes, '$.old_stage') LIKE ?", ["%{$searchTerm}%"])
+              // Search in new_stage
+              ->orWhereRaw("JSON_EXTRACT(changes, '$.new_stage') LIKE ?", ["%{$searchTerm}%"])
+              // Search in old_person
+              ->orWhereRaw("JSON_EXTRACT(changes, '$.old_person') LIKE ?", ["%{$searchTerm}%"])
+              // Search in new_person
+              ->orWhereRaw("JSON_EXTRACT(changes, '$.new_person') LIKE ?", ["%{$searchTerm}%"]);
+        });
+    }
+
+    if ($request->filled('action')) {
+        $query->where('changes->action', $request->action);
+    }
+
+    if ($request->filled('user_id')) {
+        $query->where('user_id', $request->user_id);
+    }
+
+    if ($request->filled('from_date')) {
+        $query->whereDate('created_at', '>=', $request->from_date);
+    }
+
+    if ($request->filled('to_date')) {
+        $query->whereDate('created_at', '<=', $request->to_date);
+    }
+
+    // Get per_page from request or default to 10
+    $perPage = $request->input('per_page', 10);
+    
+    $histories = $query->latest()->paginate($perPage);
+
+    return ApiResponse::success([
+        'items' => LeadHistoryResource::collection($histories),
+        'pagination' => [
+            'current_page' => $histories->currentPage(),
+            'last_page'    => $histories->lastPage(),
+            'per_page'     => $histories->perPage(),
+            'total'        => $histories->total(),
+            'next_page'    => $histories->nextPageUrl(),
+            'prev_page'    => $histories->previousPageUrl(),
+        ]
+    ], 'Lead History retrieved successfully');
+}
           public function view_history($id): JsonResponse
     {
         try {
