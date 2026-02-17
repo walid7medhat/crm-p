@@ -160,6 +160,10 @@ public function getStagesWithLeads(Request $request): JsonResponse
                 $q->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]))
                   ->orWhereIn('added_by', $subordinatesIds);
             });
+            if($user->hasAnyRole(['manager', 'team_lead'])){
+                $leadsQuery->whereNull('revert');
+            }
+            
         } 
         else {
             $leadsQuery->where(function ($q) use ($user) {
