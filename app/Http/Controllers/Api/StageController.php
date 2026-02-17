@@ -165,7 +165,7 @@ public function getStagesWithLeads(Request $request): JsonResponse
             $leadsQuery->where(function ($q) use ($user) {
                 $q->where('responsible_person_id', $user->id)
                   ->orWhere('added_by', $user->id);
-            });
+            })->whereNull('revert');
         }
 
         // ================= Lead filters only (stage_id filters both stages and leads when present) =================

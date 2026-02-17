@@ -40,7 +40,7 @@ class LeadController extends Controller
         public function index(Request $request): JsonResponse
         {
             try {
-                $this->checkAndRevertLeads();
+                // $this->checkAndRevertLeads();
         
                 $user = auth()->user();
                 $perPage = $request->get('per_page', 20);
@@ -367,7 +367,8 @@ class LeadController extends Controller
 
         $lead->update([
             'responsible_person_id' => $request->responsible_person_id,
-            'last_stage_change_at' => now()
+            'last_stage_change_at' => now(),
+            'revert'=>null,
         ]);
                 $changes = [
             'old_person' => $oldPerson?->name,

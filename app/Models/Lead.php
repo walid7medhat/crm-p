@@ -16,7 +16,8 @@ class Lead extends Model
       protected $casts = [
         'date_of_birth' => 'date',
         'available_to_everyone' => 'boolean',
-        'last_stage_change_at' => 'datetime'
+        'last_stage_change_at' => 'datetime',
+        'revert'=>'datetime'
 
     ];
     protected static function booted()
@@ -123,17 +124,18 @@ class Lead extends Model
                 $this->updateQuietly([
                     'stage_id' => $stageOne->id,
                     'last_stage_change_at' => now(),
-                    'responsible_person_id' => $response,
+                    // 'responsible_person_id' => $response,
+                    'revert'=>now(),
                 ]);
         
-                $this->refresh(); // 🔥 مهم
+                $this->refresh();
         
                 LeadHistoryHelper::log(
                     $this->id,
                     [
                         'action' => 'revert',
-                        'old_person' => $oldPerson?->name,
-                        'new_person' => $this->initialResponsiblePerson?->name,
+                        // 'old_person' => $oldPerson?->name,
+                        // 'new_person' => $responseName,
                         'old_stage'  => $oldStage?->name,
                         'new_stage'  => $this->stage?->name
                     ]
@@ -142,8 +144,8 @@ class Lead extends Model
                 $changes = [
                     'old_stage'  => $oldStage?->name,
                     'new_stage'  => $this->stage?->name,
-                    'old_person' => $oldPerson?->name,
-                    'new_person' => $this->initialResponsiblePerson?->name,
+                    // 'old_person' => $oldPerson?->name,
+                    // 'new_person' =>$responseName,
                 ];
         
                 broadcast(new LeadUpdated($this, 'revert', null, $changes));

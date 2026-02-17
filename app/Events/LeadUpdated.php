@@ -118,7 +118,7 @@ class LeadUpdated implements ShouldBroadcast
                $oldStage = $this->changes['old_stage'] ?? 'Previous Stage';
                $newStage = $this->lead->stage?->name ?? 'New Stage';
                $newPerson=$this->changes['new_person']?? $this->lead->responsiblePerson?->name;
-               return "lead #{$leadName} reverted to {$newStage} and assign to {$newPerson}";
+               return "lead #{$leadName} reverted to {$newStage} ";
 
             case 'assigned':
                 $oldPerson = $this->changes['old_person'] ?? 'Previous Person';
