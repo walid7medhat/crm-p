@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, h, markRaw } from 'vue'
 import App from './App.vue'
 import router from './router.js'
 import VueApexCharts from "vue3-apexcharts"
@@ -126,8 +126,42 @@ app.config.errorHandler = (err, instance, info) => {
   }
 }
 
-// Global components
-app.component('iconify-icon', Icon)
+// Global components – wrap Icon so we pass a plain (markRaw) props object to avoid Iconify's mergeCustomisations + Vue reactivity causing "Maximum call stack size exceeded"
+app.component('iconify-icon', {
+  name: 'IconifyIconSafe',
+  props: {
+    icon: { type: [String, Object], default: '' },
+    width: { type: [String, Number], default: undefined },
+    height: { type: [String, Number], default: undefined },
+    color: { type: String, default: undefined },
+    flip: { type: String, default: undefined },
+    rotate: { type: [String, Number], default: undefined },
+    inline: { type: Boolean, default: undefined },
+    mode: { type: String, default: undefined },
+    ariaLabel: { type: String, default: undefined },
+    ariaHidden: { type: [Boolean, String], default: undefined },
+    class: { type: [String, Object, Array], default: undefined },
+    style: { type: [String, Object], default: undefined }
+  },
+  setup (props) {
+    return () => {
+      const icon = props.icon != null ? String(props.icon) : ''
+      const plain = { icon }
+      if (props.width !== undefined) plain.width = props.width
+      if (props.height !== undefined) plain.height = props.height
+      if (props.color !== undefined) plain.color = props.color
+      if (props.flip !== undefined) plain.flip = props.flip
+      if (props.rotate !== undefined) plain.rotate = props.rotate
+      if (props.inline !== undefined) plain.inline = props.inline
+      if (props.mode !== undefined) plain.mode = props.mode
+      if (props.ariaLabel !== undefined) plain.ariaLabel = props.ariaLabel
+      if (props.ariaHidden !== undefined) plain.ariaHidden = props.ariaHidden
+      if (props.class !== undefined) plain.class = props.class
+      if (props.style !== undefined) plain.style = props.style
+      return h(Icon, markRaw(plain))
+    }
+  }
+})
 
 // Plugins
 app.use(router)

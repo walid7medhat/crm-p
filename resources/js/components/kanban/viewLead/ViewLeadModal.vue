@@ -66,7 +66,6 @@ import StageSelector from '../shared/StageSelector.vue'
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
-import Swal from 'sweetalert2'
 
 const props = defineProps({
     modelValue: Boolean,
@@ -459,32 +458,10 @@ watch(lead, (newLead) => {
 //     }
 // })
 
-// Notification helper
+// Notification helper – use global deferred to avoid SweetAlert2 stack overflow
 const $showNotification = (message, type = 'info') => {
-    if (window.$showNotification) {
-        window.$showNotification(message, type)
-    } else {
-        console.log(`${type}: ${message}`)
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
-        })
-        
-        const iconMap = {
-            'success': 'success',
-            'error': 'error',
-            'warning': 'warning',
-            'info': 'info'
-        }
-        
-        Toast.fire({
-            icon: iconMap[type] || 'info',
-            title: message
-        })
-    }
+    if (window.$showNotification) window.$showNotification(message, type)
+    else console.log(`${type}: ${message}`)
 }
 </script>
 

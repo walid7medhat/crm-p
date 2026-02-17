@@ -12,8 +12,8 @@
                     </button>
                 </div>
 
-                <!-- View Mode -->
-                <ViewLead v-if="!isEditMode" :lead="lead" />
+                <!-- View Mode (read-only; do not use ViewLead.vue here – it is a full modal and would cause infinite recursion) -->
+                <LeadInfoView v-if="!isEditMode" :lead="lead" />
 
                 <!-- Edit Mode -->
                 <EditLead 
@@ -82,7 +82,7 @@
 <script setup>
 import { ref, watch ,onMounted} from 'vue'
 import EditLead from '../editLead/EditLead.vue'
-import ViewLead from './ViewLead.vue'
+import LeadInfoView from './LeadInfoView.vue'
 import ActivitySection from './ActivitySection.vue'
 import CommentsSection from './CommentsSection.vue'
 import ActivityList from './ActivityList.vue'

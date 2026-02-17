@@ -306,18 +306,6 @@ const handleStageUpdate = (event) => {
 }
 
 const showStageNotification = (event) => {
-    const Toast = Swal.mixin({
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 3000,
-        timerProgressBar: true,
-        didOpen: (toast) => {
-            toast.addEventListener('mouseenter', Swal.stopTimer)
-            toast.addEventListener('mouseleave', Swal.resumeTimer)
-        }
-    })
-
     const stageData = event.stage?.data || event.stage
     const stageName = stageData?.name || 'Unknown Stage'
     const userName = event.user_name || 'Someone'
@@ -346,11 +334,14 @@ const showStageNotification = (event) => {
             title = `📊 Stage updated: ${stageName}`
     }
 
-    Toast.fire({
-        icon: icon,
-        title: title,
-        text: event.message || 'Stage has been updated'
-    })
+    const text = event.message || 'Stage has been updated'
+    const message = text ? `${title}\n${text}` : title
+    // Defer so SweetAlert2 never runs in same turn as Bootstrap modal focus (avoids stack overflow)
+    setTimeout(() => {
+        if (window.$showNotification) {
+            window.$showNotification(message, icon)
+        }
+    }, 200)
 }
 
 const startPolling = () => {
@@ -560,32 +551,12 @@ const handleStageCreated = async (stageData) => {
     $showNotification('Stage created successfully!', 'success')
 }
 
-// Notification helper
+// Notification helper – always use global deferred to avoid SweetAlert2 stack overflow
 const $showNotification = (message, type = 'info') => {
     if (window.$showNotification) {
         window.$showNotification(message, type)
     } else {
         console.log(`${type}: ${message}`)
-        // Fallback notification using Swal
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
-        })
-        
-        const iconMap = {
-            'success': 'success',
-            'error': 'error',
-            'warning': 'warning',
-            'info': 'info'
-        }
-        
-        Toast.fire({
-            icon: iconMap[type] || 'info',
-            title: message
-        })
     }
 }
 </script>
