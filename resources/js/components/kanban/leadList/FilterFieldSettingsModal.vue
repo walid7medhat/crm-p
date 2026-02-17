@@ -30,16 +30,16 @@
                         <iconify-icon icon="lucide:check" width="10"></iconify-icon>
                     </span>
                 </button>
-                <button 
-                    class="tab-btn" 
-                    :class="{ active: activeTabs.includes('activity') }"
-                    @click="toggleTab('activity')"
-                >
-                    Activity
-                    <span v-if="activeTabs.includes('activity')" class="check-badge">
-                        <iconify-icon icon="lucide:check" width="10"></iconify-icon>
-                    </span>
-                </button>
+                <!--<button -->
+                <!--    class="tab-btn" -->
+                <!--    :class="{ active: activeTabs.includes('activity') }"-->
+                <!--    @click="toggleTab('activity')">-->
+                <!---->
+                <!--    Activity-->
+                <!--    <span v-if="activeTabs.includes('activity')" class="check-badge">-->
+                <!--        <iconify-icon icon="lucide:check" width="10"></iconify-icon>-->
+                <!--    </span>-->
+                <!--</button>-->
             </div>
 
             <!-- Leads Section -->
@@ -131,9 +131,11 @@ const toggleTab = (tab) => {
 const leadFields = ref([
     { id: 'first_name', label: 'First Name', checked: true },
     { id: 'lead_name', label: 'Lead Name', checked: true },
-    { id: 'closed', label: 'Closed', checked: true },
+    { id: 'closed', label: 'Closed', checked: false },
+     { id: 'created_on', label: 'Created On',checked:true},
     { id: 'work_phone', label: 'Work Phone', checked: true },
     { id: 'responsible_person', label: 'Responsible Person', checked: true },
+    { id: 'source', label: 'Source', checked: true },
     { id: 'lead_branch_source', label: 'Lead Branch Source', checked: true },
     { id: 'stage', label: 'Stage', checked: true },
     { id: 'email', label: 'Email', checked: true },

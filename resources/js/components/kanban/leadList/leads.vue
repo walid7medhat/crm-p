@@ -453,7 +453,7 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
             break
         case 'revert':
             console.log("revert");
-            handleUpdatedLead(leadData, 'revert')
+            handleStageChanged(leadData, event.changes)
             break
         default:
             // For unknown action types, try to handle as update
@@ -524,7 +524,10 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
     if (!lead || !lead.id) {
         return
     }
-    
+    if (!isAdminOrSuperAdmin.value  && lead.is_reverted) {
+        removeLeadFromColumns(lead.id)
+        return
+    }
     // Extract stage_id from different possible locations
     const stageId = lead.stage_id || lead.stage?.id || null
     
@@ -613,12 +616,27 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
         }
     }
 }
-
+const removeLeadFromColumns = (leadId) => {
+    for (let i = 0; i < columns.value.length; i++) {
+        const column = columns.value[i]
+        if (column.leads) {
+            const index = column.leads.findIndex(l => l && l.id === leadId)
+            if (index !== -1) {
+                column.leads.splice(index, 1)
+                break
+            }
+        }
+    }
+}
 const handleStageChanged = (lead, changes) => {
     const leadId = lead?.data?.id || lead?.id
     const leadStageId = lead?.data?.stage_id || lead?.stage_id
     
     if (!leadId || !leadStageId) {
+        return
+    }
+    if (!isAdminOrSuperAdmin.value  && lead.is_reverted) {
+        removeLeadFromColumns(lead.id)
         return
     }
     

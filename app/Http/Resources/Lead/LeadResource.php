@@ -82,8 +82,9 @@ class LeadResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'duplicate_no'=>$this->duplicate_leads->count(),
-            'duplicate_ids'=>$this->duplicate_leads->pluck('id')->toArray()
-            
+            'duplicate_ids'=>$this->duplicate_leads->pluck('id')->toArray(),
+            'is_reverted'=>!is_null($this->revert),
+
             
         ];
     }

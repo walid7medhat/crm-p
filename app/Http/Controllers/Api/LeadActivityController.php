@@ -519,7 +519,7 @@ class LeadActivityController extends Controller
     }
     
     public function get_mentions(Request $request){
-        $query = User::query();
+        $query = User::query()->role(['admin', 'super_admin']);
           if ($request->has('search') && $request->search) {
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {

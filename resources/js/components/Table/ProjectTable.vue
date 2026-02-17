@@ -74,7 +74,13 @@
                                     <th @click="sortBy('status')" class="sortable">Status</th>
                                     <th @click="sortBy('count_listing')" class="sortable">Count of Listing</th>
                                     <th @click="sortBy('duplicated')" class="sortable">Duplicated</th>
-                                    <th>Completed</th>
+                                    <th @click="sortBy('completed')" class="sortable">
+                                        Completed
+                                        <iconify-icon
+                                            v-if="sortKey === 'completed'"
+                                            :icon="sortDirection === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'"
+                                        />
+                                    </th>
                                     <th @click="sortBy('created_at')" class="sortable">Created Date</th>
 
                                 <th scope="col">Actions</th>
@@ -426,7 +432,11 @@ export default {
                                     bVal = Number(b.listing_count) || 0;
                                     break;
 
-            
+                            case 'completed':
+                                aVal = Number(a.completion_percentage) || 0;
+                                bVal = Number(b.completion_percentage) || 0;
+                                break;
+
                             case 'created_at':
                                 aVal = new Date(a.created_at);
                                 bVal = new Date(b.created_at);

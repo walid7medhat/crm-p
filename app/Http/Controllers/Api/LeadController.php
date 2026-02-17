@@ -493,10 +493,33 @@ class LeadController extends Controller
                     );
                 }
             }
+            if($newStage->order==2 && !is_null($lead->revert)){
+              
+                $lead->update([
+                
+                    'revert'=>null,
+                ]); 
+                      $responsiblePerson = User::find($lead->responsible_person_id);
+                              $changes = [
+                            'old_person' => $responsiblePerson?->name,
+                            'new_person' => $responsiblePerson?->name
+                        ];
+                        broadcast(new LeadUpdated($lead, 'assigned', null, $changes));
+                        //  ==================================hiatory====================
+                        LeadHistoryHelper::log(
+                            $lead->id,
+                            [
+                                'action' => 'assigned',
+                                'old_person' => $responsiblePerson?->name,
+                                'new_person' => $responsiblePerson?->name
+                            ]
+                        );
+            }
            
             $lead->update([
                 'stage_id' => $request->stage_id,
-                'last_stage_change_at' => now()
+                'last_stage_change_at' => now(),
+                //  'revert'=>null,
             ]);
          $changes = [
             'old_stage' => $oldStage->name,
