@@ -34,13 +34,13 @@
                         <div class="activity-card-left">
                             <!-- Show who did the action: user avatar or fallback icon -->
                             <div class="activity-type-icon activity-icon-person" :class="item.iconClass">
-                                <img
-                                    v-if="item.user?.avatar"
-                                    :src="item.user.avatar"
-                                    class="activity-icon-avatar"
-                                    :alt="item.user?.name"
-                                />
-                                <iconify-icon v-else :icon="item.icon" class="activity-type-icon-content"></iconify-icon>
+                                <!--<img-->
+                                <!--    v-if="item.user?.avatar"-->
+                                <!--    :src="item.user.avatar"-->
+                                <!--    class="activity-icon-avatar"-->
+                                <!--    :alt="item.user?.name"-->
+                                <!--/>-->
+                                <iconify-icon  :icon="item.icon" class="activity-type-icon-content"></iconify-icon>
                             </div>
                         </div>
                         <div class="activity-card-body">
@@ -173,11 +173,13 @@ function buildDetailsHtml(entry) {
 }
 
 function transformEntry(entry) {
+    console.log(entry);
     const user = entry.user || {}
     let avatar = user.avatar || ''
     if (avatar && !avatar.startsWith('http') && !avatar.startsWith('/')) {
         avatar = `/storage/${avatar}`
     }
+    console.log(avatar);
     const action = (entry.changes && entry.changes.action) || entry.action || 'updated'
     const { icon, class: iconClass } = getIconAndClass(action)
     const dateStr = entry.created_at || entry.date
@@ -253,7 +255,7 @@ async function fetchHistory(page = 1, append = false) {
         const { list, pagination } = parseResponse(res.data)
         const withoutView = list.filter((entry) => {
             const action = (entry.changes && entry.changes.action) ?? entry.action
-            return action !== 'view'
+            return action !== 'view' && action !== 'revert'
         })
         const transformed = withoutView.map(transformEntry)
         if (append) {

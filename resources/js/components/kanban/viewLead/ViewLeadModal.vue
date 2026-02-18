@@ -33,6 +33,7 @@
                         General
                     </button>
                     <button 
+                        v-if="canViewHistory"
                         class="tab-item" 
                         :class="{ active: activeTab === 'history' }"
                         @click="switchTab('history')"
@@ -53,14 +54,14 @@
                 />
 
                 <!-- History Tab Content -->
-                <HistoryTab v-if="activeTab === 'history'" :lead="lead" :is-active="activeTab === 'history'" />
+                <HistoryTab v-if="activeTab === 'history' && canViewHistory"  :lead="lead" :is-active="activeTab === 'history'" />
             </div>
         </div>
     </b-modal>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted,computed } from 'vue'
 import { BModal, BDropdown } from 'bootstrap-vue-3'
 import StageSelector from '../shared/StageSelector.vue'
 import GeneralTab from './GeneralTab.vue'
@@ -82,6 +83,22 @@ const leadStageId = ref(null)
 const activeTab = ref('general')
 const echoListener = ref(null)
 const echoAssignedListener = ref(null)
+const user = ref(JSON.parse(localStorage.getItem('user')))
+
+
+
+const canViewHistory = computed(() => {
+    if (!user.value || !lead.value) return false
+
+    const isAdminUser =
+        user.value.roles?.includes('super_admin') ||
+        user.value.roles?.includes('admin')
+
+    const isResponsible =
+        lead.value.responsible_person_id === user.value.id
+
+    return isAdminUser || isResponsible
+})
 
 const switchTab = (tab) => {
     activeTab.value = tab

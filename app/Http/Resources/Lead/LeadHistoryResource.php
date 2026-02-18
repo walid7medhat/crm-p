@@ -20,9 +20,9 @@ class LeadHistoryResource extends JsonResource
             'changes'   => $this->changes,
             'user'      => $this->whenLoaded('user', function () {
                 return [
-                    'id'   => $this->user->id,
-                    'name' => $this->user->name,
-                    'avatar'=>$this->user->avatar_url,
+                    'id'   => $this->user?->id,
+                    'name' => $this->user?->name,
+                    'avatar'=>$this->user?->avatar_url,
                 ];
             }),
             'date'      => $this->created_at->format('Y-m-d H:i'),

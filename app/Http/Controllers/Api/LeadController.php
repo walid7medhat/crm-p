@@ -640,7 +640,7 @@ class LeadController extends Controller
         public function history(Request $request, $leadId)
 {
     $query = LeadHistory::where('lead_id', $leadId)
-        ->with('user:id,name');
+        ->with('user:id,name,avatar');
     
     // Search functionality - search in multiple fields
     if ($request->filled('search')) {
