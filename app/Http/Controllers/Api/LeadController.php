@@ -22,7 +22,7 @@ use App\Http\Resources\Lead\DuplicateLeadResource;
 use App\Helpers\LeadHistoryHelper;
 use App\Http\Resources\Lead\LeadHistoryResource;
 use App\Models\LeadHistory;
-
+use App\Models\LeadComment;
 use Illuminate\Support\Str;
 class LeadController extends Controller
 {
@@ -479,7 +479,8 @@ class LeadController extends Controller
             }
 
             $request->validate([
-                'stage_id' => 'required|exists:stages,id'
+                'stage_id' => 'required|exists:stages,id',
+                'reason'=>'nullable|string|max:255',
             ]);
         $oldStage = $lead->stage;
 
@@ -523,6 +524,13 @@ class LeadController extends Controller
                 'last_stage_change_at' => now(),
                 //  'revert'=>null,
             ]);
+            if($request->reason){
+                LeadComment::create([
+                    'lead_id'=>$lead->id,
+                    'comment'=>$request->reason,
+                    'user_id'=>auth()->user()->id
+                    ]);
+            }
          $changes = [
             'old_stage' => $oldStage->name,
             'new_stage' => $newStage->name

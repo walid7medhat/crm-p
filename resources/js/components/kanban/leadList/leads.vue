@@ -165,7 +165,14 @@
         :triggerElement="currentTriggerElement"
         @view-lead="handleViewDuplicateLead"
     />
-
+     <StageChangeReasonModal
+            ref="stageChangeReasonModal"
+            :leadId="pendingStageChange?.leadId"
+            :targetStageId="pendingStageChange?.targetStageId"
+            :targetStageName="pendingStageChange?.targetStageName"
+            @submit="handleStageChangeWithReason"
+            @closed="clearPendingStageChange"
+        />
     <!-- Add/Edit Task Modal -->
     <div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -235,6 +242,8 @@ import leadsIcon from '@/assets/images/kanban/leads-icon.png'
 import avatar2 from '@/assets/images/users/user2.png'
 import ViewLeadModal from '../viewLead/ViewLeadModal.vue'
 import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
+import StageChangeReasonModal from './StageChangeReasonModal.vue'
+
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 
@@ -282,6 +291,12 @@ const fetchDebounceTimer = ref(null)
 const editingStageId = ref(null)
 const editingStageTitle = ref('')
 const stageTitleInput = ref(null)
+
+
+
+const stageChangeReasonModal = ref(null)
+const pendingStageChange = ref(null)
+
 
 const colors = ['#7BD3EA', '#E3DA32', '#F2C934', '#8EC82F', '#00A74C']
 
@@ -978,18 +993,79 @@ async function onLeadDragChange(evt, column) {
         const lead = evt.added.element
         const newStageId = column.status // column.status is stage.slug || stage.id
 
-        try {
-            await api.post(`/leads/${lead.id}/change-stage`, {
-                stage_id: newStageId
-            })
-            // Don't refetch - real-time updates will handle the UI update
-        } catch (error) {
-            // Revert the UI change if API fails - only refetch if not already fetching
-            if (!isFetching.value) {
-                await fetchLeads(true) // Immediate refetch on error
+        // Check if user is not admin and stage is actually changing
+        if (!isAdminOrSuperAdmin.value && lead.stage_id !== newStageId) {
+            // Store pending change and show reason modal
+            pendingStageChange.value = {
+                leadId: lead.id,
+                targetStageId: newStageId,
+                targetStageName: column.title,
+                originalStageId: lead.stage_id,
+                leadData: lead
             }
-            $showNotification('Failed to move lead', 'error')
+            
+            // Show the reason modal
+            await nextTick()
+            if (stageChangeReasonModal.value) {
+                stageChangeReasonModal.value.show()
+            }
+            
+            // Remove the added lead immediately (revert UI change)
+            // We need to revert the drag since we need reason first
+            const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
+            if (sourceColumn) {
+                // Remove from target column
+                const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
+                if (targetColumnIndex !== -1) {
+                    columns.value[targetColumnIndex].leads = columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
+                }
+                // Add back to source column
+                if (!sourceColumn.leads.find(l => l.id === lead.id)) {
+                    sourceColumn.leads.push(lead)
+                }
+            }
+            return
         }
+
+        // For admin users or same stage, proceed normally
+        await moveLeadWithStageChange(lead, newStageId)
+    }
+}
+async function moveLeadWithStageChange(lead, newStageId) {
+    try {
+        await api.post(`/leads/${lead.id}/change-stage`, {
+            stage_id: newStageId
+        })
+        // Don't refetch - real-time updates will handle the UI update
+    } catch (error) {
+        // Revert the UI change if API fails - only refetch if not already fetching
+        if (!isFetching.value) {
+            await fetchLeads(true) // Immediate refetch on error
+        }
+        $showNotification('Failed to move lead', 'error')
+    }
+}
+
+function clearPendingStageChange() {
+    pendingStageChange.value = null
+}
+
+
+async function handleStageChangeWithReason({ leadId, targetStageId, reason }) {
+    try {
+        const lead = pendingStageChange.value?.leadData
+        if (!lead) return
+
+        await api.post(`/leads/${leadId}/change-stage`, {
+            stage_id: targetStageId,
+            reason: reason // Send reason to backend
+        })
+        
+        // Success - real-time updates will handle UI
+        $showNotification('Lead moved successfully', 'success')
+    } catch (error) {
+        $showNotification(error.response?.data?.message || 'Failed to move lead', 'error')
+        throw error // Re-throw to show error in modal
     }
 }
 
