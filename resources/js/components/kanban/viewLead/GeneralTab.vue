@@ -76,6 +76,11 @@
                 ref="commentListRef"
                 :lead-id="lead?.id" 
             />
+            <!-- Lead Activity timeline: under comments, grouped by date (who assigned, created, history) -->
+            <LeadActivityTimeline 
+                v-if="activeViewTab === 'comments' && lead?.id" 
+                :lead-id="lead?.id" 
+            />
         </div>
     </div>
 </template>
@@ -88,6 +93,7 @@ import ActivitySection from './ActivitySection.vue'
 import CommentsSection from './CommentsSection.vue'
 import ActivityList from './ActivityList.vue'
 import CommentList from './CommentList.vue'
+import LeadActivityTimeline from './LeadActivityTimeline.vue'
 
 const props = defineProps({
     lead: {
