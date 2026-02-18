@@ -1,39 +1,117 @@
 <template>
     <div class="info-card bg-white p-3 radius-12 shadow-sm history-content">
-        <!-- Search Bar that opens modal -->
-        <div class="search-area d-flex justify-content-start position-relative mb-3">
+        <!-- Search area: bar + dropdown (sidebar pills INSIDE popup) -->
+        <div class="search-area d-flex justify-content-start mb-3 position-relative" ref="searchDropdownAnchorRef">
             <div
-                class="search-wrapper d-flex align-items-center"
-                @click="showSearchModal = true"
+                ref="searchWrapperRef"
+                class="search-wrapper d-flex align-items-center flex-wrap"
+                :class="{
+                    'search-wrapper-expanded': hasActiveFilters,
+                    'search-wrapper-focused': showSearchModal
+                }"
             >
-                <iconify-icon icon="lucide:search" class="search-icon"></iconify-icon>
-                <span class="search-placeholder">Search history...</span>
+                <div v-if="hasActiveFilters" class="search-filters-pills d-flex align-items-center flex-wrap gap-2">
+                    <span v-if="searchFilters.search" class="filter-badge">
+                        Search: "{{ searchFilters.search }}"
+                        <iconify-icon icon="lucide:x" @click="removeFilter('search')"></iconify-icon>
+                    </span>
+                    <span v-if="searchFilters.action" class="filter-badge">
+                        Event: {{ getActionLabel(searchFilters.action) }}
+                        <iconify-icon icon="lucide:x" @click="removeFilter('action')"></iconify-icon>
+                    </span>
+                    <span v-if="searchFilters.user" class="filter-badge">
+                        User: {{ getUserName(searchFilters.user) }}
+                        <iconify-icon icon="lucide:x" @click="removeFilter('user')"></iconify-icon>
+                    </span>
+                    <span v-if="searchFilters.dateFrom || searchFilters.dateTo" class="filter-badge">
+                        Date: {{ searchFilters.dateFrom || 'Any' }} – {{ searchFilters.dateTo || 'Any' }}
+                        <iconify-icon icon="lucide:x" @click="removeFilter('date')"></iconify-icon>
+                    </span>
+                </div>
+                <div class="search-input-container d-flex align-items-center">
+                    <input
+                        v-model="searchFilters.search"
+                        type="text"
+                        class="search-input-field"
+                        placeholder="Search..."
+                        @input="onSearchInput"
+                        @keydown.enter="applySearch()"
+                        @focus="showSearchModal = true"
+                    />
+                    <button
+                        type="button"
+                        class="search-filter-btn"
+                        aria-label="Open filters"
+                        @click.stop="showSearchModal = true"
+                    >
+                        <iconify-icon icon="lucide:sliders-horizontal"></iconify-icon>
+                    </button>
+                </div>
+                <iconify-icon
+                    v-if="hasActiveFilters"
+                    icon="lucide:x"
+                    class="clear-search-icon"
+                    @click="clearAllFilters"
+                />
             </div>
-        </div>
 
-        <!-- Active Filters Display -->
-        <div v-if="hasActiveFilters" class="active-filters px-4 mb-3">
-            <div class="d-flex flex-wrap gap-2">
-                <span v-if="searchFilters.search" class="filter-badge">
-                    Search: "{{ searchFilters.search }}"
-                    <iconify-icon icon="lucide:x" @click="removeFilter('search')"></iconify-icon>
-                </span>
-                <span v-if="searchFilters.action" class="filter-badge">
-                    Event: {{ getActionLabel(searchFilters.action) }}
-                    <iconify-icon icon="lucide:x" @click="removeFilter('action')"></iconify-icon>
-                </span>
-                <span v-if="searchFilters.user" class="filter-badge">
-                    User: {{ getUserName(searchFilters.user) }}
-                    <iconify-icon icon="lucide:x" @click="removeFilter('user')"></iconify-icon>
-                </span>
-                <span v-if="searchFilters.dateFrom || searchFilters.dateTo" class="filter-badge">
-                    Date: {{ searchFilters.dateFrom || 'Any' }} to {{ searchFilters.dateTo || 'Any' }}
-                    <iconify-icon icon="lucide:x" @click="removeFilter('date')"></iconify-icon>
-                </span>
-                <button v-if="hasActiveFilters" class="btn-clear-all" @click="clearAllFilters">
-                    Clear All
-                </button>
-            </div>
+            <!-- Dropdown panel: under search input so you can write + choose (teleport so not clipped) -->
+            <Teleport to="body">
+                <div
+                    v-if="showSearchModal"
+                    class="history-search-dropdown-outer"
+                    :style="dropdownPositionStyle"
+                    ref="dropdownRef"
+                >
+                    <div class="history-search-dropdown-panel d-flex">
+                    <!-- Sidebar pills INSIDE popup -->
+                    <div class="history-sidebar-pills d-flex flex-column">
+                        <button
+                            type="button"
+                            class="history-pill"
+                            :class="{ active: quickPill === 'today' }"
+                            @click="applyQuickPill('today')"
+                        >
+                            Created Today
+                        </button>
+                        <button
+                            type="button"
+                            class="history-pill"
+                            :class="{ active: quickPill === 'yesterday' }"
+                            @click="applyQuickPill('yesterday')"
+                        >
+                            Created Yesterday
+                        </button>
+                        <button
+                            type="button"
+                            class="history-pill"
+                            :class="{ active: quickPill === 'by_me' }"
+                            @click="applyQuickPill('by_me')"
+                        >
+                            Created By Me
+                        </button>
+                    </div>
+                    <!-- Form content -->
+                    <div class="history-search-form-column position-relative flex-grow-1">
+                        <button class="history-modal-close" aria-label="Close" @click="showSearchModal = false">
+                            <iconify-icon icon="lucide:x" width="18" height="18"></iconify-icon>
+                        </button>
+                        <div class="history-search-modal-body">
+                            <HistorySearchForm
+                                :initial-search="searchFilters.search"
+                                :initial-action="searchFilters.action"
+                                :initial-user="searchFilters.user"
+                                :initial-date-from="searchFilters.dateFrom"
+                                :initial-date-to="searchFilters.dateTo"
+                                :users="users"
+                                @search="onSearch"
+                                @close="showSearchModal = false"
+                            />
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </Teleport>
         </div>
 
         <!-- History Table -->
@@ -140,49 +218,10 @@
             </div>
         </div>
     </div>
-
-    <!-- Search Modal -->
-    <b-modal
-        id="history-search-modal"
-        v-model="showSearchModal"
-        centered
-        size="md"
-        hide-footer
-        hide-header
-        body-class="p-0"
-        @hidden="onModalHidden"
-    >
-        <div class="history-search-modal">
-            <!-- Modal Header -->
-            <div class="modal-header-custom p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="created-date">Filter History</span>
-                    <button class="close-btn" @click="showSearchModal = false">
-                        <iconify-icon icon="lucide:x" width="20" height="20"></iconify-icon>
-                    </button>
-                </div>
-            </div>
-
-            <!-- History Search Form -->
-            <div class="p-4 pt-0">
-                <HistorySearchForm
-                    :initial-search="searchFilters.search"
-                    :initial-action="searchFilters.action"
-                    :initial-user="searchFilters.user"
-                    :initial-date-from="searchFilters.dateFrom"
-                    :initial-date-to="searchFilters.dateTo"
-                    :users="users"
-                    @search="onSearch"
-                    @close="showSearchModal = false"
-                />
-            </div>
-        </div>
-    </b-modal>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue'
-import { BModal } from 'bootstrap-vue-3'
+import { ref, computed, watch, onMounted, onUnmounted, getCurrentInstance, nextTick } from 'vue'
 import api from '@/plugins/axios'
 import HistorySearchForm from './HistorySearchModal.vue'
 
@@ -208,8 +247,33 @@ const props = defineProps({
     }
 })
 
-// Modal state
+// Dropdown state (search opens dropdown, not modal)
 const showSearchModal = ref(false)
+const searchDropdownAnchorRef = ref(null)
+const searchWrapperRef = ref(null)
+const dropdownRef = ref(null)
+
+// Position dropdown under search bar, aligned to same left as search input (same line)
+const dropdownPositionStyle = ref({})
+function updateDropdownPosition() {
+    const wrapper = searchWrapperRef.value
+    if (!wrapper) return
+    const rect = wrapper.getBoundingClientRect()
+    dropdownPositionStyle.value = {
+        position: 'fixed',
+        top: `${rect.bottom + 6}px`,
+        left: `${rect.left}px`,
+        zIndex: 10500
+    }
+}
+
+// Quick filter pill: 'today' | 'yesterday' | 'by_me' | null
+const quickPill = ref(null)
+let currentUserId = null
+try {
+    const u = JSON.parse(localStorage.getItem('user') || '{}')
+    currentUserId = u?.id || null
+} catch (_) {}
 
 // Users list for filter dropdown
 const users = ref([])
@@ -222,6 +286,15 @@ const searchFilters = ref({
     dateFrom: '',
     dateTo: ''
 })
+
+// Debounce typing in search input
+let searchInputDebounce = null
+const onSearchInput = () => {
+    if (searchInputDebounce) clearTimeout(searchInputDebounce)
+    searchInputDebounce = setTimeout(() => {
+        applySearch()
+    }, 350)
+}
 
 // History data
 const historyEntries = ref([])
@@ -292,6 +365,7 @@ const getUserName = (userId) => {
 
 // Filter methods
 const removeFilter = (filterType) => {
+    quickPill.value = null
     if (filterType === 'search') searchFilters.value.search = ''
     if (filterType === 'action') searchFilters.value.action = ''
     if (filterType === 'user') searchFilters.value.user = ''
@@ -303,6 +377,7 @@ const removeFilter = (filterType) => {
 }
 
 const clearAllFilters = () => {
+    quickPill.value = null
     searchFilters.value = {
         search: '',
         action: '',
@@ -311,10 +386,42 @@ const clearAllFilters = () => {
         dateTo: ''
     }
     applySearch()
+    showSearchModal.value = false
+}
+
+// Quick pills: Created Today, Created Yesterday, Created By Me
+function getTodayISO() {
+    const d = new Date()
+    return d.toISOString().slice(0, 10)
+}
+function getYesterdayISO() {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    return d.toISOString().slice(0, 10)
+}
+function applyQuickPill(pill) {
+    quickPill.value = pill
+    if (pill === 'today') {
+        const t = getTodayISO()
+        searchFilters.value.dateFrom = t
+        searchFilters.value.dateTo = t
+        searchFilters.value.user = ''
+    } else if (pill === 'yesterday') {
+        const y = getYesterdayISO()
+        searchFilters.value.dateFrom = y
+        searchFilters.value.dateTo = y
+        searchFilters.value.user = ''
+    } else if (pill === 'by_me' && currentUserId) {
+        searchFilters.value.user = String(currentUserId)
+        searchFilters.value.dateFrom = ''
+        searchFilters.value.dateTo = ''
+    }
+    applySearch()
 }
 
 // Handle search from form
 const onSearch = (filters) => {
+    quickPill.value = null
     searchFilters.value = {
         search: filters.search || '',
         action: filters.action || '',
@@ -332,11 +439,33 @@ const applySearch = () => {
     fetchHistory(1)
 }
 
-// Modal hidden handler
-const onModalHidden = () => {
-    // Optional: reset filters when modal is closed without searching
-    // You can keep this empty or add logic if needed
+// Click outside to close dropdown (anchor contains input + bar; dropdown is teleported so check both)
+function handleClickOutside(e) {
+    if (!showSearchModal.value) return
+    const anchor = searchDropdownAnchorRef.value
+    const dropdown = dropdownRef.value
+    const inAnchor = anchor && anchor.contains(e.target)
+    const inDropdown = dropdown && dropdown.contains(e.target)
+    if (!inAnchor && !inDropdown) {
+        showSearchModal.value = false
+    }
 }
+
+// Keep dropdown position under search bar when scroll/resize
+function onScrollOrResize() {
+    if (showSearchModal.value) updateDropdownPosition()
+}
+
+onMounted(() => {
+    document.addEventListener('click', handleClickOutside)
+    window.addEventListener('scroll', onScrollOrResize, true)
+    window.addEventListener('resize', onScrollOrResize)
+})
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside)
+    window.removeEventListener('scroll', onScrollOrResize, true)
+    window.removeEventListener('resize', onScrollOrResize)
+})
 
 // Transform API response
 const transformHistoryEntry = (entry) => {
@@ -534,6 +663,14 @@ const goToPage = async (page) => {
     }
 }
 
+// When modal opens, position dropdown under search bar
+watch(showSearchModal, async (isOpen) => {
+    if (isOpen) {
+        await nextTick()
+        updateDropdownPosition()
+    }
+})
+
 // Watch for tab activation
 watch(() => props.isActive, (isActive) => {
     if (isActive && props.lead?.id) {
@@ -577,76 +714,222 @@ onMounted(() => {
     }
 }
 
-/* Search Area */
+/* Search Area – compact bar like reference image (not full width) */
 .search-area {
-    padding: 16px 24px 0 24px;
+    padding: 12px 24px 0;
 }
 
 .search-wrapper {
-    border: 1px solid #E5E7EB;
+    width: auto;
+    max-width: 420px;
+    border: 1px solid #E0E0E0;
     border-radius: 100px;
-    background: white;
-    height: 42px;
-    padding: 0 16px;
-    width: 300px;
+    background: #F7F7F7;
+    min-height: 34px;
+    padding: 4px 8px 4px 4px;
     display: flex;
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: max-width 0.35s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .search-wrapper:hover {
-    border-color: #FAA300;
-    box-shadow: 0 0 0 3px rgba(250, 163, 0, 0.1);
+    border-color: #D8D8D8;
+    background: #F0F0F0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-.search-icon {
-    color: #9CA3AF;
+.search-wrapper-expanded {
+    max-width: 560px;
+}
+
+.search-wrapper-focused {
+    max-width: 640px;
+}
+
+.search-wrapper-expanded.search-wrapper-focused {
+    max-width: 680px;
+}
+
+.search-filters-pills {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.search-input-container {
+    flex: 1;
+    min-width: 140px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px 2px 12px;
+}
+
+.search-input-field {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    line-height: 1.3;
+    color: #374151;
+    outline: none;
+    font-family: inherit;
+}
+
+.search-input-field::placeholder {
+    color: #999999;
+}
+
+.search-filter-btn {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    color: #999999;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s, background 0.2s;
+}
+
+.search-filter-btn:hover {
+    color: #374151;
+    background: #EBEBEB;
+}
+
+.search-filter-btn iconify-icon {
     font-size: 16px;
 }
 
-.search-placeholder {
-    color: #9CA3AF;
-    font-size: 14px;
+.clear-search-icon {
+    color: #FAA300;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px;
 }
 
-/* Active Filters */
-.active-filters {
-    padding: 0 24px;
+.clear-search-icon:hover {
+    color: #D97706;
 }
 
+/* Dropdown panel – position set by JS (Teleport); fixed size */
+.history-search-dropdown-outer {
+    width: 660px;
+    flex-shrink: 0;
+}
+
+.history-search-dropdown-panel {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(99, 102, 241, 0.08);
+    overflow: hidden;
+    width: 660px;
+    height: 500px;
+    min-width: 660px;
+    min-height: 500px;
+    max-width: 660px;
+    max-height: 500px;
+    box-sizing: border-box;
+    display: flex;
+    flex-shrink: 0;
+}
+
+/* Sidebar pills – more space for shortcuts in popup */
+.history-sidebar-pills {
+    flex-shrink: 0;
+    width: 200px;
+    min-width: 200px;
+    padding: 18px 16px;
+    gap: 12px;
+    border-right: 1px solid #E5E7EB;
+}
+
+.history-pill {
+    padding: 10px 16px;
+    min-height: 38px;
+    border-radius: 100px;
+    border: 1px solid #E5E7EB;
+    background: #F9FAFB;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    white-space: nowrap;
+    text-align: left;
+    display: flex;
+    align-items: center;
+}
+
+.history-pill:hover {
+    background: #F3F4F6;
+    border-color: #D1D5DB;
+}
+
+.history-pill.active {
+    background: #FEF3C7;
+    border-color: #F59E0B;
+    color: #92400E;
+}
+
+.history-search-form-column {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.history-search-form-column .history-search-modal-body {
+    flex: 1;
+    padding: 16px 28px 28px;
+    overflow-y: auto;
+    min-height: 0;
+    overflow-x: hidden;
+}
+
+/* Filter badges in bar – match image: light grey, capsule, small x */
 .filter-badge {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     padding: 6px 12px;
-    background-color: #F3F4F6;
+    background: #EBEBEB;
+    border: 1px solid #D8D8D8;
     border-radius: 100px;
     font-size: 13px;
-    color: #374151;
+    color: #555555;
 }
 
 .filter-badge iconify-icon {
-    font-size: 14px;
-    color: #9CA3AF;
+    font-size: 13px;
+    color: #999999;
     cursor: pointer;
-    transition: color 0.2s ease;
 }
 
 .filter-badge iconify-icon:hover {
-    color: #374151;
+    color: #555555;
 }
 
 .btn-clear-all {
     background: transparent;
     border: 1px solid #E5E7EB;
-    padding: 6px 12px;
+    padding: 4px 10px;
     border-radius: 100px;
-    font-size: 13px;
+    font-size: 12px;
     color: #6B7280;
     cursor: pointer;
-    transition: all 0.2s ease;
 }
 
 .btn-clear-all:hover {
@@ -654,47 +937,37 @@ onMounted(() => {
     color: #374151;
 }
 
-/* Modal Styles */
-.history-search-modal {
-    background: white;
-    border-radius: 16px;
-    overflow: hidden;
-}
-
-.modal-header-custom {
-    background: #F9FAFB;
-    border-bottom: 1px solid #E5E7EB;
-}
-
-.created-date {
-    font-size: 14px;
-    font-weight: 500;
-    color: #1F2937;
-}
-
-.close-btn {
+/* Close X */
+.history-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
     background: transparent;
     border: none;
-    color: #6B7280;
+    color: #1f2937;
     cursor: pointer;
-    padding: 4px;
+    padding: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
-    transition: all 0.2s ease;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+    z-index: 2;
 }
 
-.close-btn:hover {
-    background: #F3F4F6;
-    color: #374151;
+.history-modal-close:hover {
+    background: #f3f4f6;
+}
+
+.history-search-modal-body {
+    padding: 40px 20px 20px;
 }
 
 /* Table Styles */
 .history-table-wrapper {
     border: 1px solid #E5E7EB;
-    border-radius: 12px;
-    margin: 0 24px 24px 24px;
+    border-radius: 10px;
+    margin: 0 20px 20px;
     overflow: hidden;
 }
 
@@ -965,18 +1238,6 @@ onMounted(() => {
 
 .text-neutral-500 {
     color: #6B7280;
-}
-
-/* Modal Customization */
-:deep(.modal-content) {
-    border: none;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-:deep(.modal-body) {
-    padding: 0;
 }
 
 /* Responsive */
