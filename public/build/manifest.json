@@ -1,6 +1,6 @@
 {
-  "_html2canvas-C7prnjfC.js": {
-    "file": "assets/html2canvas-C7prnjfC.js",
+  "_html2canvas-DS3JvX9D.js": {
+    "file": "assets/html2canvas-DS3JvX9D.js",
     "name": "html2canvas",
     "isDynamicEntry": true,
     "imports": [
@@ -22,7 +22,7 @@
     ]
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-BdGVPzOg.js",
+    "file": "assets/index.es-48a7dDDw.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
@@ -38,7 +38,7 @@
     "isDynamicEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app.Cl2N5Zfk.css",
+    "file": "assets/app.CPTQh1B7.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -192,7 +192,7 @@
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/main.js": {
-    "file": "assets/main-eXPpp7ra.js",
+    "file": "assets/main-RGBe4svy.js",
     "name": "main",
     "src": "resources/js/main.js",
     "isEntry": true,
@@ -200,12 +200,12 @@
       "_sweetalert2.esm.all-D917OO_H.js"
     ],
     "dynamicImports": [
-      "_html2canvas-C7prnjfC.js",
+      "_html2canvas-DS3JvX9D.js",
       "node_modules/dompurify/dist/purify.es.mjs",
       "node_modules/canvg/lib/index.es.js"
     ],
     "css": [
-      "assets/main.lvQWocEj.css"
+      "assets/main.DYhkxO02.css"
     ],
     "assets": [
       "assets/flag5.BD-cC3Ws.png",

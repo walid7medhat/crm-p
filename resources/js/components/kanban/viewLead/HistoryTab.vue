@@ -62,6 +62,7 @@
                     class="history-search-dropdown-outer"
                     :style="dropdownPositionStyle"
                     ref="dropdownRef"
+                    @click.stop
                 >
                     <div class="history-search-dropdown-panel d-flex">
                     <!-- Sidebar pills INSIDE popup -->
@@ -439,14 +440,17 @@ const applySearch = () => {
     fetchHistory(1)
 }
 
-// Click outside to close dropdown (anchor contains input + bar; dropdown is teleported so check both)
+// Click outside to close dropdown; don't close when interacting with "Created By" v-select
 function handleClickOutside(e) {
     if (!showSearchModal.value) return
     const anchor = searchDropdownAnchorRef.value
     const dropdown = dropdownRef.value
     const inAnchor = anchor && anchor.contains(e.target)
     const inDropdown = dropdown && dropdown.contains(e.target)
-    if (!inAnchor && !inDropdown) {
+    const inVSelectMenu = e.target.closest && e.target.closest('.vs__dropdown-menu')
+    const inVSelect = e.target.closest && e.target.closest('.v-select')
+    const inVSelectAny = e.target.closest && e.target.closest('[class*="vs__"]')
+    if (!inAnchor && !inDropdown && !inVSelectMenu && !inVSelect && !inVSelectAny) {
         showSearchModal.value = false
     }
 }
@@ -832,7 +836,7 @@ onMounted(() => {
     border-radius: 16px;
     box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04);
     border: 1px solid rgba(99, 102, 241, 0.08);
-    overflow: hidden;
+    overflow: visible;
     width: 660px;
     height: 500px;
     min-width: 660px;
@@ -888,15 +892,15 @@ onMounted(() => {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible;
 }
 
+/* overflow: visible so v-select dropdown (append-to-body false) is not clipped */
 .history-search-form-column .history-search-modal-body {
     flex: 1;
     padding: 16px 28px 28px;
-    overflow-y: auto;
+    overflow: visible;
     min-height: 0;
-    overflow-x: hidden;
 }
 
 /* Filter badges in bar – match image: light grey, capsule, small x */

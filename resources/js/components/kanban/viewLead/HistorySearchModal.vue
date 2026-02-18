@@ -1,54 +1,98 @@
 <template>
     <div class="history-search-form">
-        <!-- Type (keyword search) -->
-        <div class="filter-row">
-            <label class="filter-label">Type</label>
-            <div class="filter-input-wrap">
-                <input
-                    type="text"
-                    class="filter-input"
-                    v-model="localSearch"
-                    placeholder="Not Specified"
-                />
-            </div>
-        </div>
-
-        <!-- Event Type -->
+        <!-- Event Type (custom searchable dropdown – no v-select) -->
         <div class="filter-row">
             <label class="filter-label">Event Type</label>
-            <div class="filter-input-wrap">
-                <select class="filter-input filter-select" v-model="localAction">
-                    <option value="">Not Specified</option>
-                    <option value="view">View</option>
-                    <option value="stage_changed">Status Changed</option>
-                    <option value="revert">Revert</option>
-                    <option value="assigned">Responsible Person Changed</option>
-                    <option value="updated">Lead Updated</option>
-                    <option value="created">Lead Created</option>
-                </select>
-                <iconify-icon icon="lucide:chevrons-up-down" class="input-chevron"></iconify-icon>
+            <div class="filter-input-wrap custom-select-wrap" ref="eventTypeWrapRef">
+                <button
+                    type="button"
+                    class="custom-select-trigger filter-select-advanced"
+                    :class="{ open: openEventType }"
+                    @mousedown.prevent
+                    @click="toggleEventType"
+                >
+                    <span class="custom-select-label">{{ eventTypeLabel }}</span>
+                    <iconify-icon icon="lucide:chevrons-up-down" class="custom-select-chevron"></iconify-icon>
+                </button>
+                <Teleport to="body">
+                    <div
+                        v-if="openEventType"
+                        class="custom-select-dropdown"
+                        :style="eventTypeDropdownStyle"
+                        @click.stop
+                        @mousedown.stop
+                    >
+                        <input
+                            ref="eventTypeSearchRef"
+                            v-model="eventTypeQuery"
+                            type="text"
+                            class="custom-select-search"
+                            placeholder="Search..."
+                            autocomplete="off"
+                            @keydown.enter.prevent="pickFirstEventType"
+                        />
+                        <ul class="custom-select-list">
+                            <li
+                                v-for="opt in filteredEventTypeOptions"
+                                :key="opt.value"
+                                class="custom-select-option"
+                                :class="{ selected: localAction === opt.value }"
+                                @click="localAction = opt.value; openEventType = false"
+                            >
+                                {{ opt.label }}
+                            </li>
+                            <li v-if="filteredEventTypeOptions.length === 0" class="custom-select-option muted">No matches</li>
+                        </ul>
+                    </div>
+                </Teleport>
             </div>
         </div>
 
-        <!-- Created By (searchable dropdown: type to search) -->
+        <!-- Created By (custom searchable dropdown) -->
         <div class="filter-row">
             <label class="filter-label">Created By</label>
-            <div class="filter-input-wrap created-by-select-wrap">
-                <v-select
-                    v-model="localUser"
-                    :options="userOptions"
-                    :reduce="opt => opt.value"
-                    label="label"
-                    placeholder="Text here"
-                    :clearable="true"
-                    class="history-v-select"
+            <div class="filter-input-wrap custom-select-wrap" ref="createdByWrapRef">
+                <button
+                    type="button"
+                    class="custom-select-trigger filter-select-advanced"
+                    :class="{ open: openCreatedBy }"
+                    @mousedown.prevent
+                    @click="toggleCreatedBy"
                 >
-                    <template #open-indicator="{ attributes }">
-                        <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevrons-up-down" class="vs-open-icon"></iconify-icon>
-                        </span>
-                    </template>
-                </v-select>
+                    <span class="custom-select-label">{{ createdByLabel }}</span>
+                    <iconify-icon icon="lucide:chevrons-up-down" class="custom-select-chevron"></iconify-icon>
+                </button>
+                <Teleport to="body">
+                    <div
+                        v-if="openCreatedBy"
+                        class="custom-select-dropdown"
+                        :style="createdByDropdownStyle"
+                        @click.stop
+                        @mousedown.stop
+                    >
+                        <input
+                            ref="createdBySearchRef"
+                            v-model="createdByQuery"
+                            type="text"
+                            class="custom-select-search"
+                            placeholder="Search..."
+                            autocomplete="off"
+                            @keydown.enter.prevent="pickFirstCreatedBy"
+                        />
+                        <ul class="custom-select-list">
+                            <li
+                                v-for="opt in filteredUserOptions"
+                                :key="opt.value"
+                                class="custom-select-option"
+                                :class="{ selected: localUser === opt.value }"
+                                @click="localUser = opt.value; openCreatedBy = false"
+                            >
+                                {{ opt.label }}
+                            </li>
+                            <li v-if="filteredUserOptions.length === 0" class="custom-select-option muted">No matches</li>
+                        </ul>
+                    </div>
+                </Teleport>
             </div>
         </div>
 
@@ -88,9 +132,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import vSelect from 'vue-select'
-import 'vue-select/dist/vue-select.css'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
     initialSearch: {
@@ -124,6 +166,14 @@ const emit = defineEmits(['search', 'close'])
 const localSearch = ref(props.initialSearch)
 const localAction = ref(props.initialAction)
 const localUser = ref(props.initialUser || '')
+const eventTypeOptions = [
+    { label: 'View', value: 'view' },
+    { label: 'Status Changed', value: 'stage_changed' },
+    { label: 'Revert', value: 'revert' },
+    { label: 'Responsible Person Changed', value: 'assigned' },
+    { label: 'Lead Updated', value: 'updated' },
+    { label: 'Lead Created', value: 'created' }
+]
 const userOptions = computed(() =>
     (props.users || []).map((u) => ({ label: u.name || 'Unknown', value: String(u.id) }))
 )
@@ -131,6 +181,79 @@ const dateFrom = ref(props.initialDateFrom || '')
 const dateTo = ref(props.initialDateTo || '')
 const showDateDropdown = ref(false)
 const dateWrapRef = ref(null)
+
+const openEventType = ref(false)
+const openCreatedBy = ref(false)
+const eventTypeQuery = ref('')
+const createdByQuery = ref('')
+const eventTypeWrapRef = ref(null)
+const createdByWrapRef = ref(null)
+const eventTypeSearchRef = ref(null)
+const createdBySearchRef = ref(null)
+
+const eventTypeDropdownStyle = ref({})
+const createdByDropdownStyle = ref({})
+
+function updateDropdownPosition(wrapRef, styleRef) {
+    if (!wrapRef?.value) return
+    const rect = wrapRef.value.getBoundingClientRect()
+    styleRef.value = {
+        position: 'fixed',
+        top: `${rect.bottom + 4}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        minWidth: `${rect.width}px`,
+        zIndex: 10600
+    }
+}
+
+const eventTypeLabel = computed(() => {
+    if (!localAction.value) return 'Not Specified'
+    const o = eventTypeOptions.find((opt) => opt.value === localAction.value)
+    return o ? o.label : 'Not Specified'
+})
+const createdByLabel = computed(() => {
+    if (!localUser.value) return 'Not Specified'
+    const o = userOptions.value.find((opt) => opt.value === localUser.value)
+    return o ? o.label : 'Not Specified'
+})
+
+const filteredEventTypeOptions = computed(() => {
+    const q = (eventTypeQuery.value || '').toLowerCase().trim()
+    const list = [{ label: 'Not Specified', value: '' }, ...eventTypeOptions]
+    if (!q) return list
+    return list.filter((o) => o.label.toLowerCase().includes(q))
+})
+const filteredUserOptions = computed(() => {
+    const q = (createdByQuery.value || '').toLowerCase().trim()
+    const list = [{ label: 'Not Specified', value: '' }, ...userOptions.value]
+    if (!q) return list
+    return list.filter((o) => o.label.toLowerCase().includes(q))
+})
+
+function toggleEventType() {
+    openCreatedBy.value = false
+    openEventType.value = !openEventType.value
+}
+function toggleCreatedBy() {
+    openEventType.value = false
+    openCreatedBy.value = !openCreatedBy.value
+}
+
+function pickFirstEventType() {
+    const first = filteredEventTypeOptions.value[0]
+    if (first) {
+        localAction.value = first.value
+        openEventType.value = false
+    }
+}
+function pickFirstCreatedBy() {
+    const first = filteredUserOptions.value[0]
+    if (first) {
+        localUser.value = first.value
+        openCreatedBy.value = false
+    }
+}
 
 function formatDateForDisplay(isoDate) {
     if (!isoDate) return ''
@@ -152,8 +275,16 @@ const dateDisplayText = computed(() => {
 })
 
 function handleClickOutside(e) {
-    if (showDateDropdown.value && dateWrapRef.value && !dateWrapRef.value.contains(e.target)) {
+    const target = e.target
+    const insideAnySelect = target?.closest?.('.custom-select-dropdown')
+    if (showDateDropdown.value && dateWrapRef.value && !dateWrapRef.value.contains(target)) {
         showDateDropdown.value = false
+    }
+    if (openEventType.value && !insideAnySelect && eventTypeWrapRef.value && !eventTypeWrapRef.value.contains(target)) {
+        openEventType.value = false
+    }
+    if (openCreatedBy.value && !insideAnySelect && createdByWrapRef.value && !createdByWrapRef.value.contains(target)) {
+        openCreatedBy.value = false
     }
 }
 
@@ -164,6 +295,28 @@ onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside)
 })
 
+watch(openEventType, (isOpen) => {
+    if (isOpen) {
+        eventTypeQuery.value = ''
+        updateDropdownPosition(eventTypeWrapRef, eventTypeDropdownStyle)
+        nextTick(() => {
+            requestAnimationFrame(() => {
+                eventTypeSearchRef.value?.focus()
+            })
+        })
+    }
+})
+watch(openCreatedBy, (isOpen) => {
+    if (isOpen) {
+        createdByQuery.value = ''
+        updateDropdownPosition(createdByWrapRef, createdByDropdownStyle)
+        nextTick(() => {
+            requestAnimationFrame(() => {
+                createdBySearchRef.value?.focus()
+            })
+        })
+    }
+})
 watch(() => props.initialSearch, (val) => { localSearch.value = val })
 watch(() => props.initialAction, (val) => { localAction.value = val })
 watch(() => props.initialUser, (val) => { localUser.value = val || '' })
@@ -248,6 +401,120 @@ const applySearch = () => {
 .filter-select {
     appearance: none;
     cursor: pointer;
+}
+
+/* Advanced select style – background, subtle border */
+.filter-select-advanced {
+    background: #F1F5F9 !important;
+    border-color: #E2E8F0 !important;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.filter-select-advanced:hover {
+    background: #E2E8F0 !important;
+    border-color: #CBD5E1 !important;
+}
+
+.filter-select-advanced:focus {
+    background: #F8FAFC !important;
+    border-color: #94A3B8 !important;
+    box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.25);
+}
+
+/* Custom searchable dropdown (replaces v-select so it opens reliably) */
+.custom-select-wrap {
+    position: relative;
+}
+.custom-select-trigger {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 36px 8px 12px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: #F1F5F9;
+    color: #1e293b;
+    font-weight: 500;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: inherit;
+}
+.custom-select-trigger:hover {
+    background: #E2E8F0;
+    border-color: #CBD5E1;
+}
+.custom-select-trigger.open {
+    border-color: #94A3B8;
+    box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.25);
+}
+.custom-select-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.custom-select-chevron {
+    flex-shrink: 0;
+    color: #64748B;
+    font-size: 16px;
+}
+.custom-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+.custom-select-search {
+    width: 100%;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    font-size: 14px;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    font-family: inherit;
+    pointer-events: auto;
+    position: relative;
+    z-index: 1;
+}
+.custom-select-search:focus {
+    outline: none;
+    border-color: #94A3B8;
+}
+.custom-select-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.custom-select-option {
+    padding: 8px 10px;
+    font-size: 14px;
+    color: #374151;
+    cursor: pointer;
+    border-radius: 6px;
+}
+.custom-select-option:hover {
+    background: #F1F5F9;
+}
+.custom-select-option.selected {
+    background: #E2E8F0;
+    font-weight: 500;
+}
+.custom-select-option.muted {
+    color: #9CA3AF;
+    cursor: default;
 }
 
 .input-chevron {
@@ -371,64 +638,4 @@ const applySearch = () => {
     background: #172554;
 }
 
-/* Searchable Created By – v-select */
-.created-by-select-wrap {
-    padding: 0;
-}
-
-:deep(.history-v-select) {
-    font-size: 14px;
-}
-
-:deep(.history-v-select .vs__dropdown-toggle) {
-    min-height: 40px;
-    padding: 8px 36px 8px 12px;
-    border: 1px solid #E5E7EB;
-    border-radius: 8px;
-    background: #fff;
-}
-
-:deep(.history-v-select .vs__search) {
-    margin: 0;
-    padding: 0;
-    border: none;
-}
-
-:deep(.history-v-select .vs__search::placeholder) {
-    color: #9CA3AF;
-}
-
-:deep(.history-v-select .vs__selected) {
-    margin: 0;
-    padding: 0;
-    color: #374151;
-}
-
-:deep(.history-v-select .vs__actions) {
-    padding: 0 14px 0 0;
-}
-
-:deep(.history-v-select .vs__open-indicator) {
-    fill: #64748b;
-}
-
-:deep(.history-v-select .vs__dropdown-menu) {
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-:deep(.history-v-select .vs__dropdown-option--highlight) {
-    background: #f1f5f9;
-    color: #1e293b;
-}
-
-:deep(.history-v-select .vs__clear) {
-    fill: #64748b;
-}
-
-.vs-open-icon {
-    font-size: 16px;
-    color: #64748b;
-}
 </style>
