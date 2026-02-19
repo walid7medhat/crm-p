@@ -18,7 +18,7 @@ class AreaController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:areas-list', ['only' => ['show', 'index', 'byType', 'children', 'getProjectAreas']]);
+        $this->middleware('permission:areas-list', ['only' => ['show', 'byType', 'children']]);
         $this->middleware('permission:areas-create', ['only' => ['store']]);
         $this->middleware('permission:areas-edit', ['only' => ['update']]);
         $this->middleware('permission:areas-delete', ['only' => ['destroy']]);
@@ -411,9 +411,10 @@ class AreaController extends Controller
             //     $areas = Area::where('id', $matchedArea->id)->get();
             // }
          $childIds=$area->child_ids;
-          $areas = Area::whereIn('id', $childIds)->where('id','!=',$area->id)->get();
+          $areas = Area::whereIn('id', $childIds)->where('id','!=',$area->id)->withCount('child')->get();
           if($areas->count()==0){
-              $areas=Area::whereIn('id', $childIds)->get();
+              $childIds=[$area->id];
+              $areas=Area::whereIn('id', $childIds)->withCount('child')->get();
           }
             return response()->json([
                 'success' => true,

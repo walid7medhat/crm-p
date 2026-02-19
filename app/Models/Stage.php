@@ -33,4 +33,33 @@ class Stage extends Model
             }
             return $leads;
     }
+            public function deals()
+        {
+            return $this->hasMany(Deal::class);
+        }
+        
+        public function isLeadStage()
+        {
+            return $this->stage_type === 'lead';
+        }
+        
+        public function isDealStage()
+        {
+            return $this->stage_type === 'deal';
+        }
+        
+        public function scopeLeadStages($query)
+        {
+            return $query->where('stage_type', 'lead');
+        }
+        
+        public function scopeDealStages($query)
+        {
+            return $query->where('stage_type', 'deal');
+        }
+        
+        public function scopeOfDealType($query, $type)
+        {
+            return $query->where('stage_type', 'deal')->where('deal_type', $type);
+        }
 }

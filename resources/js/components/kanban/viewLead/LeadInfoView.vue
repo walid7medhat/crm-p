@@ -4,6 +4,7 @@
             <label class="form-label-custom">Lead Name</label>
             <div class="info-value">{{ lead?.lead_name || '—' }}</div>
         </div>
+        
         <div class="info-group">
             <label class="form-label-custom">Salutation</label>
             <div class="info-value">{{ lead?.salutation || '—' }}</div>
@@ -28,6 +29,14 @@
             <label class="form-label-custom">Secondary Phone</label>
             <div class="info-value">{{ lead?.work_phone_2 || '—' }}</div>
         </div>
+        <div class="info-group" v-if="lead.lead_source">
+            <label class="form-label-custom">lead_source</label>
+            <div class="info-value">{{ lead?.lead_source || '—' }}</div>
+        </div>
+        <div class="info-group" v-if="lead.bedrooms">
+            <label class="form-label-custom">Bedrooms</label>
+            <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
+        </div>
         <div class="info-group">
             <label class="form-label-custom">Comment</label>
             <div class="info-value info-value-block">{{ lead?.comment || '—' }}</div>
@@ -37,8 +46,25 @@
             <div class="info-value">{{ lead?.budget != null ? lead.budget : '—' }} {{ lead?.currency || '' }}</div>
         </div>
         <div class="info-group">
-            <label class="form-label-custom">Responsible Person</label>
-            <div class="info-value">{{ lead?.responsible_person?.name || '—' }}</div>
+             <div class="d-flex align-items-center gap-3">
+                <div class="avatar-wrapper">
+                    <img 
+                        v-if="lead?.responsible_person?.avatar" 
+                        :src="lead?.responsible_person?.avatar" 
+                        class="avatar-md rounded-circle" 
+                     
+                    />
+                    <div v-else class="avatar-placeholder">
+                        <iconify-icon icon="lucide:user" class="avatar-icon"></iconify-icon>
+                    </div>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="">
+                        <label class="form-label-custom">Responsible Person</label>
+                        <div class="info-value">{{ lead?.responsible_person?.name || '—' }}</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </template>

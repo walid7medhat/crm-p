@@ -508,16 +508,18 @@ const handleAssignedLead = (lead, changes) => {
     const newPersonId = lead.responsible_person_id
 
     // لو أنا الشخص القديم → امسح
-    if (oldPersonId && oldPersonId === currentUserId) {
+    if (oldPersonId && oldPersonId === currentUserId && oldPersonId != newPersonId) {
         removeLeadFromColumns(lead.id)
         return
     }
-
+      console.log(newPersonId == currentUserId);
     // لو أنا الشخص الجديد → أضف أو حدّث
-    if (newPersonId === currentUserId) {
+    if (newPersonId == currentUserId) {
         handleUpdatedLead(lead, 'assigned')
         return
     }
+     handleUpdatedLead(lead, 'assigned')
+        return
 }
 
 const handleNewLead = (lead) => {

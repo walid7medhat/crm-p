@@ -123,7 +123,7 @@ class LeadUpdated implements ShouldBroadcast
     private function getUserChannels(): array
     {
         $channels = [];
-        if($this->actionType=='assigned'){
+        if($this->actionType=='assigned' && $this->changes['old_person_id']){
               $channels[] = new PrivateChannel('user.' . $this->changes['old_person_id']);
         }
         if ($this->lead->responsible_person_id) {

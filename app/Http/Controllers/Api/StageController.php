@@ -26,11 +26,20 @@ class StageController extends Controller
     /**
      * Get all stages
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         try {
-            $stages = Stage::withCount('leads')->orderBy('order')->get();
+            $stages = Stage::query()->withCount('leads');
+            if($request->stage_type){
+                $stages->where('stage_type',$request->stage_type);
+            }else{
+                 $stages->where('stage_type','lead');
+            }
             
+            if($request->deal_type){
+                $stages->where('deal_type',$request->deal_type);
+            }
+            $stages=$stages->orderBy('order')->get();
             return ApiResponse::success(
                 new StageCollection($stages),
                 'Stages retrieved successfully'
@@ -248,7 +257,7 @@ public function getStagesWithLeads(Request $request): JsonResponse
             ->get();
 
         // ================= Stages: all by default, or only stage_id when in request =================
-        $stagesQuery = Stage::orderBy('order');
+        $stagesQuery = Stage::where('stage_type','lead')->orderBy('order');
         if ($request->filled('stage_id')) {
             $stagesQuery->where('id', $request->stage_id);
         }

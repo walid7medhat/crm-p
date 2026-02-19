@@ -57,7 +57,7 @@ class SendLeadUpdateNotification
             }
         }
         
-        // 5. Admin & Super Admin 🔥
+        // 5. Admin & Super Admin ðŸ”¥
         // only admin
     $admins = User::whereHas('roles', function ($q) {
         $q->whereIn('name', [ 'super_admin']);

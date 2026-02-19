@@ -382,6 +382,7 @@ class LeadController extends Controller
             $lead->id,
             [
                 'action' => 'assigned',
+                                    'old_person_id'=>$oldPerson?->id,
                 'old_person' => $oldPerson?->name,
                 'new_person' => $responsiblePerson?->name
             ]
@@ -496,14 +497,16 @@ class LeadController extends Controller
                     );
                 }
             }
+              \Log::info($newStage->order==2 && !is_null($lead->revert));
             if($newStage->order==2 && !is_null($lead->revert)){
-              
+            
                 $lead->update([
                 
                     'revert'=>null,
                 ]); 
                       $responsiblePerson = User::find($lead->responsible_person_id);
                               $changes = [
+                                    'old_person_id'=>$responsiblePerson?->id,
                             'old_person' => $responsiblePerson?->name,
                             'new_person' => $responsiblePerson?->name
                         ];
@@ -513,6 +516,7 @@ class LeadController extends Controller
                             $lead->id,
                             [
                                 'action' => 'assigned',
+                                'old_person_id'=>$responsiblePerson?->id,
                                 'old_person' => $responsiblePerson?->name,
                                 'new_person' => $responsiblePerson?->name
                             ]

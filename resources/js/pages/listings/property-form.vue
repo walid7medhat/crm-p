@@ -1520,7 +1520,10 @@ watch(() => selectedProject.value, async (newProject, oldProject) => {
     try {
       const response = await api.get(`/listings/projects/${newProject.id}/areas`);
       const projectAreasData = response.data.data || response.data;
-      form.value.projectAreas = projectAreasData.map(area => ({
+        const filteredAreas = projectAreasData.filter(
+        area => area.children_count == 0
+      );
+      form.value.projectAreas = filteredAreas.map(area => ({
         id: area.id,
         name: area.area_parents_title || area.name || area.title,
         project_id: newProject.id
@@ -1937,7 +1940,7 @@ const filteredAreas = computed(() => {
   if (selectedProject.value && form.value.projectAreas.length > 0) {
     return form.value.projectAreas;
   }
-  return areas.value.filter(area => area.children_count === 0);
+  return areas.value.filter(area => area.children_count == 0);
 });
 
 const fetchProjects = async () => {

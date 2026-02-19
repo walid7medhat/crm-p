@@ -134,7 +134,8 @@ class Lead extends Model
                     $this->id,
                     [
                         'action' => 'revert',
-                        // 'old_person' => $oldPerson?->name,
+                        'old_person_id' => $oldPerson?->id,
+                        'old_person' => $oldPerson?->name,
                         // 'new_person' => $responseName,
                         'old_stage'  => $oldStage?->name,
                         'new_stage'  => $this->stage?->name
@@ -144,7 +145,7 @@ class Lead extends Model
                 $changes = [
                     'old_stage'  => $oldStage?->name,
                     'new_stage'  => $this->stage?->name,
-                    // 'old_person' => $oldPerson?->name,
+                    'old_person_id' => $oldPerson?->id,
                     // 'new_person' =>$responseName,
                 ];
         
@@ -168,5 +169,18 @@ class Lead extends Model
                 ->get();
         }
 
-
+        public function convertedToDeal()
+        {
+            return $this->belongsTo(Deal::class, 'converted_to_deal_id');
+        }
+        
+        public function isConverted()
+        {
+            return !is_null($this->converted_to_deal_id);
+        }
+        
+        public function getDealAttribute()
+        {
+            return $this->convertedToDeal;
+        }
 }
