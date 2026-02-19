@@ -17,7 +17,8 @@ class Lead extends Model
         'date_of_birth' => 'date',
         'available_to_everyone' => 'boolean',
         'last_stage_change_at' => 'datetime',
-        'revert'=>'datetime'
+        'revert'=>'datetime',
+        'converted_at'=>'datetime'
 
     ];
     protected static function booted()

@@ -29,7 +29,7 @@ class StageController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $stages = Stage::query()->withCount('leads');
+            $stages = Stage::query();
             if($request->stage_type){
                 $stages->where('stage_type',$request->stage_type);
             }else{

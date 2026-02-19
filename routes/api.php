@@ -31,7 +31,8 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Http\Controllers\Api\LeadActivityController;
 use App\Http\Controllers\Api\IntegrationController;
-
+use App\Http\Controllers\Api\Deal\DealController;
+use App\Http\Controllers\Api\Deal\LeadConversionController;
 Route::get('/test-email', function () {
     try {
         // Test basic email
@@ -98,6 +99,23 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
         Route::get('/kanban/stages-with-leads', [StageController::class, 'getStagesWithLeads']);
     Route::get('/kanban/leads-by-stage/{stage}', [StageController::class, 'getLeadsByStage']);
 
+});
+
+
+Route::middleware('jwt.auth')->group(function () {
+    
+    // === Lead Conversion API ===
+    Route::post('/leads/{lead}/convert-to-deal', [LeadConversionController::class, 'convert']);
+    Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);
+    
+    // === Deals API ===
+    Route::prefix('deals')->group(function () {
+        Route::get('/', [DealController::class, 'index']);
+        Route::get('/grouped-by-stage', [DealController::class, 'getDealsGroupedByStage']);
+        Route::get('/{deal}', [DealController::class, 'show']);
+        Route::put('/{deal}', [DealController::class, 'update']);
+    });
+    
 });
 Route::get('leads/integration', [LeadController::class,'storeIntegration']);
 
