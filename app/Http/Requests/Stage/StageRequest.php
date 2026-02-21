@@ -25,6 +25,7 @@ class StageRequest extends FormRequest
                 Rule::unique('stages')->ignore($stageId)
             ],
             'order' => 'nullable|integer|min:0',
+            'color' => 'nullable|string|max:255',
         ];
     }
 

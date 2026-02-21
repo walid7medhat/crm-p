@@ -50,14 +50,14 @@
                                     <button type="button" data-bs-toggle="dropdown" aria-expanded="false" class="bg-transparent border-0 p-0 d-flex align-items-center">
                                         <iconify-icon icon="entypo:dots-three-vertical" class="text-xl text-white"></iconify-icon>
                                     </button>
-                                    <!-- <ul class="dropdown-menu p-12 border bg-base shadow">
+                                     <ul class="dropdown-menu p-12 border bg-base shadow">
                                         <li>
                                             <a href="#" class="duplicate-button dropdown-item px-10 py-1 text-secondary-light bg-hover-neutral-200 text-hover-neutral-900 d-flex align-items-center gap-2" @click="editStage(column)">
                                                 <iconify-icon class="text-xs" icon="lucide:edit"></iconify-icon>
                                                 Edit Stage
                                             </a>
                                         </li>
-                                    </ul> -->
+                                    </ul>
                                 </div>
                             </div>
 
@@ -232,6 +232,58 @@
             </div>
         </div>
     </div>
+    <div v-if="showStageModal" class="stage-modal-overlay">
+    <div class="stage-modal">
+            <h6 class="mb-3">
+                {{ isEditingStage ? 'Edit Stage' : 'Create Stage' }}
+            </h6>
+    
+             <!-- Stage Tittle -->
+            <div class="form-group">
+                <label class="form-label">Stage Title</label>
+                <input
+                    type="text"
+                    v-model="stageForm.name"
+                    class="form-control"
+                />
+                
+            </div>
+            <div class="form-group">
+                <label class="form-label">Stage Color</label>
+            
+                <div class="color-field-wrapper">
+
+                                <!-- hex input -->
+                   
+                    <input
+                    placeholder="#000000"
+                        type="color"
+                        v-model="stageForm.color"
+                        class="form-control"
+                    />
+
+                    <input
+                        ref="colorInput"
+                        type="color"
+                        v-model="stageForm.color"
+                        class="hidden-color-input"
+                    />
+
+                </div>
+            
+                
+            </div>
+    
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <button class="btn btn-light" @click="closeStageModal">
+                    Cancel
+                </button>
+                <button class="btn btn-primary" @click="saveStage">
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup>
@@ -298,6 +350,22 @@ const stageChangeReasonModal = ref(null)
 const pendingStageChange = ref(null)
 
 
+const showStageModal = ref(false)
+const isEditingStage = ref(false)
+
+const stageForm = ref({
+    id: null,
+    name: '',
+    color: null
+})
+
+const colorInput = ref(null)
+
+const openColorPicker = () => {
+    colorInput.value?.click()
+}
+
+
 const colors = ['#7BD3EA', '#E3DA32', '#F2C934', '#8EC82F', '#00A74C']
 
 function getColorByIndex(index) {
@@ -325,6 +393,37 @@ const fetchLeads = async (immediate = false, queryOverride = undefined) => {
     }
     
     return executeFetchLeads()
+}
+function closeStageModal() {
+    showStageModal.value = false
+    isEditingStage.value = false
+    stageForm.value = { id: null, name: '', color: null }
+}
+
+async function saveStage() {
+    if (!stageForm.value.name.trim()) {
+        $showNotification('Stage name is required', 'warning')
+        return
+    }
+
+    try {
+        await api.put(`/stages/${stageForm.value.id}`, {
+            name: stageForm.value.name,
+            color: stageForm.value.color
+        })
+
+        // Update local column
+        const column = columns.value.find(c => c.status === stageForm.value.id)
+        if (column) {
+            column.title = stageForm.value.name
+            column.color = stageForm.value.color
+        }
+
+        $showNotification('Stage updated successfully', 'success')
+        closeStageModal()
+    } catch (error) {
+        $showNotification('Failed to update stage', 'error')
+    }
 }
 
 const executeFetchLeads = async () => {
@@ -930,10 +1029,17 @@ function deleteTask(taskId) {
         }
     }
 }
-
 function editStage(stage) {
-    // Edit stage functionality
+    stageForm.value = {
+        id: stage.status,
+        name: stage.title,
+        color: stage.color
+    }
+
+    isEditingStage.value = true
+    showStageModal.value = true
 }
+
 
 async function startEditingStage(column) {
     editingStageId.value = column.status
@@ -993,11 +1099,16 @@ async function saveStageName(column) {
 async function onLeadDragChange(evt, column) {
     if (evt.added) {
         const lead = evt.added.element
-        const newStageId = column.status // column.status is stage.slug || stage.id
+        const newStageId = column.status
 
-        // Check if user is not admin and stage is actually changing
+        const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
+
+        if (targetColumnIndex === 0 || targetColumnIndex === 1) {
+            await moveLeadWithStageChange(lead, newStageId)
+            return
+        }
+
         if (!isAdminOrSuperAdmin.value && lead.stage_id !== newStageId) {
-            // Store pending change and show reason modal
             pendingStageChange.value = {
                 leadId: lead.id,
                 targetStageId: newStageId,
@@ -1005,23 +1116,16 @@ async function onLeadDragChange(evt, column) {
                 originalStageId: lead.stage_id,
                 leadData: lead
             }
-            
-            // Show the reason modal
+
             await nextTick()
-            if (stageChangeReasonModal.value) {
-                stageChangeReasonModal.value.show()
-            }
-            
-            // Remove the added lead immediately (revert UI change)
-            // We need to revert the drag since we need reason first
+            stageChangeReasonModal.value?.show()
+
+            // revert UI
             const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
             if (sourceColumn) {
-                // Remove from target column
-                const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
-                if (targetColumnIndex !== -1) {
-                    columns.value[targetColumnIndex].leads = columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
-                }
-                // Add back to source column
+                columns.value[targetColumnIndex].leads =
+                    columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
+
                 if (!sourceColumn.leads.find(l => l.id === lead.id)) {
                     sourceColumn.leads.push(lead)
                 }
@@ -1029,7 +1133,6 @@ async function onLeadDragChange(evt, column) {
             return
         }
 
-        // For admin users or same stage, proceed normally
         await moveLeadWithStageChange(lead, newStageId)
     }
 }
@@ -1453,5 +1556,22 @@ const $showNotification = (message, type = 'info') => {
 .header-title-input:focus {
     /* background: rgba(255, 255, 255, 0.3); */
     border-color: rgba(255, 255, 255, 0.6);
+}
+
+.stage-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+}
+
+.stage-modal {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    width: 400px;
 }
 </style>

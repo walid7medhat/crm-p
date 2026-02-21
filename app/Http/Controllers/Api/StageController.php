@@ -18,7 +18,7 @@ class StageController extends Controller
 {
      public function __construct()
     {
-        $this->middleware('permission:stages-list', ['only' => ['index', 'show']]);
+        $this->middleware('permission:stages-list', ['only' => []]);
         $this->middleware('permission:stages-create', ['only' => ['store']]);
         $this->middleware('permission:stages-edit', ['only' => ['update', 'reorder']]);
         $this->middleware('permission:stages-delete', ['only' => ['destroy']]);
@@ -45,6 +45,11 @@ class StageController extends Controller
                 'Stages retrieved successfully'
             );
         } catch (\Exception $e) {
+            dd($e->getMessage());
+             \Log::info('Failed to retrieve stages: ' . $e->getMessage(), [
+                'stack' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
             return ApiResponse::error('Failed to retrieve stages: ' . $e->getMessage());
         }
     }
@@ -274,6 +279,7 @@ public function getStagesWithLeads(Request $request): JsonResponse
                 'id' => $stage->id,
                 'name' => $stage->name,
                 'order' => $stage->order,
+                'color' => $stage->color,
                 'lead_count' => $stageLeads->count(),
                 'leads' => LeadResource::collection($stageLeads),
                 'created_at' => $stage->created_at?->toISOString(),

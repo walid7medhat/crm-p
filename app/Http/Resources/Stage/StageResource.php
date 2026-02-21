@@ -14,6 +14,7 @@ class StageResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'order' => $this->order,
+            'color' => $this->color,
             'leads_count' => $this->whenCounted('leads'),
             'leads'=> $this->whenLoaded('leads', function () {
             return LeadResource::collection($this->leads);

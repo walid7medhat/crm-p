@@ -31,6 +31,29 @@
                         {{ validationErrors.title[0] }}
                     </div>
                 </div>
+                <!-- Stage Color -->
+                <div class="form-group">
+                    <label class="form-label">Stage Color</label>
+                    
+                    <div class="d-flex align-items-center gap-2">
+                        <input
+                            type="color"
+                             :value="formData.color || '#000000'"
+                            v-model="formData.color"
+                            class="color-picker"
+                        />
+                        
+                        <b-form-input
+                            v-model="formData.color"
+                            placeholder="#000000"
+                            class="form-input"
+                        />
+                    </div>
+                
+                    <div v-if="validationErrors.color" class="invalid-feedback d-block">
+                        {{ validationErrors.color[0] }}
+                    </div>
+                </div>
 
                 <!-- Stage Order -->
                 <!-- <div class="form-group">
@@ -112,7 +135,8 @@ const localShow = computed({
 const formData = ref({
     title: '',
     order: null,
-    roles: null
+    roles: null,
+    color:null,
 })
 
 const isSubmitting = ref(false)
@@ -173,6 +197,7 @@ const handleSave = async () => {
         
         const payload = {
             name: formData.value.title,
+            color: formData.value.color,
             // order: formData.value.order,
             // Add other fields as needed
         }
@@ -214,7 +239,8 @@ const resetForm = () => {
     formData.value = {
         title: '',
         order: null,
-        roles: null
+        roles: null,
+        color: null,
     }
     errorMessage.value = ''
     validationErrors.value = {}
@@ -444,5 +470,13 @@ const $showNotification = (message, type = 'info') => {
 
 .btn-save:hover {
     background: #060a2b;
+}
+.color-picker {
+    width: 50px;
+    height: 42px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 0;
+    cursor: pointer;
 }
 </style>
