@@ -7,7 +7,7 @@
                 <div class="d-flex align-items-center gap-2">
                     <span class="modal-title">Lead Information</span>
                 </div>
-                    <button @click="toggleEditMode" v-if="!isEditMode">
+                    <button @click="toggleEditMode" v-if="!isEditMode && lead.can_edit">
                         <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:pencil"></iconify-icon>
                     </button>
                 </div>

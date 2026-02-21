@@ -100,7 +100,7 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
     Route::get('/kanban/leads-by-stage/{stage}', [StageController::class, 'getLeadsByStage']);
 
 });
-
+Route::get('/teams-with-leads', [StageController::class, 'getTeamsWithLeads'])->middleware('jwt.auth');
 
 Route::middleware('jwt.auth')->group(function () {
     

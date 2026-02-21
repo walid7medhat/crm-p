@@ -156,16 +156,18 @@ const props = defineProps({
     /** When false, form is reset when modal opens (e.g. filters were cleared in parent) */
     hasActiveFilters: { type: Boolean, default: true },
     /** Current search query from parent; form is synced from this when modal opens or when it changes */
-    currentQuery: { type: Object, default: null }
+    currentQuery: { type: Object, default: null },
+     showTeamFilter: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update:modelValue', 'search'])
 
 const show = ref(props.modelValue)
 const showFilterSettings = ref(false)
-const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'work_phone', 'responsible_person', 'lead_branch_source', 'stage', 'email', 'bedrooms','source'])
+const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'work_phone', 'responsible_person', 'lead_branch_source', 'stage', 'email', 'bedrooms','source','team'])
 // const activePill = ref('leads-in-progress')
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
+const teamOptions = ref([{ value: null, text: 'Select Team' }])
 
 
 watch(() => props.modelValue, (val) => {
@@ -195,7 +197,8 @@ const queryToFormKeys = {
     email: 'email',
     bedrooms: 'bedrooms',
     search: 'search',
-    source: 'source'
+    source: 'source',
+    team_id: 'team'
 }
 
 function syncFormFromQuery(query) {
@@ -218,7 +221,8 @@ function syncFormFromQuery(query) {
         stage: '',
         email: '',
         bedrooms: '',
-        leadName: ''
+        leadName: '',
+          team: ''
     }
     Object.keys(queryToFormKeys).forEach(qKey => {
         const formKey = queryToFormKeys[qKey]
@@ -280,6 +284,7 @@ const form = ref({
      source: '',
        createdFrom: '',    
     createdTo: '',  
+      team: ''
 })
 
 const responsiblePersons = ref([])
@@ -331,39 +336,105 @@ const createdOnOptions = [
 ]
 
 const sourceOptions = ref([{ value: null, text: 'Select Source' }])
-const searchFieldsConfig = [
-    { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
-    { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
-    // { id: 'closed', label: 'Closed', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
-     { id: 'created_on', label: 'Created On', formKey: 'createdOn', queryKey: 'created_at', type: 'select', options: createdOnOptions },
-    { id: 'work_phone', label: 'Work Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
-    { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] },
-    { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
-    { id: 'stage', label: 'Stage', formKey: 'stage', queryKey: 'stage_id', type: 'select', options: [] },
-    { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
-    { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions },
-    { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] }
-]
+// const searchFieldsConfig = [
+//     { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
+//     { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
+//     // { id: 'closed', label: 'Closed', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
+//      { id: 'created_on', label: 'Created On', formKey: 'createdOn', queryKey: 'created_at', type: 'select', options: createdOnOptions },
+//     { id: 'work_phone', label: 'Work Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
+//     { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] },
+//     { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
+//     { id: 'stage', label: 'Stage', formKey: 'stage', queryKey: 'stage_id', type: 'select', options: [] },
+//     { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
+//     { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions },
+//     { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] },
+
+       
+// ]
+const getUserFromStorage = () => {
+    try {
+        const userData = localStorage.getItem('user')
+        return userData ? JSON.parse(userData) : null
+    } catch (error) {
+        console.error('Error getting user from storage:', error)
+        return null
+    }
+}
+const user = ref(getUserFromStorage())
+
+const updateUserFromStorage = () => {
+    try {
+        const userData = localStorage.getItem('user')
+        user.value = userData ? JSON.parse(userData) : null
+        console.log('User updated from storage:', user.value)
+    } catch (error) {
+        console.error('Error getting user from storage:', error)
+        user.value = null
+    }
+}
+// Applied search params (from search modal, not from URL)
+const appliedSearchParams = ref(null)
+
+// Check if user is admin or super_admin (same pattern as header/index.vue)
+const isAdminOrSuperAdmin = computed(() => {
+    if (!user.value) return false
+    
+    const isAdminUser = user.value.roles?.includes('super_admin') || 
+                       user.value.roles?.includes('admin') || user.value.roles?.includes('manager')
+    
+    return isAdminUser
+})
+const searchFieldsConfig = computed(() => {
+    const fields = [
+        { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
+        { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
+        { id: 'closed', label: 'Closed', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
+        { id: 'created_on', label: 'Created On', formKey: 'createdOn', queryKey: 'created_at', type: 'select', options: createdOnOptions },
+        { id: 'work_phone', label: 'Work Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
+        { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] },
+        { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
+        
+    ]
+    
+    if (isAdminOrSuperAdmin.value) {
+        fields.push({ id: 'team', label: 'Team', formKey: 'team', queryKey: 'team_id', type: 'select', options: [] })
+    }
+    
+    fields.push(
+        { id: 'stage', label: 'Stage', formKey: 'stage', queryKey: 'stage_id', type: 'select', options: [] },
+        { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions },
+        { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
+        { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] }
+    )
+    
+    console.log(isAdminOrSuperAdmin.value)
+    return fields
+})
+
+
 
 const visibleSearchFields = computed(() => {
-    return searchFieldsConfig
+    return searchFieldsConfig.value
         .filter(f => selectedLeadFieldIds.value.includes(f.id))
         .map(f => ({
             ...f,
-              options: f.formKey === 'responsible' ? personOptions.value : 
-                    (f.formKey === 'branchSource' ? branchSourceOptions.value : 
-                    (f.formKey === 'stage' ? stageOptions.value : 
-                    (f.formKey === 'source' ? sourceOptions.value : 
-                    (f.formKey === 'createdOn' ? createdOnOptions : 
-                    (f.options || []))))),
+            options:
+                f.formKey === 'responsible' ? personOptions.value :
+                f.formKey === 'branchSource' ? branchSourceOptions.value :
+                f.formKey === 'stage' ? stageOptions.value :
+                f.formKey === 'source' ? sourceOptions.value :
+                f.formKey === 'createdOn' ? createdOnOptions :
+                f.formKey === 'team' ? teamOptions.value :
+                (f.options || []),
             placeholder: f.placeholder || (f.type === 'select' ? 'Select' : '')
         }))
 })
 
-const defaultLeadFieldIds = searchFieldsConfig.map(f => f.id)
-
+const defaultLeadFieldIds = computed(() =>
+    searchFieldsConfig.value.map(f => f.id)
+)
 function restoreDefaultFields() {
-    selectedLeadFieldIds.value = [...defaultLeadFieldIds]
+    selectedLeadFieldIds.value = [...defaultLeadFieldIds.value]
 }
 
 function onFilterApply(payload) {
@@ -389,13 +460,13 @@ function getDisplayValue(field, rawValue) {
 function applySearch() {
    
     
-       let createdFrom = undefined
+    let createdFrom = undefined
     let createdTo = undefined
     let createdAt = undefined
-      let branchSource = form.value.branchSource || undefined
+    let branchSource = form.value.branchSource || undefined
     let responsiblePersonId = form.value.responsible ?? undefined
     let closed = form.value.closed ?? undefined
-    
+    let teamId = form.value.team ?? undefined
     switch (activePill.value) {
         case 'dubai':
             const dubaiOption = branchSourceOptions.value.find(opt => 
@@ -545,19 +616,31 @@ function applySearch() {
         created_from: createdFrom  || undefined,  
         created_to: createdTo || undefined,     
         created_at: createdAt  || undefined,   
+         team_id: teamId || undefined 
     }
     Object.keys(query).forEach(k => { if (query[k] === '' || query[k] === undefined) delete query[k] })
     console.log('Search Query:', query)
 
     const activeFilters = []
-    const visibleFields = searchFieldsConfig.filter(f => selectedLeadFieldIds.value.includes(f.id))
+    const visibleFields = searchFieldsConfig.value.filter(f => selectedLeadFieldIds.value.includes(f.id))
     visibleFields.forEach(field => {
         const raw = form.value[field.formKey]
         if (!hasValue(raw)) return
+        
         const displayValue = getDisplayValue(
-            { ...field, options: field.formKey === 'responsible' ? personOptions.value : (field.formKey === 'branchSource' ? branchSourceOptions.value : (field.formKey === 'stage' ? stageOptions.value : (field.options || []))) },
+            { 
+                ...field, 
+                options: 
+                    field.formKey === 'responsible' ? personOptions.value : 
+                    field.formKey === 'branchSource' ? branchSourceOptions.value : 
+                    field.formKey === 'stage' ? stageOptions.value : 
+                    field.formKey === 'source' ? sourceOptions.value :
+                    field.formKey === 'team' ? teamOptions.value : 
+                    (field.options || [])
+            },
             raw
         )
+        
         if (displayValue) {
             activeFilters.push({
                 id: field.id,
@@ -621,6 +704,20 @@ async function fetchSources() {
         console.error('Error fetching sources:', error)
     }
 }
+async function fetchTeams() {
+    try {
+        const res = await api.get('/teams-with-leads') // You'll need to create this endpoint
+        const data = res.data?.data
+        if (Array.isArray(data) && data.length) {
+            teamOptions.value = [
+                { value: null, text: 'Select Team' },
+                ...data.map(team => ({ value: team.id, text: team.name }))
+            ]
+        }
+    } catch (error) {
+        console.error('Error fetching teams:', error)
+    }
+}
 function resetFormValues() {
     form.value = {
         search: '',
@@ -639,7 +736,8 @@ function resetFormValues() {
         stage: '',
         email: '',
         bedrooms: '',
-         source: ''
+         source: '',
+         team: ''
     }
 }
 
@@ -650,10 +748,12 @@ const resetForm = () => {
 }
 
 onMounted(() => {
+      updateUserFromStorage() 
     fetchResponsiblePersons()
     fetchBranchSources()
     fetchStages()
     fetchSources()
+        fetchTeams()
 })
 </script>
 

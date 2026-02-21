@@ -458,6 +458,7 @@ const executeFetchLeads = async () => {
         if (q.work_phone) params.work_phone = q.work_phone
         if (q.email) params.email = q.email
         if (q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '') params.bedrooms = q.bedrooms
+        if (q.team_id != null && q.team_id !== '') params.team_id = q.team_id
         const response = await api.get('/stages/kanban/stages-with-leads', {
             params,
             signal: abortController.value.signal

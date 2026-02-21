@@ -248,6 +248,15 @@ public function getStagesWithLeads(Request $request): JsonResponse
                  $team=$branch_team->getAllSubordinatesIds();
                 $q->whereIn('responsible_person_id',$team);
             }
+            if ($request->filled('team_id')) {
+                $teamLead = User::find($request->team_id);
+                if ($teamLead) {
+                    $teamMemberIds = $teamLead->getAllSubordinatesIds();
+                    // Include the team lead themselves
+                    $teamMemberIds[] = $teamLead->id;
+                    $q->whereIn('responsible_person_id', $teamMemberIds);
+                }
+            }
             if ($request->filled('search')) {
                 $search = $request->search;
                 $q->where(function ($s) use ($search) {
@@ -293,7 +302,42 @@ public function getStagesWithLeads(Request $request): JsonResponse
         return ApiResponse::error($e->getMessage());
     }
 }
+public function getTeamsWithLeads(Request $request): JsonResponse
+{
+    try {
+        $user = auth()->user();
+        
+        if (!$user->hasAnyRole(['super_admin', 'admin', 'manager'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
 
+       
+        $teams = User::whereHas('children', function($query) {
+            // users who have at least one child/subordinate
+        })
+        ->whereIn('id',$user->getAllSubordinatesIds())
+        ->where('id','!=',auth()->user()->id)
+        ->withCount('children') 
+        ->get()
+        ->map(function($user) {
+            $allSubordinates = $user->getAllSubordinatesIds();
+            $teamSize = count($allSubordinates) - 1; 
+            
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'team_size' => $teamSize,
+                'role' => $user->roles->pluck('name')->first()
+            ];
+        });
+
+        return ApiResponse::success($teams, 'Teams fetched successfully');
+
+    } catch (\Exception $e) {
+        return ApiResponse::error($e->getMessage());
+    }
+}
 
 public function getLeadBranchSource()
 {
