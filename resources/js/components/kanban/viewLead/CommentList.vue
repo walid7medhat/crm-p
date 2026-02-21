@@ -50,6 +50,7 @@
                                     :src="comment.userAvatar" 
                                     class="comment-user-avatar"
                                     alt="User"
+                                    :title="comment.userName"
                                 />
                                 <div v-else class="comment-user-avatar-placeholder">
                                     <iconify-icon icon="lucide:user" class="comment-avatar-icon"></iconify-icon>

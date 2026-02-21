@@ -109,7 +109,7 @@
 
                                                 <div class="responsible-info d-flex align-items-center justify-content-between mb-12">
                                                     <div class="d-flex align-items-center gap-2">
-                                                        <img v-if="task.responsible_person?.avatar" :src="task.responsible_person.avatar" alt="" class="avatar-sm rounded-circle" />
+                                                        <img v-if="task.responsible_person?.avatar" :title="task.responsible_person?.name" :src="task.responsible_person.avatar" alt="" class="avatar-sm rounded-circle" />
                                                         <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
                                                             <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
                                                         </div>

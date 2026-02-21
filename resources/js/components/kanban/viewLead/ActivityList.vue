@@ -106,6 +106,7 @@
                                     :src="activity.userAvatar" 
                                     class="user-avatar-img"
                                     alt="User"
+                                    :title="activity.userName"
                                 />
                                 <div v-else class="user-avatar-placeholder">
                                     <iconify-icon icon="lucide:user" class="user-avatar-icon"></iconify-icon>

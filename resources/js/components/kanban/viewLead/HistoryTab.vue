@@ -541,6 +541,19 @@ const transformHistoryEntry = (entry) => {
         } else if (changes.new_person) {
             changesHtml = `<span class="change-new">${changes.new_person}</span>`
         }
+         else if (changes.fields && typeof changes.fields === 'object') {
+            const entries = Object.entries(changes.fields)
+                .filter(([key, val]) => key !== 'updated_at'); 
+            changesHtml = entries.map(([key, val]) => {
+                const oldVal = val.old ?? '';
+                const newVal = val.new ?? '';
+                const label = key
+                    .replace(/_/g, ' ')
+                    .replace(/\b\w/g, l => l.toUpperCase());
+                return  `<span>${label} </span> `
+                // return `<strong>${label}:</strong> <span class="change-old">${oldVal}</span> <span class="change-arrow">→</span> <span class="change-new">${newVal}</span></br>`;
+            }).join(',');
+        }
     }
     
     return {

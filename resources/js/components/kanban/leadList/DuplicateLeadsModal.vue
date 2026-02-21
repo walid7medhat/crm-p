@@ -70,6 +70,7 @@
                                     :src="lead.responsible_person.avatar" 
                                     alt="" 
                                     class="avatar-sm rounded-circle" 
+                                    :title="lead.responsible_person.name"
                                 />
                                 <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
                                     <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>

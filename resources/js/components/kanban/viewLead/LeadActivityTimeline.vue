@@ -53,6 +53,7 @@
                                         :src="item.user.avatar"
                                         class="activity-avatar"
                                         :alt="item.user?.name"
+                                        :title="item.user?.name"
                                     />
                                     <div v-else class="activity-avatar activity-avatar-placeholder">
                                         <iconify-icon icon="lucide:user"></iconify-icon>
@@ -162,9 +163,15 @@ function buildDetailsHtml(entry) {
     }
     if (action === 'created') {
         const leadName = changes.lead_name || entry.lead_name || '—'
-        const source = changes.source || entry.source
-        let html = `<div class="detail-created"><span class="detail-label">Lead Name</span> ${leadName}</div>`
-        if (source) html += `<div class="detail-created"><span class="detail-label">Source</span> ${source}</div>`
+        const source =  entry.source
+        const response =  entry.response_person
+        const createdBy=entry.createdBy
+        console.log(response);
+        let html = `<div class="detail-created"><span class="detail-label">Lead Name:</span> ${leadName}</div>`
+        if (createdBy) html +=`<div class="detail-created"><span class="detail-label">Created By:</span> ${createdBy}</div>`
+        if (source) html += `<div class="detail-created"><span class="detail-label">Source:</span> ${source}</div>`
+        if (response) html +=`<div class="detail-created"><span class="detail-label">Responsible Person:</span> ${response}</div>`
+         
         return html
     }
     if (changes.new_stage) return `<div class="detail-single"><span class="detail-new">${changes.new_stage}</span></div>`

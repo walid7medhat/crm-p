@@ -27,6 +27,11 @@ class LeadHistoryResource extends JsonResource
             }),
             'date'      => $this->created_at->format('Y-m-d H:i'),
             'time_ago'  => $this->created_at->diffForHumans(),
+            'lead_name'=>$this->lead?->lead_name,
+            'response_person'=>$this->lead?->initialResponsiblePerson?->name,
+            'response_person_avatar'=>$this->lead?->initialResponsiblePerson?->avatar,
+            'source' =>$this->lead?->lead_source,
+            'createdBy'=>$this?->lead?->addedBy?->name
         ];
     }
 }

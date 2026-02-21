@@ -310,10 +310,13 @@ class LeadController extends Controller
                 }
                 // ===================history==============
                 $new = $lead->getAttributes();
-                
+                $ignoreKeys = ['stage_id', 'last_stage_change_at', 'responsible_person_id', 'updated_at'];
+
                 $fields = [];
                 
                 foreach ($new as $key => $value) {
+                    if (in_array($key, $ignoreKeys)) continue; 
+                
                     if (!array_key_exists($key, $old)) continue;
                 
                     if ($old[$key] != $value) {
@@ -512,15 +515,15 @@ class LeadController extends Controller
                         ];
                         broadcast(new LeadUpdated($lead, 'assigned', null, $changes));
                         //  ==================================hiatory====================
-                        LeadHistoryHelper::log(
-                            $lead->id,
-                            [
-                                'action' => 'assigned',
-                                'old_person_id'=>$responsiblePerson?->id,
-                                'old_person' => $responsiblePerson?->name,
-                                'new_person' => $responsiblePerson?->name
-                            ]
-                        );
+                        // LeadHistoryHelper::log(
+                        //     $lead->id,
+                        //     [
+                        //         'action' => 'revert',
+                        //         'old_person_id'=>$responsiblePerson?->id,
+                        //         'old_person' => $responsiblePerson?->name,
+                        //         'new_person' => $responsiblePerson?->name
+                        //     ]
+                        // );
             }
            
             $lead->update([
