@@ -99,7 +99,7 @@ export default {
       showDropdown: false,
       userId: null,
       pusherInitialized: false,
-      apiBaseUrl: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api',
+      apiBaseUrl: (typeof window !== 'undefined' && window.__API_BASE_URL__) || import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api',
       notificationSound
     };
   },

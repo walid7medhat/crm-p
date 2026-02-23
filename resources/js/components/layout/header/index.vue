@@ -4,25 +4,17 @@
     <button type="button" class="sidebar-close-btn" @click="closeSidebar">
       <iconify-icon icon="radix-icons:cross-2" />
     </button>
-    
-    <div class="sidebar-toggle-container d-flex align-items-center justify-content-between">
-      <!-- Logo -->
-      <router-link to="/" class="sidebar-logo d-flex flex-wrap align-items-space-between gap-4">
-        <img :src="logo" alt="Logo" class="light-logo" />
-        <img :src="logo" alt="Logo" class="dark-logo" />
-        <img :src="logo" alt="Logo" class="logo-icon" />
-    
-      </router-link>
-
-      <button v-if="!isSidebarActive" type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
-        <iconify-icon icon='heroicons:bars-3-bottom-right'
-          class="icon text-2xl"></iconify-icon>
+    <div class="sidebar-toggle-container sidebar-header d-flex align-items-center" :class="{ 'sidebar-header--open': !isSidebarActive, 'sidebar-header--closed': isSidebarActive }">
+      <button
+        type="button"
+        class="sidebar-toggle"
+        :title="isSidebarActive ? 'Expand menu' : 'Collapse menu'"
+        @click="toggleSidebarDesktop"
+        aria-label="Toggle menu"
+      >
+        <iconify-icon icon="material-symbols:menu-rounded" class="sidebar-menu-icon" />
       </button>
     </div>
-    <!-- <button v-if="isSidebarActive" type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
-      <iconify-icon icon='iconoir:arrow-right'
-        class="icon text-2xl"></iconify-icon>
-    </button> -->
     <!-- Menu -->
     <div class="sidebar-menu-area">
       <ul class="sidebar-menu">
@@ -353,6 +345,7 @@ const requestsIcon=ref('/assets/icons/request-icon.svg');
 const ownersIcon=ref('/assets/icons/owners-icon.svg');
 const propertyIcon=ref('/assets/icons/property-icon-white.svg');
 const unitViewIcon=ref('/assets/icons/unit-view-icon.svg');
+const isMobileOpen = ref(false);
 const layoutTypeIcon=ref('/assets/icons/layout-icon.svg');
 const locationIcon=ref('/assets/icons/area-icon.svg');
 const agentsIcon=ref('/assets/icons/agents-icon.svg');
@@ -360,10 +353,22 @@ const roleIcon=ref('/assets/icons/role-icon.svg');
 
 const route = useRoute();
 const activeDropdown = ref(null);
-const isMobileOpen = ref(false);
 const countsLoading = ref(false);
 const { proxy } = getCurrentInstance();
 const { isSidebarActive, toggleSidebarDesktop } = useSidebar();
+
+const closeSidebar = () => {
+  isMobileOpen.value = false;
+  document.body.classList.remove('overlay-active');
+  const asideEl = document.querySelector('aside.sidebar');
+  if (asideEl) asideEl.classList.remove('sidebar-open');
+};
+
+function toggleSidebarMobile() {
+  isMobileOpen.value = true;
+  document.querySelector('.sidebar')?.classList.add('sidebar-open');
+  document.body.classList.add('overlay-active');
+}
 
 const getUserFromStorage = () => {
   try {
@@ -635,21 +640,6 @@ const toggleDropdown = (name) => {
   localStorage.setItem('activeDropdown', activeDropdown.value || '');
 };
 
-const closeSidebar = () => {
-  isMobileOpen.value = false;
-  document.body.classList.remove('overlay-active');
-  const asideEl = document.querySelector('aside.sidebar');
-  if (asideEl) {
-    asideEl.classList.remove('sidebar-open');
-  }
-};
-
-
-function toggleSidebarMobile() {
-  isMobileOpen.value = true;
-  document.querySelector('.sidebar')?.classList.add('sidebar-open');
-  document.body.classList.add('overlay-active');
-}
 
 const isActive = (path) => {
   if (path === '/') {
@@ -755,14 +745,70 @@ onMounted(() => {
 
   setInterval(fetchAllCounts, 60000);
 });
+
 </script>
 <style scoped>
+.sidebar-header {
+  padding: 0.875rem 1rem;
+  min-height: 4.5rem;
+  box-sizing: border-box;
+  justify-content: flex-start;
+  background: #363d6661;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Hover on closed sidebar expands it */
+.sidebar.active:hover {
+  width: auto;
+}
+@media (min-width: 1200px) {
+  .sidebar.active:hover {
+    inset-inline-start: 0;
+  }
+}
+@media (min-width: 1400px) {
+  .sidebar.active:hover {
+    width: 17.1875rem;
+  }
+}
+@media (min-width: 1650px) {
+  .sidebar.active:hover {
+    width: 19.5rem;
+  }
+}
+
+/* Menu icon: white on dark header */
 .sidebar-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 40px;
-  margin-right: 20px;
+  width: 40px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sidebar-menu-icon {
+  font-size: 1.75rem;
+  color: #ffffff !important;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.sidebar-toggle:hover .sidebar-menu-icon {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+[data-theme="dark"] .sidebar-menu-icon {
+  color: #ffffff !important;
+}
+[data-theme="dark"] .sidebar-toggle:hover .sidebar-menu-icon {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+/* Ensure Iconify icon inherits color (SVG fill) */
+.sidebar-menu-icon :deep(svg),
+.sidebar-menu-icon :deep(path) {
+  fill: currentColor;
 }
 
 /* .sidebar-menu .dropdown.active-parent > a {

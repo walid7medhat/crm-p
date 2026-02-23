@@ -15,9 +15,10 @@
                 <!-- View Mode (read-only; do not use ViewLead.vue here – it is a full modal and would cause infinite recursion) -->
                 <LeadInfoView v-if="!isEditMode" :lead="lead" />
 
-                <!-- Edit Mode -->
+                <!-- Edit Mode (footer Save/Cancel moved to global bottom bar below) -->
                 <EditLead 
                     v-else 
+                    ref="editLeadRef"
                     :lead="lead"
                     :stage-id="selectedStageId"
                     @updated="handleLeadUpdated"
@@ -76,19 +77,41 @@
                 ref="commentListRef"
                 :lead-id="lead?.id" 
             />
-            <!-- Lead Activity timeline: under comments, grouped by date (who assigned, created, history) -->
+            <!-- Lead Activity timeline: under comments, grouped by date (who assigned, created, history). Key forces refetch when stage changes so "Stage changed" appears immediately. -->
             <LeadActivityTimeline 
                 v-if="activeViewTab === 'comments' && lead?.id" 
+                :key="`timeline-${lead?.id}-${lead?.stage_id}`"
                 :lead-id="lead?.id" 
             />
+            <!-- Lead Created (first section from bottom) -->
+            <LeadCreatedCard v-if="lead?.id" :lead="lead" />
+        </div>
+
+        <!-- Spacer when bar is visible so content isn't hidden behind fixed bar -->
+        <div v-if="isEditMode" class="col-12 edit-lead-bar-spacer"></div>
+
+        <!-- Global fixed bottom bar: Save / Cancel when editing lead (centered, fixed on scroll) -->
+        <div v-if="isEditMode" class="edit-lead-bottom-bar">
+            <button class="edit-bar-btn edit-bar-cancel" @click="onEditBarCancel">
+                Cancel
+            </button>
+            <button
+                class="edit-bar-btn edit-bar-save"
+                :disabled="isEditBarSaving"
+                @click="onEditBarSave"
+            >
+                <span v-if="isEditBarSaving">Saving...</span>
+                <span v-else>Save</span>
+            </button>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, watch ,onMounted} from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import EditLead from '../editLead/EditLead.vue'
 import LeadInfoView from './LeadInfoView.vue'
+import LeadCreatedCard from './LeadCreatedCard.vue'
 import ActivitySection from './ActivitySection.vue'
 import CommentsSection from './CommentsSection.vue'
 import ActivityList from './ActivityList.vue'
@@ -113,6 +136,7 @@ const selectedStageId = ref(props.stageId || props.lead?.stage?.id || null)
 const activeViewTab = ref('comments') // 'activity' or 'comments'
 const commentListRef = ref(null)
 const activityListRef = ref(null)
+const editLeadRef = ref(null)
 const resetEditMode = () => {
     console.log('🔄 GeneralTab: Resetting edit mode to false')
     isEditMode.value = false
@@ -157,6 +181,16 @@ const toggleEditMode = () => {
 const handleCancel = () => {
     isEditMode.value = false
 }
+
+const onEditBarCancel = () => {
+    editLeadRef.value?.handleCancel?.()
+}
+
+const onEditBarSave = () => {
+    editLeadRef.value?.handleSave?.()
+}
+
+const isEditBarSaving = computed(() => editLeadRef.value?.isSubmitting?.value ?? false)
 
 const handleLeadUpdated = (responseData) => {
     try {
@@ -236,6 +270,63 @@ onMounted(() => {
     color: #fff;
     font-weight: 400;
     box-shadow: 0px 4px 8px rgba(1, 6, 44, 0.2);
+}
+
+/* Spacer so content can scroll above the fixed bar */
+.edit-lead-bar-spacer {
+    height: 56px;
+    width: 100%;
+    flex-shrink: 0;
+}
+
+/* Global fixed bottom bar: centered Cancel / Save */
+.edit-lead-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 1rem;
+    background: #fff;
+    border-top: 1px solid #E2E8F0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+    z-index: 1050;
+}
+
+.edit-bar-btn {
+    padding: 8px 20px;
+    border-radius: 100px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.edit-bar-cancel {
+    background: #F4F4F4;
+    color: #01062C;
+}
+
+.edit-bar-cancel:hover {
+    background: #E2E8F0;
+}
+
+.edit-bar-save {
+    background: #01062C;
+    color: #fff;
+}
+
+.edit-bar-save:hover:not(:disabled) {
+    background: #060a2b;
+}
+
+.edit-bar-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .activity-card {

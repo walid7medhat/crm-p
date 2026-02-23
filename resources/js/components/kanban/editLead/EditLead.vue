@@ -312,17 +312,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Save and Cancel Buttons -->
-        <div class="modal-footer-custom">
-            <button class="btn-cancel" @click="handleCancel" :disabled="isSubmitting">
-                Cancel
-            </button>
-            <button class="btn-save" @click="handleSave" :disabled="isSubmitting">
-                <span v-if="isSubmitting">Saving...</span>
-                <span v-else>Save</span>
-            </button>
-        </div>
     </div>
 </template>
 
@@ -681,6 +670,12 @@ const handleSave = async () => {
         isSubmitting.value = false
     }
 }
+
+defineExpose({
+    handleCancel,
+    handleSave,
+    isSubmitting
+})
 </script>
 
 <style scoped>

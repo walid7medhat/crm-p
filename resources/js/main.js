@@ -23,8 +23,17 @@ addCSS('/assets/css/style14.css')
 addCSS('https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css')
 
 
+// API base: use same-origin when served by Laravel (e.g. MAMP), else env
+const getAppOrigin = () =>
+  (typeof window !== 'undefined' && window.__APP_ORIGIN__) ||
+  (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api').replace(/\/api\/?$/, '');
+const getApiBaseUrl = () =>
+  (typeof window !== 'undefined' && window.__API_BASE_URL__) ||
+  import.meta.env.VITE_API_BASE_URL ||
+  'http://127.0.0.1:8001/api';
+
 // Setup Axios
-axios.defaults.baseURL = 'http://127.0.0.1:8001'
+axios.defaults.baseURL = getAppOrigin()
 axios.defaults.headers.common['Accept'] = 'application/json'
 axios.defaults.headers.common['Content-Type'] = 'application/json'
 
@@ -94,19 +103,12 @@ Pusher.logToConsole = true
 
 window.Pusher = Pusher
 
-// Get base URL without /api for broadcasting auth
-const getBaseUrl = () => {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api';
-    // Remove /api from the end if present
-    return apiUrl.replace(/\/api\/?$/, '');
-};
-
 window.Echo = new Echo({
     broadcaster: 'pusher',
     key: import.meta.env.VITE_PUSHER_APP_KEY,
     cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
     forceTLS: true,
-    authEndpoint: `${getBaseUrl()}/broadcasting/auth`,
+    authEndpoint: `${getAppOrigin()}/broadcasting/auth`,
     auth: {
         headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -168,7 +170,7 @@ app.use(router)
 app.use(VueApexCharts)
 
 // Global properties
-app.config.globalProperties.$apiBaseUrl = 'http://127.0.0.1:8000/api'
+app.config.globalProperties.$apiBaseUrl = getApiBaseUrl()
 app.config.globalProperties.$axios = axios
 
 // SweetAlert configuration

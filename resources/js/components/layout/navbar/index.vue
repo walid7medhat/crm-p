@@ -3,14 +3,10 @@
     <div class="row align-items-center justify-content-between">
       <div class="col-auto">
         <div class="d-flex flex-wrap align-items-center gap-4">
-          <!-- <button type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
-            <iconify-icon :icon="isSidebarActive ? 'iconoir:arrow-right' : 'heroicons:bars-3-solid'"
-              class="icon text-2xl"></iconify-icon>
-          </button> -->
-          <button v-if="isSidebarActive" type="button" class="sidebar-toggle" @click="toggleSidebarDesktop">
-            <iconify-icon icon='iconoir:arrow-right'
-              class="icon text-2xl"></iconify-icon>
+          <button type="button" class="sidebar-toggle back-button" @click="goBack" title="Go back" aria-label="Go back">
+            <iconify-icon icon="lucide:arrow-left" class="icon text-2xl"></iconify-icon>
           </button>
+        
 
           <button type="button" @click="toggleSidebarMobile" class="sidebar-mobile-toggle">
             <iconify-icon icon="heroicons:bars-3-solid" class="icon"></iconify-icon>
@@ -244,14 +240,16 @@
 import { ref, onMounted, computed, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useTheme } from '@/composables/useTheme.js';
-import { useSidebar } from '@/composables/useSidebar.js';
 import NotificationBell from '@/components/NotificationBell.vue';
 import userPlaceholder from '@/assets/images/user.png';
 import api from '@/plugins/axios';
 
 const { theme, toggleTheme } = useTheme();
-const { isSidebarActive, toggleSidebarDesktop } = useSidebar();
 const router = useRouter();
+
+function goBack() {
+  router.back();
+}
 const route = useRoute();
 const user = ref(null);
 
@@ -570,7 +568,6 @@ function toggleBrowserNotifications() {
     console.log('📱 Browser notifications disabled');
   }
 }
-
 
 function toggleSidebarMobile() {
   document.querySelector('.sidebar')?.classList.add('sidebar-open');
