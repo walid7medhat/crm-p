@@ -64,6 +64,7 @@ import allNotifications from './components/allNotifications.vue'
 
 // Kanban
 import Kanban from './pages/kanban.vue'
+import kanban_deal from './pages/kanban_deal.vue'
 
 import FeaturesList from './pages/features/features-list.vue'
 import FeatureForm from './pages/features/form.vue'
@@ -75,6 +76,7 @@ import FloorPlans from './pages/projects/FloorPlans.vue'
 const routes = [
   // Khanban Route
   { path: '/kanban', component: Kanban },
+  { path: '/kanban_deal', component: kanban_deal },
   { path: '/', component: Ai, meta: { requiresAuth: true } },
 
   { path: '/table-basic', component: BasicTable, meta: { requiresAuth: true } },
