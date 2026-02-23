@@ -279,7 +279,14 @@ const buyerDocsLength = computed(() => {
 </script>
 
 <style scoped>
-.section-title { font-size: 13px; font-weight: 600; color: #01062C; font-family: 'Montserrat'; }
+.section-title,
+h6.section-title {
+  font-size: 13px !important;
+  font-weight: 600;
+  color: #01062C;
+  font-family: 'Montserrat', sans-serif;
+  margin-bottom: 0.5rem;
+}
 .view-card { background: #fff; border: 1px solid #F3F3F3; box-shadow: 1px 1px 5px rgba(0,0,0,0.03); }
 .radius-12 { border-radius: 12px; }
 .info-label { font-size: 11px; font-weight: 500; color: #979797; display: block; margin-bottom: 4px; }

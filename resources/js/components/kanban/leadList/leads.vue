@@ -1,6 +1,6 @@
 <template>
     <div class="kanban-outer">
-        <div ref="kanbanContainerRef" class="kanban-container">
+        <div ref="kanbanContainerRef" class="kanban-container" @scroll="updateScrollArrows">
         <!-- Loading state -->
         <div v-if="loading && columns.length === 0" class="kanban-empty-state kanban-loading">
             <div class="kanban-empty-spinner"></div>
@@ -20,7 +20,7 @@
             <p class="kanban-empty-text">Use the menu above to add a new stage and start organizing your leads.</p>
         </div>
         <!-- Draggable Columns -->
-        <draggable v-else v-model="columns" item-key="status" class="kanban-wrapper d-flex gap-20 h-100" :group="'columns'"
+        <draggable v-else v-model="columns" item-key="status" class="kanban-wrapper d-flex gap-12 h-100" :group="'columns'"
             handle=".column-header"
             :ghost-class="'ghost'" :drag-class="'dragging'">
             <template #item="{ element: column, index }">
@@ -28,7 +28,7 @@
                     <div class=" p-0 overflow-hidden shadow-none border-0 bg-transparent h-100 d-flex flex-column">
                         <div class="card-body p-0 d-flex flex-column h-100">
                             <!-- Column Header -->
-                            <div class="column-header d-flex align-items-center justify-content-between p-11 cursor-move flex-shrink-0" :style="{ backgroundColor: column.color }">
+                            <div class="column-header d-flex align-items-center justify-content-between p-8 cursor-move flex-shrink-0" :style="{ backgroundColor: column.color }">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="stage-circle">
                                         <div class="stage-dot" :style="{ backgroundColor: column.color }"></div>
@@ -62,14 +62,14 @@
                                 </div>
                             </div>
 
-                            <div class="column-content p-10 overflow-y-auto scroll-sm flex-grow-1 d-flex flex-column">
+                            <div class="column-content p-8 overflow-y-auto scroll-sm flex-grow-1 d-flex flex-column">
                                 <!-- Tasks -->
                                 <draggable v-model="column.leads" :group="'tasks'" item-key="id"
                                     class="tasks-list flex-grow-1" :ghost-class="'ghost'"
                                     :drag-class="'dragging'"
                                     @change="(evt) => onLeadDragChange(evt, column)">
                                     <template #item="{ element: task }">
-                                        <div :key="task.id" class="kanban-card bg-white p-16 radius-12 mb-16 shadow-sm border-0 cursor-pointer"
+                                        <div :key="task.id" class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
                                             @click="viewLead(task)">
                                             <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
                                                 <p class="task-title flex-grow-1 mb-0">{{ task.lead_name }}</p>
@@ -156,26 +156,32 @@
         </draggable>
         </div>
         <template v-if="!loading && !error && columns.length > 0">
-            <button
-                type="button"
-                class="kanban-nav-arrow kanban-nav-arrow-left"
+            <!-- Left: hide when at start -->
+            <div
+                v-show="showLeftZone"
+                class="kanban-nav-zone kanban-nav-zone-left"
                 title="Move left"
                 aria-label="Move left"
                 @mouseenter="startScrollLeft"
                 @mouseleave="stopScroll"
             >
-                <iconify-icon icon="lucide:chevron-left" class="kanban-nav-arrow-icon" />
-            </button>
-            <button
-                type="button"
-                class="kanban-nav-arrow kanban-nav-arrow-right"
+                <span class="kanban-nav-arrow kanban-nav-arrow-left">
+                    <iconify-icon icon="lucide:chevron-left" class="kanban-nav-arrow-icon" />
+                </span>
+            </div>
+            <!-- Right: hide when at end -->
+            <div
+                v-show="showRightZone"
+                class="kanban-nav-zone kanban-nav-zone-right"
                 title="Move the stages"
                 aria-label="Move the stages"
                 @mouseenter="startScrollRight"
                 @mouseleave="stopScroll"
             >
-                <iconify-icon icon="lucide:chevron-right" class="kanban-nav-arrow-icon" />
-            </button>
+                <span class="kanban-nav-arrow kanban-nav-arrow-right">
+                    <iconify-icon icon="lucide:chevron-right" class="kanban-nav-arrow-icon" />
+                </span>
+            </div>
         </template>
     </div>
 
@@ -315,7 +321,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import draggable from 'vuedraggable'
 import avatar1 from '@/assets/images/users/user1.png'
 import leadsIcon from '@/assets/images/kanban/leads-icon.png'
@@ -362,9 +368,20 @@ const loading = ref(true)
 const error = ref(null)
 const kanbanContainerRef = ref(null)
 const scrollInterval = ref(null)
+const showLeftZone = ref(true)
+const showRightZone = ref(true)
 
 const SCROLL_SPEED = 10
 const SCROLL_TICK_MS = 16
+
+function updateScrollArrows() {
+    const el = kanbanContainerRef.value
+    if (!el) return
+    const atStart = el.scrollLeft <= 2
+    const atEnd = el.scrollWidth - el.clientWidth <= el.scrollLeft + 2
+    showLeftZone.value = !atStart
+    showRightZone.value = !atEnd
+}
 
 function startScrollLeft() {
     stopScroll()
@@ -560,12 +577,17 @@ async function fetchResponsiblePersons() {
     }
 }
 
+watch(() => columns.value?.length, () => {
+    nextTick(() => updateScrollArrows())
+})
+
 onMounted(async () => {
     await Promise.all([
         fetchLeads(true), // Immediate on mount
         fetchResponsiblePersons()
     ])
-    
+    nextTick(() => updateScrollArrows())
+    window.addEventListener('resize', updateScrollArrows)
     setTimeout(() => {
         initializeLeadUpdates()
     }, 1000)
@@ -573,6 +595,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
     stopScroll()
+    window.removeEventListener('resize', updateScrollArrows)
     cleanup()
 })
 
@@ -1287,7 +1310,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .kanban-container {
-    padding: 24px;
+    padding: 16px;
     height: 100%;
     overflow-x: auto;
     overflow-y: hidden;
@@ -1297,25 +1320,39 @@ const $showNotification = (message, type = 'info') => {
     position: relative;
 }
 
-/* Stage navigation arrows – semi-circular, hover to scroll, z-index below sidebar */
-.kanban-nav-arrow {
+/* Full-height hover zones: hover anywhere on the line to scroll */
+.kanban-nav-zone {
     position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 0;
+    bottom: 0;
+    width: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    cursor: pointer;
+}
+.kanban-nav-zone-left {
+    left: 0;
+}
+.kanban-nav-zone-right {
+    right: 0;
+}
+
+/* Arrow style same as before: small semi-circular pill */
+.kanban-nav-arrow {
     width: 36px;
     height: 72px;
     background: #ffffff;
     box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
     border: none;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2;
     transition: box-shadow 0.2s ease, background 0.2s ease;
+    pointer-events: none;
 }
-.kanban-nav-arrow:hover {
-    background: #ffffff;
+.kanban-nav-zone:hover .kanban-nav-arrow {
     box-shadow: 3px 0 16px rgba(0, 0, 0, 0.1), 0 3px 12px rgba(0, 0, 0, 0.08);
 }
 .kanban-nav-arrow-icon {
@@ -1324,12 +1361,10 @@ const $showNotification = (message, type = 'info') => {
     color: #0f172a;
 }
 .kanban-nav-arrow-left {
-    left: 0;
     border-radius: 0 36px 36px 0;
     padding-left: 4px;
 }
 .kanban-nav-arrow-right {
-    right: 0;
     border-radius: 36px 0 0 36px;
     padding-right: 4px;
 }
