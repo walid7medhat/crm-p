@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="info-group">
+        <div class="info-group edit">
             <label class="form-label-custom">Lead Name</label>
             <b-form-input 
                 v-model="form.lead_name" 
@@ -390,7 +390,7 @@ const salutationOptions = [
 ]
 
 const currencyOptions = [
-    { value: 'USD', text: 'USD $' },
+    // { value: 'USD', text: 'USD $' },
     { value: 'AED', text: 'AED د.إ' },
 ]
 

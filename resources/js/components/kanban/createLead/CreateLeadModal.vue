@@ -405,7 +405,7 @@ const form = ref({
     //     avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
     // },
     budget: null,
-    currency: null,
+    currency: "AED",
 })
 
 
@@ -422,7 +422,7 @@ const phoneTypeOptions = [
 ]
 
 const currencyOptions = [
-    { value: 'USD', text: 'USD $' },
+    // { value: 'USD', text: 'USD $' },
     { value: 'AED', text: 'AED د.إ' },
 ]
 

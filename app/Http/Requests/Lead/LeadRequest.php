@@ -27,7 +27,7 @@ class LeadRequest extends FormRequest
             
             // Contact Details
             'whatsapp_number' => 'nullable|string|max:20',
-            'work_phone' => 'nullable|string|max:20',
+            'work_phone' => 'required|string|max:20',
             'work_phone_2' => 'nullable|string|max:20',
             'email' => 'nullable|email',
             'website' => 'nullable|url',
