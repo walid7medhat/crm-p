@@ -1,5 +1,6 @@
 <template>
-    <div class="kanban-container">
+    <div class="kanban-outer">
+        <div ref="kanbanContainerRef" class="kanban-container">
         <!-- Loading state -->
         <div v-if="loading && columns.length === 0" class="kanban-empty-state kanban-loading">
             <div class="kanban-empty-spinner"></div>
@@ -153,10 +154,37 @@
                 </div>
             </template>
         </draggable>
+        </div>
+        <template v-if="!loading && !error && columns.length > 0">
+            <button
+                type="button"
+                class="kanban-nav-arrow kanban-nav-arrow-left"
+                title="Move left"
+                aria-label="Move left"
+                @mouseenter="startScrollLeft"
+                @mouseleave="stopScroll"
+            >
+                <iconify-icon icon="lucide:chevron-left" class="kanban-nav-arrow-icon" />
+            </button>
+            <button
+                type="button"
+                class="kanban-nav-arrow kanban-nav-arrow-right"
+                title="Move the stages"
+                aria-label="Move the stages"
+                @mouseenter="startScrollRight"
+                @mouseleave="stopScroll"
+            >
+                <iconify-icon icon="lucide:chevron-right" class="kanban-nav-arrow-icon" />
+            </button>
+        </template>
     </div>
 
     <!-- View Lead Modal -->
-    <ViewLeadModal v-model="showViewModal" :leadId="selectedLead" />
+    <ViewLeadModal
+        v-model="showViewModal"
+        :leadId="selectedLead"
+        @lead-updated="handleLeadUpdatedFromModal"
+    />
 
     <!-- Duplicate Leads Dropdown -->
     <DuplicateLeadsModal 
@@ -332,6 +360,36 @@ const columns = ref([])
 const responsiblePersons = ref([])
 const loading = ref(true)
 const error = ref(null)
+const kanbanContainerRef = ref(null)
+const scrollInterval = ref(null)
+
+const SCROLL_SPEED = 10
+const SCROLL_TICK_MS = 16
+
+function startScrollLeft() {
+    stopScroll()
+    scrollInterval.value = setInterval(() => {
+        const el = kanbanContainerRef.value
+        if (!el) return
+        el.scrollLeft -= SCROLL_SPEED
+    }, SCROLL_TICK_MS)
+}
+
+function startScrollRight() {
+    stopScroll()
+    scrollInterval.value = setInterval(() => {
+        const el = kanbanContainerRef.value
+        if (!el) return
+        el.scrollLeft += SCROLL_SPEED
+    }, SCROLL_TICK_MS)
+}
+
+function stopScroll() {
+    if (scrollInterval.value) {
+        clearInterval(scrollInterval.value)
+        scrollInterval.value = null
+    }
+}
 
 const echoListeners = ref([])
 const pollingInterval = ref(null)
@@ -514,6 +572,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+    stopScroll()
     cleanup()
 })
 
@@ -676,6 +735,12 @@ const handleDeletedLead = (lead) => {
                 break
             }
         }
+    }
+}
+
+const handleLeadUpdatedFromModal = (updatedLead) => {
+    if (updatedLead?.id) {
+        handleUpdatedLead(updatedLead, 'updated')
     }
 }
 
@@ -1215,16 +1280,58 @@ const $showNotification = (message, type = 'info') => {
     display: none; /* Chrome, Safari, and Opera */
 }
 
+.kanban-outer {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 150px);
+}
+
 .kanban-container {
-    /* background-color: transparent; Use background from Index.vue */
     padding: 24px;
-    height: calc(100vh - 150px); /* Adjust based on your header height */
+    height: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     width: 100%;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
     position: relative;
+}
+
+/* Stage navigation arrows – semi-circular, hover to scroll, z-index below sidebar */
+.kanban-nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 72px;
+    background: #ffffff;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+.kanban-nav-arrow:hover {
+    background: #ffffff;
+    box-shadow: 3px 0 16px rgba(0, 0, 0, 0.1), 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+.kanban-nav-arrow-icon {
+    font-size: 24px;
+    font-weight: 600;
+    color: #0f172a;
+}
+.kanban-nav-arrow-left {
+    left: 0;
+    border-radius: 0 36px 36px 0;
+    padding-left: 4px;
+}
+.kanban-nav-arrow-right {
+    right: 0;
+    border-radius: 36px 0 0 36px;
+    padding-right: 4px;
 }
 
 /* Empty / loading / error states */

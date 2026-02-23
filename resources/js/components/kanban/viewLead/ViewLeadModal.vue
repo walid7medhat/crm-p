@@ -458,25 +458,25 @@ watch(lead, (newLead) => {
     }
 }, { immediate: true })
 
-// Emit when stage is updated
-// watch(leadStageId, async (newStageId, oldStageId) => {
-//     if (newStageId && oldStageId && newStageId !== oldStageId && lead.value) {
-//         try {
-//             // Update the stage via API
-//             await api.post(`/leads/${lead.value.id}/change-stage`, {
-//                 stage_id: newStageId
-//             })
-            
-//             emit('stage-updated', { leadId: lead.value.id, stageId: newStageId })
-//             $showNotification('Lead stage updated successfully', 'success')
-//         } catch (error) {
-//             console.error('❌ Error updating stage:', error)
-//             $showNotification('Failed to update lead stage', 'error')
-//             // Revert the stage change
-//             leadStageId.value = oldStageId
-//         }
-//     }
-// })
+// When user clicks a stage in StageSelector, save immediately and show in activity timeline
+watch(leadStageId, async (newStageId, oldStageId) => {
+    if (!newStageId || oldStageId === undefined || newStageId === oldStageId || !lead.value?.id) return
+    try {
+        const response = await api.post(`/leads/${lead.value.id}/change-stage`, {
+            stage_id: newStageId
+        })
+        const updatedLeadData = response.data?.data || response.data
+        if (updatedLeadData) {
+            lead.value = { ...lead.value, ...updatedLeadData }
+        }
+        emit('lead-updated', lead.value)
+        $showNotification('Stage updated successfully', 'success')
+    } catch (error) {
+        console.error('❌ Error updating stage:', error)
+        $showNotification(error.response?.data?.message || 'Failed to update stage', 'error')
+        leadStageId.value = oldStageId
+    }
+})
 
 // Notification helper – use global deferred to avoid SweetAlert2 stack overflow
 const $showNotification = (message, type = 'info') => {

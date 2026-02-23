@@ -7,11 +7,9 @@ export function useSidebar() {
     isSidebarActive.value = !isSidebarActive.value
     document.querySelector('.sidebar')?.classList.toggle('active')
     document.querySelector('.dashboard-main')?.classList.toggle('active')
-    // Persist state to localStorage
     localStorage.setItem('sidebarActive', isSidebarActive.value.toString())
   }
 
-  // Restore sidebar state on mount
   onMounted(() => {
     const savedState = localStorage.getItem('sidebarActive')
     if (savedState === 'true') {
@@ -21,8 +19,8 @@ export function useSidebar() {
     }
   })
 
-  return { 
-    isSidebarActive, 
-    toggleSidebarDesktop 
+  return {
+    isSidebarActive,
+    toggleSidebarDesktop
   }
 }
