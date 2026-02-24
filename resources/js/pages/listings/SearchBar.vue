@@ -963,7 +963,7 @@ fetchProjects()
 
 .form-label {
   display: block;
-  margin-bottom: 6px;
+  margin-left: 8px;
   font-weight: 600;
   color: #333;
   font-size: 0.8rem;
@@ -1482,6 +1482,7 @@ fetchProjects()
 .range-dropdown {
   position: relative;
   display: block;
+  margin:4px 8px;
 }
 
 .range-dropdown-content {

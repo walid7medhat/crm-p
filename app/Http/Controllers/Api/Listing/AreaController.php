@@ -173,13 +173,16 @@ class AreaController extends Controller
             }
             
             DB::beginTransaction();
-            
+        
             $area->update([
                 'name' => $request->name,
                 'type' => $request->type,
                 'parent_id' => $request->parent_id,
             ]);
-
+            $project=Project::where('area_id',$area->id)->first();
+            if($project){
+            $project->update(['title'=>$request->name]);
+            }
             // Note: We don't create projects on update, only on create
             
             $this->clearAreaCache($area->id);

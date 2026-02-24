@@ -131,6 +131,7 @@
                             <!-- Area Selection -->
                             <div class="mb-4" v-if="selectedCity">
                                 <label class="form-label">Area</label>
+                                <!--|| (isEditMode && !canEditArea)-->
                                 <v-select
                                     v-model="selectedArea"
                                     :options="areas"
@@ -138,7 +139,7 @@
                                     :reduce="(area) => area"
                                     placeholder="Select area (optional)"
                                     :class="{'is-invalid': errors.area}"
-                                    :disabled="loading || loadingAreas || (isEditMode && !canEditArea)"
+                                    :disabled="loading || loadingAreas "
                                     @update:modelValue="onAreaChange"
                                 >
                                     <template #option="{ name }">
@@ -160,7 +161,7 @@
                                     :reduce="(area) => area"
                                     placeholder="Select community (optional)"
                                     :class="{'is-invalid': errors.community}"
-                                    :disabled="loading || loadingCommunities || (isEditMode && !canEditCommunity)"
+                                    :disabled="loading || loadingCommunities "
                                     @update:modelValue="onCommunityChange"
                                 >
                                     <template #option="{ name }">
@@ -182,7 +183,7 @@
                                     :reduce="(area) => area"
                                     placeholder="Select sub community (optional)"
                                     :class="{'is-invalid': errors.subCommunity}"
-                                    :disabled="loading || loadingSubCommunities || (isEditMode && !canEditSubCommunity)"
+                                    :disabled="loading || loadingSubCommunities "
                                     @update:modelValue="onSubCommunityChange"
                                 >
                                     <template #option="{ name }">
@@ -250,7 +251,7 @@
                             <!-- Name Field -->
                             <div class="mb-4">
                                 <label class="form-label d-flex gap-4">
-                                 <div>Add New {{ getFinalLevelLabel }} <span class="text-danger">*</span></div> 
+                                 <div>{{!isEditMode?'Add New':'update' }} {{ getFinalLevelLabel }} <span class="text-danger">*</span></div> 
                                     <div class="form-check" v-if="!isEditMode && shouldShowProjectCheckbox">
                                         <input 
                                             type="checkbox" 
@@ -480,9 +481,9 @@ export default {
             // Show for specific levels based on selections
             
             // Creating Area (when city is selected and no area)
-            // if (selectedCity.value && !selectedArea.value && !selectedCommunity.value && !selectedSubCommunity.value) {
-            //     return true;
-            // }
+            if (selectedCity.value && !selectedArea.value && !selectedCommunity.value && !selectedSubCommunity.value) {
+                return true;
+            }
             
             // Creating Community (when area is selected)
             if (selectedArea.value && !selectedCommunity.value && !selectedSubCommunity.value) {
@@ -690,15 +691,15 @@ export default {
                 cities.value = response.data.data || response.data || [];
                 
                 if (cities.value.length > 0 && !selectedCity.value) {
-                    const abuDhabi = cities.value.find(c => 
-                        c.name.toLowerCase() === 'abu dhabi'
+                    const selectedCity = cities.value.find(c => 
+                        c.name.toLowerCase() === 'Abu Dhabi'
                      
                      
                     );
                     
-                    if (abuDhabi) {
-                        selectedCity.value = abuDhabi;
-                        onCityChange(abuDhabi);
+                    if (selectedCity) {
+                        selectedCity.value = selectedCity;
+                        onCityChange(selectedCity);
                     }
                 }
                 

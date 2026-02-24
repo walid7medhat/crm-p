@@ -1,20 +1,37 @@
 <template>
   <div class="">
     <div class="search-bar">
-       <div class="main-search-row">
-               
+      
+      <!-- Main Search Row -->
+      <div class="main-search-row main-search-row-single">
                 <!-- Location -->
-                <div class="form-group col-md-4 col-12">
-                  <label class="form-label">Location</label>
+                   <!-- Location: wider, placeholder centered, options in 2 lines -->
+                <div class="form-group form-group-inline form-group-location">
+                  <label class="form-label form-label-inline form-label-location">Location</label>
                   <v-select
                     v-model="selectedArea"
                     :options="areas"
                     :disabled="isLoadingAreas"
                     label="name"
                     placeholder="Select area"
-                    class="custom-select unified-input"
+                    class="custom-select unified-input unified-input-inline unified-input-inline location-select"
                     @update:modelValue="handleFilterChange"
                   >
+                    <template #option="option">
+                      <div class="location-option">
+                        <i class="ri-map-pin-line location-option-icon"></i>
+                        <div class="location-option-text">
+                          <span class="location-option-name">{{ locationFirstLine(option) }}</span>
+                          <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
+                        </div>
+                      </div>
+                    </template>
+                    <template #selected-option="option">
+                      <div v-if="option" class="location-selected">
+                        <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
+                        <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
+                      </div>
+                    </template>
                     <template #no-options>
                       <div class="text-center p-2">
                         {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
@@ -22,31 +39,27 @@
                     </template>
                   </v-select>
                 </div>
-        </div>
-      <!-- Main Search Row -->
-      <div class="main-search-row">
-         
       <!-- Completion Status (Off Plan/Ready) -->
-            <div class="form-group compact">
-              <label class="form-label">Project Status</label>
+            <div class="form-group-inline form-group-location">
+              <label class="form-label form-label-inline form-label-location">Project Status</label>
               <v-select
                 v-model="selectedCompletionStatus"
                 :options="completionStatusOptions"
                 placeholder="Select status"
-                class="custom-select unified-input"
+                class="custom-select unified-input unified-input-inline"
                 @update:modelValue="handleFilterChange"
               />
             </div>
         <!-- Property Type -->
-        <div class="form-group compact">
-          <label class="form-label">Property Type</label>
+        <div class="form-group-inline form-group-location">
+          <label class="form-label form-label-inline form-label-location">Property Type</label>
           <v-select
             v-model="selectedPropertyType"
             :options="propertyTypes"
             :disabled="isLoadingPropertyTypes"
             label="name"
             placeholder="Any Type"
-            class="custom-select unified-input"
+            class="custom-select unified-input unified-input-inline"
             @update:modelValue="handleFilterChange"
           >
             <template #no-options>
@@ -60,141 +73,102 @@
      
       
          <!-- Bedrooms -->
-        <div class="form-group compact">
-          <label class="form-label">Bedrooms</label>
+        <div class="form-group-inline form-group-location">
+          <label class="form-label form-label-inline form-label-location">Bedrooms</label>
           <v-select
             v-model="selectedBeds"
             :options="bedsOptions"
             placeholder="Any"
-            class="custom-select unified-input"
+            class="custom-select unified-input unified-input-inline"
             @update:modelValue="handleFilterChange"
           />
         </div>
            <!-- Price & Size in Same Row -->
-        <div class="form-group compact double-group">
-          <div class="double-row">
             <!-- Price Range -->
-            <div class="range-group">
-              <label class="form-label">Price Range</label>
-              <div class="range-dropdown">
-                <button class="range-dropdown-btn unified-btn" @click="togglePriceDropdown">
-                  <span class="range-preview">
-                    {{ formatNumber(priceFrom) }} - {{ formatNumber(priceTo) }} AED
-                  </span>
-                  <i class="ri-arrow-down-s-line dropdown-icon"></i>
+        <div class="form-group form-group-inline form-group-range">
+          <label class="form-label form-label-inline">Price Range</label>
+          <div class="range-dropdown">
+            <button class="range-dropdown-btn unified-btn unified-btn-inline" @click="togglePriceDropdown">
+              <span class="range-preview range-preview-inline">
+                {{ formatNumber(priceFrom) }} - {{ formatNumber(priceTo) }} AED
+              </span>
+              <i class="ri-arrow-down-s-line dropdown-icon"></i>
+            </button>
+            <div v-if="showPriceDropdown" class="range-dropdown-content compact-dropdown">
+              <div class="range-header">
+                <span>Price (AED)</span>
+                <button class="close-dropdown" @click="showPriceDropdown = false">
+                  <i class="ri-close-line"></i>
                 </button>
-                <div v-if="showPriceDropdown" class="range-dropdown-content compact-dropdown">
-                  <div class="range-header">
-                    <span>Price (AED)</span>
-                    <button class="close-dropdown" @click="showPriceDropdown = false">
-                      <i class="ri-close-line"></i>
-                    </button>
+              </div>
+              <div class="range-slider-container">
+                <div class="range-inputs-side">
+                  <div class="input-group-side">
+                    <input type="text" v-model="priceFrom" class="range-input-side" @change="handlePriceChange" placeholder="Min">
                   </div>
-                  <div class="range-slider-container">
-                    <div class="range-inputs-side">
-                      <div class="input-group-side">
-                        <input type="text" v-model="priceFrom" class="range-input-side" @change="handlePriceChange" placeholder="Min">
-                      </div>
-                      <div class="input-group-side">
-                        <input type="text" v-model="priceTo" class="range-input-side" @change="handlePriceChange" placeholder="Max">
-                      </div>
-                    </div>
-                    <div class="range-track">
-                      <div class="range-progress" :style="priceProgressStyle"></div>
-                    </div>
-                    <div class="range-slider">
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="10000000" 
-                        step="100000"
-                        v-model="priceFrom"
-                        class="slider"
-                        @input="handlePriceSliderChange"
-                      />
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="10000000" 
-                        step="100000"
-                        v-model="priceTo"
-                        class="slider"
-                        @input="handlePriceSliderChange"
-                      />
-                    </div>
+                  <div class="input-group-side">
+                    <input type="text" v-model="priceTo" class="range-input-side" @change="handlePriceChange" placeholder="Max">
                   </div>
+                </div>
+                <div class="range-track">
+                  <div class="range-progress" :style="priceProgressStyle"></div>
+                </div>
+                <div class="range-slider">
+                  <input type="range" min="0" max="10000000" step="100000" v-model="priceFrom" class="slider" @input="handlePriceSliderChange" />
+                  <input type="range" min="0" max="10000000" step="100000" v-model="priceTo" class="slider" @input="handlePriceSliderChange" />
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <div class="form-group compact double-group">
-          <div class="double-row">
-            <!-- Size Range -->
-            <div class="range-group">
-              <label class="form-label">Size Range</label>
-              <div class="range-dropdown">
-                <button class="range-dropdown-btn unified-btn" @click="toggleSizeDropdown">
-                  <span class="range-preview">
-                    {{ sizeFrom }} - {{ sizeTo }} sqft
-                  </span>
-                  <i class="ri-arrow-down-s-line dropdown-icon"></i>
+
+        <!-- Size Range -->
+        <div class="form-group form-group-inline form-group-range">
+          <label class="form-label form-label-inline">Size Range</label>
+          <div class="range-dropdown">
+            <button class="range-dropdown-btn unified-btn unified-btn-inline" @click="toggleSizeDropdown">
+              <span class="range-preview range-preview-inline">
+                {{ sizeFrom }} - {{ sizeTo }} sqft
+              </span>
+              <i class="ri-arrow-down-s-line dropdown-icon"></i>
+            </button>
+            <div v-if="showSizeDropdown" class="range-dropdown-content compact-dropdown">
+              <div class="range-header">
+                <span>Size (sqft)</span>
+                <button class="close-dropdown" @click="showSizeDropdown = false">
+                  <i class="ri-close-line"></i>
                 </button>
-                <div v-if="showSizeDropdown" class="range-dropdown-content compact-dropdown">
-                  <div class="range-header">
-                    <span>Size (sqft)</span>
-                    <button class="close-dropdown" @click="showSizeDropdown = false">
-                      <i class="ri-close-line"></i>
-                    </button>
+              </div>
+              <div class="range-slider-container">
+                <div class="range-inputs-side">
+                  <div class="input-group-side">
+                    <input type="text" v-model="sizeFrom" class="range-input-side" @change="handleSizeChange" placeholder="Min">
                   </div>
-                  <div class="range-slider-container">
-                    <div class="range-inputs-side">
-                      <div class="input-group-side">
-                        <input type="text" v-model="sizeFrom" class="range-input-side" @change="handleSizeChange" placeholder="Min">
-                      </div>
-                      <div class="input-group-side">
-                        <input type="text" v-model="sizeTo" class="range-input-side" @change="handleSizeChange" placeholder="Max">
-                      </div>
-                    </div>
-                    <div class="range-track">
-                      <div class="range-progress" :style="sizeProgressStyle"></div>
-                    </div>
-                    <div class="range-slider">
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="10000" 
-                        step="100"
-                        v-model="sizeFrom"
-                        class="slider"
-                        @input="handleSizeSliderChange"
-                      />
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="10000" 
-                        step="100"
-                        v-model="sizeTo"
-                        class="slider"
-                        @input="handleSizeSliderChange"
-                      />
-                    </div>
+                  <div class="input-group-side">
+                    <input type="text" v-model="sizeTo" class="range-input-side" @change="handleSizeChange" placeholder="Max">
                   </div>
+                </div>
+                <div class="range-track">
+                  <div class="range-progress" :style="sizeProgressStyle"></div>
+                </div>
+                <div class="range-slider">
+                  <input type="range" min="0" max="10000" step="100" v-model="sizeFrom" class="slider" @input="handleSizeSliderChange" />
+                  <input type="range" min="0" max="10000" step="100" v-model="sizeTo" class="slider" @input="handleSizeSliderChange" />
                 </div>
               </div>
             </div>
           </div>
         </div>
            <!-- Agent Filter -->
-        <div class="form-group compact">
-          <label class="form-label">Agent</label>
+        <div class="form-group-inline form-group-location">
+          <label class="form-label form-label-inline form-label-location">Agent</label>
           <v-select
             v-model="selectedAgent"
             :options="agents"
             :disabled="isLoadingAgents"
             label="name"
             placeholder="Any Agent"
-            class="custom-select unified-input"
+            class="custom-select unified-input unified-input-inline"
             @update:modelValue="handleFilterChange"
           >
             <template #no-options>
@@ -209,18 +183,17 @@
       <!-- Secondary Filters -->
       <div class="secondary-filters">
         <!-- Sale/Rent Tabs -->
-        <div class="filter-section">
+         <div class="filter-section">
           <label class="filter-label">Type</label>
-          <div class="status-tabs">
-            <button
-              v-for="type in saleRentOptions"
-              :key="type"
-              :class="['status-tab', { active: selectedSaleRent === type }]"
-              @click="handleSaleRentChange(type)"
-            >
-              {{ type }}
-            </button>
-          </div>
+         <v-select
+          v-model="selectedSaleRent"
+          :options="saleRentOptions"
+          label="label"
+          :reduce="option => option.value"
+          placeholder="All"
+          class="custom-select sort-select unified-select unified-select-secondary"
+          @update:modelValue="handleFilterChange"
+        />
         </div>
 
         <!-- Status Tabs -->
@@ -241,7 +214,7 @@
         <!-- Sort By -->
       
         
-        <div class="form-group compact search-btn-group">
+        <div class="form-group-inline form-group-location search-btn-group">
           <button class="btn btn-primary unified-search-btn" @click="applyFilters" :disabled="isLoadingAreas || isLoadingPropertyTypes">
             <i class="ri-search-line"></i>
             {{ (isLoadingAreas || isLoadingPropertyTypes) ? 'Loading...' : 'Search' }}
@@ -354,7 +327,11 @@ const searchReferenceNumber = ref("");
     const searchTimer = ref(null);
 
     // Static options
-    const saleRentOptions = ["All", "Sale", "Rent"];
+    const saleRentOptions = [
+          { label: "All", value: "All" },
+          { label: "Sale", value: "Sale" },
+          { label: "Rent", value: "Rent" }
+        ];
     const statusOptions = ["All", "Ready", "Offplan"];
     const bedsOptions = ["Studio", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
      const completionStatusOptions = [
@@ -750,6 +727,21 @@ const searchReferenceNumber = ref("");
     const formatNumber = (num) => {
       return num.toLocaleString();
     };
+ // Location: first line = first part of name, second line = full remainder (rest + subtitle)
+    const locationFirstLine = (option) => {
+      if (!option || !option.name) return '';
+      const idx = option.name.indexOf(',');
+      return idx > 0 ? option.name.slice(0, idx).trim() : option.name;
+    };
+    const locationSecondLine = (option) => {
+      if (!option) return '';
+      const name = option.name || '';
+      const subtitle = option.subtitle || 'UAE';
+      const idx = name.indexOf(',');
+      const rest = idx > 0 ? name.slice(idx + 1).trim() : '';
+      if (rest) return subtitle ? `${rest}, ${subtitle}` : rest;
+      return subtitle;
+    };
 
     // Lifecycle
     onMounted(() => {
@@ -840,6 +832,8 @@ const searchReferenceNumber = ref("");
       handleSizeSliderChange,
       
       searchReferenceNumber,
+         locationFirstLine,
+      locationSecondLine,
     };
   }
 };
@@ -864,26 +858,207 @@ const searchReferenceNumber = ref("");
 
 .search-container {
   width: 100%;
-  margin: 20px 0px;
+  margin: 0;
 }
 
 .search-bar {
   width: 100%;
-  padding: 20px;
+  padding: 12px 16px;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid #eaeaea;
-  margin: 20px 0px;
+  margin: 0;
 }
 
 /* Main Search Row */
 .main-search-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 10px;
   align-items: flex-end;
+}
+
+/* Single line: all filters in one row, full width */
+.main-search-row-single {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin-bottom: 10px;
+  width: 100%;
+  align-items: flex-end;
+}
+
+.form-group-inline {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.form-group-inline :deep(.custom-select),
+.form-group-inline :deep(.vs__dropdown-toggle),
+.form-group-inline .range-dropdown,
+.form-group-inline .range-dropdown-btn {
+  width: 100%;
+}
+
+/* Location: wider than other fields */
+.form-group-inline.form-group-location {
+  flex: 1.6 1 0;
+  min-width: 0;
+}
+
+.form-group-inline.form-group-range {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Same gap between label and input for all (match Price/Size range) */
+.form-label-inline {
+  margin-bottom: 2px;
+  font-size: 0.7rem;
+}
+
+/* No space between title and input for Project Status, Property Type, Bedrooms */
+.form-label-tight {
+  margin-bottom: 0;
+}
+
+.form-label-location {
+  margin-bottom: 2px;
+}
+
+/* Location: same height & padding as Price/Size range */
+:deep(.location-select .vs__dropdown-toggle) {
+  min-height: 36px !important;
+  padding: 4px 8px !important;
+  align-items: center !important;
+  font-size: 0.75rem !important;
+}
+
+:deep(.location-select .vs__selected) {
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+:deep(.location-select .vs__placeholder) {
+  margin: 0 !important;
+  position: static !important;
+  width: 100%;
+  text-align: center;
+}
+
+:deep(.location-select .vs__selected) {
+  width: 100%;
+  text-align: center;
+}
+
+:deep(.location-select .vs__selected .location-selected) {
+  text-align: left;
+}
+
+/* Location selected value in 2 lines (when using selected-option slot) */
+.location-selected {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.location-selected-name {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #01062d;
+}
+
+.location-selected-subtitle {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+/* Location dropdown options: 2 lines with icon (like image) */
+.location-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  min-height: 48px;
+}
+
+.location-option-icon {
+  font-size: 1.1rem;
+  color: #64748b;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.location-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.location-option-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #01062d;
+  line-height: 1.2;
+}
+
+.location-option-subtitle {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+/* Location dropdown list: wider */
+:deep(.location-select + .vs__dropdown-menu),
+:deep(.location-select .vs__dropdown-menu) {
+  min-width: 320px !important;
+  width: 100% !important;
+  max-width: 400px;
+}
+
+/* All top-row inputs: same height, padding, font as Price/Size range */
+.unified-input-inline {
+  min-height: 36px !important;
+  padding: 4px 8px !important;
+  font-size: 0.75rem !important;
+}
+
+:deep(.unified-input-inline.vs--single .vs__dropdown-toggle),
+:deep(.form-group-inline .custom-select.vs--single .vs__dropdown-toggle) {
+  min-height: 36px !important;
+  padding: 4px 8px !important;
+  font-size: 0.75rem !important;
+}
+
+.main-search-row-single :deep(.vs__selected),
+.main-search-row-single :deep(.vs__search),
+.main-search-row-single :deep(.vs__placeholder) {
+  font-size: 0.75rem !important;
+}
+
+.unified-btn-inline {
+  min-height: 36px !important;
+  padding: 4px 8px !important;
+  font-size: 0.75rem !important;
+}
+
+.range-preview-inline {
+  font-size: 0.7rem !important;
+  line-height: 1.2;
+  white-space: normal;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .form-group.compact {
@@ -910,7 +1085,7 @@ const searchReferenceNumber = ref("");
 
 .form-label {
   display: block;
-  margin-bottom: 6px;
+  margin-left: 8px;
   font-weight: 600;
   color: #333;
   font-size: 0.8rem;
@@ -1174,17 +1349,17 @@ const searchReferenceNumber = ref("");
 /* Secondary Filters */
 .secondary-filters {
   display: flex;
-  gap: 20px;
+  gap: 10px;
   align-items: center;
-  margin-bottom: 16px;
-  padding-top: 16px;
+  margin-bottom: 0;
+  padding-top: 8px;
   border-top: 1px solid #f0f0f0;
 }
 
 .filter-section {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .filter-label {
@@ -1192,6 +1367,16 @@ const searchReferenceNumber = ref("");
   color: #333;
   font-size: 0.8rem;
   white-space: nowrap;
+}
+
+.secondary-filters .filter-section .unified-select {
+  min-width: 120px;
+}
+
+:deep(.unified-select-secondary.vs--single .vs__dropdown-toggle) {
+  min-height: 36px !important;
+  padding: 4px 8px !important;
+  font-size: 0.75rem !important;
 }
 
 .status-tabs {
@@ -1291,6 +1476,18 @@ const searchReferenceNumber = ref("");
 }
 
 /* Responsive */
+@media (max-width: 1200px) {
+  .main-search-row-single {
+    flex-wrap: wrap;
+  }
+  .form-group-inline {
+    min-width: 100px;
+  }
+  .form-group-inline.form-group-location {
+    max-width: none;
+  }
+}
+
 @media (max-width: 768px) {
   .search-bar {
     padding: 16px;
@@ -1298,6 +1495,17 @@ const searchReferenceNumber = ref("");
   
   .main-search-row {
     flex-direction: column;
+  }
+  
+  .main-search-row-single {
+    flex-direction: column;
+  }
+  
+  .form-group-inline,
+  .form-group-inline.form-group-location,
+  .form-group-inline.form-group-range {
+    min-width: 100%;
+    max-width: none;
   }
   
   .form-group.compact {
@@ -1396,6 +1604,7 @@ const searchReferenceNumber = ref("");
 .range-dropdown {
   position: relative;
   display: block;
+  margin:4px 8px;
 }
 
 .range-dropdown-content {
@@ -1404,9 +1613,4 @@ const searchReferenceNumber = ref("");
   opacity: 1 !important;
   transform: translateY(0) !important;
 }
-/*.form-group.compact:nth-child(1) { */
-/*  min-width: 200px;*/
-/*  flex: 2;*/
-/*}*/
-
 </style>
