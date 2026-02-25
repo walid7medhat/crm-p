@@ -460,7 +460,7 @@ watch(lead, (newLead) => {
 
 // When user clicks a stage in StageSelector, save immediately and show in activity timeline
 watch(leadStageId, async (newStageId, oldStageId) => {
-    if (!newStageId || oldStageId === undefined || newStageId === oldStageId || !lead.value?.id) return
+    if (!newStageId || newStageId==lead.value.stage_id  || oldStageId === undefined || newStageId === oldStageId || !lead.value?.id) return
     try {
         const response = await api.post(`/leads/${lead.value.id}/change-stage`, {
             stage_id: newStageId

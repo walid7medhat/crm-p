@@ -17,6 +17,9 @@
                     class="custom-select unified-input unified-input-inline unified-input-inline location-select"
                     @update:modelValue="handleFilterChange"
                   >
+                       <template #open-indicator="{ attributes }">
+                            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                         </template>
                     <template #option="option">
                       <div class="location-option">
                         <i class="ri-map-pin-line location-option-icon"></i>
@@ -40,7 +43,7 @@
                   </v-select>
                 </div>
       <!-- Completion Status (Off Plan/Ready) -->
-            <div class="form-group-inline form-group-location">
+            <div class="form-group form-group-inline ">
               <label class="form-label form-label-inline form-label-location">Project Status</label>
               <v-select
                 v-model="selectedCompletionStatus"
@@ -48,10 +51,14 @@
                 placeholder="Select status"
                 class="custom-select unified-input unified-input-inline"
                 @update:modelValue="handleFilterChange"
-              />
+              >
+                  <template #open-indicator="{ attributes }">
+                            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                         </template>
+              </v-select>
             </div>
         <!-- Property Type -->
-        <div class="form-group-inline form-group-location">
+        <div class="form-group form-group-inline ">
           <label class="form-label form-label-inline form-label-location">Property Type</label>
           <v-select
             v-model="selectedPropertyType"
@@ -62,6 +69,9 @@
             class="custom-select unified-input unified-input-inline"
             @update:modelValue="handleFilterChange"
           >
+              <template #open-indicator="{ attributes }">
+                            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                         </template>
             <template #no-options>
               <div class="text-center p-2">
                 {{ isLoadingPropertyTypes ? 'Loading property types...' : 'No property types found' }}
@@ -71,9 +81,30 @@
         </div>
 
      
-      
+          <!-- Agent Filter -->
+        <div class="form-group form-group-inline ">
+          <label class="form-label form-label-inline form-label-location">Agent</label>
+          <v-select
+            v-model="selectedAgent"
+            :options="agents"
+            :disabled="isLoadingAgents"
+            label="name"
+            placeholder="Any Agent"
+            class="custom-select unified-input unified-input-inline"
+            @update:modelValue="handleFilterChange"
+          >
+              <template #open-indicator="{ attributes }">
+                            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                         </template>
+            <template #no-options>
+              <div class="text-center p-2">
+                {{ isLoadingAgents ? 'Loading agents...' : 'No agents found' }}
+              </div>
+            </template>
+          </v-select>
+        </div>
          <!-- Bedrooms -->
-        <div class="form-group-inline form-group-location">
+        <div class="form-group form-group-inline ">
           <label class="form-label form-label-inline form-label-location">Bedrooms</label>
           <v-select
             v-model="selectedBeds"
@@ -81,7 +112,10 @@
             placeholder="Any"
             class="custom-select unified-input unified-input-inline"
             @update:modelValue="handleFilterChange"
-          />
+          ><template #open-indicator="{ attributes }">
+                            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                         </template>
+            </v-select>
         </div>
            <!-- Price & Size in Same Row -->
             <!-- Price Range -->
@@ -159,25 +193,7 @@
             </div>
           </div>
         </div>
-           <!-- Agent Filter -->
-        <div class="form-group-inline form-group-location">
-          <label class="form-label form-label-inline form-label-location">Agent</label>
-          <v-select
-            v-model="selectedAgent"
-            :options="agents"
-            :disabled="isLoadingAgents"
-            label="name"
-            placeholder="Any Agent"
-            class="custom-select unified-input unified-input-inline"
-            @update:modelValue="handleFilterChange"
-          >
-            <template #no-options>
-              <div class="text-center p-2">
-                {{ isLoadingAgents ? 'Loading agents...' : 'No agents found' }}
-              </div>
-            </template>
-          </v-select>
-        </div>
+       
       </div>
 
       <!-- Secondary Filters -->
@@ -193,7 +209,11 @@
           placeholder="All"
           class="custom-select sort-select unified-select unified-select-secondary"
           @update:modelValue="handleFilterChange"
-        />
+        >
+               <template #open-indicator="{ attributes }">
+                    <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                 </template>
+         </v-select>
         </div>
 
         <!-- Status Tabs -->
@@ -232,7 +252,11 @@
             class="custom-select sort-select unified-select"
             @update:modelValue="handleFilterChange"
             :modelValue="selectedSort"
-          />
+          >
+               <template #open-indicator="{ attributes }">
+                <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+             </template>
+         </v-select>
         </div>
       </div>
 
@@ -305,7 +329,7 @@ export default {
  const isLoadingProjects = ref(false); 
         const agents = ref([]);
 
-    const selectedSaleRent = ref("All");
+    const selectedSaleRent = ref("");
     const selectedStatus = ref("All");
     const selectedArea = ref(null);
     const selectedProject = ref(null); 
@@ -335,7 +359,7 @@ const searchReferenceNumber = ref("");
     const statusOptions = ["All", "Ready", "Offplan"];
     const bedsOptions = ["Studio", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
      const completionStatusOptions = [
-      { label: "Select Completion Status", value: null },
+      { label: "All", value: null },
       { label: "Completed", value: "Completed" },
       { label: "Under Construction", value: "Under Construction" }
     ];
@@ -931,10 +955,10 @@ const searchReferenceNumber = ref("");
 
 /* Location: same height & padding as Price/Size range */
 :deep(.location-select .vs__dropdown-toggle) {
-  min-height: 36px !important;
-  padding: 4px 8px !important;
+  min-height: 30px !important;
+  padding: 0px 8px !important;
   align-items: center !important;
-  font-size: 0.75rem !important;
+  font-size: 0.65rem !important;
 }
 
 :deep(.location-select .vs__selected) {
@@ -985,8 +1009,8 @@ const searchReferenceNumber = ref("");
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 8px 0;
-  min-height: 48px;
+  padding: 4px 0;
+  min-height: 40px;
 }
 
 .location-option-icon {
@@ -1004,13 +1028,13 @@ const searchReferenceNumber = ref("");
 
 .location-option-name {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   color: #01062d;
   line-height: 1.2;
 }
 
 .location-option-subtitle {
-  font-size: 0.8rem;
+  font-size: 0.65rem;
   color: #64748b;
   line-height: 1.2;
 }
@@ -1025,32 +1049,32 @@ const searchReferenceNumber = ref("");
 
 /* All top-row inputs: same height, padding, font as Price/Size range */
 .unified-input-inline {
-  min-height: 36px !important;
-  padding: 4px 8px !important;
-  font-size: 0.75rem !important;
+     min-height: 30px !important;
+    padding: 0px !important;
+    font-size: .65rem !important;
 }
 
 :deep(.unified-input-inline.vs--single .vs__dropdown-toggle),
 :deep(.form-group-inline .custom-select.vs--single .vs__dropdown-toggle) {
-  min-height: 36px !important;
-  padding: 4px 8px !important;
-  font-size: 0.75rem !important;
+  min-height: 30px !important;
+  padding: 2px 8px !important;
+  font-size: 0.65rem !important;
 }
 
 .main-search-row-single :deep(.vs__selected),
 .main-search-row-single :deep(.vs__search),
 .main-search-row-single :deep(.vs__placeholder) {
-  font-size: 0.75rem !important;
+  font-size: 0.65rem !important;
 }
 
 .unified-btn-inline {
-  min-height: 36px !important;
-  padding: 4px 8px !important;
-  font-size: 0.75rem !important;
+  min-height: 30px !important;
+  padding: 2px 8px !important;
+  font-size: 0.65rem !important;
 }
 
 .range-preview-inline {
-  font-size: 0.7rem !important;
+  font-size: 0.6rem !important;
   line-height: 1.2;
   white-space: normal;
   word-break: break-word;
@@ -1367,6 +1391,8 @@ const searchReferenceNumber = ref("");
   color: #333;
   font-size: 0.8rem;
   white-space: nowrap;
+    margin-bottom:0px !important;
+
 }
 
 .secondary-filters .filter-section .unified-select {
@@ -1604,7 +1630,7 @@ const searchReferenceNumber = ref("");
 .range-dropdown {
   position: relative;
   display: block;
-  margin:4px 8px;
+  /*margin:0px 8px;*/
 }
 
 .range-dropdown-content {

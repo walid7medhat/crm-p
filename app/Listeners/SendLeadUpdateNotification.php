@@ -34,25 +34,25 @@ class SendLeadUpdateNotification
         $users = collect();
         
         // 1. Responsible person
-        if ($lead->responsible_person_id) {
+        if ($lead->responsible_person_id && $lead->responsible_person_id != auth()->user()->id) {
             $users->push(User::find($lead->responsible_person_id));
         }
         
         // 2. Added by
-        if ($lead->added_by) {
+        if ($lead->added_by && $lead->added_by != auth()->user()->id) {
             $users->push(User::find($lead->added_by));
         }
         
         // 3. Participants
         foreach ($lead->participants as $participant) {
-            if ($participant->user_id) {
+            if ($participant->user_id && $participant->user_id != auth()->user()->id) {
                 $users->push(User::find($participant->user_id));
             }
         }
         
         // 4. Observers
         foreach ($lead->observers as $observer) {
-            if ($observer->user_id) {
+            if ($observer->user_id && $observer->user_id  != auth()->user()->id) {
                 $users->push(User::find($observer->user_id));
             }
         }

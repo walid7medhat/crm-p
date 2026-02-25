@@ -27,8 +27,16 @@ class LeadRequest extends FormRequest
             
             // Contact Details
             'whatsapp_number' => 'nullable|string|max:20',
-            'work_phone' => 'required|string|max:20',
-            'work_phone_2' => 'nullable|string|max:20',
+          'work_phone' => [
+                'required',
+                'max:20',
+                'regex:/^\+?[0-9]+$/'
+            ],
+            'work_phone_2' => [
+                'nullable',
+                'max:20',
+                'regex:/^\+?[0-9]+$/'
+            ],
             'email' => 'nullable|email',
             'website' => 'nullable|url',
             'messenger' => 'nullable|string|max:255',
@@ -95,6 +103,8 @@ class LeadRequest extends FormRequest
         return [
             'responsible_person_id.required' => 'The responsible manager is required.',
             'responsible_person_id.exists' => 'The selected responsible manager does not exist.',
+            'work_phone.regex' => 'Phone number must contain digits only.',
+            'work_phone_2.regex' => 'Phone number 2 must contain digits only.',
         ];
     }
 }

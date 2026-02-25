@@ -15,6 +15,9 @@
             class="custom-select unified-input unified-input-inline location-select"
             @update:modelValue="handleFilterChange"
           >
+              <template #open-indicator="{ attributes }">
+                            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                         </template>
             <template #option="option">
               <div class="location-option">
                 <i class="ri-map-pin-line location-option-icon"></i>
@@ -47,7 +50,11 @@
             placeholder="Select status"
             class="custom-select unified-input unified-input-inline"
             @update:modelValue="handleFilterChange"
-          />
+          >
+              <template #open-indicator="{ attributes }">
+                    <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                 </template>
+          </v-select>
         </div>
 
         <!-- Property Type -->
@@ -62,6 +69,9 @@
             class="custom-select unified-input unified-input-inline"
             @update:modelValue="handleFilterChange"
           >
+              <template #open-indicator="{ attributes }">
+                <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+             </template>
             <template #no-options>
               <div class="text-center p-2">
                 {{ isLoadingPropertyTypes ? 'Loading...' : 'No types found' }}
@@ -79,7 +89,11 @@
             placeholder="Any"
             class="custom-select unified-input unified-input-inline"
             @update:modelValue="handleFilterChange"
-          />
+          >
+              <template #open-indicator="{ attributes }">
+                <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+             </template>
+          </v-select>
         </div>
 
         <!-- Price Range -->
@@ -172,7 +186,11 @@
             placeholder="All"
             class="custom-select sort-select unified-select unified-select-secondary"
             @update:modelValue="handleFilterChange"
-          />
+          >
+              <template #open-indicator="{ attributes }">
+                <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+             </template>
+          </v-select>
         </div>
 
         <div class="form-group compact search-btn-group">
@@ -193,7 +211,11 @@
             class="custom-select sort-select unified-select unified-select-secondary"
             @update:modelValue="handleFilterChange"
             :modelValue="selectedSort"
-          />
+          >
+                <template #open-indicator="{ attributes }">
+                    <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                 </template>
+          </v-select>
         </div>
       </div>
 
@@ -227,7 +249,7 @@ export default {
      const isLoadingProjects = ref(false);
       const selectedProject = ref(null); 
       const selectedCompletionStatus = ref(null); 
-    const selectedSaleRent = ref("All");
+    const selectedSaleRent = ref("");
     const selectedStatus = ref("All");
     const selectedArea = ref(null);
     const selectedPropertyType = ref(null);
@@ -252,7 +274,7 @@ const searchReferenceNumber = ref("");
     const bedsOptions = ["Studio", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
     
      const completionStatusOptions = [
-      { label: "Select Completion Status", value: null },
+      { label: "All", value: null },
       { label: "Completed", value: "Completed" },
       { label: "Under Construction", value: "Under Construction" }
     ];
@@ -809,10 +831,10 @@ fetchProjects()
 
 /* Location: same height & padding as Price/Size range */
 :deep(.location-select .vs__dropdown-toggle) {
-  min-height: 36px !important;
-  padding: 4px 8px !important;
+  min-height: 30px !important;
+  padding: 0px 8px !important;
   align-items: center !important;
-  font-size: 0.75rem !important;
+  font-size: 0.65rem !important;
 }
 
 :deep(.location-select .vs__selected) {
@@ -863,8 +885,8 @@ fetchProjects()
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 8px 0;
-  min-height: 48px;
+  padding: 4px 0;
+  min-height: 40px;
 }
 
 .location-option-icon {
@@ -882,13 +904,13 @@ fetchProjects()
 
 .location-option-name {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   color: #01062d;
   line-height: 1.2;
 }
 
 .location-option-subtitle {
-  font-size: 0.8rem;
+  font-size: 0.65rem;
   color: #64748b;
   line-height: 1.2;
 }
@@ -903,32 +925,32 @@ fetchProjects()
 
 /* All top-row inputs: same height, padding, font as Price/Size range */
 .unified-input-inline {
-  min-height: 36px !important;
-  padding: 4px 8px !important;
-  font-size: 0.75rem !important;
+     min-height: 30px !important;
+    padding: 0px !important;
+    font-size: .65rem !important;
 }
 
 :deep(.unified-input-inline.vs--single .vs__dropdown-toggle),
 :deep(.form-group-inline .custom-select.vs--single .vs__dropdown-toggle) {
-  min-height: 36px !important;
-  padding: 4px 8px !important;
-  font-size: 0.75rem !important;
+  min-height: 30px !important;
+  padding: 2px 8px !important;
+  font-size: 0.65rem !important;
 }
 
 .main-search-row-single :deep(.vs__selected),
 .main-search-row-single :deep(.vs__search),
 .main-search-row-single :deep(.vs__placeholder) {
-  font-size: 0.75rem !important;
+  font-size: 0.65rem !important;
 }
 
 .unified-btn-inline {
-  min-height: 36px !important;
-  padding: 4px 8px !important;
-  font-size: 0.75rem !important;
+  min-height: 30px !important;
+  padding: 2px 8px !important;
+  font-size: 0.65rem !important;
 }
 
 .range-preview-inline {
-  font-size: 0.7rem !important;
+  font-size: 0.6rem !important;
   line-height: 1.2;
   white-space: normal;
   word-break: break-word;
@@ -1245,6 +1267,7 @@ fetchProjects()
   color: #333;
   font-size: 0.8rem;
   white-space: nowrap;
+  margin-bottom:0px !important;
 }
 
 .secondary-filters .filter-section .unified-select {
@@ -1482,7 +1505,7 @@ fetchProjects()
 .range-dropdown {
   position: relative;
   display: block;
-  margin:4px 8px;
+  margin:0px 8px;
 }
 
 .range-dropdown-content {

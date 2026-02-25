@@ -257,11 +257,27 @@ public function getStagesWithLeads(Request $request): JsonResponse
                     $q->whereIn('responsible_person_id', $teamMemberIds);
                 }
             }
-            if ($request->filled('search')) {
+           if ($request->filled('search')) {
                 $search = $request->search;
+            
                 $q->where(function ($s) use ($search) {
                     $s->where('lead_name', 'like', "%{$search}%")
-                      ->orWhere('lead_number', 'like', "%{$search}%");
+                      ->orWhere('lead_number', 'like', "%{$search}%")
+                      ->orWhere('first_name', 'like', "%{$search}%")
+                      ->orWhere('last_name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('work_phone', 'like', "%{$search}%")
+                      ->orWhere('bedrooms', 'like', "%{$search}%")
+                      ->orWhere('work_phone_2', 'like', "%{$search}%")
+                      ->orWhere('lead_source', 'like', "%{$search}%")
+                      ->orWhere('source_information', 'like', "%{$search}%")
+                      ->orWhere('budget', 'like', "%{$search}%")
+                      ->orWhereHas('responsiblePerson', function ($r) use ($search) {
+                          $r->where('name', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('stage', function ($st) use ($search) {
+                          $st->where('name', 'like', "%{$search}%");
+                      });
                 });
             }
         });

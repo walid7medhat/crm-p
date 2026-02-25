@@ -33,7 +33,7 @@
                 <span v-if="canView">{{ lead?.email || '—' }}</span>
                 <span v-else>
                     {{ lead?.email?.slice(0,3) || '' }}
-                    <span class="blurred-stars">{{ maskValue(lead?.email?.slice(3)) }}</span>
+                    <span class="blurred-stars">{{ maskValue(lead?.email?.slice(3))}}</span>
                 </span>
             </div>
         </div>
@@ -47,8 +47,8 @@
                 </span>
             </div>
         </div>
-        <div class="info-group" v-if="lead.lead_source">
-            <label class="form-label-custom">lead_source</label>
+        <div class="info-group" v-if="lead?.lead_source">
+            <label class="form-label-custom">lead source</label>
             <div class="info-value">{{ lead?.lead_source || '—' }}</div>
         </div>
         <div class="info-group" v-if="lead.bedrooms">
@@ -115,20 +115,9 @@ const canView = computed(() => {
 
 // Function to mask value with stars (email or phone)
 const maskValue = (value) => {
-  if (!value) return '—'
+  if (!value) return ''
 
-  // For email
-  if (value.includes('@')) {
-    const [name, domain] = value.split('@')
-    const visibleChars = Math.min(3, name.length)
-    const stars = '★'.repeat(name.length - visibleChars)
-    return name.slice(0, visibleChars) + stars + '@' + domain
-  }
-
-  // For phone numbers
-  const visibleDigits = Math.min(3, value.length)
-  const stars = '★'.repeat(value.length - visibleDigits)
-  return value.slice(0, visibleDigits) + stars
+  return '★'.repeat(value.length)
 }
 </script>
 <style scoped>
