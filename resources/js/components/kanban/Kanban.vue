@@ -376,7 +376,8 @@ const cleanup = () => {
 }
 
 const defaultFilter = { id: 'leads-in-progress', label: 'Leads In Progress' }
-const activeFilter = ref({ ...defaultFilter })
+// const activeFilter =ref({ ...defaultFilter })
+const activeFilter = ref(null)
 const activeFilters = ref([])
 const lastQuery = ref(null)
 
@@ -567,7 +568,7 @@ const $showNotification = (message, type = 'info') => {
     display: flex;
     flex-direction: column;
     background-color: #ffffff !important;
-    margin: 8px 12px 0;
+    /*margin: 8px 12px 0;*/
     border-radius: 16px;
 }
 
@@ -715,7 +716,7 @@ const $showNotification = (message, type = 'info') => {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
     border-radius: 100px;
-    min-height: 38px;
+    min-height: 25px;
     gap: 8px;
     padding: 5px 8px 5px 5px;
     display: flex;
@@ -793,8 +794,8 @@ const $showNotification = (message, type = 'info') => {
 
 .search-input-container {
     color: #94A3B8;
-    height: 32px;
-    min-height: 32px;
+    height: 25px;
+    min-height: 25px;
     display: flex;
     align-items: center;
     flex-shrink: 0;
@@ -843,12 +844,12 @@ const $showNotification = (message, type = 'info') => {
 
 .clear-search-icon {
     color: #F2994A;
-    font-size: 20px;
+    font-size: 18px;
     cursor: pointer;
     margin-right: 8px;
     flex-shrink: 0;
-    min-width: 20px;
-    min-height: 20px;
+    min-width: 18px;
+    min-height: 18px;
 }
 
 /* Dropdown Styles */
