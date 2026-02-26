@@ -567,20 +567,20 @@ const $showNotification = (message, type = 'info') => {
     display: flex;
     flex-direction: column;
     background-color: #ffffff !important;
-    margin-top: 11px;
-    border-radius: 20px;
+    margin: 8px 12px 0;
+    border-radius: 16px;
 }
 
-/* Bootstrap Tabs Customization */
+/* Bootstrap Tabs Customization – tighter section spacing and left/right */
 :deep(.kanban-tabs-container > .nav-tabs) {
     background: transparent;
-    height: 72px;
+    height: 56px;
     flex-shrink: 0;
     border-bottom: 1px solid #E2E8F0 !important;
-    padding: 24px;
+    padding: 12px 16px;
     display: flex;
     align-items: center;
-    gap: 32px;
+    gap: 16px;
     flex-wrap: nowrap;
 }
 
@@ -594,7 +594,7 @@ const $showNotification = (message, type = 'info') => {
 :deep(.kanban-tabs-container .nav-link) {
     border: none !important;
     background: transparent !important;
-    padding: 20px !important;
+    padding: 10px 14px !important;
     height: 100%;
     display: flex;
     align-items: center;
@@ -604,7 +604,7 @@ const $showNotification = (message, type = 'info') => {
     text-decoration: none;
     color: #64748B;
     font-family: 'Montserrat', sans-serif;
-    font-size: 14px; /* text-md */
+    font-size: 14px;
     transition: all 0.2s ease;
 }
 
@@ -731,9 +731,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .search-wrapper-tall {
-    /*min-height: 72px;*/
-    /*padding: 12px 12px 12px 14px;*/
-    /*border-radius: 16px;*/
+    min-height: 40px;
 }
 
 .search-filters-pills {

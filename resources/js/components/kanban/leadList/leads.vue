@@ -20,7 +20,7 @@
             <p class="kanban-empty-text">Use the menu above to add a new stage and start organizing your leads.</p>
         </div>
         <!-- Draggable Columns -->
-        <draggable v-else v-model="columns" item-key="status" class="kanban-wrapper d-flex gap-12 h-100" :group="'columns'"
+        <draggable v-else v-model="columns" item-key="status" class="kanban-wrapper kanban-wrapper-tight d-flex h-100" :group="'columns'"
             handle=".column-header"
             :ghost-class="'ghost'" :drag-class="'dragging'">
             <template #item="{ element: column, index }">
@@ -62,7 +62,7 @@
                                 </div>
                             </div>
 
-                            <div class="column-content p-8 overflow-y-auto scroll-sm flex-grow-1 d-flex flex-column">
+                            <div class="column-content column-content-scrollable p-8 flex-grow-1 d-flex flex-column">
                                 <!-- Tasks -->
                                 <draggable v-model="column.leads" :group="'tasks'" item-key="id"
                                     class="tasks-list flex-grow-1" :ghost-class="'ghost'"
@@ -1294,13 +1294,60 @@ const $showNotification = (message, type = 'info') => {
 
 
 <style scoped>
+/* Column content: visible when not scrollable (horizontal board scroll) */
 .column-content {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 .column-content::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, and Opera */
+    display: none;
+}
+
+/* Vertical scroll inside each stage – scrollbar visible only on column hover */
+.column-content-scrollable {
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    scrollbar-width: none;
+    transition: scrollbar-color 0.2s ease;
+}
+
+.column-content-scrollable::-webkit-scrollbar {
+    width: 0;
+    transition: width 0.2s ease;
+}
+
+.column-content-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+}
+
+.column-content-scrollable::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 3px;
+}
+
+/* Show scrollbar when hovering the stage column */
+.kanban-column:hover .column-content-scrollable {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.kanban-column:hover .column-content-scrollable::-webkit-scrollbar {
+    width: 6px;
+}
+
+.kanban-column:hover .column-content-scrollable::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.kanban-column:hover .column-content-scrollable::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+}
+
+.kanban-column:hover .column-content-scrollable::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
 .kanban-outer {
@@ -1310,7 +1357,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .kanban-container {
-    padding: 16px;
+    padding: 12px 10px;
     height: 100%;
     overflow-x: auto;
     overflow-y: hidden;
@@ -1454,6 +1501,10 @@ const $showNotification = (message, type = 'info') => {
     flex-shrink: 0;
 }
 
+.kanban-wrapper-tight {
+    gap: 8px;
+}
+
 .kanban-column {
     min-width: 247px;
     width: 247px;
@@ -1548,7 +1599,11 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .tasks-list {
-    min-height: 100%;
+    min-height: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     font-family: Montserrat;
 }
 

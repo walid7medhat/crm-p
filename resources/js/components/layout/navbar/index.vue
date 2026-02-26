@@ -237,11 +237,13 @@
 </template>
 
 <script setup>
+import { useSidebar } from '@/composables/useSidebar.js';
 import { ref, onMounted, computed, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useTheme } from '@/composables/useTheme.js';
 import NotificationBell from '@/components/NotificationBell.vue';
 import userPlaceholder from '@/assets/images/user.png';
+const { isMobileOpen, openMobileSidebar } = useSidebar();
 import api from '@/plugins/axios';
 
 const { theme, toggleTheme } = useTheme();
@@ -587,6 +589,27 @@ function logout() {
   display: flex;
   align-items: center;
   justify-content: center;
+.sidebar-mobile-toggle.menu-btn-with-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sidebar-mobile-toggle .menu-btn-label {
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  transition: max-width 0.2s ease, opacity 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.sidebar-mobile-toggle:hover .menu-btn-label {
+  max-width: 200px;
+  opacity: 1;
+}
+
   min-width: 40px;
 }
 

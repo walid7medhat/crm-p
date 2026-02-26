@@ -5,15 +5,27 @@
       <iconify-icon icon="radix-icons:cross-2" />
     </button>
     <div class="sidebar-toggle-container sidebar-header d-flex align-items-center" :class="{ 'sidebar-header--open': !isSidebarActive, 'sidebar-header--closed': isSidebarActive }">
-      <button
-        type="button"
-        class="sidebar-toggle"
-        :title="isSidebarActive ? 'Expand menu' : 'Collapse menu'"
-        @click="toggleSidebarDesktop"
-        aria-label="Toggle menu"
+      <div
+        class="sidebar-toggle-wrap"
+        @mouseenter="sidebarHeaderHover = true"
+        @mouseleave="sidebarHeaderHover = false"
       >
-        <iconify-icon icon="material-symbols:menu-rounded" class="sidebar-menu-icon" />
-      </button>
+        <button
+          type="button"
+          class="sidebar-toggle"
+          :class="{ 'sidebar-toggle-with-label': !isSidebarActive || (isSidebarActive && sidebarHeaderHover) }"
+          :title="isSidebarActive ? 'Expand menu' : 'Oia Properties'"
+          @click="toggleSidebarDesktop"
+          aria-label="Toggle menu"
+        >
+          <iconify-icon icon="material-symbols:menu-rounded" class="sidebar-menu-icon" />
+          <!-- Same place, same style: "Oia Properties" when open, "Expand menu" when collapsed + hover -->
+          <span
+            v-show="!isSidebarActive || sidebarHeaderHover"
+            class="sidebar-toggle-label"
+          >{{ !isSidebarActive ? 'Oia Properties' : 'Expand menu' }}</span>
+        </button>
+      </div>
     </div>
     <!-- Menu -->
     <div class="sidebar-menu-area">
@@ -331,6 +343,7 @@
     </div>
   </aside>
 </template>
+const isMobileOpen = ref(false);
 
 <script setup>
 import { ref, computed, onMounted, getCurrentInstance, watch } from 'vue';
@@ -342,10 +355,10 @@ const logo = ref('/assets/images/LogoWhite.png');
 const dashboardIcon=ref('/assets/icons/dashboard-icon.svg');
 const listingsIcon=ref('/assets/icons/listings-icon.svg');
 const requestsIcon=ref('/assets/icons/request-icon.svg');
+const isMobileOpen = ref(false);
 const ownersIcon=ref('/assets/icons/owners-icon.svg');
 const propertyIcon=ref('/assets/icons/property-icon-white.svg');
 const unitViewIcon=ref('/assets/icons/unit-view-icon.svg');
-const isMobileOpen = ref(false);
 const layoutTypeIcon=ref('/assets/icons/layout-icon.svg');
 const locationIcon=ref('/assets/icons/area-icon.svg');
 const agentsIcon=ref('/assets/icons/agents-icon.svg');
@@ -356,6 +369,8 @@ const activeDropdown = ref(null);
 const countsLoading = ref(false);
 const { proxy } = getCurrentInstance();
 const { isSidebarActive, toggleSidebarDesktop } = useSidebar();
+
+const sidebarHeaderHover = ref(false);
 
 const closeSidebar = () => {
   isMobileOpen.value = false;
@@ -778,6 +793,12 @@ onMounted(() => {
 }
 
 /* Menu icon: white on dark header */
+.sidebar-toggle-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .sidebar-toggle {
   display: flex;
   align-items: center;
@@ -789,6 +810,19 @@ onMounted(() => {
   border: none;
   cursor: pointer;
   flex-shrink: 0;
+}
+.sidebar-toggle-with-label {
+  width: auto;
+  gap: 0.5rem;
+  justify-content: flex-start;
+}
+/* Same place, same style as menu items but smaller and not bold */
+.sidebar-toggle-label {
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #ffffff;
+  white-space: nowrap;
 }
 .sidebar-menu-icon {
   font-size: 1.75rem;
@@ -829,25 +863,11 @@ onMounted(() => {
 } */
 
 .sidebar-menu li a.active {
-   background: linear-gradient(135deg, 
-        rgba(255, 255, 255, 0.12) 0%,   
-        rgba(255, 255, 255, 0.5) 100%    
-    );
-    
-    border: 1px solid rgba(255, 255, 255, 0.1); 
-    
-    box-shadow: 
-        0 4px 20px rgba(0, 0, 0, 0.1),
-        0 0 40px rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(40px); 
-    
-    border-radius: 16px;
-    
-    padding: 15px;
-    
-
-    
-    background-clip: padding-box;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 12px 16px;
 }
 
 
@@ -885,6 +905,24 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   width: 100%;
+  padding: 12px 16px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+.sidebar-menu li a.active {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+  transition: background 0.15s ease;
+}
+
+.sidebar-menu .nav-link.active-page a,
+.sidebar-submenu .nav-link.active-page a {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
 }
 
 .nav-link a {
