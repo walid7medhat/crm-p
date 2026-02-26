@@ -608,24 +608,26 @@ class LeadController extends Controller
         $leadData['lead_number'] = null;
 
         // responsible person
-        $leadData['responsible_person_id'] = $leadData['responsible_person_id'] 
+        $leadData['responsible_person_id'] = (int)$leadData['responsible_person_id'] 
             ?? config('leads.default_manager');
 
         // default stage
-        $firstStage = Stage::orderBy('order','asc')->first();
+        $firstStage = Stage::where('stage_type','lead')->orderBy('order','asc')->first();
         $leadData['stage_id'] = $leadData['stage_id'] 
             ?? ($firstStage ? $firstStage->id : null);
 
         $lead = Lead::create($leadData);
 
        
-
+ LeadHistoryHelper::log(
+                $lead->id,
+                ['action' => 'created']
+            );
         broadcast(new LeadUpdated($lead, 'created'));
 
         return  ApiResponse::success('success' );
 
     } catch (\Throwable $e) {
-
     return response()->json([
         'success' => false,
         'error' => [

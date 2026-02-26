@@ -84,7 +84,7 @@ class LeadResource extends JsonResource
             'duplicate_no'=>$this->duplicate_leads->count(),
             'duplicate_ids'=>$this->duplicate_leads->pluck('id')->toArray(),
             'is_reverted'=>!is_null($this->revert),
-            'can_edit'=>auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin') || $this->responsible_person_id==auth()->user()->id,
+            'can_edit'=>auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin') || $this->responsible_person_id==auth()->user()->id),
 
             
         ];
