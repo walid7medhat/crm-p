@@ -12,26 +12,41 @@ class Integration extends Model
 
     protected $fillable = [
         'user_id',
-        'form_id',
-        'form_name',
-        'meta_account_id',
-        'access_token',
-        'meta_app_id',
-        'platform',
-        'active',
+        'name',
+        'crm_entity',
+        'expert_mode',
+        'duplicate_handling',
+        'project_id',
+        'lead_source',
+        'page_id',
+        'facebook_form_id',
+        'facebook_form_name',
+        'field_mappings',
+        'responsible_person_id',
+        'dont_make_responsible_if_not_clocked_in',
+        'status'
     ];
 
     protected $casts = [
-        'access_token' => 'encrypted',
-        'active' => 'boolean',
-    ];
-
-    protected $hidden = [
-        'access_token', // Never expose raw token in JSON
+        'expert_mode' => 'boolean',
+        'dont_make_responsible_if_not_clocked_in' => 'boolean',
+        'field_mappings' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime'
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function responsiblePerson(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'responsible_person_id');
     }
 }

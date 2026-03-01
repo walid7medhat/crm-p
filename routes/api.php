@@ -212,13 +212,13 @@ Route::prefix('leads')->group(function(){
         Route::apiResource('sources', SourceController::class);
 
     // Integrations (Meta forms connect)
-    Route::get('integrations', [IntegrationController::class, 'index']);
+    Route::apiResource('integrations', IntegrationController::class);
     Route::post('integrations/meta/pages', [IntegrationController::class, 'fetchMetaPages']);
     Route::post('integrations/meta/forms', [IntegrationController::class, 'fetchMetaForms']);
     Route::post('integrations/meta', [IntegrationController::class, 'fetchMetaForms']); // alias for same action
-    Route::post('integrations', [IntegrationController::class, 'store']);
+    // Route::post('integrations', [IntegrationController::class, 'store']);
     Route::patch('integrations/{integration}/toggle-active', [IntegrationController::class, 'toggleActive']);
-    Route::delete('integrations/{integration}', [IntegrationController::class, 'destroy']);
+    // Route::delete('integrations/{integration}', [IntegrationController::class, 'destroy']);
 Route::prefix('listings')->group(function(){
     
     Route::get('/{id}/comments', [ListingCommentController::class, 'index']);

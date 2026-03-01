@@ -73,26 +73,31 @@
 <script setup>
 import { ref, watch } from 'vue'
 
+// الأسماء هنا لازم تطابق الأسماء في v-model بالمودال الرئيسي
 const props = defineProps({
-    modelSelectedEntity: {
+    selectedEntity: {  // كان modelSelectedEntity
         type: String,
         default: null
     },
-    modelExpertMode: {
+    expertMode: {      // كان modelExpertMode
         type: Boolean,
         default: false
     },
-    modelDuplicateHandling: {
+    duplicateHandling: { // كان modelDuplicateHandling
         type: String,
         default: 'merge'
     }
 })
 
-const emit = defineEmits(['update:model-selected-entity', 'update:model-expert-mode', 'update:model-duplicate-handling'])
+const emit = defineEmits([
+    'update:selectedEntity',    // كان update:model-selected-entity
+    'update:expertMode',        // كان update:model-expert-mode
+    'update:duplicateHandling'  // كان update:model-duplicate-handling
+])
 
-const selectedEntity = ref(props.modelSelectedEntity)
-const expertMode = ref(props.modelExpertMode)
-const duplicateHandling = ref(props.modelDuplicateHandling)
+const selectedEntity = ref(props.selectedEntity)
+const expertMode = ref(props.expertMode)
+const duplicateHandling = ref(props.duplicateHandling)
 
 const entities = [
     { 
@@ -112,30 +117,34 @@ const entities = [
     }
 ]
 
-watch(() => props.modelSelectedEntity, (newVal) => {
+// Watch props
+watch(() => props.selectedEntity, (newVal) => {
     selectedEntity.value = newVal
 })
 
-watch(() => props.modelExpertMode, (newVal) => {
+watch(() => props.expertMode, (newVal) => {
     expertMode.value = newVal
 })
 
-watch(() => props.modelDuplicateHandling, (newVal) => {
+watch(() => props.duplicateHandling, (newVal) => {
     duplicateHandling.value = newVal
 })
 
+// Emit changes
 watch(selectedEntity, (newVal) => {
-    emit('update:model-selected-entity', newVal)
+    emit('update:selectedEntity', newVal)
 })
 
 watch(expertMode, (newVal) => {
-    emit('update:model-expert-mode', newVal)
+    emit('update:expertMode', newVal)
 })
 
 watch(duplicateHandling, (newVal) => {
-    emit('update:model-duplicate-handling', newVal)
+    emit('update:duplicateHandling', newVal)
 })
 </script>
+
+
 
 <style scoped>
 .section-title {

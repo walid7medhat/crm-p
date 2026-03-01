@@ -9,6 +9,7 @@ use App\Http\Middleware\JwtAuthMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
+use App\Console\Commands\RefreshMetaAppToken;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -57,7 +58,10 @@ return Application::configure(basePath: dirname(__DIR__))
                     
                     
         $schedule->command('activities:send-reminders')->everyMinute();
-   
+     $schedule->command('meta:refresh-app-token')
+                 ->cron('0 0 */60 * *') 
+                 ->withoutOverlapping()
+                 ->runInBackground();
         // ==================== TEST COMMANDS ====================
         // $schedule->command('activities:send-reminders --timeframe=today --test')
         //     ->dailyAt('10:00')

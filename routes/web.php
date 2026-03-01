@@ -11,7 +11,7 @@ Route::get('/login', function () {
 })->name('login');
 Route::post('/broadcasting/auth', function () {
     return Broadcast::auth(request());
-})->middleware('auth:api'); // إذا تستخدم JWT
+})->middleware('auth:api'); 
 // Handle OPTIONS preflight request for broadcasting/auth
 Route::options('/broadcasting/auth', function () {
     return response('', 200)
@@ -49,10 +49,10 @@ Broadcast::channel('listing.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('lead.{id}', function ($user, $id) {
-    return true; // أو يمكنك إضافة منطق للصلاحيات
+    return true; 
 });
 Broadcast::channel('lead.updated', function ($user) {
-    return $user !== null; // أي مستخدم مصادق يمكنه الاستماع
+    return $user !== null;
 });
 Route::post('/test-broadcast-auth', function (\Illuminate\Http\Request $request) {
     \Log::info('Test Broadcast Auth Called', [
@@ -135,6 +135,9 @@ Route::get('/test-request-cancelled', function () {
     ]));
     
     return 'Test RequestCancelledNotification sent!';
+});
+Route::get('privacy-policy',function(){
+    return view('privacy-policy');
 });
 Route::get('{any}', function () {
     return view('welcome'); 

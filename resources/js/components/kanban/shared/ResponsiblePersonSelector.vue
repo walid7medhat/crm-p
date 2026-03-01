@@ -22,7 +22,7 @@
                 <div class="d-flex flex-column align-items-end gap-2">
                     <div class="d-flex align-items-center gap-3">
                         <div class="department-badge">
-                            Department : {{ department || 'Sales' }}
+                            Department : {{ departmentName  || 'Sales' }}
                         </div>
                         <b-dropdown 
                             variant="link" 
@@ -157,6 +157,9 @@ const selectUser = (user) => {
     dropdownShow.value = false
     searchQuery.value = ''
 }
+const departmentName = computed(() => {
+    return currentResponsiblePerson.value?.role_name || 'Sales'
+})
 </script>
 
 <style scoped>

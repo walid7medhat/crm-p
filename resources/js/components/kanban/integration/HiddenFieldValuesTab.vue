@@ -14,6 +14,7 @@
                 label="text"
                 placeholder="Select Project"
                 class="custom-v-select"
+                :loading="loadingProjects"
                 @option:selected="handleProjectSelect"
                 @open="onDropdownOpen"
             >
@@ -45,6 +46,7 @@
             body-class="p-0"
             modal-class="add-project-modal"
             backdrop="true"
+            @hidden="resetAddProjectForm"
         >
             <div class="add-project-modal-content">
                 <!-- Header -->
@@ -62,14 +64,18 @@
                         v-model="newProjectName" 
                         placeholder="Enter Project Name" 
                         class="add-project-input"
+                        :disabled="addingProject"
                         @keyup.enter="handleAddProject"
                     />
                 </div>
 
                 <!-- Footer Buttons -->
                 <div class="modal-footer-section">
-                    <button class="footer-btn cancel-btn" @click="closeAddProjectModal">Cancel</button>
-                    <button class="footer-btn apply-btn" @click="handleAddProject">Add</button>
+                    <button class="footer-btn cancel-btn" @click="closeAddProjectModal" :disabled="addingProject">Cancel</button>
+                    <button class="footer-btn apply-btn" @click="handleAddProject" :disabled="!newProjectName?.trim() || addingProject">
+                        <span v-if="addingProject">Adding...</span>
+                        <span v-else>Add</span>
+                    </button>
                 </div>
             </div>
         </b-modal>
@@ -87,6 +93,7 @@
                 label="text"
                 placeholder="Select Lead Value"
                 class="custom-v-select meta-ads-select"
+                :loading="loadingSources"
             >
                 <template #open-indicator="{ attributes }">
                     <span v-bind="attributes">
@@ -109,46 +116,97 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, nextTick, getCurrentInstance } from 'vue'
 import { BFormInput, BModal } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
+import api from '@/plugins/axios'
 
-const selectedProject = ref(null)
-const selectedLeadValue = ref(null)
+const { proxy } = getCurrentInstance()
+
+const props = defineProps({
+    project: {
+        type: [String, Number],
+        default: null
+    },
+    leadSource: {
+        type: [String, Number],
+        default: null
+    }
+})
+
+const emit = defineEmits(['update:project', 'update:leadSource'])
+
+const selectedProject = ref(props.project)
+const selectedLeadValue = ref(props.leadSource)
 const showAddProjectModal = ref(false)
 const newProjectName = ref('')
 const projectSelect = ref(null)
+const loadingProjects = ref(false)
+const loadingSources = ref(false)
+const addingProject = ref(false)
 
-// Project options from the design
-const projectOptions = ref([
-    { value: 'jacob-co-beachfront-living', text: 'Jacob & Co. Beachfront Living' },
-    { value: 'ohana-projects', text: 'Ohana Projects' },
-    { value: 'compleate-crm-mamsha-gardens-plots', text: 'Compleate CRM From "Mamsha Gardens Plots"' },
-    { value: 'elie-saab-waterfront', text: 'ELIE SAAB Waterfront' },
-    { value: 'ohana-by-the-sea', text: 'Ohana by the Sea' },
-    { value: 'bayn-by-ora', text: 'Bayn by ora' }
-])
+// Project options from API
+const projectOptions = ref([])
+
+// Lead source options from API /api/sources
+const leadValueOptions = ref([])
+
+// Load projects from API
+const loadProjects = async () => {
+    loadingProjects.value = true
+    try {
+        const response = await api.get('/listings/projects')
+        const projects = response.data.data || response.data || []
+        
+        projectOptions.value = projects.map(project => ({
+            value: project.id,
+            text: project.name
+        }))
+    } catch (error) {
+        console.error('Failed to load projects:', error)
+        proxy?.$showNotification?.('Failed to load projects', 'error')
+    } finally {
+        loadingProjects.value = false
+    }
+}
+
+// Load lead sources from API /api/sources
+const loadSources = async () => {
+    loadingSources.value = true
+    try {
+        const response = await api.get('/sources')
+        const sources = response.data.data || response.data || []
+        
+        leadValueOptions.value = sources.map(source => ({
+            value: source.name,
+            text: source.name
+        }))
+    } catch (error) {
+        console.error('Failed to load sources:', error)
+        proxy?.$showNotification?.('Failed to load sources', 'error')
+    } finally {
+        loadingSources.value = false
+    }
+}
 
 // Computed options that include the "Add New Project" option
 const computedProjectOptions = computed(() => {
     return [
         ...projectOptions.value,
-        { value: 'add-new-project', text: 'Add New Project' }
+        // { value: 'add-new-project', text: 'Add New Project' }
     ]
 })
 
-const leadValueOptions = ref([
-    { value: 'meta-ads-lead-form', text: 'Meta Ads - Lead Form' },
-    { value: 'self-leads', text: 'Self Leads' },
-    { value: 'via-references', text: 'Via References' },
-    { value: 'land-line', text: 'Land Line' },
-    { value: 'call-from-bayut', text: 'Call From Bayut' },
-    { value: 'whatsapp-from-bayut', text: 'Whatsapp from Bayut' }
-])
+// Load data on mount
+onMounted(() => {
+    loadProjects()
+    loadSources()
+})
 
+// Methods
 const openAddProjectModal = () => {
-    // Close the dropdown by blurring the toggle element
+    // Close dropdown
     nextTick(() => {
         const toggle = document.querySelector('.custom-v-select .vs__dropdown-toggle')
         if (toggle) {
@@ -156,11 +214,10 @@ const openAddProjectModal = () => {
         }
     })
     
-    // Reset form and open modal
     newProjectName.value = ''
     showAddProjectModal.value = true
     
-    // Focus the input field when modal opens
+    // Focus input
     nextTick(() => {
         setTimeout(() => {
             const input = document.querySelector('.add-project-modal-content .add-project-input')
@@ -177,7 +234,6 @@ const closeAddProjectModal = () => {
 }
 
 const handleProjectSelect = (option) => {
-    // Prevent selecting the "Add New Project" option
     if (option === 'add-new-project') {
         selectedProject.value = null
         openAddProjectModal()
@@ -185,36 +241,45 @@ const handleProjectSelect = (option) => {
     }
 }
 
-const handleAddProject = () => {
+const handleAddProject = async () => {
     if (!newProjectName.value || !newProjectName.value.trim()) {
         return
     }
     
-    // Create a slug from the project name
-    const slug = newProjectName.value
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '')
+    addingProject.value = true
     
-    // Add new project to the list
-    const newProject = {
-        value: slug,
-        text: newProjectName.value.trim()
+    try {
+        // Save to database
+        const response = await api.post('/listings/projects', {
+            name: newProjectName.value.trim()
+        })
+        
+        const newProject = response.data.data || response.data
+        
+        // Add to options list with real ID
+        projectOptions.value.push({
+            value: newProject.id,
+            text: newProject.name
+        })
+        
+        // Select the newly added project
+        selectedProject.value = newProject.id
+        
+        // Show success message
+        proxy?.$showNotification?.('Project added successfully', 'success')
+        
+        // Close modal
+        closeAddProjectModal()
+    } catch (error) {
+        console.error('Failed to add project:', error)
+        proxy?.$showNotification?.(error.response?.data?.message || 'Failed to add project', 'error')
+    } finally {
+        addingProject.value = false
     }
-    
-    projectOptions.value.push(newProject)
-    
-    // Select the newly added project
-    selectedProject.value = slug
-    
-    // Close modal and reset form
-    closeAddProjectModal()
 }
-
 
 const onDropdownOpen = () => {
     nextTick(() => {
-        // Find and style the last option (Add New Project)
         const dropdownMenu = document.querySelector('.custom-v-select .vs__dropdown-menu')
         if (dropdownMenu) {
             const options = dropdownMenu.querySelectorAll('.vs__dropdown-option')
@@ -229,7 +294,17 @@ const onDropdownOpen = () => {
 const resetAddProjectForm = () => {
     newProjectName.value = ''
 }
+
+// Watches
+watch(selectedProject, (newVal) => {
+    emit('update:project', newVal)
+})
+
+watch(selectedLeadValue, (newVal) => {
+    emit('update:leadSource', newVal)
+})
 </script>
+
 
 <style scoped>
 .tab-content {
