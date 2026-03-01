@@ -602,7 +602,7 @@ const formatDateShort = (dateString) => {
     background-color: #F8FAFC;
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 2;
 }
 
 .integration-table th {
