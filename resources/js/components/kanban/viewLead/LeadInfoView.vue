@@ -85,6 +85,13 @@
                 </div>
             </div>
         </div>
+         <template v-if="hasAdditionalFacebookQuestions">
+            <div class="info-group" v-for="(answer, question) in facebookQuestions" :key="question">
+                <label class="form-label-custom">  {{ formatQuestion(question) }}</label>
+                <div class="info-value">{{ answer }}</div>
+            </div>
+        </template>
+           
     </div>
 </template>
 
@@ -112,12 +119,40 @@ const canView = computed(() => {
   const isResponsible = props.lead?.responsible_person_id === user.value.id
   return isAdmin || isResponsible
 })
+const basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone', 'first_name', 'last_name']
+
+const facebookQuestions = computed(() => {
+    if (!props.lead?.facebook_questions_answers) {
+        return {}
+    }
+    
+    // فلترة الحقول - نرجع الحقول اللي مش أساسية
+    const fields = {}
+    Object.keys(props.lead.facebook_questions_answers).forEach(key => {
+        if (!basicFields.includes(key) && props.lead.facebook_questions_answers[key]) {
+            fields[key] = props.lead.facebook_questions_answers[key]
+        }
+    })
+    
+    return fields
+})
+
+const hasAdditionalFacebookQuestions = computed(() => {
+    return Object.keys(facebookQuestions.value).length > 0
+})
 
 // Function to mask value with stars (email or phone)
 const maskValue = (value) => {
   if (!value) return ''
 
   return '★'.repeat(value.length)
+}
+const formatQuestion = (question) => {
+  if (!question) return ''
+  
+  return question
+    .replace(/_/g, ' ')      // يشيل _
+    .replace(/\b\w/g, l => l.toUpperCase()) // يكبر أول حرف
 }
 </script>
 <style scoped>

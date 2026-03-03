@@ -528,9 +528,9 @@ class IntegrationController extends Controller
                 // 'dont_make_responsible_if_not_clocked_in' => $integration->dont_make_responsible_if_not_clocked_in,
                 'field_mappings_data' => json_encode($mappedData),
                 'raw_meta_data' => json_encode($leadData),
-                'created_at' => isset($leadData['created_time']) 
-                    ? Carbon::parse($leadData['created_time']) 
-                    : null,
+                // 'created_at' => isset($leadData['created_time']) 
+                //     ? Carbon::parse($leadData['created_time']) 
+                //     : null,
             ]);
             LeadHistoryHelper::log(
                 $lead->id,

@@ -560,7 +560,7 @@ const transformHistoryEntry = (entry) => {
         id: entry.id,
         dateTime: dateTime,
         createdBy: {
-            name: user.name || 'System',
+            name: user.name || entry.source,
             avatar: user.avatar || avatar,
         },
         eventType: eventType,

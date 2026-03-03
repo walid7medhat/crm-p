@@ -8,6 +8,18 @@ class LeadResource extends JsonResource
 {
     public function toArray($request): array
     {
+         $rawMetaData = is_string($this->raw_meta_data) 
+            ? json_decode($this->raw_meta_data, true) 
+            : $this->raw_meta_data;
+$facebookFields = [];
+
+if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) {
+    foreach ($rawMetaData['field_data'] as $field) {
+        if (isset($field['name']) && isset($field['values'][0])) {
+            $facebookFields[$field['name']] = $field['values'][0];
+        }
+    }
+}
         return [
             'id' => $this->id,
             'added_by' => $this->added_by,
@@ -79,14 +91,15 @@ class LeadResource extends JsonResource
             'budget'=>$this->budget,
             'currency'=>$this->currency,
             
-            'created_at' => $this->created_at,
+            'created_at' => $this->created_at->setTimezone(config('app.timezone')),
             'updated_at' => $this->updated_at,
             'duplicate_no'=>$this->duplicate_leads->count(),
             'duplicate_ids'=>$this->duplicate_leads->pluck('id')->toArray(),
             'is_reverted'=>!is_null($this->revert),
             'can_edit'=>auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin') || $this->responsible_person_id==auth()->user()->id),
+             'raw_meta_data' => $rawMetaData, 
+                        'facebook_questions_answers' =>$facebookFields,
 
-            
         ];
     }
 }
