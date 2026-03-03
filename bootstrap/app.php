@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
    ->withMiddleware(function (Middleware $middleware) {
+       
        $middleware->alias([
         'role' => RoleMiddleware::class,
         'permission' => PermissionMiddleware::class,
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
        // Exclude broadcasting/auth from CSRF since we use JWT auth
        $middleware->validateCsrfTokens(except: [
            'broadcasting/auth',
+           'api/webhook/facebook', 
        ]);
     })
 

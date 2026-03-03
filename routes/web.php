@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
+use App\Http\Controllers\Api\IntegrationController;
 
 // استخدم web middleware فقط
 Broadcast::routes(['middleware' => ['auth:api']]);
@@ -139,6 +140,8 @@ Route::get('/test-request-cancelled', function () {
 Route::get('privacy-policy',function(){
     return view('privacy-policy');
 });
+    Route::get('/fb/from/{id}/leads', [IntegrationController::class, 'fetchMetaLeads']);
+
 Route::get('{any}', function () {
     return view('welcome'); 
 })->where('any', '^(?!api).*$');

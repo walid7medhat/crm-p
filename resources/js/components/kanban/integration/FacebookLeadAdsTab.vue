@@ -24,7 +24,8 @@
             <div class="select-card">
                 <label class="field-label">Select a Facebook Page</label>
                 <v-select
-                    v-model="selectedPageObject"
+                    :model-value="selectedPageObject"
+                    @update:model-value="handlePageSelect"
                     :options="pages"
                     :reduce="page => page"
                     label="name"
@@ -48,7 +49,8 @@
             <div v-if="selectedPageId" class="select-card">
                 <label class="field-label">Select a Form</label>
                 <v-select
-                    v-model="selectedFormObject"
+                    :model-value="selectedFormObject"
+                    @update:model-value="handleFormSelect"
                     :options="forms"
                     :reduce="form => form"
                     label="name"
@@ -72,7 +74,7 @@
                     </template>
                 </v-select>
 
-                <!-- Load More Button (لو في forms أكتر) -->
+                <!-- Load More Button -->
                 <button 
                     v-if="hasNextPage && forms.length > 0" 
                     class="load-more-btn"
@@ -83,12 +85,54 @@
                     <span v-else>Load More Forms</span>
                 </button>
             </div>
+
+            <!-- Field Mappings Section -->
+            <div v-if="selectedFormId" class="mappings-card">
+                <div class="mappings-header">
+                    <!--<h4 class="mappings-title">Field Mapping</h4>-->
+                    <label class="field-label">Field Mapping</label>
+                    <p class="mappings-subtitle">Map Facebook form fields to CRM fields</p>
+                </div>
+
+                <div class="mappings-list">
+                    <div 
+                        v-for="(mapping, index) in localMappings" 
+                        :key="index"
+                        class="mapping-row"
+                    >
+                        <div class="mapping-field">
+                            <span class="meta-field">{{ mapping.meta_field || 'Select field' }}</span>
+                            <iconify-icon icon="lucide:arrow-right" class="arrow-icon"></iconify-icon>
+                            <v-select
+                                v-model="mapping.crm_field"
+                                :options="crmFields"
+                                :reduce="field => field.value"
+                                label="label"
+                                placeholder="Select CRM field"
+                                class="crm-field-select"
+                            />
+                        </div>
+                        <button 
+                            class="remove-mapping-btn"
+                            @click="removeMapping(index)"
+                            v-if="localMappings.length > 1"
+                        >
+                            <iconify-icon icon="lucide:x"></iconify-icon>
+                        </button>
+                    </div>
+                </div>
+
+                <button class="add-mapping-btn" @click="addMapping">
+                    <iconify-icon icon="lucide:plus"></iconify-icon>
+                    Add Field Mapping
+                </button>
+            </div>
         </template>
     </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, getCurrentInstance, computed } from 'vue'
+import { ref, watch, onMounted, getCurrentInstance, computed, nextTick } from 'vue'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
@@ -123,34 +167,58 @@ const loadingMore = ref(false)
 const error = ref(null)
 
 const pages = ref([])
-const selectedPage = ref(null)
 const selectedPageId = ref(props.pageId)
 const selectedPageAccessToken = ref(null)
 const forms = ref([])
-const selectedForm = ref(null)
 const selectedFormId = ref(props.formId)
 const nextCursor = ref(null)
 const hasNextPage = ref(false)
 
-// Computed for page selection
-const selectedPageObject = computed({
-    get: () => pages.value.find(p => p.id === selectedPageId.value) || null,
-    set: (page) => {
-        if (page) {
-            handlePageSelect(page)
-        }
-    }
-})
+// Field mappings
+const localMappings = ref([])
+const crmFields = [
+    { value: 'first_name', label: 'First Name' },
+    { value: 'last_name', label: 'Last Name' },
+    { value: 'email', label: 'Email' },
+    { value: 'work_phone', label: 'Work Phone' },
+    { value: 'mobile', label: 'Mobile' },
+    { value: 'lead_name', label: 'Lead Name' },
+    { value: 'company', label: 'Company' },
+    { value: 'position', label: 'Position' },
+    { value: 'address', label: 'Address' },
+    { value: 'city', label: 'City' },
+    { value: 'country', label: 'Country' },
+    { value: 'notes', label: 'Notes' }
+]
 
-// Computed for form selection
-const selectedFormObject = computed({
-    get: () => forms.value.find(f => f.id === selectedFormId.value) || null,
-    set: (form) => {
-        if (form) {
-            handleFormSelect(form)
-        }
-    }
-})
+// Meta fields (مؤقتة)
+const metaFields = ref([
+    'full_name',
+    'first_name',
+    'last_name',
+    'email',
+    'phone_number',
+    'mobile',
+    'address',
+    'city',
+    'country',
+    'company',
+    'position',
+    'website'
+])
+
+// Computed for page selection (readonly)
+const selectedPageObject = computed(() => 
+    pages.value.find(p => p.id === selectedPageId.value) || null
+)
+
+// Computed for form selection (readonly)
+const selectedFormObject = computed(() => 
+    forms.value.find(f => f.id === selectedFormId.value) || null
+)
+
+// Flag to prevent update loops
+const isInternalUpdate = ref(false)
 
 // Load pages on mount
 onMounted(() => {
@@ -167,7 +235,6 @@ const loadPages = async () => {
         const response = await api.get('/integrations/meta/pages')
         pages.value = response.data.data.pages || []
         
-        // If we have a pre-selected page, find its token and load forms
         if (selectedPageId.value) {
             const selectedPage = pages.value.find(p => p.id === selectedPageId.value)
             if (selectedPage) {
@@ -186,37 +253,61 @@ const loadPages = async () => {
 
 // Handle page selection
 const handlePageSelect = (page) => {
+    if (!page) return
+    
+    isInternalUpdate.value = true
+    
     selectedPageId.value = page.id
     selectedPageAccessToken.value = page.access_token
     selectedFormId.value = null
-    selectedForm.value = null
     forms.value = []
     nextCursor.value = null
     hasNextPage.value = false
+    localMappings.value = []
     
     emit('update:pageId', page.id)
+    emit('update:fieldMappings', [])
     
-    // Load forms for selected page
     loadForms(page.id, page.access_token)
+    
+    nextTick(() => {
+        isInternalUpdate.value = false
+    })
 }
 
 // Handle form selection
 const handleFormSelect = (form) => {
+    if (!form) return
+    
+    isInternalUpdate.value = true
+    
     selectedFormId.value = form.id
-    selectedForm.value = form
     
     emit('update:formName', form.name)
     emit('update:formId', form.id)
+    
+    // Initialize default mappings
+    localMappings.value = [
+        { meta_field: 'full_name', crm_field: 'first_name' },
+        { meta_field: 'email', crm_field: 'email' },
+        { meta_field: 'phone_number', crm_field: 'work_phone' }
+    ]
+    
+    emit('update:fieldMappings', localMappings.value)
     
     emit('connected', {
         pageId: selectedPageId.value,
         pageAccessToken: selectedPageAccessToken.value,
         formId: form.id,
         formName: form.name,
-        fieldMappings: []
+        fieldMappings: localMappings.value
     })
     
     proxy?.$showNotification?.(`Form "${form.name}" selected`, 'success')
+    
+    nextTick(() => {
+        isInternalUpdate.value = false
+    })
 }
 
 // Load forms for selected page
@@ -247,7 +338,6 @@ const loadForms = async (pageId, pageAccessToken, cursor = null) => {
         nextCursor.value = data.next_cursor || null
         hasNextPage.value = data.has_next || false
 
-        // Show success notification when forms loaded
         if (!cursor && data.forms?.length > 0) {
             proxy?.$showNotification?.(`Found ${data.forms.length} forms`, 'success')
         }
@@ -268,8 +358,23 @@ const loadMoreForms = async () => {
     loadingMore.value = false
 }
 
+// Field mapping methods
+const addMapping = () => {
+    localMappings.value.push({
+        meta_field: metaFields.value[0] || '',
+        crm_field: ''
+    })
+    emit('update:fieldMappings', localMappings.value)
+}
+
+const removeMapping = (index) => {
+    localMappings.value.splice(index, 1)
+    emit('update:fieldMappings', localMappings.value)
+}
+
 // Watch for props changes (for edit mode)
 watch(() => props.pageId, (newVal) => {
+    if (isInternalUpdate.value) return
     if (newVal && pages.value.length > 0) {
         const page = pages.value.find(p => p.id === newVal)
         if (page) {
@@ -280,16 +385,20 @@ watch(() => props.pageId, (newVal) => {
 })
 
 watch(() => props.formId, (newVal) => {
+    if (isInternalUpdate.value) return
     if (newVal && forms.value.length > 0) {
         const form = forms.value.find(f => f.id === newVal)
         if (form) {
             selectedFormId.value = newVal
-            selectedForm.value = form
         }
     }
 })
-</script>
 
+watch(localMappings, (newVal) => {
+    if (isInternalUpdate.value) return
+    emit('update:fieldMappings', newVal)
+}, { deep: true })
+</script>
 
 <style scoped>
 .tab-content {
@@ -488,6 +597,161 @@ watch(() => props.formId, (newVal) => {
 .load-more-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* Mappings Card */
+.mappings-card {
+    background: #FFFFFF;
+    border: 1px solid #EEEEEE;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.mappings-header {
+    margin-bottom: 20px;
+}
+
+.mappings-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #01062C;
+    margin: 0 0 4px 0;
+}
+
+.mappings-subtitle {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    color: #64748B;
+    margin: 0;
+}
+
+.mappings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.mapping-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #F8FAFC;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+}
+
+.mapping-field {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.meta-field {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1E293B;
+    min-width: 150px;
+    padding: 8px 12px;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+}
+
+.arrow-icon {
+    font-size: 18px;
+    color: #94A3B8;
+}
+
+:deep(.crm-field-select) {
+    flex: 1;
+    min-width: 200px;
+}
+
+:deep(.crm-field-select .vs__dropdown-toggle) {
+    height: 42px;
+    border-radius: 6px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+}
+
+.remove-mapping-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: #FEE2E2;
+    border: none;
+    border-radius: 6px;
+    color: #EF4444;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.remove-mapping-btn:hover {
+    background: #FECACA;
+    color: #DC2626;
+}
+
+.remove-mapping-btn iconify-icon {
+    font-size: 16px;
+}
+
+.add-mapping-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    background: #F8FAFC;
+    border: 1px dashed #CBD5E1;
+    border-radius: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748B;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.add-mapping-btn:hover {
+    background: #F1F5F9;
+    border-color: #94A3B8;
+    color: #475569;
+}
+
+.add-mapping-btn iconify-icon {
+    font-size: 18px;
+}
+
+/* Scrollbar for mappings list */
+.mappings-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.mappings-list::-webkit-scrollbar-track {
+    background: #F1F5F9;
+    border-radius: 3px;
+}
+
+.mappings-list::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 3px;
+}
+
+.mappings-list::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
 }
 
 /* Loading Spinner */

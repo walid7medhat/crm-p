@@ -23,7 +23,8 @@
     </b-modal>
     <CreateLeadModal v-model="showCreateModal" @lead-created="handleLeadCreated" />
     <CreateDealModal v-model="showCreateDealModal" @deal-created="handleDealCreated" />
-    <CreateIntegrationModal v-model="showCreateIntegrationModal" @integration-created="handleIntegrationCreated" />
+    <CreateIntegrationModal  v-model="showCreateIntegrationModal" @integration-created="handleIntegrationCreated"  @saved="handleIntegrationCreated"
+    @updated="handleIntegrationCreated"/>
     <AddStageModal v-model="showAddStageModal" @stage-created="handleStageCreated" />
     <div class="kanban-main-wrapper">
         <b-tabs 
@@ -182,14 +183,21 @@ const SEARCH_DEBOUNCE_MS = 400
 const echoListeners = ref([])
 const pollingInterval = ref(null)
 
-const tabs = ref([
-    // { id: 'deals', name: 'Deals', hasChevron: false },
-    { id: 'leads', name: 'Leads', hasChevron: false },
-    // { id: 'inventory', name: 'Inventory', hasChevron: true },
-    // { id: 'costumers', name: 'Costumers', hasChevron: true },
-    { id: 'integration', name: 'Integration', hasChevron: false },
-    // { id: 'analytics', name: 'Analytics', hasChevron: false }
-])
+const tabs = computed(() => {
+    const baseTabs = [
+        // { id: 'deals', name: 'Deals', hasChevron: false },
+        { id: 'leads', name: 'Leads', hasChevron: false },
+        // { id: 'inventory', name: 'Inventory', hasChevron: true },
+        // { id: 'costumers', name: 'Costumers', hasChevron: true },
+        // { id: 'analytics', name: 'Analytics', hasChevron: false }
+    ]
+    
+    if (isSuperAdmin.value) {
+        baseTabs.push({ id: 'integration', name: 'Integration', hasChevron: false })
+    }
+    
+    return baseTabs
+})
 
 const activeTabIndex = computed({
     get: () => tabs.value.findIndex(t => t.id === activeTab.value),
@@ -203,7 +211,30 @@ const activeTabIndex = computed({
 const activeTabName = computed(() => {
     return tabs.value.find(t => t.id === activeTab.value)?.name || ''
 })
+// Get user from storage (same pattern as header/index.vue)
+const getUserFromStorage = () => {
+    try {
+        const userData = localStorage.getItem('user')
+        return userData ? JSON.parse(userData) : null
+    } catch (error) {
+        console.error('Error getting user from storage:', error)
+        return null
+    }
+}
 
+const user = ref(getUserFromStorage())
+
+// Applied search params (from search modal, not from URL)
+const appliedSearchParams = ref(null)
+
+// Check if user is admin or super_admin (same pattern as header/index.vue)
+const isSuperAdmin = computed(() => {
+    if (!user.value) return false
+    
+    const isAdminUser = user.value.roles?.includes('super_admin')
+    
+    return isAdminUser
+})
 function applySearchToApi() {
     const base = lastQuery.value && Object.keys(lastQuery.value).length ? { ...lastQuery.value } : {}
     const term = (search.value || '').trim()
@@ -528,9 +559,18 @@ const handleLeadCreated = async () => {
 }
 
 const handleIntegrationCreated = (data) => {
+    console.log('📦 Integration created:', data)
     $showNotification('Integration created successfully!', 'success')
-    const comp = integrationRef.value && (Array.isArray(integrationRef.value) ? integrationRef.value[0] : integrationRef.value)
-    if (comp && typeof comp.loadIntegrations === 'function') comp.loadIntegrations()
+    
+    // تحديث التبويب Integration
+    if (integrationRef.value) {
+        const comp = Array.isArray(integrationRef.value) 
+            ? integrationRef.value[0] 
+            : integrationRef.value
+        if (comp && typeof comp.loadIntegrations === 'function') {
+            comp.loadIntegrations()
+        }
+    }
 }
 
 const handleStageCreated = async (stageData) => {

@@ -74,6 +74,8 @@ Route::get('/test-server', function() {
     ]);
 });
 
+Route::get('/webhook/facebook', [IntegrationController::class, 'verifyWebhook']);
+Route::post('/webhook/facebook', [IntegrationController::class, 'handleWebhook']);
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
@@ -213,8 +215,8 @@ Route::prefix('leads')->group(function(){
 
     // Integrations (Meta forms connect)
     Route::apiResource('integrations', IntegrationController::class);
-    Route::post('integrations/meta/pages', [IntegrationController::class, 'fetchMetaPages']);
-    Route::post('integrations/meta/forms', [IntegrationController::class, 'fetchMetaForms']);
+    Route::get('integrations/meta/pages', [IntegrationController::class, 'fetchMetaPages']);
+    Route::get('integrations/meta/forms', [IntegrationController::class, 'fetchMetaForms']);
     Route::post('integrations/meta', [IntegrationController::class, 'fetchMetaForms']); // alias for same action
     // Route::post('integrations', [IntegrationController::class, 'store']);
     Route::patch('integrations/{integration}/toggle-active', [IntegrationController::class, 'toggleActive']);
@@ -330,6 +332,3 @@ Route::middleware('auth:api')->group(function () {
 Route::get('/invitation/{token}', [UserInvitationController::class, 'validateInvitation']);
 Route::post('/register', [UserInvitationController::class, 'registerWithInvitation']);
 
-
-Route::get('/webhook/facebook', [IntegrationController::class, 'verify']);
-Route::post('/webhook/facebook', [IntegrationController::class, 'handle']);
