@@ -28,18 +28,18 @@
         </div>
 
         <!-- Checkbox -->
-        <div class="checkbox-wrapper" @click="dontMakeResponsibleIfNotClockedIn = !dontMakeResponsibleIfNotClockedIn">
-            <input
-                type="checkbox"
-                id="dont-make-responsible-checkbox"
-                v-model="dontMakeResponsibleIfNotClockedIn"
-                class="other-settings-checkbox"
-                @click.stop
-            />
-            <label for="dont-make-responsible-checkbox" class="checkbox-label" @click.stop>
-                Don't make user a responsible person if not clocked in or on scheduled break
-            </label>
-        </div>
+        <!--<div class="checkbox-wrapper" @click="dontMakeResponsibleIfNotClockedIn = !dontMakeResponsibleIfNotClockedIn">-->
+        <!--    <input-->
+        <!--        type="checkbox"-->
+        <!--        id="dont-make-responsible-checkbox"-->
+        <!--        v-model="dontMakeResponsibleIfNotClockedIn"-->
+        <!--        class="other-settings-checkbox"-->
+        <!--        @click.stop-->
+        <!--    />-->
+        <!--    <label for="dont-make-responsible-checkbox" class="checkbox-label" @click.stop>-->
+        <!--        Don't make user a responsible person if not clocked in or on scheduled break-->
+        <!--    </label>-->
+        <!--</div>-->
     </div>
 </template>
 

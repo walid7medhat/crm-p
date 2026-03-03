@@ -177,7 +177,8 @@ const isTabCompleted = (tabId) => {
         case 'crm-entities':
             return !!formData.value.selectedEntity
         case 'hidden-fields':
-            return !!formData.value.project && !!formData.value.leadSource
+            // !!formData.value.project &&
+            return  !!formData.value.leadSource
         case 'facebook-leads':
             return !!formData.value.facebookFormId
         case 'other-settings':
@@ -191,7 +192,7 @@ const isTabCompleted = (tabId) => {
 const canSave = computed(() => {
     return (
         formData.value.selectedEntity &&
-        formData.value.project &&
+        // formData.value.project &&
         formData.value.leadSource &&
         formData.value.facebookFormId &&
         formData.value.integrationName &&

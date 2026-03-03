@@ -271,7 +271,7 @@ class IntegrationController extends Controller
             'facebook_form_name' => 'nullable|string|max:500',
             'field_mappings' => 'nullable|array',
             'responsible_person_id' => 'nullable|exists:users,id',
-            'dont_make_responsible_if_not_clocked_in' => 'sometimes|boolean',
+            // 'dont_make_responsible_if_not_clocked_in' => 'sometimes|boolean',
             'status' => 'sometimes|in:active,inactive'
         ]);
 
@@ -503,12 +503,12 @@ class IntegrationController extends Controller
             $mappedData = $this->applyFieldMappings($fields, $integration->field_mappings ?? []);
 
             // التحقق من عدم وجود الليد مكرر
-            $existingLead = Lead::where('meta_lead_id', $leadgenId)->first();
+            // $existingLead = Lead::where('meta_lead_id', $leadgenId)->first();
             
-            if ($existingLead) {
-                Log::info('Lead already exists', ['meta_lead_id' => $leadgenId]);
-                return;
-            }
+            // if ($existingLead) {
+            //     Log::info('Lead already exists', ['meta_lead_id' => $leadgenId]);
+            //     return;
+            // }
 
             $lead = Lead::create([
                 'integration_id' => $integration->id,
@@ -518,28 +518,28 @@ class IntegrationController extends Controller
                 'last_name' => $fields['last_name'] ?? null,
                 'email' => $fields['email'] ?? null,
                 'work_phone' => $fields['phone_number'] ?? $fields['phone'] ?? null,
-                'mobile' => $fields['mobile'] ?? $fields['cell'] ?? null,
+                // 'mobile' => $fields['mobile'] ?? $fields['cell'] ?? null,
                 'stage_id' => $stage?->id,
                 'lead_source' => $integration->lead_source ?? 'Social Media-Facebook',
                 'project_id' => $integration->project_id,
                 'ad_id' => $leadData['ad_id'] ?? null,
                 'added_by' => $integration->user_id,
-                'responsible_person_id' => $integration->responsible_person_id,
-                'dont_make_responsible_if_not_clocked_in' => $integration->dont_make_responsible_if_not_clocked_in,
+                'responsible_person_id' => $integration->responsible_person_id??1,
+                // 'dont_make_responsible_if_not_clocked_in' => $integration->dont_make_responsible_if_not_clocked_in,
                 'field_mappings_data' => json_encode($mappedData),
                 'raw_meta_data' => json_encode($leadData),
                 'created_at' => isset($leadData['created_time']) 
                     ? Carbon::parse($leadData['created_time']) 
                     : null,
             ]);
-  LeadHistoryHelper::log(
+            LeadHistoryHelper::log(
                 $lead->id,
                 ['action' => 'created']
             );
-        broadcast(new LeadUpdated($lead, 'created'));
+          broadcast(new LeadUpdated($lead, 'created'));
             Log::info('✅ Lead stored successfully', [
                 'lead_id' => $lead->id,
-                'meta_lead_id' => $leadgenId,
+                // 'meta_lead_id' => $leadgenId,
                 'lead_name' => $lead->first_name
             ]);
 
@@ -563,16 +563,16 @@ class IntegrationController extends Controller
             return $mapped;
         }
         /**
- * Extract lead name safely
- */
-private function extractName(array $fields): string
-{
-    return
-        $fields['full_name']
-        ?? $fields['name']
-        ?? $fields['first_name']
-        ?? 'Facebook Lead';
-}
+         * Extract lead name safely
+         */
+        private function extractName(array $fields): string
+        {
+            return
+                $fields['full_name']
+                ?? $fields['name']
+                ?? $fields['first_name']
+                ?? 'Facebook Lead';
+        }
   private function applyFieldMappings(array $fields, array $mappings): array
     {
         $result = [];

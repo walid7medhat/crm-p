@@ -410,7 +410,7 @@ class LeadController extends Controller
             $user = auth()->user();
 
             if (($user->hasRole('admin') || $user->hasRole('super_admin'))) {
-               $responsiblePersons = User::role(['team_lead', 'sales', 'manager'])
+               $responsiblePersons = User::role(['team_lead', 'sales', 'manager','admin'])
                 ->get(['id', 'name', 'email', 'avatar'])
                 ->map(function($user) {
                     return [
@@ -418,6 +418,7 @@ class LeadController extends Controller
                         'name'   => $user->name,
                         'email'  => $user->email,
                         'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                        'role_name'=>$user->roles()->first()->name
                     ];
                 });
 
