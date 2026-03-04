@@ -1,5 +1,10 @@
 <template>
-  <aside class="sidebar" :class="{ 'sidebar-open': isMobileOpen }">
+  <aside
+    class="sidebar"
+    :class="{ 'sidebar-open': isMobileOpen, active: isSidebarActive }"
+    @mouseenter="sidebarHover = true"
+    @mouseleave="sidebarHover = false"
+  >
     <!-- Mobile Close -->
     <button type="button" class="sidebar-close-btn" @click="closeSidebar">
       <iconify-icon icon="radix-icons:cross-2" />
@@ -13,15 +18,15 @@
         <button
           type="button"
           class="sidebar-toggle"
-          :class="{ 'sidebar-toggle-with-label': !isSidebarActive || (isSidebarActive && sidebarHeaderHover) }"
+          :class="{ 'sidebar-toggle-with-label': !isSidebarActive || (isSidebarActive && (sidebarHeaderHover || sidebarHover)) }"
           :title="isSidebarActive ? 'Expand menu' : 'Oia Properties'"
           @click="toggleSidebarDesktop"
           aria-label="Toggle menu"
         >
           <iconify-icon icon="material-symbols:menu-rounded" class="sidebar-menu-icon" />
-          <!-- Same place, same style: "Oia Properties" when open, "Expand menu" when collapsed + hover -->
+          <!-- "Oia Properties" when open; "Expand menu" with icon when collapsed + hover anywhere on sidebar -->
           <span
-            v-show="!isSidebarActive || sidebarHeaderHover"
+            v-show="!isSidebarActive || (isSidebarActive && (sidebarHeaderHover || sidebarHover))"
             class="sidebar-toggle-label"
           >{{ !isSidebarActive ? 'Oia Properties' : 'Expand menu' }}</span>
         </button>
@@ -339,11 +344,26 @@
             </ul>
           </transition>
         </li>
+
+        <!-- Reports -->
+        <li>
+          <router-link to="/reports" :class="{ 'active-page': isActive('/reports') }">
+            <iconify-icon icon="lucide:bar-chart-2" class="menu-icon sidebar-reports-icon" />
+            <span>Reports</span>
+          </router-link>
+        </li>
+
+        <!-- Suggestion -->
+        <li>
+          <router-link to="/suggestion" :class="{ 'active-page': isActive('/suggestion') }">
+            <iconify-icon icon="lucide:lightbulb" class="menu-icon" />
+            <span>Suggestion</span>
+          </router-link>
+        </li>
       </ul>
     </div>
   </aside>
 </template>
-const isMobileOpen = ref(false);
 
 <script setup>
 import { ref, computed, onMounted, getCurrentInstance, watch } from 'vue';
@@ -371,6 +391,7 @@ const { proxy } = getCurrentInstance();
 const { isSidebarActive, toggleSidebarDesktop } = useSidebar();
 
 const sidebarHeaderHover = ref(false);
+const sidebarHover = ref(false);
 
 const closeSidebar = () => {
   isMobileOpen.value = false;
@@ -763,32 +784,45 @@ onMounted(() => {
 
 </script>
 <style scoped>
+/* 1. Default / open sidebar: same as header bar (light transparent glass) */
+.sidebar {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 .sidebar-header {
   padding: 0.875rem 1rem;
   min-height: 4.5rem;
   box-sizing: border-box;
   justify-content: flex-start;
-  background: #363d6661;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
 }
 
-/* Hover on closed sidebar expands it */
+/* 2. Darker only on hover when collapsed (.sidebar.active = collapsed) */
 .sidebar.active:hover {
   width: auto;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 @media (min-width: 1200px) {
   .sidebar.active:hover {
     inset-inline-start: 0;
+    width: 18rem;
   }
 }
 @media (min-width: 1400px) {
   .sidebar.active:hover {
-    width: 17.1875rem;
+    width: 20rem;
   }
 }
 @media (min-width: 1650px) {
   .sidebar.active:hover {
-    width: 19.5rem;
+    width: 22rem;
   }
 }
 
@@ -899,6 +933,7 @@ onMounted(() => {
   padding: 1px 6px;
 }
 
+/* Menu links: visible on both transparent (open) and dark (collapsed hover) */
 .sidebar-menu li a,
 .sidebar-submenu li a {
   display: flex;
@@ -908,21 +943,39 @@ onMounted(() => {
   padding: 12px 16px;
   margin-bottom: 4px;
   border-radius: 10px;
+  color: rgba(255, 255, 255, 0.95);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sidebar-menu li a:hover,
+.sidebar-submenu li a:hover {
+  color: #fff;
+}
 .sidebar-menu li a.active {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border-radius: 10px;
   padding: 12px 16px;
+  color: #fff;
 }
 
-  transition: background 0.15s ease;
-}
 
+/* Icons and dropdown arrow visible on dark sidebar */
 .sidebar-menu .nav-link.active-page a,
 .sidebar-submenu .nav-link.active-page a {
   background: rgba(255, 255, 255, 0.1);
+  filter: brightness(1.05);
   border-radius: 10px;
+  color: #fff;
+}
+.sidebar .menu-icon {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+.sidebar .imgicon {
+  opacity: 0.95;
+}
+.sidebar .dropdown-arrow {
+  border-left-color: rgba(255, 255, 255, 0.9);
 }
 
 .nav-link a {

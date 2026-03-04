@@ -1,5 +1,5 @@
 <template>
-    <div v-if="entries.length > 0" class="lead-activity-timeline info-card bg-white p-3 radius-12 shadow-sm mt-3">
+    <div class="lead-activity-timeline info-card bg-white p-3 radius-12 shadow-sm mt-3">
         <div class="activity-timeline-header d-flex justify-content-between align-items-center pb-2 mb-3 border-bottom">
             <span class="modal-title">Lead Activity</span>
         </div>
@@ -9,12 +9,12 @@
             <p class="mt-2 text-muted small">Loading activity...</p>
         </div>
 
-        <!--<div v-else-if="entries.length === 0" class="empty-state py-5 text-center text-muted">-->
-        <!--    <iconify-icon icon="lucide:history" class="empty-icon"></iconify-icon>-->
-        <!--    <p class="mb-0 small">No activity yet for this lead.</p>-->
-        <!--</div>-->
+        <div v-else-if="entries.length === 0" class="empty-state py-5 text-center text-muted">
+            <iconify-icon icon="lucide:history" class="empty-icon"></iconify-icon>
+            <p class="mb-0 small">No activity yet for this lead.</p>
+        </div>
 
-        <div v-else-if="entries.length > 0" class="activity-timeline">
+        <div v-else class="activity-timeline">
             <template v-for="(group, groupIndex) in groupedByDate" :key="group.dateKey">
                 <!-- Date header -->
                 <div class="timeline-date-header">
@@ -40,7 +40,7 @@
                                 <!--    class="activity-icon-avatar"-->
                                 <!--    :alt="item.user?.name"-->
                                 <!--/>-->
-                                <iconify-icon  :icon="item.icon" class="activity-type-icon-content"></iconify-icon>
+                                <iconify-icon :icon="item.icon" class="activity-type-icon-content"></iconify-icon>
                             </div>
                         </div>
                         <div class="activity-card-body">
@@ -163,15 +163,14 @@ function buildDetailsHtml(entry) {
     }
     if (action === 'created') {
         const leadName = changes.lead_name || entry.lead_name || '—'
-        const source =  entry.source
-        const response =  entry.response_person
-        const createdBy=entry.createdBy
-        console.log(response);
+        const source = entry.source
+        const response = entry.response_person
+        const createdBy = entry.createdBy
+        console.log(response)
         let html = `<div class="detail-created"><span class="detail-label">Lead Name:</span> ${leadName}</div>`
-        if (createdBy) html +=`<div class="detail-created"><span class="detail-label">Created By:</span> ${createdBy}</div>`
+        if (createdBy) html += `<div class="detail-created"><span class="detail-label">Created By:</span> ${createdBy}</div>`
         if (source) html += `<div class="detail-created"><span class="detail-label">Source:</span> ${source}</div>`
-        if (response) html +=`<div class="detail-created"><span class="detail-label">Responsible Person:</span> ${response}</div>`
-         
+        if (response) html += `<div class="detail-created"><span class="detail-label">Responsible Person:</span> ${response}</div>`
         return html
     }
     if (changes.new_stage) return `<div class="detail-single"><span class="detail-new">${changes.new_stage}</span></div>`
@@ -180,13 +179,13 @@ function buildDetailsHtml(entry) {
 }
 
 function transformEntry(entry) {
-    console.log(entry);
+    console.log(entry)
     const user = entry.user || {}
     let avatar = user.avatar || ''
     if (avatar && !avatar.startsWith('http') && !avatar.startsWith('/')) {
         avatar = `/storage/${avatar}`
     }
-    console.log(avatar);
+    console.log(avatar)
     const action = (entry.changes && entry.changes.action) || entry.action || 'updated'
     const { icon, class: iconClass } = getIconAndClass(action)
     const dateStr = entry.created_at || entry.date
@@ -262,7 +261,7 @@ async function fetchHistory(page = 1, append = false) {
         const { list, pagination } = parseResponse(res.data)
         const withoutView = list.filter((entry) => {
             const action = (entry.changes && entry.changes.action) ?? entry.action
-            return action !== 'view' && action !== 'revert' && action !== 'created'
+            return action !== 'view' && action !== 'revert'
         })
         const transformed = withoutView.map(transformEntry)
         if (append) {
@@ -289,14 +288,17 @@ function loadMore() {
     fetchHistory(currentPage.value + 1, true)
 }
 
-watch(() => props.leadId, (id) => {
-    if (id) {
-        currentPage.value = 1
-        fetchHistory(1)
-    } else {
-        entries.value = []
+watch(
+    () => props.leadId,
+    (id) => {
+        if (id) {
+            currentPage.value = 1
+            fetchHistory(1)
+        } else {
+            entries.value = []
+        }
     }
-})
+)
 
 onMounted(() => {
     if (props.leadId) fetchHistory(1)
