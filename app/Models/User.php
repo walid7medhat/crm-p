@@ -143,6 +143,10 @@ public function approvedRequests()
                 ->where('status', 'approved');
 }
 
+public function suggestions()
+{
+    return $this->hasMany(Suggestion::class);
+}
 
 public function agents()
 {

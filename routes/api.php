@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\LeadActivityController;
 use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\Deal\DealController;
 use App\Http\Controllers\Api\Deal\LeadConversionController;
+use App\Http\Controllers\Api\SuggestionController;
 Route::get('/test-email', function () {
     try {
         // Test basic email
@@ -122,6 +123,8 @@ Route::middleware('jwt.auth')->group(function () {
 Route::get('leads/integration', [LeadController::class,'storeIntegration']);
 
 Route::middleware(['jwt.auth'])->group(function () {
+    Route::get('/suggestions', [SuggestionController::class, 'index']);
+    Route::post('/suggestions', [SuggestionController::class, 'store']);
     Route::get('dashboard/stats',[DashboardController::class,'getStats']);
     Route::get('/dashboard/listings-statistics', [DashboardController::class, 'getListingsStatistics']);
     Route::get('/dashboard/active-agents', [DashboardController::class, 'getActiveAgents']);
