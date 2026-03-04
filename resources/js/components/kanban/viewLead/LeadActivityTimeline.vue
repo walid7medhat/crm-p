@@ -1,5 +1,5 @@
-<template>
-    <div class="lead-activity-timeline info-card bg-white p-3 radius-12 shadow-sm mt-3">
+<template v-if="entries.length > 0" >
+    <div v-if="entries.length > 0" class="lead-activity-timeline info-card bg-white p-3 radius-12 shadow-sm mt-3">
         <div class="activity-timeline-header d-flex justify-content-between align-items-center pb-2 mb-3 border-bottom">
             <span class="modal-title">Lead Activity</span>
         </div>
@@ -9,12 +9,12 @@
             <p class="mt-2 text-muted small">Loading activity...</p>
         </div>
 
-        <div v-else-if="entries.length === 0" class="empty-state py-5 text-center text-muted">
-            <iconify-icon icon="lucide:history" class="empty-icon"></iconify-icon>
-            <p class="mb-0 small">No activity yet for this lead.</p>
-        </div>
+        <!--<div v-else-if="entries.length === 0" class="empty-state py-5 text-center text-muted">-->
+        <!--    <iconify-icon icon="lucide:history" class="empty-icon"></iconify-icon>-->
+        <!--    <p class="mb-0 small">No activity yet for this lead.</p>-->
+        <!--</div>-->
 
-        <div v-else class="activity-timeline">
+        <div v-else-if="entries.length > 0" class="activity-timeline">
             <template v-for="(group, groupIndex) in groupedByDate" :key="group.dateKey">
                 <!-- Date header -->
                 <div class="timeline-date-header">
@@ -261,7 +261,7 @@ async function fetchHistory(page = 1, append = false) {
         const { list, pagination } = parseResponse(res.data)
         const withoutView = list.filter((entry) => {
             const action = (entry.changes && entry.changes.action) ?? entry.action
-            return action !== 'view' && action !== 'revert'
+            return action !== 'view' && action !== 'revert' && action !== 'created'
         })
         const transformed = withoutView.map(transformEntry)
         if (append) {

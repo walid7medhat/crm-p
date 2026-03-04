@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('listing_access_requests', function (Blueprint $table) {
             //
                $table->timestamp('cancelled_at')->nullable();
-            $table->foreignId('cancelled_by')->nullable()->constrained('users');
+            $table->foreignId('cancelled_by')->nullable()->constrained('users')->nullOnDelete();
         });
     }
 
