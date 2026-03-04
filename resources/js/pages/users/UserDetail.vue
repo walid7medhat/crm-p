@@ -1527,5 +1527,9 @@ export default {
   font-size: 0.7rem;
   font-weight: 500;  
 }
+.icons img{
+    width: 17px;
+    height: 17px;
+}
 </style>
 

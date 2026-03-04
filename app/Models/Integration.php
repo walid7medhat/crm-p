@@ -49,4 +49,9 @@ class Integration extends Model
     {
         return $this->belongsTo(User::class, 'responsible_person_id');
     }
+    public function leads()
+    {
+        return $this->hasMany(Lead::class,'integration_id');
+    }
+
 }

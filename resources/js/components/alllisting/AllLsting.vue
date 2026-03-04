@@ -1159,5 +1159,9 @@ export default {
 .justify-between{
     justify-content:space-between;
 }
+.icons img{
+    width: 17px;
+    height: 17px;
+}
 
 </style>

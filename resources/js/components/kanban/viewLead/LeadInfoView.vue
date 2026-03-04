@@ -51,6 +51,10 @@
             <label class="form-label-custom">lead source</label>
             <div class="info-value">{{ lead?.lead_source || '—' }}</div>
         </div>
+        <div class="info-group" v-if="lead?.lead_source">
+            <label class="form-label-custom">Lead Branch Source</label>
+            <div class="info-value">{{ lead?.lead_branch_source || '—' }}</div>
+        </div>
         <div class="info-group" v-if="lead.bedrooms">
             <label class="form-label-custom">Bedrooms</label>
             <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
@@ -63,6 +67,12 @@
             <label class="form-label-custom">Budget</label>
             <div class="info-value">{{ lead?.budget != null ? lead.budget : '—' }} {{ lead?.currency || '' }}</div>
         </div>
+         <template v-if="hasAdditionalFacebookQuestions">
+            <div class="info-group" v-for="(answer, question) in facebookQuestions" :key="question">
+                <label class="form-label-custom">  {{ formatQuestion(question) }}</label>
+                <div class="info-value">{{ answer }}</div>
+            </div>
+        </template>
         <div class="info-group">
              <div class="d-flex align-items-center gap-3">
                 <div class="avatar-wrapper">
@@ -85,12 +95,7 @@
                 </div>
             </div>
         </div>
-         <template v-if="hasAdditionalFacebookQuestions">
-            <div class="info-group" v-for="(answer, question) in facebookQuestions" :key="question">
-                <label class="form-label-custom">  {{ formatQuestion(question) }}</label>
-                <div class="info-value">{{ answer }}</div>
-            </div>
-        </template>
+        
            
     </div>
 </template>

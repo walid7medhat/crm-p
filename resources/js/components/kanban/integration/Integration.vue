@@ -44,7 +44,7 @@
                         <th>Name</th>
                         <th>Created On</th>
                         <th>Active</th>
-                        <th>Conversation</th>
+                        <th>Count Of Leads</th>
                         <th>Platform</th>
                         <th>Action</th>
                     </tr>
@@ -79,11 +79,11 @@
                                         @change="toggleActive(form)"
                                     />
                                 </div>
-                                <span class="active-date">{{ formatDateShort(form.updated_at) }}</span>
+                                <!--<span class="active-date">{{ formatDateShort(form.updated_at) }}</span>-->
                             </div>
                         </td>
                         <td class="conversation-count">
-                            {{ form.conversation_count || 0 }}
+                            {{ form.leads_count || 0 }}
                         </td>
                         <td class="platform">
                             <span class="platform-badge">{{ form.platform }}</span>
@@ -241,7 +241,7 @@ async function loadIntegrations() {
             responsible_person: integration.responsible_person,
             status: integration.status || 'active',
             platform: integration.platform || 'Meta Ads',
-            conversation_count: integration.conversation_count || 0,
+            leads_count: integration.leads_count || 0,
             created_at: integration.created_at,
             updated_at: integration.updated_at
         }))

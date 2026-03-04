@@ -428,6 +428,11 @@ watch(selectedLeadValue, (newVal) => {
     border-radius: 8px;
     overflow: hidden;
     background: #FFFFFF;
+    
+    /* Add these properties for scrolling */
+    max-height: 300px !important; /* Fixed max height */
+    overflow-y: auto !important; /* Enable vertical scrolling */
+    overflow-x: hidden; /* Hide horizontal scroll */
 }
 
 :deep(.meta-ads-select .vs__dropdown-menu) {
@@ -439,6 +444,11 @@ watch(selectedLeadValue, (newVal) => {
     border-radius: 8px;
     overflow: hidden;
     background: #FFFFFF;
+    
+    /* Add these properties for scrolling */
+    max-height: 250px !important; /* Fixed max height */
+    overflow-y: auto !important; /* Enable vertical scrolling */
+    overflow-x: hidden; /* Hide horizontal scroll */
 }
 
 :deep(.custom-v-select .vs__dropdown-option) {

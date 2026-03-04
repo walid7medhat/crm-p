@@ -284,7 +284,7 @@
               </div>
 
               <!-- Rent fields: hidden when Vacant -->
-              <template v-if="form.occupancyStatus !== 'Vacant' && form.completionStatus !== 'Under Construction'">
+              <template v-if="form.occupancyStatus === 'Rented' && form.completionStatus !== 'Under Construction'">
                 <div class="col-md-4">
                   <label class="form-label">Rent Expiry Date</label>
                   <input v-model="form.rentExpiryDate" type="date" class="form-control" placeholder="Enter Rent Expiry Date" :min="minRentExpiryDate" />

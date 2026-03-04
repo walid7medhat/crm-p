@@ -411,6 +411,11 @@ class LeadController extends Controller
 
             if (($user->hasRole('admin') || $user->hasRole('super_admin'))) {
                $responsiblePersons = User::role(['team_lead', 'sales', 'manager','admin'])
+                ->whereNotNull('parent_id')
+                ->whereHas('parent', function($q) {
+                    // not get branch
+                    $q->whereNotNull('parent_id'); 
+                })
                 ->get(['id', 'name', 'email', 'avatar'])
                 ->map(function($user) {
                     return [

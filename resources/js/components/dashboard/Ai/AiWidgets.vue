@@ -186,16 +186,16 @@ export default {
     const getListingsRoute = () => {
       try {
         const userData = JSON.parse(localStorage.getItem('user'))
-        if (!userData || !userData.role_name) return '/my-listing'
+        if (!userData || !userData.role_name) return '/alllisting'
         
         // Check if user is admin or super_admin
         if (userData.role_name === 'admin' || userData.role_name === 'super_admin') {
           return '/alllisting'
         }
-        return '/my-listing'
+        return '/alllisting'
       } catch (error) {
         console.error('Error determining listings route:', error)
-        return '/my-listing'
+        return '/alllisting'
       }
     }
 

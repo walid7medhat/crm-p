@@ -17,14 +17,14 @@
                 placeholder="Select Sale or Rent"
               />
             </div>
-            <div class="col-md-4">
-              <label class="form-label">Hot Deal</label>
-              <v-select 
-                v-model="form.is_hot_deal" 
-                :options="hotDealOptions" 
-                placeholder="Select Hot Deal"
-              />
-            </div>
+            <!--<div class="col-md-4">-->
+            <!--  <label class="form-label">Hot Deal</label>-->
+            <!--  <v-select -->
+            <!--    v-model="form.is_hot_deal" -->
+            <!--    :options="hotDealOptions" -->
+            <!--    placeholder="Select Hot Deal"-->
+            <!--  />-->
+            <!--</div>-->
             
             <!-- Rented Status -->
             <!--<div class="col-md-4">-->
@@ -283,7 +283,7 @@
                   />
                 </div>
     
-                <template v-if="form.occupancyStatus !== 'Vacant' && form.completionStatus !== 'Under Construction'">
+                <template v-if="form.occupancyStatus === 'Rented' && form.completionStatus !== 'Under Construction'">
                   <div class="col-md-4">
                     <label class="form-label">Rent Expiry Date</label>
                     <input v-model="form.rentExpiryDate" type="date" class="form-control" placeholder="Enter Rent Expiry Date" :min="minRentExpiryDate" />

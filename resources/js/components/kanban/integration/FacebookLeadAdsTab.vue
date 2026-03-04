@@ -59,14 +59,21 @@
                     :loading="loadingForms"
                     :disabled="loadingForms"
                 >
-                    <template #option="{ name, leads_count, id }">
-                        <div class="select-option">
-                            <span class="option-name">{{ name }}</span>
-                            <span class="option-meta">
-                                <iconify-icon icon="lucide:users" class="meta-icon"></iconify-icon>
-                                {{ leads_count || 0 }} leads
-                            </span>
-                        </div>
+                    <template #option="{ name, status, leads_count, id }">
+                      <div class="select-option">
+                        <span class="option-name">
+                          {{ name }}
+                          <span 
+                            class="status-indicator" 
+                            :class="status.toLowerCase()"
+                            :title="status"
+                          ></span>
+                        </span>
+                        <span class="option-meta">
+                          <iconify-icon icon="lucide:users" class="meta-icon"></iconify-icon>
+                          {{ leads_count || 0 }} leads
+                        </span>
+                      </div>
                     </template>
                     <template #no-options>
                         <div v-if="loadingForms" class="no-options">Loading forms...</div>
@@ -222,6 +229,9 @@ const isInternalUpdate = ref(false)
 
 // Load pages on mount
 onMounted(() => {
+      if (props.fieldMappings.length > 0) {
+        localMappings.value = [...props.fieldMappings]
+    }
     loadPages()
 })
 
@@ -286,12 +296,16 @@ const handleFormSelect = (form) => {
     emit('update:formName', form.name)
     emit('update:formId', form.id)
     
-    // Initialize default mappings
-    localMappings.value = [
-        { meta_field: 'full_name', crm_field: 'first_name' },
-        { meta_field: 'email', crm_field: 'email' },
-        { meta_field: 'phone_number', crm_field: 'work_phone' }
-    ]
+    if (props.fieldMappings.length > 0) {
+        localMappings.value = [...props.fieldMappings]
+    } else {
+        // Initialize default mappings
+        localMappings.value = [
+            { meta_field: 'full_name', crm_field: 'first_name' },
+            { meta_field: 'email', crm_field: 'email' },
+            { meta_field: 'phone_number', crm_field: 'work_phone' }
+        ]
+    }
     
     emit('update:fieldMappings', localMappings.value)
     
@@ -759,4 +773,145 @@ watch(localMappings, (newVal) => {
     width: 3rem;
     height: 3rem;
 }
+:deep(.vs__dropdown-toggle),
+:deep(.vs__selected),
+:deep(.vs__search),
+:deep(.vs__dropdown-option),
+:deep(.vs__placeholder) {
+    font-size: 14px !important;
+    font-weight: 500;
+}
+.status-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.status-indicator.active {
+    background-color: #16A34A;
+}
+
+.status-indicator.inactive {
+    background-color: #EF4444; 
+}
+
+.status-indicator.closed {
+    background-color: #F59E0B; 
+}
+
+/* Custom v-select styles matching CreateLeadModal.vue */
+:deep(.custom-v-select) {
+    font-family: 'Montserrat';
+}
+
+:deep(.custom-v-select .vs__dropdown-toggle) {
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    padding: 0 8px;
+}
+
+:deep(.custom-v-select .vs__selected-options) {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    max-width: calc(100% - 30px);
+}
+
+:deep(.custom-v-select .vs__selected) {
+    font-size: 13px;
+    color: #64748B;
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
+    line-height: 40px; 
+}
+
+:deep(.custom-v-select .vs__search) {
+    font-size: 13px;
+    color: #64748B;
+    margin: 0;
+    padding: 0;
+}
+
+:deep(.custom-v-select .vs__search::placeholder) {
+    color: #94A3B8;
+}
+
+:deep(.meta-ads-select .vs__search::placeholder) {
+    color: #94A3B8;
+}
+
+:deep(.custom-v-select .vs__actions) {
+    padding: 0 8px;
+}
+
+:deep(.custom-v-select .vs__open-indicator-icon) {
+    font-size: 16px;
+    color: #64748B;
+}
+
+:deep(svg) {
+    vertical-align: middle !important;
+}
+
+:deep(.custom-v-select .vs__dropdown-menu) {
+    border: none;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 8px 0;
+    margin-top: 4px;
+    z-index: 1100;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #FFFFFF;
+    
+    /* Add these properties for scrolling */
+    max-height: 300px !important; /* Fixed max height */
+    overflow-y: auto !important; /* Enable vertical scrolling */
+    overflow-x: hidden; /* Hide horizontal scroll */
+}
+
+:deep(.meta-ads-select .vs__dropdown-menu) {
+    border: none;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 4px 0;
+    margin-top: 4px;
+    z-index: 1100;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #FFFFFF;
+    
+    /* Add these properties for scrolling */
+    max-height: 250px !important; /* Fixed max height */
+    overflow-y: auto !important; /* Enable vertical scrolling */
+    overflow-x: hidden; /* Hide horizontal scroll */
+}
+
+:deep(.custom-v-select .vs__dropdown-option) {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #000000;
+    transition: all 0.2s;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 400;
+    background: transparent;
+}
+
+:deep(.custom-v-select .vs__dropdown-option--highlight) {
+    background: #F8FAFC !important;
+    color: #000000 !important;
+}
+
+:deep(.custom-v-select .vs__dropdown-option--selected) {
+    background: transparent;
+    color: #000000;
+}
+
 </style>
