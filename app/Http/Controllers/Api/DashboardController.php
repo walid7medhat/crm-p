@@ -50,14 +50,8 @@ class DashboardController extends Controller
         })->where('created_at', '>=', $thirtyDaysAgo)->count();
 
         // Total Listings
-        $totalListings = Listing::when(!($currentUser->hasRole('super_admin')|| $currentUser->hasRole('admin')) ,function($q)use ($user_herarchy){
-            $q->whereIn('agent_id', $user_herarchy);
-            
-        })->count();
-        $listingsChange = Listing::when(!($currentUser->hasRole('super_admin')|| $currentUser->hasRole('admin')) ,function($q)use ($user_herarchy){
-            $q->whereIn('agent_id', $user_herarchy);
-            
-        })->where('created_at', '>=', $thirtyDaysAgo)->count();
+        $totalListings = Listing::where('is_active',true)->where('is_archived',false)->whereNotIn('status',['converted','draft'])->count();
+        $listingsChange = Listing::where('is_active',true)->where('is_archived',false)->whereNotIn('status',['converted','draft'])->where('created_at', '>=', $thirtyDaysAgo)->count();
 
         // My Orders (for authenticated user)
         $myOrders = ListingAccessRequest::when(!($currentUser->hasRole('super_admin')|| $currentUser->hasRole('admin')) ,function($q)use ($user_herarchy){
