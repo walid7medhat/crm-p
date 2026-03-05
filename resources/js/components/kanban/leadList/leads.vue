@@ -103,7 +103,7 @@
                                                     <div class="info-value">{{ task.lead_source }}</div>
                                                 </div>
                                                 
-                                                <div class="info-item mb-12">
+                                                <div class="info-item mb-12" v-if="task.lead_branch_source">
                                                     <div class="info-label text-secondary-light text-xs mb-1">Lead Branch Source</div>
                                                     <div class="info-value">{{ task.lead_branch_source }}</div>
                                                 </div>

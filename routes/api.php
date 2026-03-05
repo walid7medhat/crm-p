@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\Deal\DealController;
 use App\Http\Controllers\Api\Deal\LeadConversionController;
 use App\Http\Controllers\Api\SuggestionController;
+
 Route::get('/test-email', function () {
     try {
         // Test basic email
@@ -77,6 +78,7 @@ Route::get('/test-server', function() {
 
 Route::get('/webhook/facebook', [IntegrationController::class, 'verifyWebhook']);
 Route::post('/webhook/facebook', [IntegrationController::class, 'handleWebhook']);
+Route::post('/website-lead', [IntegrationController::class, 'store_website']);
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
@@ -123,7 +125,7 @@ Route::middleware('jwt.auth')->group(function () {
 Route::get('leads/integration', [LeadController::class,'storeIntegration']);
 
 Route::middleware(['jwt.auth'])->group(function () {
-    Route::get('/suggestions', [SuggestionController::class, 'index']);
+       Route::get('/suggestions', [SuggestionController::class, 'index']);
     Route::post('/suggestions', [SuggestionController::class, 'store']);
     Route::get('dashboard/stats',[DashboardController::class,'getStats']);
     Route::get('/dashboard/listings-statistics', [DashboardController::class, 'getListingsStatistics']);

@@ -55,7 +55,7 @@
             <label class="form-label-custom">Lead Branch Source</label>
             <div class="info-value">{{ lead?.lead_branch_source || '—' }}</div>
         </div>
-        <div class="info-group" v-if="lead.bedrooms">
+        <div class="info-group" v-if="lead?.bedrooms">
             <label class="form-label-custom">Bedrooms</label>
             <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
         </div>
