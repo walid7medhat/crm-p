@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
-
+use App\Notifications\UserStatusUpdated;
 class UserController extends Controller
 {
     public function __construct()
@@ -717,7 +717,9 @@ public function show(User $user): JsonResponse
         $user->update([
             'status' => $request->status
         ]);
-
+        // if ($request->status === 'active') {
+        //  $user->notify(new UserStatusUpdated($request->status));
+        // }
         // Reload user with relationships
         $user->load(['roles', 'parent']);
 
