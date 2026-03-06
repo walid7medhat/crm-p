@@ -76,9 +76,10 @@
                                         <iconify-icon :icon="sortAsc ? 'mdi:arrow-up' : 'mdi:arrow-down'"></iconify-icon>
                                     </span>
                                 </th>
+                                <th scope="col">Email</th>
                                 <th scope="col">Role</th>
                                 <th scope="col">Manager</th>
-                                 <th scope="col">Active/Inactive</th>
+                                <th scope="col">Active/Inactive</th>
                                 <th scope="col" @click="sortBy('last_login_at')" class="sortable">
                                     Last Login
                                     <span v-if="sortKey === 'last_login_at'">
@@ -123,6 +124,7 @@
                                         </div>
                                     </div>
                                 </td>
+                                <td>{{user.email}}</td>
                                 <td>
                                     <span class="">{{ user.role_name.replace(/_/g, ' ') }}</span>
                                 </td>
