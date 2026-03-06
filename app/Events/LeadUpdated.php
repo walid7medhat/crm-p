@@ -79,7 +79,7 @@ class LeadUpdated implements ShouldBroadcast
             return User::find($this->userId)?->name ?? 'System';
         }
 
-        return 'Integration';
+        return '';
     }
 
     

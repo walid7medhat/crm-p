@@ -21,7 +21,7 @@ return new class extends Migration
                 
                 // Personal Details
                 $table->string('first_name');
-                $table->string('last_name');
+                $table->string('last_name')->nullable();
                 $table->date('date_of_birth')->nullable();
                 $table->string('phone')->nullable();
                 $table->string('email')->nullable();

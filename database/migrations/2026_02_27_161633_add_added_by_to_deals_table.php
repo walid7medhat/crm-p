@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('leads', function (Blueprint $table) {
+        Schema::table('deals', function (Blueprint $table) {
             //
-                $table->foreignId('converted_to_deal_id')->nullable()->constrained('deals')->onDelete('Set Null');
-                $table->timestamp('converted_at')->nullable();
+                        $table->foreignId('added_by')->constrained('users')->onDelete('cascade');
         });
     }
 
@@ -23,8 +22,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('leads', function (Blueprint $table) {
+        Schema::table('deals', function (Blueprint $table) {
             //
+            $table->dropForeign(['added_by']);
+            $table->dropColumn('added_by');
         });
     }
 };

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('deals', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('lead_id')->unique()->constrained()->onDelete('cascade');
+                $table->foreignId('lead_id')->nullable()->unique()->constrained()->onDelete('cascade');
                 $table->string('deal_number')->nullable()->unique(); // هياخد من lead_number
                 $table->enum('deal_type', ['primary', 'secondary', 'rental']);
                 $table->foreignId('stage_id')->constrained('stages');
@@ -30,7 +30,7 @@ return new class extends Migration
                 $table->decimal('agent_share', 5, 2)->nullable();
                 $table->decimal('company_share', 5, 2)->nullable();
                 
-                $table->string('unit_no');
+                $table->string('unit_no')->nullable();
                 $table->foreignId('property_type_id')->nullable()->constrained('property_types');
                 $table->string('bedrooms')->nullable(); // Studio, 1, 2, 3, 4, 5+
                 $table->decimal('unit_size', 10, 2)->nullable();

@@ -207,6 +207,13 @@
             @submit="handleStageChangeWithReason"
             @closed="clearPendingStageChange"
         />
+    <ConvertLeadModal
+        ref="convertModalRef"
+        :leadId="selectedLeadForConversion"
+        :leadData="selectedLeadData"
+        @converted="handleLeadConverted"
+        @closed="selectedLeadForConversion = null"
+    />
     <!-- Add/Edit Task Modal -->
     <div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -329,12 +336,20 @@ import avatar2 from '@/assets/images/users/user2.png'
 import ViewLeadModal from '../viewLead/ViewLeadModal.vue'
 import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
+import ConvertLeadModal from './ConvertLeadModal.vue'
 
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 
 // Import Bootstrap
 import * as bootstrap from 'bootstrap'
+
+
+const showConvertModal = ref(false)
+const selectedLeadForConversion = ref(null)
+const selectedLeadData = ref(null)
+const convertModalRef = ref(null)
+const CONVERTED_STAGE_ID = 8
 
 // Get user from storage (same pattern as header/index.vue)
 const getUserFromStorage = () => {
@@ -576,6 +591,29 @@ async function fetchResponsiblePersons() {
         // Don't throw error for this, we can still work without it
     }
 }
+
+function openConvertLeadModal(lead) {
+    selectedLeadForConversion.value = lead.id
+    selectedLeadData.value = lead
+    
+    nextTick(() => {
+        if (convertModalRef.value) {
+            convertModalRef.value.show()
+        }
+    })
+}
+
+function handleLeadConverted(deal) {
+
+   
+
+    $showNotification('Lead converted to deal successfully', 'success')
+    fetchLeads(true)
+
+    selectedLeadForConversion.value = null
+    selectedLeadData.value = null
+}
+
 
 watch(() => columns.value?.length, () => {
     nextTick(() => updateScrollArrows())
@@ -1189,6 +1227,25 @@ async function onLeadDragChange(evt, column) {
     if (evt.added) {
         const lead = evt.added.element
         const newStageId = column.status
+
+        // Check if this is the converted stage (ID 8)
+        if (newStageId === CONVERTED_STAGE_ID) {
+            // Store the lead and target stage for the modal
+            selectedLeadForConversion.value = lead.id
+            selectedLeadData.value = lead
+            
+            // Remove the lead from the converted stage (revert UI)
+            const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
+            columns.value[targetColumnIndex].leads = 
+                columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
+            
+            // Show conversion modal
+            await nextTick()
+            if (convertModalRef.value) {
+                convertModalRef.value.show()
+            }
+            return // Don't proceed with stage change
+        }
 
         const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
 

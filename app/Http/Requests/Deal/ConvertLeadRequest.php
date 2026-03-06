@@ -1,5 +1,4 @@
 <?php
-// app/Http/Requests/ConvertLeadRequest.php
 
 namespace App\Http\Requests\Deal;
 
@@ -17,8 +16,8 @@ class ConvertLeadRequest extends FormRequest
         $rules = [
             'deal_type' => 'required|in:primary,secondary,rental',
             'unit_no' => 'required|string',
-            'source' => 'nullable|string',
-            'deal_name' => 'nullable|string',
+            'source' => 'required|string',
+            'deal_name' => 'required|string',
             'property_type_id' => 'nullable|exists:property_types,id',
             'bedrooms' => 'nullable|string',
             'unit_size' => 'nullable|numeric',

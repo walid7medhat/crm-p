@@ -21,4 +21,8 @@ class LeadHistory extends Model
     {
         return $this->belongsTo(Lead::class);
     }
+    public function deal()
+    {
+        return $this->belongsTo(Deal::class);
+    }
 }

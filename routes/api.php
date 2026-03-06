@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\Deal\DealController;
 use App\Http\Controllers\Api\Deal\LeadConversionController;
 use App\Http\Controllers\Api\SuggestionController;
+use App\Http\Controllers\Api\Deal\DealActivityController;
 
 Route::get('/test-email', function () {
     try {
@@ -110,7 +111,7 @@ Route::get('/teams-with-leads', [StageController::class, 'getTeamsWithLeads'])->
 Route::middleware('jwt.auth')->group(function () {
     
     // === Lead Conversion API ===
-    Route::post('/leads/{lead}/convert-to-deal', [LeadConversionController::class, 'convert']);
+    Route::post('/leads/convert/to-deal', [LeadConversionController::class, 'convert']);
     Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);
     
     // === Deals API ===
@@ -119,6 +120,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/grouped-by-stage', [DealController::class, 'getDealsGroupedByStage']);
         Route::get('/{deal}', [DealController::class, 'show']);
         Route::put('/{deal}', [DealController::class, 'update']);
+        Route::post('/store/new', [LeadConversionController::class, 'store']);
     });
     
 });
@@ -325,7 +327,6 @@ Route::prefix('listings')->group(function(){
             Route::post('projects/{id}/update/floor-plans', [ProjectController::class, 'updateFloorPlans']);
             Route::put('projects/floor-plan-images/{id}/name', [ProjectController::class, 'updateFloorPlanName']);
 });    
-
 });
 Route::middleware('auth:api')->group(function () {
     Route::post('/user-invitations', [UserInvitationController::class, 'store']);

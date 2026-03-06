@@ -12,6 +12,7 @@ class Deal extends Model
     protected $table = 'deals';
 
     protected $fillable = [
+        'added_by',
         'lead_id',
         'deal_number',
         'deal_type',
@@ -52,6 +53,20 @@ class Deal extends Model
     public function lead()
     {
         return $this->belongsTo(Lead::class);
+    }
+      public function addedBy()
+    {
+        return $this->belongsTo(User::class, 'added_by');
+    }
+
+   public function histories()
+    {
+        return LeadHistory::query()
+            ->where(function ($query) {
+                $query->where('deal_id', $this->id)
+                      ->orWhere('lead_id', $this->lead_id);
+            })
+            ->latest();
     }
 
     public function stage()
@@ -196,4 +211,66 @@ class Deal extends Model
     {
         return $this->status === 'completed';
     }
+    public function comments()
+    {
+        return $this->hasMany(DealComment::class)->latest();
+    }
+       public function activities()
+    {
+        return $this->hasMany(DealActivity::class)->latest();
+    }
+
+    public function pendingActivities()
+    {
+        return $this->hasMany(DealActivity::class)->pending();
+    }
+    
+        public function scopeVisibleFor($query, $user)
+{
+    if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+
+        $subordinatesIds = $user->getAllSubordinatesIds();
+
+        $query->whereIn(
+            'responsible_person_id',
+            array_merge($subordinatesIds, [$user->id])
+        );
+
+    } elseif (!$user->hasRole('super_admin')) {
+
+        $query->where('responsible_person_id', $user->id);
+    }
+
+    return $query;
+}
+public function scopeFilter($query, $request)
+{
+    return $query
+        ->when($request->deal_type, fn($q,$v) => $q->where('deal_type',$v))
+        ->when($request->stage_id, fn($q,$v) => $q->where('stage_id',$v))
+        ->when($request->status, fn($q,$v) => $q->where('status',$v))
+        ->when($request->responsible_id, fn($q,$v) => $q->where('responsible_person_id',$v))
+        ->when($request->project_id, fn($q,$v) => $q->where('project_id',$v))
+        ->when($request->area_id, fn($q,$v) => $q->where('area_id',$v))
+        ->when($request->developer_id, fn($q,$v) => $q->where('developer_id',$v))
+        ->when($request->from_date, fn($q,$v) => $q->whereDate('created_at','>=',$v))
+        ->when($request->to_date, fn($q,$v) => $q->whereDate('created_at','<=',$v))
+        ->when($request->search,function($q,$search){
+
+            $q->where(function($query) use ($search){
+
+                $query->where('deal_number','like',"%$search%")
+                    ->orWhere('deal_name','like',"%$search%")
+                    ->orWhere('unit_no','like',"%$search%")
+                    ->orWhereHas('lead',function($lead) use ($search){
+
+                        $lead->where('lead_name','like',"%$search%")
+                             ->orWhere('email','like',"%$search%")
+                             ->orWhere('phone','like',"%$search%");
+                    });
+
+            });
+
+        });
+}
 }

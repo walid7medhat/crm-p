@@ -13,7 +13,7 @@ return new class extends Migration
     {
        Schema::create('lead_histories', function (Blueprint $table) {
         $table->id();
-        $table->foreignId('lead_id')->constrained()->cascadeOnDelete();
+        $table->foreignId('lead_id')->nullable()->constrained()->cascadeOnDelete();
         $table->foreignId('user_id')->nullable();
         $table->json('changes'); 
         $table->timestamps();

@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/Api/LeadConversionController.php
 
 namespace App\Http\Controllers\Api\Deal;
 
@@ -9,22 +8,24 @@ use App\Http\Resources\Deal\DealResource;
 use App\Models\Lead;
 use App\Models\Deal;
 use App\Models\Stage;
+use App\Models\DealDocument;
 use App\Models\DealParty;
+use App\Helpers\ImageHelper;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Storage;
+use App\Helpers\DealHistoryHelper;
+use App\Helpers\LeadHistoryHelper;
+use App\Events\DealUpdated;
+use App\Events\LeadUpdated;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 class LeadConversionController extends Controller
 {
-    /**
-     * تحويل Lead إلى Deal
-     * 
-     * POST /api/leads/{lead}/convert-to-deal
-     */
-    public function convert(ConvertLeadRequest $request, Lead $lead)
+   public function convert(Request $request)
     {
-        // ===== 1. التحقق من صلاحية المستخدم للـ Lead =====
         $user = auth()->user();
-        
-        // التحقق أن المستخدم يقدر يشوف الـ lead ده
+        $lead=Lead::find($request->lead_id);
+        if($lead){
         if (!$user->hasAnyRole(['super_admin'])) {
             $canAccess = false;
             
@@ -44,105 +45,97 @@ class LeadConversionController extends Controller
                 ], 403);
             }
         }
+        }
 
-        // ===== 2. التحقق من أن الـ Lead مش محول قبل كده =====
-        if ($lead->converted_to_deal_id) {
+        if ($lead && $lead->converted_to_deal_id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Lead already converted to deal',
                 'deal_id' => $lead->converted_to_deal_id
             ], 400);
         }
+        
+       
 
-        // ===== 3. التحقق من وجود مرحلة مناسبة للـ Deal =====
-        $stage = Stage::where('stage_type', 'deal')
+             $stage = Stage::where('stage_type', 'deal')
             ->where('deal_type', $request->deal_type)
             ->orderBy('order')
             ->first();
+        
 
-        if (!$stage) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No suitable stage found for this deal type'
-            ], 400);
-        }
-
-        // ===== 4. بدأ المعاملة (Transaction) =====
         try {
             DB::beginTransaction();
 
-            // ===== 5. إنشاء رقم الصفقة =====
             $dealNumber = $this->generateDealNumber($lead);
 
-            // ===== 6. إنشاء الصفقة =====
             $deal = Deal::create([
-                // الربط بالـ Lead
-                'lead_id' => $lead->id,
+                'added_by'=>$user->id,
+                'lead_id' => $lead?->id,
                 'deal_number' => $dealNumber,
                 
-                // نوع ومرحلة الصفقة
                 'deal_type' => $request->deal_type,
                 'stage_id' => $stage->id,
                 
-                // المعلومات الأساسية
-                'source' => $request->source,
-                'deal_name' => $request->deal_name,
-                'status' => 'draft',
-                
-                // التفاصيل المالية
-                'deal_total_amount' => $request->deal_total_amount,
-                'currency' => $request->currency ?? 'AED',
-                'deal_commission' => $request->deal_commission,
-                'agent_share' => $request->agent_share,
-                'company_share' => $request->company_share,
-                
-                // تفاصيل العقار (في نفس الجدول)
+                'source' => $lead->lead_source,
+                'deal_name' => $lead->lead_name,
+
+                'deal_total_amount' => $lead->budget,
+                'currency' => $lead->currency ?? 'AED',
+               
                 'unit_no' => $request->unit_no,
                 'property_type_id' => $request->property_type_id,
-                'bedrooms' => $request->bedrooms,
-                'unit_size' => $request->unit_size,
-                'property_link' => $request->property_link,
-                'property_reference' => $request->property_reference,
-                
-                // العلاقات
-                'project_id' => $request->project_id,
-                'area_id' => $request->area_id,
-                'developer_id' => $request->developer_id,
-                
-                // المسؤول
-                'responsible_person_id' => $request->responsible_person_id ?? $lead->responsible_person_id,
-                
-                // Tracking
-                'created_by' => auth()->id(),
-                
-                // Metadata
-                'metadata' => [
-                    'converted_from_lead' => $lead->id,
-                    'converted_at' => now()->toDateTimeString(),
-                    'lead_data' => [
-                        'id' => $lead->id,
-                        'name' => $lead->lead_name,
-                        'email' => $lead->email,
-                        'phone' => $lead->phone
-                    ]
-                ]
+                'bedrooms' => $lead->bedrooms,
+                'created_by'=>auth()->user()->id,
+                'addedBy'=>auth()->user()->id,
+                'responsible_person_id '=>$lead->responsible_person_id ,
             ]);
-
-            // ===== 7. إنشاء أطراف الصفقة حسب النوع =====
-            $this->createDealParties($deal, $request);
-
-            // ===== 8. تحديث الـ Lead =====
-            $lead->update([
-                'converted_to_deal_id' => $deal->id,
-                'converted_at' => now()
+          
+            DealParty::create([
+                    'deal_id' => $deal->id,
+                    'party_type' => 'buyer',
+                    'party_role' => 'primary',
+                    'first_name' => $lead->first_name,
+                    'last_name' =>$lead->last_name,
+                    'date_of_birth' => $lead->date_of_birth,
+                    'phone' => $lead->work_phone,
+                    'email' => $lead->email,
+                    
+                    'amount' => $lead->budget,
+                ]);
+           
+            DealHistoryHelper::log(
+                $deal->id,
+                ['action' => 'created']
+            );
+            $oldStage=$lead->stage;
+             $lead->update([
+                //  converted stage
+                'stage_id' => 8,
+                'last_stage_change_at' => now(),
+                  'converted_to_deal_id' =>$deal->id,
+                  'converted_at'=>Carbon::now(),
+                //  'revert'=>null,
             ]);
+            $newStage=$lead->stage;
+            
+         $changes = [
+            'old_stage' => $oldStage->name,
+            'new_stage' => $newStage->name
+        ];
+          LeadHistoryHelper::log(
+            $lead->id,
+            [
+                'action' => 'stage_changed',
+                'old_stage' => $oldStage->name,
+                'new_stage' => $newStage->name
+            ]
+        );
+        broadcast(new LeadUpdated($lead, 'stage_changed', null, $changes));
+        broadcast(new DealUpdated($deal, 'created'));
+
 
             DB::commit();
 
-            // ===== 9. Dispatch Event (اختياري) =====
-            // event(new \App\Events\LeadConvertedToDeal($lead, $deal, auth()->user()));
-
-            // ===== 10. إرجاع النتيجة =====
             return response()->json([
                 'success' => true,
                 'message' => 'Lead converted to deal successfully',
@@ -153,7 +146,150 @@ class LeadConversionController extends Controller
                     'area',
                     'developer',
                     'parties',
-                    'responsiblePerson'
+                    'responsiblePerson',
+                    'documents'
+                ]))
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            dd($e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to convert lead to deal',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function store(ConvertLeadRequest $request)
+    {
+        $user = auth()->user();
+        $lead=Lead::find($request->lead_id);
+        if($lead){
+        if (!$user->hasAnyRole(['super_admin'])) {
+            $canAccess = false;
+            
+            if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+                $subordinatesIds = $user->getAllSubordinatesIds();
+                $canAccess = in_array($lead->responsible_person_id, array_merge($subordinatesIds, [$user->id])) 
+                        || in_array($lead->added_by, $subordinatesIds);
+            } else {
+                $canAccess = $lead->responsible_person_id == $user->id 
+                        || $lead->added_by == $user->id;
+            }
+            
+            if (!$canAccess) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized to convert this lead'
+                ], 403);
+            }
+        }
+        }
+
+        if ($lead && $lead->converted_to_deal_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lead already converted to deal',
+                'deal_id' => $lead->converted_to_deal_id
+            ], 400);
+        }
+
+        if (!$request->filled('stage_id')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Stage ID is required'
+            ], 400);
+        }
+
+        $stage = Stage::where('id', $request->stage_id)
+            ->where('stage_type', 'deal')
+            ->where('deal_type', $request->deal_type)
+            ->first();
+
+        if (!$stage) {
+              $stage = Stage::where('stage_type', 'deal')
+            ->where('deal_type', $request->deal_type)
+            ->orderBy('order')
+            ->first();
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $dealNumber = $this->generateDealNumber($lead);
+
+            $deal = Deal::create([
+                'added_by'=>$user->id,
+                'lead_id' => $lead?->id,
+                'deal_number' => $dealNumber,
+                
+                'deal_type' => $request->deal_type,
+                'stage_id' => $stage->id,
+                
+                'source' => $request->source,
+                'deal_name' => $request->deal_name,
+                'status' => 'draft',
+                
+                'deal_total_amount' => $request->deal_total_amount,
+                'currency' => $request->currency ?? 'AED',
+                'deal_commission' => $request->deal_commission,
+                'agent_share' => $request->agent_share,
+                'company_share' => $request->company_share,
+                
+                'unit_no' => $request->unit_no,
+                'property_type_id' => $request->property_type_id,
+                'bedrooms' => $request->bedrooms,
+                'unit_size' => $request->unit_size,
+                'property_link' => $request->property_link,
+                'property_reference' => $request->property_reference,
+                
+                'project_id' => $request->project_id,
+                'area_id' => $request->area_id,
+                'developer_id' => $request->developer_id,
+                
+                'responsible_person_id' => $request->responsible_person_id ?? $lead->responsible_person_id,
+                
+                'created_by' => auth()->id(),
+                
+                'metadata' => [
+                    'converted_from_lead' => $lead?->id,
+                    'converted_at' => now()->toDateTimeString(),
+                    'lead_data' => [
+                        'id' => $lead?->id,
+                        'name' => $lead?->lead_name,
+                        'email' => $lead?->email,
+                        'phone' => $lead?->phone
+                    ]
+                ]
+            ]);
+
+            $parties = $this->createDealParties($deal, $request);
+
+            if ($request->hasFile('documents')) {
+                $this->uploadDocuments($deal, $request, $parties);
+            }
+            DealHistoryHelper::log(
+                $deal->id,
+                ['action' => 'created']
+            );
+        broadcast(new DealUpdated($deal, 'created'));
+
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Lead converted to deal successfully',
+                'data' => new DealResource($deal->load([
+                    'stage',
+                    'propertyType',
+                    'project',
+                    'area',
+                    'developer',
+                    'parties',
+                    'responsiblePerson',
+                    'documents'
                 ]))
             ], 201);
 
@@ -169,17 +305,122 @@ class LeadConversionController extends Controller
     }
 
     /**
+     * رفع وحفظ المستندات باستخدام ImageHelper
+     */
+    private function uploadDocuments($deal, $request, $parties)
+    {
+        $documents = $request->input('documents', []);
+        $files = $request->file('documents');
+        
+        // تجميع الملفات حسب الـ index
+        $groupedFiles = [];
+        if(count($files)>0){
+        foreach ($files as $index => $file) {
+            $groupedFiles[$index] = $file;
+        }
+        }
+        if(count($documents)>0){
+        foreach ($documents as $index => $docData) {
+            if (!isset($groupedFiles[$index])) {
+                continue;
+            }
+
+            $file = $groupedFiles[$index];
+            $category = $docData['category']; // buyer, seller, tenant, landlord, property
+            $type = $docData['type']; // national_id, passport, etc
+            
+            // تحديد الـ party_id بناءً على الـ category
+            $partyId = $this->getPartyIdByCategory($parties, $category);
+            
+            // تحديد مسار الحفظ
+            $storagePath = "deals/{$deal->id}/{$category}";
+            
+            // التحقق من نوع الملف
+            $isImage = in_array($file->getMimeType(), ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']);
+            
+            if ($isImage) {
+                // استخدام ImageHelper لضغط وتحويل الصور
+                $imageOptions = [
+                    'quality' => 80,
+                    'max_width' => 1920,
+                    'max_height' => 1080,
+                    'watermark' => [
+                        'enabled' => false, // يمكن تفعيله إذا أردت
+                    ]
+                ];
+                
+                // تحويل الصور إلى WebP
+                $result = ImageHelper::compressAndConvertToWebP($file, $storagePath, $imageOptions);
+                $filePath = $result['path'];
+                $fileSize = $result['compressed_size'] ?? $file->getSize();
+                
+            } else {
+                // للملفات غير الصور (PDF, DOC, etc)
+                $path = $file->store($storagePath, 'public');
+                $filePath = $path;
+                $fileSize = $file->getSize();
+            }
+
+            // حفظ في قاعدة البيانات
+            DealDocument::create([
+                'deal_id' => $deal->id,
+                'deal_party_id' => $partyId,
+                'document_category' => $category,
+                'document_type' => $type,
+                'file_name' => $file->getClientOriginalName(),
+                'file_path' => $filePath,
+                'file_size' => $fileSize,
+                'mime_type' => $file->getMimeType(),
+                'uploaded_by' => auth()->id()
+            ]);
+        }
+        }
+    }
+
+    /**
+     * الحصول على Party ID حسب الفئة
+     */
+    private function getPartyIdByCategory($parties, $category)
+    {
+        // Map category to party_type
+        $partyTypeMap = [
+            'buyer' => 'buyer',
+            'seller' => 'seller',
+            'tenant' => 'tenant',
+            'landlord' => 'landlord',
+            'property' => null // property documents don't belong to a party
+        ];
+
+        $partyType = $partyTypeMap[$category] ?? null;
+        
+        if (!$partyType) {
+            return null;
+        }
+
+        // Find the first party with this type and primary role
+        foreach ($parties as $party) {
+            if ($party->party_type === $partyType && $party->party_role === 'primary') {
+                return $party->id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * إنشاء أطراف الصفقة حسب النوع
      */
     private function createDealParties($deal, $request)
     {
+        $parties = [];
+
         switch ($request->deal_type) {
             
             case 'rental':
                 // Client (العميل)
                 if ($request->client_name) {
                     $nameParts = explode(' ', $request->client_name, 2);
-                    DealParty::create([
+                    $parties[] = DealParty::create([
                         'deal_id' => $deal->id,
                         'party_type' => 'client',
                         'party_role' => 'primary',
@@ -191,7 +432,7 @@ class LeadConversionController extends Controller
                 }
 
                 // Tenant (المستأجر)
-                DealParty::create([
+                $parties[] = DealParty::create([
                     'deal_id' => $deal->id,
                     'party_type' => 'tenant',
                     'party_role' => 'primary',
@@ -203,7 +444,7 @@ class LeadConversionController extends Controller
                 ]);
 
                 // Landlord (المالك)
-                DealParty::create([
+                $parties[] = DealParty::create([
                     'deal_id' => $deal->id,
                     'party_type' => 'landlord',
                     'party_role' => 'primary',
@@ -220,7 +461,7 @@ class LeadConversionController extends Controller
 
             case 'primary':
                 // Buyer (المشتري)
-                DealParty::create([
+                $parties[] = DealParty::create([
                     'deal_id' => $deal->id,
                     'party_type' => 'buyer',
                     'party_role' => 'primary',
@@ -238,8 +479,8 @@ class LeadConversionController extends Controller
                 ]);
 
                 // Secondary Buyer (لو موجود)
-                if ($request->has('secondary_buyer_first_name')) {
-                    DealParty::create([
+                if ($request->filled('secondary_buyer_first_name')) {
+                    $parties[] = DealParty::create([
                         'deal_id' => $deal->id,
                         'party_type' => 'buyer',
                         'party_role' => 'secondary',
@@ -254,7 +495,7 @@ class LeadConversionController extends Controller
 
             case 'secondary':
                 // Buyer (المشتري)
-                DealParty::create([
+                $parties[] = DealParty::create([
                     'deal_id' => $deal->id,
                     'party_type' => 'buyer',
                     'party_role' => 'primary',
@@ -272,7 +513,7 @@ class LeadConversionController extends Controller
                 ]);
 
                 // Seller (البائع)
-                DealParty::create([
+                $parties[] = DealParty::create([
                     'deal_id' => $deal->id,
                     'party_type' => 'seller',
                     'party_role' => 'primary',
@@ -286,8 +527,8 @@ class LeadConversionController extends Controller
                 ]);
 
                 // Secondary Buyer (لو موجود)
-                if ($request->has('secondary_buyer_first_name')) {
-                    DealParty::create([
+                if ($request->filled('secondary_buyer_first_name')) {
+                    $parties[] = DealParty::create([
                         'deal_id' => $deal->id,
                         'party_type' => 'buyer',
                         'party_role' => 'secondary',
@@ -300,6 +541,8 @@ class LeadConversionController extends Controller
                 }
                 break;
         }
+
+        return $parties;
     }
 
     /**
