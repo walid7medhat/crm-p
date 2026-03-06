@@ -69,8 +69,17 @@
         </div>
          <template v-if="hasAdditionalFacebookQuestions">
             <div class="info-group" v-for="(answer, question) in facebookQuestions" :key="question">
-                <label class="form-label-custom">  {{ formatQuestion(question) }}</label>
-                <div class="info-value">{{ answer }}</div>
+                <label class="form-label-custom">{{ formatQuestion(question) }}</label>
+            
+                <div class="info-value">
+                    <a v-if="question === 'link'" :href="answer" target="_blank">
+                        {{ answer }}
+                    </a>
+            
+                    <span v-else>
+                        {{ answer }}
+                    </span>
+                </div>
             </div>
         </template>
         <div class="info-group">
