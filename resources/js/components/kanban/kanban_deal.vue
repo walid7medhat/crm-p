@@ -637,21 +637,26 @@ const $showNotification = (message, type = 'info') => {
     min-height: calc(100vh - 72px);
     display: flex;
     flex-direction: column;
-    background-color: #ffffff !important;
-    margin-top: 11px;
-    border-radius: 20px;
+    background-color: transparent !important;
+    /*margin: 8px 12px 0;*/
+    border-radius: 16px;
 }
 
-/* Bootstrap Tabs Customization */
+:deep(.kanban-tabs-container),
+:deep(.kanban-tabs-container .nav),
+:deep(.kanban-tabs-container > .nav-tabs) {
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+/* Bootstrap Tabs Customization – tighter section spacing and left/right */
 :deep(.kanban-tabs-container > .nav-tabs) {
     background: transparent;
-    height: 72px;
+    height: 56px;
     flex-shrink: 0;
-    border-bottom: 1px solid #E2E8F0 !important;
-    padding: 24px;
+    padding: 12px 16px;
     display: flex;
     align-items: center;
-    gap: 32px;
+    gap: 16px;
     flex-wrap: nowrap;
 }
 
@@ -664,8 +669,9 @@ const $showNotification = (message, type = 'info') => {
 
 :deep(.kanban-tabs-container .nav-link) {
     border: none !important;
+    border-bottom: none !important;
     background: transparent !important;
-    padding: 20px !important;
+    padding: 10px 14px !important;
     height: 100%;
     display: flex;
     align-items: center;
@@ -673,19 +679,20 @@ const $showNotification = (message, type = 'info') => {
     position: relative;
     margin-bottom: 0 !important;
     text-decoration: none;
-    color: #64748B;
+    color: #fff;
     font-family: 'Montserrat', sans-serif;
-    font-size: 14px; /* text-md */
+    font-size: 15px;
+    font-weight: 600;
     transition: all 0.2s ease;
 }
 
 :deep(.kanban-tabs-container .nav-link:hover) {
-    color: #01062C;
+    color: #fff;
 }
 
 :deep(.kanban-tabs-container .nav-link.active) {
-    color: #01062C !important;
-    font-weight: 600;
+    color: #fff !important;
+    font-weight: 700;
 }
 
 :deep(.kanban-tabs-container .nav-link .active-indicator) {
@@ -711,28 +718,33 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .btn-create-new {
-    opacity: 1;
-    border-radius: 50px;
-    padding: 2px 18px;
-    background-color: #0a0f3d;
+     border-radius: 999px;
+    padding: 4px 14px;
+    min-height: 30px;
+    background: linear-gradient(90deg, #12b981, #22c55e);
+    border: 1px solid #16a34a;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.45);
+    transition: all 0.2s ease;
 }
 
 .btn-create-new:hover {
-    background-color: #0a0f3d;
+   background: linear-gradient(90deg, #16a34a, #22c55e);
+    border-color: #15803d;
 }
 
 .action-icon-btn {
-    width: 40px;
-    height: 40px;
-    background: white;
-    border-color: #E2E8F0 !important;
-    transition: all 0.2s;
-    color: inherit;
+ background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.2s ease;
+    color: rgba(255, 255, 255, 0.95);
 }
 
 .action-icon-btn:hover {
-    background: #F8FAFC;
-    border-color: #CBD5E1 !important;
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.7) !important;
+    color: #fff;
 }
 
 .action-icon-btn:focus {
@@ -741,7 +753,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 :deep(.action-icon-btn-dropdown .action-icon-btn) {
-    color: #1E293B !important;
+        color: rgba(255, 255, 255, 0.95) !important;
 }
 
 .radius-circle {
@@ -751,13 +763,14 @@ const $showNotification = (message, type = 'info') => {
 .btn-create-new-text {
     font-style: Medium;
     font-size: 14px;
-    color: #FFFF;
-    margin: 5px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 2px;
 }
 
 /* Utility Classes */
 .text-warning-600 {
-    color: #D97706 !important;
+    color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .text-s {
