@@ -184,7 +184,7 @@ const pollingInterval = ref(null)
 
 const tabs = computed(() => {
     const baseTabs = [
-        // { id: 'deals', name: 'Deals', hasChevron: false },
+        { id: 'deals', name: 'Deals', hasChevron: false },
         { id: 'leads', name: 'Leads', hasChevron: false },
         // { id: 'inventory', name: 'Inventory', hasChevron: true },
         // { id: 'costumers', name: 'Costumers', hasChevron: true },

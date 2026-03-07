@@ -22,10 +22,15 @@ class StageRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('stages')->ignore($stageId)
+                   Rule::unique('stages')->where(function ($query) {
+                    return $query->where('stage_type', $this->stage_type)
+                                 ->where('deal_type', $this->deal_type);
+                })->ignore($stageId)
             ],
             'order' => 'nullable|integer|min:0',
             'color' => 'nullable|string|max:255',
+            'stage_type'=>'nullable',
+            'deal_type'=>'nullable',
         ];
     }
 
