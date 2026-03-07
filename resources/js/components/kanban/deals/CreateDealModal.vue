@@ -7,9 +7,11 @@
     size="xl"
     centered
     body-class="p-0"
+    @hidden="resetForm"
+    @shown="onModalShown"
   >
     <div class="create-deal-modal-content p-3">
-      <!-- Header: Title + Deal Type Tabs + Close -->
+      <!-- Header -->
       <div class="modal-header-deal d-flex justify-content-between align-items-center flex-wrap gap-2 px-1">
         <div class="d-flex align-items-center gap-3 flex-grow-1">
           <span class="modal-title">Create New Deal</span>
@@ -25,26 +27,37 @@
             </button>
           </div>
         </div>
-        <button class="close-btn border-0 bg-transparent p-0 d-flex align-items-center justify-content-center" @click="close">
+        <button class="close-btn" @click="close">
           <iconify-icon icon="lucide:x"></iconify-icon>
         </button>
       </div>
 
-      <!-- Deal progress / stages (changes by deal type) -->
+      <!-- Lead Conversion Banner -->
+      <div v-if="leadId" class="lead-info-banner px-1 py-2">
+        <div class="alert alert-info d-flex align-items-center gap-2 mb-0">
+          <iconify-icon icon="lucide:info" class="text-info"></iconify-icon>
+          <span>Converting Lead #{{ leadId }} to Deal</span>
+          <b-button size="sm" variant="outline-info" @click="loadLeadData" class="ms-auto">
+            Load Lead Data
+          </b-button>
+        </div>
+      </div>
+
+        <!-- Deal progress / stages (changes by deal type) -->
       <div class="deal-progress-wrapper py-3 px-1">
         <div class="deal-progress-bar">
           <template v-for="(stage, index) in currentStages" :key="stage.id">
             <div
-              class="deal-stage-pill"
-              :class="{ active: index <= selectedStageIndex }"
-              :style="{
-                backgroundColor: index <= selectedStageIndex ? stage.bg : 'transparent',
-                borderColor: index <= selectedStageIndex ? stage.dotColor : '#E2E8F0'
-              }"
-              @click="selectedStageIndex = index"
+                    class="deal-stage-pill"
+                    :class="{ active: selectedStageId === stage.id }"
+                    :style="{
+                      backgroundColor: selectedStageId === stage.id ? (stage.color || '#DBEAFE') : 'transparent',
+                      borderColor: selectedStageId === stage.id ? (stage.color || '#3B82F6') : '#E2E8F0'
+                    }"
+                    @click="selectedStageId = stage.id"
             >
               <div class="stage-circle">
-                <div class="stage-dot" :style="{ backgroundColor: stage.dotColor }"></div>
+                <div class="stage-dot" :style="{ backgroundColor: stage.color }"></div>
               </div>
               <span class="stage-text">{{ stage.name }}</span>
             </div>
@@ -52,21 +65,21 @@
           </template>
         </div>
       </div>
-
-      <!-- Form content (Primary / Secondary / Rental) -->
+      <!-- Unified Form -->
       <div class="form-scroll-area">
-        <!-- Primary / Off Plan -->
-        <div v-if="dealType === 'primary'" class="step-content">
-          <PrimaryDealForm ref="primaryFormRef" v-model="primaryForm" :users="users" />
-        </div>
-        <!-- Secondary -->
-        <div v-else-if="dealType === 'secondary'" class="step-content">
-          <SecondaryDealForm ref="secondaryFormRef" v-model="secondaryForm" :users="users" />
-        </div>
-        <!-- Rental -->
-        <div v-else class="step-content">
-          <RentalDealForm ref="rentalFormRef" v-model="rentalForm" :users="users" />
-        </div>
+        <DealForm
+          ref="dealFormRef"
+          v-model="formData"
+          :deal-type="dealType"
+          :users="users"
+          :sources="sources"
+          :property-types="propertyTypes"
+          :developers="developers"
+          :areas="areas"
+          @search-areas="searchAreas"
+          @search-communities="searchCommunities"
+          @search-sub-communities="searchSubCommunities"
+        />
       </div>
 
       <!-- Footer -->
@@ -74,9 +87,13 @@
         <div class="d-flex align-items-center justify-content-end gap-3">
           <button class="btn-clear" @click="resetForm" :disabled="isSubmitting">Clear</button>
           <button class="btn-next-step" @click="submitForm" :disabled="isSubmitting">
-            <span v-if="isSubmitting">Creating...</span>
-            <span v-else>Next Step</span>
-            <iconify-icon icon="lucide:chevron-right" class="ms-1"></iconify-icon>
+            <span v-if="isSubmitting">
+              <b-spinner small></b-spinner> Creating...
+            </span>
+            <span v-else>
+              {{ leadId ? 'Convert Lead to Deal' : 'Create Deal' }}
+              <iconify-icon icon="lucide:chevron-right" class="ms-1" />
+            </span>
           </button>
         </div>
       </div>
@@ -86,27 +103,39 @@
 
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue'
-import { BModal } from 'bootstrap-vue-3'
-import PrimaryDealForm from './PrimaryDealForm.vue'
-import SecondaryDealForm from './SecondaryDealForm.vue'
-import RentalDealForm from './RentalDealForm.vue'
+import { BModal, BSpinner, BButton } from 'bootstrap-vue-3'
+import DealForm from './DealForm.vue'
 import api from '@/plugins/axios'
+import Swal from 'sweetalert2'
 
 const props = defineProps({
-  modelValue: Boolean
+  modelValue: Boolean,
+  leadId: { type: [Number, String], default: null },
+  dealType: { type: String, default: 'primary' }
 })
 
 const emit = defineEmits(['update:modelValue', 'deal-created'])
 
 const show = ref(props.modelValue)
-const dealType = ref('primary')
-const selectedStageIndex = ref(0)
+const dealType = ref(props.dealType || 'primary')
+const selectedStageId = ref(null)
 const isSubmitting = ref(false)
-const users = ref([])
+const stagesLoading = ref(false)
+const dealFormRef = ref(null)
 
-const primaryFormRef = ref(null)
-const secondaryFormRef = ref(null)
-const rentalFormRef = ref(null)
+// Data from API
+const users = ref([])
+const usersLoading = ref(false)
+const sources = ref([])
+const stages = ref([])
+const propertyTypes = ref([])
+const developers = ref([])
+const areas = ref([])
+const communities = ref([])
+const subCommunities = ref([])
+
+// Form data
+const formData = ref({})
 
 const dealTypeTabs = [
   { id: 'primary', name: 'Primary / Off Plan' },
@@ -114,51 +143,59 @@ const dealTypeTabs = [
   { id: 'rental', name: 'Rental' }
 ]
 
-// Primary stages: EOI, Booking, SPA Signed, Deal Lost, Deal Won
-const primaryStages = [
-  { id: 'eoi', name: 'EOI', bg: '#DBEAFE', dotColor: '#3B82F6' },
-  { id: 'booking', name: 'Booking', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'spa-signed', name: 'SPA Signed (Deal Done)', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'deal-lost', name: 'Deal Lost', bg: '#FEE2E2', dotColor: '#DC2626' },
-  { id: 'deal-won', name: 'Deal Won', bg: '#D1FAE5', dotColor: '#059669' }
-]
-
-// Secondary stages
-const secondaryStages = [
-  { id: 'security-deposit', name: 'Security Deposit', bg: '#DBEAFE', dotColor: '#3B82F6' },
-  { id: 'mou-signed', name: 'MOU / Contract If Signed', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'noc', name: 'NOC', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'deal-lost', name: 'Deal Lost', bg: '#FEE2E2', dotColor: '#DC2626' },
-  { id: 'deal-won', name: 'Deal Won', bg: '#D1FAE5', dotColor: '#059669' }
-]
-
-// Rental stages
-const rentalStages = [
-  { id: 'lease-offer', name: 'Lease Offer Letter', bg: '#DBEAFE', dotColor: '#3B82F6' },
-  { id: 'guarantee', name: 'Guarantee Letter / Cheque Collected', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'internal-contract', name: 'Internal Contract Signed', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'ejari', name: 'Ejari / Tawtheq Issued', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'tenant-moved', name: 'Tenant moved in', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'close-deal', name: 'Close Deal', bg: '#D1FAE5', dotColor: '#059669' }
-]
-
+// Get stages for current deal type
 const currentStages = computed(() => {
-  if (dealType.value === 'secondary') return secondaryStages
-  if (dealType.value === 'rental') return rentalStages
-  return primaryStages
+  console.log('All stages:', stages.value)
+  
+  if (!stages.value || stages.value.length === 0) {
+    return []
+  }
+  
+  // لو الـ stages ملهمش stage_type أو deal_type، نستخدم الكل
+  const hasStageType = stages.value.some(s => s.stage_type)
+  const hasDealType = stages.value.some(s => s.deal_type)
+  
+  if (!hasStageType && !hasDealType) {
+    console.log('Stages have no type info, showing all')
+    return stages.value
+  }
+  
+  const filtered = stages.value.filter(stage => {
+    const stageType = stage.stage_type || 'deal'
+    const stageDealType = stage.deal_type || dealType.value
+    return stageType === 'deal' && stageDealType === dealType.value
+  })
+  
+  console.log('Filtered stages:', filtered)
+  return filtered.sort((a, b) => (a.order || 0) - (b.order || 0))
 })
 
-// Reset stage index when switching deal type
-watch(dealType, () => {
-  selectedStageIndex.value = 0
+// Watch for deal type changes
+watch(dealType, async (newVal, oldVal) => {
+  console.log('Deal type changed from', oldVal, 'to', newVal)
+  selectedStageId.value = null
+  await fetchStages()
+  resetFormData()
 })
 
-const primaryForm = ref({})
-const secondaryForm = ref({})
-const rentalForm = ref({})
+// Watch for changes in the dealType prop from parent
+watch(() => props.dealType, (newVal) => {
+  if (newVal && newVal !== dealType.value) {
+    console.log('Prop dealType changed to', newVal)
+    dealType.value = newVal
+  }
+})
 
-watch(() => props.modelValue, (val) => {
+// Watch for modal visibility
+watch(() => props.modelValue, async (val) => {
+  console.log('Modal visibility changed to', val)
   show.value = val
+  if (val) {
+    await loadInitialData()
+    if (props.leadId) {
+      checkLeadConversionStatus()
+    }
+  }
 })
 
 watch(show, (val) => {
@@ -166,46 +203,501 @@ watch(show, (val) => {
   if (!val) resetForm()
 })
 
+// عندما يظهر المودال
+function onModalShown() {
+  console.log('Modal shown, current stages:', currentStages.value)
+}
+
+// Load all initial data
+async function loadInitialData() {
+  console.log('Loading initial data...')
+  await Promise.all([
+    fetchUsers(),
+    fetchSources(),
+    fetchStages(),
+    fetchPropertyTypes(),
+    fetchDevelopers()
+  ])
+}
+
+// API Calls
 async function fetchUsers() {
+  usersLoading.value = true
   try {
     const response = await api.get('/available-responsible-persons')
-    const data = response.data?.data ?? response.data
-    users.value = Array.isArray(data) ? data : []
-  } catch (e) {
-    console.error('Error fetching users:', e)
+    console.log('Users response:', response.data)
+    
+    const responseData = response.data
+    if (responseData?.data) {
+      users.value = Array.isArray(responseData.data) ? responseData.data : []
+    } else if (Array.isArray(responseData)) {
+      users.value = responseData
+    } else {
+      users.value = []
+    }
+    
+    console.log('Processed users:', users.value)
+  } catch (error) {
+    console.error('Error fetching users:', error)
+    users.value = []
+    
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Failed to load responsible persons'
+    })
+  } finally {
+    usersLoading.value = false
   }
 }
 
-onMounted(() => {
-  fetchUsers()
-})
+async function fetchSources() {
+  try {
+    const response = await api.get('/sources')
+    const responseData = response.data
+    if (responseData?.data) {
+      sources.value = Array.isArray(responseData.data) ? responseData.data : []
+    } else if (Array.isArray(responseData)) {
+      sources.value = responseData
+    } else {
+      sources.value = []
+    }
+  } catch (error) {
+    console.error('Error fetching sources:', error)
+    sources.value = []
+  }
+}
 
-function close() {
-  show.value = false
+async function fetchStages() {
+  stagesLoading.value = true
+  try {
+    console.log('Fetching stages for deal type:', dealType.value)
+    const response = await api.get('/stages', {
+      params: {
+        stage_type: 'deal',
+        deal_type: dealType.value
+      }
+    })
+    
+    console.log('Stages API response:', response.data)
+    
+    const responseData = response.data
+    
+    if (responseData?.data?.data) {
+      stages.value = Array.isArray(responseData.data.data) ? responseData.data.data : []
+    } else if (responseData?.data && Array.isArray(responseData.data)) {
+      stages.value = responseData.data
+    } else if (Array.isArray(responseData)) {
+      stages.value = responseData
+    } else {
+      stages.value = []
+    }
+    
+    console.log('Processed stages:', stages.value)
+    
+    console.log('Stage types check:', stages.value.map(s => ({
+      id: s.id,
+      name: s.name,
+      stage_type: s.stage_type || 'deal', 
+      deal_type: s.deal_type || dealType.value 
+    })))
+    
+    const filteredStages = stages.value.filter(stage => {
+      const stageType = stage.stage_type || 'deal'
+      const stageDealType = stage.deal_type || dealType.value
+      return stageType === 'deal' && stageDealType === dealType.value
+    })
+    
+    console.log('Filtered stages for', dealType.value, ':', filteredStages)
+    
+    if (filteredStages.length > 0 && !selectedStageId.value) {
+      selectedStageId.value = filteredStages[0].id
+      console.log('Auto-selected stage:', selectedStageId.value)
+    }
+  } catch (error) {
+    console.error('Error fetching stages:', error)
+    stages.value = []
+    
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Failed to load stages'
+    })
+  } finally {
+    stagesLoading.value = false
+  }
+}
+
+async function fetchPropertyTypes() {
+  try {
+    const response = await api.get('/listings/property-types')
+    const responseData = response.data
+    if (responseData?.data) {
+      propertyTypes.value = Array.isArray(responseData.data) ? responseData.data : []
+    } else if (Array.isArray(responseData)) {
+      propertyTypes.value = responseData
+    } else {
+      propertyTypes.value = []
+    }
+  } catch (error) {
+    console.error('Error fetching property types:', error)
+    propertyTypes.value = []
+  }
+}
+
+async function fetchDevelopers() {
+  try {
+    const response = await api.get('/listings/developers')
+    const responseData = response.data
+    if (responseData?.data) {
+      developers.value = Array.isArray(responseData.data) ? responseData.data : []
+    } else if (Array.isArray(responseData)) {
+      developers.value = responseData
+    } else {
+      developers.value = []
+    }
+  } catch (error) {
+    console.error('Error fetching developers:', error)
+    developers.value = []
+  }
+}
+
+// Area search functions
+async function searchAreas(search, parentId = null) {
+  try {
+    const params = {}
+    if (parentId) {
+      params.parent_id = parentId
+      params.type = 'city'
+    } else {
+      params.type = 'country'
+    }
+    
+    const response = await api.get('/listings/areas', { params })
+    const responseData = response.data
+    if (responseData?.data) {
+      areas.value = Array.isArray(responseData.data) ? responseData.data : []
+    } else if (Array.isArray(responseData)) {
+      areas.value = responseData
+    } else {
+      areas.value = []
+    }
+    return areas.value
+  } catch (error) {
+    console.error('Error searching areas:', error)
+    return []
+  }
+}
+
+async function searchCommunities(parentId) {
+  try {
+    const response = await api.get('/listings/areas', {
+      params: {
+        type: 'community',
+        parent_id: parentId
+      }
+    })
+    const responseData = response.data
+    if (responseData?.data) {
+      communities.value = Array.isArray(responseData.data) ? responseData.data : []
+    } else if (Array.isArray(responseData)) {
+      communities.value = responseData
+    } else {
+      communities.value = []
+    }
+    return communities.value
+  } catch (error) {
+    console.error('Error searching communities:', error)
+    return []
+  }
+}
+
+async function searchSubCommunities(parentId) {
+  try {
+    const response = await api.get('/listings/areas', {
+      params: {
+        type: 'sub_community',
+        parent_id: parentId
+      }
+    })
+    const responseData = response.data
+    if (responseData?.data) {
+      subCommunities.value = Array.isArray(responseData.data) ? responseData.data : []
+    } else if (Array.isArray(responseData)) {
+      subCommunities.value = responseData
+    } else {
+      subCommunities.value = []
+    }
+    return subCommunities.value
+  } catch (error) {
+    console.error('Error searching sub-communities:', error)
+    return []
+  }
+}
+
+// Lead conversion functions
+async function checkLeadConversionStatus() {
+  if (!props.leadId) return
+  
+  try {
+    const response = await api.get(`/leads/${props.leadId}/can-convert`)
+    const responseData = response.data?.data ?? response.data
+    
+    if (!responseData.can_convert) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Lead Already Converted',
+        text: `This lead has already been converted to deal #${responseData.converted_to_deal_id}`,
+        confirmButtonText: 'OK'
+      })
+      close()
+    }
+  } catch (error) {
+    console.error('Error checking lead conversion status:', error)
+  }
+}
+
+async function loadLeadData() {
+  if (!props.leadId) return
+  
+  try {
+    const response = await api.get(`/leads/${props.leadId}`)
+    const lead = response.data?.data ?? response.data
+    
+    // Map lead data to form
+    formData.value = {
+      ...formData.value,
+      source: lead.source || lead.lead_source,
+      deal_name: lead.lead_name,
+      unit_no: lead.unit_no || '',
+      property_type_id: lead.property_type_id,
+      bedrooms: lead.bedrooms,
+      unit_size: lead.unit_size || '',
+      project_id: lead.project_id,
+      area_id: lead.area_id,
+      developer_id: lead.developer_id,
+      responsible_person_id: lead.responsible_person_id,
+      deal_total_amount: lead.budget,
+      currency: lead.currency || 'AED',
+      
+      // Buyer/Tenant data based on lead
+      buyer_first_name: lead.first_name || '',
+      buyer_last_name: lead.last_name || '',
+      buyer_dob: lead.date_of_birth || '',
+      buyer_phone: lead.phone || lead.mobile || lead.work_phone,
+      buyer_email: lead.email || '',
+      buyer_nationality: lead.nationality || '',
+      amount: lead.budget || ''
+    }
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Success',
+      text: 'Lead data loaded successfully',
+      timer: 1500,
+      showConfirmButton: false
+    })
+    
+  } catch (error) {
+    console.error('Error loading lead data:', error)
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Failed to load lead data'
+    })
+  }
+}
+
+// Submit form
+async function submitForm() {
+  if (!selectedStageId.value) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Stage Required',
+      text: 'Please select a stage for the deal'
+    })
+    return
+  }
+  
+  isSubmitting.value = true
+  
+  try {
+    // Prepare form data for API
+    const submitData = new FormData()
+    
+    // Add basic fields
+    submitData.append('deal_type', dealType.value)
+    submitData.append('stage_id', selectedStageId.value)
+    
+    if (props.leadId) {
+      submitData.append('lead_id', props.leadId)
+    }
+    
+    // Add all form fields
+    Object.keys(formData.value).forEach(key => {
+      if (formData.value[key] !== null && formData.value[key] !== undefined && formData.value[key] !== '') {
+        if (key.includes('documents') && Array.isArray(formData.value[key])) {
+          // Handle document files
+          formData.value[key].forEach((doc, index) => {
+            if (doc.file) {
+              submitData.append(`documents[${index}]`, doc.file)
+              submitData.append(`documents[${index}][category]`, doc.category)
+              submitData.append(`documents[${index}][type]`, doc.document_type)
+            }
+          })
+        } else if (!key.includes('documents')) {
+          submitData.append(key, formData.value[key])
+        }
+      }
+    })
+    
+    // Submit to API
+    const response = await api.post('/deals/store/new', submitData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Success!',
+      text: props.leadId ? 'Lead converted successfully' : 'Deal created successfully',
+      timer: 2000,
+      showConfirmButton: false
+    })
+    
+    emit('deal-created', response.data?.data ?? response.data)
+    close()
+    
+  } catch (error) {
+    console.error('Error:', error)
+    
+    if (error.response?.data?.errors) {
+      const errors = Object.values(error.response.data.errors).flat().join('\n')
+      Swal.fire({ 
+        icon: 'error', 
+        title: 'Validation Error', 
+        text: errors,
+        confirmButtonText: 'OK'
+      })
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data?.message || 'Failed to create deal',
+        confirmButtonText: 'OK'
+      })
+    }
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+function resetFormData() {
+    formData.value = {} 
+      if (dealFormRef.value && dealFormRef.value.clearAllDocuments) {
+    dealFormRef.value.clearAllDocuments()
+  }
+  formData.value = {
+    // Common fields
+    source: null,
+    deal_name: '',
+    unit_no: '',
+    property_type_id: null,
+    bedrooms: null,
+    unit_size: '',
+    project_id: null,
+    developer_id: null,
+    area_id: null,
+    property_link: '',
+    property_reference: '',
+    deal_total_amount: null,
+    deal_commission: null,
+    agent_share: null,
+    company_share: null,
+    currency: 'AED',
+    responsible_person_id: null,
+    
+    // Buyer fields
+    buyer_first_name: '',
+    buyer_last_name: '',
+    buyer_dob: '',
+    buyer_phone: '',
+    buyer_email: '',
+    buyer_nationality: '',
+    buyer_documents: [],
+    
+    // Seller fields (secondary)
+    seller_first_name: '',
+    seller_last_name: '',
+    seller_phone: '',
+    seller_email: '',
+    seller_documents: [],
+    
+    // Tenant fields (rental)
+    tenant_first_name: '',
+    tenant_last_name: '',
+    tenant_phone: '',
+    tenant_email: '',
+    tenant_nationality: '',
+    tenant_documents: [],
+    
+    // Landlord fields (rental)
+    landlord_first_name: '',
+    landlord_last_name: '',
+    landlord_phone: '',
+    landlord_email: '',
+    landlord_nationality: '',
+    landlord_documents: [],
+    
+    // Property documents
+    property_documents: [],
+    
+    // Secondary buyer
+    secondary_first_name: '',
+    secondary_last_name: '',
+    secondary_phone: '',
+    secondary_email: '',
+    secondary_amount: null
+  }
 }
 
 function resetForm() {
-  selectedStageIndex.value = 0
-  primaryForm.value = {}
-  secondaryForm.value = {}
-  rentalForm.value = {}
+  selectedStageId.value = null
+  resetFormData()
 }
 
-function submitForm() {
-  // TODO: when backend exists, validate and POST; for now just close and emit
-  const stage = currentStages.value[selectedStageIndex.value]
-  const payload = {
-    deal_type: dealType.value,
-    stage_id: stage?.id,
-    stage_index: selectedStageIndex.value,
-    form: dealType.value === 'primary' ? primaryForm.value : dealType.value === 'secondary' ? secondaryForm.value : rentalForm.value
-  }
-  emit('deal-created', payload)
-  close()
+function close() {
+     resetForm()
+  show.value = false
 }
+
+onMounted(() => {
+  console.log('CreateDealModal mounted')
+  resetFormData()
+  loadInitialData()
+})
 </script>
 
 <style scoped>
+/* Add loading state styles */
+.lead-info-banner {
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.alert-info {
+  background-color: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #1E40AF;
+  border-radius: 8px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .deals-type-tabs-inline {
+    margin-top: 10px;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
 .create-deal-modal-content {
   background: #fff;
   border-radius: 12px;

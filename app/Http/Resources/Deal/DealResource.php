@@ -70,7 +70,14 @@ class DealResource extends JsonResource
                 'name' => $this->responsiblePerson->name,
                 'avatar' => $this->responsiblePerson->avatar,
             ]),
-            
+           'buyer_name' => (function () {
+                    $buyer = $this->parties
+                        ->where('party_type', 'buyer')
+                        ->where('party_role', 'primary')
+                        ->first();
+                
+                    return $buyer ? trim($buyer->first_name . ' ' . $buyer->last_name) : null;
+                })(),
             'parties' => DealPartyResource::collection($this->whenLoaded('parties')),
             'documents' => DealDocumentResource::collection($this->whenLoaded('documents')),
             

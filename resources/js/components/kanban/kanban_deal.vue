@@ -22,9 +22,11 @@
         </div>
     </b-modal>
     <CreateLeadModal v-model="showCreateModal" @lead-created="handleLeadCreated" />
-    <CreateDealModal v-model="showCreateDealModal" @deal-created="handleDealCreated" />
+    <CreateDealModal v-model="showCreateDealModal" @deal-created="handleDealCreated" :deal-type="currentDealType" />
     <CreateIntegrationModal v-model="showCreateIntegrationModal" @integration-created="handleIntegrationCreated" />
-    <AddStageModal v-model="showAddStageModal" @stage-created="handleStageCreated" />
+    <AddStageModal v-model="showAddStageModal"   :stage-type="currentStageType"
+        :deal-type="currentDealType"
+        @stage-created="handleStageCreated" />
     <div class="kanban-main-wrapper">
         <b-tabs 
             v-model="activeTabIndex"
@@ -47,7 +49,7 @@
                 </template>
 
                 <!-- Tab Content -->
-                <Deals v-if="tab.id === 'deals'" />
+                <Deals v-if="tab.id === 'deals'" ref="dealsRef" />
                 <Leads v-else-if="tab.id === 'leads'" ref="leadsRef" />
                 <Integration v-else-if="tab.id === 'integration'" ref="integrationRef" />
             </b-tab>
@@ -173,6 +175,8 @@ const showCreateIntegrationModal = ref(false)
 const showAddStageModal = ref(false)
 const searchInputFocused = ref(false)
 const leadsRef = ref(null)
+const dealsRef = ref(null)
+
 const integrationRef = ref(null)
 const searchDropdownAnchorRef = ref(null)
 const search = ref('')
@@ -197,6 +201,23 @@ const tabs = computed(() => {
     
     return baseTabs
 })
+
+const currentStageType = computed(() => {
+    return activeTab.value === 'deals' ? 'deal' : 'lead'
+})
+
+const currentDealType = computed(() => {
+    if (activeTab.value === 'deals') {
+      
+        if (dealsRef.value) {
+            const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+            return dealsComponent?.currentDealType || 'primary'
+        }
+    }
+    return null
+})
+
+
 
 const activeTabIndex = computed({
     get: () => tabs.value.findIndex(t => t.id === activeTab.value),
@@ -567,15 +588,34 @@ const handleStageCreated = async (stageData) => {
     console.log('🎯 handleStageCreated triggered')
     console.log('New stage created:', stageData)
     
-    // Refresh the leads view to show the new stage
-    // This is necessary because we need to fetch the new stage structure
-    if (leadsRef.value) {
-        const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
-        
-        if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
-            console.log('✅ Calling fetchLeads after stage creation')
-            // Pass true for immediate execution (no debounce) since this is a user action
-            await leadsComponent.fetchLeads(true)
+    // التحقق من نوع المرحلة
+    const stageType = stageData?.stage_type || currentStageType.value
+    
+    console.log('Stage type:', stageType)
+    
+    if (stageType === 'deal') {
+        // تحديث Deals
+        if (dealsRef.value) {
+            const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+            
+            if (dealsComponent && typeof dealsComponent.fetchDeals === 'function') {
+                console.log('✅ Calling fetchDeals after stage creation')
+                await dealsComponent.fetchDeals(true)
+            } else {
+                console.log('⚠️ fetchDeals method not found on deals component')
+            }
+        } else {
+            console.log('⚠️ dealsRef is not available')
+        }
+    } else {
+        // تحديث Leads (السلوك الافتراضي)
+        if (leadsRef.value) {
+            const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+            
+            if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+                console.log('✅ Calling fetchLeads after stage creation')
+                await leadsComponent.fetchLeads(true)
+            }
         }
     }
     
@@ -607,7 +647,7 @@ const $showNotification = (message, type = 'info') => {
     background: transparent;
     height: 72px;
     flex-shrink: 0;
-    border-bottom: none !important;
+    border-bottom: 1px solid #E2E8F0 !important;
     padding: 24px;
     display: flex;
     align-items: center;
@@ -743,24 +783,38 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .search-wrapper {
-    background: rgba(255, 255, 255, 0.10);
-    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 999px;
-    min-height: 38px;
+    height: 36px;
+    min-height: 36px;
     gap: 8px;
-    padding: 5px 8px 5px 5px;
+    padding: 4px 12px 4px 10px;
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
     width: max-content;
-    max-width: 220px;
-    transition: max-width 0.35s ease, min-height 0.3s ease, padding 0.3s ease, border-radius 0.3s ease;
+    max-width: 320px;
+    min-width: 160px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.search-wrapper-focused,
+.search-wrapper-tall {
+    max-width: 560px;
+    min-width: 280px;
+    height: 36px;
+    min-height: 36px;
+    padding: 4px 12px 4px 10px;
+    border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .search-wrapper-expanded {
-    max-width: 1020px;
+    max-width: 560px;
+    min-width: 280px;
 }
-
 .search-wrapper-tall {
     /*min-height: 72px;*/
     /*padding: 12px 12px 12px 14px;*/
@@ -800,12 +854,13 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .search-tag {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 100px;
-    padding: 4px 10px;
-    font-size: 12px;
-    color: #475569;
+    background: rgba(59, 130, 246, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #fff;
     white-space: nowrap;
     width: fit-content;
 }
@@ -813,75 +868,104 @@ const $showNotification = (message, type = 'info') => {
 .close-tag-icon {
     font-size: 12px;
     cursor: pointer;
-    color: #000000;
-    background: #E2E8F0;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 50%;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     padding: 2px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
+
 .search-input-container {
-    color: #e5edf7;
-    height: 32px;
-    min-height: 32px;
+    color: #1e293b;
+    height: 26px;
+    min-height: 26px;
     display: flex;
     align-items: center;
-    flex-shrink: 0;
-    width: 180px;
-    min-width: 180px;
-    transition: height 0.3s ease, min-height 0.3s ease;
+    flex: 1 1 auto;
+    min-width: 80px;
+    width: 100%;
+    max-width: 160px;
+    transition: min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-/*.search-input-container-tall {*/
-/*    height: 48px;*/
-/*    min-height: 48px;*/
-/*}*/
+.search-wrapper-focused,
+.search-wrapper-tall {
+    max-width: 560px;
+    min-width: 280px;
+    height: 36px;
+    min-height: 36px;
+    padding: 4px 12px 4px 10px;
+    border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
 
+.search-wrapper-focused .search-input-container-tall,
+.search-wrapper-tall .search-input-container-tall {
+    min-width: 440px;
+    max-width: 100%;
+}
+
+.search-magnify-icon {
+    color: #64748b;
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-right: 4px;
+}
 .search-plus-icon {
     font-size: 18px;
-    color: #94A3B8;
-    margin-right: 5px;
-    margin-bottom: 2px;
+    color: #64748b;
+    margin-right: 6px;
+    margin-bottom: 0;
+    flex-shrink: 0;
 }
 
-.search-input {
+.search-input,
+.search-input:focus,
+:deep(.search-input-container input),
+:deep(.search-input-container input:focus) {
     border: none !important;
     outline: none !important;
     box-shadow: none !important;
+    background: transparent !important;
+    color: #1e293b !important;
+}
+.search-input {
     width: 100%;
     font-size: 14px;
-    color: #e5edf7;
-    background: transparent !important;
-    padding: 0 !important;
+    font-weight: 500;
+    color: #1e293b !important;
+    padding: 0 4px !important;
     height: 100% !important;
-    min-height: 32px;
+    min-height: 26px;
     display: flex;
     align-items: center;
-    transition: min-height 0.3s ease;
+    caret-color: #1e293b;
 }
 
-/*.search-input-container-tall .search-input {*/
-/*    min-height: 48px;*/
-/*    font-size: 15px;*/
-/*}*/
+
+.search-input-container-tall .search-input {
+    min-height: 26px;
+    font-size: 14px;
+}
 
 .search-input::placeholder {
-    color: rgba(229, 237, 247, 0.7);
+    color: #94A3B8;
     font-size: 14px;
 }
 
 .clear-search-icon {
-    color: #F2994A;
-    font-size: 20px;
+    color: #64748b;
+    font-size: 18px;
     cursor: pointer;
-    margin-right: 8px;
+    margin-right: 4px;
     flex-shrink: 0;
-    min-width: 20px;
-    min-height: 20px;
+    min-width: 18px;
+    min-height: 18px;
 }
 
 /* Dropdown Styles */
@@ -908,10 +992,11 @@ const $showNotification = (message, type = 'info') => {
 }
 
 :deep(.stage-dropdown-menu) {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
+    background: rgba(255, 255, 255, 0.95);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     border-radius: 12px;
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     padding: 8px;
     min-width: 220px;
     margin-top: 8px !important;

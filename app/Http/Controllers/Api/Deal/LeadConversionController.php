@@ -87,9 +87,9 @@ class LeadConversionController extends Controller
                 'bedrooms' => $lead->bedrooms,
                 'created_by'=>auth()->user()->id,
                 'addedBy'=>auth()->user()->id,
-                'responsible_person_id '=>$lead->responsible_person_id ,
+                'responsible_person_id '=>$lead->responsible_person_id??auth()->user()->id ,
             ]);
-          
+            if($request->deal_type !='rental'){
             DealParty::create([
                     'deal_id' => $deal->id,
                     'party_type' => 'buyer',
@@ -102,6 +102,21 @@ class LeadConversionController extends Controller
                     
                     'amount' => $lead->budget,
                 ]);
+            }else
+            {
+                 DealParty::create([
+                    'deal_id' => $deal->id,
+                    'party_type' => 'tenant',
+                    'party_role' => 'primary',
+                    'first_name' => $lead->first_name,
+                    'last_name' =>$lead->last_name,
+                    'date_of_birth' => $lead->date_of_birth,
+                    'phone' => $lead->work_phone,
+                    'email' => $lead->email,
+                    
+                    'amount' => $lead->budget,
+                ]);
+            }
            
             DealHistoryHelper::log(
                 $deal->id,
@@ -248,7 +263,7 @@ class LeadConversionController extends Controller
                 'area_id' => $request->area_id,
                 'developer_id' => $request->developer_id,
                 
-                'responsible_person_id' => $request->responsible_person_id ?? $lead->responsible_person_id,
+                'responsible_person_id' => $request->responsible_person_id ?? $lead->responsible_person_id ??1,
                 
                 'created_by' => auth()->id(),
                 

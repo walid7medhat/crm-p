@@ -4,7 +4,6 @@
 namespace App\Http\Resources\Deal;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-
 class DealPartyResource extends JsonResource
 {
     public function toArray($request)

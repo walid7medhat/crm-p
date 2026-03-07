@@ -4,6 +4,7 @@
 namespace App\Http\Resources\Deal;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\User\UserResource;
 
 class DealDocumentResource extends JsonResource
 {
