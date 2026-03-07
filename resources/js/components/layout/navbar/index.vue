@@ -7,7 +7,6 @@
             <iconify-icon icon="lucide:arrow-left" class="icon text-2xl"></iconify-icon>
           </button>
         
-
           <button type="button" @click="toggleSidebarMobile" class="sidebar-mobile-toggle">
             <iconify-icon icon="heroicons:bars-3-solid" class="icon"></iconify-icon>
           </button>
@@ -585,6 +584,17 @@ function logout() {
 </script>
 
 <style scoped>
+/* Transparent glass header so background image shows through */
+.navbar-header {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  height: 3.25rem;
+  min-height: 3.25rem;
+  padding: 0.5rem 1rem;
+}
+
 .sidebar-toggle {
   display: flex;
   align-items: center;

@@ -755,7 +755,7 @@ export default {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(180deg, rgb(255 255 255) 0%, rgb(20 30 80 / 79%) 0%, rgba(5, 10, 40, 0.95) 100%);
+  background:  0%, rgba(5, 10, 40, 0.95) 100%);
   border-radius: 20px;
 }
 

@@ -373,12 +373,20 @@ html {
 }
 
 body {
-  background-color: var(--bg-color);
+  /* Fallback solid color behind the image */
+  background-color: #EAEDFF !important;
+  /* Global CRM background image */
+  background-image: url("/images/crm-bg-ice.png");
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
   color: var(--text-secondary-light);
-  font-family: "Inter", sans-serif;
+  font-family: "Montserrat", sans-serif;
   font-size: 1rem;
   padding: 0;
-  margin: 0;
+  margin: 0;no
   font-weight: 400;
   position: relative;
   line-height: 1.7;
@@ -15251,7 +15259,7 @@ td.fc-header-center {
 }
 
 .sidebar.active {
-  width: 86px;
+  width: 77px !important;
 }
 
 .sidebar.active:hover {
@@ -15628,4 +15636,67 @@ body.swal2-toast-shown  {
 
 .sidebar::-webkit-scrollbar-thumb:hover {
     background: rgba(120, 140, 255, 0.9);
+}
+
+/* ==========================================================================
+   CRM global background + glass layout (Bitrix24-style)
+   --------------------------------------------------------------------------
+   - Full-page gradient background fixed behind all content
+   - Sidebar and navbar use glassmorphism (semi-transparent + blur)
+   - Main dashboard body is transparent so the background is continuous
+   ========================================================================== */
+body {
+  /* Direct CRM background image */
+  background-image: url("/images/crm-bg-ice.png");
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Sidebar: transparent glass so background image shows through */
+.sidebar {
+  background: rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: transparent !important;
+  border-radius: 20px;
+  pointer-events: none;
+}
+
+/* Transparent glass navbar – background image shows through */
+.navbar-header {
+  background: rgba(255, 255, 255, 0.1) !important;
+  background-color: transparent !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.navbar-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: transparent !important;
+  border-radius: 20px;
+}
+
+/* Remove nav-tabs bottom border (Bootstrap variable override) */
+.nav-tabs {
+  --bs-nav-tabs-border-width: 0;
+  border-bottom: none !important;
+}
+
+/* Main dashboard surface is transparent; inner cards/sections handle their own backgrounds */
+.dashboard-main-body {
+  background: transparent;
 }

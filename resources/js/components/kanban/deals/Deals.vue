@@ -256,6 +256,8 @@ function onDealDragChange(evt, column) {
   max-width: 247px;
   background-color: #E8EDFB;
   border-radius: 12px;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   height: 100%;
   flex-shrink: 0;
 }
@@ -263,7 +265,22 @@ function onDealDragChange(evt, column) {
 .column-header {
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  position: relative;
+  padding-left: 12px !important;
   color: #01062C;
+}
+.column-header::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 4px 0 0 0;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .column-menu-icon {

@@ -750,6 +750,12 @@ body {
 
   background-color: var(--bg-color);
 
+  background-image: url("/images/crm-bg-ice.png");
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
   color: var(--text-secondary-light);
 
   font-family: "Inter", sans-serif;
@@ -30490,7 +30496,7 @@ td.fc-header-center {
 
     inset-block-start: 0;
 
-    inset-inline-start: -100%; /* هذا هو الإصلاح - يخفي السايدبار خارج الشاشة */
+    inset-inline-start: -100%; 
 
     width: 15.625rem;
 
@@ -30506,11 +30512,10 @@ td.fc-header-center {
 
     z-index: 3;
 
-    background: rgba(255, 255, 255, 0.05);
+    /* Unified solid dark transparent background for sidebar */
+    background: rgba(9, 13, 35, 0.92);
 
-    backdrop-filter: blur(40px);
-
-    transition: inset-inline-start 0.3s ease; /* إضافة animation */
+    transition: inset-inline-start 0.3s ease;
 
 }
 
@@ -30528,11 +30533,6 @@ td.fc-header-center {
 
     z-index: -1;
 
-    background: linear-gradient(180deg, rgb(255 255 255) 0%, 
-
-        rgb(20 30 80 / 79%) 0%, 
-
-        rgba(5, 10, 40, 0.95) 100%);
 
 }
 
@@ -30634,7 +30634,7 @@ td.fc-header-center {
 
 .sidebar.active {
 
-  width: 86px;
+  width: 72px;
 
       inset-inline-start: 0;
 

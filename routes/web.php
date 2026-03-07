@@ -140,6 +140,14 @@ Route::get('/test-request-cancelled', function () {
 Route::get('privacy-policy',function(){
     return view('privacy-policy');
 });
+
+// Preview email designs in the browser (e.g. account-activated)
+Route::get('preview-email/account-activated', function () {
+    return view('emails.account-activated', [
+        'userName' => 'Ahmed',
+    ]);
+})->name('preview-email.account-activated');
+
     Route::get('/fb/from/{id}/leads', [IntegrationController::class, 'fetchMetaLeads']);
 
 Route::get('{any}', function () {

@@ -68,6 +68,48 @@ Route::get('/test-invitation-email', function () {
         return 'Error: ' . $e->getMessage();
     }
 });
+
+/* Preview account-activated email design in browser (no mail sent) */
+Route::get('/preview-account-activated-email', function () {
+    $userName = 'Walid';
+    $userEmail = 'walidmedhat.uae@gmail.com';
+    return response()->view('emails.account-activated', [
+        'userName' => $userName,
+    ])->header('Content-Type', 'text/html');
+});
+
+/* Test account-activated email – actually sends to walidmedhat.uae@gmail.com (requires SMTP in .env) */
+Route::get('/test-account-activated-email', function () {
+    $to = 'walidmedhat.uae@gmail.com';
+    try {
+        $mailable = new App\Mail\AccountActivatedMail($to, 'Walid');
+        Mail::to($to)->send($mailable);
+        return response()->json([
+            'success' => true,
+            'message' => 'Email sent to ' . $to . '. Check inbox and spam.',
+            'mail_driver' => config('mail.default'),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'mail_driver' => config('mail.default'),
+            'hint' => config('mail.default') === 'log' ? 'Emails are only written to storage/logs. Set MAIL_MAILER=smtp in .env and configure SMTP to send to real inbox.' : 'Check .env MAIL_* settings and credentials.',
+        ], 500);
+    }
+});
+
+/* Save account-activated email HTML to file so you can open it in browser */
+Route::get('/save-account-activated-email-html', function () {
+    $html = view('emails.account-activated', ['userName' => 'Walid'])->render();
+    $path = storage_path('app/account-activated-email-preview.html');
+    file_put_contents($path, $html);
+    return response()->json([
+        'message' => 'Email HTML saved. Open this file in your browser:',
+        'file_path' => $path,
+        'open_url' => 'file://' . $path,
+    ]);
+});
 Route::get('/test-server', function() {
     return response()->json([
         'gd_installed' => extension_loaded('gd'),

@@ -14,7 +14,12 @@
 
        
     </head>
-   <body class="antialiased">
+   <body class="antialiased"
+         style="background-image: url('{{ asset('images/crm-bg-ice.png') }}');
+                background-attachment: fixed;
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;">
       <div id="app"></div>
     </body>
 </html>

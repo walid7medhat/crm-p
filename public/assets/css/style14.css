@@ -753,6 +753,12 @@ body {
 
   background-color: #EAEDFF !important;
 
+  background-image: url("/images/crm-bg-ice.png");
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
   color: var(--text-secondary-light);
 
   font-family: "Montserrat", sans-serif;
@@ -30230,18 +30236,6 @@ td.fc-header-center {
 
 
 
-    background: linear-gradient(
-
-        90deg,                       
-
-        rgba(255, 255, 255, 0.25) 0%, 
-
-        rgba(20, 30, 80, 0.79) 0%,  
-
-        rgba(5, 10, 40, 0.95) 100%    
-
-    );
-
     border-radius: 20px;
 
 
@@ -30507,8 +30501,6 @@ td.fc-header-center {
     backdrop-filter: blur(40px);
 
     transition: inset-inline-start 0.3s ease; /* إضافة animation */
-    background: linear-gradient(180deg, rgb(255 255 255) 0%,         rgb(20 30 80 / 79%) 0%,         rgba(5, 10, 40, 0.95) 100%);
-     /*overflow-y: scroll; */
 
 }
 
@@ -30632,23 +30624,14 @@ td.fc-header-center {
 
 .sidebar.active {
 
-  width: 86px;
+  width: 77px;
 
-      inset-inline-start: 0;
-
-
-
+  inset-inline-start: 0;
 }
-
-
 
 .sidebar.active:hover {
-
-  width: auto;
-
+  width: auto !important;
 }
-
-
 
 .sidebar.active .sidebar-menu li a i {
 

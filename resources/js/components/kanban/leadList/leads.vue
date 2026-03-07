@@ -1562,14 +1562,21 @@ const $showNotification = (message, type = 'info') => {
     gap: 8px;
 }
 
+/* Stages: no solid box; vertical dashed line between columns (first column has no left border) */
 .kanban-column {
     min-width: 247px;
     width: 247px;
     max-width: 247px;
-    background-color: #E8EDFB;
+    background-color: transparent;
     border-radius: 12px;
+    border: none;
+    border-left: 1px dashed rgba(255, 255, 255, 0.55);
     height: 100%;
     flex-shrink: 0;
+}
+
+.kanban-column:first-child {
+    border-left: none;
 }
 
 .column-header {
@@ -1611,11 +1618,27 @@ const $showNotification = (message, type = 'info') => {
 
 .kanban-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    color: #1e293b;
 }
 
 .kanban-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+
+/* Ensure all card text is visible on white background (override parent/theme) */
+.kanban-card .task-title,
+.kanban-card .info-item,
+.kanban-card .info-item span,
+.kanban-card .date-info,
+.kanban-card .date-info span,
+.kanban-card .info-label,
+.kanban-card .info-value {
+    color: #1e293b !important;
+}
+
+.kanban-card .info-label {
+    color: #64748b !important;
 }
 
 .cursor-pointer {
@@ -1775,7 +1798,12 @@ const $showNotification = (message, type = 'info') => {
     font-size: 10px;
     line-height: 9px;
     letter-spacing: 0%;
-    }
+    color: #64748b;
+}
+
+.date-info span {
+    color: #1e293b;
+}
 
 .header-title {
     font-weight: 600;

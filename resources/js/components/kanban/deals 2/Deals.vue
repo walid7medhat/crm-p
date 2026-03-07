@@ -252,6 +252,8 @@ function onDealDragChange(evt, column) {
   max-width: 247px;
   background-color: #E8EDFB;
   border-radius: 12px;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   height: 100%;
   flex-shrink: 0;
 }

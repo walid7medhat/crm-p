@@ -607,7 +607,7 @@ const $showNotification = (message, type = 'info') => {
     background: transparent;
     height: 72px;
     flex-shrink: 0;
-    border-bottom: 1px solid #E2E8F0 !important;
+    border-bottom: none !important;
     padding: 24px;
     display: flex;
     align-items: center;
@@ -743,9 +743,9 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .search-wrapper {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 100px;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 999px;
     min-height: 38px;
     gap: 8px;
     padding: 5px 8px 5px 5px;
@@ -825,7 +825,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .search-input-container {
-    color: #94A3B8;
+    color: #e5edf7;
     height: 32px;
     min-height: 32px;
     display: flex;
@@ -854,7 +854,7 @@ const $showNotification = (message, type = 'info') => {
     box-shadow: none !important;
     width: 100%;
     font-size: 14px;
-    color: #1E293B;
+    color: #e5edf7;
     background: transparent !important;
     padding: 0 !important;
     height: 100% !important;
@@ -870,7 +870,7 @@ const $showNotification = (message, type = 'info') => {
 /*}*/
 
 .search-input::placeholder {
-    color: #94A3B8;
+    color: rgba(229, 237, 247, 0.7);
     font-size: 14px;
 }
 

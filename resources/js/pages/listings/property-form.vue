@@ -101,8 +101,6 @@
                 <!--    <small>Payment plans are not available for completed properties</small>-->
                 <!--  </div>-->
                 <!--</div>-->
-
-            
             <div class="col-md-4">
               <label class="form-label">Project 
                 <span v-if="!selectedProject" class="text-danger">*</span></label>

@@ -317,10 +317,16 @@ export default {
 <style scoped>
 .card {
   transition: all 0.3s ease;
+  background: #ffffff;
+  border-color: #E5E7EB;
 }
 
 .card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.card * {
+  color: #1f2937 !important;
 }
 
 /* Dropdown styling */

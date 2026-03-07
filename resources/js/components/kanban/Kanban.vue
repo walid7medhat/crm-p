@@ -63,7 +63,8 @@
                             class="search-wrapper d-flex align-items-center"
                             :class="{
                                 'search-wrapper-expanded': activeFilters && activeFilters.length,
-                                'search-wrapper-tall': searchInputFocused
+                                'search-wrapper-tall': searchInputFocused,
+                                'search-wrapper-focused': searchInputFocused
                             }"
                         >
                             <div v-if="activeFilters.length" class="search-filters-pills d-flex align-items-center">
@@ -90,7 +91,7 @@
                             >
                                 <iconify-icon icon="lucide:plus" class="search-plus-icon" style="cursor: pointer;"></iconify-icon>
                                 <b-form-input
-                                    placeholder="Search"
+                                    placeholder="search"
                                     v-model="search"
                                     class="search-input"
                                     @focus="onSearchFocus"
@@ -98,6 +99,7 @@
                                     @input="showSearchModal = false"
                                 />
                             </div>
+                            <iconify-icon icon="lucide:search" class="search-magnify-icon" @click="showSearchModal = true" style="cursor: pointer;"></iconify-icon>
                             <iconify-icon v-if="activeFilter || (activeFilters && activeFilters.length || search)" icon="lucide:x" class="clear-search-icon" @click="clearSearchFilter" style="cursor: pointer;"></iconify-icon>
                         </div>
                         <div v-if="showSearchModal" class="lead-search-dropdown-outer">
@@ -607,17 +609,23 @@ const $showNotification = (message, type = 'info') => {
     min-height: calc(100vh - 72px);
     display: flex;
     flex-direction: column;
-    background-color: #ffffff !important;
+    background-color: transparent !important;
     /*margin: 8px 12px 0;*/
     border-radius: 16px;
 }
 
-/* Bootstrap Tabs Customization – tighter section spacing and left/right */
+/* Bootstrap Tabs Customization – tighter section spacing and left/right, no bottom border */
+:deep(.kanban-tabs-container),
+:deep(.kanban-tabs-container .nav),
+:deep(.kanban-tabs-container > .nav-tabs) {
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
 :deep(.kanban-tabs-container > .nav-tabs) {
     background: transparent;
     height: 56px;
     flex-shrink: 0;
-    border-bottom: 1px solid #E2E8F0 !important;
     padding: 12px 16px;
     display: flex;
     align-items: center;
@@ -634,6 +642,7 @@ const $showNotification = (message, type = 'info') => {
 
 :deep(.kanban-tabs-container .nav-link) {
     border: none !important;
+    border-bottom: none !important;
     background: transparent !important;
     padding: 10px 14px !important;
     height: 100%;
@@ -643,19 +652,20 @@ const $showNotification = (message, type = 'info') => {
     position: relative;
     margin-bottom: 0 !important;
     text-decoration: none;
-    color: #64748B;
+    color: #fff;
     font-family: 'Montserrat', sans-serif;
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 600;
     transition: all 0.2s ease;
 }
 
 :deep(.kanban-tabs-container .nav-link:hover) {
-    color: #01062C;
+    color: #fff;
 }
 
 :deep(.kanban-tabs-container .nav-link.active) {
-    color: #01062C !important;
-    font-weight: 600;
+    color: #fff !important;
+    font-weight: 700;
 }
 
 :deep(.kanban-tabs-container .nav-link .active-indicator) {
@@ -682,27 +692,35 @@ const $showNotification = (message, type = 'info') => {
 
 .btn-create-new {
     opacity: 1;
-    border-radius: 50px;
-    padding: 2px 18px;
-    background-color: #0a0f3d;
+    border-radius: 999px;
+    padding: 4px 14px;
+    min-height: 30px;
+    background: linear-gradient(90deg, #12b981, #22c55e);
+    border: 1px solid #16a34a;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.45);
+    transition: all 0.2s ease;
 }
 
 .btn-create-new:hover {
-    background-color: #0a0f3d;
+    background: linear-gradient(90deg, #16a34a, #22c55e);
+    border-color: #15803d;
 }
 
 .action-icon-btn {
     width: 40px;
     height: 40px;
-    background: white;
-    border-color: #E2E8F0 !important;
-    transition: all 0.2s;
-    color: inherit;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.2s ease;
+    color: rgba(255, 255, 255, 0.95);
 }
 
 .action-icon-btn:hover {
-    background: #F8FAFC;
-    border-color: #CBD5E1 !important;
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.7) !important;
+    color: #fff;
 }
 
 .action-icon-btn:focus {
@@ -711,7 +729,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 :deep(.action-icon-btn-dropdown .action-icon-btn) {
-    color: #1E293B !important;
+    color: rgba(255, 255, 255, 0.95) !important;
 }
 
 .radius-circle {
@@ -721,13 +739,14 @@ const $showNotification = (message, type = 'info') => {
 .btn-create-new-text {
     font-style: Medium;
     font-size: 14px;
-    color: #FFFF;
-    margin: 5px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 2px;
 }
 
 /* Utility Classes */
 .text-warning-600 {
-    color: #D97706 !important;
+    color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .text-s {
@@ -737,7 +756,7 @@ const $showNotification = (message, type = 'info') => {
     margin-right: 28px;
 }
 
-/* Search Input Styles */
+/* Search Input Styles – short height, only input expands to 440px on focus */
 .search-area-column {
     align-items: flex-end;
 }
@@ -753,26 +772,37 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .search-wrapper {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 100px;
-    min-height: 25px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 999px;
+    height: 36px;
+    min-height: 36px;
     gap: 8px;
-    padding: 5px 8px 5px 5px;
+    padding: 4px 12px 4px 10px;
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
     width: max-content;
-    max-width: 220px;
-    transition: max-width 0.35s ease, min-height 0.3s ease, padding 0.3s ease, border-radius 0.3s ease;
+    max-width: 320px;
+    min-width: 160px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.search-wrapper-focused,
+.search-wrapper-tall {
+    max-width: 560px;
+    min-width: 280px;
+    height: 36px;
+    min-height: 36px;
+    padding: 4px 12px 4px 10px;
+    border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .search-wrapper-expanded {
-    max-width: 1020px;
-}
-
-.search-wrapper-tall {
-    min-height: 40px;
+    max-width: 560px;
+    min-width: 280px;
 }
 
 .search-filters-pills {
@@ -808,12 +838,13 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .search-tag {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 100px;
-    padding: 4px 10px;
-    font-size: 12px;
-    color: #475569;
+    background: rgba(59, 130, 246, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #fff;
     white-space: nowrap;
     width: fit-content;
 }
@@ -821,11 +852,11 @@ const $showNotification = (message, type = 'info') => {
 .close-tag-icon {
     font-size: 12px;
     cursor: pointer;
-    color: #000000;
-    background: #E2E8F0;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 50%;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     padding: 2px;
     display: flex;
     align-items: center;
@@ -833,60 +864,88 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .search-input-container {
-    color: #94A3B8;
-    height: 25px;
-    min-height: 25px;
+    color: #1e293b;
+    height: 26px;
+    min-height: 26px;
     display: flex;
     align-items: center;
-    flex-shrink: 0;
-    width: 180px;
-    min-width: 180px;
-    transition: height 0.3s ease, min-height 0.3s ease;
+    flex: 1 1 auto;
+    min-width: 80px;
+    width: 100%;
+    max-width: 160px;
+    transition: min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-/*.search-input-container-tall {*/
-/*    height: 48px;*/
-/*    min-height: 48px;*/
-/*}*/
+.search-wrapper-focused .search-input-container,
+.search-input-container-tall {
+    min-width: 440px;
+    max-width: 100%;
+    min-height: 28px;
+}
+
+.search-wrapper-focused .search-input-container-tall,
+.search-wrapper-tall .search-input-container-tall {
+    min-width: 440px;
+    max-width: 100%;
+}
+
+.search-magnify-icon {
+    color: #64748b;
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-right: 4px;
+}
 
 .search-plus-icon {
     font-size: 18px;
-    color: #94A3B8;
-    margin-right: 5px;
-    margin-bottom: 2px;
+    color: #64748b;
+    margin-right: 6px;
+    margin-bottom: 0;
+    flex-shrink: 0;
 }
 
-.search-input {
+.search-input,
+.search-input:focus,
+:deep(.search-input-container input),
+:deep(.search-input-container input:focus) {
     border: none !important;
     outline: none !important;
     box-shadow: none !important;
-    width: 100%;
-    font-size: 14px;
-    color: #1E293B;
     background: transparent !important;
-    padding: 0 !important;
-    height: 100% !important;
-    min-height: 32px;
-    display: flex;
-    align-items: center;
-    transition: min-height 0.3s ease;
+    color: #1e293b !important;
 }
 
-/*.search-input-container-tall .search-input {*/
-/*    min-height: 48px;*/
-/*    font-size: 15px;*/
-/*}*/
+.search-input {
+    width: 100%;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e293b !important;
+    padding: 0 4px !important;
+    height: 100% !important;
+    min-height: 26px;
+    display: flex;
+    align-items: center;
+    caret-color: #1e293b;
+}
+
+.search-input-container-tall .search-input {
+    min-height: 26px;
+    font-size: 14px;
+}
 
 .search-input::placeholder {
-    color: #94A3B8;
-    font-size: 14px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    text-transform: lowercase;
 }
 
 .clear-search-icon {
-    color: #F2994A;
+    color: #64748b;
     font-size: 18px;
     cursor: pointer;
-    margin-right: 8px;
+    margin-right: 4px;
     flex-shrink: 0;
     min-width: 18px;
     min-height: 18px;
@@ -916,10 +975,11 @@ const $showNotification = (message, type = 'info') => {
 }
 
 :deep(.stage-dropdown-menu) {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
+    background: rgba(255, 255, 255, 0.95);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     border-radius: 12px;
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     padding: 8px;
     min-width: 220px;
     margin-top: 8px !important;

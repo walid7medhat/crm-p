@@ -22,3 +22,11 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+/* Kanban page: transparent body so header/sidebar style shows through; text readable on background */
+.dashboard-main-body {
+    color: rgba(255, 255, 255, 0.95);
+    background: transparent;
+}
+</style>
