@@ -5,7 +5,7 @@
         <!-- Header -->
         <div class="d-flex align-items-center justify-content-between mb-16">
           <div>
-            <h4 class="h2 fw-bold text-white mb-4">All Notifications</h4>
+            <h4 class=" fw-bold text-white mb-4">All Notifications</h4>
             <p class="text-white mb-0">
               {{ unreadCount }} unread of {{ totalCount }} notifications
             </p>
