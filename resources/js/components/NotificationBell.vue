@@ -410,6 +410,10 @@ export default {
           this.$router.push(`/property-details/${notification.data.listing_id}`);
       } else if (notification.data.property_id) {
           this.$router.push(`/property-details/${notification.data.property_id}`);
+      } else if (type === 'App\\Notifications\\LeadUpdatedNotification') {
+          this.$router.push('/kanban');
+      } else if (type === 'App\\Notifications\\DealUpdatedNotificatio') {
+          this.$router.push('/kanban');
       } else {
           console.log('📍 No specific action for notification type:', type);
       }

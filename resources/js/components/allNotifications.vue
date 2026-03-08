@@ -5,8 +5,8 @@
         <!-- Header -->
         <div class="d-flex align-items-center justify-content-between mb-16">
           <div>
-            <h1 class="h2 fw-bold text-primary-light mb-4">All Notifications</h1>
-            <p class="text-muted mb-0">
+            <h4 class="h2 fw-bold text-white mb-4">All Notifications</h4>
+            <p class="text-white mb-0">
               {{ unreadCount }} unread of {{ totalCount }} notifications
             </p>
           </div>
@@ -357,7 +357,11 @@ export default {
         this.$router.push(`/property-details/${notification.data.listing_id}`);
     } else if (notification.data.property_id) {
         this.$router.push(`/property-details/${notification.data.property_id}`);
-    } else {
+    } else if (type ==='App\\Notifications\\LeadUpdatedNotification') {
+          this.$router.push('/kanban');
+      } else if (type === 'App\\Notifications\\DealUpdatedNotificatio') {
+          this.$router.ush('/kanban');
+      } else {
         console.log('📍 No specific action for notification type:', type);
     }
 },
