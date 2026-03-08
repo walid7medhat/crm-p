@@ -82,7 +82,7 @@
 </template>
 
 <script>
-import defaultAvatar from "@/assets/images/user.png";
+// import defaultAvatar from "/assets/images/user.png";
 
 export default {
     name: 'TeamTreeNode',
@@ -107,8 +107,9 @@ export default {
     data() {
         return {
             expanded: this.shouldAutoExpand(),
-            defaultAvatar,
-            needsScroll: false
+            needsScroll: false,
+                            defaultAvatar: '/assets/images/user.png'
+
         };
     },
     computed: {

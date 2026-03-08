@@ -292,7 +292,6 @@
 <script>
 import { API_ENDPOINTS } from '../../config/api';
 import TeamTreeNode from './TeamTreeNode.vue';
-import defaultAvatar from "@/assets/images/user.png";
 
 export default {
     name: 'TeamTree',
@@ -308,7 +307,6 @@ export default {
             allUsers: [],
             filteredUsers: [],
             currentUser: {},
-            defaultAvatar,
             searchTimeout: null,
             showScrollIndicators: false,
             canScrollLeft: false,
@@ -316,7 +314,8 @@ export default {
             isTeamLeadSidebarOpen: false,
             isEmployeeSidebarOpen: false,
             selectedTeamLead: null,
-            selectedEmployee: null
+            selectedEmployee: null,
+                defaultAvatar: '/assets/images/user.png'
         };
     },
     computed: {

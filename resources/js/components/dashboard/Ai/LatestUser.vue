@@ -98,7 +98,7 @@
                   <tr v-for="request in allRequests.slice(0, limit)" :key="request.id">
                     <td>
                       <div class="d-flex align-items-center">
-                               <img :src="request.request_from.avatar || defaultAvatar"  alt=""
+                               <img :src="request?.request_from?.avatar || defaultAvatar"  @error="handleImageError"  alt=""
                                             class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
                         <div class="d-flex flex-column">
                        
@@ -108,7 +108,7 @@
                     </td>
                     <td>
                         <div class="d-flex align-items-center">
-                              <img :src="request.request_to.avatar || defaultAvatar"  alt=""
+                              <img :src="request?.request_to?.avatar || defaultAvatar"  @error="handleImageError"  alt=""
                                             class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
                               <div class="d-flex flex-column">
                             
@@ -160,7 +160,8 @@
                       <td>
                         <div class="d-flex align-items-center">
                           <div class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden  d-flex align-items-center justify-content-center">
-                             <img :src="request.request_from.avatar || defaultAvatar"  alt=""
+                             <img :src="request.request_from.avatar || defaultAvatar"  alt=""   @error="handleImageError"
+
                                             class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
                           </div>
                           <div class="d-flex flex-column">
@@ -210,7 +211,7 @@
         <div class="d-flex align-items-center">
           <div class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden d-flex align-items-center justify-content-center">
             <!--<iconify-icon icon="lucide:user" class="text-white-600"></iconify-icon>-->
-               <img :src="order.listing?.agent?.avatar || defaultAvatar"  alt=""
+               <img :src="order.listing?.agent?.avatar || defaultAvatar"   @error="handleImageError" alt=""
                                             class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
           </div>
           <div class="d-flex flex-column">
@@ -266,7 +267,8 @@ export default {
        activeTab: 'inbound',
       allRequestsCount: 0,
       allRequests: [],
-       defaultAvatar :'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
+        defaultAvatar: '/assets/images/user.png'
+
 
     };
   },
@@ -376,7 +378,9 @@ export default {
         year: 'numeric'
       });
     },
-    
+    handleImageError(event) {
+      event.target.src = this.defaultAvatar
+    },
     getStatusLabel(status) {
       const labels = {
         'pending': 'Pending',

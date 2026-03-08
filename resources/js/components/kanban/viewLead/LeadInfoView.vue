@@ -72,7 +72,7 @@
                 <label class="form-label-custom">{{ formatQuestion(question) }}</label>
             
                 <div class="info-value">
-                    <a v-if="question === 'link'" :href="answer" target="_blank">
+                    <a v-if="question === 'link'" :href="answer" target="_blank" class="facebook-link">
                         {{ answer }}
                     </a>
             
@@ -190,5 +190,15 @@ const formatQuestion = (question) => {
 .blurred-stars {
   filter: blur(3px);
   user-select: none;
+}
+.facebook-link {
+  color: #2563eb; /* Blue color */
+  text-decoration: underline;
+  text-decoration-color: #2563eb;
+}
+
+.facebook-link:hover {
+  color: #1d4ed8; /* Darker blue on hover */
+  text-decoration: none;
 }
 </style>

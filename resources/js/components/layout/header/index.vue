@@ -346,12 +346,12 @@
         </li>
 
         <!-- Reports -->
-        <li>
-          <router-link to="/reports" :class="{ 'active-page': isActive('/reports') }">
-            <iconify-icon icon="lucide:bar-chart-2" class="menu-icon sidebar-reports-icon" />
-            <span>Reports</span>
-          </router-link>
-        </li>
+        <!--<li>-->
+        <!--  <router-link to="/reports" :class="{ 'active-page': isActive('/reports') }">-->
+        <!--    <iconify-icon icon="lucide:bar-chart-2" class="menu-icon sidebar-reports-icon" />-->
+        <!--    <span>Reports</span>-->
+        <!--  </router-link>-->
+        <!--</li>-->
 
         <!-- Suggestion -->
         <li>
@@ -786,10 +786,10 @@ onMounted(() => {
 <style scoped>
 /* 1. Default / open sidebar: same as header bar (light transparent glass) */
 .sidebar {
-  background: rgba(255, 255, 255, 0.12);
+  /*background: rgba(255, 255, 255, 0.12);*/
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  /*border: 1px solid rgba(255, 255, 255, 0.2);*/
 }
 
 .sidebar-header {
@@ -804,10 +804,10 @@ onMounted(() => {
 /* 2. Darker only on hover when collapsed (.sidebar.active = collapsed) */
 .sidebar.active:hover {
   width: auto;
-  background: rgba(15, 23, 42, 0.88);
+   background: rgb(1 6 45 / 56%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-color: rgba(255, 255, 255, 0.12);
+  /*border-color: rgba(255, 255, 255, 0.12);*/
 }
 @media (min-width: 1200px) {
   .sidebar.active:hover {

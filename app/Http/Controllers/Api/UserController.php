@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
 use App\Notifications\UserStatusUpdated;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\AccountActivatedMail;
 class UserController extends Controller
 {
     public function __construct()
@@ -717,9 +719,11 @@ public function show(User $user): JsonResponse
         $user->update([
             'status' => $request->status
         ]);
-        // if ($request->status === 'active') {
-        //  $user->notify(new UserStatusUpdated($request->status));
-        // }
+        if ($request->status === 'active') {
+             Mail::to($user->email)->send(
+                new AccountActivatedMail($user->email, $user->name)
+            );
+        }
         // Reload user with relationships
         $user->load(['roles', 'parent']);
 
