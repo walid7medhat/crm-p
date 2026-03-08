@@ -809,6 +809,13 @@ onMounted(() => {
   -webkit-backdrop-filter: blur(16px);
   /*border-color: rgba(255, 255, 255, 0.12);*/
 }
+@media (max-width: 991px) {
+  .sidebar.sidebar-open {
+    background: rgb(1 6 45 / 56%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+}
 @media (min-width: 1200px) {
   .sidebar.active:hover {
     inset-inline-start: 0;

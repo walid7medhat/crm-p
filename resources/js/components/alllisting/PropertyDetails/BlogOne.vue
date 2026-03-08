@@ -72,7 +72,7 @@
                 </div>
                 <div class="price-main">
                   <h3 class="property-price">AED {{ formatPrice(property.price) }}</h3>
-                  <h4 class="property-title">{{ property.project?.title || "" }}{{ property.area && property.project ?', ' :''}} {{ property.area?.name || '' }}</h4>
+                  <h4 class="property-title">{{ property.area?.area_title || '' }}</h4>
                    <!--<h4 class="property-title"> Old Area {{ property.old_area || "" }}</h4>-->
                 </div>
 
@@ -7418,5 +7418,16 @@ ease;
 }
 .sold-out-modal-title{
     color:#fff !important;
+}
+@media (max-width: 768px) {
+  .card.card-main.p-0.radius-12.overflow-hidden .property-content .spec-main-value {
+    font-size: 15px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .card.card-main.p-0.radius-12.overflow-hidden .property-content .spec-main-value {
+    font-size: 14px !important;
+  }
 }
 </style>
