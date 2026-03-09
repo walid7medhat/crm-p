@@ -198,6 +198,7 @@
       :target-stage-name="pendingCompleteFields?.targetStageName"
       :missing-fields="pendingCompleteFields?.missingFields || []"
       :missing-fields-grouped="pendingCompleteFields?.missingFieldsGrouped || { sections: [] }"
+      :missing-fields-grouped-by-stage="pendingCompleteFields?.missingFieldsGroupedByStage || { stages: [] }"
       :deal="pendingCompleteFields?.dealData || null"
       @save="handleCompleteFieldsSave"
       @closed="clearPendingCompleteFields"
@@ -945,8 +946,9 @@ async function onDealDragChange(evt, targetColumn) {
     const valid = checkRes.data?.valid === true
     const missingFields = checkRes.data?.missing_fields || []
     let missingFieldsGrouped = checkRes.data?.missing_fields_grouped || { sections: [] }
-    // Ensure we have at least one section so the modal can open and show a message or fields
-    if (!missingFieldsGrouped.sections || missingFieldsGrouped.sections.length === 0) {
+    const missingFieldsGroupedByStage = checkRes.data?.missing_fields_grouped_by_stage || { stages: [] }
+    // Ensure we have at least one section so the modal can open and show a message or fields (when not using per-stage)
+    if (!missingFieldsGroupedByStage.stages?.length && (!missingFieldsGrouped.sections || missingFieldsGrouped.sections.length === 0)) {
       missingFieldsGrouped = {
         sections: valid
           ? [{ title: 'Confirm', fields: [{ key: '_confirm', label: 'No additional required fields. Click Save to move the deal.', type: 'text' }] }]
@@ -954,7 +956,6 @@ async function onDealDragChange(evt, targetColumn) {
       }
     }
 
-    // Always show the modal when moving to another stage
     pendingCompleteFields.value = {
       dealId: deal.id,
       targetStageId: newStageId,
@@ -963,6 +964,7 @@ async function onDealDragChange(evt, targetColumn) {
       dealData: deal,
       missingFields,
       missingFieldsGrouped,
+      missingFieldsGroupedByStage,
       canProceedWithoutFields: valid
     }
     showCompleteFieldsModal.value = true
@@ -1028,7 +1030,8 @@ async function handleCompleteFieldsSave({ payload }) {
       pendingCompleteFields.value = {
         ...pendingCompleteFields.value,
         missingFields: err.response.data.missing_fields || [],
-        missingFieldsGrouped: err.response.data.missing_fields_grouped || { sections: [] }
+        missingFieldsGrouped: err.response.data.missing_fields_grouped || { sections: [] },
+        missingFieldsGroupedByStage: err.response.data.missing_fields_grouped_by_stage || { stages: [] }
       }
       throw err
     }

@@ -233,92 +233,90 @@ class DealStageValidator
         }
 
         $missingFields = [];
+        $missingByStage = [];
         $allStages = Stage::where('deal_type', $dealType)
             ->where('stage_type', 'deal')
             ->orderBy('order')
             ->get();
 
-        $startOrder = $currentStage->order + 1;
-        $endOrder = $targetStage->order;
+        $startOrder = (int) $currentStage->order + 1;
+        $endOrder = (int) $targetStage->order;
 
-        // تجهيز الـ parties للوصول السريع
         $parties = [];
         foreach ($deal->parties as $party) {
             $parties[$party->party_type] = $party;
         }
-        
+
         Log::info('Loaded parties', ['count' => count($parties), 'types' => array_keys($parties)]);
 
         for ($order = $startOrder; $order <= $endOrder; $order++) {
             $stage = $allStages->firstWhere('order', $order);
             if (!$stage) continue;
 
-            // استخدم order كمفتاح وليس stage->id
             $requirements = $this->stageRequirements[$dealType][$order] ?? null;
-            
-            Log::info("Checking stage order {$order}", [
-                'has_requirements' => !is_null($requirements),
-                'requirements' => $requirements
-            ]);
-            
             if (!$requirements) continue;
 
-            // تحقق من الحقول الأساسية
+            $stageMissing = [];
+
             foreach ($requirements['fields'] ?? [] as $field) {
                 $value = $deal->$field ?? null;
-                Log::info("Checking field {$field}", ['value' => $value, 'empty' => empty($value)]);
-                
                 if (empty($value)) {
+                    $stageMissing[] = $field;
                     $missingFields[] = $field;
                 }
             }
 
-            // تحقق من الـ parties
             foreach ($requirements['parties'] ?? [] as $partyType => $fields) {
                 $party = $parties[$partyType] ?? null;
-                
-                Log::info("Checking party {$partyType}", ['exists' => !is_null($party)]);
-
                 if (!$party) {
+                    $stageMissing[] = "{$partyType}_party";
                     $missingFields[] = "{$partyType}_party";
                     continue;
                 }
-
                 foreach ($fields as $field) {
                     $modelField = $this->partyFieldMap[$field] ?? $field;
                     $value = $party->$modelField ?? null;
-                    Log::info("Checking party field {$partyType}_{$field}", ['value' => $value, 'empty' => empty($value)]);
-                    
                     if (empty($value)) {
+                        $stageMissing[] = "{$partyType}_{$field}";
                         $missingFields[] = "{$partyType}_{$field}";
                     }
                 }
             }
 
-            // تحقق من المستندات (اختياري)
             foreach ($requirements['documents'] ?? [] as $partyType => $docs) {
                 $party = $parties[$partyType] ?? null;
                 if (!$party) continue;
-
                 foreach ($docs as $docType) {
                     $hasDoc = $deal->documents()
                         ->where('deal_party_id', $party->id)
                         ->where('document_type', $docType)
                         ->exists();
-
                     if (!$hasDoc) {
-                        $missingFields[] = "{$partyType}_document_{$docType}";
+                        $key = "{$partyType}_document_{$docType}";
+                        $stageMissing[] = $key;
+                        $missingFields[] = $key;
                     }
                 }
             }
+
+            if (!empty($stageMissing)) {
+                $missingByStage[] = [
+                    'stage_order' => (int) $stage->order,
+                    'stage_id' => $stage->id,
+                    'stage_name' => $stage->name,
+                    'missing_fields' => array_values(array_unique($stageMissing)),
+                ];
+            }
         }
 
+        $missingFields = array_values(array_unique($missingFields));
         $result = [
             'valid' => empty($missingFields),
-            'missing_fields' => array_unique($missingFields)
+            'missing_fields' => $missingFields,
+            'missing_by_stage' => $missingByStage,
         ];
 
-        Log::info('Validation result', $result);
+        Log::info('Validation result', ['valid' => $result['valid'], 'missing_count' => count($missingFields), 'stages_with_missing' => count($missingByStage)]);
 
         return $result;
     }
@@ -419,6 +417,73 @@ public function getRequiredFieldsForStage(Deal $deal, int $targetStageId, string
             $sections[] = ['title' => 'Other', 'fields' => $bySection['Other']];
         }
         return ['sections' => $sections];
+    }
+
+    /**
+     * Group missing fields by stage for UI so each stage shows exactly its missing data.
+     * Input: missing_by_stage from validate() — array of { stage_order, stage_id, stage_name, missing_fields }.
+     * Output: { stages: [ { stage_order, stage_id, stage_name, sections: [ { title, fields } ] } ] }.
+     */
+    public function getMissingFieldsGroupedByStageForUI(array $missingByStage): array
+    {
+        $fieldMeta = $this->getFieldMeta();
+        $sectionOrder = [
+            'Property Details',
+            'Buyer Details',
+            'Seller Details',
+            'Tenant Details',
+            'Landlord Details',
+            'Upload Buyer Documents',
+            'Upload Seller Documents',
+            'Upload Tenant Documents',
+            'Upload Landlord Documents',
+            'Deal Financials',
+            'Other',
+        ];
+        $stagesForUi = [];
+        foreach ($missingByStage as $stageBlock) {
+            $stageOrder = $stageBlock['stage_order'] ?? 0;
+            $stageId = $stageBlock['stage_id'] ?? 0;
+            $stageName = $stageBlock['stage_name'] ?? 'Stage ' . $stageOrder;
+            $missing = $stageBlock['missing_fields'] ?? [];
+            $bySection = [];
+            foreach ($missing as $key) {
+                if (str_contains($key, '_document_')) {
+                    $parts = explode('_document_', $key, 2);
+                    $partyType = $parts[0] ?? 'buyer';
+                    $docType = $parts[1] ?? $key;
+                    $section = 'Upload ' . ucfirst($partyType) . ' Documents';
+                    $meta = ['section' => $section, 'label' => ucfirst(str_replace('_', ' ', $docType)), 'type' => 'file'];
+                } else {
+                    $meta = $fieldMeta[$key] ?? ['section' => 'Other', 'label' => $this->humanizeFieldKey($key), 'type' => 'text'];
+                }
+                $section = $meta['section'];
+                if (!isset($bySection[$section])) {
+                    $bySection[$section] = [];
+                }
+                $bySection[$section][] = [
+                    'key' => $key,
+                    'label' => $meta['label'],
+                    'type' => $meta['type'],
+                ];
+            }
+            $sections = [];
+            foreach ($sectionOrder as $title) {
+                if (!empty($bySection[$title])) {
+                    $sections[] = ['title' => $title, 'fields' => $bySection[$title]];
+                }
+            }
+            if (!empty($bySection['Other'])) {
+                $sections[] = ['title' => 'Other', 'fields' => $bySection['Other']];
+            }
+            $stagesForUi[] = [
+                'stage_order' => $stageOrder,
+                'stage_id' => $stageId,
+                'stage_name' => $stageName,
+                'sections' => $sections,
+            ];
+        }
+        return ['stages' => $stagesForUi];
     }
 
     protected function humanizeFieldKey(string $key): string

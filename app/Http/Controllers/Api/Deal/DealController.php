@@ -431,6 +431,9 @@ class DealController extends Controller
 
     if (!empty($result['missing_fields'])) {
         $response['missing_fields_grouped'] = $validator->getMissingFieldsGroupedForUI($result['missing_fields']);
+        $missingByStage = $result['missing_by_stage'] ?? [];
+        $response['missing_by_stage'] = $missingByStage;
+        $response['missing_fields_grouped_by_stage'] = $validator->getMissingFieldsGroupedByStageForUI($missingByStage);
     }
 
     return response()->json($response);
@@ -772,12 +775,15 @@ public function changeStage(Request $request, $id)
     $validation = $validator->validate($deal, $newStageId, $dealType);
 
     if (!$validation['valid']) {
+        $missingByStage = $validation['missing_by_stage'] ?? [];
         return response()->json([
             'success' => false,
             'valid' => false,
             'message' => 'Complete all required fields before changing stage.',
             'missing_fields' => $validation['missing_fields'],
             'missing_fields_grouped' => $validator->getMissingFieldsGroupedForUI($validation['missing_fields']),
+            'missing_by_stage' => $missingByStage,
+            'missing_fields_grouped_by_stage' => $validator->getMissingFieldsGroupedByStageForUI($missingByStage),
         ], 422);
     }
 

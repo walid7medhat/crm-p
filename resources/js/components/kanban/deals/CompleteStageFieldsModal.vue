@@ -12,6 +12,45 @@
             Complete the missing fields below to move this deal to <strong>{{ targetStageName }}</strong>.
           </p>
 
+          <!-- Per-stage: show each stage with its missing fields -->
+          <template v-if="stagesWithSections.length">
+            <div v-for="stageBlock in stagesWithSections" :key="stageBlock.stage_order" class="stage-block mb-4">
+              <h5 class="stage-block-title">Stage {{ stageBlock.stage_order }} — {{ stageBlock.stage_name }}</h5>
+              <p class="stage-block-hint text-muted small mb-2">Complete the following for this stage:</p>
+              <div v-for="section in stageBlock.sections" :key="section.title" class="section-block mb-3">
+                <h6 class="section-title">{{ section.title }} <span v-if="isRequiredSection(section.title)" class="text-danger">*</span></h6>
+                <div class="section-fields">
+                  <template v-for="field in section.fields" :key="field.key">
+                    <div v-if="field.key && field.key.startsWith('_')" class="form-group mb-3">
+                      <p class="text-muted mb-0">{{ field.label }}</p>
+                    </div>
+                    <div v-else-if="field.type === 'file'" class="form-group mb-3">
+                      <label class="form-label">{{ field.label }} <span class="text-danger">*</span></label>
+                      <div class="document-hint border rounded p-3 bg-light">
+                        <p class="mb-2 small text-muted">Please upload this document in the deal details.</p>
+                        <button type="button" class="btn btn-sm btn-outline-primary" @click="openDealForDocuments">Open Deal</button>
+                      </div>
+                    </div>
+                    <div v-else-if="isPartyRequiredKey(field.key)" class="form-group mb-3">
+                      <label class="form-label">{{ field.label }}</label>
+                      <div class="document-hint border rounded p-3 bg-light">
+                        <p class="mb-0 small text-muted">Please complete this section in the deal view.</p>
+                      </div>
+                    </div>
+                    <div v-else class="form-group mb-3">
+                      <label class="form-label">{{ field.label }} <span class="text-danger">*</span></label>
+                      <input v-if="field.type === 'date'" v-model="formData[field.key]" type="date" class="form-control" />
+                      <input v-else-if="field.type === 'number'" v-model.number="formData[field.key]" type="number" step="any" class="form-control" :placeholder="getPlaceholder(field)" />
+                      <input v-else v-model="formData[field.key]" type="text" class="form-control" :placeholder="getPlaceholder(field)" />
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Fallback: flat sections when no per-stage data -->
+          <template v-else>
           <div v-for="section in sections" :key="section.title" class="section-block mb-4">
             <h6 class="section-title">{{ section.title }} <span v-if="isRequiredSection(section.title)" class="text-danger">*</span></h6>
             <div class="section-fields">
@@ -60,6 +99,7 @@
               </template>
             </div>
           </div>
+          </template>
         </div>
 
         <div class="modal-footer">
@@ -90,6 +130,7 @@ const props = defineProps({
   targetStageName: { type: String, default: '' },
   missingFields: { type: Array, default: () => [] },
   missingFieldsGrouped: { type: Object, default: () => ({ sections: [] }) },
+  missingFieldsGroupedByStage: { type: Object, default: () => ({ stages: [] }) },
   deal: { type: Object, default: null }
 })
 
@@ -100,11 +141,24 @@ const submitting = ref(false)
 
 const sections = computed(() => props.missingFieldsGrouped?.sections || [])
 
-watch([() => props.show, () => props.missingFieldsGrouped, () => props.deal], () => {
-  if (props.show && sections.value.length) {
+const stagesWithSections = computed(() => {
+  const stages = props.missingFieldsGroupedByStage?.stages || []
+  return Array.isArray(stages) && stages.length ? stages : []
+})
+
+const allSectionsForForm = computed(() => {
+  if (stagesWithSections.value.length) {
+    return stagesWithSections.value.flatMap(s => s.sections || [])
+  }
+  return sections.value
+})
+
+watch([() => props.show, () => props.missingFieldsGrouped, () => props.missingFieldsGroupedByStage, () => props.deal], () => {
+  const secs = stagesWithSections.value.length ? stagesWithSections.value.flatMap(s => s.sections || []) : sections.value
+  if (props.show && secs.length) {
     const initial = {}
-    sections.value.forEach(sec => {
-      sec.fields.forEach(f => {
+    secs.forEach(sec => {
+      (sec.fields || []).forEach(f => {
         initial[f.key] = getInitialValue(f.key)
       })
     })
@@ -161,8 +215,9 @@ function closeModal() {
 
 function buildPayload() {
   const payload = {}
-  sections.value.forEach(sec => {
-    sec.fields.forEach(f => {
+  const secs = allSectionsForForm.value
+  secs.forEach(sec => {
+    (sec.fields || []).forEach(f => {
       if (f.key && f.key.startsWith('_')) return
       if (f.type === 'file' || isPartyRequiredKey(f.key)) return
       const v = formData.value[f.key]
@@ -247,6 +302,22 @@ async function submitForm() {
   overflow-y: auto;
   flex: 1;
 }
+
+.stage-block {
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: #F8FAFC;
+}
+
+.stage-block-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+}
+
+.stage-block-hint { margin-bottom: 10px; }
 
 .section-block { padding-bottom: 8px; }
 
