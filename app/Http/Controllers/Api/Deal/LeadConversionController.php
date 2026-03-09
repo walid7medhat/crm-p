@@ -19,6 +19,7 @@ use App\Events\DealUpdated;
 use App\Events\LeadUpdated;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 class LeadConversionController extends Controller
 {
    public function convert(Request $request)
@@ -145,9 +146,16 @@ class LeadConversionController extends Controller
                 'new_stage' => $newStage->name
             ]
         );
-        broadcast(new LeadUpdated($lead, 'stage_changed', null, $changes));
-        broadcast(new DealUpdated($deal, 'created'));
-
+        try {
+            broadcast(new LeadUpdated($lead, 'stage_changed', null, $changes));
+            broadcast(new DealUpdated($deal, 'created'));
+        } catch (\Throwable $e) {
+            Log::warning('Broadcast failed during lead conversion (Pusher may be unreachable)', [
+                'lead_id' => $lead->id,
+                'deal_id' => $deal->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
             DB::commit();
 
@@ -168,7 +176,7 @@ class LeadConversionController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            dd($e->getMessage());
+            Log::error('Failed to convert lead to deal', ['lead_id' => $request->lead_id, 'error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to convert lead to deal',
@@ -310,7 +318,7 @@ class LeadConversionController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            dd($e->getMessage());
+            Log::error('Failed to convert lead to deal (store)', ['lead_id' => $request->lead_id, 'error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to convert lead to deal',
