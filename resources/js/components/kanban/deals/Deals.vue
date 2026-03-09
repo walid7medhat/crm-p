@@ -91,13 +91,17 @@
                     </div>
                   </div>
 
-                  <!-- Column Content -->
+                  <!-- Column Content: deal cards + empty state when no deals -->
                   <div class="column-content column-content-scrollable p-8 flex-grow-1 d-flex flex-column">
+                    <div v-if="!column.deals || column.deals.length === 0" class="column-empty-hint">
+                      <span class="column-empty-text">No deals in this stage</span>
+                      <span class="column-empty-sub">Create a deal or drag one here</span>
+                    </div>
                     <draggable 
                       v-model="column.deals" 
                       :group="'deals-' + activeTypeTab" 
                       item-key="id"
-                      class="tasks-list flex-grow-1" 
+                      class="tasks-list flex-grow-1 min-height-cards" 
                       :ghost-class="'ghost'"
                       :drag-class="'dragging'"
                       @change="(evt) => onDealDragChange(evt, column)"
@@ -119,20 +123,15 @@
                             
                             <div class="info-item mb-8">
                               <div class="info-label text-secondary-light text-xs">Buyer Name</div>
-                              <div class="info-value">{{deal.buyer_name || 'No Buyer' }}</div>
+                              <div class="info-value">{{ deal.buyer_name || 'No Buyer' }}</div>
                             </div>
                             
-                            <div class="info-item mb-8">
+                            <div class="info-item mb-0">
                               <div class="info-label text-secondary-light text-xs">Source</div>
                               <div class="info-value">{{ deal.source || 'N/A' }}</div>
                             </div>
-                            
-                            <!--<div class="info-item mb-8" v-if="deal.property_type">-->
-                            <!--  <div class="info-label text-secondary-light text-xs">Property Type</div>-->
-                            <!--  <div class="info-value">{{ deal.property_type.name }}</div>-->
-                            <!--</div>-->
 
-                            <hr class="my-12 border-neutral-200">
+                            <hr class="my-8 border-neutral-200">
 
                             <div class="d-flex align-items-center justify-content-between">
                               <div class="info-item mb-0">
@@ -190,6 +189,20 @@
 
     <!-- Modals -->
     <ViewDealModal v-model="showViewDealModal" :deal="selectedDeal" @deal-updated="handleDealUpdatedFromModal" />
+    
+    <CompleteStageFieldsModal
+      :show="showCompleteFieldsModal"
+      :deal-id="pendingCompleteFields?.dealId"
+      :deal-type="activeTypeTab"
+      :target-stage-id="pendingCompleteFields?.targetStageId"
+      :target-stage-name="pendingCompleteFields?.targetStageName"
+      :missing-fields="pendingCompleteFields?.missingFields || []"
+      :missing-fields-grouped="pendingCompleteFields?.missingFieldsGrouped || { sections: [] }"
+      :deal="pendingCompleteFields?.dealData || null"
+      @save="handleCompleteFieldsSave"
+      @closed="clearPendingCompleteFields"
+      @open-deal="openDealById"
+    />
     
     <StageChangeReasonModal
       ref="stageChangeReasonModal"
@@ -268,6 +281,7 @@ import axios from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import ViewDealModal from './ViewDealModal.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
+import CompleteStageFieldsModal from './CompleteStageFieldsModal.vue'
 
 const props = defineProps({
   filters: {
@@ -305,6 +319,10 @@ const stageTitleInput = ref(null)
 // Stage change with reason
 const stageChangeReasonModal = ref(null)
 const pendingStageChange = ref(null)
+
+// Complete required fields before stage change
+const showCompleteFieldsModal = ref(false)
+const pendingCompleteFields = ref(null)
 
 // Stage modal for editing
 const showStageModal = ref(false)
@@ -612,7 +630,7 @@ const handleUpdatedDeal = (deal) => {
   }
   
   let dealFound = false
-  
+    
   // Find and update existing deal
   for (let i = 0; i < columns.value.length; i++) {
     const column = columns.value[i]
@@ -907,45 +925,64 @@ async function saveStage() {
 
 // Drag and drop handlers
 async function onDealDragChange(evt, targetColumn) {
-  if (evt.added) {
-    const deal = evt.added.element
-    const newStageId = targetColumn.stage_id
-    const oldStageId = deal.stage_id
+  // vuedraggable: evt.added when dropping into a list, evt.added.element is the item
+  const added = evt.added || (evt.directResult && { element: evt.directResult })
+  if (!added || !added.element) return
 
-    // Check if stage change requires reason (you can define which stages need reason)
-    const targetColumnIndex = columns.value.findIndex(c => c.stage_id === newStageId)
-    
-    if (targetColumnIndex === 0 || targetColumnIndex === 1) {
-      await moveDealWithStageChange(deal, newStageId)
-      return
+  const deal = added.element
+  const newStageId = targetColumn.stage_id
+  const oldStageId = deal.stage_id
+
+  if (oldStageId === newStageId) return
+
+  try {
+    const checkRes = await axios.post('/deals/check-stage-requirements', {
+      deal_id: deal.id,
+      target_stage_id: newStageId,
+      deal_type: activeTypeTab.value
+    })
+
+    const valid = checkRes.data?.valid === true
+    const missingFields = checkRes.data?.missing_fields || []
+    let missingFieldsGrouped = checkRes.data?.missing_fields_grouped || { sections: [] }
+    // Ensure we have at least one section so the modal can open and show a message or fields
+    if (!missingFieldsGrouped.sections || missingFieldsGrouped.sections.length === 0) {
+      missingFieldsGrouped = {
+        sections: valid
+          ? [{ title: 'Confirm', fields: [{ key: '_confirm', label: 'No additional required fields. Click Save to move the deal.', type: 'text' }] }]
+          : [{ title: 'Required', fields: [{ key: '_info', label: 'Complete the required fields below to move this deal.', type: 'text' }] }]
+      }
     }
 
-    if (!isAdminOrSuperAdmin.value && oldStageId !== newStageId) {
-      pendingStageChange.value = {
-        dealId: deal.id,
-        targetStageId: newStageId,
-        targetStageName: targetColumn.title,
-        originalStageId: oldStageId,
-        dealData: deal
-      }
-
-      await nextTick()
-      stageChangeReasonModal.value?.show()
-
-      // Revert UI
-      const sourceColumn = columns.value.find(c => c.stage_id === oldStageId)
-      if (sourceColumn) {
-        targetColumn.deals = targetColumn.deals.filter(d => d.id !== deal.id)
-        if (!sourceColumn.deals.find(d => d.id === deal.id)) {
-          sourceColumn.deals.push(deal)
-        }
-        sourceColumn.deals_count = sourceColumn.deals.length
-        targetColumn.deals_count = targetColumn.deals.length
-      }
-      return
+    // Always show the modal when moving to another stage
+    pendingCompleteFields.value = {
+      dealId: deal.id,
+      targetStageId: newStageId,
+      targetStageName: targetColumn.title,
+      originalStageId: oldStageId,
+      dealData: deal,
+      missingFields,
+      missingFieldsGrouped,
+      canProceedWithoutFields: valid
     }
+    showCompleteFieldsModal.value = true
+    revertDealDrag(deal, targetColumn, oldStageId)
+  } catch (err) {
+    console.error('Stage check error', err)
+    revertDealDrag(deal, targetColumn, oldStageId)
+    showNotification(err.response?.data?.message || 'Failed to validate stage change', 'error')
+  }
+}
 
-    await moveDealWithStageChange(deal, newStageId)
+function revertDealDrag(deal, targetColumn, originalStageId) {
+  const sourceColumn = columns.value.find(c => c.stage_id === originalStageId)
+  if (sourceColumn) {
+    targetColumn.deals = targetColumn.deals.filter(d => d.id !== deal.id)
+    if (!sourceColumn.deals.find(d => d.id === deal.id)) {
+      sourceColumn.deals.push(deal)
+    }
+    sourceColumn.deals_count = sourceColumn.deals.length
+    targetColumn.deals_count = targetColumn.deals.length
   }
 }
 
@@ -966,6 +1003,52 @@ async function moveDealWithStageChange(deal, newStageId) {
 
 function clearPendingStageChange() {
   pendingStageChange.value = null
+}
+
+function clearPendingCompleteFields() {
+  showCompleteFieldsModal.value = false
+  pendingCompleteFields.value = null
+}
+
+async function handleCompleteFieldsSave({ payload }) {
+  const dealId = pendingCompleteFields.value?.dealId
+  const targetStageId = pendingCompleteFields.value?.targetStageId
+  if (!dealId || !targetStageId) return
+
+  try {
+    if (Object.keys(payload).length > 0) {
+      await axios.post(`/deals/${dealId}/update-partial`, payload)
+    }
+    await axios.post(`/deals/${dealId}/change-stage`, { stage_id: targetStageId })
+    showNotification('Deal updated and stage changed successfully', 'success')
+    clearPendingCompleteFields()
+    await fetchDeals(true)
+  } catch (err) {
+    if (err.response?.status === 422 && err.response?.data?.missing_fields) {
+      pendingCompleteFields.value = {
+        ...pendingCompleteFields.value,
+        missingFields: err.response.data.missing_fields || [],
+        missingFieldsGrouped: err.response.data.missing_fields_grouped || { sections: [] }
+      }
+      throw err
+    }
+    showNotification(err.response?.data?.message || 'Failed to update deal', 'error')
+    throw err
+  }
+}
+
+function openDealById(dealId) {
+  const deal = pendingCompleteFields.value?.dealData || columns.value.flatMap(c => c.deals || []).find(d => d.id === dealId)
+  if (deal) {
+    selectedDeal.value = {
+      ...deal,
+      stageTitle: columns.value.find(c => c.stage_id === deal.stage_id)?.title,
+      stageId: deal.stage_id,
+      deal_type: activeTypeTab.value
+    }
+    showViewDealModal.value = true
+  }
+  clearPendingCompleteFields()
 }
 
 async function handleStageChangeWithReason({ dealId, targetStageId, reason }) {
@@ -1138,32 +1221,28 @@ defineExpose({
   min-width: 247px;
   width: 247px;
   max-width: 247px;
-  background-color: #E8EDFB;
+  background-color: transparent;
   border-radius: 12px;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  border: none;
+  border-left: 1px dashed rgba(255, 255, 255, 0.55);
   height: 100%;
   flex-shrink: 0;
+}
+.kanban-column:first-child {
+  border-left: none;
 }
 .column-header {
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-bottom: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border: none;
+  box-shadow: none;
   position: relative;
   padding-left: 12px !important;
-  color: #01062C;
+  color: #ffffff;
 }
 .column-header::before {
   content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  border-radius: 4px 0 0 0;
-  background: rgba(0, 0, 0, 0.2);
+  display: none;
 }
 .column-menu-icon {
   font-size: 18px;
@@ -1319,6 +1398,38 @@ defineExpose({
 .tasks-list {
   min-height: 100%;
   font-family: Montserrat;
+}
+
+.min-height-cards {
+  min-height: 120px;
+}
+
+.column-empty-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 16px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+  margin-bottom: 8px;
+}
+
+.column-empty-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748B;
+  display: block;
+}
+
+.column-empty-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+  display: block;
 }
 
 /* Draggable styles */

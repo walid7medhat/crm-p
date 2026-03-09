@@ -420,12 +420,20 @@ class DealController extends Controller
         ], 404);
     }
 
-    $result = $validator->validate($deal, $request->target_stage_id, $request->deal_type);
+    $deal->load(['parties', 'documents']);
+    $result = $validator->validate($deal, (int) $request->target_stage_id, $request->deal_type);
 
-    return response()->json([
+    $response = [
         'success' => true,
-        ...$result
-    ]);
+        'valid' => $result['valid'],
+        'missing_fields' => $result['missing_fields'] ?? [],
+    ];
+
+    if (!empty($result['missing_fields'])) {
+        $response['missing_fields_grouped'] = $validator->getMissingFieldsGroupedForUI($result['missing_fields']);
+    }
+
+    return response()->json($response);
 }
 
 /**
@@ -448,6 +456,12 @@ public function updatePartial(UpdatePartialRequest $request, $id)
 
         // 1. تحديث الحقول الأساسية
         $dealData = $request->except(['_token']);
+        
+        // Map subcommunity_id to area_id for deals
+        if (isset($dealData['subcommunity_id'])) {
+            $dealData['area_id'] = $dealData['subcommunity_id'];
+            unset($dealData['subcommunity_id']);
+        }
         
         // إزالة الحقول الفارغة والحقول الخاصة بالأطراف
         $dealData = array_filter($dealData, function($value, $key) {
@@ -477,6 +491,7 @@ public function updatePartial(UpdatePartialRequest $request, $id)
         if ($request->filled('buyer_city')) $buyerData['city'] = $request->buyer_city;
         if ($request->filled('buyer_country')) $buyerData['country'] = $request->buyer_country;
         if ($request->filled('buyer_language')) $buyerData['language'] = $request->buyer_language;
+        if ($request->filled('buyer_amount')) $buyerData['amount'] = $request->buyer_amount;
 
         if (!empty($buyerData)) {
             $buyer = $deal->parties()
@@ -542,6 +557,7 @@ public function updatePartial(UpdatePartialRequest $request, $id)
         if ($request->filled('tenant_city')) $tenantData['city'] = $request->tenant_city;
         if ($request->filled('tenant_country')) $tenantData['country'] = $request->tenant_country;
         if ($request->filled('tenant_language')) $tenantData['language'] = $request->tenant_language;
+        if ($request->filled('tenant_amount')) $tenantData['amount'] = $request->tenant_amount;
 
         if (!empty($tenantData)) {
             $tenant = $deal->parties()
@@ -741,24 +757,38 @@ public function changeStage(Request $request, $id)
         ], 404);
     }
 
+    $dealType = $deal->deal_type;
+    $newStageId = (int) $request->stage_id;
+
+    if (!$newStageId) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Stage ID is required'
+        ], 400);
+    }
+
+    $validator = new DealStageValidator();
+    $deal->load(['parties', 'documents']);
+    $validation = $validator->validate($deal, $newStageId, $dealType);
+
+    if (!$validation['valid']) {
+        return response()->json([
+            'success' => false,
+            'valid' => false,
+            'message' => 'Complete all required fields before changing stage.',
+            'missing_fields' => $validation['missing_fields'],
+            'missing_fields_grouped' => $validator->getMissingFieldsGroupedForUI($validation['missing_fields']),
+        ], 422);
+    }
+
     try {
         DB::beginTransaction();
 
         $oldStageId = $deal->stage_id;
-        $newStageId = $request->stage_id;
 
-        if (!$newStageId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Stage ID is required'
-            ], 400);
-        }
-
-        // تحديث المرحلة
         $deal->stage_id = $newStageId;
         $deal->save();
 
-        // تسجيل التاريخ
         DealHistoryHelper::log($deal->id, [
             'action' => 'stage_changed',
             'old_stage' => $oldStageId,
@@ -768,10 +798,7 @@ public function changeStage(Request $request, $id)
 
         DB::commit();
 
-        // Load fresh data for broadcast
         $deal->load(['stage', 'parties', 'documents']);
-
-        // broadcast
         broadcast(new DealUpdated($deal, 'stage_changed'));
 
         return response()->json([
@@ -802,7 +829,7 @@ public function getStageRequiredFields(Request $request)
     }
     
     $validator = new DealStageValidator();
-    $requiredFields = $validator->getRequiredFieldsForStage($deal, $targetStage->order, $request->deal_type);
+    $requiredFields = $validator->getRequiredFieldsForStage($deal, (int) $request->target_stage_id, $request->deal_type);
     
     return response()->json([
         'success' => true,
