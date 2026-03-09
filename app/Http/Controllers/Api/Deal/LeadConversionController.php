@@ -260,7 +260,7 @@ class LeadConversionController extends Controller
                 'property_reference' => $request->property_reference,
                 
                 'project_id' => $request->project_id,
-                'area_id' => $request->area_id,
+                'area_id' => $request->subcommunity_id,
                 'developer_id' => $request->developer_id,
                 
                 'responsible_person_id' => $request->responsible_person_id ?? $lead->responsible_person_id ??1,

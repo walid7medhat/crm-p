@@ -68,7 +68,6 @@ Route::get('/test-invitation-email', function () {
         return 'Error: ' . $e->getMessage();
     }
 });
-
 /* Preview account-activated email design in browser (no mail sent) */
 Route::get('/preview-account-activated-email', function () {
     $userName = 'Walid';
@@ -163,6 +162,12 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/{deal}', [DealController::class, 'show']);
         Route::put('/{deal}', [DealController::class, 'update']);
         Route::post('/store/new', [LeadConversionController::class, 'store']);
+        Route::post('/{id}/update-stage', [DealController::class, 'updateStage']);
+        Route::post('/check-stage-requirements', [DealController::class, 'checkStageRequirements']);
+        Route::post('/{id}/update-partial', [DealController::class, 'updatePartial']);
+         Route::post('/{id}/change-stage', [DealController::class, 'changeStage']);
+        Route::post('/get-stage-required-fields', [DealController::class, 'getStageRequiredFields']);
+
     });
     
 });

@@ -15,6 +15,10 @@ use App\Http\Resources\Deal\DealHistoryResource;
 use App\Events\DealUpdated;
 use App\Helpers\DealHistoryHelper;
 use App\Helpers\ApiResponse;
+use App\Http\Requests\Deal\CheckStageRequirementsRequest;
+use App\Http\Requests\Deal\UpdatePartialRequest;
+use App\Services\DealStageValidator;
+use App\Http\Requests\Deal\UpdateDealStageRequest;
 
 class DealController extends Controller
 {
@@ -182,7 +186,6 @@ class DealController extends Controller
                 $isImage = in_array($file->getMimeType(), ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']);
         
                 if ($isImage) {
-                    // ضغط وتحويل الصورة
                     $imageOptions = [
                         'quality' => 80,
                         'max_width' => 1920,
@@ -195,7 +198,6 @@ class DealController extends Controller
                     $filePath = $result['path'];
                     $fileSize = $result['compressed_size'] ?? $file->getSize();
                 } else {
-                    // ملفات PDF, DOC, إلخ
                     $path = $file->store($storagePath, 'public');
                     $filePath = $path;
                     $fileSize = $file->getSize();
@@ -295,7 +297,8 @@ class DealController extends Controller
             'project',
             'area',
             'developer',
-            'responsiblePerson'
+            'responsiblePerson',
+            'parties','documents'
         ])
         ->visibleFor($user)
         ->filter($request)
@@ -406,4 +409,404 @@ class DealController extends Controller
             return ApiResponse::error('Failed to retrieve lead: ' . $e->getMessage());
         }
     }
+    public function checkStageRequirements(CheckStageRequirementsRequest $request, DealStageValidator $validator)
+{
+    $deal = Deal::find($request->deal_id);
+    
+    if (!$deal) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Deal not found'
+        ], 404);
+    }
+
+    $result = $validator->validate($deal, $request->target_stage_id, $request->deal_type);
+
+    return response()->json([
+        'success' => true,
+        ...$result
+    ]);
+}
+
+/**
+ * تحديث جزئي للصفقة
+ */
+
+public function updatePartial(UpdatePartialRequest $request, $id)
+{
+    $deal = Deal::find($id);
+    
+    if (!$deal) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Deal not found'
+        ], 404);
+    }
+
+    try {
+        DB::beginTransaction();
+
+        // 1. تحديث الحقول الأساسية
+        $dealData = $request->except(['_token']);
+        
+        // إزالة الحقول الفارغة والحقول الخاصة بالأطراف
+        $dealData = array_filter($dealData, function($value, $key) {
+            // استبعد حقول الأطراف
+            if (str_starts_with($key, 'buyer_') || 
+                str_starts_with($key, 'seller_') || 
+                str_starts_with($key, 'tenant_') || 
+                str_starts_with($key, 'landlord_')) {
+                return false;
+            }
+            return $value !== null && $value !== '';
+        }, ARRAY_FILTER_USE_BOTH);
+        
+        if (!empty($dealData)) {
+            $deal->update($dealData);
+        }
+
+        // 2. تحديث أو إنشاء Buyer
+        $buyerData = [];
+        if ($request->filled('buyer_first_name')) $buyerData['first_name'] = $request->buyer_first_name;
+        if ($request->filled('buyer_last_name')) $buyerData['last_name'] = $request->buyer_last_name;
+        if ($request->filled('buyer_phone')) $buyerData['phone'] = $request->buyer_phone;
+        if ($request->filled('buyer_email')) $buyerData['email'] = $request->buyer_email;
+        if ($request->filled('buyer_nationality')) $buyerData['nationality'] = $request->buyer_nationality;
+        if ($request->filled('buyer_dob')) $buyerData['date_of_birth'] = $request->buyer_dob;
+        if ($request->filled('buyer_residency_status')) $buyerData['residency_status'] = $request->buyer_residency_status;
+        if ($request->filled('buyer_city')) $buyerData['city'] = $request->buyer_city;
+        if ($request->filled('buyer_country')) $buyerData['country'] = $request->buyer_country;
+        if ($request->filled('buyer_language')) $buyerData['language'] = $request->buyer_language;
+
+        if (!empty($buyerData)) {
+            $buyer = $deal->parties()
+                ->where('party_type', 'buyer')
+                ->where('party_role', 'primary')
+                ->first();
+
+            if ($buyer) {
+                $buyer->update($buyerData);
+            } else {
+                // نتأكد من وجود الاسم الأول والأخير قبل الإنشاء
+                if (isset($buyerData['first_name']) && isset($buyerData['last_name'])) {
+                    $deal->parties()->create([
+                        'party_type' => 'buyer',
+                        'party_role' => 'primary',
+                        ...$buyerData
+                    ]);
+                }
+            }
+        }
+
+        // 3. تحديث أو إنشاء Seller
+        $sellerData = [];
+        if ($request->filled('seller_first_name')) $sellerData['first_name'] = $request->seller_first_name;
+        if ($request->filled('seller_last_name')) $sellerData['last_name'] = $request->seller_last_name;
+        if ($request->filled('seller_phone')) $sellerData['phone'] = $request->seller_phone;
+        if ($request->filled('seller_email')) $sellerData['email'] = $request->seller_email;
+        if ($request->filled('seller_nationality')) $sellerData['nationality'] = $request->seller_nationality;
+        if ($request->filled('seller_dob')) $sellerData['date_of_birth'] = $request->seller_dob;
+        if ($request->filled('seller_residency_status')) $sellerData['residency_status'] = $request->seller_residency_status;
+        if ($request->filled('seller_city')) $sellerData['city'] = $request->seller_city;
+        if ($request->filled('seller_country')) $sellerData['country'] = $request->seller_country;
+        if ($request->filled('seller_language')) $sellerData['language'] = $request->seller_language;
+
+        if (!empty($sellerData)) {
+            $seller = $deal->parties()
+                ->where('party_type', 'seller')
+                ->where('party_role', 'primary')
+                ->first();
+
+            if ($seller) {
+                $seller->update($sellerData);
+            } else {
+                if (isset($sellerData['first_name']) && isset($sellerData['last_name'])) {
+                    $deal->parties()->create([
+                        'party_type' => 'seller',
+                        'party_role' => 'primary',
+                        ...$sellerData
+                    ]);
+                }
+            }
+        }
+
+        // 4. تحديث أو إنشاء Tenant
+        $tenantData = [];
+        if ($request->filled('tenant_first_name')) $tenantData['first_name'] = $request->tenant_first_name;
+        if ($request->filled('tenant_last_name')) $tenantData['last_name'] = $request->tenant_last_name;
+        if ($request->filled('tenant_phone')) $tenantData['phone'] = $request->tenant_phone;
+        if ($request->filled('tenant_email')) $tenantData['email'] = $request->tenant_email;
+        if ($request->filled('tenant_nationality')) $tenantData['nationality'] = $request->tenant_nationality;
+        if ($request->filled('tenant_dob')) $tenantData['date_of_birth'] = $request->tenant_dob;
+        if ($request->filled('tenant_residency_status')) $tenantData['residency_status'] = $request->tenant_residency_status;
+        if ($request->filled('tenant_city')) $tenantData['city'] = $request->tenant_city;
+        if ($request->filled('tenant_country')) $tenantData['country'] = $request->tenant_country;
+        if ($request->filled('tenant_language')) $tenantData['language'] = $request->tenant_language;
+
+        if (!empty($tenantData)) {
+            $tenant = $deal->parties()
+                ->where('party_type', 'tenant')
+                ->where('party_role', 'primary')
+                ->first();
+
+            if ($tenant) {
+                $tenant->update($tenantData);
+            } else {
+                if (isset($tenantData['first_name']) && isset($tenantData['last_name'])) {
+                    $deal->parties()->create([
+                        'party_type' => 'tenant',
+                        'party_role' => 'primary',
+                        ...$tenantData
+                    ]);
+                }
+            }
+        }
+
+        // 5. تحديث أو إنشاء Landlord
+        $landlordData = [];
+        if ($request->filled('landlord_first_name')) $landlordData['first_name'] = $request->landlord_first_name;
+        if ($request->filled('landlord_last_name')) $landlordData['last_name'] = $request->landlord_last_name;
+        if ($request->filled('landlord_phone')) $landlordData['phone'] = $request->landlord_phone;
+        if ($request->filled('landlord_email')) $landlordData['email'] = $request->landlord_email;
+        if ($request->filled('landlord_nationality')) $landlordData['nationality'] = $request->landlord_nationality;
+        if ($request->filled('landlord_dob')) $landlordData['date_of_birth'] = $request->landlord_dob;
+        if ($request->filled('landlord_residency_status')) $landlordData['residency_status'] = $request->landlord_residency_status;
+        if ($request->filled('landlord_city')) $landlordData['city'] = $request->landlord_city;
+        if ($request->filled('landlord_country')) $landlordData['country'] = $request->landlord_country;
+        if ($request->filled('landlord_language')) $landlordData['language'] = $request->landlord_language;
+
+        if (!empty($landlordData)) {
+            $landlord = $deal->parties()
+                ->where('party_type', 'landlord')
+                ->where('party_role', 'primary')
+                ->first();
+
+            if ($landlord) {
+                $landlord->update($landlordData);
+            } else {
+                if (isset($landlordData['first_name']) && isset($landlordData['last_name'])) {
+                    $deal->parties()->create([
+                        'party_type' => 'landlord',
+                        'party_role' => 'primary',
+                        ...$landlordData
+                    ]);
+                }
+            }
+        }
+
+        DealHistoryHelper::log($deal->id, [
+            'action' => 'updated',
+            'user_id' => auth()->id()
+        ]);
+
+        DB::commit();
+
+        $deal->load(['parties', 'documents', 'stage']);
+        broadcast(new DealUpdated($deal, 'updated'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Deal updated successfully',
+            'data' => new DealResource($deal)
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update deal',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+// دالة مساعدة للتحقق من وجود أي field
+private function hasAnyField($request, array $fields)
+{
+    foreach ($fields as $field) {
+        if ($request->has($field)) {
+            return true;
+        }
+    }
+    return false;
+}
+public function updateStage(Request $request, $id)
+{
+    $deal = Deal::find($id);
+    
+    if (!$deal) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Deal not found'
+        ], 404);
+    }
+
+    try {
+        DB::beginTransaction();
+
+        $oldStageId = $deal->stage_id;
+        $changes = [];
+
+        // 1. تحديث المرحلة إذا وجدت
+        if ($request->filled('stage_id')) {
+            $deal->stage_id = $request->stage_id;
+            $changes['stage'] = [
+                'old' => $oldStageId,
+                'new' => $request->stage_id
+            ];
+        }
+
+        // 2. تحديث المعلومات الأساسية
+        $basicFields = [
+            'source', 'deal_name', 'unit_no', 'property_type_id', 
+            'subcommunity_id', 'bedrooms', 'unit_size', 'area_id',
+            'deal_total_amount', 'deal_commission', 'agent_share', 
+            'company_share', 'currency', 'responsible_person_id',
+            'amount', 'property_link', 'property_reference'
+        ];
+
+        $dealData = [];
+        foreach ($basicFields as $field) {
+            if ($request->has($field)) {
+                $dealData[$field] = $request->$field;
+            }
+        }
+
+        if (!empty($dealData)) {
+            $deal->update($dealData);
+            $changes['basic'] = $dealData;
+        }
+
+        // 3. تحديث الـ parties
+        $partyTypes = ['buyer', 'seller', 'tenant', 'landlord'];
+        foreach ($partyTypes as $type) {
+            if ($request->has($type)) {
+                $partyData = $request->$type;
+                
+                $party = $deal->parties()
+                    ->where('party_type', $type)
+                    ->where('party_role', 'primary')
+                    ->first();
+
+                if ($party) {
+                    $party->update($partyData);
+                } else {
+                    // إنشاء party جديد إذا مش موجود
+                    $deal->parties()->create([
+                        'party_type' => $type,
+                        'party_role' => 'primary',
+                        ...$partyData
+                    ]);
+                }
+                $changes['parties'][$type] = $partyData;
+            }
+        }
+
+        // 4. حفظ التاريخ
+        if (!empty($changes)) {
+            DealHistoryHelper::log($deal->id, [
+                'action' => 'stage_changed',
+                'changes' => $changes,
+                'user_id' => auth()->id()
+            ]);
+        }
+
+        DB::commit();
+
+        // broadcast
+        broadcast(new DealUpdated($deal->fresh(), 'stage_changed'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Deal stage and info updated successfully',
+            'data' => new DealResource($deal->load(['parties', 'documents', 'stage']))
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update deal',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+public function changeStage(Request $request, $id)
+{
+    $deal = Deal::find($id);
+    
+    if (!$deal) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Deal not found'
+        ], 404);
+    }
+
+    try {
+        DB::beginTransaction();
+
+        $oldStageId = $deal->stage_id;
+        $newStageId = $request->stage_id;
+
+        if (!$newStageId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Stage ID is required'
+            ], 400);
+        }
+
+        // تحديث المرحلة
+        $deal->stage_id = $newStageId;
+        $deal->save();
+
+        // تسجيل التاريخ
+        DealHistoryHelper::log($deal->id, [
+            'action' => 'stage_changed',
+            'old_stage' => $oldStageId,
+            'new_stage' => $newStageId,
+            'user_id' => auth()->id()
+        ]);
+
+        DB::commit();
+
+        // Load fresh data for broadcast
+        $deal->load(['stage', 'parties', 'documents']);
+
+        // broadcast
+        broadcast(new DealUpdated($deal, 'stage_changed'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Deal stage changed successfully',
+            'data' => new DealResource($deal)
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to change deal stage',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+public function getStageRequiredFields(Request $request)
+{
+    $deal = Deal::find($request->deal_id);
+    $targetStage = Stage::find($request->target_stage_id);
+    
+    if (!$deal || !$targetStage) {
+        return response()->json([
+            'success' => false,
+            'required_fields' => []
+        ]);
+    }
+    
+    $validator = new DealStageValidator();
+    $requiredFields = $validator->getRequiredFieldsForStage($deal, $targetStage->order, $request->deal_type);
+    
+    return response()->json([
+        'success' => true,
+        'required_fields' => $requiredFields
+    ]);
+}
 }
