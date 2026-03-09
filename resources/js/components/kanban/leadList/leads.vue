@@ -2,12 +2,12 @@
     <div class="kanban-outer">
         <div ref="kanbanContainerRef" class="kanban-container" @scroll="updateScrollArrows">
         <!-- Loading state -->
-        <div v-if="loading && columns.length === 0" class="kanban-empty-state kanban-loading">
-            <div class="kanban-empty-spinner"></div>
-            <p class="kanban-empty-title">Loading stages…</p>
-        </div>
+        <!--<div v-if="loading && columns.length === 0" class="kanban-empty-state kanban-loading">-->
+        <!--    <div class="kanban-empty-spinner"></div>-->
+        <!--    <p class="kanban-empty-title">Loading stages…</p>-->
+        <!--</div>-->
         <!-- Error state -->
-        <div v-else-if="error && columns.length === 0" class="kanban-empty-state kanban-error-state">
+        <div v-if="error && columns.length === 0" class="kanban-empty-state kanban-error-state">
             <iconify-icon icon="lucide:alert-circle" class="kanban-empty-icon"></iconify-icon>
             <p class="kanban-empty-title">Could not load stages</p>
             <p class="kanban-empty-text">{{ error }}</p>
