@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\Log;
 
 class DealStageValidator
 {
+    /** Map UI/requirement field names to model attributes */
+    protected array $partyFieldMap = [
+        'dob' => 'date_of_birth',
+    ];
+
     protected array $stageRequirements = [
         'primary' => [
             1 => [
@@ -211,7 +216,7 @@ class DealStageValidator
         $currentStage = Stage::find($deal->stage_id);
         $targetStage = Stage::find($targetStageId);
         
-        \Log::info('Starting validation', [
+        Log::info('Starting validation', [
             'deal_id' => $deal->id,
             'current_stage' => $currentStage?->name,
             'target_stage' => $targetStage?->name,
@@ -242,7 +247,7 @@ class DealStageValidator
             $parties[$party->party_type] = $party;
         }
         
-        \Log::info('Loaded parties', ['count' => count($parties), 'types' => array_keys($parties)]);
+        Log::info('Loaded parties', ['count' => count($parties), 'types' => array_keys($parties)]);
 
         for ($order = $startOrder; $order <= $endOrder; $order++) {
             $stage = $allStages->firstWhere('order', $order);
@@ -251,7 +256,7 @@ class DealStageValidator
             // استخدم order كمفتاح وليس stage->id
             $requirements = $this->stageRequirements[$dealType][$order] ?? null;
             
-            \Log::info("Checking stage order {$order}", [
+            Log::info("Checking stage order {$order}", [
                 'has_requirements' => !is_null($requirements),
                 'requirements' => $requirements
             ]);
@@ -261,7 +266,7 @@ class DealStageValidator
             // تحقق من الحقول الأساسية
             foreach ($requirements['fields'] ?? [] as $field) {
                 $value = $deal->$field ?? null;
-                \Log::info("Checking field {$field}", ['value' => $value, 'empty' => empty($value)]);
+                Log::info("Checking field {$field}", ['value' => $value, 'empty' => empty($value)]);
                 
                 if (empty($value)) {
                     $missingFields[] = $field;
@@ -272,7 +277,7 @@ class DealStageValidator
             foreach ($requirements['parties'] ?? [] as $partyType => $fields) {
                 $party = $parties[$partyType] ?? null;
                 
-                \Log::info("Checking party {$partyType}", ['exists' => !is_null($party)]);
+                Log::info("Checking party {$partyType}", ['exists' => !is_null($party)]);
 
                 if (!$party) {
                     $missingFields[] = "{$partyType}_party";
@@ -280,8 +285,9 @@ class DealStageValidator
                 }
 
                 foreach ($fields as $field) {
-                    $value = $party->$field ?? null;
-                    \Log::info("Checking party field {$partyType}_{$field}", ['value' => $value, 'empty' => empty($value)]);
+                    $modelField = $this->partyFieldMap[$field] ?? $field;
+                    $value = $party->$modelField ?? null;
+                    Log::info("Checking party field {$partyType}_{$field}", ['value' => $value, 'empty' => empty($value)]);
                     
                     if (empty($value)) {
                         $missingFields[] = "{$partyType}_{$field}";
@@ -312,29 +318,30 @@ class DealStageValidator
             'missing_fields' => array_unique($missingFields)
         ];
 
-        \Log::info('Validation result', $result);
+        Log::info('Validation result', $result);
 
         return $result;
     }
 
-public function getRequiredFieldsForStage(Deal $deal, int $stageId, string $dealType): array
+public function getRequiredFieldsForStage(Deal $deal, int $targetStageId, string $dealType): array
 {
-    $stage = Stage::find($stageId);
+    $stage = Stage::find($targetStageId);
     if (!$stage) {
-        \Log::warning('Stage not found', ['stage_id' => $stageId]);
+        Log::warning('Stage not found', ['stage_id' => $targetStageId]);
         return [];
     }
     
-    \Log::info('Getting required fields', [
-        'stage_id' => $stageId,
-        'stage_order' => $stage->order,
+    $stageOrder = (int) $stage->order;
+    
+    Log::info('Getting required fields', [
+        'stage_id' => $targetStageId,
+        'stage_order' => $stageOrder,
         'deal_type' => $dealType
     ]);
     
-    // استخدم order كمفتاح
-    $requirements = $this->stageRequirements[$dealType][$stage->order] ?? null;
+    $requirements = $this->stageRequirements[$dealType][$stageOrder] ?? null;
     
-    \Log::info('Requirements found', [
+    Log::info('Requirements found', [
         'has_requirements' => !is_null($requirements),
         'requirements' => $requirements
     ]);
@@ -343,26 +350,145 @@ public function getRequiredFieldsForStage(Deal $deal, int $stageId, string $deal
     
     $requiredFields = [];
     
-    // حقول الـ deal
     foreach ($requirements['fields'] ?? [] as $field) {
         $requiredFields[] = $field;
     }
     
-    // حقول الـ parties
     foreach ($requirements['parties'] ?? [] as $partyType => $fields) {
         foreach ($fields as $field) {
             $requiredFields[] = "{$partyType}_{$field}";
         }
     }
     
-    // حقول المستندات - تعديل هنا
     foreach ($requirements['documents'] ?? [] as $partyType => $docs) {
-        // بدل ما نضيف كل document type، نضيف حقل واحد للمستندات
-        $requiredFields[] = "{$partyType}_documents";
+        foreach ($docs as $docType) {
+            $requiredFields[] = "{$partyType}_document_{$docType}";
+        }
     }
-    
-    \Log::info('Required fields result', ['fields' => $requiredFields]);
     
     return $requiredFields;
 }
+
+    /**
+     * Group missing field keys into UI sections with labels and types for the modal.
+     */
+    public function getMissingFieldsGroupedForUI(array $missingFields): array
+    {
+        $fieldMeta = $this->getFieldMeta();
+        $sectionOrder = [
+            'Buyer Details',
+            'Seller Details',
+            'Tenant Details',
+            'Landlord Details',
+            'Property Details',
+            'Upload Buyer Documents',
+            'Upload Seller Documents',
+            'Upload Tenant Documents',
+            'Upload Landlord Documents',
+            'Deal Financials',
+            'Other',
+        ];
+        $bySection = [];
+        foreach ($missingFields as $key) {
+            if (str_contains($key, '_document_')) {
+                $parts = explode('_document_', $key, 2);
+                $partyType = $parts[0] ?? 'buyer';
+                $docType = $parts[1] ?? $key;
+                $section = 'Upload ' . ucfirst($partyType) . ' Documents';
+                $meta = ['section' => $section, 'label' => ucfirst(str_replace('_', ' ', $docType)), 'type' => 'file'];
+            } else {
+                $meta = $fieldMeta[$key] ?? ['section' => 'Other', 'label' => $this->humanizeFieldKey($key), 'type' => 'text'];
+            }
+            $section = $meta['section'];
+            if (!isset($bySection[$section])) {
+                $bySection[$section] = [];
+            }
+            $bySection[$section][] = [
+                'key' => $key,
+                'label' => $meta['label'],
+                'type' => $meta['type'],
+            ];
+        }
+        $sections = [];
+        foreach ($sectionOrder as $title) {
+            if (!empty($bySection[$title])) {
+                $sections[] = ['title' => $title, 'fields' => $bySection[$title]];
+            }
+        }
+        if (!empty($bySection['Other'])) {
+            $sections[] = ['title' => 'Other', 'fields' => $bySection['Other']];
+        }
+        return ['sections' => $sections];
+    }
+
+    protected function humanizeFieldKey(string $key): string
+    {
+        $key = str_replace('_', ' ', $key);
+        return ucwords($key);
+    }
+
+    protected function getFieldMeta(): array
+    {
+        return [
+            'source' => ['section' => 'Property Details', 'label' => 'Source', 'type' => 'text'],
+            'deal_name' => ['section' => 'Property Details', 'label' => 'Deal Name', 'type' => 'text'],
+            'unit_no' => ['section' => 'Property Details', 'label' => 'Unit No', 'type' => 'text'],
+            'property_type_id' => ['section' => 'Property Details', 'label' => 'Property Type', 'type' => 'select'],
+            'subcommunity_id' => ['section' => 'Property Details', 'label' => 'Sub Community', 'type' => 'select'],
+            'area_id' => ['section' => 'Property Details', 'label' => 'Area', 'type' => 'select'],
+            'responsible_person_id' => ['section' => 'Property Details', 'label' => 'Responsible Person', 'type' => 'select'],
+            'bedrooms' => ['section' => 'Property Details', 'label' => 'Bedrooms', 'type' => 'select'],
+            'unit_size' => ['section' => 'Property Details', 'label' => 'Unit Size', 'type' => 'text'],
+            'deal_total_amount' => ['section' => 'Deal Financials', 'label' => 'Deal Total Amount', 'type' => 'number'],
+            'deal_commission' => ['section' => 'Deal Financials', 'label' => 'Deal Total Commission %', 'type' => 'number'],
+            'agent_share' => ['section' => 'Deal Financials', 'label' => 'Agent Share %', 'type' => 'number'],
+            'company_share' => ['section' => 'Deal Financials', 'label' => 'Company Share %', 'type' => 'number'],
+            'currency' => ['section' => 'Deal Financials', 'label' => 'Currency', 'type' => 'select'],
+            'buyer_first_name' => ['section' => 'Buyer Details', 'label' => 'Buyer First Name', 'type' => 'text'],
+            'buyer_last_name' => ['section' => 'Buyer Details', 'label' => 'Buyer Last Name', 'type' => 'text'],
+            'buyer_phone' => ['section' => 'Buyer Details', 'label' => 'Buyer Phone Number', 'type' => 'text'],
+            'buyer_email' => ['section' => 'Buyer Details', 'label' => 'Buyer Email', 'type' => 'text'],
+            'buyer_nationality' => ['section' => 'Buyer Details', 'label' => 'Buyer Nationality', 'type' => 'select'],
+            'buyer_dob' => ['section' => 'Buyer Details', 'label' => 'Buyer Date Of Birth', 'type' => 'date'],
+            'buyer_residency_status' => ['section' => 'Buyer Details', 'label' => 'Buyer Residency Status', 'type' => 'select'],
+            'buyer_city' => ['section' => 'Buyer Details', 'label' => 'Buyer City Of Residence', 'type' => 'text'],
+            'buyer_country' => ['section' => 'Buyer Details', 'label' => 'Buyer Country Of Residence', 'type' => 'select'],
+            'buyer_language' => ['section' => 'Buyer Details', 'label' => 'Buyer Language', 'type' => 'select'],
+            'buyer_amount' => ['section' => 'Buyer Details', 'label' => 'Amount & Currency', 'type' => 'number'],
+            'seller_first_name' => ['section' => 'Seller Details', 'label' => 'Seller First Name', 'type' => 'text'],
+            'seller_last_name' => ['section' => 'Seller Details', 'label' => 'Seller Last Name', 'type' => 'text'],
+            'seller_phone' => ['section' => 'Seller Details', 'label' => 'Seller Phone Number', 'type' => 'text'],
+            'seller_email' => ['section' => 'Seller Details', 'label' => 'Seller Email', 'type' => 'text'],
+            'seller_nationality' => ['section' => 'Seller Details', 'label' => 'Seller Nationality', 'type' => 'select'],
+            'seller_dob' => ['section' => 'Seller Details', 'label' => 'Seller Date Of Birth', 'type' => 'date'],
+            'seller_residency_status' => ['section' => 'Seller Details', 'label' => 'Seller Residency Status', 'type' => 'select'],
+            'seller_city' => ['section' => 'Seller Details', 'label' => 'Seller City', 'type' => 'text'],
+            'seller_country' => ['section' => 'Seller Details', 'label' => 'Seller Country', 'type' => 'select'],
+            'seller_language' => ['section' => 'Seller Details', 'label' => 'Seller Language', 'type' => 'select'],
+            'tenant_first_name' => ['section' => 'Tenant Details', 'label' => 'Tenant First Name', 'type' => 'text'],
+            'tenant_last_name' => ['section' => 'Tenant Details', 'label' => 'Tenant Last Name', 'type' => 'text'],
+            'tenant_phone' => ['section' => 'Tenant Details', 'label' => 'Tenant Phone', 'type' => 'text'],
+            'tenant_email' => ['section' => 'Tenant Details', 'label' => 'Tenant Email', 'type' => 'text'],
+            'tenant_nationality' => ['section' => 'Tenant Details', 'label' => 'Tenant Nationality', 'type' => 'select'],
+            'tenant_residency_status' => ['section' => 'Tenant Details', 'label' => 'Tenant Residency Status', 'type' => 'select'],
+            'tenant_city' => ['section' => 'Tenant Details', 'label' => 'Tenant City', 'type' => 'text'],
+            'tenant_country' => ['section' => 'Tenant Details', 'label' => 'Tenant Country', 'type' => 'select'],
+            'tenant_language' => ['section' => 'Tenant Details', 'label' => 'Tenant Language', 'type' => 'select'],
+            'tenant_amount' => ['section' => 'Tenant Details', 'label' => 'Amount & Currency', 'type' => 'number'],
+            'landlord_first_name' => ['section' => 'Landlord Details', 'label' => 'Landlord First Name', 'type' => 'text'],
+            'landlord_last_name' => ['section' => 'Landlord Details', 'label' => 'Landlord Last Name', 'type' => 'text'],
+            'landlord_phone' => ['section' => 'Landlord Details', 'label' => 'Landlord Phone', 'type' => 'text'],
+            'landlord_email' => ['section' => 'Landlord Details', 'label' => 'Landlord Email', 'type' => 'text'],
+            'landlord_nationality' => ['section' => 'Landlord Details', 'label' => 'Landlord Nationality', 'type' => 'select'],
+            'landlord_dob' => ['section' => 'Landlord Details', 'label' => 'Landlord Date Of Birth', 'type' => 'date'],
+            'landlord_residency_status' => ['section' => 'Landlord Details', 'label' => 'Landlord Residency Status', 'type' => 'select'],
+            'landlord_city' => ['section' => 'Landlord Details', 'label' => 'Landlord City', 'type' => 'select'],
+            'landlord_country' => ['section' => 'Landlord Details', 'label' => 'Landlord Country', 'type' => 'select'],
+            'landlord_language' => ['section' => 'Landlord Details', 'label' => 'Landlord Language', 'type' => 'select'],
+            'buyer_party' => ['section' => 'Buyer Details', 'label' => 'Buyer information required', 'type' => 'text'],
+            'seller_party' => ['section' => 'Seller Details', 'label' => 'Seller information required', 'type' => 'text'],
+            'tenant_party' => ['section' => 'Tenant Details', 'label' => 'Tenant information required', 'type' => 'text'],
+            'landlord_party' => ['section' => 'Landlord Details', 'label' => 'Landlord information required', 'type' => 'text'],
+        ];
+    }
 }
