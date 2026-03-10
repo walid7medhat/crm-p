@@ -309,14 +309,20 @@
 <script>
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
-import { ref, onMounted, computed, getCurrentInstance, onUnmounted } from 'vue';
+import { ref, onMounted, computed, getCurrentInstance, onUnmounted, watch } from 'vue';
 
 import api from '@/plugins/axios';
 
 export default {
   name: "FixedSearchBar",
   components: { vSelect },
-  setup() {
+  props: {
+    initialFilters: {
+      type: Object,
+      default: null
+    }
+  },
+  setup(props) {
     const { emit } = getCurrentInstance();
     
     // Reactive data
@@ -659,6 +665,30 @@ const searchReferenceNumber = ref("");
       console.log(" Manual search with filters:", filters);
       emit('filters-changed', filters);
     };
+
+    // Restore filters from parent (for Back navigation)
+    // Restore form values from URL/parent when coming back (do not emit — parent already fetches)
+    watch(
+      () => props.initialFilters,
+      (filters) => {
+        if (!filters) return;
+        selectedSaleRent.value = filters.saleRent ?? "All";
+        selectedStatus.value = filters.status ?? "All";
+        selectedArea.value = filters.area || null;
+        selectedProject.value = filters.project || null;
+        selectedPropertyType.value = filters.propertyType || null;
+        selectedBeds.value = filters.beds || "";
+        selectedSort.value = filters.sort || "created_at_desc";
+        priceFrom.value = filters.priceFrom ?? 0;
+        priceTo.value = filters.priceTo ?? 10000000;
+        sizeFrom.value = filters.sizeFrom ?? 0;
+        sizeTo.value = filters.sizeTo ?? 10000;
+        searchReferenceNumber.value = filters.referenceNumber || "";
+        selectedCompletionStatus.value = filters.completionStatus ?? null;
+        selectedAgent.value = filters.agent || null;
+      },
+      { immediate: true, deep: false }
+    );
 
     const resetFilters = () => {
       selectedSaleRent.value = "All";

@@ -3,7 +3,10 @@
 
     
     <!-- Search Bar -->
-    <SearchBar @filters-changed="handleFiltersChanged" />
+    <SearchBar
+      @filters-changed="handleFiltersChanged"
+      :initial-filters="initialFilters"
+    />
     
     <!-- Status Toggle Buttons -->
     <div class="row mb-4">
@@ -291,6 +294,7 @@
 
 <script>
 import { ref, onMounted, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import SearchBar from "./SearchBar.vue";
 import api from "@/plugins/axios";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
@@ -309,11 +313,15 @@ export default {
     const property2 = "/assets/images/b.jpeg";
     const property3 = "/assets/images/c.jpeg";
     const property4 = "/assets/images/a.jpeg";
+    const route = useRoute();
+    const router = useRouter();
+
     const properties = ref([]);
     const isLoading = ref(false);
     const currentFilters = ref({});
     const pagination = ref(null);
     const activeStatus = ref('all'); // 'all', 'active', 'inactive'
+    const initialFilters = ref(null);
    const propertyIcon = '/assets/icons/property-icon.svg';
   const bedIcon = '/assets/icons/bedroom-icon.svg';
   const bathIcon = '/assets/icons/bathroom-icon.svg';
@@ -524,16 +532,61 @@ const fetchProperties = async (filters = {}, page = 1) => {
       fetchProperties(currentFilters.value, page);
     };
 
+    const encodeFiltersToQuery = (filters) => {
+      return {
+        sale_rent: filters.saleRent || undefined,
+        area_id: filters.area?.id || undefined,
+        project_id: filters.project?.id || undefined,
+        type_id: filters.propertyType?.id || undefined,
+        beds: filters.beds || undefined,
+        price_from: filters.priceFrom,
+        price_to: filters.priceTo,
+        size_from: filters.sizeFrom,
+        size_to: filters.sizeTo,
+        sort: filters.sort || undefined,
+        ref: filters.referenceNumber || undefined,
+        completion_status: filters.completionStatus?.value || undefined,
+      };
+    };
+
+    const decodeFiltersFromQuery = (query) => {
+      return {
+        saleRent: query.sale_rent || 'All',
+        area: query.area_id ? { id: Number(query.area_id) } : null,
+        project: query.project_id ? { id: Number(query.project_id) } : null,
+        propertyType: query.type_id ? { id: Number(query.type_id) } : null,
+        beds: query.beds || '',
+        priceFrom: query.price_from ? Number(query.price_from) : 0,
+        priceTo: query.price_to ? Number(query.price_to) : 10000000,
+        sizeFrom: query.size_from ? Number(query.size_from) : 0,
+        sizeTo: query.size_to ? Number(query.size_to) : 10000,
+        sort: query.sort || 'created_at_desc',
+        referenceNumber: query.ref || '',
+        completionStatus: query.completion_status
+          ? { label: query.completion_status, value: query.completion_status }
+          : null,
+      };
+    };
+
     // Handle filters from SearchBar
     const handleFiltersChanged = (filters) => {
       console.log("🎯 Filters received:", filters);
       currentFilters.value = filters;
+      initialFilters.value = filters;
       
       // Convert filters to API format
       const apiFilters = convertFiltersToAPI(filters);
       
       // Fetch properties with new filters (reset to page 1)
       fetchProperties(apiFilters, 1);
+
+      // Persist filters in URL so Back restores them
+      router.replace({
+        query: {
+          ...route.query,
+          ...encodeFiltersToQuery(filters),
+        },
+      });
     };
 
     // Convert frontend filters to backend API format
@@ -654,7 +707,16 @@ const fetchProperties = async (filters = {}, page = 1) => {
 
     // Fetch initial properties on component mount
     onMounted(() => {
-      fetchProperties();
+      const hasQuery = Object.keys(route.query).length > 0;
+      if (hasQuery) {
+        const filters = decodeFiltersFromQuery(route.query);
+        currentFilters.value = filters;
+        initialFilters.value = filters;
+        const apiFilters = convertFiltersToAPI(filters);
+        fetchProperties(apiFilters, 1);
+      } else {
+        fetchProperties();
+      }
     });
 
     return {
@@ -667,6 +729,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
       isLoading,
       pagination,
       activeStatus,
+      initialFilters,
       showingFrom,
       showingTo,
       displayedPages,

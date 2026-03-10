@@ -2,7 +2,11 @@
   <div class="container-fluid mt-4">
    
     <!-- Search Bar -->
-    <SearchBar ref="searchBarRef"  @filters-changed="handleFiltersChanged" />
+    <SearchBar
+      ref="searchBarRef"
+      @filters-changed="handleFiltersChanged"
+      :initial-filters="initialFilters"
+    />
     <div v-if="isAdmin" class="row mb-4">
       <div class="col-12">
         <div class="status-toggle-buttons">
@@ -263,7 +267,7 @@
 </template>
 <script>
 import { ref, onMounted, computed, watch, nextTick } from 'vue'; // ✅ إضافة nextTick و watch
-import { useRoute } from 'vue-router'; // ✅ إضافة useRoute
+import { useRoute, useRouter } from 'vue-router'; // ✅ إضافة useRoute/useRouter
 import SearchBar from "./SearchBar.vue";
 import api from "@/plugins/axios";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
@@ -283,6 +287,7 @@ export default {
     const property3 = "/assets/images/c.jpeg";
     const property4 = "/assets/images/a.jpeg";
     const route = useRoute(); 
+    const router = useRouter();
     const properties = ref([]);
     const isLoading = ref(false);
     const currentFilters = ref({});
@@ -294,6 +299,7 @@ export default {
     const bathIcon = '/assets/icons/bathroom-icon.svg';
     const sqftIcon = '/assets/icons/area-size.svg';
     const searchBarRef = ref(null);
+    const initialFilters = ref(null);
     
     const isAdmin = computed(() => {
       return userRole.value === 'super_admin' || userRole.value === 'admin';
@@ -603,16 +609,63 @@ export default {
       });
     };
 
+    const encodeFiltersToQuery = (filters) => {
+      return {
+        sale_rent: filters.saleRent || undefined,
+        area_id: filters.area?.id || undefined,
+        project_id: filters.project?.id || undefined,
+        type_id: filters.propertyType?.id || undefined,
+        beds: filters.beds || undefined,
+        price_from: filters.priceFrom,
+        price_to: filters.priceTo,
+        size_from: filters.sizeFrom,
+        size_to: filters.sizeTo,
+        sort: filters.sort || undefined,
+        ref: filters.referenceNumber || undefined,
+        completion_status: filters.completionStatus?.value || undefined,
+        agent_id: filters.agent?.id || undefined,
+      };
+    };
+
+    const decodeFiltersFromQuery = (query) => {
+      return {
+        saleRent: query.sale_rent || 'All',
+        area: query.area_id ? { id: Number(query.area_id) } : null,
+        project: query.project_id ? { id: Number(query.project_id) } : null,
+        propertyType: query.type_id ? { id: Number(query.type_id) } : null,
+        beds: query.beds || '',
+        priceFrom: query.price_from ? Number(query.price_from) : 0,
+        priceTo: query.price_to ? Number(query.price_to) : 10000000,
+        sizeFrom: query.size_from ? Number(query.size_from) : 0,
+        sizeTo: query.size_to ? Number(query.size_to) : 10000,
+        sort: query.sort || 'created_at_desc',
+        referenceNumber: query.ref || '',
+        completionStatus: query.completion_status
+          ? { label: query.completion_status, value: query.completion_status }
+          : null,
+        agent: query.agent_id ? { id: Number(query.agent_id) } : null,
+      };
+    };
+
     // Handle filters from SearchBar
     const handleFiltersChanged = (filters) => {
       console.log("🎯 Filters received from SearchBar:", filters);
       
       currentFilters.value = convertFiltersToAPI(filters);
+      initialFilters.value = filters;
       
       activeStatus.value = 'all';
       
       // Fetch properties with new filters (reset to page 1)
       fetchProperties({}, 1); 
+
+      // Persist filters in URL so Back restores them
+      router.replace({
+        query: {
+          ...route.query,
+          ...encodeFiltersToQuery(filters),
+        },
+      });
     };
 
     // Convert frontend filters to backend API format
@@ -745,7 +798,16 @@ export default {
     // Fetch initial properties on component mount
     onMounted(async () => {
       await fetchUserInfo(); 
-      fetchProperties();
+
+      const hasQuery = Object.keys(route.query).length > 0;
+      if (hasQuery) {
+        const filters = decodeFiltersFromQuery(route.query);
+        currentFilters.value = convertFiltersToAPI(filters);
+        initialFilters.value = filters;
+        fetchProperties({}, 1);
+      } else {
+        fetchProperties();
+      }
     });
 
     return {
@@ -774,6 +836,7 @@ export default {
       handleImageLoad,
       handleImageError,
       searchBarRef,
+      initialFilters,
       notifyMe
     };
   }
