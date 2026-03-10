@@ -66,14 +66,17 @@
         <div class="spinner-border text-primary" role="status">
           <span class="visually-hidden">Loading...</span>
         </div>
-        <p class="mt-2 text-muted">Loading properties...</p>
+        <p class="mt-2 text-white">Loading properties...</p>
       </div>
 
       <!-- Empty State -->
       <div v-else-if="properties.length === 0" class="col-12 text-center py-5">
-        <i class="ri-home-4-line display-1 text-muted"></i>
-        <h4 class="mt-3 text-muted">No properties found</h4>
-        <p class="text-muted">Try adjusting your search filters</p>
+        <i class="ri-home-4-line display-1 text-white"></i>
+        <h4 class="mt-3 text-white">No properties found</h4>
+        <button @click="notifyMe" class="btn btn-primary">
+        Notify me when a property matches this search
+        </button>
+        <!--<p class="text-white">Try adjusting your search filters</p>-->
       </div>
 
       <!-- Properties Grid -->
@@ -732,7 +735,13 @@ export default {
       if (agent.first_name) return agent.first_name;
       return 'Unknown Agent';
     };
+    
+    const notifyMe = async () => {
 
+      await api.post('/search-alerts', currentFilters.value)
+    
+      $showNotification("You'll be notified when a matching property is added")
+    }
     // Fetch initial properties on component mount
     onMounted(async () => {
       await fetchUserInfo(); 
@@ -765,6 +774,7 @@ export default {
       handleImageLoad,
       handleImageError,
       searchBarRef,
+      notifyMe
     };
   }
 };

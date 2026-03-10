@@ -390,7 +390,8 @@ export default {
         'in_progress': 'In Progress',
         'in_review': 'In Review',
         'cancelled': 'Cancelled',
-        'expired': 'Expired'
+        'expired': 'Expired',
+        'converted': 'Sold Out'
       };
       return labels[status] || status;
     },

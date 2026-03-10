@@ -241,7 +241,7 @@ import { ref, onMounted, computed, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useTheme } from '@/composables/useTheme.js';
 import NotificationBell from '@/components/NotificationBell.vue';
-import userPlaceholder from '@/assets/images/user.png';
+const userPlaceholder = '/assets/images/user.png';
 const { isMobileOpen, openMobileSidebar } = useSidebar();
 import api from '@/plugins/axios';
 

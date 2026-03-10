@@ -25,7 +25,8 @@ use DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Schema;
-
+use App\Models\SearchAlert;
+use App\Jobs\CheckSearchAlerts;
 class ListingController extends Controller
 {
     // Cache constants
@@ -96,7 +97,7 @@ public function permissions(User $user): JsonResponse
 }
 
     
-    private function getListingsData(Request $request): array
+    public function getListingsData(Request $request): array
     {
         $user = Auth::user();
         $query = Listing::with([
@@ -429,7 +430,9 @@ public function permissions(User $user): JsonResponse
                     ]);
                 }
             }
-                
+            if( $listingStatus == 'published'){
+                dispatch(new CheckSearchAlerts());
+            }
                 DB::commit();
 
                 $listing->load(['propertyType', 'area', 'agent', 'owner', 'developer', 'addedBy', 'floorPlans', 'galleryImages','additionalDocuments']);
@@ -444,6 +447,7 @@ public function permissions(User $user): JsonResponse
                     201
                 );
             } catch (\Exception $e) {
+                dd($e->getMessage());
                 DB::rollBack();
                 
                 return ApiResponse::error('Failed to create listing: ' . $e->getMessage());
@@ -1534,5 +1538,15 @@ public function validateUnitNumber(Request $request)
                 'message' => 'Owner changed successfully'
             ]);
         }
+ public function store_search_alert(Request $request)
+    {
+        SearchAlert::create([
+            'user_id' => auth()->id(),
+            'filters' => $request->all(),
+        ]);
 
+        return response()->json([
+            'message' => 'Search alert saved'
+        ]);
+    }
 }

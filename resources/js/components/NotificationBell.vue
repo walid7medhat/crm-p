@@ -414,6 +414,8 @@ export default {
           this.$router.push('/kanban');
       } else if (type === 'App\\Notifications\\DealUpdatedNotificatio') {
           this.$router.push('/kanban');
+      }else if (type === 'App\\Notifications\\NewListingMatchedNotification') {
+           this.$router.push(`/property-details/${notification.data.listing_id}`);
       } else {
           console.log('📍 No specific action for notification type:', type);
       }

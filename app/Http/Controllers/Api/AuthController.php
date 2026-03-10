@@ -13,6 +13,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Resources\User\NotificationResource;
 use Illuminate\Http\JsonResponse;
 use App\Notifications\NewSalesAgentNotification;
+
 class AuthController extends Controller
 {
      public function register(RegisterRequest $request): JsonResponse
@@ -77,48 +78,50 @@ class AuthController extends Controller
             \Log::error('Failed to send parent notification: ' . $e->getMessage());
         }
     }
-    public function login(LoginRequest $request): JsonResponse
-    {
-        try {
-            $credentials = $request->validated();
+   public function login(LoginRequest $request): JsonResponse
+{
+    try {
+        $credentials = $request->validated();
 
-            // Check if user exists and is active
-            $user = User::where('email', $credentials['email'])->first();
-            
-            if (!$user) {
-                return ApiResponse::error('Invalid credentials', 401);
-            }
+        // Check if user exists
+        $user = User::where('email', $credentials['email'])->first();
 
-            // Check user status
-            if ($user->status !== 'active') {
-                $statusMessage = match($user->status) {
-                    'in_active' => 'Your account is inactive. Please contact administrator.',
-                    'blocked' => 'Your account has been blocked. Please contact administrator.',
-                    default => 'Your account is not active.',
-                };
-                return ApiResponse::error($statusMessage, 403);
-            }
-
-            // Attempt login
-            if (! $token = auth()->attempt($credentials)) {
-                return ApiResponse::error('Invalid credentials', 401);
-            }
-
-            // Update last login
-            $user->update(['last_login_at' => now()]);
-
-            $user->load('roles', 'permissions');
-
-            return ApiResponse::success([
-                'user' => new UserResource($user),
-                'token' => $token,
-            ], 'Login successful');
-
-        } catch (\Exception $e) {
-            return ApiResponse::error('Login failed: ' . $e->getMessage());
+        if (!$user) {
+            return ApiResponse::error('Email address is not registered.', 404);
         }
-    }
 
+        // Check password
+        if (!Hash::check($credentials['password'], $user->password)) {
+            return ApiResponse::error('The password you entered is incorrect.', 401);
+        }
+
+        // Check user status
+        if ($user->status !== 'active') {
+            $statusMessage = match($user->status) {
+                'in_active' => 'Your account is inactive. Please contact administrator.',
+                'blocked' => 'Your account has been blocked. Please contact administrator.',
+                default => 'Your account is not active.',
+            };
+            return ApiResponse::error($statusMessage, 403);
+        }
+
+        // Create token
+        $token = auth()->login($user);
+
+        // Update last login
+        $user->update(['last_login_at' => now()]);
+
+        $user->load('roles', 'permissions');
+
+        return ApiResponse::success([
+            'user' => new UserResource($user),
+            'token' => $token,
+        ], 'Login successful');
+
+    } catch (\Exception $e) {
+        return ApiResponse::error('Login failed: ' . $e->getMessage());
+    }
+}
 
     public function profile()
     {

@@ -4,7 +4,7 @@ namespace App\Http\Resources\Listing;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-
+use App\Models\User;
 class ListingResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -26,19 +26,28 @@ class ListingResource extends JsonResource
          $canAssignAgent = false;
 
     if ($user) {
-        $roleAllowed = in_array($user->role_name, ['admin','super_admin','team_lead','manager']);
+$roleAllowed = $user->hasAnyRole(['admin','super_admin','team_lead','manager']);
+$allowedAgentIds = [];
 
         if ($roleAllowed) {
-            if (in_array($user->role_name, ['admin','super_admin'])) {
+            if ($user->hasAnyRole(['admin','super_admin'])) {
                 $canAssignAgent = true;
             } else {
-                $allowedAgentIds = User::where(function($q) use ($user) {
+              $allowedAgentIds = User::where(function ($q) use ($user) {
+
+                    // نفسه
                     $q->where('id', $user->id)
-                      ->orWhere('parent_id', $user->id)
-                      ->orWhereHas('parent', function($parentQuery) use ($user) {
-                          $parentQuery->where('parent_id', $user->id);
-                      });
+                
+                    // direct children
+                    ->orWhere('parent_id', $user->id)
+                
+                    // grandchildren
+                    ->orWhereHas('parent', function ($q2) use ($user) {
+                        $q2->where('parent_id', $user->id);
+                    });
+                
                 })->pluck('id')->toArray();
+
 
                 if ($this->agent_id && in_array($this->agent_id, $allowedAgentIds)) {
                     $canAssignAgent = true;
@@ -153,11 +162,11 @@ class ListingResource extends JsonResource
             'user_permissions' => [
                 'can_edit' => $canEdit,
                 'can_delete' => $canDelete,
-                'is_owner' => $this->isOwner($user),
+                'is_owner' => $this->isOwner($user) || ($canAssignAgent && $user->hasRole('manager') && $user->listing_team == 1),
                    'can_assign_agent' => $canAssignAgent, 
                  'showDocuments'=>$showDocuments
             ],
-            'is_owner' => $this->isOwner($user),
+            'is_owner' => $this->isOwner($user) || ($canAssignAgent && $user->hasRole('manager') && $user->listing_team == 1),
 
             // Gallery Images
             'gallery_images' => $this->galleryImages->map(function ($galleryImage) {

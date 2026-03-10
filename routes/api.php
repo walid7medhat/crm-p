@@ -156,18 +156,18 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);
     
     // === Deals API ===
-    // Specific paths MUST come before parameterized routes (/{deal}, /{id}) or they get matched as parameters
     Route::prefix('deals')->group(function () {
         Route::get('/', [DealController::class, 'index']);
         Route::get('/grouped-by-stage', [DealController::class, 'getDealsGroupedByStage']);
-        Route::match(['get', 'post'], '/check-stage-requirements', [DealController::class, 'checkStageRequirements']);
-        Route::match(['get', 'post'], '/get-stage-required-fields', [DealController::class, 'getStageRequiredFields']);
         Route::get('/{deal}', [DealController::class, 'show']);
         Route::put('/{deal}', [DealController::class, 'update']);
         Route::post('/store/new', [LeadConversionController::class, 'store']);
         Route::post('/{id}/update-stage', [DealController::class, 'updateStage']);
+        Route::post('/check-stage-requirements', [DealController::class, 'checkStageRequirements']);
         Route::post('/{id}/update-partial', [DealController::class, 'updatePartial']);
-        Route::post('/{id}/change-stage', [DealController::class, 'changeStage']);
+         Route::post('/{id}/change-stage', [DealController::class, 'changeStage']);
+        Route::post('/get-stage-required-fields', [DealController::class, 'getStageRequiredFields']);
+
     });
     
 });
@@ -275,6 +275,10 @@ Route::prefix('leads')->group(function(){
     // Route::post('integrations', [IntegrationController::class, 'store']);
     Route::patch('integrations/{integration}/toggle-active', [IntegrationController::class, 'toggleActive']);
     // Route::delete('integrations/{integration}', [IntegrationController::class, 'destroy']);
+    
+    
+Route::post('/search-alerts',[ListingController::class, 'store_search_alert']);
+
 Route::prefix('listings')->group(function(){
     
     Route::get('/{id}/comments', [ListingCommentController::class, 'index']);
@@ -315,7 +319,6 @@ Route::prefix('listings')->group(function(){
         });
 
         // listings CRUD Routes
-
         Route::apiResource('properties', ListingController::class);
          Route::prefix('properties')->group(function () {
                 Route::patch('/{id}/toggle-archive', [ListingController::class, 'toggleArchive']);
