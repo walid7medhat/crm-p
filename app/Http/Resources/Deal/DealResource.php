@@ -54,7 +54,10 @@ class DealResource extends JsonResource
                 'id' => $this->project->id,
                 'name' => $this->project->name,
             ]),
-            
+            'subcommunity' => $this->whenLoaded('subcommunity', fn() => [
+                'id' => $this->subcommunity->id,
+                'name' => $this->subcommunity->name,
+            ]),
             'area' => $this->whenLoaded('area', fn() => [
                 'id' => $this->area->id,
                 'name' => $this->area->name,
