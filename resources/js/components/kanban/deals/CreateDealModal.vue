@@ -42,7 +42,7 @@
           </b-button>
         </div>
       </div>
-
+     
         <!-- Deal progress / stages (changes by deal type) -->
       <div class="deal-progress-wrapper py-3 px-1">
         <div class="deal-progress-bar">
@@ -65,28 +65,40 @@
           </template>
         </div>
       </div>
+      <!-- <div v-if="validationErrors.length > 0" class="validation-errors px-1 mb-3">-->
+      <!--  <div class="alert alert-danger">-->
+      <!--    <strong class="d-block mb-2">Please fix the following errors:</strong>-->
+      <!--    <ul class="mb-0">-->
+      <!--      <li v-for="(error, index) in validationErrors" :key="index">{{ error }}</li>-->
+      <!--    </ul>-->
+      <!--  </div>-->
+      <!--</div>-->
       <!-- Unified Form -->
       <div class="form-scroll-area">
-        <DealForm
-          ref="dealFormRef"
-          v-model="formData"
-          :deal-type="dealType"
-          :users="users"
-          :sources="sources"
-          :property-types="propertyTypes"
-          :developers="developers"
-          :areas="areas"
-          @search-areas="searchAreas"
-          @search-communities="searchCommunities"
-          @search-sub-communities="searchSubCommunities"
-        />
+     <DealForm
+              ref="dealFormRef"
+              v-model="formData"
+              :deal-type="dealType"
+              :users="users"
+              :sources="sources"
+              :property-types="propertyTypes"
+              :developers="developers"
+              :areas="areas"
+              @search-areas="searchAreas"        
+              @search-communities="searchCommunities"
+              @search-sub-communities="searchSubCommunities" 
+               @search-projects="searchProjects" 
+              :show-errors="showFieldErrors"     
+              :field-errors="fieldErrors"           
+              :selected-stage-id="selectedStageId"  
+            />
       </div>
 
       <!-- Footer -->
-      <div class="modal-footer-custom">
+       <div class="modal-footer-custom">
         <div class="d-flex align-items-center justify-content-end gap-3">
           <button class="btn-clear" @click="resetForm" :disabled="isSubmitting">Clear</button>
-          <button class="btn-next-step" @click="submitForm" :disabled="isSubmitting">
+          <button class="btn-next-step" @click="validateAndSubmit" :disabled="isSubmitting">
             <span v-if="isSubmitting">
               <b-spinner small></b-spinner> Creating...
             </span>
@@ -102,7 +114,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted ,nextTick} from 'vue'
 import { BModal, BSpinner, BButton } from 'bootstrap-vue-3'
 import DealForm from './DealForm.vue'
 import api from '@/plugins/axios'
@@ -122,6 +134,8 @@ const selectedStageId = ref(null)
 const isSubmitting = ref(false)
 const stagesLoading = ref(false)
 const dealFormRef = ref(null)
+const validationErrors = ref([])
+const showFieldErrors = ref(false)
 
 // Data from API
 const users = ref([])
@@ -136,6 +150,7 @@ const subCommunities = ref([])
 
 // Form data
 const formData = ref({})
+const fieldErrors = ref({})
 
 const dealTypeTabs = [
   { id: 'primary', name: 'Primary / Off Plan' },
@@ -149,15 +164,6 @@ const currentStages = computed(() => {
   
   if (!stages.value || stages.value.length === 0) {
     return []
-  }
-  
-  // لو الـ stages ملهمش stage_type أو deal_type، نستخدم الكل
-  const hasStageType = stages.value.some(s => s.stage_type)
-  const hasDealType = stages.value.some(s => s.deal_type)
-  
-  if (!hasStageType && !hasDealType) {
-    console.log('Stages have no type info, showing all')
-    return stages.value
   }
   
   const filtered = stages.value.filter(stage => {
@@ -174,6 +180,8 @@ const currentStages = computed(() => {
 watch(dealType, async (newVal, oldVal) => {
   console.log('Deal type changed from', oldVal, 'to', newVal)
   selectedStageId.value = null
+  validationErrors.value = []
+  showFieldErrors.value = false
   await fetchStages()
   resetFormData()
 })
@@ -191,6 +199,8 @@ watch(() => props.modelValue, async (val) => {
   console.log('Modal visibility changed to', val)
   show.value = val
   if (val) {
+    validationErrors.value = []
+    showFieldErrors.value = false
     await loadInitialData()
     if (props.leadId) {
       checkLeadConversionStatus()
@@ -200,7 +210,11 @@ watch(() => props.modelValue, async (val) => {
 
 watch(show, (val) => {
   emit('update:modelValue', val)
-  if (!val) resetForm()
+  if (!val) {
+    resetForm()
+    validationErrors.value = []
+    showFieldErrors.value = false
+  }
 })
 
 // عندما يظهر المودال
@@ -211,13 +225,17 @@ function onModalShown() {
 // Load all initial data
 async function loadInitialData() {
   console.log('Loading initial data...')
-  await Promise.all([
-    fetchUsers(),
-    fetchSources(),
-    fetchStages(),
-    fetchPropertyTypes(),
-    fetchDevelopers()
-  ])
+  try {
+    await Promise.all([
+      fetchUsers(),
+      fetchSources(),
+      fetchStages(),
+      fetchPropertyTypes(),
+      fetchDevelopers()
+    ])
+  } catch (error) {
+    console.error('Error loading initial data:', error)
+  }
 }
 
 // API Calls
@@ -293,22 +311,11 @@ async function fetchStages() {
       stages.value = []
     }
     
-    console.log('Processed stages:', stages.value)
-    
-    console.log('Stage types check:', stages.value.map(s => ({
-      id: s.id,
-      name: s.name,
-      stage_type: s.stage_type || 'deal', 
-      deal_type: s.deal_type || dealType.value 
-    })))
-    
     const filteredStages = stages.value.filter(stage => {
       const stageType = stage.stage_type || 'deal'
       const stageDealType = stage.deal_type || dealType.value
       return stageType === 'deal' && stageDealType === dealType.value
     })
-    
-    console.log('Filtered stages for', dealType.value, ':', filteredStages)
     
     if (filteredStages.length > 0 && !selectedStageId.value) {
       selectedStageId.value = filteredStages[0].id
@@ -363,72 +370,110 @@ async function fetchDevelopers() {
 }
 
 // Area search functions
-async function searchAreas(search, parentId = null) {
+// في CreateDealModal.vue
+
+// دالة المناطق - تجيب كل المناطق
+async function searchAreas(search = '', parentId = null) {
   try {
     const params = {}
+    
+    // لو في parentId (للمناطق الفرعية) نضيفه، لكن مش شرط يكون في search
     if (parentId) {
       params.parent_id = parentId
-      params.type = 'city'
-    } else {
-      params.type = 'country'
+    }
+    
+    // لو في search نضيفه، لو مفيش هات كل المناطق
+    if (search) {
+      params.search = search
     }
     
     const response = await api.get('/listings/areas', { params })
+    
+    console.log('Areas API response:', response.data)
+    
+    // معالجة البيانات
     const responseData = response.data
-    if (responseData?.data) {
-      areas.value = Array.isArray(responseData.data) ? responseData.data : []
+    let areasData = []
+    
+    if (responseData?.data?.data) {
+      areasData = responseData.data.data
+    } else if (responseData?.data && Array.isArray(responseData.data)) {
+      areasData = responseData.data
     } else if (Array.isArray(responseData)) {
-      areas.value = responseData
+      areasData = responseData
     } else {
-      areas.value = []
+      areasData = []
     }
-    return areas.value
+    
+    // تحديث المتغير
+    areas.value = areasData
+    return areasData
+    
   } catch (error) {
-    console.error('Error searching areas:', error)
+    console.error('Error fetching areas:', error)
+    return []
+  }
+}
+async function searchProjects(search = '') {
+  try {
+    const params = {}
+    
+    // لو في search نضيفه، لو مفيش هات كل المشاريع
+    if (search) {
+      params.search = search
+    }
+    
+    const response = await api.get('/listings/projects', { params })
+    
+    console.log('Projects API response:', response.data)
+    
+    let projectsData = []
+    const responseData = response.data
+    
+    if (responseData?.data?.data) {
+      projectsData = responseData.data.data
+    } else if (responseData?.data && Array.isArray(responseData.data)) {
+      projectsData = responseData.data
+    } else if (Array.isArray(responseData)) {
+      projectsData = responseData
+    }
+    
+    projects.value = projectsData
+    return projectsData
+    
+  } catch (error) {
+    console.error('Error fetching projects:', error)
     return []
   }
 }
 
-async function searchCommunities(parentId) {
-  try {
-    const response = await api.get('/listings/areas', {
-      params: {
-        type: 'community',
-        parent_id: parentId
-      }
-    })
-    const responseData = response.data
-    if (responseData?.data) {
-      communities.value = Array.isArray(responseData.data) ? responseData.data : []
-    } else if (Array.isArray(responseData)) {
-      communities.value = responseData
-    } else {
-      communities.value = []
-    }
-    return communities.value
-  } catch (error) {
-    console.error('Error searching communities:', error)
-    return []
-  }
-}
 
-async function searchSubCommunities(parentId) {
+// أيضاً أضف دالة searchSubCommunities المفقودة:
+async function searchSubCommunities(search) {
   try {
     const response = await api.get('/listings/areas', {
       params: {
-        type: 'sub_community',
-        parent_id: parentId
+        search,
+        type: 'sub_community' // إذا كان API يدعم تصفية حسب النوع
       }
     })
+    
     const responseData = response.data
-    if (responseData?.data) {
-      subCommunities.value = Array.isArray(responseData.data) ? responseData.data : []
+    let subCommunitiesData = []
+    
+    if (responseData?.data?.data) {
+      subCommunitiesData = responseData.data.data
+    } else if (responseData?.data && Array.isArray(responseData.data)) {
+      subCommunitiesData = responseData.data
     } else if (Array.isArray(responseData)) {
-      subCommunities.value = responseData
+      subCommunitiesData = responseData
     } else {
-      subCommunities.value = []
+      subCommunitiesData = []
     }
-    return subCommunities.value
+    
+    subCommunities.value = subCommunitiesData
+    return subCommunitiesData
+    
   } catch (error) {
     console.error('Error searching sub-communities:', error)
     return []
@@ -471,6 +516,7 @@ async function loadLeadData() {
       deal_name: lead.lead_name,
       unit_no: lead.unit_no || '',
       property_type_id: lead.property_type_id,
+      subcommunity_id: lead.subcommunity_id,
       bedrooms: lead.bedrooms,
       unit_size: lead.unit_size || '',
       project_id: lead.project_id,
@@ -487,6 +533,9 @@ async function loadLeadData() {
       buyer_phone: lead.phone || lead.mobile || lead.work_phone,
       buyer_email: lead.email || '',
       buyer_nationality: lead.nationality || '',
+      buyer_residency_status: lead.residency_status || '',
+      buyer_city: lead.city || '',
+      buyer_language: lead.language || '',
       amount: lead.budget || ''
     }
     
@@ -508,17 +557,238 @@ async function loadLeadData() {
   }
 }
 
-// Submit form
-async function submitForm() {
+// Validation function
+function validateForm() {
+  const errors = []
+  const fieldErrorsObj = {}
+  
+  // Check stage
   if (!selectedStageId.value) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Stage Required',
-      text: 'Please select a stage for the deal'
-    })
-    return
+    errors.push('Please select a stage for the deal')
+    fieldErrorsObj.stage_id = 'Stage is required'
   }
   
+  // Required fields check
+  if (!formData.value.source) {
+    errors.push('Source is required')
+    fieldErrorsObj.source = 'Source is required'
+  }
+  if (!formData.value.deal_name) {
+    errors.push('Deal name is required')
+    fieldErrorsObj.deal_name = 'Deal name is required'
+  }
+  if (!formData.value.unit_no) {
+    errors.push('Unit number is required')
+    fieldErrorsObj.unit_no = 'Unit number is required'
+  }
+  if (!formData.value.property_type_id) {
+    errors.push('Property type is required')
+    fieldErrorsObj.property_type_id = 'Property type is required'
+  }
+  if (!formData.value.subcommunity_id) {
+    errors.push('Subcommunity is required')
+    fieldErrorsObj.subcommunity_id = 'Subcommunity is required'
+  }
+  if (!formData.value.responsible_person_id) {
+    errors.push('Responsible person is required')
+    fieldErrorsObj.responsible_person_id = 'Responsible person is required'
+  }
+  
+  // Validate based on deal type
+  if (dealType.value === 'primary' || dealType.value === 'secondary') {
+    if (!formData.value.buyer_first_name) {
+      errors.push('Buyer first name is required')
+      fieldErrorsObj.buyer_first_name = 'First name is required'
+    }
+    if (!formData.value.buyer_last_name) {
+      errors.push('Buyer last name is required')
+      fieldErrorsObj.buyer_last_name = 'Last name is required'
+    }
+    if (!formData.value.buyer_phone) {
+      errors.push('Buyer phone is required')
+      fieldErrorsObj.buyer_phone = 'Phone is required'
+    }
+    if (!formData.value.buyer_email) {
+      errors.push('Buyer email is required')
+      fieldErrorsObj.buyer_email = 'Email is required'
+    }
+    if (!formData.value.buyer_nationality) {
+      errors.push('Buyer nationality is required')
+      fieldErrorsObj.buyer_nationality = 'Nationality is required'
+    }
+    if (!formData.value.buyer_dob) {
+      errors.push('Buyer date of birth is required')
+      fieldErrorsObj.buyer_dob = 'Date of birth is required'
+    }
+    if (!formData.value.buyer_residency_status) {
+      errors.push('Buyer residency status is required')
+      fieldErrorsObj.buyer_residency_status = 'Residency status is required'
+    }
+    if (!formData.value.buyer_city) {
+      errors.push('Buyer city is required')
+      fieldErrorsObj.buyer_city = 'City is required'
+    }
+    if (!formData.value.buyer_language) {
+      errors.push('Buyer language is required')
+      fieldErrorsObj.buyer_language = 'Language is required'
+    }
+  }
+  
+  if (dealType.value === 'secondary') {
+    if (!formData.value.seller_first_name) {
+      errors.push('Seller first name is required')
+      fieldErrorsObj.seller_first_name = 'First name is required'
+    }
+    if (!formData.value.seller_last_name) {
+      errors.push('Seller last name is required')
+      fieldErrorsObj.seller_last_name = 'Last name is required'
+    }
+    if (!formData.value.seller_phone) {
+      errors.push('Seller phone is required')
+      fieldErrorsObj.seller_phone = 'Phone is required'
+    }
+    if (!formData.value.seller_email) {
+      errors.push('Seller email is required')
+      fieldErrorsObj.seller_email = 'Email is required'
+    }
+    if (!formData.value.seller_nationality) {
+      errors.push('Seller nationality is required')
+      fieldErrorsObj.seller_nationality = 'Nationality is required'
+    }
+    if (!formData.value.seller_dob) {
+      errors.push('Seller date of birth is required')
+      fieldErrorsObj.seller_dob = 'Date of birth is required'
+    }
+    if (!formData.value.seller_residency_status) {
+      errors.push('Seller residency status is required')
+      fieldErrorsObj.seller_residency_status = 'Residency status is required'
+    }
+    if (!formData.value.seller_city) {
+      errors.push('Seller city is required')
+      fieldErrorsObj.seller_city = 'City is required'
+    }
+    if (!formData.value.seller_language) {
+      errors.push('Seller language is required')
+      fieldErrorsObj.seller_language = 'Language is required'
+    }
+  }
+  
+  if (dealType.value === 'rental') {
+    // Tenant validation
+    if (!formData.value.tenant_first_name) {
+      errors.push('Tenant first name is required')
+      fieldErrorsObj.tenant_first_name = 'First name is required'
+    }
+    if (!formData.value.tenant_last_name) {
+      errors.push('Tenant last name is required')
+      fieldErrorsObj.tenant_last_name = 'Last name is required'
+    }
+    if (!formData.value.tenant_phone) {
+      errors.push('Tenant phone is required')
+      fieldErrorsObj.tenant_phone = 'Phone is required'
+    }
+    if (!formData.value.tenant_email) {
+      errors.push('Tenant email is required')
+      fieldErrorsObj.tenant_email = 'Email is required'
+    }
+    if (!formData.value.tenant_nationality) {
+      errors.push('Tenant nationality is required')
+      fieldErrorsObj.tenant_nationality = 'Nationality is required'
+    }
+    if (!formData.value.tenant_residency_status) {
+      errors.push('Tenant residency status is required')
+      fieldErrorsObj.tenant_residency_status = 'Residency status is required'
+    }
+    if (!formData.value.tenant_city) {
+      errors.push('Tenant city is required')
+      fieldErrorsObj.tenant_city = 'City is required'
+    }
+    if (!formData.value.tenant_language) {
+      errors.push('Tenant language is required')
+      fieldErrorsObj.tenant_language = 'Language is required'
+    }
+    
+    // Landlord validation
+    if (!formData.value.landlord_first_name) {
+      errors.push('Landlord first name is required')
+      fieldErrorsObj.landlord_first_name = 'First name is required'
+    }
+    if (!formData.value.landlord_last_name) {
+      errors.push('Landlord last name is required')
+      fieldErrorsObj.landlord_last_name = 'Last name is required'
+    }
+    if (!formData.value.landlord_phone) {
+      errors.push('Landlord phone is required')
+      fieldErrorsObj.landlord_phone = 'Phone is required'
+    }
+    if (!formData.value.landlord_email) {
+      errors.push('Landlord email is required')
+      fieldErrorsObj.landlord_email = 'Email is required'
+    }
+    if (!formData.value.landlord_nationality) {
+      errors.push('Landlord nationality is required')
+      fieldErrorsObj.landlord_nationality = 'Nationality is required'
+    }
+    if (!formData.value.landlord_dob) {
+      errors.push('Landlord date of birth is required')
+      fieldErrorsObj.landlord_dob = 'Date of birth is required'
+    }
+    if (!formData.value.landlord_residency_status) {
+      errors.push('Landlord residency status is required')
+      fieldErrorsObj.landlord_residency_status = 'Residency status is required'
+    }
+    if (!formData.value.landlord_city) {
+      errors.push('Landlord city is required')
+      fieldErrorsObj.landlord_city = 'City is required'
+    }
+    if (!formData.value.landlord_language) {
+      errors.push('Landlord language is required')
+      fieldErrorsObj.landlord_language = 'Language is required'
+    }
+  }
+  
+  // Set field errors
+  fieldErrors.value = fieldErrorsObj
+  validationErrors.value = errors
+  
+  return errors
+}
+
+
+// Validate and submit
+// Validate and submit
+async function validateAndSubmit() {
+  // Show field errors
+  showFieldErrors.value = true
+  
+  // Validate form from DealForm
+  if (dealFormRef.value && dealFormRef.value.validateForm) {
+    const { errors, fieldErrorsObj } = dealFormRef.value.validateForm()
+    validationErrors.value = errors
+    fieldErrors.value = fieldErrorsObj
+    
+    if (errors.length > 0) {
+      // Scroll to first error
+      await nextTick()
+      const firstErrorField = document.querySelector('.is-invalid')
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+      return
+    }
+  } else {
+    // لو مفيش validateForm في DealForm، استخدمي validateForm المحلية
+    const errors = validateForm()
+    if (errors.length > 0) {
+      return
+    }
+  }
+  
+  await submitForm()
+}
+
+// Submit form
+async function submitForm() {
   isSubmitting.value = true
   
   try {
@@ -542,7 +812,7 @@ async function submitForm() {
             if (doc.file) {
               submitData.append(`documents[${index}]`, doc.file)
               submitData.append(`documents[${index}][category]`, doc.category)
-              submitData.append(`documents[${index}][type]`, doc.document_type)
+              submitData.append(`documents[${index}][document_type]`, doc.document_type)
             }
           })
         } else if (!key.includes('documents')) {
@@ -572,6 +842,7 @@ async function submitForm() {
     
     if (error.response?.data?.errors) {
       const errors = Object.values(error.response.data.errors).flat().join('\n')
+      validationErrors.value = [errors]
       Swal.fire({ 
         icon: 'error', 
         title: 'Validation Error', 
@@ -592,16 +863,13 @@ async function submitForm() {
 }
 
 function resetFormData() {
-    formData.value = {} 
-      if (dealFormRef.value && dealFormRef.value.clearAllDocuments) {
-    dealFormRef.value.clearAllDocuments()
-  }
   formData.value = {
     // Common fields
     source: null,
     deal_name: '',
     unit_no: '',
     property_type_id: null,
+    subcommunity_id: null,
     bedrooms: null,
     unit_size: '',
     project_id: null,
@@ -623,50 +891,67 @@ function resetFormData() {
     buyer_phone: '',
     buyer_email: '',
     buyer_nationality: '',
+    buyer_residency_status: '',
+    buyer_city: '',
+    buyer_country: '',
+    buyer_language: '',
     buyer_documents: [],
+    amount: null,
     
     // Seller fields (secondary)
     seller_first_name: '',
     seller_last_name: '',
+    seller_dob: '',
     seller_phone: '',
     seller_email: '',
+    seller_nationality: '',
+    seller_residency_status: '',
+    seller_city: '',
+    seller_country: '',
+    seller_language: '',
     seller_documents: [],
     
     // Tenant fields (rental)
     tenant_first_name: '',
     tenant_last_name: '',
+    tenant_dob: '',
     tenant_phone: '',
     tenant_email: '',
     tenant_nationality: '',
+    tenant_residency_status: '',
+    tenant_city: '',
+    tenant_country: '',
+    tenant_language: '',
     tenant_documents: [],
     
     // Landlord fields (rental)
     landlord_first_name: '',
     landlord_last_name: '',
+    landlord_dob: '',
     landlord_phone: '',
     landlord_email: '',
     landlord_nationality: '',
-    landlord_documents: [],
-    
-    // Property documents
-    property_documents: [],
-    
-    // Secondary buyer
-    secondary_first_name: '',
-    secondary_last_name: '',
-    secondary_phone: '',
-    secondary_email: '',
-    secondary_amount: null
+    landlord_residency_status: '',
+    landlord_city: '',
+    landlord_country: '',
+    landlord_language: '',
+    landlord_documents: []
+  }
+  
+  if (dealFormRef.value && dealFormRef.value.clearAllDocuments) {
+    dealFormRef.value.clearAllDocuments()
   }
 }
-
 function resetForm() {
   selectedStageId.value = null
+  validationErrors.value = []
+  fieldErrors.value = {}
+  showFieldErrors.value = false
   resetFormData()
 }
 
 function close() {
-     resetForm()
+  resetForm()
   show.value = false
 }
 

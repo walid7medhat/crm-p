@@ -1,20 +1,29 @@
 <template>
   <div class="document-upload-container">
-    <!-- Document Type Tabs -->
+    <!-- Document Type Tabs with Required Indicator -->
     <div class="doc-tabs d-flex gap-2 mb-3 flex-wrap">
       <button 
         v-for="type in documentTypes" 
         :key="type.id"
         class="doc-tab" 
-        :class="{ active: selectedType === type.id }" 
+        :class="{ 
+          active: selectedType === type.id,
+          required: type.required,
+          'has-files': hasFilesForType(type.id)
+        }" 
         @click="selectedType = type.id"
       >
         {{ type.name }}
+        <span v-if="type.required" class="text-danger ms-1">*</span>
+        <span v-if="hasFilesForType(type.id)" class="file-count-badge ms-1">
+          {{ getFileCountForType(type.id) }}
+        </span>
       </button>
     </div>
 
-    <!-- Upload Area -->
+    <!-- Upload Area (show if max files not reached for required types) -->
     <div 
+      v-if="canUploadMoreForType(selectedType)"
       class="upload-zone border rounded p-4 text-center"
       @dragenter.prevent
       @dragover.prevent
@@ -37,11 +46,15 @@
       />
     </div>
 
-    <!-- Uploaded Files List - Grouped by type -->
+    <!-- Uploaded Files List -->
     <div v-if="groupedFiles.length > 0" class="uploaded-files-list mt-3">
-      <!-- Loop through each type group -->
       <div v-for="group in groupedFiles" :key="group.type" class="file-group mb-3">
-        <h6 class="file-group-title mb-2">{{ getTypeName(group.type) }}</h6>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="file-group-title mb-0">{{ getTypeName(group.type) }}</h6>
+          <span v-if="isTypeRequired(group.type)" class="text-danger small">
+            Required
+          </span>
+        </div>
         <div v-for="(file, index) in group.files" :key="file.id" class="file-item d-flex align-items-center justify-content-between p-2 border rounded mb-2">
           <div class="d-flex align-items-center gap-2">
             <iconify-icon 
@@ -76,15 +89,21 @@
         </div>
       </div>
     </div>
+    
+    <!-- Required Documents Warning -->
+    <div v-if="missingRequiredDocs.length > 0" class="alert alert-warning mt-3 small p-2">
+      <iconify-icon icon="lucide:alert-triangle" class="me-1"></iconify-icon>
+      Required documents missing: {{ missingRequiredDocs.join(', ') }}
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
-  category: { type: String, default: 'buyer' }, // buyer, seller, tenant, landlord, property
+  category: { type: String, default: 'buyer' },
   documentTypes: { type: Array, default: () => [] }
 })
 
@@ -94,7 +113,7 @@ const fileInput = ref(null)
 const selectedType = ref(props.documentTypes[0]?.id || '')
 const filesByType = ref({})
 
-// Initialize filesByType when props change
+// Initialize filesByType
 function initializeFilesByType() {
   filesByType.value = {}
   props.documentTypes.forEach(type => {
@@ -102,7 +121,6 @@ function initializeFilesByType() {
   })
 }
 
-// Initialize on mount and when documentTypes change
 onMounted(() => {
   initializeFilesByType()
 })
@@ -111,7 +129,7 @@ watch(() => props.documentTypes, () => {
   initializeFilesByType()
 }, { deep: true })
 
-// Computed property to group files for display
+// Computed properties
 const groupedFiles = computed(() => {
   return Object.entries(filesByType.value)
     .filter(([type, files]) => files.length > 0)
@@ -121,21 +139,35 @@ const groupedFiles = computed(() => {
     }))
 })
 
-// Watch for changes and emit to parent
-watch(filesByType, (newFilesByType) => {
-  // Flatten all files from all types with category info
-  const allFiles = []
-  Object.entries(newFilesByType).forEach(([type, files]) => {
-    files.forEach(file => {
-      allFiles.push({
-        ...file,
-        category: props.category,  // ← هنا بنستخدم category مباشرة
-        document_type: type
-      })
-    })
+const missingRequiredDocs = computed(() => {
+  const missing = []
+  props.documentTypes.forEach(type => {
+    if (type.required && (!filesByType.value[type.id] || filesByType.value[type.id].length === 0)) {
+      missing.push(type.name)
+    }
   })
-  emit('update:modelValue', allFiles)
-}, { deep: true })
+  return missing
+})
+
+// Helper functions
+function hasFilesForType(typeId) {
+  return filesByType.value[typeId]?.length > 0
+}
+
+function getFileCountForType(typeId) {
+  return filesByType.value[typeId]?.length || 0
+}
+
+function isTypeRequired(typeId) {
+  const type = props.documentTypes.find(t => t.id === typeId)
+  return type?.required || false
+}
+
+function canUploadMoreForType(typeId) {
+  const type = props.documentTypes.find(t => t.id === typeId)
+  // For required types, allow multiple files
+  return true
+}
 
 function getTypeName(typeId) {
   const type = props.documentTypes.find(t => t.id === typeId)
@@ -163,14 +195,17 @@ function addFiles(newFiles) {
       filesByType.value[selectedType.value] = []
     }
     
+    // ✅ إضافة كل البيانات المهمة للملف
     filesByType.value[selectedType.value].push({
       id: Date.now() + Math.random(),
       file: file,
       name: file.name,
       size: file.size,
       type: file.type,
+      document_type: selectedType.value,     // national_id, passport, etc.
+      category: props.category,               // buyer, seller, etc.
+      party_type: props.category,              // buyer, seller, etc.
       status: 'pending'
-      // ملاحظة: مش بنضيف category هنا، لأنها هتتضاف في الـ emit
     })
   })
 }
@@ -181,16 +216,27 @@ function removeFile(typeId, fileId) {
   }
 }
 
-// Reset function
 function clearAllFiles() {
   initializeFilesByType()
 }
 
-// Expose reset function
-defineExpose({
-  clearAllFiles
-})
+// Watch for changes and emit
+watch(filesByType, (newFilesByType) => {
+  const allFiles = []
+  Object.entries(newFilesByType).forEach(([type, files]) => {
+    files.forEach(file => {
+      allFiles.push({
+        ...file,
+        category: props.category,
+        document_type: type,
+        document_category: props.category
+      })
+    })
+  })
+  emit('update:modelValue', allFiles)
+}, { deep: true })
 
+// File helpers
 function getFileIcon(mimeType) {
   if (mimeType?.includes('pdf')) return 'lucide:file-text'
   if (mimeType?.includes('image')) return 'lucide:image'
@@ -205,42 +251,41 @@ function formatFileSize(bytes) {
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
+
+defineExpose({
+  clearAllFiles,
+  missingRequiredDocs
+})
 </script>
 
+
 <style scoped>
-/* أضف الـ styles بتاعة الـ file-group */
+.doc-tab.required {
+  border-left: 3px solid #ef4444;
+}
+
+.doc-tab.has-files {
+  background-color: #e8f5e9;
+  border-color: #4caf50;
+}
+
+.file-count-badge {
+  background: #0F172A;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
 .file-group-title {
   font-size: 13px;
   font-weight: 600;
   color: #01062C;
-  margin-bottom: 8px;
 }
 
 .file-group {
   border-left: 3px solid #E2E8F0;
   padding-left: 12px;
-}
-
-/* باقي الـ styles زي ما هي */
-.doc-tab {
-  padding: 6px 14px;
-  border-radius: 100px;
-  border: 1px solid #E2E8F0;
-  background: #fff;
-  font-size: 12px;
-  color: #64748B;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.doc-tab:hover {
-  background: #F1F5F9;
-}
-
-.doc-tab.active {
-  background: #0F172A;
-  color: #fff;
-  border-color: #0F172A;
 }
 
 .upload-zone {
@@ -257,12 +302,21 @@ function formatFileSize(bytes) {
 
 .upload-icon {
   font-size: 32px;
-  color: #94A3B8;
+  color: #64748B;
+  margin-bottom: 8px;
+}
+
+.upload-text {
+  font-size: 14px;
+  color: #1E293B;
+}
+
+.upload-hint {
+  font-size: 12px;
 }
 
 .file-item {
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
 }
 
 .file-icon {
@@ -270,16 +324,24 @@ function formatFileSize(bytes) {
   color: #64748B;
 }
 
+.file-name {
+  font-size: 13px;
+  color: #1E293B;
+  font-weight: 500;
+}
+
+.file-size {
+  font-size: 11px;
+}
+
 .remove-icon {
-  font-size: 18px;
-  color: #EF4444;
   cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.2s;
+  color: #94A3B8;
+  transition: color 0.2s;
 }
 
 .remove-icon:hover {
-  opacity: 1;
+  color: #EF4444;
 }
 
 .spinner {

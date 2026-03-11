@@ -268,7 +268,8 @@ class LeadConversionController extends Controller
                 'property_reference' => $request->property_reference,
                 
                 'project_id' => $request->project_id,
-                'area_id' => $request->subcommunity_id,
+                'subcommunity_id' => $request->subcommunity_id,
+                'area_id' => $request->area_id,
                 'developer_id' => $request->developer_id,
                 
                 'responsible_person_id' => $request->responsible_person_id ?? $lead->responsible_person_id ??1,
@@ -350,7 +351,7 @@ class LeadConversionController extends Controller
 
             $file = $groupedFiles[$index];
             $category = $docData['category']; // buyer, seller, tenant, landlord, property
-            $type = $docData['type']; // national_id, passport, etc
+            $type = $docData['document_type']; // national_id, passport, etc
             
             // تحديد الـ party_id بناءً على الـ category
             $partyId = $this->getPartyIdByCategory($parties, $category);

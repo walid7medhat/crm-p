@@ -19,7 +19,8 @@ use App\Http\Requests\Deal\CheckStageRequirementsRequest;
 use App\Http\Requests\Deal\UpdatePartialRequest;
 use App\Services\DealStageValidator;
 use App\Http\Requests\Deal\UpdateDealStageRequest;
-
+use Illuminate\Support\Facades\Log; 
+use App\Models\DealDocument;
 class DealController extends Controller
 {
     /**
@@ -35,7 +36,8 @@ class DealController extends Controller
                     'area',
                     'developer',
                     'responsiblePerson',
-                    'parties'
+                    'parties',
+                    'subcommunity'
                 ])
                 ->visibleFor(auth()->user())
                 ->filter($request)
@@ -91,7 +93,8 @@ class DealController extends Controller
             'developer',
             'responsiblePerson',
             'parties',
-            'documents'
+            'documents',
+            'subcommunity'
         ]);
 
         return response()->json([
@@ -128,7 +131,7 @@ class DealController extends Controller
             'unit_no',
             'bedrooms',
             'unit_size',
-            'property_link'
+            'property_link','lost_reason'
         ]));
 
         if ($deal->getChanges()) {
@@ -253,7 +256,7 @@ class DealController extends Controller
             'developer',
             'parties',
             'documents',
-            'responsiblePerson'
+            'responsiblePerson','subcommunity'
         ]);
 
         broadcast(new DealUpdated($deal, 'updated'))->toOthers();
@@ -298,7 +301,7 @@ class DealController extends Controller
             'area',
             'developer',
             'responsiblePerson',
-            'parties','documents'
+            'parties','documents','subcommunity'
         ])
         ->visibleFor($user)
         ->filter($request)
@@ -409,6 +412,9 @@ class DealController extends Controller
             return ApiResponse::error('Failed to retrieve lead: ' . $e->getMessage());
         }
     }
+    
+    
+    
     public function checkStageRequirements(CheckStageRequirementsRequest $request, DealStageValidator $validator)
 {
     $deal = Deal::find($request->deal_id);
@@ -421,6 +427,13 @@ class DealController extends Controller
     }
 
     $deal->load(['parties', 'documents']);
+    
+    // تسجيل عدد المستندات الموجودة
+    Log::info('Deal documents count', [
+        'deal_id' => $deal->id,
+        'documents_count' => $deal->documents->count()
+    ]);
+    
     $result = $validator->validate($deal, (int) $request->target_stage_id, $request->deal_type);
 
     $response = [
@@ -460,11 +473,7 @@ public function updatePartial(UpdatePartialRequest $request, $id)
         // 1. تحديث الحقول الأساسية
         $dealData = $request->except(['_token']);
         
-        // Map subcommunity_id to area_id for deals
-        if (isset($dealData['subcommunity_id'])) {
-            $dealData['area_id'] = $dealData['subcommunity_id'];
-            unset($dealData['subcommunity_id']);
-        }
+        
         
         // إزالة الحقول الفارغة والحقول الخاصة بالأطراف
         $dealData = array_filter($dealData, function($value, $key) {
@@ -648,6 +657,27 @@ private function hasAnyField($request, array $fields)
     }
     return false;
 }
+
+public function getStageRequiredFields(Request $request)
+{
+    $deal = Deal::find($request->deal_id);
+    $targetStage = Stage::find($request->target_stage_id);
+    
+    if (!$deal || !$targetStage) {
+        return response()->json([
+            'success' => false,
+            'required_fields' => []
+        ]);
+    }
+    
+    $validator = new DealStageValidator();
+    $requiredFields = $validator->getRequiredFieldsForStage($deal, (int) $request->target_stage_id, $request->deal_type);
+    
+    return response()->json([
+        'success' => true,
+        'required_fields' => $requiredFields
+    ]);
+}
 public function updateStage(Request $request, $id)
 {
     $deal = Deal::find($id);
@@ -680,7 +710,7 @@ public function updateStage(Request $request, $id)
             'subcommunity_id', 'bedrooms', 'unit_size', 'area_id',
             'deal_total_amount', 'deal_commission', 'agent_share', 
             'company_share', 'currency', 'responsible_person_id',
-            'amount', 'property_link', 'property_reference'
+            'amount', 'property_link', 'property_reference','lost_reason'
         ];
 
         $dealData = [];
@@ -822,24 +852,260 @@ public function changeStage(Request $request, $id)
         ], 500);
     }
 }
-public function getStageRequiredFields(Request $request)
+
+public function updateAndChangeStage(Request $request, $id)
 {
-    $deal = Deal::find($request->deal_id);
-    $targetStage = Stage::find($request->target_stage_id);
+    // تسجيل كل البيانات الواصلة
+    Log::info('updateAndChangeStage called', [
+        'deal_id' => $id,
+        'all_input' => $request->all(),
+        'has_files' => $request->hasFile('documents'),
+        'files_count' => $request->hasFile('documents') ? count($request->file('documents')) : 0,
+        'method' => $request->method(),
+        'content_type' => $request->header('Content-Type')
+    ]);
+
+    $deal = Deal::find($id);
     
-    if (!$deal || !$targetStage) {
+    if (!$deal) {
+        return response()->json(['success' => false, 'message' => 'Deal not found'], 404);
+    }
+
+    try {
+        DB::beginTransaction();
+
+        // 1. تحديث البيانات الأساسية
+        $updateData = [];
+        
+        $dealFields = [
+            'source', 'deal_name', 'unit_no', 'property_type_id', 
+            'subcommunity_id', 'bedrooms', 'unit_size', 'area_id',
+            'deal_total_amount', 'deal_commission', 'agent_share', 
+            'company_share', 'currency', 'responsible_person_id',
+            'property_link', 'property_reference','lost_reason'
+        ];
+        
+        foreach ($dealFields as $field) {
+            if ($request->has($field) && $request->$field !== null && $request->$field !== '') {
+                $updateData[$field] = $request->$field;
+                Log::info('Field found', ['field' => $field, 'value' => $request->$field]);
+            }
+        }
+        
+        if (!empty($updateData)) {
+            $deal->update($updateData);
+            Log::info('Deal updated with data', $updateData);
+        } else {
+            Log::info('No deal fields to update');
+        }
+
+        // 2. تحديث الأطراف (parties)
+        $this->updatePartiesFromRequest($deal, $request);
+
+        // 3. رفع المستندات ✅ الطريقة الجديدة
+        if ($request->hasFile('documents')) {
+            Log::info('Documents found in request', [
+                'count' => count($request->file('documents')),
+                'files' => array_keys($request->file('documents'))
+            ]);
+            
+            $files = $request->file('documents');
+            $documentTypes = $request->input('document_types', []);
+            $categories = $request->input('categories', []);
+            $partyTypes = $request->input('party_types', []);
+            
+            foreach ($files as $index => $file) {
+                $docType = $documentTypes[$index] ?? 'unknown';
+                $category = $categories[$index] ?? 'other';
+                $partyType = $partyTypes[$index] ?? null;
+                
+                // البحث عن الـ party المناسب
+                $party = null;
+                if ($partyType) {
+                    $party = $deal->parties()
+                        ->where('party_type', $partyType)
+                        ->where('party_role', 'primary')
+                        ->first();
+                }
+                
+                // التأكد من وجود المجلد
+                $storagePath = "deals/{$deal->id}/{$category}";
+                
+                // رفع الملف
+                $path = $file->store($storagePath, 'public');
+                
+                // حفظ في قاعدة البيانات
+                DealDocument::create([
+                    'deal_id' => $deal->id,
+                    'deal_party_id' => $party?->id,
+                    'document_category' => $category,
+                    'document_type' => $docType,
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => $path,
+                    'file_size' => $file->getSize(),
+                    'mime_type' => $file->getMimeType(),
+                    'uploaded_by' => auth()->id()
+                ]);
+                
+                Log::info('Document uploaded', [
+                    'deal_id' => $deal->id,
+                    'file_name' => $file->getClientOriginalName(),
+                    'document_type' => $docType,
+                    'category' => $category,
+                    'party_type' => $partyType
+                ]);
+            }
+        } else {
+            Log::info('No documents in request');
+        }
+
+        // 4. تغيير المرحلة
+        if ($request->filled('stage_id')) {
+            $deal->stage_id = $request->stage_id;
+            $deal->save();
+            Log::info('Stage changed', ['new_stage' => $request->stage_id]);
+        }
+
+        // 5. تسجيل التاريخ
+        DealHistoryHelper::log($deal->id, [
+            'action' => 'stage_changed',
+            'user_id' => auth()->id()
+        ]);
+
+        DB::commit();
+
+        broadcast(new DealUpdated($deal->fresh(), 'updated'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Deal updated successfully',
+            'data' => new DealResource($deal)
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error in updateAndChangeStage', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
         return response()->json([
             'success' => false,
-            'required_fields' => []
-        ]);
+            'message' => 'Failed to update deal',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+private function updatePartiesFromRequest($deal, $request)
+{
+    $partyTypes = ['buyer', 'seller', 'tenant', 'landlord'];
+    
+    foreach ($partyTypes as $type) {
+        $partyData = [];
+        $prefix = $type . '_';
+        
+        // الحقول الممكنة للطرف
+        $partyFields = [
+            'first_name', 'last_name', 'phone', 'email', 'nationality', 
+            'dob', 'residency_status', 'city', 'country', 'language', 'amount'
+        ];
+        
+        foreach ($partyFields as $field) {
+            $key = $prefix . $field;
+            if ($request->has($key) && $request->$key !== null && $request->$key !== '') {
+                $dbField = ($field === 'dob') ? 'date_of_birth' : $field;
+                $partyData[$dbField] = $request->$key;
+            }
+        }
+        
+        if (!empty($partyData)) {
+            $party = $deal->parties()
+                ->where('party_type', $type)
+                ->where('party_role', 'primary')
+                ->first();
+                
+            if ($party) {
+                $party->update($partyData);
+            } else {
+                // التأكد من وجود الاسم الأول والأخير قبل الإنشاء
+                if (isset($partyData['first_name']) && isset($partyData['last_name'])) {
+                    $deal->parties()->create([
+                        'party_type' => $type,
+                        'party_role' => 'primary',
+                        ...$partyData
+                    ]);
+                }
+            }
+        }
+    }
+}
+
+private function uploadDocuments($deal, $request)
+{
+    $documents = $request->file('documents');
+    
+    if (!$documents) return;
+    
+    // تحويل documents إلى array إذا كان object
+    if (!is_array($documents)) {
+        $documents = [$documents];
     }
     
-    $validator = new DealStageValidator();
-    $requiredFields = $validator->getRequiredFieldsForStage($deal, (int) $request->target_stage_id, $request->deal_type);
-    
-    return response()->json([
-        'success' => true,
-        'required_fields' => $requiredFields
-    ]);
+    foreach ($documents as $index => $file) {
+        // استقبال البيانات من FormData
+        $docType = $request->input("documents.{$index}.document_type");
+        $category = $request->input("documents.{$index}.category");
+        $partyType = $request->input("documents.{$index}.party_type");
+        
+        if (!$docType) {
+            $docType = $request->input("documents.{$index}.document_type");
+        }
+        
+        if (!$category) {
+            $category = $request->input("documents.{$index}.category");
+        }
+        
+        if (!$partyType) {
+            $partyType = $request->input("documents.{$index}.party_type");
+        }
+        
+        // البحث عن الـ party المناسب
+        $party = null;
+        if ($partyType) {
+            $party = $deal->parties()
+                ->where('party_type', $partyType)
+                ->where('party_role', 'primary')
+                ->first();
+        }
+        
+        // استخدام category كـ default للـ document_category
+        $docCategory = $category ?? $partyType ?? 'other';
+        
+        // التأكد من وجود المجلد
+        $storagePath = "deals/{$deal->id}/{$docCategory}";
+        
+        // رفع الملف
+        $path = $file->store($storagePath, 'public');
+        
+        // حفظ في قاعدة البيانات
+        DealDocument::create([
+            'deal_id' => $deal->id,
+            'deal_party_id' => $party?->id,
+            'document_category' => $docCategory,
+            'document_type' => $docType ?? 'unknown',
+            'file_name' => $file->getClientOriginalName(),
+            'file_path' => $path,
+            'file_size' => $file->getSize(),
+            'mime_type' => $file->getMimeType(),
+            'uploaded_by' => auth()->id()
+        ]);
+        
+        Log::info('Document uploaded', [
+            'deal_id' => $deal->id,
+            'file_name' => $file->getClientOriginalName(),
+            'document_type' => $docType,
+            'party_type' => $partyType
+        ]);
+    }
 }
 }

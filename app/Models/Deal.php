@@ -37,7 +37,7 @@ class Deal extends Model
         'responsible_person_id',
         'created_by',
         'updated_by',
-        'metadata'
+        'metadata','subcommunity_id','lost_reason'
     ];
 
     protected $casts = [
@@ -87,6 +87,10 @@ class Deal extends Model
     public function area()
     {
         return $this->belongsTo(Area::class);
+    }
+    public function subcommunity()
+    {
+        return $this->belongsTo(Area::class,'subcommunity_id');
     }
 
     public function developer()

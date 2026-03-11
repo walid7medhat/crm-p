@@ -925,8 +925,9 @@ async function saveStage() {
 }
 
 // Drag and drop handlers
+// في DealsKanban.vue - تعديل دالة onDealDragChange
+
 async function onDealDragChange(evt, targetColumn) {
-  // vuedraggable: evt.added when dropping into a list, evt.added.element is the item
   const added = evt.added || (evt.directResult && { element: evt.directResult })
   if (!added || !added.element) return
 
@@ -937,6 +938,7 @@ async function onDealDragChange(evt, targetColumn) {
   if (oldStageId === newStageId) return
 
   try {
+    // التحقق من متطلبات المرحلة
     const checkRes = await axios.post('/deals/check-stage-requirements', {
       deal_id: deal.id,
       target_stage_id: newStageId,
@@ -945,46 +947,84 @@ async function onDealDragChange(evt, targetColumn) {
 
     const valid = checkRes.data?.valid === true
     const missingFields = checkRes.data?.missing_fields || []
-    let missingFieldsGrouped = checkRes.data?.missing_fields_grouped || { sections: [] }
-    const missingFieldsGroupedByStage = checkRes.data?.missing_fields_grouped_by_stage || { stages: [] }
-    // Ensure we have at least one section so the modal can open and show a message or fields (when not using per-stage)
-    if (!missingFieldsGroupedByStage.stages?.length && (!missingFieldsGrouped.sections || missingFieldsGrouped.sections.length === 0)) {
-      missingFieldsGrouped = {
-        sections: valid
-          ? [{ title: 'Confirm', fields: [{ key: '_confirm', label: 'No additional required fields. Click Save to move the deal.', type: 'text' }] }]
-          : [{ title: 'Required', fields: [{ key: '_info', label: 'Complete the required fields below to move this deal.', type: 'text' }] }]
-      }
+
+    // لو مفيش حقول مفقودة، ننقل الديل على طول
+    if (valid || missingFields.length === 0) {
+      // نقل الديل مباشرة
+      await moveDealDirectly(deal, newStageId, targetColumn, oldStageId)
+      return
     }
+
+    // لو في حقول مفقودة، نفتح المودال - بس الديل لسه في مكانه الأصلي
+    // مش بنعمله revert هنا لأننا لسه مانقلناهوش
+    
+    const missingFieldsGrouped = checkRes.data?.missing_fields_grouped || { sections: [] }
+    const missingFieldsGroupedByStage = checkRes.data?.missing_fields_grouped_by_stage || { stages: [] }
 
     pendingCompleteFields.value = {
       dealId: deal.id,
       targetStageId: newStageId,
       targetStageName: targetColumn.title,
       originalStageId: oldStageId,
-      dealData: deal,
+      dealData: { ...deal }, // copy عشان البيانات تتغيرش
       missingFields,
       missingFieldsGrouped,
       missingFieldsGroupedByStage,
       canProceedWithoutFields: valid
     }
+    
     showCompleteFieldsModal.value = true
-    revertDealDrag(deal, targetColumn, oldStageId)
+    
   } catch (err) {
     console.error('Stage check error', err)
     revertDealDrag(deal, targetColumn, oldStageId)
     showNotification(err.response?.data?.message || 'Failed to validate stage change', 'error')
   }
 }
+// دالة جديدة لنقل الديل مباشرة
+async function moveDealDirectly(deal, newStageId, targetColumn, oldStageId) {
+  try {
+    // إزالة الديل من العمود القديم
+    const sourceColumn = columns.value.find(c => c.stage_id === oldStageId)
+    if (sourceColumn) {
+      sourceColumn.deals = sourceColumn.deals.filter(d => d.id !== deal.id)
+      sourceColumn.deals_count = sourceColumn.deals.length
+    }
 
+    // إضافة الديل للعمود الجديد
+    if (!targetColumn.deals.find(d => d.id === deal.id)) {
+      targetColumn.deals.push(deal)
+      targetColumn.deals_count = targetColumn.deals.length
+    }
+
+    // تحديث المرحلة في الخلفية
+    await axios.post(`/deals/${deal.id}/change-stage`, { 
+      stage_id: newStageId 
+    })
+
+    showNotification('Deal moved successfully', 'success')
+    
+  } catch (error) {
+    console.error('Error moving deal:', error)
+    // لو حصل خطأ، نرجع الديل لمكانه
+    revertDealDrag(deal, targetColumn, oldStageId)
+    showNotification('Failed to move deal', 'error')
+  }
+}
+
+// تعديل revertDealDrag
 function revertDealDrag(deal, targetColumn, originalStageId) {
+  // نشيل الديل من العمود الجديد
+  targetColumn.deals = targetColumn.deals.filter(d => d.id !== deal.id)
+  targetColumn.deals_count = targetColumn.deals.length
+
+  // نضيفه للعمود القديم
   const sourceColumn = columns.value.find(c => c.stage_id === originalStageId)
   if (sourceColumn) {
-    targetColumn.deals = targetColumn.deals.filter(d => d.id !== deal.id)
     if (!sourceColumn.deals.find(d => d.id === deal.id)) {
       sourceColumn.deals.push(deal)
+      sourceColumn.deals_count = sourceColumn.deals.length
     }
-    sourceColumn.deals_count = sourceColumn.deals.length
-    targetColumn.deals_count = targetColumn.deals.length
   }
 }
 
@@ -1007,40 +1047,136 @@ function clearPendingStageChange() {
   pendingStageChange.value = null
 }
 
+// تعديل clearPendingCompleteFields
 function clearPendingCompleteFields() {
+  const pending = pendingCompleteFields.value
+  
+  // لو كان في ديل معلق وكان المستخدم عمل Cancel، نرجعه لمكانه
+  if (pending && pending.dealData && pending.originalStageId && pending.targetStageId) {
+    const sourceColumn = columns.value.find(c => c.stage_id === pending.originalStageId)
+    const targetColumn = columns.value.find(c => c.stage_id === pending.targetStageId)
+    
+    if (sourceColumn && targetColumn) {
+      // نشيل الديل من العمود الجديد لو موجود
+      targetColumn.deals = targetColumn.deals.filter(d => d.id !== pending.dealData.id)
+      targetColumn.deals_count = targetColumn.deals.length
+      
+      // نضيفه للعمود القديم لو مش موجود
+      if (!sourceColumn.deals.find(d => d.id === pending.dealData.id)) {
+        sourceColumn.deals.push(pending.dealData)
+        sourceColumn.deals_count = sourceColumn.deals.length
+        console.log('Deal returned to original stage:', pending.originalStageId)
+      }
+    }
+  }
+  
   showCompleteFieldsModal.value = false
   pendingCompleteFields.value = null
 }
+/// في DealsKanban.vue
+// ✅ الطريقة الصحيحة - في DealsKanban.vue
+async function handleCompleteFieldsSave({ payload, documents, stage_id }) {
+  const pending = pendingCompleteFields.value
+  if (!pending || !pending.dealId) return
 
-async function handleCompleteFieldsSave({ payload }) {
-  const dealId = pendingCompleteFields.value?.dealId
-  const targetStageId = pendingCompleteFields.value?.targetStageId
-  if (!dealId || !targetStageId) return
+  const dealId = pending.dealId
+  const targetStageId = stage_id || pending.targetStageId
 
   try {
-    if (Object.keys(payload).length > 0) {
-      await axios.post(`/deals/${dealId}/update-partial`, payload)
+    console.log('Saving data:', { 
+      payload, 
+      documents, 
+      targetStageId,
+      documentsCount: documents?.length 
+    })
+    
+    // 1. إنشاء FormData
+    let hasDocuments = documents && documents.length > 0
+    let formData = new FormData()
+    
+    // 2. إضافة الحقول العادية
+    if (payload && Object.keys(payload).length > 0) {
+      Object.keys(payload).forEach(key => {
+        if (payload[key] !== null && payload[key] !== undefined && payload[key] !== '') {
+          // تأكد من أنك لا ترسل حقول المستندات هنا
+          if (!key.includes('_documents')) {
+              formData.append(key, payload[key])
+              console.log('Added field to FormData:', key, payload[key])
+          }
+        }
+      })
     }
-    await axios.post(`/deals/${dealId}/change-stage`, { stage_id: targetStageId })
+    
+          if (hasDocuments) {
+          documents.forEach((doc, index) => {
+            if (doc.file) {
+              console.log('Adding document to FormData:', {
+                index,
+                fileName: doc.file.name,
+                docType: doc.document_type,
+                category: doc.category,
+                partyType: doc.party_type
+              })
+              
+              // ✅ الطريقة الصحيحة - الملف تحت مفتاح خاص
+              formData.append(`documents[${index}]`, doc.file)  // ← الملف هنا
+              
+              // والبيانات تحت نفس المفتاح
+              formData.append(`document_types[${index}]`, doc.document_type)
+              formData.append(`categories[${index}]`, doc.category)
+              formData.append(`party_types[${index}]`, doc.party_type)
+            }
+          })
+        }
+    
+    // 4. إضافة stage_id
+    formData.append('stage_id', targetStageId)
+    console.log('Added stage_id:', targetStageId)
+    
+    // 5. للاختبار - شوفي إيه اللي بيتبعت
+    console.log('FormData contents:')
+    for (let pair of formData.entries()) {
+      if (pair[0].includes('file') && pair[1] instanceof File) {
+        console.log(pair[0], 'File:', pair[1].name)
+      } else {
+        console.log(pair[0], pair[1])
+      }
+    }
+    
+    // 6. إرسال الطلب
+    console.log('Sending request to:', `/deals/${dealId}/update-and-change-stage`)
+    
+    const response = await axios.post(`/deals/${dealId}/update-and-change-stage`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    
+    console.log('Response:', response.data)
+
     showNotification('Deal updated and stage changed successfully', 'success')
     clearPendingCompleteFields()
+    
+    // 7. تحديث الـ UI
     await fetchDeals(true)
+
   } catch (err) {
+    console.error('Error in handleCompleteFieldsSave:', err)
+    console.error('Error response:', err.response?.data)
+    
     if (err.response?.status === 422 && err.response?.data?.missing_fields) {
       pendingCompleteFields.value = {
-        ...pendingCompleteFields.value,
+        ...pending,
         missingFields: err.response.data.missing_fields || [],
         missingFieldsGrouped: err.response.data.missing_fields_grouped || { sections: [] },
         missingFieldsGroupedByStage: err.response.data.missing_fields_grouped_by_stage || { stages: [] }
       }
+      showCompleteFieldsModal.value = true
       throw err
     }
+    
     showNotification(err.response?.data?.message || 'Failed to update deal', 'error')
     throw err
   }
-}
-
-function openDealById(dealId) {
+}function openDealById(dealId) {
   const deal = pendingCompleteFields.value?.dealData || columns.value.flatMap(c => c.deals || []).find(d => d.id === dealId)
   if (deal) {
     selectedDeal.value = {
