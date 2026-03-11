@@ -167,7 +167,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::post('/{id}/update-partial', [DealController::class, 'updatePartial']);
          Route::post('/{id}/change-stage', [DealController::class, 'changeStage']);
         Route::post('/get-stage-required-fields', [DealController::class, 'getStageRequiredFields']);
-
+        Route::post('/{id}/update-and-change-stage', [DealController::class, 'updateAndChangeStage']);
     });
     
 });
