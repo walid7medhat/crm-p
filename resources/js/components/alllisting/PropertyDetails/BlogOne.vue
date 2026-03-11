@@ -170,7 +170,7 @@
                   </div>
                   <div class="info-item">
                     <span class="info-label">Completion Status</span>
-                    <span class="info-value">{{ property.completion_status || "Not specified" }}</span>
+                    <span class="info-value">{{ property?.completion_status || "Not specified" }}</span>
                   </div>
                   
                   <!--<div class="info-item" v-if="false">-->
@@ -653,6 +653,13 @@
                                 <i class="ri-file-pdf-line"></i>
                                 Create Offer
                               </button>
+                              <button  v-if="canShowOffers"
+                                  class="dropdown-item"
+                                  @click="showOfferHistory"
+                                >
+                                  <i class="ri-history-line"></i>
+                                  View Offer History
+                                </button>
                                 <button v-if="canDeleteProperty" class="dropdown-item" @click="confirmDeleteProperty">
                                   <i class="ri-delete-bin-line"></i>
                                   Delete Property
@@ -709,7 +716,7 @@
                               </button>
                               <!-- Viewing -->
             
-                    <div v-if="!isPropertyOwner && property.completion_status=='Completed'" class="dropdown-item-btn">
+                    <div v-if="!isPropertyOwner && property?.completion_status=='Completed'" class="dropdown-item-btn">
                           <div v-if="requestStatus?.viewing_status === 'approved'" class="dropdown-item approved-info viewing">
                             <div>
                               <i class="ri-checkbox-circle-line text-success"></i>
@@ -871,7 +878,7 @@
     <div v-if="showAssignAgentModal" class="modal-overlay" @click="showAssignAgentModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h4>
+          <h4 class="text-white">
             <i class="ri-user-shared-line me-2"></i>
             Assign Property to Agent
           </h4>
@@ -1748,6 +1755,9 @@ const confirmCancelRequest = async () => {
     const canEditProperty = computed(() => {
       return property.value?.user_permissions?.can_edit || false;
     });
+    const canShowOffers = computed(() => {
+      return property.value?.user_permissions?.show_offers || false;
+    });
 
     const canDeleteProperty = computed(() => {
       return property.value?.user_permissions?.can_delete || false;
@@ -1997,15 +2007,7 @@ const isAuthenticated = computed(() => {
 
 // New computed properties for dropdown actions
 const canAssignAgent = computed(() => {
-  const property = props.property; // 
-  const user = getCurrentUser();
-
-  if (!user || !property) return false;
-
-  console.log('User role_name:', user.role_name);
-  console.log('Property can_assign_agent:', property.user_permissions?.can_assign_agent);
-
-  return property.user_permissions?.can_assign_agent || false;
+  return property.value?.user_permissions?.can_assign_agent || false;
 });
 
 
@@ -3396,17 +3398,36 @@ const generatePDF = async () => {
     const userData = localStorage.getItem('user');
     const currentUser = userData ? JSON.parse(userData) : null;
 
-    const pdfContent = createNewDesignContent(currentUser);
+    // Prepare offer data
+    const offerData = {
+      generated_at: new Date().toISOString(),
+      property_id: property.value.id,
+      property_title: property.value.title || property.value.area?.area_title,
+      client_name: 'Potential Client', // يمكن إضافة حقل لإدخال اسم العميل
+      generated_by: currentUser?.name,
+      offer_details: {
+        price: property.value.price,
+        bedrooms: property.value.number_of_bedrooms,
+        bathrooms: property.value.number_of_bathrooms,
+        area: property.value.area?.area_title
+      }
+    };
 
-    const filename = `sales-offer for ${
-      property.value?.area?.name || 'details'
-    } ${
-      Number(property.value?.number_of_bedrooms) === 0
-        ? 'Studio'
-        : Number(property.value?.number_of_bedrooms) === 1
-          ? '1 Bedroom'
-          : `${Number(property.value?.number_of_bedrooms)} Bedrooms`
-    }.pdf`;
+    // First, save offer to database
+    const saveResponse = await api.post(`/listings/properties/${property.value.id}/generate-offer`, {
+      offer_data: offerData,
+      client_name: 'Potential Client' // يمكن جعلها مدخلاً من المستخدم
+    });
+
+    if (!saveResponse.data.status) {
+      throw new Error('Failed to save offer record');
+    }
+
+    console.log('✅ Offer saved:', saveResponse.data);
+
+    // Continue with PDF generation
+    const pdfContent = createNewDesignContent(currentUser);
+    const filename = `sales-offer-${saveResponse.data.data.offer.offer_number}.pdf`;
 
     const options = {
       margin: [0,0],
@@ -3416,34 +3437,95 @@ const generatePDF = async () => {
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    // Generate PDF as jsPDF object
     const pdf = await html2pdf().set(options).from(pdfContent).toPdf().get('pdf');
-
-    // Remove last page if needed
     const pageCount = pdf.internal.getNumberOfPages();
     pdf.deletePage(pageCount);
 
-    // Convert PDF to Blob
     const pdfBlob = pdf.output('blob');
-
-    // Create a temporary link to trigger download
     const link = document.createElement('a');
     link.href = URL.createObjectURL(pdfBlob);
-    link.download = filename; // <-- this triggers Save As
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
 
-    // Close loading
     await loadingToast.close();
 
-    // Show success notification
-    proxy.$showNotification('Sales Offer PDF generated successfully!', 'success');
+    // Show success with offer number
+    proxy.$showNotification(`Sales Offer ${saveResponse.data.data.offer.offer_number} generated successfully!`, 'success');
+
+    // Optional: Show who created the offer
+    Swal.fire({
+      icon: 'success',
+      title: 'Offer Generated!',
+      html: `
+        <div style="text-align: left;">
+          <p><strong>Offer Number:</strong> ${saveResponse.data.data.offer.offer_number}</p>
+          <p><strong>Created By:</strong> ${currentUser?.name || 'You'}</p>
+          <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+        </div>
+      `,
+      confirmButtonColor: '#01062d'
+    });
 
   } catch (error) {
     console.error('PDF generation error:', error);
     proxy.$showNotification('Failed to generate PDF. Please try again.', 'error');
+  }
+};
+
+// إضافة دالة لعرض تاريخ العروض
+const showOfferHistory = async () => {
+  try {
+    const response = await api.get(`/listings/properties/${property.value.id}/offers`);
+    
+    if (response.data.status) {
+      const offers = response.data.data;
+      
+      if (offers.length === 0) {
+        Swal.fire({
+          title: 'No Offers',
+          text: 'No offers have been generated for this property yet.',
+          icon: 'info',
+          confirmButtonColor: '#01062d'
+        });
+        return;
+      }
+
+      // عرض قائمة العروض
+      let html = '<div style="max-height: 400px; overflow-y: auto;">';
+      offers.forEach(offer => {
+        html += `
+          <div style="border-bottom: 1px solid #e9ecef; padding: 12px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                
+                <div style="font-size: 14px">
+                  <strong style="font-size: 14px"> ${offer.creator?.name || 'Unknown'}</strong>
+                </div>
+                
+              </div>
+              <span style="font-size: 12px; color: #999;">
+                 ${new Date(offer.created_at).toLocaleString()}
+              </span>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+
+      Swal.fire({
+        title: 'Offer History',
+        html: html,
+        width: '600px',
+        confirmButtonColor: '#01062d',
+        confirmButtonText: 'Close'
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching offer history:', error);
+    proxy.$showNotification('Failed to load offer history', 'error');
   }
 };
 
@@ -4447,6 +4529,7 @@ const openDriveLink = () => {
       canEditProperty,
       canDeleteProperty,
       canEditOrDelete,
+      canShowOffers,
       hasMortgageInfo,
       canRequestUnitNumber,
       canRequestOwnerInfo,
@@ -4513,6 +4596,7 @@ const openDriveLink = () => {
       goToAgentDetails,
       //pdf
       generatePDF,
+      showOfferHistory,
         // Dropdown and Modal
         showActionsDropdown,
         showAssignAgentModal,
@@ -7429,5 +7513,13 @@ ease;
   .card.card-main.p-0.radius-12.overflow-hidden .property-content .spec-main-value {
     font-size: 14px !important;
   }
+}
+@media (min-width: 991px) and  (max-width:1072px) {
+    .info-value{
+         font-size: 11px;
+    }
+    .approved-info{
+        padding:6px;
+    }
 }
 </style>

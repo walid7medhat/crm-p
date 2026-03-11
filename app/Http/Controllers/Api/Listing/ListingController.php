@@ -27,6 +27,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Schema;
 use App\Models\SearchAlert;
 use App\Jobs\CheckSearchAlerts;
+use App\Models\PropertyOffer;
 class ListingController extends Controller
 {
     // Cache constants
@@ -1549,4 +1550,111 @@ public function validateUnitNumber(Request $request)
             'message' => 'Search alert saved'
         ]);
     }
+    
+    
+     public function generateOffer(Request $request, $id)
+    {
+        try {
+            $property = Listing::findOrFail($id);
+            $user = Auth::user();
+
+            // Validate request
+            $request->validate([
+                'offer_data' => 'sometimes|array',
+                'client_name' => 'sometimes|string',
+                'client_email' => 'sometimes|email',
+                'client_phone' => 'sometimes|string'
+            ]);
+
+            // Create offer record
+            $offer = PropertyOffer::create([
+                'property_id' => $property->id,
+                'created_by' => $user->id,
+                'offer_number' => PropertyOffer::generateOfferNumber(),
+                'offer_data' => $request->all(),
+                'status' => 'generated'
+            ]);
+
+            // Load creator relationship
+            $offer->load('creator:id,name,email,avatar');
+
+            \Log::info('Offer generated', [
+                'offer_id' => $offer->id,
+                'property_id' => $property->id,
+                'created_by' => $user->id,
+                'offer_number' => $offer->offer_number
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Offer generated successfully',
+                'data' => [
+                    'offer' => $offer,
+                    'created_by' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'avatar' => $user->avatar
+                    ]
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to generate offer: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to generate offer',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all offers for a property
+     */
+    public function getOffers($id)
+    {
+        try {
+            $offers = PropertyOffer::with('creator:id,name,email,avatar')
+                ->where('property_id', $id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'status' => true,
+                'data' => $offers
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to fetch offers'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get a single offer
+     */
+    public function getOffer($propertyId, $offerId)
+    {
+        try {
+            $offer = PropertyOffer::with('creator:id,name,email,avatar')
+                ->where('property_id', $propertyId)
+                ->findOrFail($offerId);
+
+            return response()->json([
+                'status' => true,
+                'data' => $offer
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Offer not found'
+            ], 404);
+        }
+    }
+
 }

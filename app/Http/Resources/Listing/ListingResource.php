@@ -30,24 +30,10 @@ $roleAllowed = $user->hasAnyRole(['admin','super_admin','team_lead','manager']);
 $allowedAgentIds = [];
 
         if ($roleAllowed) {
-            if ($user->hasAnyRole(['admin','super_admin'])) {
+            if ($user->hasAnyRole(['super_admin','admin'])) {
                 $canAssignAgent = true;
             } else {
-              $allowedAgentIds = User::where(function ($q) use ($user) {
-
-                    // نفسه
-                    $q->where('id', $user->id)
-                
-                    // direct children
-                    ->orWhere('parent_id', $user->id)
-                
-                    // grandchildren
-                    ->orWhereHas('parent', function ($q2) use ($user) {
-                        $q2->where('parent_id', $user->id);
-                    });
-                
-                })->pluck('id')->toArray();
-
+              $allowedAgentIds = $user->getAllSubordinatesIds();
 
                 if ($this->agent_id && in_array($this->agent_id, $allowedAgentIds)) {
                     $canAssignAgent = true;
@@ -163,8 +149,9 @@ $allowedAgentIds = [];
                 'can_edit' => $canEdit,
                 'can_delete' => $canDelete,
                 'is_owner' => $this->isOwner($user) || ($canAssignAgent && $user->hasRole('manager') && $user->listing_team == 1),
-                   'can_assign_agent' => $canAssignAgent, 
-                 'showDocuments'=>$showDocuments
+                   'can_assign_agent' => $canAssignAgent && $user->hasPermissionTo('listings-assign'), 
+                 'showDocuments'=>$showDocuments,
+                  'show_offers'=>$user->hasRole('super_admin'),
             ],
             'is_owner' => $this->isOwner($user) || ($canAssignAgent && $user->hasRole('manager') && $user->listing_team == 1),
 

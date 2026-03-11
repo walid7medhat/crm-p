@@ -298,7 +298,6 @@
 <script>
 import { API_ENDPOINTS } from '@/config/api';
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
-import userPlaceholder from '@/assets/images/avatar/avatar1.png';
 
 export default {
     name: 'ViewUser',
@@ -312,7 +311,7 @@ export default {
             teamMembers: [],
             userPermissions: [],
             error: null,
-            userPlaceholder,
+    
             showAllTeamMembers: false,
             
             // Agent Properties
@@ -324,7 +323,7 @@ export default {
             bedIcon : '/assets/icons/bedroom-icon.svg',
             bathIcon : '/assets/icons/bathroom-icon.svg',
             sqftIcon : '/assets/icons/area-size.svg',
-            
+            userPlaceholder:'/assets/images/user.png'
         };
     },
     computed: {

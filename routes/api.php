@@ -280,7 +280,8 @@ Route::prefix('leads')->group(function(){
 Route::post('/search-alerts',[ListingController::class, 'store_search_alert']);
 
 Route::prefix('listings')->group(function(){
-    
+    Route::post('/properties/{id}/generate-offer', [ListingController::class, 'generateOffer']);
+Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
     Route::get('/{id}/comments', [ListingCommentController::class, 'index']);
     Route::get('/{id}/comments/stats', [ListingCommentController::class, 'getStats']);
     Route::post('/{id}/comments', [ListingCommentController::class, 'store']);

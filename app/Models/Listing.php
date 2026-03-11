@@ -329,4 +329,14 @@ class Listing extends Model
     {
         return $this->hasMany(ListingAdditionalDocument::class)->orderBy('order');
     }
+    
+    public function offers()
+    {
+        return $this->hasMany(PropertyOffer::class,'property_id');
+    }
+    
+    public function latestOffer()
+    {
+        return $this->hasOne(PropertyOffer::class,'property_id')->latestOfMany();
+    }
 }

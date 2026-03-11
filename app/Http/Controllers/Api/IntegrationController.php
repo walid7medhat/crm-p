@@ -517,7 +517,7 @@ class IntegrationController extends Controller
                 'first_name' => $this->extractName($fields),
                 'last_name' => $fields['last_name'] ?? null,
                 'email' => $fields['email'] ?? null,
-                'work_phone' => $fields['phone_number'] ?? $fields['phone'] ?? null,
+                'work_phone' => $fields['phone_number'] ?? $fields['phone'] ?? $fields['work_phone'] ?? $fields['work_phone_number'] ?? null,
                 // 'mobile' => $fields['mobile'] ?? $fields['cell'] ?? null,
                 'stage_id' => $stage?->id,
                 'lead_source' => $integration->lead_source ?? 'Social Media-Facebook',

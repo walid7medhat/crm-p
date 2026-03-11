@@ -78,7 +78,7 @@
                             <tr v-for="request in paginatedRequests" :key="request.id">
                                   <td>{{request.reference_number}}</td>
                                 <td>
-                                    <div class="d-flex align-items-center">
+                                    <div class="d-flex align-items-center" style="cursor: pointer;" @click="goToUser(request.requested_by?.id)">
                                         <img :src="request.requested_by?.avatar || defaultAvatar"  alt=""
                                             class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
                                         <div class="flex-grow-1">
@@ -507,9 +507,11 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
+import { useRouter } from 'vue-router'
 
 const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
 const filtericon= '/assets/images/filter.png'
+const router = useRouter()
 
 // Data
 const requests = ref([])
@@ -773,7 +775,11 @@ function formatDate(dateString) {
         minute: '2-digit'
     })
 }
-
+function  goToUser(userId) {
+        if (userId) {
+            router.push(`/users/${userId}`);
+        }
+    }
 watch(searchText, () => {
     currentPage.value = 1
 })

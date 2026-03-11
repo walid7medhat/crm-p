@@ -62,7 +62,7 @@
                             <tr v-for="order in paginatedOrders" :key="order.id">
                                   <td>{{order.reference_number}}</td>
                                 <td v-if="hasShowAllColumn">
-                                    <div class="d-flex align-items-center">
+                                    <div class="d-flex align-items-center"  style="cursor: pointer;" @click="goToUser(order.requested_by?.id)">
                                                     <img :src=" order.requested_by.avatar || defaultAvatar"  alt=""
                                             class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
                                         <div class="d-flex flex-column">
@@ -72,7 +72,7 @@
                                     </div>
                                 </td>
                                <td>
-                                  <div class="d-flex align-items-center">
+                                  <div class="d-flex align-items-center" >
                                        <img :src=" order.listing.agent_avatar || defaultAvatar"  alt=""
                                             class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
                                     <div class="d-flex flex-column">
@@ -586,7 +586,11 @@ function viewPropertyFromModal(propertyId) {
         })
     }
 }
-
+function  goToUser(userId) {
+        if (userId) {
+            router.push(`/users/${userId}`);
+        }
+    }
 async function fetchMyOrders() {
     try {
         loading.value = true
