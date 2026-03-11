@@ -83,7 +83,7 @@ class DealResource extends JsonResource
                 })(),
             'parties' => DealPartyResource::collection($this->whenLoaded('parties')),
             'documents' => DealDocumentResource::collection($this->whenLoaded('documents')),
-            
+            'lost_reason'=>$this->lost_reason
             // Timestamps
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
