@@ -275,7 +275,7 @@ class LeadController extends Controller
 
                 $changes = [];
                 
-                if (!empty($leadData['responsible_person_id']) && $leadData['responsible_person_id'] !== $lead->responsible_person_id) {
+                if (!empty($leadData['responsible_person_id']) && $leadData['responsible_person_id'] != $lead->responsible_person_id) {
                     $oldPerson = User::find($lead->responsible_person_id);
                     $newPerson = User::find($leadData['responsible_person_id']);
                     
@@ -343,7 +343,33 @@ class LeadController extends Controller
                         ];
                     }
                 }
-                
+                if (isset($leadData['responsible_person_id']) && $leadData['responsible_person_id'] != $old['responsible_person_id']) {
+                    $fields['responsible_person_id'] = [
+                        'old' => $old['responsible_person_id'],
+                        'new' => $leadData['responsible_person_id']
+                    ];
+                    
+                    // يمكنك أيضاً إضافة أسماء المستخدمين للوضوح
+                    $oldPerson = User::find($old['responsible_person_id']);
+                    $newPerson = User::find($leadData['responsible_person_id']);
+                    
+                       $changes = [
+                                    'old_person_id'=>$oldPerson?->id,
+                            'old_person' => $oldPerson?->name,
+                            'new_person' => $newPerson?->name
+                        ];
+                          LeadHistoryHelper::log(
+                            $lead->id,
+                            [
+                                'action' => 'assigned',
+                                                    'old_person_id'=>$oldPerson?->id,
+                                'old_person' => $oldPerson?->name,
+                                'new_person' => $newPerson?->name
+                            ]
+                        );
+                }
+
+                           
                 LeadHistoryHelper::log(
                     $lead->id,
                     [

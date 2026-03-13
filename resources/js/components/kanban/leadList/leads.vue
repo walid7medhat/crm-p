@@ -129,12 +129,12 @@
 
                                                 <hr class="my-12 border-neutral-200">
 
-                                                <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center justify-content-between assignedBy">
                                                     <div class="info-item">
-                                                        <div class="info-label text-secondary-light text-xs mb-1">Assigned By</div>
-                                                        <div class="info-value">{{ formatDate(task.responsible_person.created_at) }}</div>
+                                                        <div class="info-label text-secondary-light text-xs ">Assigned By</div>
+                                                        <!--<div class="info-value">{{ formatDate(task.responsible_person.created_at) }}</div>-->
                                                     </div>
-                                                    <img v-if="task?.parent?.avatar" :src="task.parent.avatar" alt="" class="avatar-sm rounded-circle" />
+                                                    <img v-if="task?.parent?.avatar" :src="task.parent.avatar"  :title="task.parent.name" alt="" class="avatar-sm rounded-circle" />
                                                     <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
                                                         <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
                                                     </div>
@@ -1776,12 +1776,16 @@ const $showNotification = (message, type = 'info') => {
     height: 32px;
     object-fit: cover;
 }
+.assignedBy .avatar-sm{
+      width: 25px;
+    height: 25px;
+}
 
 .info-label {
     color: #979797;
     font-weight: 500;
     font-style: Medium;
-    font-size: 11px;
+    font-size: 11px !important;
 
 }
 

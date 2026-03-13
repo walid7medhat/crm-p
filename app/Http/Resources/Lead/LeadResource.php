@@ -20,6 +20,17 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
         }
     }
 }
+        $assignmentHistory = $this->histories()
+            ->where('changes->action', 'assigned')
+            ->orderBy('created_at', 'desc') 
+            ->first();
+        
+        if ($assignmentHistory && $assignmentHistory->user) {
+            $assignedBy = $assignmentHistory->user;
+        } else {
+            // إذا لم يتم العثور على هيستوري إسناد، استخدم addedBy
+            $assignedBy = $this->addedBy;
+        }
         return [
             'id' => $this->id,
             'added_by' => $this->added_by,
@@ -100,6 +111,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'can_delete'=>auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin') ),
              'raw_meta_data' => $rawMetaData, 
                         'facebook_questions_answers' =>$facebookFields,
+            'parent'=>new \App\Http\Resources\User\UserResource($assignedBy)
 
         ];
     }
