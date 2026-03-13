@@ -62,14 +62,20 @@
                                 </div>
                             </div>
 
-                            <div class="column-content column-content-scrollable p-8 flex-grow-1 d-flex flex-column">
+                            <div
+                                class="column-content column-content-scrollable p-8 flex-grow-1 d-flex flex-column"
+                                @scroll="(e) => onColumnScroll(column, e)"
+                            >
                                 <!-- Tasks -->
                                 <draggable v-model="column.leads" :group="'tasks'" item-key="id"
                                     class="tasks-list flex-grow-1" :ghost-class="'ghost'"
                                     :drag-class="'dragging'"
                                     @change="(evt) => onLeadDragChange(evt, column)">
-                                    <template #item="{ element: task }">
-                                        <div :key="task.id" class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
+                                    <template #item="{ element: task, index }">
+                                        <div
+                                            v-if="index < getVisibleLeadCount(column.status)"
+                                            :key="task.id"
+                                            class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
                                             @click="viewLead(task)">
                                             <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
                                                 <p class="task-title flex-grow-1 mb-0">{{ task.lead_name }}</p>
@@ -148,6 +154,18 @@
                                         </div>
                                     </template>
                                 </draggable>
+                                <div
+                                    v-if="column.leads.length > getVisibleLeadCount(column.status)"
+                                    class="mt-2 text-center"
+                                >
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-light"
+                                        @click="loadMoreLeads(column.status)"
+                                    >
+                                        Load more
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -378,6 +396,9 @@ const isAdminOrSuperAdmin = computed(() => {
 })
 
 const columns = ref([])
+const INITIAL_VISIBLE_LEADS_PER_STAGE = 20
+const VISIBLE_LEADS_INCREMENT = 20
+const visibleLeadCounts = ref({})
 const responsiblePersons = ref([])
 const loading = ref(true)
 const error = ref(null)
@@ -563,6 +584,17 @@ const executeFetchLeads = async () => {
             leads: stage.leads || []
         }))
         columns.value = newData
+        // Initialize / clamp visible counts per stage to avoid rendering all cards at once
+        const nextCounts = { ...visibleLeadCounts.value }
+        columns.value.forEach(col => {
+            const total = Array.isArray(col.leads) ? col.leads.length : 0
+            if (nextCounts[col.status] == null) {
+                nextCounts[col.status] = Math.min(INITIAL_VISIBLE_LEADS_PER_STAGE, total)
+            } else if (nextCounts[col.status] > total) {
+                nextCounts[col.status] = total
+            }
+        })
+        visibleLeadCounts.value = nextCounts
         error.value = null
         loading.value = false
     } catch (err) {
@@ -574,6 +606,35 @@ const executeFetchLeads = async () => {
     } finally {
         isFetching.value = false
         abortController.value = null
+    }
+}
+
+function getVisibleLeadCount(stageId) {
+    const current = visibleLeadCounts.value[stageId]
+    if (current == null) {
+        return INITIAL_VISIBLE_LEADS_PER_STAGE
+    }
+    return current
+}
+
+function loadMoreLeads(stageId) {
+    const current = getVisibleLeadCount(stageId)
+    visibleLeadCounts.value = {
+        ...visibleLeadCounts.value,
+        [stageId]: current + VISIBLE_LEADS_INCREMENT
+    }
+}
+
+function onColumnScroll(column, event) {
+    const el = event?.target
+    if (!el) return
+    const threshold = 48 // px from bottom
+    const reachedBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - threshold
+    if (!reachedBottom) return
+    const total = Array.isArray(column.leads) ? column.leads.length : 0
+    const current = getVisibleLeadCount(column.status)
+    if (total > current) {
+        loadMoreLeads(column.status)
     }
 }
 

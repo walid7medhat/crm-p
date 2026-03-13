@@ -1294,6 +1294,7 @@ const bedroomOptions = [
 </script>
 
 <style scoped>
+<<<<<<< Updated upstream
 .section-title { 
   font-size: 14px !important; 
   font-weight: 600; 
@@ -1364,10 +1365,6 @@ const bedroomOptions = [
   border: 1px solid #E2E8F0;
   border-radius: 10px;
   min-height: 42px;
-}
-
-.form-section {
-  margin-top: 10px;
 }
 
 .section-title { font-size: 16px !important; font-weight: 600; color: #01062C; font-family: 'Montserrat'; margin-bottom: 12px; }

@@ -27,7 +27,7 @@
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 24px 40px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-                            <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #111827; letter-spacing: -0.02em;">OIA Properties Listing Portal</h1>
+                            <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #111827; letter-spacing: -0.02em;">Oia Properties Listing Portal</h1>
                             <p style="margin: 8px 0 0 0; font-size: 14px; color: #6b7280;">Your account is now active</p>
                         </td>
                     </tr>
@@ -35,7 +35,7 @@
                     <tr>
                         <td style="padding: 32px 40px;">
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #374151;">Hello{{ isset($userName) && $userName ? ' ' . e($userName) : '' }},</p>
-                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #374151;">Great news — your account on the <strong style="color: #111827;">OIA Properties Listing Portal</strong> has been successfully activated by our team.</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #374151;">your account on the <strong style="color: #111827;">Oia Properties Listing Portal</strong> has been successfully activated by our team.</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #374151;">You can now sign in using the email address and password you used when you signed up. Once logged in, you’ll be able to browse all available property listings on the portal.</p>
                             <!-- CTA Button -->
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 28px 0;">
@@ -49,21 +49,16 @@
                             <p style="margin: 0 0 24px 0; font-size: 14px; text-align: center;">
                                 <a href="https://listings.oiaproperties.com/" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; word-break: break-all;">https://listings.oiaproperties.com/</a>
                             </p>
-                            <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #374151;">We’re glad to have you on board. If you have any questions, feel free to reach out to our team.</p>
                         </td>
                     </tr>
                     <!-- Footer -->
-                    <tr>
-                        <td style="padding: 24px 40px 40px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
-                            <p style="margin: 0; font-size: 14px; color: #6b7280; line-height: 1.5;">Best regards,<br><strong style="color: #111827;">The OIA Properties Team</strong></p>
-                        </td>
-                    </tr>
+            
                 </table>
                 <!-- Optional small print -->
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 24px auto 0 auto;">
                     <tr>
                         <td style="text-align: center; padding: 0 20px;">
-                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">&copy; {{ date('Y') }} OIA Properties Listing Portal. All rights reserved.</p>
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">&copy; {{ date('Y') }} Oia Properties Listing Portal. All rights reserved.</p>
                         </td>
                     </tr>
                 </table>
