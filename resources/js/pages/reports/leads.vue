@@ -159,7 +159,7 @@
                 </div>
               </td>
               <td>
-                <span class="role-badge">{{ item.user.roles?.[0]?.name || 'No Role' }}</span>
+                <span class="role-badge">{{ item.user.role_name || 'No Role' }}</span>
               </td>
               <td class="text-center">{{ item.statistics.total_assigned_leads }}</td>
               <td class="text-center">{{ item.statistics.total_created_leads }}</td>
