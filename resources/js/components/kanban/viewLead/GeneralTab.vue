@@ -30,6 +30,8 @@
         <!-- Right Column: Activity & Comments -->
         <div class="col-md-7">
             <div class="activity-card bg-white p-3 radius-12 shadow-sm">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+
                 <!-- Activity/Comments Toggle -->
                 <div class="d-flex gap-2 mb-4 p-1 radius-100 w-fit-content toggle-buttons-container">
                       <button 
@@ -50,7 +52,33 @@
                     </button>
                   
                 </div>
-
+                    <div v-if="lead?.can_delete" class="admin-controls d-flex gap-2">
+                        <!-- زر حذف الكل للتعليقات -->
+                        <button 
+                            v-if="activeViewTab === 'comments'"
+                            class="btn-admin-action btn-delete-all"
+                            @click="confirmDeleteAllComments"
+                            title="Delete all comments"
+                        >
+                            <iconify-icon icon="lucide:trash-2" width="18" height="18"></iconify-icon>
+                            <span>Delete All </span>
+                        </button>
+                        
+                        <!-- زر حذف الكل للأنشطة -->
+                        <button 
+                            v-if="activeViewTab === 'activity'"
+                            class="btn-admin-action btn-delete-all"
+                            @click="confirmDeleteAllActivities"
+                            title="Delete all activities"
+                        >
+                            <iconify-icon icon="lucide:trash-2" width="18" height="18"></iconify-icon>
+                            <span>Delete All </span>
+                        </button>
+                        
+                        <!-- زر استعادة (اختياري) - يمكن إضافته في وضع خاص -->
+                        <!-- <button class="btn-admin-action btn-restore-all">Restore All</button> -->
+                    </div>
+                </div>
                 <!-- Activity View -->
                 <ActivitySection 
                     v-if="activeViewTab === 'activity'" 
@@ -71,17 +99,20 @@
                 v-if="activeViewTab === 'activity'" 
                 ref="activityListRef"
                 :lead-id="lead?.id" 
+                 :key-delete="activityListKey"
             />
             <CommentList 
                 v-if="activeViewTab === 'comments'" 
                 ref="commentListRef"
                 :lead-id="lead?.id" 
+                 :key="commentListKey"
             />
             <!-- Lead Activity timeline: under comments, grouped by date (who assigned, created, history). Key forces refetch when stage changes so "Stage changed" appears immediately. -->
             <LeadActivityTimeline 
                 v-if="activeViewTab === 'comments' && lead?.id" 
                 :key="`timeline-${lead?.id}-${lead?.stage_id}`"
                 :lead-id="lead?.id" 
+               
             />
             <!-- Lead Created (first section from bottom) -->
             <LeadCreatedCard v-if="lead?.id" :lead="lead" />
@@ -117,7 +148,8 @@ import CommentsSection from './CommentsSection.vue'
 import ActivityList from './ActivityList.vue'
 import CommentList from './CommentList.vue'
 import LeadActivityTimeline from './LeadActivityTimeline.vue'
-
+import api from '@/plugins/axios'
+import Swal from 'sweetalert2'
 const props = defineProps({
     lead: {
         type: Object,
@@ -133,18 +165,100 @@ const emit = defineEmits(['update:lead'])
 
 const isEditMode = ref(false)
 const selectedStageId = ref(props.stageId || props.lead?.stage?.id || null)
-const activeViewTab = ref('comments') // 'activity' or 'comments'
+const activeViewTab = ref('comments')
 const commentListRef = ref(null)
 const activityListRef = ref(null)
 const editLeadRef = ref(null)
+const commentListKey = ref(0)
+const activityListKey = ref(0)
+
+// استخدام window.$showNotification بدلاً من toast
+const showNotification = (message, type = 'success') => {
+    if (window.$showNotification) {
+        window.$showNotification(message, type)
+    } else {
+        console.log(message)
+    }
+}
+
 const resetEditMode = () => {
     console.log('🔄 GeneralTab: Resetting edit mode to false')
     isEditMode.value = false
 }
 
+const confirmDeleteAllComments = () => {
+    Swal.fire({
+        title: 'Delete All Comments?',
+        html: `
+            <div class="text-center">
+                <p class="mb-3">Are you sure you want to delete <strong>ALL comments</strong> for this lead?</p>
+                <p class="text-danger small">This action can be reversed by an administrator.</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete all!',
+        cancelButtonText: 'Cancel',
+        showLoaderOnConfirm: true,
+        preConfirm: async () => {
+            try {
+                const response = await api.delete(`/leads/${props.lead.id}/comments/all`)
+                return response.data
+            } catch (error) {
+                window.$swal.showValidationMessage(
+                    error.response?.data?.message || 'Failed to delete comments'
+                )
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            showNotification(`Successfully deleted ${result.value?.data?.deleted_count || 0} comments`, 'success')
+            commentListKey.value++
+            
+        }
+    })
+}
+
+const confirmDeleteAllActivities = () => {
+    Swal.fire({
+        title: 'Delete All Activities?',
+        html: `
+            <div class="text-center">
+                <p class="mb-3">Are you sure you want to delete <strong>ALL activities</strong> for this lead?</p>
+                <p class="text-danger small">This action can be reversed by an administrator.</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete all!',
+        cancelButtonText: 'Cancel',
+        showLoaderOnConfirm: true,
+        preConfirm: async () => {
+            try {
+                const response = await api.delete(`/leads/${props.lead.id}/activities/all`)
+                return response.data
+            } catch (error) {
+                window.$swal.showValidationMessage(
+                    error.response?.data?.message || 'Failed to delete activities'
+                )
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            showNotification(`Successfully deleted ${result.value?.data?.deleted_count || 0} activities`, 'success')
+            activityListKey.value++
+        }
+    })
+}
+
 defineExpose({
     resetEditMode
 })
+
 // Watch for stageId changes from parent
 watch(() => props.stageId, (newStageId) => {
     if (newStageId) {
@@ -215,25 +329,22 @@ const handleLeadUpdated = (responseData) => {
 }
 
 const handleCommentCreated = (newComment) => {
-    // Add the new comment to the CommentList
     if (commentListRef.value && commentListRef.value.addComment) {
         commentListRef.value.addComment(newComment)
     }
 }
 
 const handleActivityCreated = (newActivity) => {
-    // Add the new activity to the ActivityList
     if (activityListRef.value && activityListRef.value.addActivity) {
         activityListRef.value.addActivity(newActivity)
     }
 }
+
 onMounted(() => {
     console.log('📝 GeneralTab: Component mounted, isEditMode = false')
     isEditMode.value = false
 })
-</script>
-
-<style scoped>
+</script><style scoped>
 /* GeneralTab Wrapper Styles */
 .info-card {
     border: 1px solid #F4F4F4;
@@ -342,5 +453,42 @@ onMounted(() => {
 .w-fit-content {
     width: fit-content;
 }
+.admin-controls {
+    position: relative;
+}
 
+.btn-admin-action {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.btn-delete-all {
+    background-color: #FEF2F2;
+    color: #EF4444;
+    border-color: #FEE2E2;
+}
+
+.btn-delete-all:hover {
+    background-color: #FEE2E2;
+    color: #DC2626;
+}
+
+.btn-restore-all {
+    background-color: #F0F9FF;
+    color: #0284C7;
+    border-color: #E0F2FE;
+}
+
+.btn-restore-all:hover {
+    background-color: #E0F2FE;
+    color: #0369A1;
+}
 </style>

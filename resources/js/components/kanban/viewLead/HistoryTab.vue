@@ -541,18 +541,29 @@ const transformHistoryEntry = (entry) => {
         } else if (changes.new_person) {
             changesHtml = `<span class="change-new">${changes.new_person}</span>`
         }
-         else if (changes.fields && typeof changes.fields === 'object') {
+        else if (changes.fields && typeof changes.fields === 'object') {
+        
             const entries = Object.entries(changes.fields)
-                .filter(([key, val]) => key !== 'updated_at'); 
+                .filter(([key]) => key !== 'updated_at');
+        
             changesHtml = entries.map(([key, val]) => {
-                const oldVal = val.old ?? '';
-                const newVal = val.new ?? '';
+        
+                const oldVal = val?.old !== null && val?.old !== undefined ? val.old : '-'
+                const newVal = val?.new !== null && val?.new !== undefined ? val.new : '-'
+        
                 const label = key
                     .replace(/_/g, ' ')
-                    .replace(/\b\w/g, l => l.toUpperCase());
-                return  `<span>${label} </span> `
-                // return `<strong>${label}:</strong> <span class="change-old">${oldVal}</span> <span class="change-arrow">→</span> <span class="change-new">${newVal}</span></br>`;
-            }).join(',');
+                    .replace(/\b\w/g, l => l.toUpperCase())
+        
+                return `
+                    <div class="history-change" style="margin-bottom:4px;">
+                        <strong>${label}:</strong>
+                        <span class="change-old">${oldVal}</span>
+                        <span class="change-arrow"> → </span>
+                        <span class="change-new">${newVal}</span>
+                    </div>
+                `
+            }).join('')
         }
     }
     

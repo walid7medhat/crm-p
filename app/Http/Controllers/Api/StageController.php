@@ -234,7 +234,10 @@ public function getStagesWithLeads(Request $request): JsonResponse
                 $q->where('source_information', 'like', "%{$request->source_information}%");
             }
              if ($request->filled('closed')) {
-                 $closed = Stage::orderBy('order', 'desc')->first();
+                 $closed = Stage::where('stage_type', 'lead')
+                ->where('name', 'like', '%Converted%')
+                ->orderBy('order', 'desc')
+                ->first();
                 $q->where('stage_id', $closed->id);
             }
             if ($request->filled('lead_name')) {

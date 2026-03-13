@@ -62,7 +62,7 @@
         </div>
 
         <div class="info-group">
-            <label class="form-label-custom">Contact</label>
+            <label class="form-label-custom">Phone Number</label>
             <b-form-input 
                 v-model="form.work_phone" 
                 placeholder="Enter Phone Number" 
@@ -88,7 +88,7 @@
         </div>
 
         <div class="info-group">
-            <label class="form-label-custom">Secondary Phone</label>
+            <label class="form-label-custom">Work Phone</label>
             <b-form-input 
                 v-model="form.work_phone_2" 
                 placeholder="Enter Phone Number" 
@@ -100,19 +100,19 @@
             </div>
         </div>
 
-        <div class="info-group">
-            <label class="form-label-custom">Comment</label>
-            <b-form-textarea 
-                v-model="form.comment" 
-                placeholder="Text Here" 
-                rows="4" 
-                class="custom-textarea"
-                :class="{ 'is-invalid': validationErrors.comment }"
-            ></b-form-textarea>
-            <div v-if="validationErrors.comment" class="invalid-feedback d-block">
-                {{ validationErrors.comment[0] }}
-            </div>
-        </div>
+        <!--<div class="info-group">-->
+        <!--    <label class="form-label-custom">Comment</label>-->
+        <!--    <b-form-textarea -->
+        <!--        v-model="form.comment" -->
+        <!--        placeholder="Text Here" -->
+        <!--        rows="4" -->
+        <!--        class="custom-textarea"-->
+        <!--        :class="{ 'is-invalid': validationErrors.comment }"-->
+        <!--    ></b-form-textarea>-->
+        <!--    <div v-if="validationErrors.comment" class="invalid-feedback d-block">-->
+        <!--        {{ validationErrors.comment[0] }}-->
+        <!--    </div>-->
+        <!--</div>-->
 
         <div class="info-group">
             <label class="form-label-custom">Budget</label>
@@ -216,7 +216,7 @@
         </div>
 
         <div class="info-group mb-3">
-            <label class="form-label-custom">Source Information</label>
+            <label class="form-label-custom">More Information</label>
             <b-form-textarea 
                 v-model="form.source_information" 
                 placeholder="Text Here" 

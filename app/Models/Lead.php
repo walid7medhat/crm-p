@@ -90,6 +90,15 @@ class Lead extends Model
     {
         return $this->hasMany(LeadActivity::class)->latest();
     }
+    public function commentsWithTrashed()
+{
+    return $this->hasMany(LeadComment::class)->withTrashed();
+}
+
+public function activitiesWithTrashed()
+{
+    return $this->hasMany(LeadActivity::class)->withTrashed();
+}
 
     public function pendingActivities()
     {

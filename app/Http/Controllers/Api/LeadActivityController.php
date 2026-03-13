@@ -24,7 +24,6 @@ use Carbon\Carbon;
 use App\Http\Resources\User\MentionAgentResource;
 use App\Helpers\ApiResponse;
 use App\Helpers\LeadHistoryHelper;
-
 use Illuminate\Support\Str;
 class LeadActivityController extends Controller
 {
@@ -535,4 +534,233 @@ class LeadActivityController extends Controller
                 'Users retrieved successfully'
             );
     }
+
+/**
+ * حذف تعليق بواسطة المشرف (soft delete)
+ */
+public function destroyCommentByAdmin($id)
+{
+    try {
+        $user = auth()->user();
+        
+        // تحقق من صلاحية المشرف
+        if (!$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized - Only admins can delete comments', 403);
+        }
+        
+        $comment = LeadComment::findOrFail($id);
+        
+        // تسجيل الحدث قبل الحذف
+        LeadHistoryHelper::log(
+            $comment->lead_id,
+            [
+                'action' => 'comment_deleted_by_admin',
+                'comment_id' => $comment->id,
+                'comment' => Str::limit($comment->comment, 50),
+                'deleted_by' => $user->name
+            ]
+        );
+        
+        // soft delete
+        $comment->delete();
+        
+        return ApiResponse::success(null, 'Comment deleted successfully');
+        
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to delete comment: ' . $e->getMessage());
+    }
+}
+
+/**
+ * حذف نشاط بواسطة المشرف (soft delete)
+ */
+public function destroyActivityByAdmin($id)
+{
+    try {
+        $user = auth()->user();
+        
+        // تحقق من صلاحية المشرف
+        if (!$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized - Only admins can delete activities', 403);
+        }
+        
+        $activity = LeadActivity::findOrFail($id);
+        
+        // تسجيل الحدث قبل الحذف
+        LeadHistoryHelper::log(
+            $activity->lead_id,
+            [
+                'action' => 'activity_deleted_by_admin',
+                'activity_id' => $activity->id,
+                'title' => $activity->title,
+                'deleted_by' => $user->name
+            ]
+        );
+        
+        // soft delete
+        $activity->delete();
+        
+        return ApiResponse::success(null, 'Activity deleted successfully');
+        
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to delete activity: ' . $e->getMessage());
+    }
+}
+
+public function destroyAllComments($leadId)
+{
+    try {
+        $user = auth()->user();
+        
+        // تحقق من صلاحية المشرف
+        if (!$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized - Only admins can delete comments', 403);
+        }
+        
+        $lead = Lead::findOrFail($leadId);
+        
+        DB::beginTransaction();
+        
+        // حصر عدد التعليقات قبل الحذف
+        $commentsCount = $lead->comments()->count();
+        
+        // تسجيل الحدث في الهيستوري
+        LeadHistoryHelper::log(
+            $lead->id,
+            [
+                'action' => 'all_comments_deleted_by_admin',
+                'comments_count' => $commentsCount,
+                'deleted_by' => $user->name
+            ]
+        );
+        
+        // soft delete لجميع التعليقات
+        $lead->comments()->delete();
+        
+        DB::commit();
+        
+        return ApiResponse::success([
+            'deleted_count' => $commentsCount
+        ], "Successfully deleted {$commentsCount} comments");
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return ApiResponse::error('Failed to delete comments: ' . $e->getMessage());
+    }
+}
+
+/**
+ * حذف جميع أنشطة اليد (للمشرفين فقط)
+ */
+public function destroyAllActivities($leadId)
+{
+    try {
+        $user = auth()->user();
+        
+        // تحقق من صلاحية المشرف
+        if (!$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized - Only admins can delete activities', 403);
+        }
+        
+        $lead = Lead::findOrFail($leadId);
+        
+        DB::beginTransaction();
+        
+        // حصر عدد الأنشطة قبل الحذف
+        $activitiesCount = $lead->activities()->count();
+        
+        // تسجيل الحدث في الهيستوري
+        LeadHistoryHelper::log(
+            $lead->id,
+            [
+                'action' => 'all_activities_deleted_by_admin',
+                'activities_count' => $activitiesCount,
+                'deleted_by' => $user->name
+            ]
+        );
+        
+        // soft delete لجميع الأنشطة
+        $lead->activities()->delete();
+        
+        DB::commit();
+        
+        return ApiResponse::success([
+            'deleted_count' => $activitiesCount
+        ], "Successfully deleted {$activitiesCount} activities");
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return ApiResponse::error('Failed to delete activities: ' . $e->getMessage());
+    }
+}
+
+/**
+ * استعادة جميع تعليقات اليد (للمشرفين فقط)
+ */
+public function restoreAllComments($leadId)
+{
+    try {
+        $user = auth()->user();
+        
+        if (!$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+        
+        $lead = Lead::findOrFail($leadId);
+        
+        $restoredCount = $lead->comments()->onlyTrashed()->count();
+        $lead->comments()->onlyTrashed()->restore();
+        
+        LeadHistoryHelper::log(
+            $lead->id,
+            [
+                'action' => 'all_comments_restored_by_admin',
+                'comments_count' => $restoredCount,
+                'restored_by' => $user->name
+            ]
+        );
+        
+        return ApiResponse::success([
+            'restored_count' => $restoredCount
+        ], "Successfully restored {$restoredCount} comments");
+        
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to restore comments: ' . $e->getMessage());
+    }
+}
+
+/**
+ * استعادة جميع أنشطة اليد (للمشرفين فقط)
+ */
+public function restoreAllActivities($leadId)
+{
+    try {
+        $user = auth()->user();
+        
+        if (!$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+        
+        $lead = Lead::findOrFail($leadId);
+        
+        $restoredCount = $lead->activities()->onlyTrashed()->count();
+        $lead->activities()->onlyTrashed()->restore();
+        
+        LeadHistoryHelper::log(
+            $lead->id,
+            [
+                'action' => 'all_activities_restored_by_admin',
+                'activities_count' => $restoredCount,
+                'restored_by' => $user->name
+            ]
+        );
+        
+        return ApiResponse::success([
+            'restored_count' => $restoredCount
+        ], "Successfully restored {$restoredCount} activities");
+        
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to restore activities: ' . $e->getMessage());
+    }
+}
 }

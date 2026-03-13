@@ -177,11 +177,21 @@ const loadSources = async () => {
     try {
         const response = await api.get('/sources')
         const sources = response.data.data || response.data || []
-        
+
         leadValueOptions.value = sources.map(source => ({
             value: source.name,
             text: source.name
         }))
+
+        // Auto select Meta Lead Form
+        const metaSource = sources.find(
+            source => source.name === 'Meta Lead Form'
+        )
+
+        if (metaSource) {
+            selectedLeadValue.value = metaSource.name
+        }
+
     } catch (error) {
         console.error('Failed to load sources:', error)
         proxy?.$showNotification?.('Failed to load sources', 'error')

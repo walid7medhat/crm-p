@@ -91,7 +91,7 @@
                                 <span class="section-title d-block mb-3">Contact Details</span>
                                 <div class="d-flex justify-content-between align-items-center gap-2">
                                     <div class="col">
-                                        <label class="form-label-custom">Contact</label>
+                                        <label class="form-label-custom">Phone Number</label>
                                         <b-form-input 
                                             v-model="form.work_phone" 
                                             placeholder="Enter Phone Number" 
@@ -115,7 +115,7 @@
                                         </div>
                                     </div>
                                     <div class="col">
-                                        <label class="form-label-custom">Secondary Phone</label>
+                                        <label class="form-label-custom">Work Phone</label>
                                         <b-form-input 
                                             v-model="form.work_phone_2" 
                                             placeholder="Enter Phone Number" 
@@ -248,7 +248,7 @@
 
                         <!-- Source Information -->
                         <div class="col-12">
-                            <label class="form-label-custom">Source Information</label>
+                            <label class="form-label-custom">More Information</label>
                             <b-form-textarea 
                                 v-model="form.source_information" 
                                 placeholder="Text Here" 

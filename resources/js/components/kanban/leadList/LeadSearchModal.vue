@@ -109,6 +109,7 @@
                                 append-to-body
                                 class="custom-v-select"
                             >
+                               
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
                                         <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
@@ -117,6 +118,28 @@
                             </v-select>
                         </div>
                     </template>
+                   <!-- Custom Date Range -->
+                    <div v-if="showCustomDateRange" class="row mt-4 pt-2 ">
+                        <div class="col-12">
+                            <label class="form-label-custom fw-bold mb-3">Custom Date Range</label>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">From Date</label>
+                            <b-form-input
+                                v-model="form.createdFrom"
+                                type="date"
+                                class="custom-input"
+                            />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">To Date</label>
+                            <b-form-input
+                                v-model="form.createdTo"
+                                type="date"
+                                class="custom-input"
+                            />
+                        </div>
+                    </div>
                 </div>
                 <div class="d-flex align-items-center justify-content-between mt-3 pt-4">
                     <div class="d-flex gap-4">
@@ -191,7 +214,7 @@ const queryToFormKeys = {
     created_from: 'createdFrom',    
     created_to: 'createdTo',
     lead_branch_source: 'branchSource',
-    closed: 'closed',
+    closed: 'Converted',
     work_phone: 'workPhone',
     stage_id: 'stage',
     email: 'email',
@@ -260,7 +283,7 @@ watch(() => props.currentQuery, (query) => {
 
 
 const sidebarPills = [
-    { id: 'closed-leads', label: 'Closed Leads' },
+    { id: 'closed-leads', label: 'Converted Leads' },
     { id: 'leads-in-progress', label: 'Leads In Progress' },
     { id: 'my-leads', label: 'My Leads' },
     { id: 'dubai', label: 'Dubai' },
@@ -332,14 +355,15 @@ const createdOnOptions = [
     { value: 'last_month', text: 'Last Month' },
     // { value: 'next_week', text: 'Next Week' },
     // { value: 'next_month', text: 'Next Month' },
-    { value: 'exact_date', text: 'Exact Date' }
+    // { value: 'exact_date', text: 'Exact Date' }
+    { value: 'custom_date', text: 'Custom Date' }
 ]
 
 const sourceOptions = ref([{ value: null, text: 'Select Source' }])
 // const searchFieldsConfig = [
 //     { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
 //     { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
-//     // { id: 'closed', label: 'Closed', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
+//     // { id: 'closed', label: 'Converted', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
 //      { id: 'created_on', label: 'Created On', formKey: 'createdOn', queryKey: 'created_at', type: 'select', options: createdOnOptions },
 //     { id: 'work_phone', label: 'Work Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
 //     { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] },
@@ -388,7 +412,7 @@ const searchFieldsConfig = computed(() => {
     const fields = [
         { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
         { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
-        { id: 'closed', label: 'Closed', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
+        { id: 'closed', label: 'Converted', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
         { id: 'created_on', label: 'Created On', formKey: 'createdOn', queryKey: 'created_at', type: 'select', options: createdOnOptions },
         { id: 'work_phone', label: 'Work Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
         { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] },
@@ -411,7 +435,9 @@ const searchFieldsConfig = computed(() => {
     return fields
 })
 
-
+const showCustomDateRange = computed(() => {
+    return form.value.createdOn === 'custom_date'  
+})
 
 const visibleSearchFields = computed(() => {
     return searchFieldsConfig.value
@@ -597,6 +623,15 @@ function applySearch() {
                     createdAt = form.value.exactDate
                 }
                 break
+            case 'custom_date':
+                if (form.value.createdFrom) {
+                    createdFrom = form.value.createdFrom
+                }
+                if (form.value.createdTo) {
+                    createdTo = form.value.createdTo
+                }
+                createdAt = undefined
+                break
         }
     }
 
@@ -746,7 +781,12 @@ const resetForm = () => {
     show.value = false
     emit('search', { query: null, activePill: null, activeFilters: [] })
 }
-
+watch(() => form.value.createdOn, (newVal, oldVal) => {
+    if (oldVal === 'custom_date' && newVal !== 'custom_date') {
+        form.value.createdFrom = ''
+        form.value.createdTo = ''
+    }
+})
 onMounted(() => {
       updateUserFromStorage() 
     fetchResponsiblePersons()

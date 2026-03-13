@@ -142,8 +142,8 @@ class LeadController extends Controller
             
             $participants = $request->input('participants', []);
             $observers = $request->input('observers', []);
-            
-            unset($leadData['participants'], $leadData['observers']);
+             $initialComment = $request->input('comment');
+            unset($leadData['participants'], $leadData['observers'],$leadData['comment']);
             $leadData['added_by'] = $user->id;
             $leadData['last_stage_change_at'] = now();
 
@@ -159,11 +159,28 @@ class LeadController extends Controller
             //         return ApiResponse::error('Responsible person must be an admin, manager, or team lead', 422);
             //     }
             // }
+        
           if(!$request->stage_id){
               $leadData['stage_id']=Stage::orderBy('order','asc')->first()->id;
           }
             $lead = Lead::create($leadData);
-
+       if (!empty($initialComment)) {
+                $comment = LeadComment::create([
+                    'lead_id' => $lead->id,
+                    'user_id' => $user->id,
+                    'comment' => $initialComment,
+                ]);
+                
+                // تسجيل في الهيستوري
+                LeadHistoryHelper::log(
+                    $lead->id,
+                    [
+                        'action' => 'comment_added',
+                        'comment_id' => $comment->id,
+                        'comment' => Str::limit($comment->comment, 50)
+                    ]
+                );
+            }
             if (!empty($participants)) {
                 foreach ($participants as $participantData) {
                     $participantData['added_by'] = $user->id;

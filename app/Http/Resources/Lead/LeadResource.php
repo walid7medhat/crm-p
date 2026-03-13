@@ -97,6 +97,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'duplicate_ids'=>$this->duplicate_leads->pluck('id')->toArray(),
             'is_reverted'=>!is_null($this->revert),
             'can_edit'=>auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin') || $this->responsible_person_id==auth()->user()->id),
+            'can_delete'=>auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin') ),
              'raw_meta_data' => $rawMetaData, 
                         'facebook_questions_answers' =>$facebookFields,
 

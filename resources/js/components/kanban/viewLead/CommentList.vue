@@ -147,6 +147,10 @@ const props = defineProps({
     leadId: {
         type: [Number, String],
         default: null
+    },
+     key: {  
+        type: Number,
+        default: 0
     }
 })
 
@@ -155,6 +159,11 @@ const loading = ref(false)
 const loadingOlder = ref(false)
 const nextPageUrl = ref(null)
 const hasNextPage = computed(() => !!nextPageUrl.value)
+
+
+watch(() => props.key, () => {
+    fetchComments()
+}, { immediate: true })
 
 // Format date to match image format
 const formatDateLabel = (dateString) => {

@@ -18,7 +18,7 @@
             <div class="info-value">{{ lead?.last_name || '—' }}</div>
         </div>
         <div class="info-group">
-            <label class="form-label-custom" >Contact</label>
+            <label class="form-label-custom" >Phone Number</label>
             <div class="info-value" >
                   <span v-if="canView">{{ lead?.work_phone || '—' }}</span>
                  <span v-else>
@@ -38,7 +38,7 @@
             </div>
         </div>
         <div class="info-group" >
-            <label class="form-label-custom">Secondary Phone</label>
+            <label class="form-label-custom">Work Phone</label>
             <div class="info-value" >
                  <span v-if="canView">{{ lead?.work_phone_2 || '—' }}</span>
                 <span v-else>
@@ -51,6 +51,7 @@
             <label class="form-label-custom">lead source</label>
             <div class="info-value">{{ lead?.lead_source || '—' }}</div>
         </div>
+        
         <div class="info-group" v-if="lead?.lead_source">
             <label class="form-label-custom">Lead Branch Source</label>
             <div class="info-value">{{ lead?.lead_branch_source || '—' }}</div>
@@ -59,9 +60,13 @@
             <label class="form-label-custom">Bedrooms</label>
             <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
         </div>
-        <div class="info-group">
-            <label class="form-label-custom">Comment</label>
-            <div class="info-value info-value-block">{{ lead?.comment || '—' }}</div>
+        <!--<div class="info-group">-->
+        <!--    <label class="form-label-custom">Comment</label>-->
+        <!--    <div class="info-value info-value-block">{{ lead?.comment || '—' }}</div>-->
+        <!--</div>-->
+        <div class="info-group" v-if="lead?.source_information">
+            <label class="form-label-custom">More Information</label>
+            <div class="info-value">{{ lead?.source_information || '—' }}</div>
         </div>
         <div class="info-group">
             <label class="form-label-custom">Budget</label>

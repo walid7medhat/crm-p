@@ -143,10 +143,6 @@ public function approvedRequests()
                 ->where('status', 'approved');
 }
 
-public function suggestions()
-{
-    return $this->hasMany(Suggestion::class);
-}
 
 public function agents()
 {
@@ -283,4 +279,13 @@ public function activeAgent()
 public function getAvatarUrlAttribute(){
      return $this->avatar ?  asset('storage/'. $this->avatar) : null;
 }
+
+ public function assignedLeads()
+    {
+        return $this->hasMany(Lead::class, 'responsible_person_id');
+    }
+      public function createdLeads()
+    {
+        return $this->hasMany(Lead::class, 'added_by');
+    }
 }

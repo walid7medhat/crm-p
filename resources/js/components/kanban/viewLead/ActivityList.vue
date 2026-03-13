@@ -322,6 +322,10 @@ const props = defineProps({
     leadId: {
         type: [Number, String],
         default: null
+    },
+     keyDelete: {
+        type: Number,
+        default: 0
     }
 })
 
@@ -340,6 +344,12 @@ const editForm = ref({
     deadlineDate: null,
     reminders: []
 })
+
+
+watch(() => props.keyDelete, () => {
+    fetchActivities()
+}, { immediate: true })
+
 
 // Reminder options
 const reminderOptions = [

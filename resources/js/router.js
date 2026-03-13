@@ -67,7 +67,7 @@ import Kanban from './pages/kanban.vue'
 import kanban_deal from './pages/kanban_deal.vue'
 
 // Reports
-import Reports from './pages/reports/index.vue'
+// import Reports from './pages/reports/index.vue'
 
 // Suggestions
 import Suggestions from './pages/suggestions/index.vue'
@@ -79,11 +79,16 @@ import ProjectsTable from './pages/projects/projects-list.vue'
 import ProjectForm from './pages/projects/form.vue'
 import ProjectDetails from './pages/projects/show.vue'
 import FloorPlans from './pages/projects/FloorPlans.vue'
+
+import LeadReports from './pages/reports/leads.vue'
+
 const routes = [
   // Kanban Route
   { path: '/kanban', component: Kanban },
   { path: '/kanban_deal', component: kanban_deal },
-  { path: '/reports', component: Reports, meta: { requiresAuth: true } },
+//   { path: '/reports', component: Reports, meta: { requiresAuth: true } },
+
+ { path: '/lead-reports', component: LeadReports, meta: { requiresAuth: true } },
   { path: '/suggestion', component: Suggestions, meta: { requiresAuth: true } },
   { path: '/', component: Ai, meta: { requiresAuth: true } },
 
@@ -220,6 +225,7 @@ const isTokenValid = () => {
 }
 
 const logout = () => {
+     localStorage.removeItem('searchFilters')
   localStorage.removeItem('token')
   localStorage.removeItem('user')
   localStorage.removeItem('refreshToken')

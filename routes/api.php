@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\Deal\DealController;
 use App\Http\Controllers\Api\Deal\LeadConversionController;
 use App\Http\Controllers\Api\SuggestionController;
 use App\Http\Controllers\Api\Deal\DealActivityController;
+use App\Http\Controllers\Api\ReportController;
 
 Route::get('/test-email', function () {
     try {
@@ -263,6 +264,23 @@ Route::prefix('leads')->group(function(){
     Route::post('/comments/{commentId}/attachments', [LeadActivityController::class, 'addCommentAttachments']);
     Route::delete('/comments/{commentId}/attachments/{attachmentId}', [LeadActivityController::class, 'destroyCommentAttachment']);
     Route::get('mentions/agents',[LeadActivityController::class,'get_mentions']);
+    
+    Route::delete('comments/{comment}/admin-delete', [LeadActivityController::class, 'destroyCommentByAdmin']);
+    Route::delete('activities/{activity}/admin-delete', [LeadActivityController::class, 'destroyActivityByAdmin']);
+    
+      Route::delete('{leadId}/comments/all', [LeadActivityController::class, 'destroyAllComments']);
+        Route::delete('{leadId}/activities/all', [LeadActivityController::class, 'destroyAllActivities']);
+        
+        Route::post('{leadId}/comments/restore-all', [LeadActivityController::class, 'restoreAllComments']);
+        Route::post('{leadId}/activities/restore-all', [LeadActivityController::class, 'restoreAllActivities']);
+        
+        
+          Route::prefix('reports')->group(function () {
+            Route::get('/users', [ReportController::class, 'userReport']);
+            Route::get('/users/{userId}', [ReportController::class, 'singleUserReport']);
+            Route::get('/months', [ReportController::class, 'getMonthOptions']);
+            Route::get('/years', [ReportController::class, 'getYearOptions']);
+        });
 });
   // =================sources=============
         Route::apiResource('sources', SourceController::class);

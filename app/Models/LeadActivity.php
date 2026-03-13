@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 
 class LeadActivity extends Model
 {
+    use SoftDeletes;
     //
        use HasFactory;
     protected $guarded=[];
@@ -19,7 +22,7 @@ class LeadActivity extends Model
         'last_reminded_at' => 'datetime',
     ];
     
-
+    protected $dates = ['deleted_at']; 
 
     public function lead()
     {
