@@ -50,7 +50,9 @@ class IntegrationController extends Controller
                     'responsible_person' => $i->responsiblePerson ? ['id' => $i->responsiblePerson->id, 'name' => $i->responsiblePerson->name] : null,
                     'status' => $i->status,
                     'created_at' => $i->created_at?->toIso8601String(),
-                    'leads_count'=>$i->leads->count()
+                    'leads_count'=>$i->leads->count(),
+                    'track_enabled' => $i->track_enabled,
+                    'track_keyword' => $i->track_keyword,
                 ]);
 
             return ApiResponse::success($integrations, 'Integrations retrieved successfully');
@@ -187,7 +189,9 @@ class IntegrationController extends Controller
             'field_mappings' => 'nullable|array',
             'responsible_person_id' => 'nullable|exists:users,id',
             'dont_make_responsible_if_not_clocked_in' => 'boolean',
-            'status' => 'in:active,inactive'
+            'status' => 'in:active,inactive',
+            'track_enabled' => 'boolean',
+            'track_keyword' => 'nullable|string|max:255|required_if:track_enabled,true',
         ]);
 
         $user = auth()->user();
@@ -208,6 +212,8 @@ class IntegrationController extends Controller
                 'responsible_person_id' => $request->input('responsible_person_id'),
                 'dont_make_responsible_if_not_clocked_in' => $request->input('dont_make_responsible_if_not_clocked_in', true),
                 'status' => $request->input('status', 'active'),
+                'track_enabled' => $request->input('track_enabled', false),
+                'track_keyword' => $request->input('track_keyword'),
             ]);
 
             return ApiResponse::success([
@@ -247,6 +253,8 @@ class IntegrationController extends Controller
             'dont_make_responsible_if_not_clocked_in' => $integration->dont_make_responsible_if_not_clocked_in,
             'status' => $integration->status,
             'created_at' => $integration->created_at?->toIso8601String(),
+            'track_enabled' => $integration->track_enabled,
+            'track_keyword' => $integration->track_keyword,
         ], 'Integration retrieved successfully');
     }
 
@@ -272,7 +280,9 @@ class IntegrationController extends Controller
             'field_mappings' => 'nullable|array',
             'responsible_person_id' => 'nullable|exists:users,id',
             // 'dont_make_responsible_if_not_clocked_in' => 'sometimes|boolean',
-            'status' => 'sometimes|in:active,inactive'
+            'status' => 'sometimes|in:active,inactive',
+            'track_enabled' => 'boolean',
+            'track_keyword' => 'nullable|string|max:255|required_if:track_enabled,true',
         ]);
 
         try {
@@ -571,7 +581,7 @@ class IntegrationController extends Controller
                 $fields['full_name']
                 ?? $fields['name']
                 ?? $fields['first_name']
-                ?? 'Facebook Lead';
+                ?? $fields['full name'] ?? 'Facebook Lead';
         }
   private function applyFieldMappings(array $fields, array $mappings): array
     {

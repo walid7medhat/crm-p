@@ -75,6 +75,8 @@
                     v-model:responsible-person-id="formData.responsiblePersonId"
                     v-model:responsible-person="formData.responsiblePerson"
                     v-model:dont-make-responsible-if-not-clocked-in="formData.dontMakeResponsibleIfNotClockedIn"
+                    v-model:track-enabled="formData.trackEnabled"
+                    v-model:track-keyword="formData.trackKeyword"
                 />
             </div>
 
@@ -168,7 +170,9 @@ const formData = ref({
     integrationName: '',
     responsiblePersonId: null,
     responsiblePerson: null,
-    dontMakeResponsibleIfNotClockedIn: true
+    dontMakeResponsibleIfNotClockedIn: true,
+        trackEnabled: false,
+    trackKeyword: ''
 })
 
 // Check if tab is completed
@@ -259,7 +263,9 @@ const loadIntegrationData = async () => {
             integrationName: data.name,
             responsiblePersonId: data.responsible_person_id,
             responsiblePerson: data.responsible_person,
-            dontMakeResponsibleIfNotClockedIn: data.dont_make_responsible_if_not_clocked_in
+            dontMakeResponsibleIfNotClockedIn: data.dont_make_responsible_if_not_clocked_in,
+            trackEnabled: data.track_enabled ?? false,
+            trackKeyword: data.track_keyword ?? ''
         }
 
         proxy?.$showNotification?.('Integration data loaded successfully', 'success')
@@ -294,7 +300,9 @@ const handleSave = async () => {
             field_mappings: formData.value.fieldMappings,
             responsible_person_id: formData.value.responsiblePersonId,
             dont_make_responsible_if_not_clocked_in: formData.value.dontMakeResponsibleIfNotClockedIn,
-            status: 'active'
+            status: 'active',
+            track_enabled: formData.value.trackEnabled,
+            track_keyword: formData.value.trackKeyword,
         }
 
         let response
@@ -330,7 +338,9 @@ const resetModal = () => {
         integrationName: '',
         responsiblePersonId: null,
         responsiblePerson: null,
-        dontMakeResponsibleIfNotClockedIn: true
+        dontMakeResponsibleIfNotClockedIn: true,
+        trackEnabled: false,
+        trackKeyword: ''
     }
 }
 </script>

@@ -2,10 +2,10 @@
     <div class="kanban-outer">
         <div ref="kanbanContainerRef" class="kanban-container" @scroll="updateScrollArrows">
         <!-- Loading state -->
-        <!--<div v-if="loading && columns.length === 0" class="kanban-empty-state kanban-loading">-->
-        <!--    <div class="kanban-empty-spinner"></div>-->
-        <!--    <p class="kanban-empty-title">Loading stages…</p>-->
-        <!--</div>-->
+        <div v-if="loading && columns.length === 0" class="kanban-empty-state kanban-loading">
+            <div class="kanban-empty-spinner"></div>
+            <p class="kanban-empty-title">Loading stages…</p>
+        </div>
         <!-- Error state -->
         <div v-if="error && columns.length === 0" class="kanban-empty-state kanban-error-state">
             <iconify-icon icon="lucide:alert-circle" class="kanban-empty-icon"></iconify-icon>
@@ -34,7 +34,13 @@
                                         <div class="stage-dot" :style="{ backgroundColor: column.color }"></div>
                                     </div>
                                     <div v-if="editingStageId !== column.status" class="header-title-wrapper" @click="startEditingStage(column)">
-                                        <p class="header-title">{{ column.title }} ({{ column.leads.length }})</p>
+                                        <p class="header-title">{{ column.title }}</p>
+                                         <small class="leads-count-badge" v-if="column.leads.length>0 && stagePagination[column.status] && stagePagination[column.status].total > column.leads.length ">
+                                             {{ stagePagination[column.status]?.total || column.leads.length }}
+                                        </small>
+                                        <small class="leads-count-badge" v-else >
+                                            {{ column.leads.length }}
+                                        </small>
                                     </div>
                                     <input 
                                         v-else
@@ -127,9 +133,9 @@
                                                     </div>
                                                 </div>
 
-                                                <hr class="my-12 border-neutral-200">
+                                                <hr class="mb-2 border-neutral-200">
 
-                                                <div class="d-flex align-items-center justify-content-between assignedBy">
+                                                <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
                                                     <div class="info-item">
                                                         <div class="info-label text-secondary-light text-xs ">Assigned By</div>
                                                         <!--<div class="info-value">{{ formatDate(task.responsible_person.created_at) }}</div>-->
@@ -356,6 +362,7 @@ import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
 import ConvertLeadModal from './ConvertLeadModal.vue'
 
+
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 
@@ -368,6 +375,8 @@ const selectedLeadForConversion = ref(null)
 const selectedLeadData = ref(null)
 const convertModalRef = ref(null)
 const CONVERTED_STAGE_ID = 8
+
+
 
 // Get user from storage (same pattern as header/index.vue)
 const getUserFromStorage = () => {
@@ -408,7 +417,9 @@ const kanbanContainerRef = ref(null)
 const scrollInterval = ref(null)
 const showLeftZone = ref(true)
 const showRightZone = ref(true)
-
+const stagePagination = ref({})          
+const loadingMoreLeads = ref({})          
+const leadsPerPage = ref(20)              
 const SCROLL_SPEED = 10
 const SCROLL_TICK_MS = 16
 
@@ -540,76 +551,95 @@ async function saveStage() {
 }
 
 const executeFetchLeads = async () => {
-    // Prevent concurrent requests
-    if (isFetching.value) {
-        return
-    }
+    if (isFetching.value) return
     
-    // Cancel any pending request
     if (abortController.value) {
         abortController.value.abort()
     }
     
-    // Create new abort controller for this request
     abortController.value = new AbortController()
     isFetching.value = true
+    loading.value = true
     
     try {
         const q = appliedSearchParams.value || {}
-        const params = {}
-        if (q.search) params.search = q.search
-        if (q.lead_name) params.lead_name = q.lead_name
-        if (q.first_name) params.first_name = q.first_name
-        if (q.responsible_person_id != null && q.responsible_person_id !== '') params.responsible_person_id = q.responsible_person_id
-        if (q.created_at) params.created_at = q.created_at
-        if (q.created_from) params.created_from = q.created_from
-        if (q.created_to) params.created_to = q.created_to
-        if (q.source) params.source = q.source
-        if (q.lead_branch_source) params.lead_branch_source = q.lead_branch_source
-        if (q.stage_id != null && q.stage_id !== '') params.stage_id = q.stage_id
-        if (q.closed !== undefined && q.closed !== null && q.closed !== '') params.closed = q.closed
-        if (q.work_phone) params.work_phone = q.work_phone
-        if (q.email) params.email = q.email
-        if (q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '') params.bedrooms = q.bedrooms
-        if (q.team_id != null && q.team_id !== '') params.team_id = q.team_id
-        // Hint to backend (if supported) to limit number of leads per stage for performance
-        params.per_stage_limit = 200
+        
+        const params = {
+            per_page: leadsPerPage.value,
+            ...(q.search && { search: q.search }),
+            ...(q.lead_name && { lead_name: q.lead_name }),
+            ...(q.first_name && { first_name: q.first_name }),
+            ...(q.responsible_person_id != null && q.responsible_person_id !== '' && { responsible_person_id: q.responsible_person_id }),
+            ...(q.created_at && { created_at: q.created_at }),
+            ...(q.created_from && { created_from: q.created_from }),
+            ...(q.created_to && { created_to: q.created_to }),
+            ...(q.source && { source: q.source }),
+            ...(q.lead_branch_source && { lead_branch_source: q.lead_branch_source }),
+            ...(q.stage_id != null && q.stage_id !== '' && { stage_id: q.stage_id }),
+            ...(q.closed !== undefined && q.closed !== null && q.closed !== '' && { closed: q.closed }),
+            ...(q.work_phone && { work_phone: q.work_phone }),
+            ...(q.email && { email: q.email }),
+            ...(q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '' && { bedrooms: q.bedrooms }),
+            ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id })
+        }
+        
         const response = await api.get('/stages/kanban/stages-with-leads', {
             params,
             signal: abortController.value.signal
         })
-        const raw = response?.data?.data
-        const list = Array.isArray(raw) ? raw : []
-        const newData = list.map((stage, index) => ({
+        
+        const responseData = response?.data?.data
+        const stagesData = responseData?.stages || []
+        
+        // تحويل البيانات
+        const newData = stagesData.map((stage, index) => ({
             title: stage.name,
-            status: stage.id, // Use ID for stage changes
+            status: stage.id,
             color: stage.color || getColorByIndex(index),
             order: stage.order ?? index,
-            leads: stage.leads || []
+            leads: stage.leads || [],
+            pagination: stage.pagination || {
+                current_page: 1,
+                last_page: 1,
+                per_page: leadsPerPage.value,
+                total: stage.lead_count || 0,
+                has_more_pages: false
+            }
         }))
+        
         columns.value = newData
-        // Initialize / clamp visible counts per stage to avoid rendering all cards at once
-        const nextCounts = { ...visibleLeadCounts.value }
+        
+        // تحديث visibleLeadCounts (العدد المرئي)
+        const nextCounts = {}
         columns.value.forEach(col => {
             const total = Array.isArray(col.leads) ? col.leads.length : 0
-            if (nextCounts[col.status] == null) {
-                nextCounts[col.status] = Math.min(INITIAL_VISIBLE_LEADS_PER_STAGE, total)
-            } else if (nextCounts[col.status] > total) {
-                nextCounts[col.status] = total
-            }
+            nextCounts[col.status] = Math.min(INITIAL_VISIBLE_LEADS_PER_STAGE, total)
         })
         visibleLeadCounts.value = nextCounts
-        saveColumnsToCache()
+        
+        // تخزين pagination info
+        const newStagePagination = {}
+        stagesData.forEach(stage => {
+            newStagePagination[stage.id] = {
+                currentPage: stage.pagination?.current_page || 1,
+                lastPage: stage.pagination?.last_page || 1,
+                perPage: stage.pagination?.per_page || leadsPerPage.value,
+                total: stage.pagination?.total || stage.lead_count || 0,
+                hasMorePages: stage.pagination?.has_more_pages || false
+            }
+        })
+        stagePagination.value = newStagePagination
+        
         error.value = null
-        loading.value = false
+        saveColumnsToCache()
+        
     } catch (err) {
-        // Don't set error if request was aborted
         if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
             error.value = err.message || 'Failed to load data'
-            loading.value = false
         }
     } finally {
         isFetching.value = false
+        loading.value = false
         abortController.value = null
     }
 }
@@ -675,6 +705,7 @@ function getVisibleLeadCount(stageId) {
     return current
 }
 
+
 function loadMoreLeads(stageId) {
     const current = getVisibleLeadCount(stageId)
     visibleLeadCounts.value = {
@@ -682,17 +713,119 @@ function loadMoreLeads(stageId) {
         [stageId]: current + VISIBLE_LEADS_INCREMENT
     }
 }
-
+async function fetchMoreLeadsFromApi(stageId) {
+    // لو بتحمل حالياً، متعملش حاجة
+    if (loadingMoreLeads.value[stageId]) return
+    
+    // لوصلت لآخر صفحة، متعملش حاجة
+    const stage = columns.value.find(c => c.status === stageId)
+    if (!stage || !stage.pagination?.has_more_pages) return
+    
+    loadingMoreLeads.value = {
+        ...loadingMoreLeads.value,
+        [stageId]: true
+    }
+    
+    try {
+        const nextPage = (stage.pagination?.current_page || 1) + 1
+        
+        // جمع معاملات الفلترة الحالية
+        const q = appliedSearchParams.value || {}
+        
+        const params = {
+            page: nextPage,
+            per_page: leadsPerPage.value,
+            ...(q.search && { search: q.search }),
+            ...(q.lead_name && { lead_name: q.lead_name }),
+            ...(q.first_name && { first_name: q.first_name }),
+            ...(q.responsible_person_id != null && q.responsible_person_id !== '' && { responsible_person_id: q.responsible_person_id }),
+            ...(q.created_at && { created_at: q.created_at }),
+            ...(q.created_from && { created_from: q.created_from }),
+            ...(q.created_to && { created_to: q.created_to }),
+            ...(q.source && { source: q.source }),
+            ...(q.lead_branch_source && { lead_branch_source: q.lead_branch_source }),
+            ...(q.stage_id != null && q.stage_id !== '' && { stage_id: q.stage_id }),
+            ...(q.closed !== undefined && q.closed !== null && q.closed !== '' && { closed: q.closed }),
+            ...(q.work_phone && { work_phone: q.work_phone }),
+            ...(q.email && { email: q.email }),
+            ...(q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '' && { bedrooms: q.bedrooms }),
+            ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id })
+        }
+        
+        const response = await api.get(`/stages/kanban/stage/${stageId}/more-leads`, {
+            params
+        })
+        
+        const responseData = response?.data?.data
+        const newLeads = responseData?.leads || []
+        const newPagination = responseData?.pagination || {}
+        
+        // إضافة الـ leads الجديدة للـ column
+        const columnIndex = columns.value.findIndex(c => c.status === stageId)
+        if (columnIndex !== -1) {
+            // ضيف الـ leads الجديدة تحت القديمة
+            columns.value[columnIndex].leads = [
+                ...columns.value[columnIndex].leads,
+                ...newLeads
+            ]
+            
+            // تحديث الـ pagination
+            columns.value[columnIndex].pagination = {
+                current_page: newPagination.current_page,
+                last_page: newPagination.last_page,
+                per_page: newPagination.per_page,
+                total: newPagination.total,
+                has_more_pages: newPagination.has_more_pages
+            }
+        }
+        
+        // تحديث stagePagination
+        stagePagination.value = {
+            ...stagePagination.value,
+            [stageId]: {
+                currentPage: newPagination.current_page,
+                lastPage: newPagination.last_page,
+                perPage: newPagination.per_page,
+                total: newPagination.total,
+                hasMorePages: newPagination.has_more_pages
+            }
+        }
+        
+        // بعد ما تجيب الليدا الجديدة، زود العدد المرئي عشان تظهر
+        // لكن هنا أحنا ضفناها بالفعل للـ leads array، فمحتاجين نحدث visibleLeadCounts
+        const totalLeadsNow = columns.value[columnIndex].leads.length
+        visibleLeadCounts.value = {
+            ...visibleLeadCounts.value,
+            [stageId]: totalLeadsNow // خلي الكل مرئي
+        }
+        
+    } catch (error) {
+        console.error('Error loading more leads:', error)
+        $showNotification('Failed to load more leads', 'error')
+    } finally {
+        loadingMoreLeads.value = {
+            ...loadingMoreLeads.value,
+            [stageId]: false
+        }
+    }
+}
 function onColumnScroll(column, event) {
     const el = event?.target
     if (!el) return
-    const threshold = 48 // px from bottom
+    
+    const threshold = 100
     const reachedBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - threshold
-    if (!reachedBottom) return
-    const total = Array.isArray(column.leads) ? column.leads.length : 0
-    const current = getVisibleLeadCount(column.status)
-    if (total > current) {
-        loadMoreLeads(column.status)
+    
+    if (reachedBottom) {
+        const stageId = column.status
+        const pagination = stagePagination.value[stageId]
+        const isLoading = loadingMoreLeads.value[stageId]
+        
+        // لو فيه صفحات تانية ومش بنحمل دلوقتي
+        if (pagination?.hasMorePages && !isLoading) {
+            console.log(`Loading more leads for stage ${stageId} - Page ${pagination.currentPage + 1}`)
+            fetchMoreLeadsFromApi(stageId)
+        }
     }
 }
 
@@ -1942,6 +2075,7 @@ const $showNotification = (message, type = 'info') => {
 .header-title-wrapper {
     cursor: pointer;
     flex: 1;
+    display:flex;
 }
 
 .header-title-wrapper:hover .header-title {
@@ -1982,5 +2116,14 @@ const $showNotification = (message, type = 'info') => {
     padding: 24px;
     border-radius: 12px;
     width: 400px;
+}
+.leads-count-badge {
+    /*font-size: 11px !important;*/
+    color: rgba(255, 255, 255, 0.9);
+    /*background: rgba(0, 0, 0, 0.2);*/
+    /*padding: 2px 8px;*/
+    /*border-radius: 12px;*/
+    margin-left: 8px;
+    font-weight: 600 !important;
 }
 </style>

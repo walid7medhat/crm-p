@@ -48,7 +48,10 @@ class Lead extends Model
         return $this->hasMany(LeadHistory::class)->latest();
     }
 
-    
+      public function integration()
+    {
+        return $this->belongsTo(Integration::class, 'integration_id');
+    }
   
 
     public function stage()

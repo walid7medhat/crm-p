@@ -44,6 +44,7 @@
                         <th>Name</th>
                         <th>Created On</th>
                         <th>Active</th>
+                        <th>Track</th>
                         <th>Count Of Leads</th>
                         <th>Platform</th>
                         <th>Action</th>
@@ -82,6 +83,7 @@
                                 <!--<span class="active-date">{{ formatDateShort(form.updated_at) }}</span>-->
                             </div>
                         </td>
+                        <td class="form-name">{{ form.track_keyword }}</td>
                         <td class="conversation-count">
                             {{ form.leads_count || 0 }}
                         </td>
@@ -243,7 +245,9 @@ async function loadIntegrations() {
             platform: integration.platform || 'Meta Ads',
             leads_count: integration.leads_count || 0,
             created_at: integration.created_at,
-            updated_at: integration.updated_at
+            updated_at: integration.updated_at,
+            track_enabled: integration.track_enabled ?? false,
+            track_keyword: integration.track_keyword ?? ''
         }))
         
         console.log('✅ Forms updated:', forms.value.length, 'records')

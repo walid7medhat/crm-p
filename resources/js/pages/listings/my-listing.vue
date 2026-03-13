@@ -284,7 +284,7 @@
         </nav>
 
         <!-- Pagination Info -->
-        <div class="text-center text-muted small mt-2">
+        <div class="text-center text-white small mt-2">
           Showing {{ showingFrom }}-{{ showingTo }} of {{ pagination.total }} properties
         </div>
       </div>

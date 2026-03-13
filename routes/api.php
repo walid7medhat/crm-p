@@ -144,9 +144,9 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
     Route::put('/{stage}', [StageController::class, 'update']);
     Route::delete('/{stage}', [StageController::class, 'destroy']);
     Route::post('/reorder', [StageController::class, 'reorder']);
-        Route::get('/kanban/stages-with-leads', [StageController::class, 'getStagesWithLeads']);
+    Route::get('/kanban/stages-with-leads', [StageController::class, 'getStagesWithLeads']);
     Route::get('/kanban/leads-by-stage/{stage}', [StageController::class, 'getLeadsByStage']);
-
+    Route::get('/kanban/stage/{stage}/more-leads', [StageController::class, 'getMoreStageLeads']);
 });
 Route::get('/teams-with-leads', [StageController::class, 'getTeamsWithLeads'])->middleware('jwt.auth');
 

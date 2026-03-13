@@ -24,11 +24,14 @@ class Integration extends Model
         'field_mappings',
         'responsible_person_id',
         'dont_make_responsible_if_not_clocked_in',
-        'status'
+        'status',
+        'track_enabled',
+        'track_keyword',
     ];
 
     protected $casts = [
         'expert_mode' => 'boolean',
+        'track_enabled' => 'boolean',
         'dont_make_responsible_if_not_clocked_in' => 'boolean',
         'field_mappings' => 'array',
         'created_at' => 'datetime',

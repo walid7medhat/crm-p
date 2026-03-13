@@ -78,7 +78,7 @@
         <i class="ri-home-4-line display-1 text-white"></i>
         <h4 class="mt-3 text-white">No properties found</h4>
         <button @click="notifyMe" class="btn btn-primary">
-        Notify me when a property matches this search
+        Get notified when matching properties become available
         </button>
         <!--<p class="text-white">Try adjusting your search filters</p>-->
       </div>
@@ -258,7 +258,7 @@
         </nav>
 
         <!-- Pagination Info -->
-        <div class="text-center text-muted small mt-2">
+        <div class="text-center text-white small mt-2">
           Showing {{ showingFrom }}-{{ showingTo }} of {{ pagination.total }} properties
         </div>
       </div>
