@@ -399,6 +399,8 @@ const columns = ref([])
 const INITIAL_VISIBLE_LEADS_PER_STAGE = 20
 const VISIBLE_LEADS_INCREMENT = 20
 const visibleLeadCounts = ref({})
+const KANBAN_LEADS_CACHE_KEY = 'kanban_leads_stages_cache_v1'
+const KANBAN_LEADS_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 const responsiblePersons = ref([])
 const loading = ref(true)
 const error = ref(null)
@@ -570,6 +572,8 @@ const executeFetchLeads = async () => {
         if (q.email) params.email = q.email
         if (q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '') params.bedrooms = q.bedrooms
         if (q.team_id != null && q.team_id !== '') params.team_id = q.team_id
+        // Hint to backend (if supported) to limit number of leads per stage for performance
+        params.per_stage_limit = 200
         const response = await api.get('/stages/kanban/stages-with-leads', {
             params,
             signal: abortController.value.signal
@@ -595,6 +599,7 @@ const executeFetchLeads = async () => {
             }
         })
         visibleLeadCounts.value = nextCounts
+        saveColumnsToCache()
         error.value = null
         loading.value = false
     } catch (err) {
@@ -606,6 +611,59 @@ const executeFetchLeads = async () => {
     } finally {
         isFetching.value = false
         abortController.value = null
+    }
+}
+
+function saveColumnsToCache() {
+    try {
+        const snapshot = Array.isArray(columns.value)
+            ? columns.value.map(col => ({
+                  // keep only what we need for fast first paint
+                  title: col.title,
+                  status: col.status,
+                  color: col.color,
+                  order: col.order,
+                  // cap number of cached leads per stage to keep localStorage small
+                  leads: Array.isArray(col.leads) ? col.leads.slice(0, 100) : []
+              }))
+            : []
+
+        const payload = {
+            cachedAt: Date.now(),
+            columns: snapshot
+        }
+        localStorage.setItem(KANBAN_LEADS_CACHE_KEY, JSON.stringify(payload))
+    } catch (e) {
+        // ignore cache errors
+    }
+}
+
+function loadCachedColumns() {
+    try {
+        const raw = localStorage.getItem(KANBAN_LEADS_CACHE_KEY)
+        if (!raw) return
+        const parsed = JSON.parse(raw)
+        if (!parsed || !Array.isArray(parsed.columns)) return
+
+        const now = Date.now()
+        if (parsed.cachedAt && now - parsed.cachedAt > KANBAN_LEADS_CACHE_TTL_MS) {
+            return
+        }
+
+        columns.value = parsed.columns
+
+        // Initialize visible counts based on cached data
+        const nextCounts = {}
+        columns.value.forEach(col => {
+            const total = Array.isArray(col.leads) ? col.leads.length : 0
+            nextCounts[col.status] = Math.min(INITIAL_VISIBLE_LEADS_PER_STAGE, total)
+        })
+        visibleLeadCounts.value = nextCounts
+
+        loading.value = false
+        error.value = null
+    } catch (e) {
+        // ignore cache errors
     }
 }
 
@@ -681,6 +739,9 @@ watch(() => columns.value?.length, () => {
 })
 
 onMounted(async () => {
+    // Try to show cached stages/leads immediately while fresh data loads
+    loadCachedColumns()
+
     await Promise.all([
         fetchLeads(true), // Immediate on mount
         fetchResponsiblePersons()
