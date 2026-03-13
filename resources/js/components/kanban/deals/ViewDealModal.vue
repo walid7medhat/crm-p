@@ -10,30 +10,67 @@
     modal-class="view-deal-modal-outer"
     content-class="view-deal-modal-content-wrap"
   >
-    <div v-if="show" class="view-deal-modal-content p-3">
-      <!-- Header (same as View Lead): title + deal type pill + close -->
-      <div class="modal-header-custom d-flex justify-content-between align-items-center px-1">
-        <div class="d-flex align-items-center gap-3">
-          <span class="modal-title">{{ dealTitle }}</span>
-          <div class="deals-type-tabs-inline d-flex gap-2">
-            <button
+    <div v-if="show" class="view-deal-modal-content view-deal-modal-padding">
+      <!-- Header: title + deal type dropdown + close -->
+      <div class="view-deal-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <span class="view-deal-title">{{ dealTitle }}</span>
+          <b-dropdown
+            class="deal-type-dropdown"
+            menu-class="deal-type-dropdown-menu"
+            toggle-class="deal-type-dropdown-toggle"
+            variant="none"
+            no-caret
+          >
+            <template #button-content>
+              <span class="deal-type-dropdown-label">{{ selectedDealTypeName }}</span>
+              <iconify-icon icon="lucide:chevron-down" class="deal-type-dropdown-chevron"></iconify-icon>
+            </template>
+            <b-dropdown-item
               v-for="tab in dealTypeTabs"
               :key="tab.id"
-              class="deals-type-tab-inline"
-              :class="{ active: dealType === tab.id }"
+              :active="dealType === tab.id"
+              class="deal-type-dropdown-item"
               @click="dealType = tab.id"
             >
               {{ tab.name }}
-            </button>
-          </div>
+            </b-dropdown-item>
+          </b-dropdown>
         </div>
         <button class="close-btn" @click="close" type="button">
           <iconify-icon icon="lucide:x"></iconify-icon>
         </button>
       </div>
 
-      <!-- Tabs (same as View Lead): General | History -->
-      <div class="tabs-container mb-3 border-bottom">
+      <!-- Stage progress bar: clickable stage tabs -->
+      <div class="deal-progress-wrapper py-3">
+        <div class="deal-progress-bar">
+          <template v-for="(stage, index) in currentStages" :key="stage.id">
+            <div
+              class="deal-stage-pill"
+              :class="{ active: selectedStageIndex === index }"
+              :style="{
+                backgroundColor: selectedStageIndex === index ? (stage.bg || '#DBEAFE') : 'transparent',
+                borderColor: selectedStageIndex === index ? (stage.dotColor || '#3B82F6') : '#E2E8F0'
+              }"
+              role="button"
+              tabindex="0"
+              @click="selectStage(index)"
+              @keydown.enter="selectStage(index)"
+              @keydown.space.prevent="selectStage(index)"
+            >
+              <div class="stage-circle">
+                <div class="stage-dot" :style="{ backgroundColor: stage.dotColor }"></div>
+              </div>
+              <span class="stage-text">{{ stage.name }}</span>
+            </div>
+            <iconify-icon v-if="index < currentStages.length - 1" icon="lucide:chevron-right" class="stage-arrow"></iconify-icon>
+          </template>
+        </div>
+      </div>
+
+      <!-- Tabs: General | History (orange underline for active) -->
+      <div class="tabs-container border-bottom">
         <div class="d-flex gap-4">
           <button
             class="tab-item"
@@ -52,18 +89,19 @@
         </div>
       </div>
 
-      <!-- Main content (same structure as View Lead: modal-body-custom p-4) -->
-      <div class="modal-body-custom p-4">
+      <!-- Main content -->
+      <div class="modal-body-custom view-deal-body-padding">
         <!-- General tab: two columns like Lead -->
         <template v-if="activeTab === 'general'">
           <div class="row g-4">
-            <!-- Left column: Deal Information -->
+            <!-- Left column: Deal Information (with edit icon like image) -->
             <div class="col-md-5">
               <div class="info-card bg-white p-3 radius-12 shadow-sm">
-                <div class="modal-header-custom d-flex justify-content-between align-items-center pb-9 mb-3 border-bottom">
-                  <div class="d-flex align-items-center gap-2">
-                    <span class="modal-title">Deal Information</span>
-                  </div>
+                <div class="info-card-header d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                  <span class="info-card-title">Deal Information</span>
+                  <button type="button" class="btn-edit-icon" aria-label="Edit">
+                    <iconify-icon icon="lucide:pencil"></iconify-icon>
+                  </button>
                 </div>
                 <div v-if="dealType === 'primary'" class="row g-3 view-deal-content">
                   <ViewPrimaryDeal :deal="deal" />
@@ -77,25 +115,25 @@
               </div>
             </div>
 
-            <!-- Right column: Activity & Comments (exact same as View Lead GeneralTab) -->
+            <!-- Right column: Activity (first, dark when active) | Comments -->
             <div class="col-md-7">
               <div class="activity-card bg-white p-3 radius-12 shadow-sm">
-                <div class="d-flex gap-2 mb-4 p-1 radius-100 w-fit-content toggle-buttons-container">
+                <div class="d-flex gap-2 mb-4 w-fit-content toggle-buttons-container">
                   <button
-                    class="btn-toggle d-flex align-items-center gap-2 px-3 py-1 radius-100"
-                    :class="{ active: activeViewTab === 'comments' }"
-                    @click="activeViewTab = 'comments'"
-                  >
-                    <iconify-icon icon="lucide:message-square"></iconify-icon>
-                    Comments
-                  </button>
-                  <button
-                    class="btn-toggle d-flex align-items-center gap-2 px-3 py-1 radius-100"
+                    class="btn-toggle btn-toggle-activity d-flex align-items-center gap-2"
                     :class="{ active: activeViewTab === 'activity' }"
                     @click="activeViewTab = 'activity'"
                   >
                     <iconify-icon icon="lucide:clock-3"></iconify-icon>
                     Activity
+                  </button>
+                  <button
+                    class="btn-toggle btn-toggle-comments d-flex align-items-center gap-2"
+                    :class="{ active: activeViewTab === 'comments' }"
+                    @click="activeViewTab = 'comments'"
+                  >
+                    <iconify-icon icon="lucide:message-square"></iconify-icon>
+                    Comments
                   </button>
                 </div>
 
@@ -123,7 +161,7 @@
                 :lead-id="dealLeadId"
               />
               <LeadActivityTimeline
-                v-if="activeViewTab === 'comments' && dealLeadId"
+                v-if="activeViewTab === 'activity' && dealLeadId"
                 :key="`timeline-deal-${deal?.id}-${dealLeadId}`"
                 :lead-id="dealLeadId"
               />
@@ -143,7 +181,7 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { BModal } from 'bootstrap-vue-3'
+import { BModal, BDropdown, BDropdownItem } from 'bootstrap-vue-3'
 import ViewPrimaryDeal from './ViewPrimaryDeal.vue'
 import ViewSecondaryDeal from './ViewSecondaryDeal.vue'
 import ViewRentalDeal from './ViewRentalDeal.vue'
@@ -176,6 +214,11 @@ const dealTitle = computed(() => {
 
 const dealLeadId = computed(() => props.deal?.lead_id ?? null)
 
+const selectedDealTypeName = computed(() => {
+  const tab = dealTypeTabs.find(t => t.id === dealType.value)
+  return tab ? tab.name : 'Primary / Off Plan'
+})
+
 const activityListRef = ref(null)
 const commentListRef = ref(null)
 
@@ -194,11 +237,12 @@ const dealTypeTabs = [
 ]
 
 const primaryStages = [
+  { id: 'new', name: 'New', bg: '#DBEAFE', dotColor: '#3B82F6' },
   { id: 'eoi', name: 'EOI', bg: '#DBEAFE', dotColor: '#3B82F6' },
-  { id: 'booking', name: 'Booking', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'spa-signed', name: 'SPA Signed (Deal Done)', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'deal-lost', name: 'Deal Lost', bg: '#FEE2E2', dotColor: '#DC2626' },
-  { id: 'deal-won', name: 'Deal Won', bg: '#D1FAE5', dotColor: '#059669' }
+  { id: 'booking', name: 'Booking', bg: '#D1FAE5', dotColor: '#22C55E' },
+  { id: 'spa-signed', name: 'SPA Signed (Deal Done)', bg: '#D1FAE5', dotColor: '#22C55E' },
+  { id: 'deal-won', name: 'Deal Won', bg: '#D1FAE5', dotColor: '#22C55E' },
+  { id: 'deal-lost', name: 'Deal Lost', bg: '#FEE2E2', dotColor: '#EF4444' }
 ]
 
 const secondaryStages = [
@@ -226,13 +270,15 @@ const currentStages = computed(() => {
 
 const currentStageIndex = computed(() => {
   const d = props.deal
-  if (!d?.stageId) return 0
-  let stageId = d.stageId
+  if (!d) return 0
+  const stages = currentStages.value
+  let stageId = d.stageId ?? d.stage_id
+  if (stageId == null) return 0
   if (stageId === 'deal-lost-sec') stageId = 'deal-lost'
   if (stageId === 'deal-won-sec') stageId = 'deal-won'
   if (stageId === 'lease-off') stageId = 'lease-offer'
   if (stageId === 'guarantee-letter') stageId = 'guarantee'
-  const idx = currentStages.value.findIndex(s => s.id === stageId)
+  const idx = stages.findIndex(s => String(s.id) === String(stageId))
   return idx >= 0 ? idx : 0
 })
 
@@ -264,20 +310,22 @@ function close() {
 </script>
 
 <style>
-/* Global: modal size smaller (not full screen) and border */
+/* Global: modal large, 12px radius, like image */
 #view-deal-modal .modal-dialog {
-  max-width: 85vw !important;
-  width: 85vw !important;
+  max-width: 95vw !important;
+  width: 95vw !important;
+  max-width: 1200px !important;
   max-height: 92vh !important;
-  min-height: 88vh !important;
-  margin: 1vh auto !important;
+  min-height: 85vh !important;
+  margin: 2vh auto !important;
 }
 #view-deal-modal .modal-content {
   max-height: 92vh !important;
-  min-height: 88vh !important;
-  border-radius: 8px !important;
+  min-height: 85vh !important;
+  border-radius: 12px !important;
   overflow: hidden !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12) !important;
 }
 #view-deal-modal .modal-body {
   overflow: hidden !important;
@@ -288,18 +336,18 @@ function close() {
 </style>
 
 <style scoped>
-/* Scoped fallback (when modal is not teleported) */
 :deep(.view-deal-modal-outer .modal-dialog) {
-  max-width: 85vw !important;
-  width: 85vw !important;
+  max-width: 95vw !important;
+  width: 95vw !important;
+  max-width: 1200px !important;
   max-height: 92vh !important;
-  min-height: 88vh !important;
+  min-height: 85vh !important;
 }
 :deep(.view-deal-modal-outer .modal-content.view-deal-modal-content-wrap),
 :deep(#view-deal-modal .modal-content) {
   max-height: 92vh !important;
-  min-height: 88vh !important;
-  border-radius: 8px !important;
+  min-height: 85vh !important;
+  border-radius: 12px !important;
   overflow: hidden !important;
 }
 :deep(.view-deal-modal-outer .modal-body) {
@@ -321,56 +369,128 @@ function close() {
 .modal-header-custom {
   background: #fff;
 }
-.modal-title {
-  font-size: 16px;
+
+.view-deal-body-padding {
+  padding: 1rem 2.5rem 1.5rem 2.5rem;
+}
+
+/* Header: title 18px + deal type tag pill + close */
+.view-deal-header {
+  padding: 0.5rem 0.75rem 0.5rem 0.75rem;
+  border-bottom: none;
+}
+.view-deal-title {
+  font-size: 18px;
   font-weight: 600;
   color: #01062C;
 }
-.deals-type-tabs-inline {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-.deals-type-tab-inline {
-  padding: 6px 14px;
+.deal-type-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
   border-radius: 100px;
-  border: none;
+  background: #F1F5F9;
+  color: #64748B;
   font-size: 13px;
   font-weight: 500;
-  color: #64748B;
-  background: #F1F5F9;
-  cursor: pointer;
-  transition: all 0.2s;
 }
-.deals-type-tab-inline:hover {
-  color: #1E293B;
-  background: #E2E8F0;
-}
-.deals-type-tab-inline.active {
-  background: #0F172A;
-  color: #fff;
+.deal-type-tag-icon {
+  font-size: 14px;
+  opacity: 0.8;
 }
 .close-btn {
-  background: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #F1F5F9;
   border: none;
-  padding: 4px;
-  display: flex;
+  padding: 0;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 20px;
-  color: #000;
+  font-size: 18px;
+  color: #64748B;
+  transition: background 0.2s, color 0.2s;
 }
 .close-btn:hover {
+  background: #E2E8F0;
   color: #1E293B;
 }
 
-/* Tabs (match View Lead) */
+/* Stage progress bar (like Create Deal / image) */
+.deal-progress-wrapper {
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+.deal-progress-wrapper::-webkit-scrollbar {
+  display: none;
+}
+.deal-progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.deal-stage-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 100px;
+  border: 1px solid #E2E8F0;
+  transition: all 0.2s;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.deal-stage-pill .stage-circle {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.deal-stage-pill .stage-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.deal-stage-pill .stage-text {
+  font-size: 13px;
+  color: #64748B;
+  font-weight: 400;
+}
+.deal-stage-pill.active .stage-text {
+  color: #01062C;
+  font-weight: 600;
+}
+.stage-arrow {
+  font-size: 14px;
+  color: #CBD5E1;
+  flex-shrink: 0;
+}
+
+/* Tabs: General | History (orange underline when active) */
+.tabs-container {
+  margin-bottom: 0;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
 .tab-item {
   background: none;
   border: none;
-  padding: 12px 10px;
-  font-size: 13px;
+  padding: 12px 0;
+  margin-right: 24px;
+  font-size: 14px;
   font-weight: 500;
   color: #64748B;
   position: relative;
@@ -378,6 +498,7 @@ function close() {
 }
 .tab-item.active {
   color: #01062C;
+  font-weight: 600;
 }
 .tab-item.active::after {
   content: '';
@@ -390,31 +511,70 @@ function close() {
 }
 
 .radius-12 { border-radius: 12px; }
-.radius-100 { border-radius: 100px; }
 
-/* Two-column cards (match GeneralTab) */
-.info-card .modal-header-custom.pb-9 { padding-bottom: 0.5rem; }
+/* Left column: Deal Information card with edit icon */
+.info-card-header {
+  padding: 0;
+}
+.info-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #01062C;
+}
+.btn-edit-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748B;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-edit-icon:hover {
+  background: #F1F5F9;
+  color: #01062C;
+}
+
 .activity-card {
   border: 1px solid #F4F4F4;
 }
 .toggle-buttons-container {
-  border: 1px solid #EDEDED;
-  box-shadow: 2px 2px 20px 4px #7090B014;
+  width: fit-content;
 }
 .w-fit-content { width: fit-content; }
 .btn-toggle {
-  background: none;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 100px;
   border: none;
   font-size: 13px;
-  font-weight: 600;
-  color: #64748B;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
-.btn-toggle.active {
-  background: #01062C;
+.btn-toggle-activity {
+  background: #F1F5F9;
+  color: #64748B;
+}
+.btn-toggle-activity.active {
+  background: #0F172A;
   color: #fff;
-  box-shadow: 0px 4px 8px rgba(1, 6, 44, 0.2);
+}
+.btn-toggle-comments {
+  background: #F1F5F9;
+  color: #64748B;
+}
+.btn-toggle-comments.active {
+  background: #0F172A;
+  color: #fff;
 }
 .btn-primary {
   background: #01062C;
@@ -438,7 +598,6 @@ function close() {
   overflow-y: auto;
 }
 
-/* Scrollable content area: vertical scroll only, no horizontal scrollbar */
 .form-scroll-area {
   flex: 1 1 auto;
   min-height: 0;
@@ -469,4 +628,21 @@ function close() {
   min-width: 0;
 }
 
+/* Child sections: section titles 16px, labels 12px #64748B, values 14px #01062C */
+:deep(.info-card .section-title),
+:deep(.info-card h6.section-title) {
+  font-size: 16px !important;
+  font-weight: 600;
+  color: #01062C;
+  margin-bottom: 12px;
+}
+:deep(.info-card .info-label) {
+  font-size: 12px !important;
+  color: #64748B;
+  margin-bottom: 4px;
+}
+:deep(.info-card .info-value) {
+  font-size: 14px !important;
+  color: #01062C;
+}
 </style>

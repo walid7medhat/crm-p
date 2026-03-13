@@ -38,7 +38,6 @@
                     <div class="d-flex align-items-center gap-2">
                         <input
                             type="color"
-                             :value="formData.color || '#000000'"
                             v-model="formData.color"
                             class="color-picker"
                         />
@@ -122,7 +121,9 @@ const props = defineProps({
     modelValue: {
         type: Boolean,
         required: true
-    }
+    },
+    stageType: { type: String, default: null },
+    dealType: { type: String, default: null }
 })
 
 const emit = defineEmits(['update:modelValue', 'stage-created'])
@@ -197,11 +198,11 @@ const handleSave = async () => {
         
         const payload = {
             name: formData.value.title,
-            color: formData.value.color,
-            // order: formData.value.order,
-            // Add other fields as needed
+            color: formData.value.color || '#3B82F6',
         }
-        
+        if (props.stageType) payload.stage_type = props.stageType
+        if (props.dealType) payload.deal_type = props.dealType
+
         const response = await api.post('/stages', payload)
         
         console.log('✅ Stage created successfully:', response.data)

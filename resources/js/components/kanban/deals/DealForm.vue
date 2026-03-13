@@ -1369,4 +1369,28 @@ const bedroomOptions = [
 .form-section {
   margin-top: 10px;
 }
+
+.section-title { font-size: 16px !important; font-weight: 600; color: #01062C; font-family: 'Montserrat'; margin-bottom: 12px; }
+.form-card { background: #fff; border: 1px solid #F3F3F3; box-shadow: 1px 1px 5px rgba(0,0,0,0.03); padding: 1.25rem !important; }
+.radius-12 { border-radius: 12px; }
+.form-label-custom { font-size: 13px !important; font-weight: 500; color: #334155; margin-bottom: 6px; display: block; font-family: 'Montserrat'; }
+.custom-input { height: 44px !important; min-height: 44px; border-radius: 10px !important; border: 1px solid #E2E8F0 !important; font-size: 14px !important; font-family: 'Montserrat'; }
+.input-group-custom { display: flex; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; }
+.input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 10px 0 0 10px !important; }
+:deep(.custom-v-select) { font-size: 14px; }
+:deep(.custom-v-select .vs__dropdown-toggle) { height: 44px !important; min-height: 44px; border-radius: 10px; border: 1px solid #E2E8F0; font-size: 14px; }
+:deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 14px; }
+:deep(.custom-v-select-inline) { min-width: 120px; }
+:deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 44px !important; min-height: 44px; border: none; border-left: 1px solid #E2E8F0; border-radius: 0 10px 10px 0; font-size: 14px; }
+.doc-tabs { gap: 8px; }
+.doc-tab { height: 32px; min-height: 32px; padding: 0 14px; border-radius: 100px; border: 1px solid #E2E8F0; background: #F1F5F9; font-size: 13px; color: #64748B; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.doc-tab.active { background: #2196F3; color: #fff; border-color: #2196F3; }
+.upload-zone { border-style: dashed !important; border-color: #E2E8F0 !important; background: #F8FAFC; }
+.upload-icon { font-size: 36px; color: #94A3B8; }
+.upload-text { font-size: 14px; color: #475569; margin: 0; }
+.tag-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #F1F5F9; border-radius: 100px; font-size: 13px; }
+.tag-remove { cursor: pointer; font-size: 16px; }
+.btn-tag-search { background: transparent; border: none; color: #3B82F6; font-size: 14px; cursor: pointer; }
+.add-custom-field-link { font-size: 14px; color: #3B82F6; text-decoration: underline; }
+.form-section { margin-top: 20px; }
 </style>

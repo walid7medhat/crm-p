@@ -6,34 +6,37 @@
     hide-footer
     size="xl"
     centered
-    body-class="p-0"
+    body-class="p-0 create-deal-modal-body"
+    modal-class="create-deal-modal-wrap"
     @hidden="resetForm"
     @shown="onModalShown"
   >
-    <div class="create-deal-modal-content p-3">
-      <!-- Header -->
-      <div class="modal-header-deal d-flex justify-content-between align-items-center flex-wrap gap-2 px-1">
-        <div class="d-flex align-items-center gap-3 flex-grow-1">
+    <div class="create-deal-modal-content create-deal-modal-padding">
+      <!-- Header: extra padding so text doesn't start at edge -->
+      <div class="modal-header-deal d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3 flex-grow-1 header-left-with-padding">
           <span class="modal-title">Create New Deal</span>
+          <!-- Clickable tabs: Primary / Secondary / Rental -->
           <div class="deals-type-tabs-inline d-flex gap-2">
             <button
               v-for="tab in dealTypeTabs"
               :key="tab.id"
-              class="deals-type-tab-inline"
+              type="button"
+              class="deals-type-tab-btn"
               :class="{ active: dealType === tab.id }"
-              @click="dealType = tab.id"
+              @click="selectDealType(tab.id)"
             >
               {{ tab.name }}
             </button>
           </div>
         </div>
-        <button class="close-btn" @click="close">
+        <button type="button" class="close-btn" @click="close">
           <iconify-icon icon="lucide:x"></iconify-icon>
         </button>
       </div>
 
       <!-- Lead Conversion Banner -->
-      <div v-if="leadId" class="lead-info-banner px-1 py-2">
+      <div v-if="leadId" class="lead-info-banner py-2">
         <div class="alert alert-info d-flex align-items-center gap-2 mb-0">
           <iconify-icon icon="lucide:info" class="text-info"></iconify-icon>
           <span>Converting Lead #{{ leadId }} to Deal</span>
@@ -44,7 +47,7 @@
       </div>
      
         <!-- Deal progress / stages (changes by deal type) -->
-      <div class="deal-progress-wrapper py-3 px-1">
+      <div class="deal-progress-wrapper py-3">
         <div class="deal-progress-bar">
           <template v-for="(stage, index) in currentStages" :key="stage.id">
             <div
@@ -157,6 +160,10 @@ const dealTypeTabs = [
   { id: 'secondary', name: 'Secondary' },
   { id: 'rental', name: 'Rental' }
 ]
+
+function selectDealType(id) {
+  dealType.value = id
+}
 
 // Get stages for current deal type
 const currentStages = computed(() => {
@@ -963,7 +970,18 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Add loading state styles */
+/* Modal wider – no tight width constraint */
+:deep(.create-deal-modal-wrap .modal-dialog) {
+  max-width: 98vw;
+  width: 98vw;
+}
+:deep(.create-deal-modal-body) {
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .lead-info-banner {
   border-bottom: 1px solid #E2E8F0;
 }
@@ -975,18 +993,20 @@ onMounted(() => {
   border-radius: 8px;
 }
 
-/* Responsive adjustments */
 @media (max-width: 768px) {
-  .deals-type-tabs-inline {
-    margin-top: 10px;
-    width: 100%;
-    justify-content: flex-start;
+  .deal-type-dropdown {
+    margin-top: 4px;
   }
 }
+
 .create-deal-modal-content {
   background: #fff;
   border-radius: 12px;
   font-family: 'Montserrat', sans-serif;
+  font-size: 15px;
+}
+.create-deal-modal-padding {
+  padding: 1.25rem 2.5rem 1.25rem 2.5rem;
 }
 
 .modal-header-deal {
@@ -994,34 +1014,47 @@ onMounted(() => {
   border-bottom: 1px solid #F4F4F4;
 }
 
-.modal-title {
-  font-weight: 600;
-  font-size: 16px;
-  color: #01062C;
+.header-left-with-padding {
+  padding-left: 0.5rem;
 }
 
+.modal-title {
+  font-weight: 600;
+  font-size: 18px;
+  color: #01062C;
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* Deal type: clickable tabs (Primary / Secondary / Rental) */
 .deals-type-tabs-inline {
+  display: flex;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
-.deals-type-tab-inline {
-  padding: 6px 14px;
+.deals-type-tab-btn {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 14px;
   border-radius: 100px;
   border: none;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: #64748B;
   background: #F1F5F9;
   cursor: pointer;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.deals-type-tab-inline:hover {
+.deals-type-tab-btn:hover {
   color: #1E293B;
   background: #E2E8F0;
 }
 
-.deals-type-tab-inline.active {
+.deals-type-tab-btn.active {
   background: #0F172A;
   color: #fff;
 }
@@ -1032,6 +1065,10 @@ onMounted(() => {
   border-radius: 50%;
   cursor: pointer;
   color: #64748B;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: background 0.2s, color 0.2s;
 }
 
@@ -1043,6 +1080,7 @@ onMounted(() => {
 .deal-progress-wrapper {
   overflow-x: auto;
   scrollbar-width: none;
+  padding: 0.5rem 0;
 }
 
 .deal-progress-wrapper::-webkit-scrollbar {
@@ -1060,17 +1098,21 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  border-radius: 30px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 100px;
   border: 1px solid #E2E8F0;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .deal-stage-pill .stage-circle {
   width: 14px;
   height: 14px;
+  min-width: 14px;
   border-radius: 50%;
   background: #fff;
   display: flex;
@@ -1085,13 +1127,14 @@ onMounted(() => {
 }
 
 .deal-stage-pill .stage-text {
-  font-size: 12px;
+  font-size: 13px;
   color: #64748B;
+  font-weight: 400;
 }
 
 .deal-stage-pill.active .stage-text {
   color: #01062C;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .stage-arrow {
@@ -1101,26 +1144,29 @@ onMounted(() => {
 }
 
 .form-scroll-area {
-  max-height: 60vh;
+  max-height: 70vh;
   overflow-y: auto;
-  padding: 0 0.5rem;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
 }
 
 .step-content {
-  padding: 0.5rem 0;
+  padding: 0.75rem 0;
 }
 
 .modal-footer-custom {
   border-top: 1px solid #F4F4F4;
-  padding: 15px;
+  padding: 20px;
 }
 
 .btn-clear {
   background: #F4F4F4;
   border: none;
-  padding: 10px 25px;
+  padding: 12px 28px;
   border-radius: 100px;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
   color: #01062C;
   cursor: pointer;
 }
@@ -1128,9 +1174,9 @@ onMounted(() => {
 .btn-next-step {
   background: #01062C;
   border: none;
-  padding: 10px 20px;
+  padding: 12px 24px;
   border-radius: 100px;
-  font-size: 14px;
+  font-size: 15px;
   color: #fff;
   font-weight: 500;
   display: inline-flex;
@@ -1141,5 +1187,75 @@ onMounted(() => {
 
 .btn-next-step:hover:not(:disabled) {
   background: #0f172a;
+}
+
+/* Form inside: match image – section titles, labels, inputs same style */
+:deep(.deal-form-container .section-title) {
+  font-size: 16px !important;
+  font-weight: 600;
+  color: #01062C;
+  margin-bottom: 12px;
+  font-family: 'Montserrat', sans-serif;
+}
+
+:deep(.deal-form-container .form-label-custom) {
+  font-size: 13px !important;
+  font-weight: 500;
+  color: #334155;
+  margin-bottom: 6px;
+  font-family: 'Montserrat', sans-serif;
+}
+
+:deep(.deal-form-container .custom-input) {
+  height: 44px !important;
+  min-height: 44px;
+  font-size: 14px !important;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  font-family: 'Montserrat', sans-serif;
+}
+
+:deep(.deal-form-container .custom-v-select .vs__dropdown-toggle) {
+  height: 44px !important;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  font-size: 14px;
+}
+
+:deep(.deal-form-container .custom-v-select .vs__selected),
+:deep(.deal-form-container .custom-v-select .vs__search) {
+  font-size: 14px;
+}
+
+:deep(.deal-form-container .custom-v-select-inline .vs__dropdown-toggle) {
+  height: 44px !important;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+:deep(.deal-form-container .form-card) {
+  padding: 1.25rem !important;
+}
+
+:deep(.deal-form-container .form-section) {
+  margin-top: 20px;
+}
+
+/* Document type tabs: active blue like image */
+:deep(.deal-form-container .doc-tab) {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:deep(.deal-form-container .doc-tab.active) {
+  background: #2196F3;
+  color: #fff;
+  border-color: #2196F3;
 }
 </style>
