@@ -138,7 +138,7 @@ const canView = computed(() => {
   const isResponsible = props.lead?.responsible_person_id === user.value.id
   return isAdmin || isResponsible
 })
-const basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone', 'first_name', 'last_name']
+const basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone','work_phone_number','phone_number','full name', 'first_name', 'last_name']
 
 const facebookQuestions = computed(() => {
     if (!props.lead?.facebook_questions_answers) {
