@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\Deal\LeadConversionController;
 use App\Http\Controllers\Api\SuggestionController;
 use App\Http\Controllers\Api\Deal\DealActivityController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\ChatController;
 
 Route::get('/test-email', function () {
     try {
@@ -192,6 +193,17 @@ Route::middleware(['jwt.auth'])->group(function () {
 
    Route::get('/sidebar/counts', [DashboardController::class, 'getSidebarCounts']);
 
+    // Chat
+    Route::prefix('chat')->group(function () {
+        Route::post('/start', [ChatController::class, 'start']);
+        Route::get('/unread-count', [ChatController::class, 'unreadCount']);
+        Route::get('/conversations', [ChatController::class, 'conversations']);
+        Route::get('/messages/{conversation}', [ChatController::class, 'messages']);
+        Route::post('/send', [ChatController::class, 'send']);
+        Route::post('/read', [ChatController::class, 'read']);
+        Route::get('/admin/conversations', [ChatController::class, 'adminConversations']);
+    });
+
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
@@ -297,7 +309,7 @@ Route::prefix('leads')->group(function(){
     
 Route::post('/search-alerts',[ListingController::class, 'store_search_alert']);
 
-Route::prefix('listings')->group(function(){
+Route::prefix('listings')->middleware(['jwt.auth'])->group(function(){
     Route::post('/properties/{id}/generate-offer', [ListingController::class, 'generateOffer']);
 Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
     Route::get('/{id}/comments', [ListingCommentController::class, 'index']);

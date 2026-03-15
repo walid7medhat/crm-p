@@ -64,11 +64,10 @@
                   <button class="btn btn-primary" >
                  {{ property.listing_status || "Not specified" }}
                 </button>
-                    <button class="btn btn-success" @click="openFloorPlanSlider(0)"v-if="property?.floor_plans?.length > 0">
+                  <button class="btn btn-success" @click="openFloorPlanSlider(0)" v-if="property?.floor_plans?.length > 0">
                     <iconify-icon icon="iconamoon:eye-light"></iconify-icon>
-                     VIEW FLOOR PLAN
-                    </button>
-                    
+                    VIEW FLOOR PLAN
+                  </button>
                 </div>
                 <div class="price-main">
                   <h3 class="property-price">AED {{ formatPrice(property.price) }}</h3>
@@ -693,6 +692,16 @@
                               >
                                 <i class="ri-user-shared-line"></i>
                                 Assign to Agent
+                              </button>
+
+                              <!-- Chat with Agent -->
+                              <button 
+                                v-if="property?.agent"
+                                class="dropdown-item"
+                                @click="handleChatWithAgentClick"
+                              >
+                                <i class="ri-chat-3-fill"></i>
+                                Chat with Agent
                               </button>
                     
                               <!-- Mark as Converted (Sold Out) -->
@@ -1591,7 +1600,7 @@
 </template>
 
 <script>
-import { ref, onMounted, getCurrentInstance, computed ,watch } from 'vue';
+import { ref, onMounted, getCurrentInstance, computed, watch } from 'vue';
 
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
@@ -1603,7 +1612,10 @@ import "vue-select/dist/vue-select.css";
 export default {
   name: "PropertyDetails",
    components: {
-    vSelect
+    vSelect,
+  },
+  data() {
+    return {};
   },
   setup() {
         const propertyIcon = '/assets/icons/property-icon.svg';
@@ -1651,6 +1663,9 @@ const locationIcon  =  '/assets/images/Location.png';
       owner_info_rejected_at: null
     });
     const showOwnerDetailsModal = ref(false);
+    const showChatPopup = ref(false);
+    const chatAgent = ref(null);
+    const chatListingId = ref(null);
     const showFloorPlanSlider = ref(false);
     const currentFloorPlanIndex = ref(0);
     
@@ -2567,6 +2582,17 @@ const revertFromConverted = async () => {
 
 };
 
+    const openChatWithAgent = () => {
+      if (!property.value?.agent) return;
+      chatAgent.value = {
+        id: property.value.agent.id,
+        name: property.value.agent.name || property.value.agent.email,
+        email: property.value.agent.email,
+        avatar: property.value.agent.avatar_url || property.value.agent.avatar || null,
+      };
+      chatListingId.value = property.value.id ?? null;
+      showChatPopup.value = true;
+    };
 
     // Real-time updates methods
     const listenForAccessRequestUpdates = () => {
@@ -2690,7 +2716,23 @@ const revertFromConverted = async () => {
       }
     };
 
-  
+    // Sync property agent to sessionStorage so global "Chat with Agent" (App.vue) can open chat
+    watch(property, (p) => {
+      if (p?.agent) {
+        try {
+          sessionStorage.setItem('propertyChatAgent', JSON.stringify({
+            id: p.agent.id,
+            name: p.agent.name || p.agent.email,
+            email: p.agent.email,
+            avatar: p.agent.avatar_url || p.agent.avatar || null,
+          }));
+          sessionStorage.setItem('propertyChatListingId', String(p.id ?? ''));
+        } catch (_) {}
+      } else {
+        sessionStorage.removeItem('propertyChatAgent');
+        sessionStorage.removeItem('propertyChatListingId');
+      }
+    }, { immediate: true });
 
     // Comments system methods
     const fetchComments = async () => {
@@ -4594,6 +4636,10 @@ const openDriveLink = () => {
       getLevelType,
       // New method
       goToAgentDetails,
+      openChatWithAgent,
+      showChatPopup,
+      chatAgent,
+      chatListingId,
       //pdf
       generatePDF,
       showOfferHistory,
@@ -4667,6 +4713,38 @@ const openDriveLink = () => {
     };
   },
 
+  methods: {
+    handleChatWithAgentClick() {
+      this.openChatWithAgentFromStorage();
+      this.closeActionsDropdown();
+    },
+    openChatWithAgentFromStorage() {
+      if (!window.__openPropertyChat) {
+        Swal.fire({ title: 'Error', text: 'Chat is not available.', icon: 'info' });
+        return;
+      }
+      try {
+        const raw = sessionStorage.getItem('propertyChatAgent');
+        const listingId = sessionStorage.getItem('propertyChatListingId');
+        if (raw) {
+          const agent = JSON.parse(raw);
+          window.__openPropertyChat(agent, listingId ? parseInt(listingId, 10) : null);
+          return;
+        }
+        const p = this.property?.value ?? this.property;
+        if (!p?.agent) {
+          Swal.fire({ title: 'No agent', text: 'This property has no agent assigned.', icon: 'info' });
+          return;
+        }
+        window.__openPropertyChat(
+          { id: p.agent.id, name: p.agent.name || p.agent.email, email: p.agent.email, avatar: p.agent.avatar_url || p.agent.avatar || null },
+          p.id ?? null
+        );
+      } catch (_) {
+        Swal.fire({ title: 'Error', text: 'Could not open chat.', icon: 'info' });
+      }
+    },
+  },
   beforeUnmount() {
     this.cleanup();
   }
@@ -5537,6 +5615,9 @@ margin-top: 20px;
   padding-bottom: 16px;
   border-bottom: 1px solid #e9ecef;
   text-align: left;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 }
 
 .agent-sidebar-avatar {
@@ -5549,6 +5630,8 @@ margin-top: 20px;
 
 .agent-sidebar-info {
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .agent-sidebar-name {
@@ -7438,9 +7521,28 @@ ease;
 .card-main{
   background: none !important;
 }
-.property-actions  .btn{
+.property-actions .btn {
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: 8px;
+}
 
+.btn-chat-agent-inline {
+  color: #fff;
+  background: #0d6efd;
+  border: none;
+  cursor: pointer;
+}
+.btn-chat-agent-inline:hover {
+  background: #0b5ed7;
+  color: #fff;
+}
+.btn-chat-agent-inline i {
+  font-size: 15px;
 }
 .dropdown-item-btn{
   display: flex;

@@ -345,13 +345,13 @@
           </transition>
         </li>
 
-        <!-- Reports -->
-        <!--<li>-->
-        <!--  <router-link to="/reports" :class="{ 'active-page': isActive('/reports') }">-->
-        <!--    <iconify-icon icon="lucide:bar-chart-2" class="menu-icon sidebar-reports-icon" />-->
-        <!--    <span>Reports</span>-->
-        <!--  </router-link>-->
-        <!--</li>-->
+        <!-- All Chats (Super Admin only) -->
+        <li v-if="isSuperAdmin" class="sidebar-item-all-chats">
+          <router-link to="/admin/chat" :class="{ 'active-page': isActive('/admin/chat') }">
+            <iconify-icon icon="ri-chat-3-line" class="menu-icon" />
+            <span>All Chats</span>
+          </router-link>
+        </li>
 
         <!-- Suggestion -->
         <li>
@@ -426,6 +426,10 @@ const isAdmin = computed(() => {
                      proxy.$hasPermission('admin');
   
   return isAdminUser;
+});
+
+const isSuperAdmin = computed(() => {
+  return user.value?.roles?.includes('super_admin') ?? false;
 });
 
 const tableItems = computed(() => {
@@ -1003,5 +1007,14 @@ onMounted(() => {
 }
 .sidebar-menu li a .menu-icon{
     margin-inline-end: 0rem !important;
+}
+
+.sidebar-item-all-chats a,
+.sidebar-item-all-chats a span {
+  font-size: 0.8rem !important;
+  color: #ffffff !important;
+}
+.sidebar-item-all-chats .menu-icon {
+  font-size: 1rem !important;
 }
 </style>
