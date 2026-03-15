@@ -79,7 +79,7 @@
                                     @change="(evt) => onLeadDragChange(evt, column)">
                                     <template #item="{ element: task, index }">
                                         <div
-                                            v-if="index < getVisibleLeadCount(column.status)"
+                                            
                                             :key="task.id"
                                             class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
                                             @click="viewLead(task)">
@@ -160,18 +160,7 @@
                                         </div>
                                     </template>
                                 </draggable>
-                                <div
-                                    v-if="column.leads.length > getVisibleLeadCount(column.status)"
-                                    class="mt-2 text-center"
-                                >
-                                    <button
-                                        type="button"
-                                        class="btn btn-sm btn-light"
-                                        @click="loadMoreLeads(column.status)"
-                                    >
-                                        Load more
-                                    </button>
-                                </div>
+                                
                             </div>
                         </div>
                     </div>
@@ -409,7 +398,7 @@ const INITIAL_VISIBLE_LEADS_PER_STAGE = 20
 const VISIBLE_LEADS_INCREMENT = 20
 const visibleLeadCounts = ref({})
 const KANBAN_LEADS_CACHE_KEY = 'kanban_leads_stages_cache_v1'
-const KANBAN_LEADS_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+const KANBAN_LEADS_CACHE_TTL_MS =30000
 const responsiblePersons = ref([])
 const loading = ref(true)
 const error = ref(null)
@@ -873,7 +862,7 @@ watch(() => columns.value?.length, () => {
 
 onMounted(async () => {
     // Try to show cached stages/leads immediately while fresh data loads
-    loadCachedColumns()
+    // loadCachedColumns()
 
     await Promise.all([
         fetchLeads(true), // Immediate on mount
@@ -1171,12 +1160,14 @@ const removeLeadFromColumns = (leadId) => {
 const handleStageChanged = (lead, changes) => {
     const leadId = lead?.data?.id || lead?.id
     const leadStageId = lead?.data?.stage_id || lead?.stage_id
-    
-    if (!leadId || !leadStageId) {
-        return
-    }
-    if (!isAdminOrSuperAdmin.value  && lead.is_reverted) {
-        removeLeadFromColumns(lead.id)
+
+    if (!leadId || !leadStageId) return
+
+    const existingLead = columns.value
+        .flatMap(c => c.leads)
+        .find(l => l.id === leadId)
+
+    if (existingLead && existingLead.stage_id === leadStageId) {
         return
     }
     
@@ -1542,6 +1533,7 @@ async function moveLeadWithStageChange(lead, newStageId) {
         await api.post(`/leads/${lead.id}/change-stage`, {
             stage_id: newStageId
         })
+          lead.stage_id = newStageId
         // Don't refetch - real-time updates will handle the UI update
     } catch (error) {
         // Revert the UI change if API fails - only refetch if not already fetching
