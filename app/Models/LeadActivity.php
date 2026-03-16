@@ -53,21 +53,22 @@ class LeadActivity extends Model
     {
         return $query->where('reminder_date', '<', now())->pending();
     }
-    public function calculateNextReminder()
-    {
-        if (empty($this->reminders)) {
-            $this->next_reminder_at = null;
-            return;
-        }
-    
-        $times = collect($this->reminders)
-            ->map(fn ($minutes) =>
-                Carbon::parse($this->reminder_date)->subMinutes($minutes)
-            )
-            ->filter(fn ($time) => $time->isFuture())
-            ->sort()
-            ->values();
-    
-        $this->next_reminder_at = $times->first();
+public function calculateNextReminder()
+{
+    if (empty($this->reminders) || !$this->reminder_date) {
+        $this->next_reminder_at = null;
+        return;
     }
+
+    $times = collect($this->reminders)
+        ->map(fn ($minutes) => (int)$minutes)
+        ->map(fn ($minutes) =>
+            Carbon::parse($this->reminder_date)->subMinutes($minutes)
+        )
+        ->filter(fn ($time) => $time->isFuture())
+        ->sort()
+        ->values();
+
+    $this->next_reminder_at = $times->first() ?? $this->reminder_date;
+}
 }

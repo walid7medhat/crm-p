@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Lead;
 use App\Models\User;
+use DB;
 class StageController extends Controller
 {
      public function __construct()
@@ -155,10 +156,25 @@ class StageController extends Controller
     {
         try {
             $user = auth()->user();
-            $perPage = $request->get('per_page', 20); // عدد الليدات كل مرة
+            $perPage = $request->get('per_page', 20);
 
-            // ================= stages =================
-            $stagesQuery = Stage::where('stage_type', 'lead')->orderBy('order');
+                 $userRole = $user->roles()->first()?->name ?? 'sales';
+        
+        // ================= جلب الـ stages المسموح بها لهذا الدور =================
+        $stageVisibility = DB::table('stage_visibility')
+            ->where('role_name', $userRole)
+            ->first();
+        
+        if ($stageVisibility) {
+            $visibleStageIds = json_decode($stageVisibility->visible_stages);
+        }else{
+            $visibleStageIds=Stage::where('stage_type','lead')->pluck('id')->toArray();
+        }
+
+        // ================= stages =================
+        $stagesQuery = Stage::where('stage_type', 'lead')
+            ->whereIn('id', $visibleStageIds) 
+            ->orderBy('order');
             if ($request->filled('stage_id')) {
                 $stagesQuery->where('id', $request->stage_id);
             }
@@ -559,6 +575,50 @@ public function getLeadBranchSource()
             );
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve leads for stage: ' . $e->getMessage());
+        }
+    }
+    
+    public function getStageVisibilitySettings()
+    {
+        try {
+            $settings = DB::table('stage_visibility')->get();
+             $allStages = Stage::where('stage_type', 'lead')
+            ->orderBy('order')
+            ->get(['id', 'name', 'color', 'order']);
+            
+            return ApiResponse::success([
+                'settings' => $settings,
+                'all_stages' => $allStages,
+                'roles' => ['super_admin', 'admin', 'manager', 'team_lead', 'sales', 'marketing']
+            ], 'Stage visibility settings retrieved');
+            
+        } catch (\Exception $e) {
+            return ApiResponse::error($e->getMessage());
+        }
+    }
+    
+  
+    public function updateStageVisibility(Request $request)
+    {
+        try {
+            $request->validate([
+                'role_name' => 'required|string',
+                'visible_stages' => 'required|array',
+                'visible_stages.*' => 'exists:stages,id'
+            ]);
+            
+            DB::table('stage_visibility')->updateOrInsert(
+                ['role_name' => $request->role_name],
+                [
+                    'visible_stages' => json_encode($request->visible_stages),
+                    'updated_at' => now()
+                ]
+            );
+            
+            return ApiResponse::success(null, 'Stage visibility updated successfully');
+            
+        } catch (\Exception $e) {
+            return ApiResponse::error($e->getMessage());
         }
     }
 }

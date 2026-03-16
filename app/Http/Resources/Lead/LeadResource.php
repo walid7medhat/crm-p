@@ -111,7 +111,8 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'can_delete'=>auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin') ),
              'raw_meta_data' => $rawMetaData, 
                         'facebook_questions_answers' =>$facebookFields,
-            'parent'=>new \App\Http\Resources\User\UserResource($assignedBy)
+            'parent'=>new \App\Http\Resources\User\UserResource($assignedBy),
+            'assigned_at'=>$assignmentHistory?$assignmentHistory->created_at:$this->created_at,
 
         ];
     }

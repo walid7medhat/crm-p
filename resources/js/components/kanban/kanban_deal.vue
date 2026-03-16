@@ -138,10 +138,17 @@
                                 <img :src="addStage" alt="Add Stage" class="dropdown-icon" />
                                 <span class="dropdown-text">Add New Stage</span>
                             </b-dropdown-item>
+                             <b-dropdown-item v-if="isSuperAdmin && activeTab=='leads'" @click="goToStageVisibility" class="dropdown-item-custom">
+                                <iconify-icon icon="lucide:eye" class="dropdown-icon" style="font-size: 18px; color: #666;"></iconify-icon>
+                                <span class="dropdown-text">Stage Visibility Settings</span>
+                            </b-dropdown-item>
+                    
                         </b-dropdown>
                         
-                        <button class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">
-                            <img :src="leadsSettings" alt="Settings" />
+                        <button   v-if="activeTab === 'leads' && isSuperAdmin" 
+                                    @click="goToKanbanSettings" 
+                                    class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">
+                            <img :src="leadsSettings" id="settingsIcon" alt="Settings" />
                         </button>
                     </div>
                 </div>
@@ -165,7 +172,9 @@ const addStage = '/assets/images/kanban/add-stage.svg'
 import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem, BModal, BButton } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const activeTab = ref('leads')
 const showSearchModal = ref(false)
 const showSelectedFiltersModal = ref(false)
@@ -202,6 +211,12 @@ const tabs = computed(() => {
     return baseTabs
 })
 
+const goToStageVisibility = () => {
+    router.push('/settings/stage-visibility')
+}
+const goToKanbanSettings = () => {
+    router.push('/settings/kanban')
+}
 const currentStageType = computed(() => {
     return activeTab.value === 'deals' ? 'deal' : 'lead'
 })
@@ -1035,5 +1050,10 @@ const $showNotification = (message, type = 'info') => {
     color: #666666;
     vertical-align: middle !important;
     margin-right: 10px;
+}
+#settingsIcon{
+    filter:invert(1);
+    width: 20px;
+    padding: 2px;
 }
 </style>

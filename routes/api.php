@@ -37,7 +37,7 @@ use App\Http\Controllers\Api\SuggestionController;
 use App\Http\Controllers\Api\Deal\DealActivityController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ChatController;
-
+use App\Http\Controllers\Api\KanbanSettingsController;
 Route::get('/test-email', function () {
     try {
         // Test basic email
@@ -137,7 +137,11 @@ Route::prefix('auth')->group(function () {
         Route::delete('notifications/{id}', [AuthController::class, 'deleteNotification']);
      });
 });
-
+Route::prefix('settings')->middleware(['jwt.auth'])->group(function () {
+  Route::get('/kanban', [KanbanSettingsController::class, 'getSettings']);
+    Route::post('/kanban/card-fields', [KanbanSettingsController::class, 'updateCardFields']);
+    Route::post('/kanban/revert-hours', [KanbanSettingsController::class, 'updateRevertHours']);
+});
 Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
     Route::get('/', [StageController::class, 'index']);
     Route::post('/', [StageController::class, 'store']);
@@ -148,6 +152,8 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
     Route::get('/kanban/stages-with-leads', [StageController::class, 'getStagesWithLeads']);
     Route::get('/kanban/leads-by-stage/{stage}', [StageController::class, 'getLeadsByStage']);
     Route::get('/kanban/stage/{stage}/more-leads', [StageController::class, 'getMoreStageLeads']);
+    Route::get('/visibility/settings', [StageController::class, 'getStageVisibilitySettings']);
+    Route::post('/visibility/settings', [StageController::class, 'updateStageVisibility']);
 });
 Route::get('/teams-with-leads', [StageController::class, 'getTeamsWithLeads'])->middleware('jwt.auth');
 
@@ -193,6 +199,7 @@ Route::middleware(['jwt.auth'])->group(function () {
 
    Route::get('/sidebar/counts', [DashboardController::class, 'getSidebarCounts']);
 
+
     // Chat
     Route::prefix('chat')->group(function () {
         Route::post('/start', [ChatController::class, 'start']);
@@ -203,7 +210,8 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::post('/read', [ChatController::class, 'read']);
         Route::get('/admin/conversations', [ChatController::class, 'adminConversations']);
     });
-
+    
+    
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
@@ -309,7 +317,7 @@ Route::prefix('leads')->group(function(){
     
 Route::post('/search-alerts',[ListingController::class, 'store_search_alert']);
 
-Route::prefix('listings')->middleware(['jwt.auth'])->group(function(){
+Route::prefix('listings')->group(function(){
     Route::post('/properties/{id}/generate-offer', [ListingController::class, 'generateOffer']);
 Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
     Route::get('/{id}/comments', [ListingCommentController::class, 'index']);

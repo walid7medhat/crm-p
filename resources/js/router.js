@@ -83,12 +83,19 @@ import FloorPlans from './pages/projects/FloorPlans.vue'
 import LeadReports from './pages/reports/leads.vue'
 import AdminChatDashboard from './pages/chat/AdminChatDashboard.vue'
 
+import StageVisibility from './components/kanban/stage/StageVisibility.vue'
+
+import kanban_settings from './components/kanban/KanbanSettings.vue'
 const routes = [
   // Kanban Route
   { path: '/kanban', component: Kanban },
   { path: '/kanban_deal', component: kanban_deal },
+    { path: '/settings/kanban', component: kanban_settings },
 //   { path: '/reports', component: Reports, meta: { requiresAuth: true } },
 
+ 
+  { path: '/settings/stage-visibility', component: StageVisibility, meta: { requiresAuth: true } },
+  
  { path: '/lead-reports', component: LeadReports, meta: { requiresAuth: true } },
   { path: '/suggestion', component: Suggestions, meta: { requiresAuth: true } },
   { path: '/', component: Ai, meta: { requiresAuth: true } },
@@ -155,7 +162,7 @@ const routes = [
   { path: '/team-tree', name: 'TeamTree', component: TeamTree, meta: { requiresAuth: true } },
   { path: '/notifications', component: allNotifications, name: 'notifications', meta: { requiresAuth: true } },
   { path: '/admin/chat', component: AdminChatDashboard, name: 'admin-chat', meta: { requiresAuth: true } },
-
+  
      { path: '/features', component: FeaturesList, meta: { requiresAuth: true } },
   { path: '/add-features', component: FeatureForm, meta: { requiresAuth: true } },
   { path: '/features/:id/edit', component: FeatureForm, name: 'edit-layout_type', meta: { requiresAuth: true } },

@@ -13,7 +13,7 @@
                 </div>
 
                 <!-- View Mode (read-only; do not use ViewLead.vue here – it is a full modal and would cause infinite recursion) -->
-                <LeadInfoView v-if="!isEditMode" :lead="lead" />
+                <LeadInfoView v-if="!isEditMode" :lead="lead"   @person-updated="handlePersonUpdated" />
 
                 <!-- Edit Mode (footer Save/Cancel moved to global bottom bar below) -->
                 <EditLead 
@@ -185,7 +185,17 @@ const resetEditMode = () => {
     console.log('🔄 GeneralTab: Resetting edit mode to false')
     isEditMode.value = false
 }
-
+const handlePersonUpdated = (updatedPerson) => {
+    // تحديث بيانات الـ lead في الـ parent
+    if (selectedLead.value) {
+        selectedLead.value.responsible_person = {
+            id: updatedPerson.id,
+            name: updatedPerson.name,
+            avatar: updatedPerson.avatar
+        }
+        selectedLead.value.responsible_person_id = updatedPerson.id
+    }
+}
 const confirmDeleteAllComments = () => {
     Swal.fire({
         title: 'Delete All Comments?',

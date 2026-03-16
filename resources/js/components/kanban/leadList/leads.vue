@@ -78,87 +78,118 @@
                                     :drag-class="'dragging'"
                                     @change="(evt) => onLeadDragChange(evt, column)">
                                     <template #item="{ element: task, index }">
-                                        <div
-                                            
-                                            :key="task.id"
-                                            class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
-                                            @click="viewLead(task)">
-                                            <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
-                                                <p class="task-title flex-grow-1 mb-0">{{ task.lead_name }}</p>
-                                                <div 
-                                                    v-if="index === 0 && isAdminOrSuperAdmin"
-                                                    class="duplicate-badge position-relative cursor-pointer"
-                                                    @click.stop="openDuplicateLeadsModal(task.id, $event)"
-                                                >
-                                                    <div class="duplicate-icon-wrapper">
-                                                        <div class="duplicate-rectangle duplicate-rectangle-back"></div>
-                                                        <div class="duplicate-rectangle duplicate-rectangle-front">
-                                                            <span class="duplicate-number">{{ task.duplicate_no || 0 }}</span>
+                                            <div
+                                                :key="task.id"
+                                                class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
+                                                @click="viewLead(task)"
+                                            >
+                                                <!-- Task Header - Lead Name (دائماً ظاهر) -->
+                                                <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
+                                                    <p class="task-title flex-grow-1 mb-0">{{ task.lead_name }}</p>
+                                                    <div 
+                                                        v-if="isFieldEnabled('duplicate_count') && index === 0 && isAdminOrSuperAdmin"
+                                                        class="duplicate-badge position-relative cursor-pointer"
+                                                        @click.stop="openDuplicateLeadsModal(task.id, $event)"
+                                                    >
+                                                        <div class="duplicate-icon-wrapper">
+                                                            <div class="duplicate-rectangle duplicate-rectangle-back"></div>
+                                                            <div class="duplicate-rectangle duplicate-rectangle-front">
+                                                                <span class="duplicate-number">{{ task.duplicate_no || 0 }}</span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            
-                                            <div class="task-info">
-                                                <div class="info-item date-info d-flex align-items-center gap-1 mb-8">
-                                                    <span>Created By</span>
-                                                    <span>{{ formatDate(task.created_at) }}</span>
-                                                </div>
                                                 
-                                                <div class="info-item mb-8">
-                                                    <div class="info-label text-secondary-light text-xs">Name</div>
-                                                    <div class="info-value">{{ task.salutation }} {{ task.first_name}}</div>
-                                                </div>
-                                                
-                                                <div class="info-item mb-8">
-                                                    <div class="info-label text-secondary-light text-xs mb-1">Source</div>
-                                                    <div class="info-value">{{ task.lead_source }}</div>
-                                                </div>
-                                                
-                                                <div class="info-item mb-12" v-if="task.lead_branch_source">
-                                                    <div class="info-label text-secondary-light text-xs mb-1">Lead Branch Source</div>
-                                                    <div class="info-value">{{ task.lead_branch_source }}</div>
-                                                </div>
-
-                                                <div class="responsible-info d-flex align-items-center justify-content-between mb-12">
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <img v-if="task.responsible_person?.avatar" :title="task.responsible_person?.name" :src="task.responsible_person.avatar" alt="" class="avatar-sm rounded-circle" />
-                                                        <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
-                                                            <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
-                                                        </div>
-                                                        <div>
-                                                            <div class="info-label text-secondary-light text-xs">Responsible</div>
-                                                            <div class="info-value">{{ task.responsible_person?.name }}</div>
-                                                        </div>
+                                                 <div class="task-info">
+                                                        <!-- عرض الفيلدات حسب الإعدادات والترتيب -->
+                                                        <template v-for="field in enabledFields" :key="field.key">
+                                                            <!-- Created By / Date -->
+                                                            <div v-if="field.key === 'created_by' || field.key === 'created_at'" 
+                                                                 class="info-item date-info d-flex align-items-center gap-1 mb-8">
+                                                                <span v-if="field.key === 'created_by'">Created By</span>
+                                                                <span>{{ formatDate(task.created_at) }}</span>
+                                                            </div>
+                                                            
+                                                            <!-- First Name -->
+                                                            <div v-else-if="field.key === 'first_name'" class="info-item mb-8">
+                                                                <div class="info-label text-secondary-light text-xs">Name</div>
+                                                                <div class="info-value">{{ task.salutation }} {{ task.first_name }}</div>
+                                                            </div>
+                                                            
+                                                            <!-- Source -->
+                                                            <div v-else-if="field.key === 'lead_source'" class="info-item mb-8">
+                                                                <div class="info-label text-secondary-light text-xs mb-1">Source</div>
+                                                                <div class="info-value">{{ task.lead_source }}</div>
+                                                            </div>
+                                                            
+                                                            <!-- Lead Branch Source -->
+                                                            <div v-else-if="field.key === 'lead_branch_source' && task.lead_branch_source" class="info-item mb-12">
+                                                                <div class="info-label text-secondary-light text-xs mb-1">Lead Branch Source</div>
+                                                                <div class="info-value">{{ task.lead_branch_source }}</div>
+                                                            </div>
+                                                              
+                                                            <!-- Work Phone -->
+                                                            <div v-else-if="field.key === 'work_phone'" class="info-item mb-8">
+                                                                <div class="info-label text-secondary-light text-xs">Phone</div>
+                                                                <div class="info-value">{{ task.work_phone || task.whatsapp_number || '—' }}</div>
+                                                            </div>
+                                                            
+                                                            <!-- Email -->
+                                                            <div v-else-if="field.key === 'email'" class="info-item mb-8">
+                                                                <div class="info-label text-secondary-light text-xs">Email</div>
+                                                                <div class="info-value">{{ task.email || '—' }}</div>
+                                                            </div>
+                                                            
+                                                            <!-- Bedrooms -->
+                                                            <div v-else-if="field.key === 'bedrooms' && task.bedrooms" class="info-item mb-8">
+                                                                <div class="info-label text-secondary-light text-xs">Bedrooms</div>
+                                                                <div class="info-value">{{ task.bedrooms }}</div>
+                                                            </div>
+                                                            
+                                                            <!-- Budget -->
+                                                            <div v-else-if="field.key === 'budget' && task.budget" class="info-item mb-8">
+                                                                <div class="info-label text-secondary-light text-xs">Budget</div>
+                                                                <div class="info-value">{{ task.budget }} {{ task.currency || '' }}</div>
+                                                            </div>
+                                                            
+                                                            <!-- WhatsApp -->
+                                                            <div v-else-if="field.key === 'whatsapp_number' && task.whatsapp_number" class="info-item mb-8">
+                                                                <div class="info-label text-secondary-light text-xs">WhatsApp</div>
+                                                                <div class="info-value">{{ task.whatsapp_number }}</div>
+                                                            </div>
+                                                            
+                                                            <!-- Responsible Person -->
+                                                            <div v-else-if="field.key === 'responsible_person'" class="responsible-info d-flex align-items-center justify-content-between mb-12">
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <img v-if="task.responsible_person?.avatar" :title="task.responsible_person?.name" :src="task.responsible_person.avatar" alt="" class="avatar-sm rounded-circle" />
+                                                                    <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
+                                                                        <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
+                                                                    </div>
+                                                                    <div>
+                                                                        <div class="info-value">{{ task.responsible_person?.name }}</div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <!-- Assigned By -->
+                                                            <div v-else-if="field.key === 'assigned_by'">
+                                                                <hr class="mb-2 border-neutral-200">
+                                                                <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
+                                                                    <div class="info-item">
+                                                                        <div class="info-label text-secondary-light text-xs mb-1">Assigned By</div>
+                                                                        <div class="info-value">{{ formatDate(task.assigned_at) }}</div>
+                                                                    </div>
+                                                                    <img v-if="task?.parent?.avatar" :src="task.parent.avatar"  :title="task.parent.name" alt="" class="avatar-sm rounded-circle" />
+                                                                    <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
+                                                                        <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                          
+                                                        </template>
                                                     </div>
-                                                </div>
-
-                                                <hr class="mb-2 border-neutral-200">
-
-                                                <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
-                                                    <div class="info-item">
-                                                        <div class="info-label text-secondary-light text-xs ">Assigned By</div>
-                                                        <!--<div class="info-value">{{ formatDate(task.responsible_person.created_at) }}</div>-->
-                                                    </div>
-                                                    <img v-if="task?.parent?.avatar" :src="task.parent.avatar"  :title="task.parent.name" alt="" class="avatar-sm rounded-circle" />
-                                                    <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
-                                                        <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
-                                                    </div>
-                                                </div>
                                             </div>
-
-                                            <div class="task-actions d-none">
-                                                <button type="button" class="card-edit-button text-success-600"
-                                                    @click.stop="openModal(task)">
-                                                    <iconify-icon icon="lucide:edit"></iconify-icon>
-                                                </button>
-                                                <button type="button" class="card-delete-button text-danger-600"
-                                                    @click.stop="deleteTask(task.id)">
-                                                    <iconify-icon icon="fluent:delete-24-regular"></iconify-icon>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </template>
+                                        </template>
                                 </draggable>
                                 
                             </div>
@@ -457,6 +488,7 @@ const editingStageId = ref(null)
 const editingStageTitle = ref('')
 const stageTitleInput = ref(null)
 
+const cardFields = ref([])
 
 
 const stageChangeReasonModal = ref(null)
@@ -484,7 +516,15 @@ const colors = ['#7BD3EA', '#E3DA32', '#F2C934', '#8EC82F', '#00A74C']
 function getColorByIndex(index) {
     return colors[index % colors.length]
 }
-
+const fetchCardSettings = async () => {
+    try {
+        const response = await api.get('/settings/kanban')
+        const data = response.data.data
+        cardFields.value = data.card_fields || []
+    } catch (error) {
+        console.error('Error fetching card settings:', error)
+    }
+}
 const fetchLeads = async (immediate = false, queryOverride = undefined) => {
     if (queryOverride !== undefined) {
         appliedSearchParams.value = queryOverride && Object.keys(queryOverride).length ? queryOverride : null
@@ -859,14 +899,25 @@ function handleLeadConverted(deal) {
 watch(() => columns.value?.length, () => {
     nextTick(() => updateScrollArrows())
 })
-
+const enabledFields = computed(() => {
+    return cardFields.value
+        .filter(field => field.enabled)
+        .sort((a, b) => a.order - b.order)
+})
+const isFieldEnabled = (fieldKey) => {
+    return cardFields.value.some(field => field.key === fieldKey && field.enabled)
+}
+watch(cardFields, () => {
+    console.log('Card fields updated:', cardFields.value)
+}, { deep: true })
 onMounted(async () => {
     // Try to show cached stages/leads immediately while fresh data loads
     // loadCachedColumns()
 
     await Promise.all([
         fetchLeads(true), // Immediate on mount
-        fetchResponsiblePersons()
+        fetchResponsiblePersons(),
+         fetchCardSettings() 
     ])
     nextTick(() => updateScrollArrows())
     window.addEventListener('resize', updateScrollArrows)
@@ -1902,8 +1953,8 @@ const $showNotification = (message, type = 'info') => {
     object-fit: cover;
 }
 .assignedBy .avatar-sm{
-      width: 25px;
-    height: 25px;
+      width: 28px;
+    height: 28px;
 }
 
 .info-label {

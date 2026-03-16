@@ -63,8 +63,7 @@
                             class="search-wrapper d-flex align-items-center"
                             :class="{
                                 'search-wrapper-expanded': activeFilters && activeFilters.length,
-                                'search-wrapper-tall': searchInputFocused,
-                                'search-wrapper-focused': searchInputFocused
+                                'search-wrapper-tall': searchInputFocused
                             }"
                         >
                             <div v-if="activeFilters.length" class="search-filters-pills d-flex align-items-center">
@@ -91,7 +90,7 @@
                             >
                                 <iconify-icon icon="lucide:plus" class="search-plus-icon" style="cursor: pointer;"></iconify-icon>
                                 <b-form-input
-                                    placeholder="search"
+                                    placeholder="Search"
                                     v-model="search"
                                     class="search-input"
                                     @focus="onSearchFocus"
@@ -99,7 +98,6 @@
                                     @input="showSearchModal = false"
                                 />
                             </div>
-                            <iconify-icon icon="lucide:search" class="search-magnify-icon" @click="showSearchModal = true" style="cursor: pointer;"></iconify-icon>
                             <iconify-icon v-if="activeFilter || (activeFilters && activeFilters.length || search)" icon="lucide:x" class="clear-search-icon" @click="clearSearchFilter" style="cursor: pointer;"></iconify-icon>
                         </div>
                         <div v-if="showSearchModal" class="lead-search-dropdown-outer">
@@ -139,10 +137,16 @@
                                 <img :src="addStage" alt="Add Stage" class="dropdown-icon" />
                                 <span class="dropdown-text">Add New Stage</span>
                             </b-dropdown-item>
+                            <b-dropdown-item v-if="isSuperAdmin  && activeTab=='leads'" @click="goToStageVisibility" class="dropdown-item-custom">
+                                <iconify-icon icon="lucide:eye" class="dropdown-icon" style="font-size: 18px; color: #666;"></iconify-icon>
+                                <span class="dropdown-text">Stage Visibility Settings</span>
+                            </b-dropdown-item>
                         </b-dropdown>
                         
-                        <button class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">
-                            <img :src="leadsSettings" alt="Settings" />
+                        <button   v-if="activeTab === 'leads' && isSuperAdmin" 
+                                    @click="goToKanbanSettings" 
+                                    class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">
+                            <img :src="leadsSettings" id="settingsIcon" alt="Settings" />
                         </button>
                     </div>
                 </div>
@@ -166,7 +170,9 @@ const addStage = '/assets/images/kanban/add-stage.svg'
 import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem, BModal, BButton } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const activeTab = ref('leads')
 const showSearchModal = ref(false)
 const showSelectedFiltersModal = ref(false)
@@ -201,6 +207,12 @@ const tabs = computed(() => {
     return baseTabs
 })
 
+const goToStageVisibility = () => {
+    router.push('/settings/stage-visibility')
+}
+const goToKanbanSettings = () => {
+    router.push('/settings/kanban')
+}
 const activeTabIndex = computed({
     get: () => tabs.value.findIndex(t => t.id === activeTab.value),
     set: (index) => {
@@ -614,14 +626,13 @@ const $showNotification = (message, type = 'info') => {
     border-radius: 16px;
 }
 
-/* Bootstrap Tabs Customization – tighter section spacing and left/right, no bottom border */
 :deep(.kanban-tabs-container),
 :deep(.kanban-tabs-container .nav),
 :deep(.kanban-tabs-container > .nav-tabs) {
     border-bottom: none !important;
     box-shadow: none !important;
 }
-
+/* Bootstrap Tabs Customization – tighter section spacing and left/right */
 :deep(.kanban-tabs-container > .nav-tabs) {
     background: transparent;
     height: 56px;
@@ -665,7 +676,7 @@ const $showNotification = (message, type = 'info') => {
 
 :deep(.kanban-tabs-container .nav-link.active) {
     color: #fff !important;
-    font-weight: 700;
+    font-weight: 6700;
 }
 
 :deep(.kanban-tabs-container .nav-link .active-indicator) {
@@ -691,8 +702,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .btn-create-new {
-    opacity: 1;
-    border-radius: 999px;
+   border-radius: 999px;
     padding: 4px 14px;
     min-height: 30px;
     background: linear-gradient(90deg, #12b981, #22c55e);
@@ -707,9 +717,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .action-icon-btn {
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.12);
+ background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.55) !important;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -718,7 +726,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .action-icon-btn:hover {
-    background: rgba(255, 255, 255, 0.22);
+ background: rgba(255, 255, 255, 0.22);
     border-color: rgba(255, 255, 255, 0.7) !important;
     color: #fff;
 }
@@ -729,7 +737,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 :deep(.action-icon-btn-dropdown .action-icon-btn) {
-    color: rgba(255, 255, 255, 0.95) !important;
+       color: rgba(255, 255, 255, 0.95) !important;
 }
 
 .radius-circle {
@@ -756,7 +764,7 @@ const $showNotification = (message, type = 'info') => {
     margin-right: 28px;
 }
 
-/* Search Input Styles – short height, only input expands to 440px on focus */
+/* Search Input Styles */
 .search-area-column {
     align-items: flex-end;
 }
@@ -803,6 +811,10 @@ const $showNotification = (message, type = 'info') => {
 .search-wrapper-expanded {
     max-width: 560px;
     min-width: 280px;
+}
+
+.search-wrapper-tall {
+    min-height: 40px;
 }
 
 .search-filters-pills {
@@ -863,6 +875,7 @@ const $showNotification = (message, type = 'info') => {
     justify-content: center;
 }
 
+
 .search-input-container {
     color: #1e293b;
     height: 26px;
@@ -876,11 +889,15 @@ const $showNotification = (message, type = 'info') => {
     transition: min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-.search-wrapper-focused .search-input-container,
-.search-input-container-tall {
-    min-width: 440px;
-    max-width: 100%;
-    min-height: 28px;
+.search-wrapper-focused,
+.search-wrapper-tall {
+    max-width: 560px;
+    min-width: 280px;
+    height: 36px;
+    min-height: 36px;
+    padding: 4px 12px 4px 10px;
+    border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .search-wrapper-focused .search-input-container-tall,
@@ -895,6 +912,7 @@ const $showNotification = (message, type = 'info') => {
     flex-shrink: 0;
     margin-right: 4px;
 }
+
 
 .search-plus-icon {
     font-size: 18px;
@@ -914,7 +932,6 @@ const $showNotification = (message, type = 'info') => {
     background: transparent !important;
     color: #1e293b !important;
 }
-
 .search-input {
     width: 100%;
     font-size: 14px;
@@ -928,17 +945,15 @@ const $showNotification = (message, type = 'info') => {
     caret-color: #1e293b;
 }
 
+
 .search-input-container-tall .search-input {
     min-height: 26px;
     font-size: 14px;
 }
 
 .search-input::placeholder {
-    color: #94a3b8;
-    font-size: 12px;
-    font-weight: 400;
-    letter-spacing: 0.02em;
-    text-transform: lowercase;
+    color: #94A3B8;
+    font-size: 14px;
 }
 
 .clear-search-icon {
@@ -1005,5 +1020,10 @@ const $showNotification = (message, type = 'info') => {
     color: #666666;
     vertical-align: middle !important;
     margin-right: 10px;
+}
+#settingsIcon{
+    filter:invert(1);
+    width: 20px;
+    padding: 2px;
 }
 </style>

@@ -471,7 +471,8 @@ class LeadController extends Controller
                 });
 
             } 
-            elseif ($user->hasRole(['manager', 'team_lead'])) {
+            // elseif ($user->hasRole(['manager', 'team_lead'])) {
+            else{
                 $subordinatesIds = $user->getAllSubordinatesIds();
                 $responsiblePersons = User::role(['team_lead','sales'])
                     ->whereIn('id', $subordinatesIds)
@@ -485,9 +486,9 @@ class LeadController extends Controller
                             ];
                         });
             }
-            else {
-                return ApiResponse::error('You are not authorized to view responsible persons list', 403);
-            }
+            // else {
+            //     return ApiResponse::error('You are not authorized to view responsible persons list', 403);
+            // }
 
             return ApiResponse::success(
                 $responsiblePersons,

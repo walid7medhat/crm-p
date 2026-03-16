@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Carbon\Carbon;
 use App\Helpers\LeadHistoryHelper;
 use App\Events\LeadUpdated;
-
+use App\Models\KanbanSetting;
 class Lead extends Model
 {
     // 
@@ -111,8 +111,10 @@ public function activitiesWithTrashed()
     public function shouldRevertToStageOne(): bool
     {
         if ($this->stage && $this->stage->order == 2 && $this->last_stage_change_at) {
-            $oneHourAgo = Carbon::now()->subHour();
-            return $this->last_stage_change_at->lessThanOrEqualTo($oneHourAgo);
+           $revertHours = KanbanSetting::getRevertHours();
+        
+            $revertTime = Carbon::now()->subHours($revertHours);
+            return $this->last_stage_change_at->lessThanOrEqualTo($revertTime);
         }
 
         return false;
@@ -169,9 +171,11 @@ public function activitiesWithTrashed()
 
     public function scopeNeedsRevert($query)
     {
+          $revertHours = KanbanSetting::getRevertHours();
+        
         return $query->whereHas('stage', function($q) {
             $q->where('order', 2);
-        })->where('last_stage_change_at', '<=', Carbon::now()->subHour());
+        })->where('last_stage_change_at', '<=', Carbon::now()->subHours($revertHours));
     }
      
      public function getDuplicateLeadsAttribute()
