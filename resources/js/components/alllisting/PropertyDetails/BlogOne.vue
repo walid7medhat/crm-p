@@ -695,14 +695,13 @@
                               </button>
 
                               <!-- Chat with Agent -->
-                              <button 
-                                v-if="property?.agent"
-                                class="dropdown-item"
-                                @click="handleChatWithAgentClick"
-                              >
-                                <i class="ri-chat-3-fill"></i>
-                                Chat with Agent
-                              </button>
+                              <!--<button -->
+                              <!--  v-if="property?.agent"-->
+                              <!--  class="dropdown-item"-->
+                              <!--  @click="handleChatWithAgentClick">-->
+                              <!--  <i class="ri-chat-3-fill"></i>-->
+                              <!--  Chat with Agent-->
+                              <!--</button>-->
                     
                               <!-- Mark as Converted (Sold Out) -->
                               <button 
@@ -7616,12 +7615,21 @@ ease;
     font-size: 14px !important;
   }
 }
-@media (min-width: 991px) and  (max-width:1072px) {
+@media (min-width: 991px) and (max-width: 1226px) {
     .info-value{
-         font-size: 11px;
+        font-size: 10px;
     }
     .approved-info{
-        padding:6px;
+        padding: 5px;
+    }
+}
+
+@media (min-width: 1227px) and (max-width: 1303px) {
+    .info-value{
+        font-size: 11px;
+    }
+    .approved-info{
+        padding: 6px;
     }
 }
 </style>
