@@ -130,9 +130,9 @@
                   <span v-else-if="property.completion_status === 'Completed'" class="badge-ready">
                     <i class="ri-checkbox-circle-line me-1"></i>Ready
                   </span>
-                  <span v-if="property.is_hot_deal== 'Yes'" class="badge-off_plan">
-                    Hot Deal
-                  </span>
+                  <!--<span v-if="property.is_hot_deal== 'Yes'" class="badge-off_plan">-->
+                  <!--  Hot Deal-->
+                  <!--</span>-->
                   <span v-if="property.occupancy_status && property.completion_status != 'Under Construction'" class="badge-occupancy_status">
                     {{property.occupancy_status}}
                   </span>
