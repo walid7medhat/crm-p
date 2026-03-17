@@ -3444,7 +3444,7 @@ const generatePDF = async () => {
       generated_at: new Date().toISOString(),
       property_id: property.value.id,
       property_title: property.value.title || property.value.area?.area_title,
-      client_name: 'Potential Client', // يمكن إضافة حقل لإدخال اسم العميل
+      client_name: 'Potential Client', 
       generated_by: currentUser?.name,
       offer_details: {
         price: property.value.price,
@@ -3457,7 +3457,7 @@ const generatePDF = async () => {
     // First, save offer to database
     const saveResponse = await api.post(`/listings/properties/${property.value.id}/generate-offer`, {
       offer_data: offerData,
-      client_name: 'Potential Client' // يمكن جعلها مدخلاً من المستخدم
+      client_name: 'Potential Client' 
     });
 
     if (!saveResponse.data.status) {
@@ -3516,7 +3516,6 @@ const generatePDF = async () => {
   }
 };
 
-// إضافة دالة لعرض تاريخ العروض
 const showOfferHistory = async () => {
   try {
     const response = await api.get(`/listings/properties/${property.value.id}/offers`);
@@ -4151,7 +4150,7 @@ const createSlide6 = (currentUser) => {
               text-transform: uppercase !important;
               letter-spacing: 0.5mm !important;
             ">
-              ${currentUser?.name || 'SYSTEM ADMIN'}
+              ${currentUser?.name || ' '}
             </li>
             <li style="
               margin-bottom: 5mm !important; 
@@ -4160,7 +4159,7 @@ const createSlide6 = (currentUser) => {
               text-transform: uppercase !important;
               letter-spacing: 0.5mm !important;
             ">
-              ${currentUser?.phone || '+971 50 123 4567'}
+              ${currentUser?.phone || ' '}
             </li>
            
           </ul>
