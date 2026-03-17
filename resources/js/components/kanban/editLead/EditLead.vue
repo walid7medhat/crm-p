@@ -271,7 +271,78 @@
                 {{ validationErrors.source_information[0] }}
             </div>
         </div>
-
+       <div class="mb-3">
+                <a href="#" @click.prevent="handleAddCustomField" class="add-custom-field-link">
+                    + Add Custom Field
+                </a>
+        </div>
+        <div v-if="showCustomFields" class="info-group">
+            <label class="form-label-custom">Area</label>
+        
+            <v-select
+                v-model="form.area_id"
+                :options="areas"
+                :reduce="area => area.id"
+                :disabled="isLoadingAreas"
+                label="name"
+                placeholder="Select area"
+                class="custom-v-select"
+            >
+                <template #open-indicator="{ attributes }">
+                    <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                </template>
+        
+                <template #option="option">
+                    <div class="location-option">
+                        <i class="ri-map-pin-line location-option-icon"></i>
+                        <div class="location-option-text">
+                            <span class="location-option-name">
+                                {{ locationFirstLine(option) }}
+                            </span>
+                            <span class="location-option-subtitle">
+                                {{ locationSecondLine(option) }}
+                            </span>
+                        </div>
+                    </div>
+                </template>
+        
+                <template #selected-option="option">
+                    <div v-if="option" class="location-selected">
+                        <span class="location-selected-name">
+                            {{ locationFirstLine(option) }}
+                        </span>
+                        <span class="location-selected-subtitle">
+                            {{ locationSecondLine(option) }}
+                        </span>
+                    </div>
+                </template>
+        
+                <template #no-options>
+                    <div class="text-center p-2">
+                        {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
+                    </div>
+                </template>
+            </v-select>
+</div>
+        <div v-if="showCustomFields" class="info-group">
+                 <label class="form-label-custom">Property Type</label>
+                
+                    <v-select
+                        v-model="form.property_type_id"
+                        :options="propertyTypeOptions"
+                        :reduce="item => item.id"
+                        label="name"
+                        placeholder="Select Property Type"
+                        class="custom-v-select"
+                        :disabled="isLoadingPropertyTypes"
+                    >
+                        <template #open-indicator="{ attributes }">
+                            <span v-bind="attributes">
+                                <iconify-icon icon="lucide:chevron-down"></iconify-icon>
+                            </span>
+                        </template>
+                    </v-select>
+        </div>
         <!-- Responsible Person -->
         <div class="responsible-person-box p-3 radius-8 shadow-sm mb-3">
             <div class="d-flex align-items-center justify-content-between mb-3">
@@ -335,7 +406,8 @@
                     </div>
                 </div>
             </div>
-            
+        
+               
             <div class="d-flex align-items-center gap-3">
                 <div class="avatar-wrapper">
                     <img 
@@ -389,6 +461,14 @@ const errorMessage = ref('')
 
 const useSecondaryEmail = ref(false)
 const useSecondaryPhone = ref(false)
+
+const showCustomFields = ref(false)
+
+const areas = ref([])
+const propertyTypeOptions = ref([])
+
+const isLoadingAreas = ref(false)
+const isLoadingPropertyTypes = ref(false)
 const form = ref({
     lead_name: '',
     stage_id: null,
@@ -406,7 +486,9 @@ const form = ref({
     purpose_buying: null,
     lead_source: '',
     source_information: '',
-    responsible_person_id: null
+    responsible_person_id: null,
+    area_id: null,
+    property_type_id: null,
 })
 
 const stageOptions = ref([
@@ -501,7 +583,58 @@ const selectUser = (user) => {
     selectedPerson.value = user
     searchQuery.value = ''
 }
+const handleAddCustomField = async () => {
+    showCustomFields.value = !showCustomFields.value
 
+    if (!showCustomFields.value) return
+
+    if (areas.value.length === 0) {
+        await fetchAreas()
+    }
+
+    if (propertyTypeOptions.value.length === 0) {
+        await fetchPropertyTypes()
+    }
+}
+const fetchAreas = async () => {
+    try {
+        isLoadingAreas.value = true
+
+        const response = await api.get("/listings/areas/?has_listings=true")
+        const data = response.data.data || response.data
+
+        areas.value = data.map(area => ({
+            id: area.id,
+            name: area.name || area.title,
+            parent: area.area_parents_title || null
+        }))
+
+    } catch (e) {
+        console.error(e)
+    } finally {
+        isLoadingAreas.value = false
+    }
+}
+const fetchPropertyTypes = async () => {
+    try {
+        isLoadingPropertyTypes.value = true
+
+        const res = await api.get('/listings/property-types')
+        const data = res.data.data || res.data
+
+        propertyTypeOptions.value = data.map(item => ({
+            id: item.id,
+            name: item.name
+        }))
+
+    } catch (e) {
+        console.error(e)
+    } finally {
+        isLoadingPropertyTypes.value = false
+    }
+}
+const locationFirstLine = (area) => area?.name || ''
+const locationSecondLine = (area) => area?.parent || ''
 // Initialize form with lead data
 const initializeForm = () => {
     form.value = {
@@ -521,7 +654,9 @@ const initializeForm = () => {
         purpose_buying: props.lead?.purpose_buying || null,
         lead_source: props.lead?.lead_source || '',
         source_information: props.lead?.source_information || '',
-        responsible_person_id: props.lead?.responsible_person?.id || null
+        responsible_person_id: props.lead?.responsible_person?.id || null,
+        area_id: props.lead?.area_id || null,
+        property_type_id: props.lead?.property_type_id || null,
     }
     selectedPerson.value = props.lead?.responsible_person || null
 }
@@ -673,9 +808,16 @@ watch(() => form.value.responsible_person_id, () => {
 })
 
 // Initialize on mount
-onMounted(() => {
+onMounted(async () => {
     initializeForm()
-    fetchUsers()
+    await fetchUsers()
+
+    if (props.lead?.area_id || props.lead?.property_type_id) {
+        showCustomFields.value = true
+
+        await fetchAreas()
+        await fetchPropertyTypes()
+    }
 })
 
 const handleAvatarError = () => {
@@ -1249,5 +1391,127 @@ defineExpose({
 .btn-save:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+
+    
+    /* Location: same height & padding as Price/Size range */
+:deep(.location-select .vs__dropdown-toggle) {
+  min-height: 30px !important;
+  padding: 0px 8px !important;
+  align-items: center !important;
+  font-size: 0.65rem !important;
+}
+
+:deep(.location-select .vs__selected) {
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+:deep(.location-select .vs__placeholder) {
+  margin: 0 !important;
+  position: static !important;
+  width: 100%;
+  text-align: center;
+}
+
+:deep(.location-select .vs__selected) {
+  width: 100%;
+  text-align: center;
+}
+
+:deep(.location-select .vs__selected .location-selected) {
+  text-align: left;
+}
+
+/* Location selected value in 2 lines (when using selected-option slot) */
+.location-selected {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.location-selected-name {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #01062d;
+}
+
+.location-selected-subtitle {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+/* Location dropdown options: 2 lines with icon (like image) */
+.location-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 4px 0;
+  min-height: 40px;
+}
+
+.location-option-icon {
+  font-size: 1.1rem;
+  color: #64748b;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.location-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.location-option-name {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #01062d;
+  line-height: 1.2;
+}
+
+.location-option-subtitle {
+  font-size: 0.65rem;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+/* Location dropdown list: wider */
+:deep(.location-select + .vs__dropdown-menu),
+:deep(.location-select .vs__dropdown-menu) {
+  min-width: 320px !important;
+  width: 100% !important;
+  max-width: 400px;
+}
+
+/* All top-row inputs: same height, padding, font as Price/Size range */
+.unified-input-inline {
+     min-height: 30px !important;
+    padding: 0px !important;
+    font-size: .65rem !important;
+}
+
+:deep(.unified-input-inline.vs--single .vs__dropdown-toggle),
+:deep(.form-group-inline .custom-select.vs--single .vs__dropdown-toggle) {
+  min-height: 30px !important;
+  padding: 2px 8px !important;
+  font-size: 0.65rem !important;
+}
+
+.main-search-row-single :deep(.vs__selected),
+.main-search-row-single :deep(.vs__search),
+.main-search-row-single :deep(.vs__placeholder) {
+  font-size: 0.65rem !important;
+}
+
+.unified-btn-inline {
+  min-height: 30px !important;
+  padding: 2px 8px !important;
+  font-size: 0.65rem !important;
 }
 </style>

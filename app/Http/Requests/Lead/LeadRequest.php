@@ -90,6 +90,9 @@ class LeadRequest extends FormRequest
             
             'budget'=>'nullable',
              'currency'=>'nullable',
+             
+            'area_id' => 'nullable|exists:areas,id',
+            'property_type_id' => 'nullable|exists:property_types,id',
         ];
 
         if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {

@@ -62,6 +62,14 @@
             <label class="form-label-custom">Bedrooms</label>
             <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
         </div>
+         <div class="info-group" v-if="lead?.area">
+            <label class="form-label-custom">Location</label>
+            <div class="info-value">{{ lead?.area || '—' }}</div>
+        </div>
+                 <div class="info-group" v-if="lead?.property_type">
+            <label class="form-label-custom">Property Type</label>
+            <div class="info-value">{{ lead?.property_type || '—' }}</div>
+        </div>
         <!--<div class="info-group">-->
         <!--    <label class="form-label-custom">Comment</label>-->
         <!--    <div class="info-value info-value-block">{{ lead?.comment || '—' }}</div>-->

@@ -115,6 +115,10 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
                         'facebook_questions_answers' =>$facebookFields,
             'parent'=>new \App\Http\Resources\User\UserResource($assignedBy),
             'assigned_at'=>$assignmentHistory?$assignmentHistory->created_at:$this->created_at,
+            'property_type'=>$this->propertyType?->name,
+            'area'=>$this->area?->title,
+            'property_type_id'=>$this->propertyType?->id,
+            'area_id'=>$this->area?->id,
 
         ];
     }

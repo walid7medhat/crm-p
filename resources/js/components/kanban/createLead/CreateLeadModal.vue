@@ -122,7 +122,7 @@
                                             class="custom-input"
                                             :class="{ 'is-invalid': validationErrors.secondary_email }"
                                         />
-                                        <div v-if="validationErrors.Secondary" class="invalid-feedback d-block">
+                                        <div v-if="validationErrors.secondary_email" class="invalid-feedback d-block">
                                             {{ validationErrors.secondary_email[0] }}
                                         </div>
                                     </div>
@@ -283,7 +283,79 @@
 
                         <!-- Add Custom Field Link -->
                         <div class="col-12 mt-2">
-                            <a href="#" class="add-custom-field-link" @click.prevent>Add Custom Field</a>
+                            <a href="#" class="add-custom-field-link" @click.prevent="handleAddCustomField">
+                                Add Custom Field</a>
+                        </div>
+                        <div v-if="showCustomFields" class="col-12 mt-3">
+                            <div class="row g-3">
+                        
+                                <!-- Areas -->
+                                <div class="col-md-6">
+                                    <label class="form-label-custom">Location</label>
+                                    <v-select
+                                        v-model="form.area_id"
+                                        :options="areas"
+                                        :reduce="area => area.id"
+                                        :disabled="isLoadingAreas"
+                                        label="name"
+                                        placeholder="Select area"
+                                        class="custom-v-select"
+                                    >
+                                        <!-- Arrow -->
+                                        <template #open-indicator="{ attributes }">
+                                            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                                        </template>
+                                    
+                                        <!-- Dropdown Option -->
+                                        <template #option="option">
+                                            <div class="location-option">
+                                                <i class="ri-map-pin-line location-option-icon"></i>
+                                                <div class="location-option-text">
+                                                    <span class="location-option-name">
+                                                        {{ locationFirstLine(option) }}
+                                                    </span>
+                                                    <span class="location-option-subtitle">
+                                                        {{ locationSecondLine(option) }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    
+                                        <!-- Selected -->
+                                        <template #selected-option="option">
+                                            <div v-if="option" class="location-selected">
+                                                <span class="location-selected-name">
+                                                    {{ locationFirstLine(option) }}
+                                                </span>
+                                                <span class="location-selected-subtitle">
+                                                    {{ locationSecondLine(option) }}
+                                                </span>
+                                            </div>
+                                        </template>
+                                    
+                                        <!-- Empty -->
+                                        <template #no-options>
+                                            <div class="text-center p-2">
+                                                {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
+                                            </div>
+                                        </template>
+                                    </v-select>
+                                </div>
+                        
+                                <!-- Property Types -->
+                                <div class="col-md-6">
+                                    <label class="form-label-custom">Property Type</label>
+                                    <v-select 
+                                        v-model="form.property_type_id"
+                                        :options="propertyTypeOptions"
+                                        :reduce="option => option.value"
+                                        label="text"
+                                        placeholder="Select Property Type"
+                                        class="custom-v-select"
+                                    />
+                                </div>
+                        
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -338,7 +410,18 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const sourceOptions = ref([])
 const validationErrors = ref({})
+const showCustomFields = ref(false)
 
+const areas = ref([])
+const isLoadingAreas = ref(false)
+const propertyTypeOptions = ref([])
+const locationFirstLine = (area) => {
+    return area.name || ''
+}
+
+const locationSecondLine = (area) => {
+    return area.parent || ''
+}
 watch(() => props.modelValue, (val) => {
     show.value = val
 })
@@ -419,6 +502,8 @@ const form = ref({
     // },
     budget: null,
     currency: "AED",
+    area_id: null,
+    property_type_id: null,
 })
 
 
@@ -488,7 +573,39 @@ const clearErrorMessageIfNeeded = () => {
         errorMessage.value = ''
     }
 }
+const fetchAreas = async () => {
+    try {
+        isLoadingAreas.value = true;
 
+        const response = await api.get("/listings/areas/?has_listings=true");
+        const areasData = response.data.data || response.data;
+
+        areas.value = areasData.map(area => ({
+            id: area.id,
+            name: area.name || area.title,
+            parent: area.area_parents_title || null
+        }));
+
+    } catch (error) {
+        console.error("❌ Error fetching areas:", error.response || error);
+    } finally {
+        isLoadingAreas.value = false;
+    }
+};
+
+const fetchPropertyTypes = async () => {
+    try {
+        const res = await api.get('/listings/property-types')
+        const data = res.data.data || res.data
+
+        propertyTypeOptions.value = data.map(item => ({
+            value: item.id,
+            text: item.name
+        }))
+    } catch (e) {
+        console.error('Property types error', e)
+    }
+}
 // Watch form fields and clear their validation errors when user modifies them
 watch(() => form.value.lead_name, () => {
     if (validationErrors.value.lead_name) {
@@ -627,6 +744,8 @@ const resetForm = () => {
         responsible_person_id: 1,
         budget: null,
         currency: null,
+        area_id: null,
+        property_type_id: null,
     }
     validationErrors.value = {}
     errorMessage.value = ''
@@ -686,6 +805,26 @@ const $showNotification = (message, type = 'info') => {
         window.$showNotification(message, type)
     } else {
         console.log(`${type}: ${message}`)
+    }
+}
+const handleAddCustomField = async () => {
+    showCustomFields.value = !showCustomFields.value
+
+    if (!showCustomFields.value) return
+
+    try {
+        // Load Areas
+        if (areas.value.length === 0) {
+            await fetchAreas()
+        }
+
+        // Load Property Types
+        if (propertyTypeOptions.value.length === 0) {
+            await fetchPropertyTypes()
+        }
+
+    } catch (error) {
+        console.error('❌ Error loading custom fields data:', error)
     }
 }
 </script>
@@ -1109,6 +1248,126 @@ const $showNotification = (message, type = 'info') => {
         border-radius: 16px !important;
         border: none !important;
     }
+    
+    /* Location: same height & padding as Price/Size range */
+:deep(.location-select .vs__dropdown-toggle) {
+  min-height: 30px !important;
+  padding: 0px 8px !important;
+  align-items: center !important;
+  font-size: 0.65rem !important;
+}
+
+:deep(.location-select .vs__selected) {
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+:deep(.location-select .vs__placeholder) {
+  margin: 0 !important;
+  position: static !important;
+  width: 100%;
+  text-align: center;
+}
+
+:deep(.location-select .vs__selected) {
+  width: 100%;
+  text-align: center;
+}
+
+:deep(.location-select .vs__selected .location-selected) {
+  text-align: left;
+}
+
+/* Location selected value in 2 lines (when using selected-option slot) */
+.location-selected {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.location-selected-name {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #01062d;
+}
+
+.location-selected-subtitle {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+/* Location dropdown options: 2 lines with icon (like image) */
+.location-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 4px 0;
+  min-height: 40px;
+}
+
+.location-option-icon {
+  font-size: 1.1rem;
+  color: #64748b;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.location-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.location-option-name {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #01062d;
+  line-height: 1.2;
+}
+
+.location-option-subtitle {
+  font-size: 0.65rem;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+/* Location dropdown list: wider */
+:deep(.location-select + .vs__dropdown-menu),
+:deep(.location-select .vs__dropdown-menu) {
+  min-width: 320px !important;
+  width: 100% !important;
+  max-width: 400px;
+}
+
+/* All top-row inputs: same height, padding, font as Price/Size range */
+.unified-input-inline {
+     min-height: 30px !important;
+    padding: 0px !important;
+    font-size: .65rem !important;
+}
+
+:deep(.unified-input-inline.vs--single .vs__dropdown-toggle),
+:deep(.form-group-inline .custom-select.vs--single .vs__dropdown-toggle) {
+  min-height: 30px !important;
+  padding: 2px 8px !important;
+  font-size: 0.65rem !important;
+}
+
+.main-search-row-single :deep(.vs__selected),
+.main-search-row-single :deep(.vs__search),
+.main-search-row-single :deep(.vs__placeholder) {
+  font-size: 0.65rem !important;
+}
+
+.unified-btn-inline {
+  min-height: 30px !important;
+  padding: 2px 8px !important;
+  font-size: 0.65rem !important;
+}
 </style>
 
 

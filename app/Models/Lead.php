@@ -200,4 +200,13 @@ public function activitiesWithTrashed()
         {
             return $this->convertedToDeal;
         }
+        public function area()
+        {
+            return $this->belongsTo(Area::class);
+        }
+        
+        public function propertyType()
+        {
+            return $this->belongsTo(PropertyType::class);
+        }
 }
