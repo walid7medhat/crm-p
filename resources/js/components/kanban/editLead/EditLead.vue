@@ -62,12 +62,13 @@
         </div>
 
         <div class="info-group">
-            <label class="form-label-custom">Phone Number</label>
+            <label class="form-label-custom">Primary Phone</label>
             <b-form-input 
                 v-model="form.work_phone" 
                 placeholder="Enter Phone Number" 
                 class="custom-input"
                 :class="{ 'is-invalid': validationErrors.work_phone }"
+                  :disabled="useSecondaryEmail || !canEditPhoneEmail"
             />
             <div v-if="validationErrors.work_phone" class="invalid-feedback d-block">
                 {{ validationErrors.work_phone[0] }}
@@ -75,25 +76,68 @@
         </div>
 
         <div class="info-group">
-            <label class="form-label-custom">Email</label>
+            <label class="form-label-custom">Primary Email</label>
             <b-form-input 
                 v-model="form.email" 
                 placeholder="Enter Your Email" 
                 class="custom-input"
                 :class="{ 'is-invalid': validationErrors.email }"
+                  :disabled="useSecondaryEmail || !canEditPhoneEmail"
             />
             <div v-if="validationErrors.email" class="invalid-feedback d-block">
                 {{ validationErrors.email[0] }}
             </div>
         </div>
+        <div class="col">
+            <label class="form-label-custom d-flex align-items-center justify-content-between">
+                <span>Secondary Email</span>
+                
+                <div class="form-check m-0">
+                    <input 
+                        type="checkbox" 
+                        class="form-check-input"
+                        v-model="useSecondaryEmail"
+                        :disabled="!form.secondary_email"
+                            @change="swapEmails"
 
+                    >
+                    <label class="form-check-label small mt-1">Use as primary</label>
+                </div>
+            </label>
+            <b-form-input 
+                v-model="form.secondary_email" 
+                placeholder="Enter Your Secondary Email" 
+                class="custom-input"
+                :class="{ 'is-invalid': validationErrors.secondary_email }"
+                    :disabled="!canEditPhoneEmail"
+
+            />
+            <div v-if="validationErrors.secondary_email" class="invalid-feedback d-block">
+                {{ validationErrors.secondary_email[0] }}
+            </div>
+        </div>
         <div class="info-group">
-            <label class="form-label-custom">Work Phone</label>
+             <label class="form-label-custom d-flex align-items-center justify-content-between">
+                <span>Secondary Phone</span>
+        
+                <div class="form-check m-0">
+                    <input 
+                        type="checkbox" 
+                        class="form-check-input"
+                        v-model="useSecondaryPhone"
+                        :disabled="!form.work_phone_2"
+                            @change="swapPhones"
+
+                    >
+                    <label class="form-check-label small mt-1">Use as primary</label>
+                </div>
+            </label>
             <b-form-input 
                 v-model="form.work_phone_2" 
                 placeholder="Enter Phone Number" 
                 class="custom-input"
                 :class="{ 'is-invalid': validationErrors.work_phone_2 }"
+                    :disabled="!canEditPhoneEmail"
             />
             <div v-if="validationErrors.work_phone_2" class="invalid-feedback d-block">
                 {{ validationErrors.work_phone_2[0] }}
@@ -343,6 +387,8 @@ const validationErrors = ref({})
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 
+const useSecondaryEmail = ref(false)
+const useSecondaryPhone = ref(false)
 const form = ref({
     lead_name: '',
     stage_id: null,
@@ -351,6 +397,7 @@ const form = ref({
     last_name: '',
     work_phone: '',
     email: '',
+    secondary_email:'',
     work_phone_2: '',
     comment: '',
     budget: null,
@@ -417,7 +464,16 @@ const sourceOptions = ref([
     { value: 'Cold Call', text: 'Cold Call' },
     { value: 'Other', text: 'Other' }
 ])
-
+const swapEmails = () => {
+    const temp = form.value.email
+    form.value.email = form.value.secondary_email
+    form.value.secondary_email = temp
+}
+const swapPhones = () => {
+    const temp = form.value.work_phone
+    form.value.work_phone = form.value.work_phone_2
+    form.value.work_phone_2 = temp
+}
 // Fetch users from API
 const fetchUsers = async () => {
     try {
@@ -457,6 +513,7 @@ const initializeForm = () => {
         work_phone: props.lead?.work_phone || '',
         email: props.lead?.email || '',
         work_phone_2: props.lead?.work_phone_2 || '',
+        secondary_email:props.lead?.secondary_email || '',
         comment: props.lead?.comment || '',
         budget: props.lead?.budget || null,
         currency: props.lead?.currency || 'AED',
@@ -468,7 +525,9 @@ const initializeForm = () => {
     }
     selectedPerson.value = props.lead?.responsible_person || null
 }
-
+const canEditPhoneEmail = computed(() => {
+    return props.lead?.can_edit_phone_email ?? false
+})
 // Watch for stageId changes from parent
 watch(() => props.stageId, (newStageId) => {
     if (newStageId) {
@@ -483,6 +542,7 @@ watch(() => props.lead?.responsible_person, (newPerson) => {
         selectedPerson.value = newPerson
     }
 })
+
 
 // Helper function to clear error message when all validation errors are fixed
 const clearErrorMessageIfNeeded = () => {
@@ -541,12 +601,20 @@ watch(() => form.value.email, () => {
     }
 })
 
+watch(() => form.value.secondary_email, () => {
+    if (validationErrors.value.secondary_email) {
+        delete validationErrors.value.secondary_email
+        clearErrorMessageIfNeeded()
+    }
+})
+
 watch(() => form.value.work_phone_2, () => {
     if (validationErrors.value.work_phone_2) {
         delete validationErrors.value.work_phone_2
         clearErrorMessageIfNeeded()
     }
 })
+
 
 watch(() => form.value.comment, () => {
     if (validationErrors.value.comment) {

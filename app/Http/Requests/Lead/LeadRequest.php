@@ -37,6 +37,7 @@ class LeadRequest extends FormRequest
                 'max:20',
                 'regex:/^\+?[0-9]+$/'
             ],
+            'secondary_email'=>'nullable|email',
             'email' => 'nullable|email',
             'website' => 'nullable|url',
             'messenger' => 'nullable|string|max:255',
@@ -97,14 +98,23 @@ class LeadRequest extends FormRequest
 
         return $rules;
     }
+    public function attributes(): array
+{
+    return [
+        'work_phone' => 'Primary Phone',
+        'work_phone_2' => 'Secondary Phone',
+        'email' => 'Primary Email',
+        'secondary_email' => 'Secondary Email',
+    ];
+}
 
     public function messages(): array
     {
         return [
             'responsible_person_id.required' => 'The responsible manager is required.',
             'responsible_person_id.exists' => 'The selected responsible manager does not exist.',
-            'work_phone.regex' => 'Phone number must contain digits only.',
-            'work_phone_2.regex' => 'Phone number 2 must contain digits only.',
+            'work_phone.regex' => 'Primary Phone number must contain digits only.',
+            'work_phone_2.regex' => 'Secondary Phone number must contain digits only.',
         ];
     }
 }

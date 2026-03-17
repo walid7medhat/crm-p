@@ -18,7 +18,7 @@
             <div class="info-value">{{ lead?.last_name || '—' }}</div>
         </div>
         <div class="info-group">
-            <label class="form-label-custom" >Phone Number</label>
+            <label class="form-label-custom" >Primary Phone</label>
             <div class="info-value" >
                   <span v-if="canView">{{ lead?.work_phone || '—' }}</span>
                  <span v-else>
@@ -28,7 +28,7 @@
             </div>
         </div>
         <div class="info-group">
-            <label class="form-label-custom ">Email</label>
+            <label class="form-label-custom ">Primary Email</label>
             <div class="info-value"  >
                 <span v-if="canView">{{ lead?.email || '—' }}</span>
                 <span v-else>
@@ -37,8 +37,18 @@
                 </span>
             </div>
         </div>
+        <div class="info-group">
+            <label class="form-label-custom ">Secondary Email</label>
+            <div class="info-value"  >
+                <span v-if="canView">{{ lead?.secondary_email || '—' }}</span>
+                <span v-else>
+                    {{ lead?.secondary_email?.slice(0,3) || '' }}
+                    <span class="blurred-stars">{{ maskValue(lead?.secondary_email?.slice(3))}}</span>
+                </span>
+            </div>
+        </div>
         <div class="info-group" >
-            <label class="form-label-custom">Work Phone</label>
+            <label class="form-label-custom">Secondary Phone</label>
             <div class="info-value" >
                  <span v-if="canView">{{ lead?.work_phone_2 || '—' }}</span>
                 <span v-else>
@@ -474,27 +484,31 @@ const hasAdditionalFacebookQuestions = computed(() => {
 
 /* Modal Styles */
 :deep(.person-modal .modal-content) {
-    border-radius: 12px;
-    border: none;
+    border-radius: 12px !important;
+    border: none !important;
 }
 
 :deep(.person-modal .modal-header) {
-    border-bottom: 1px solid #E2E8F0;
-    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #E2E8F0 !important;
+    padding: 1rem 1.5rem 1important;
 }
 
 :deep(.person-modal .modal-title) {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 16px !important; 
+    font-weight: 600 !important;
     color: #1E293B;
 }
-
+.person-modal .modal-title {
+    font-size: 16px !important; 
+    font-weight: 600 !important;
+    color: #1E293B;
+}
 :deep(.person-modal .modal-body) {
     padding: 1.5rem;
 }
 
 .person-modal-content {
-    padding: 0.5rem 0;
+    padding: 0.5rem 0 !important;
 }
 
 /* Search Input */

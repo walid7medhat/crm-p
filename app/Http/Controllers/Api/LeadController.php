@@ -267,6 +267,12 @@ class LeadController extends Controller
                 }
 
                 $leadData = $request->validated();
+                if (!auth()->user()->hasRole('admin') && !auth()->user()->hasRole('super_admin')) {
+                        unset($leadData['email']);
+                        unset($leadData['secondary_email']);
+                        unset($leadData['work_phone']);
+                        unset($leadData['work_phone_2']);
+                    }
                 
                 $participants = $request->input('participants', []);
                 $observers = $request->input('observers', []);

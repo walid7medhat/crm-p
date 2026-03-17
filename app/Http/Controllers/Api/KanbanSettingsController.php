@@ -9,10 +9,7 @@ use App\Helpers\ApiResponse;
 
 class KanbanSettingsController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('role:super_admin');
-    }
+   
     
     public function getSettings()
     {

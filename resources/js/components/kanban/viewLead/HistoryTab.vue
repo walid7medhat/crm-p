@@ -524,6 +524,12 @@ const transformHistoryEntry = (entry) => {
         'updated': 'Lead Updated',
         'created': 'Lead Created'
     }
+    const fieldLabels = {
+        work_phone: 'Primary Phone',
+        work_phone_2: 'Secondary Phone',
+        email: 'Primary Email',
+        secondary_email: 'Secondary Email',
+    }
     eventType = eventTypeMap[eventType] || eventType.charAt(0).toUpperCase() + eventType.slice(1).replace(/_/g, ' ')
     
     // Format changes
@@ -551,9 +557,9 @@ const transformHistoryEntry = (entry) => {
                 const oldVal = val?.old !== null && val?.old !== undefined ? val.old : '-'
                 const newVal = val?.new !== null && val?.new !== undefined ? val.new : '-'
         
-                const label = key
-                    .replace(/_/g, ' ')
-                    .replace(/\b\w/g, l => l.toUpperCase())
+                const label = fieldLabels[key] || key
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, l => l.toUpperCase())
         
                 return `
                     <div class="history-change" style="margin-bottom:4px;">

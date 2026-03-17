@@ -91,7 +91,7 @@
                                 <span class="section-title d-block mb-3">Contact Details</span>
                                 <div class="d-flex justify-content-between align-items-center gap-2">
                                     <div class="col">
-                                        <label class="form-label-custom">Phone Number</label>
+                                        <label class="form-label-custom">Primary Phone</label>
                                         <b-form-input 
                                             v-model="form.work_phone" 
                                             placeholder="Enter Phone Number" 
@@ -103,7 +103,7 @@
                                         </div>
                                     </div>
                                     <div class="col">
-                                        <label class="form-label-custom">Email</label>
+                                        <label class="form-label-custom">Primary Email</label>
                                         <b-form-input 
                                             v-model="form.email" 
                                             placeholder="Enter Your Email" 
@@ -114,8 +114,20 @@
                                             {{ validationErrors.email[0] }}
                                         </div>
                                     </div>
+                                     <div class="col">
+                                        <label class="form-label-custom">Secondary Email</label>
+                                        <b-form-input 
+                                            v-model="form.secondary_email" 
+                                            placeholder="Enter Your Secondary Email" 
+                                            class="custom-input"
+                                            :class="{ 'is-invalid': validationErrors.secondary_email }"
+                                        />
+                                        <div v-if="validationErrors.Secondary" class="invalid-feedback d-block">
+                                            {{ validationErrors.secondary_email[0] }}
+                                        </div>
+                                    </div>
                                     <div class="col">
-                                        <label class="form-label-custom">Work Phone</label>
+                                        <label class="form-label-custom">Secondary Phone</label>
                                         <b-form-input 
                                             v-model="form.work_phone_2" 
                                             placeholder="Enter Phone Number" 
@@ -390,6 +402,7 @@ const form = ref({
     last_name: '',
     work_phone: '',
     email: '',
+    secondary_email:'',
     work_phone_2: '',
     comment: '',
     lead_source: '',
@@ -511,6 +524,12 @@ watch(() => form.value.email, () => {
         clearErrorMessageIfNeeded()
     }
 })
+watch(() => form.value.secondary_email, () => {
+    if (validationErrors.value.secondary_email) {
+        delete validationErrors.value.secondary_email
+        clearErrorMessageIfNeeded()
+    }
+})
 
 watch(() => form.value.work_phone, () => {
     if (validationErrors.value.work_phone) {
@@ -598,6 +617,7 @@ const resetForm = () => {
         last_name: '',
         work_phone: '',
         email: '',
+        secondary_email:'',
         work_phone_2: '',
         comment: '',
         lead_source: '',
