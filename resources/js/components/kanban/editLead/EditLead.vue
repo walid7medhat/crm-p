@@ -158,104 +158,223 @@
         <!--    </div>-->
         <!--</div>-->
 
+        <!-- Additional Fields (same UX as Create) -->
         <div class="info-group">
-            <label class="form-label-custom">Budget</label>
-            <div class="input-group-custom" :class="{ 'is-invalid-group': validationErrors.budget || validationErrors.currency }">
-                <b-form-input 
-                    v-model="form.budget"  
-                    type="number" 
-                    placeholder="Enter Budget" 
-                    class="custom-input"
-                    :class="{ 'is-invalid': validationErrors.budget }"
-                />
-                <v-select 
-                    v-model="form.currency" 
-                    :options="currencyOptions" 
-                    :reduce="option => option.value"
-                    label="text"
-                    :clearable="false"
-                    :searchable="false"
-                    class="custom-v-select-inline"
-                    :class="{ 'is-invalid-select': validationErrors.currency }"
-                >
-                    <template #open-indicator="{ attributes }">
-                        <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                        </span>
-                    </template>
-                </v-select>
-            </div>
-            <div v-if="validationErrors.budget" class="invalid-feedback d-block">
-                {{ validationErrors.budget[0] }}
-            </div>
-            <div v-if="validationErrors.currency" class="invalid-feedback d-block">
-                {{ validationErrors.currency[0] }}
-            </div>
-        </div>
+            <div class="additional-fields-card p-3">
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                    <div>
+                        <span class="section-title d-block">Additional fields</span>
+                        <small class="text-secondary-light d-block">Select what you want to edit. Required fields can’t be removed.</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @click="showAdditionalPanel = !showAdditionalPanel">
+                        {{ showAdditionalPanel ? 'Hide fields' : 'Add fields' }}
+                    </button>
+                </div>
 
-        <div class="info-group">
-            <label class="form-label-custom">Bedrooms</label>
-            <v-select 
-                v-model="form.bedrooms" 
-                :options="bedroomOptions" 
-                :reduce="option => option.value"
-                label="text"
-                placeholder="Select Bedrooms"
-                class="custom-v-select"
-                :class="{ 'is-invalid-select': validationErrors.bedrooms }"
-            >
-                <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
-                </template>
-            </v-select>
-            <div v-if="validationErrors.bedrooms" class="invalid-feedback d-block">
-                {{ validationErrors.bedrooms[0] }}
-            </div>
-        </div>
+                <div class="selected-fields-row" v-if="selectedAdditionalSummary.length">
+                    <div class="selected-pill" v-for="k in selectedAdditionalSummary" :key="k">
+                        <span class="selected-pill-label">{{ additionalLabel(k) }}</span>
+                        <button
+                            v-if="k !== 'lead_source'"
+                            type="button"
+                            class="selected-pill-x"
+                            title="Remove"
+                            @click="removeAdditional(k)"
+                        >
+                            ×
+                        </button>
+                        <span v-else class="required-pill">Required</span>
+                    </div>
+                </div>
 
-        <div class="info-group">
-            <label class="form-label-custom">Purpose Of Purchase</label>
-            <v-select 
-                v-model="form.purpose_buying" 
-                :options="purposeOptions" 
-                :reduce="option => option.value"
-                label="text"
-                placeholder="Select Purpose"
-                class="custom-v-select"
-                :class="{ 'is-invalid-select': validationErrors.purpose_buying }"
-            >
-                <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
-                </template>
-            </v-select>
-            <div v-if="validationErrors.purpose_buying" class="invalid-feedback d-block">
-                {{ validationErrors.purpose_buying[0] }}
-            </div>
-        </div>
+                <div v-if="showAdditionalPanel" class="additional-checklist">
+                    <label
+                        v-for="opt in additionalFieldOptions"
+                        :key="opt.key"
+                        class="additional-check"
+                        :class="{ disabled: opt.required, active: isAdditionalEnabled(opt.key) }"
+                    >
+                        <input
+                            type="checkbox"
+                            class="additional-check-input"
+                            :checked="isAdditionalEnabled(opt.key)"
+                            :disabled="opt.required"
+                            @change="toggleAdditional(opt.key)"
+                        />
+                        <span class="additional-check-label">{{ opt.label }}</span>
+                        <span v-if="opt.required" class="required-pill">Required</span>
+                    </label>
+                </div>
 
-        <div class="info-group">
-            <label class="form-label-custom">Source</label>
-            <v-select 
-                v-model="form.lead_source" 
-                :options="sourceOptions" 
-                :reduce="option => option.value"
-                label="text"
-                placeholder="Select Source"
-                class="custom-v-select"
-                :class="{ 'is-invalid-select': validationErrors.lead_source }"
-            >
-                <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
-                </template>
-            </v-select>
-            <div v-if="validationErrors.lead_source" class="invalid-feedback d-block">
-                {{ validationErrors.lead_source[0] }}
+                <div class="row g-3 mt-1 additional-fields-grid" v-if="enabledAdditionalKeys.length">
+                    <!-- Bedrooms -->
+                    <div v-if="shouldShowAdditional('bedrooms')" class="col-md-6">
+                        <div class="additional-input-wrap">
+                            <label class="form-label-custom">How Many Bedrooms</label>
+                            <v-select 
+                                v-model="form.bedrooms" 
+                                :options="bedroomOptions" 
+                                :reduce="option => option.value"
+                                label="text"
+                                placeholder="Select Bedrooms"
+                                class="custom-v-select"
+                                :class="{ 'is-invalid-select': validationErrors.bedrooms }"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                            <div v-if="validationErrors.bedrooms" class="invalid-feedback d-block">
+                                {{ validationErrors.bedrooms[0] }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Budget (AED fixed) -->
+                    <div v-if="shouldShowAdditional('budget')" class="col-md-6">
+                        <div class="additional-input-wrap">
+                            <label class="form-label-custom">Budget</label>
+                            <div class="input-group-custom" :class="{ 'is-invalid-group': validationErrors.budget }">
+                                <b-form-input 
+                                    v-model="form.budget"  
+                                    type="number" 
+                                    placeholder="Enter Budget" 
+                                    class="custom-input"
+                                    :class="{ 'is-invalid': validationErrors.budget }"
+                                />
+                                <div class="currency-pill" aria-label="Currency">AED</div>
+                            </div>
+                            <div v-if="validationErrors.budget" class="invalid-feedback d-block">
+                                {{ validationErrors.budget[0] }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Purpose -->
+                    <div v-if="shouldShowAdditional('purpose_buying')" class="col-md-6">
+                        <div class="additional-input-wrap">
+                            <label class="form-label-custom">Purpose Of Purchase</label>
+                            <v-select 
+                                v-model="form.purpose_buying" 
+                                :options="purposeOptions" 
+                                :reduce="option => option.value"
+                                label="text"
+                                placeholder="Select Purpose"
+                                class="custom-v-select"
+                                :class="{ 'is-invalid-select': validationErrors.purpose_buying }"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                            <div v-if="validationErrors.purpose_buying" class="invalid-feedback d-block">
+                                {{ validationErrors.purpose_buying[0] }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Source (required) -->
+                    <div class="col-md-6">
+                        <div class="additional-input-wrap required">
+                            <label class="form-label-custom">Source <span class="text-danger">*</span></label>
+                            <v-select 
+                                v-model="form.lead_source" 
+                                :options="sourceOptions" 
+                                :reduce="option => option.value"
+                                label="text"
+                                placeholder="Select Source"
+                                class="custom-v-select"
+                                :class="{ 'is-invalid-select': validationErrors.lead_source }"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                            <div v-if="validationErrors.lead_source" class="invalid-feedback d-block">
+                                {{ validationErrors.lead_source[0] }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location -->
+                    <div v-if="shouldShowAdditional('area_id')" class="col-12">
+                        <div class="additional-input-wrap">
+                            <label class="form-label-custom">Location</label>
+                            <v-select
+                                v-model="form.area_id"
+                                :options="areas"
+                                :reduce="area => area.id"
+                                :disabled="isLoadingAreas"
+                                label="name"
+                                placeholder="Select area"
+                                class="custom-v-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                                </template>
+
+                                <template #option="option">
+                                    <div class="location-option">
+                                        <i class="ri-map-pin-line location-option-icon"></i>
+                                        <div class="location-option-text">
+                                            <span class="location-option-name">
+                                                {{ locationFirstLine(option) }}
+                                            </span>
+                                            <span class="location-option-subtitle">
+                                                {{ locationSecondLine(option) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <template #selected-option="option">
+                                    <div v-if="option" class="location-selected">
+                                        <span class="location-selected-name">
+                                            {{ locationFirstLine(option) }}
+                                        </span>
+                                        <span class="location-selected-subtitle">
+                                            {{ locationSecondLine(option) }}
+                                        </span>
+                                    </div>
+                                </template>
+
+                                <template #no-options>
+                                    <div class="text-center p-2">
+                                        {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
+                                    </div>
+                                </template>
+                            </v-select>
+                        </div>
+                    </div>
+
+                    <!-- Property Type -->
+                    <div v-if="shouldShowAdditional('property_type_id')" class="col-12">
+                        <div class="additional-input-wrap">
+                            <label class="form-label-custom">Property Type</label>
+                            <v-select
+                                v-model="form.property_type_id"
+                                :options="propertyTypeOptions"
+                                :reduce="item => item.id"
+                                label="name"
+                                placeholder="Select Property Type"
+                                class="custom-v-select"
+                                :disabled="isLoadingPropertyTypes"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -271,78 +390,7 @@
                 {{ validationErrors.source_information[0] }}
             </div>
         </div>
-       <div class="mb-3">
-                <a href="#" @click.prevent="handleAddCustomField" class="add-custom-field-link">
-                    + Add Custom Field
-                </a>
-        </div>
-        <div v-if="showCustomFields" class="info-group">
-                    <label class="form-label-custom">Location</label>
-                
-                    <v-select
-                        v-model="form.area_id"
-                        :options="areas"
-                        :reduce="area => area.id"
-                        :disabled="isLoadingAreas"
-                        label="name"
-                        placeholder="Select area"
-                        class="custom-v-select"
-                    >
-                        <template #open-indicator="{ attributes }">
-                            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
-                        </template>
-                
-                        <template #option="option">
-                            <div class="location-option">
-                                <i class="ri-map-pin-line location-option-icon"></i>
-                                <div class="location-option-text">
-                                    <span class="location-option-name">
-                                        {{ locationFirstLine(option) }}
-                                    </span>
-                                    <span class="location-option-subtitle">
-                                        {{ locationSecondLine(option) }}
-                                    </span>
-                                </div>
-                            </div>
-                        </template>
-                
-                        <template #selected-option="option">
-                            <div v-if="option" class="location-selected">
-                                <span class="location-selected-name">
-                                    {{ locationFirstLine(option) }}
-                                </span>
-                                <span class="location-selected-subtitle">
-                                    {{ locationSecondLine(option) }}
-                                </span>
-                            </div>
-                        </template>
-                
-                        <template #no-options>
-                            <div class="text-center p-2">
-                                {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
-                            </div>
-                        </template>
-                    </v-select>
-        </div>
-        <div v-if="showCustomFields" class="info-group">
-                 <label class="form-label-custom">Property Type</label>
-                
-                    <v-select
-                        v-model="form.property_type_id"
-                        :options="propertyTypeOptions"
-                        :reduce="item => item.id"
-                        label="name"
-                        placeholder="Select Property Type"
-                        class="custom-v-select"
-                        :disabled="isLoadingPropertyTypes"
-                    >
-                        <template #open-indicator="{ attributes }">
-                            <span v-bind="attributes">
-                                <iconify-icon icon="lucide:chevron-down"></iconify-icon>
-                            </span>
-                        </template>
-                    </v-select>
-        </div>
+        <!-- Old + Add Custom Field UI replaced by Additional fields section -->
         <!-- Responsible Person -->
         <div class="responsible-person-box p-3 radius-8 shadow-sm mb-3">
             <div class="d-flex align-items-center justify-content-between mb-3">
@@ -462,7 +510,7 @@ const errorMessage = ref('')
 const useSecondaryEmail = ref(false)
 const useSecondaryPhone = ref(false)
 
-const showCustomFields = ref(false)
+const showAdditionalPanel = ref(false)
 
 const areas = ref([])
 const propertyTypeOptions = ref([])
@@ -507,10 +555,7 @@ const salutationOptions = [
     { value: 'Mrs', text: 'Mrs' }
 ]
 
-const currencyOptions = [
-    // { value: 'USD', text: 'USD $' },
-    { value: 'AED', text: 'AED د.إ' },
-]
+// Currency is fixed to AED in this edit form
 
 const bedroomOptions = [
     { value: '0', text: 'Studio' },
@@ -546,6 +591,59 @@ const sourceOptions = ref([
     { value: 'Cold Call', text: 'Cold Call' },
     { value: 'Other', text: 'Other' }
 ])
+
+const additionalFieldOptions = [
+    { key: 'bedrooms', label: 'How Many Bedrooms' },
+    { key: 'budget', label: 'Budget' },
+    { key: 'purpose_buying', label: 'Purpose Of Purchase' },
+    { key: 'lead_source', label: 'Source', required: true },
+    { key: 'area_id', label: 'Location' },
+    { key: 'property_type_id', label: 'Property Type' },
+]
+
+const enabledAdditionalKeys = ref(['lead_source'])
+
+const isAdditionalEnabled = (key) => enabledAdditionalKeys.value.includes(key)
+
+const additionalLabel = (key) => {
+    return additionalFieldOptions.find(o => o.key === key)?.label || key
+}
+
+const selectedAdditionalSummary = computed(() => {
+    const enabled = new Set(enabledAdditionalKeys.value)
+    return additionalFieldOptions.map(o => o.key).filter(k => enabled.has(k))
+})
+
+const ensureAdditionalDataLoaded = async (key) => {
+    if (key === 'area_id' && areas.value.length === 0) {
+        await fetchAreas()
+    }
+    if (key === 'property_type_id' && propertyTypeOptions.value.length === 0) {
+        await fetchPropertyTypes()
+    }
+}
+
+const removeAdditional = (key) => {
+    if (key === 'lead_source') return
+    enabledAdditionalKeys.value = enabledAdditionalKeys.value.filter(k => k !== key)
+    if (key === 'area_id') form.value.area_id = null
+    if (key === 'property_type_id') form.value.property_type_id = null
+    if (key === 'bedrooms') form.value.bedrooms = null
+    if (key === 'budget') form.value.budget = null
+    if (key === 'purpose_buying') form.value.purpose_buying = null
+}
+
+const toggleAdditional = async (key) => {
+    if (key === 'lead_source') return
+    if (isAdditionalEnabled(key)) {
+        removeAdditional(key)
+        return
+    }
+    enabledAdditionalKeys.value = [...enabledAdditionalKeys.value, key]
+    await ensureAdditionalDataLoaded(key)
+}
+
+const shouldShowAdditional = (key) => isAdditionalEnabled(key)
 const swapEmails = () => {
     const temp = form.value.email
     form.value.email = form.value.secondary_email
@@ -583,19 +681,7 @@ const selectUser = (user) => {
     selectedPerson.value = user
     searchQuery.value = ''
 }
-const handleAddCustomField = async () => {
-    showCustomFields.value = !showCustomFields.value
-
-    if (!showCustomFields.value) return
-
-    if (areas.value.length === 0) {
-        await fetchAreas()
-    }
-
-    if (propertyTypeOptions.value.length === 0) {
-        await fetchPropertyTypes()
-    }
-}
+// Old "+ Add Custom Field" flow replaced by Additional fields checklist
 const fetchAreas = async () => {
     try {
         isLoadingAreas.value = true
@@ -765,12 +851,7 @@ watch(() => form.value.budget, () => {
     }
 })
 
-watch(() => form.value.currency, () => {
-    if (validationErrors.value.currency) {
-        delete validationErrors.value.currency
-        clearErrorMessageIfNeeded()
-    }
-})
+// currency is fixed, no watcher needed
 
 watch(() => form.value.bedrooms, () => {
     if (validationErrors.value.bedrooms) {
@@ -813,11 +894,18 @@ onMounted(async () => {
     await fetchUsers()
 
     if (props.lead?.area_id || props.lead?.property_type_id) {
-        showCustomFields.value = true
-
         await fetchAreas()
         await fetchPropertyTypes()
     }
+
+    // Auto-enable additional fields if lead already has values
+    const next = new Set(enabledAdditionalKeys.value)
+    if (props.lead?.bedrooms != null && props.lead?.bedrooms !== '') next.add('bedrooms')
+    if (props.lead?.budget != null && props.lead?.budget !== '') next.add('budget')
+    if (props.lead?.purpose_buying) next.add('purpose_buying')
+    if (props.lead?.area_id) next.add('area_id')
+    if (props.lead?.property_type_id) next.add('property_type_id')
+    enabledAdditionalKeys.value = Array.from(next)
 })
 
 const handleAvatarError = () => {
@@ -1030,6 +1118,148 @@ defineExpose({
     flex-grow: 1 !important;
     border-radius: 10px 0 0 10px !important;
     padding: 0 8px !important;
+}
+
+.currency-pill {
+    min-width: 72px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    border-left: 1px solid #E2E8F0;
+    color: #64748B;
+    font-size: 13px;
+    font-family: 'Montserrat';
+    background: #fff;
+    border-radius: 0 8px 8px 0;
+}
+
+.additional-fields-card {
+    background: #FFFFFF;
+    border: 1px solid #F3F3F3;
+    border-radius: 10px;
+    box-shadow: 1px 1px 5px 5px #00000005;
+}
+
+.additional-checklist {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+    margin-bottom: 10px;
+}
+
+.additional-check {
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Montserrat';
+}
+
+.additional-check:hover {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+}
+
+.additional-check.active {
+    background: #F1F5FF;
+    border-color: #3B82F6;
+    box-shadow: 0 1px 0 rgba(59, 130, 246, 0.10);
+}
+
+.additional-check.disabled {
+    opacity: 0.8;
+    cursor: default;
+}
+
+.additional-check-input {
+    width: 16px;
+    height: 16px;
+}
+
+.additional-check-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #01062C;
+    flex: 1;
+}
+
+.required-pill {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid #E2E8F0;
+    background: #F8FAFC;
+    color: #64748B;
+}
+
+.selected-fields-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.selected-pill {
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    border-radius: 999px;
+    padding: 6px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Montserrat';
+    font-size: 12px;
+    color: #01062C;
+}
+
+.selected-pill-label {
+    font-weight: 600;
+}
+
+.selected-pill-x {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748B;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.selected-pill-x:hover {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+}
+
+.additional-input-wrap {
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 10px;
+    background: #FFFFFF;
+    box-shadow: 1px 1px 5px 5px #00000005;
+}
+
+.additional-input-wrap.required {
+    border-color: #CBD5E1;
+    background: #F8FAFC;
+}
+
+@media (max-width: 768px) {
+    .additional-checklist {
+        grid-template-columns: 1fr;
+    }
 }
 
 :deep(.custom-v-select-inline) {

@@ -2,11 +2,29 @@
 <template>
     <div class="stage-visibility-container">
         <!-- Header -->
-        <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="page-header">
             <div>
-                <h4 class="mb-1">Stage Visibility Settings</h4>
+                <h6 class="page-title">Stage Visibility</h6>
+                <p class="page-subtitle">Choose which stages each role can see in the Kanban board.</p>
             </div>
-           
+            <div class="page-actions">
+                <button
+                    class="btn btn-outline-secondary btn-sm"
+                    :disabled="loading || saving || !hasChanges"
+                    @click="fetchSettings"
+                >
+                    <iconify-icon icon="lucide:rotate-ccw" class="me-1" />
+                    Reset
+                </button>
+                <button
+                    class="btn btn-primary btn-sm"
+                    :disabled="loading || saving || !hasChanges"
+                    @click="saveAllSettings"
+                >
+                    <iconify-icon icon="lucide:save" class="me-1" />
+                    {{ saving ? 'Saving…' : 'Save changes' }}
+                </button>
+            </div>
         </div>
 
         <!-- Loading State -->
@@ -26,6 +44,21 @@
 
         <!-- Settings Content -->
         <div v-else class="settings-content">
+            <div class="settings-card">
+                <div class="card-head">
+                    <div>
+                        <div class="card-title">Permissions Matrix</div>
+                        <div class="card-desc">Enabled means the role can view that stage. Use quick actions to enable all or none.</div>
+                    </div>
+                    <div class="card-meta">
+                        <span class="meta-pill">
+                            Roles: <strong>{{ roles.length }}</strong>
+                        </span>
+                        <span class="meta-pill">
+                            Stages: <strong>{{ allStages.length }}</strong>
+                        </span>
+                    </div>
+                </div>
             <!-- Stages Legend -->
             <!--<div class="stages-legend mb-4">-->
             <!--    <span class="legend-label">Available Stages:</span>-->
@@ -55,9 +88,9 @@
                                 :key="stage.id"
                                 class="stage-column"
                             >
-                                <div class="stage-header" :style="{ backgroundColor: stage.color || '#f8f9fa' }">
+                                <div class="stage-header" :style="{ '--stage-color': stage.color || '#e2e8f0' }">
                                     <span class="stage-order">{{ stage.order }}</span>
-                                    <span class="stage-name">{{ stage.name }}</span>
+                                    <span class="stage-name" :title="stage.name">{{ stage.name }}</span>
                                 </div>
                             </th>
                             <th class="actions-column">Actions</th>
@@ -68,8 +101,16 @@
                             <!-- Role Info -->
                             <td class="role-column">
                                 <div class="role-info">
-                                    <span class="role-name">{{ formatRoleName(role.name) }}</span>
-                                    <span class="role-badge" :class="role.name">{{ role.name }}</span>
+                                    <div class="role-top">
+                                        <span class="role-name">{{ formatRoleName(role.name) }}</span>
+                                        <span v-if="changedRoles.has(role.name)" class="unsaved-pill">Unsaved</span>
+                                    </div>
+                                    <div class="role-bottom">
+                                        <span class="role-badge" :class="role.name">{{ role.name }}</span>
+                                        <span class="role-count">
+                                            {{ (settings[role.name] || []).length }}/{{ allStages.length }}
+                                        </span>
+                                    </div>
                                 </div>
                             </td>
 
@@ -91,6 +132,7 @@
                                     <label 
                                         :for="`${role.name}_stage_${stage.id}`"
                                         class="checkbox-label"
+                                        :title="`Allow ${formatRoleName(role.name)} to see: ${stage.name}`"
                                     ></label>
                                 </div>
                             </td>
@@ -117,6 +159,7 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
             </div>
 
             <!-- Quick Presets -->
@@ -166,7 +209,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 
@@ -179,6 +222,8 @@ const allStages = ref([])
 const roles = ref([])
 const settings = ref({})
 const changedRoles = ref(new Set())
+
+const hasChanges = computed(() => changedRoles.value.size > 0)
 
 // ================= Methods =================
 const fetchSettings = async () => {
@@ -325,15 +370,93 @@ onMounted(() => {
 <style scoped>
 .stage-visibility-container {
     padding: 24px;
-    background-color: #f8fafc;
+    padding-top: 40px;
     min-height: 100vh;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    margin-top: 12px;
+}
+
+.page-title {
+    margin: 0;
+    font-weight: 700;
+    font-size: 15px;
+    color: #0f172a;
+}
+
+.page-subtitle {
+    margin: 6px 0 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.page-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .settings-content {
-    background: white;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    padding: 0;
+}
+
+.settings-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    box-shadow: 0 1px 6px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
+}
+
+.card-head {
+    padding: 16px;
+    border-bottom: 1px solid #eef2f7;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.card-title {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 14px;
+}
+
+.card-desc {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 12.5px;
+    max-width: 60ch;
+}
+
+.card-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 12px;
 }
 
 /* Stages Legend */
@@ -389,8 +512,7 @@ onMounted(() => {
 /* Settings Table */
 .settings-table-wrapper {
     overflow-x: auto;
-    margin: 0 -24px;
-    padding: 0 24px;
+    padding: 0 16px 16px 16px;
 }
 
 .settings-table {
@@ -404,12 +526,13 @@ onMounted(() => {
     top: 0;
     background: white;
     z-index: 10;
-    padding: 12px 8px;
+    padding: 10px 8px;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .settings-table td {
-    padding: 12px 8px;
-    border-bottom: 1px solid #e2e8f0;
+    padding: 10px 8px;
+    border-bottom: 1px solid #eef2f7;
 }
 
 .settings-table tr:hover td {
@@ -423,6 +546,7 @@ onMounted(() => {
     left: 0;
     background: white;
     z-index: 5;
+    border-right: 1px solid #f1f5f9;
 }
 
 .role-info {
@@ -431,9 +555,40 @@ onMounted(() => {
     gap: 4px;
 }
 
+.role-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.role-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
 .role-name {
     font-weight: 600;
     color: #1e293b;
+}
+
+.unsaved-pill {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #0f172a;
+    white-space: nowrap;
+}
+
+.role-count {
+    font-size: 12px;
+    color: #64748b;
+    white-space: nowrap;
 }
 
 .role-badge {
@@ -486,8 +641,23 @@ onMounted(() => {
     flex-direction: column;
     align-items: center;
     padding: 8px;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 12px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    position: relative;
+    overflow: hidden;
+}
+
+.stage-header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--stage-color);
+    opacity: 0.9;
 }
 
 .stage-order {
@@ -517,30 +687,45 @@ onMounted(() => {
 }
 
 .checkbox-label {
-    width: 22px;
+    width: 40px;
     height: 22px;
-    border: 2px solid #cbd5e1;
-    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
     cursor: pointer;
     position: relative;
-    transition: all 0.2s;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
+    background: #f1f5f9;
 }
 
 .stage-checkbox:checked + .checkbox-label {
-    background-color: #3b82f6;
-    border-color: #3b82f6;
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+
+.checkbox-label::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: #ffffff;
+    transform: translateY(-50%);
+    transition: left 0.18s ease;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
 }
 
 .stage-checkbox:checked + .checkbox-label::after {
-    content: '';
-    position: absolute;
-    left: 7px;
-    top: 3px;
-    width: 6px;
-    height: 11px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
+    left: 20px;
+}
+
+.checkbox-label:hover {
+    border-color: #cbd5e1;
+}
+
+.settings-table tr:hover .checkbox-label {
+    border-color: #94a3b8;
 }
 
 /* Actions Column */
@@ -592,9 +777,9 @@ onMounted(() => {
     .stage-visibility-container {
         padding: 16px;
     }
-    
-    .settings-content {
-        padding: 16px;
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
     }
     
     .quick-presets {
