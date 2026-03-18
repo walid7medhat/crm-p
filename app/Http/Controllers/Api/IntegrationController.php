@@ -647,4 +647,61 @@ $fieldMappings = [
         'status' => 'success'
     ]);
 }
+
+public function store_wordpress(Request $request)
+{
+    $data = $request->all();
+    \Log::info($data);
+$fieldData = [];
+    if($data['responsible_person']==2911){
+                    $data['responsible_person_id']=59;
+                }elseif($data['responsible_person']==2909){
+                    $data['responsible_person_id']=25;
+                }else{
+                     $data['responsible_person_id']=25;
+                }
+foreach ($data as $key => $value) {
+
+    if (in_array($key, ['responsible_person_id','responsible_person','lead_name','source'])) {
+        continue;
+    }
+
+    if ($value !== null && $value !== '') {
+        $fieldData[] = [
+            'name' => $key,
+            'values' => [(string) $value]
+        ];
+    }
+}
+$fieldMappings = [
+    'field_data' => $fieldData
+];
+    $stage = Stage::where('stage_type', 'lead')
+        ->orderBy('order')
+        ->first();
+\Log::info($data['responsible_person_id']);
+    $lead = Lead::create([
+        'integration_id' => null,
+        'meta_lead_id' => null,
+        'lead_name' => $data['Page_Name'] ?? 'Wordpress Lead',
+        'first_name' => $data['No_Label_name'] ?? 'wordpress',
+        'last_name' => $data['last_name'] ?? null,
+        'email' => $data['No_Label_email'] ?? null,
+        'work_phone' => $data['No_Label_phone'] ?? null,
+        'stage_id' => $stage?->id,
+        'lead_source' =>$data['source']?? 'Allproperties.ae',
+        'ad_id' => null,
+        'added_by' => 1,
+        'responsible_person_id' =>(int) $data['responsible_person_id'] ?? 1,
+        'field_mappings_data' => json_encode($data),
+        'raw_meta_data' => json_encode($fieldMappings),
+    ]);
+
+    LeadHistoryHelper::log($lead->id, ['action' => 'created']);
+    broadcast(new LeadUpdated($lead, 'created'));
+
+    return response()->json([
+        'status' => 'success'
+    ]);
+}
 }

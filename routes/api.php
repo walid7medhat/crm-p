@@ -123,6 +123,7 @@ Route::get('/test-server', function() {
 Route::get('/webhook/facebook', [IntegrationController::class, 'verifyWebhook']);
 Route::post('/webhook/facebook', [IntegrationController::class, 'handleWebhook']);
 Route::post('/website-lead', [IntegrationController::class, 'store_website']);
+Route::post('/website-lead/wordpress', [IntegrationController::class, 'store_wordpress']);
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
