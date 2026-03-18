@@ -3684,7 +3684,11 @@ const createSlide2 = () => {
               </li>
               <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
                 <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Bedrooms</span>
-                <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${property.value?.number_of_bedrooms || '1'}</span>
+                <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${
+                property.value?.number_of_bedrooms === 0
+                  ? 'Studio'
+                  : `${property.value?.number_of_bedrooms || ''} Bedrooms`
+              }</span>
               </li>
               <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
                 <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Bathrooms</span>
