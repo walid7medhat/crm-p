@@ -529,94 +529,209 @@ class LeadController extends Controller
     /**
      * Change lead stage
      */
-    public function changeStage(Request $request, Lead $lead): JsonResponse
-    {
-        try {
-            $user = auth()->user();
-            
-            if (!$user->canViewLead($lead)) {
-                return ApiResponse::error('You are not authorized to change stage of this lead', 403);
-            }
+   public function changeStage(Request $request, Lead $lead): JsonResponse
+{
+    try {
+        $user = auth()->user();
+        
+        if (!$user->canViewLead($lead)) {
+            return ApiResponse::error('You are not authorized to change stage of this lead', 403);
+        }
 
-            $request->validate([
-                'stage_id' => 'required|exists:stages,id',
-                'reason'=>'nullable|string|max:255',
-            ]);
+        $request->validate([
+            'stage_id' => 'required|exists:stages,id',
+            'reason' => 'nullable|string|max:255',
+            'area_id' => 'nullable|exists:areas,id',
+            'property_type_id' => 'nullable|exists:property_types,id',
+            'budget' => 'nullable|numeric|min:0|max:999999999.99',
+            'lead_source' => 'nullable|string|max:100',
+            'purpose_buying' => 'nullable|string|max:100',
+            'bedrooms' => 'nullable|string|max:50|in:studio,1,2,3,4,5,6,7,8,9',
+        ]);
+
         $oldStage = $lead->stage;
+        $newStage = Stage::find($request->stage_id);
+        
+        // حفظ القيم القديمة للهيستوري
+        $old = $lead->getAttributes();
 
-            $newStage = Stage::find($request->stage_id);
-
-            if ($newStage->order == 3 && $lead->stage->order == 2) {
-                if ($lead->shouldRevertToStageOne()) {
-                    $lead->revertToStageOne();
-                    
-                    return ApiResponse::error(
-                        'Cannot move to stage 3. Lead has been reverted to stage 1 due to inactivity.',
-                        422
-                    );
-                }
-            }
-              \Log::info($newStage->order==2 && !is_null($lead->revert));
-            if($newStage->order==2 && !is_null($lead->revert)){
-            
-                $lead->update([
+        if ($newStage->order == 3 && $lead->stage->order == 2) {
+            if ($lead->shouldRevertToStageOne()) {
+                $lead->revertToStageOne();
                 
-                    'revert'=>null,
-                ]); 
-                      $responsiblePerson = User::find($lead->responsible_person_id);
-                              $changes = [
-                                    'old_person_id'=>$responsiblePerson?->id,
-                            'old_person' => $responsiblePerson?->name,
-                            'new_person' => $responsiblePerson?->name
-                        ];
-                        broadcast(new LeadUpdated($lead, 'assigned', null, $changes));
-                        //  ==================================hiatory====================
-                        // LeadHistoryHelper::log(
-                        //     $lead->id,
-                        //     [
-                        //         'action' => 'revert',
-                        //         'old_person_id'=>$responsiblePerson?->id,
-                        //         'old_person' => $responsiblePerson?->name,
-                        //         'new_person' => $responsiblePerson?->name
-                        //     ]
-                        // );
+                return ApiResponse::error(
+                    'Cannot move to stage 3. Lead has been reverted to stage 1 due to inactivity.',
+                    422
+                );
             }
-           
+        }
+        
+        \Log::info($newStage->order == 2 && !is_null($lead->revert));
+        
+        // متغيرات للتغييرات
+        $changes = [];
+        $fields = [];
+        
+        // التحقق من تغيير المسؤول
+        if (!empty($request->responsible_person_id) && $request->responsible_person_id != $lead->responsible_person_id) {
+            $oldPerson = User::find($lead->responsible_person_id);
+            $newPerson = User::find($request->responsible_person_id);
+            
+            $changes = [
+                'old_person_id' => $oldPerson?->id,
+                'old_person' => $oldPerson?->name,
+                'new_person' => $newPerson?->name,
+                'action' => 'assigned'
+            ];
+        }
+
+        // معالجة حالة revert
+        if($newStage->order == 2 && !is_null($lead->revert)){
             $lead->update([
-                'stage_id' => $request->stage_id,
-                'last_stage_change_at' => now(),
-                //  'revert'=>null,
-            ]);
-            if($request->reason){
-                LeadComment::create([
-                    'lead_id'=>$lead->id,
-                    'comment'=>$request->reason,
-                    'user_id'=>auth()->user()->id
-                    ]);
-            }
-         $changes = [
-            'old_stage' => $oldStage->name,
-            'new_stage' => $newStage->name
+                'revert' => null,
+            ]); 
+            
+            $responsiblePerson = User::find($lead->responsible_person_id);
+            $revertChanges = [
+                'old_person_id' => $responsiblePerson?->id,
+                'old_person' => $responsiblePerson?->name,
+                'new_person' => $responsiblePerson?->name,
+                'action' => 'revert'
+            ];
+            broadcast(new LeadUpdated($lead, 'assigned', null, $revertChanges));
+            
+            LeadHistoryHelper::log(
+                $lead->id,
+                [
+                    'action' => 'revert',
+                    'old_person_id' => $responsiblePerson?->id,
+                    'old_person' => $responsiblePerson?->name,
+                    'new_person' => $responsiblePerson?->name
+                ]
+            );
+        }
+        
+        // تجهيز بيانات التحديث
+        $updateData = [
+            'stage_id' => $request->stage_id,
+            'last_stage_change_at' => now(),
         ];
-        broadcast(new LeadUpdated($lead, 'stage_changed', null, $changes));
-        // =================history=================
+
+        // إضافة الحقول الإضافية إذا كانت موجودة في الطلب
+        $additionalFields = ['area_id', 'property_type_id', 'budget', 'lead_source', 'purpose_buying', 'bedrooms', 'responsible_person_id'];
+        
+        foreach ($additionalFields as $field) {
+            if ($request->has($field) && $request->$field !== null) {
+                $updateData[$field] = $request->$field;
+            }
+        }
+
+        // تحديث الـ Lead
+        $lead->update($updateData);
+
+        // إضافة التعليق إذا وجد
+        if($request->reason) {
+            LeadComment::create([
+                'lead_id' => $lead->id,
+                'comment' => $request->reason,
+                'user_id' => auth()->user()->id
+            ]);
+        }
+
+        // =================== تسجيل الهيستوري للـ fields ===================
+        $new = $lead->getAttributes();
+        $ignoreKeys = ['stage_id', 'last_stage_change_at', 'responsible_person_id', 'updated_at', 'created_at'];
+
+        // تجميع الحقول المتغيرة
+        foreach ($new as $key => $value) {
+            if (in_array($key, $ignoreKeys)) continue; 
+        
+            if (!array_key_exists($key, $old)) continue;
+        
+            if ($old[$key] != $value) {
+                $fields[$key] = [
+                    'old' => $old[$key],
+                    'new' => $value
+                ];
+            }
+            
+        }
+
+        // تسجيل تغيير المسؤول بشكل منفصل
+        if (isset($updateData['responsible_person_id']) && $updateData['responsible_person_id'] != $old['responsible_person_id']) {
+            $fields['responsible_person_id'] = [
+                'old' => $old['responsible_person_id'],
+                'new' => $updateData['responsible_person_id']
+            ];
+            
+            $oldPerson = User::find($old['responsible_person_id']);
+            $newPerson = User::find($updateData['responsible_person_id']);
+            
+            LeadHistoryHelper::log(
+                $lead->id,
+                [
+                    'action' => 'assigned',
+                    'old_person_id' => $oldPerson?->id,
+                    'old_person' => $oldPerson?->name,
+                    'new_person' => $newPerson?->name
+                ]
+            );
+        }
+
+        // تسجيل تغيير المرحلة
         LeadHistoryHelper::log(
             $lead->id,
             [
                 'action' => 'stage_changed',
                 'old_stage' => $oldStage->name,
-                'new_stage' => $newStage->name
+                'new_stage' => $newStage->name,
+                'old_stage_id' => $oldStage->id,
+                'new_stage_id' => $newStage->id
             ]
         );
 
-            return ApiResponse::success(
-                new LeadResource($lead->load('stage')),
-                'Lead stage updated successfully'
+        // تسجيل تغييرات الحقول الأخرى
+        if (!empty($fields)) {
+            LeadHistoryHelper::log(
+                $lead->id,
+                [
+                    'action' => 'updated',
+                    'fields' => $fields
+                ]
             );
-        } catch (\Exception $e) {
-            return ApiResponse::error('Failed to change lead stage: ' . $e->getMessage());
+            broadcast(new LeadUpdated($lead, 'updated'));
         }
+
+        // =================== Broadcast ===================
+        $broadcastChanges = [
+            'old_stage' => $oldStage->name,
+            'new_stage' => $newStage->name,
+            'old_stage_id' => $oldStage->id,
+            'new_stage_id' => $newStage->id
+        ];
+
+        // إضافة الحقول المتغيرة إلى الـ broadcast
+        if (!empty($fields)) {
+            $broadcastChanges['updated_fields'] = $fields;
+        }
+
+        // تحديد نوع الـ broadcast
+        if (!empty($changes) && isset($changes['action']) && $changes['action'] === 'assigned') {
+            broadcast(new LeadUpdated($lead, 'assigned', null, array_merge($changes, $broadcastChanges)));
+        } 
+           broadcast(new LeadUpdated($lead, 'stage_changed', null, $broadcastChanges));
+        return ApiResponse::success(
+            new LeadResource($lead->load(['stage', 'responsiblePerson', 'participants', 'observers.user'])),
+            'Lead stage and data updated successfully'
+        );
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return ApiResponse::error($e->validator->errors()->first(), 422);
+    } catch (\Exception $e) {
+        \Log::error('Error in changeStage: ' . $e->getMessage());
+        return ApiResponse::error('Failed to change lead stage: ' . $e->getMessage());
     }
+}
 
     /**
      * Check and revert leads that need to be reverted

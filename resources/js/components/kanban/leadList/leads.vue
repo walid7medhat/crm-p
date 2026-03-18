@@ -248,6 +248,8 @@
             :leadId="pendingStageChange?.leadId"
             :targetStageId="pendingStageChange?.targetStageId"
             :targetStageName="pendingStageChange?.targetStageName"
+              :missingFields="missingFieldsForLead" 
+              :leadData="pendingStageChange?.leadData"
             @submit="handleStageChangeWithReason"
             @closed="clearPendingStageChange"
         />
@@ -1247,6 +1249,7 @@ const handleStageChanged = (lead, changes) => {
 }
 
 const showLeadNotification = (event) => {
+    
     const Toast = Swal.mixin({
         toast: true,
         position: 'top-end',
@@ -1263,7 +1266,7 @@ const showLeadNotification = (event) => {
     const leadName = leadData?.lead_name || leadData?.lead_number || 'Unknown Lead'
     const leadNumber = leadData?.lead_number ? `#${leadData.lead_number}` : ''
     
-    const userName = event.user_name || 'Someone'
+    const userName = event.user_name || user.value?.name
 
     let title = ''
     let icon = 'info'
@@ -1519,6 +1522,7 @@ async function saveStageName(column) {
         editingStageTitle.value = column.title
     }
 }
+const missingFieldsForLead = ref([]) 
 
 async function onLeadDragChange(evt, column) {
     if (evt.added) {
@@ -1550,31 +1554,58 @@ async function onLeadDragChange(evt, column) {
             await moveLeadWithStageChange(lead, newStageId)
             return
         }
+const requiredFields = ['property_type_id', 'area_id', 'budget', 'lead_source', 'purpose_buying', 'bedrooms']
 
-        if (!isAdminOrSuperAdmin.value && lead.stage_id !== newStageId) {
-            pendingStageChange.value = {
+const leadMissingFields = requiredFields.filter(f => !lead[f])
+
+if (column.order >= 4  ) {
+          pendingStageChange.value = {
                 leadId: lead.id,
                 targetStageId: newStageId,
                 targetStageName: column.title,
                 originalStageId: lead.stage_id,
                 leadData: lead
             }
+    selectedLeadForConversion.value = lead.id
+    selectedLeadData.value = lead
+    missingFieldsForLead.value = leadMissingFields  
+    await nextTick()
+    if (stageChangeReasonModal.value) stageChangeReasonModal.value.show()
+    const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
+    if (sourceColumn) {
+        columns.value[targetColumnIndex].leads =
+            columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
 
-            await nextTick()
-            stageChangeReasonModal.value?.show()
-
-            // revert UI
-            const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
-            if (sourceColumn) {
-                columns.value[targetColumnIndex].leads =
-                    columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
-
-                if (!sourceColumn.leads.find(l => l.id === lead.id)) {
-                    sourceColumn.leads.push(lead)
-                }
-            }
-            return
+        if (!sourceColumn.leads.find(l => l.id === lead.id)) {
+            sourceColumn.leads.push(lead)
         }
+    }
+    return 
+}
+        // if (!isAdminOrSuperAdmin.value && lead.stage_id !== newStageId) {
+        //     pendingStageChange.value = {
+        //         leadId: lead.id,
+        //         targetStageId: newStageId,
+        //         targetStageName: column.title,
+        //         originalStageId: lead.stage_id,
+        //         leadData: lead
+        //     }
+
+        //     await nextTick()
+        //     stageChangeReasonModal.value?.show()
+
+        //     // revert UI
+        //     const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
+        //     if (sourceColumn) {
+        //         columns.value[targetColumnIndex].leads =
+        //             columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
+
+        //         if (!sourceColumn.leads.find(l => l.id === lead.id)) {
+        //             sourceColumn.leads.push(lead)
+        //         }
+        //     }
+        //     return
+        // }
 
         await moveLeadWithStageChange(lead, newStageId)
     }
@@ -1600,18 +1631,45 @@ function clearPendingStageChange() {
 }
 
 
-async function handleStageChangeWithReason({ leadId, targetStageId, reason }) {
+async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...additionalData }) {
     try {
         const lead = pendingStageChange.value?.leadData
         if (!lead) return
 
-        await api.post(`/leads/${leadId}/change-stage`, {
+        // تجهيز البيانات للإرسال
+        const payload = {
             stage_id: targetStageId,
-            reason: reason // Send reason to backend
-        })
+            reason: reason
+        }
+
+        // إضافة الحقول الإضافية إذا كانت موجودة
+        if (additionalData) {
+            // إضافة كل الحقول المرسلة من المودال
+            Object.keys(additionalData).forEach(key => {
+                if (additionalData[key] !== null && additionalData[key] !== undefined) {
+                    payload[key] = additionalData[key]
+                }
+            })
+        }
+
+        // إرسال الطلب
+        await api.post(`/leads/${leadId}/change-stage`, payload)
         
         // Success - real-time updates will handle UI
         $showNotification('Lead moved successfully', 'success')
+        
+        // تحديث الـ lead في الواجهة مباشرة (كحل إضافي)
+        if (lead) {
+            lead.stage_id = targetStageId
+            // تحديث الحقول الإضافية في الـ lead
+            Object.keys(payload).forEach(key => {
+                if (key !== 'stage_id' && key !== 'reason') {
+                    lead[key] = payload[key]
+                }
+            })
+        }
+        
+        clearPendingStageChange()
     } catch (error) {
         $showNotification(error.response?.data?.message || 'Failed to move lead', 'error')
         throw error // Re-throw to show error in modal

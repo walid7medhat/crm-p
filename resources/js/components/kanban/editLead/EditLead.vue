@@ -277,53 +277,53 @@
                 </a>
         </div>
         <div v-if="showCustomFields" class="info-group">
-            <label class="form-label-custom">Area</label>
-        
-            <v-select
-                v-model="form.area_id"
-                :options="areas"
-                :reduce="area => area.id"
-                :disabled="isLoadingAreas"
-                label="name"
-                placeholder="Select area"
-                class="custom-v-select"
-            >
-                <template #open-indicator="{ attributes }">
-                    <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
-                </template>
-        
-                <template #option="option">
-                    <div class="location-option">
-                        <i class="ri-map-pin-line location-option-icon"></i>
-                        <div class="location-option-text">
-                            <span class="location-option-name">
-                                {{ locationFirstLine(option) }}
-                            </span>
-                            <span class="location-option-subtitle">
-                                {{ locationSecondLine(option) }}
-                            </span>
-                        </div>
-                    </div>
-                </template>
-        
-                <template #selected-option="option">
-                    <div v-if="option" class="location-selected">
-                        <span class="location-selected-name">
-                            {{ locationFirstLine(option) }}
-                        </span>
-                        <span class="location-selected-subtitle">
-                            {{ locationSecondLine(option) }}
-                        </span>
-                    </div>
-                </template>
-        
-                <template #no-options>
-                    <div class="text-center p-2">
-                        {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
-                    </div>
-                </template>
-            </v-select>
-</div>
+                    <label class="form-label-custom">Location</label>
+                
+                    <v-select
+                        v-model="form.area_id"
+                        :options="areas"
+                        :reduce="area => area.id"
+                        :disabled="isLoadingAreas"
+                        label="name"
+                        placeholder="Select area"
+                        class="custom-v-select"
+                    >
+                        <template #open-indicator="{ attributes }">
+                            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                        </template>
+                
+                        <template #option="option">
+                            <div class="location-option">
+                                <i class="ri-map-pin-line location-option-icon"></i>
+                                <div class="location-option-text">
+                                    <span class="location-option-name">
+                                        {{ locationFirstLine(option) }}
+                                    </span>
+                                    <span class="location-option-subtitle">
+                                        {{ locationSecondLine(option) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+                
+                        <template #selected-option="option">
+                            <div v-if="option" class="location-selected">
+                                <span class="location-selected-name">
+                                    {{ locationFirstLine(option) }}
+                                </span>
+                                <span class="location-selected-subtitle">
+                                    {{ locationSecondLine(option) }}
+                                </span>
+                            </div>
+                        </template>
+                
+                        <template #no-options>
+                            <div class="text-center p-2">
+                                {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
+                            </div>
+                        </template>
+                    </v-select>
+        </div>
         <div v-if="showCustomFields" class="info-group">
                  <label class="form-label-custom">Property Type</label>
                 
@@ -513,7 +513,7 @@ const currencyOptions = [
 ]
 
 const bedroomOptions = [
-    { value: 'studio', text: 'Studio' },
+    { value: '0', text: 'Studio' },
     { value: 1, text: '1' },
     { value: 2, text: '2' },
     { value: 3, text: '3' },
