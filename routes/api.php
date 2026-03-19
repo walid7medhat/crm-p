@@ -314,7 +314,7 @@ Route::prefix('leads')->group(function(){
     // Route::post('integrations', [IntegrationController::class, 'store']);
     Route::patch('integrations/{integration}/toggle-active', [IntegrationController::class, 'toggleActive']);
     // Route::delete('integrations/{integration}', [IntegrationController::class, 'destroy']);
-    
+    Route::get('integrations/meta/form-fields/{form_id}',[IntegrationController::class,'getFormFields']);
     
 Route::post('/search-alerts',[ListingController::class, 'store_search_alert']);
 

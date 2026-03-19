@@ -108,7 +108,21 @@
                         class="mapping-row"
                     >
                         <div class="mapping-field">
-                            <span class="meta-field">{{ mapping.meta_field || 'Select field' }}</span>
+                           <v-select
+                                v-model="mapping.meta_field"
+                                :options="metaFields"
+                                label="name"                    
+                                :reduce="field => field"        
+                                placeholder="Select Meta Field"
+                                class="meta-field-select"
+                            >
+                                <template #option="{ name, label }">
+                                    <div class="meta-option">
+                                        <span class="meta-name">{{ name }}</span>
+                                        <span v-if="label && label !== name" class="meta-label">{{ label }}</span>
+                                    </div>
+                                </template>
+                            </v-select>
                             <iconify-icon icon="lucide:arrow-right" class="arrow-icon"></iconify-icon>
                             <v-select
                                 v-model="mapping.crm_field"
@@ -186,33 +200,36 @@ const localMappings = ref([])
 const crmFields = [
     { value: 'first_name', label: 'First Name' },
     { value: 'last_name', label: 'Last Name' },
-    { value: 'email', label: 'Email' },
-    { value: 'work_phone', label: 'Work Phone' },
-    { value: 'mobile', label: 'Mobile' },
+    { value: 'email', label: 'Primary Email' },
+    { value: 'secondary_email', label: 'Secondary Email' },
+    { value: 'work_phone', label: 'Primary Phone' },
+    { value: 'work_phone_2', label: 'Secondary Phone' },
+    { value: 'date_of_birth', label: 'Date Of Birth' },
+    { value: 'whatsapp_number', label: 'Whatsapp Number' },
     { value: 'lead_name', label: 'Lead Name' },
-    { value: 'company', label: 'Company' },
-    { value: 'position', label: 'Position' },
-    { value: 'address', label: 'Address' },
-    { value: 'city', label: 'City' },
-    { value: 'country', label: 'Country' },
-    { value: 'notes', label: 'Notes' }
+    { value: 'source_information', label: 'Notes' }
 ]
 
 // Meta fields (مؤقتة)
-const metaFields = ref([
-    'full_name',
-    'first_name',
-    'last_name',
-    'email',
-    'phone_number',
-    'mobile',
-    'address',
-    'city',
-    'country',
-    'company',
-    'position',
-    'website'
-])
+// const metaFields = ref([
+//     'full_name',
+//     'first_name',
+//     'last_name',
+//     'email',
+//     'phone_number',
+//     'mobile',
+//     'address',
+//     'city',
+//     'country',
+//     'company',
+//     'position',
+//     'website'
+// ])
+const metaFields = ref([])
+const loadMetaFields = async (formId) => {
+    const res = await api.get(`/integrations/meta/form-fields/${formId}`)
+    metaFields.value = res.data.fields || []
+}
 
 // Computed for page selection (readonly)
 const selectedPageObject = computed(() => 
@@ -222,17 +239,43 @@ const selectedPageObject = computed(() =>
 // Computed for form selection (readonly)
 const selectedFormObject = computed(() => 
     forms.value.find(f => f.id === selectedFormId.value) || null
+    
 )
 
 // Flag to prevent update loops
 const isInternalUpdate = ref(false)
 
-// Load pages on mount
-onMounted(() => {
-      if (props.fieldMappings.length > 0) {
-        localMappings.value = [...props.fieldMappings]
+
+onMounted(async () => {
+    await loadPages()
+    
+    // إذا كان في تعديل (formId موجود) حمل الأسئلة أولاً
+    if (props.formId) {
+        console.log('Edit mode: loading meta fields for form', props.formId)
+        await loadMetaFields(props.formId)
+        
+        // بعد تحميل metaFields، قم بتعيين localMappings
+        if (props.fieldMappings && props.fieldMappings.length > 0) {
+            localMappings.value = props.fieldMappings.map(m => {
+                // ابحث عن الـ object الكامل في metaFields
+                const metaFieldObj = metaFields.value.find(f => f.name === m.meta_field)
+                return {
+                    meta_field: m.meta_field || null, // استخدم null إذا لم يوجد
+                    crm_field: m.crm_field
+                }
+            })
+            console.log('Local mappings set:', localMappings.value) // للتصحيح
+        } else {
+            localMappings.value = [
+                { meta_field: metaFields.value.length > 0 ? metaFields.value[0] : null, crm_field: '' }
+            ]
+        }
+    } else {
+        // إذا كان في وضع الإضافة (formId غير موجود)
+        localMappings.value = [
+            { meta_field: null, crm_field: '' }
+        ]
     }
-    loadPages()
 })
 
 // Load Facebook Pages from server
@@ -273,7 +316,9 @@ const handlePageSelect = (page) => {
     forms.value = []
     nextCursor.value = null
     hasNextPage.value = false
-    localMappings.value = []
+    if (!props.formId) {
+        localMappings.value = []
+    }
     
     emit('update:pageId', page.id)
     emit('update:fieldMappings', [])
@@ -286,26 +331,30 @@ const handlePageSelect = (page) => {
 }
 
 // Handle form selection
-const handleFormSelect = (form) => {
+const handleFormSelect = async (form) => {
     if (!form) return
     
     isInternalUpdate.value = true
     
     selectedFormId.value = form.id
-    
     emit('update:formName', form.name)
     emit('update:formId', form.id)
     
-    if (props.fieldMappings.length > 0) {
-        localMappings.value = [...props.fieldMappings]
-    } else {
-        // Initialize default mappings
-        localMappings.value = [
-            { meta_field: 'full_name', crm_field: 'first_name' },
-            { meta_field: 'email', crm_field: 'email' },
-            { meta_field: 'phone_number', crm_field: 'work_phone' }
-        ]
-    }
+        // Load meta fields
+    await loadMetaFields(form.id)
+
+    // Assign localMappings ensuring meta_field exists in metaFields
+   localMappings.value = props.fieldMappings.length > 0
+    ? props.fieldMappings.map(m => {
+        const field = metaFields.value.find(f => f.name === m.meta_field) || metaFields.value[0];
+        return {
+            meta_field: field, // object كامل
+            crm_field: m.crm_field
+        }
+    })
+    : [
+        { meta_field: metaFields.value[0] || null, crm_field: '' }
+    ]
     
     emit('update:fieldMappings', localMappings.value)
     
@@ -375,7 +424,7 @@ const loadMoreForms = async () => {
 // Field mapping methods
 const addMapping = () => {
     localMappings.value.push({
-        meta_field: metaFields.value[0] || '',
+        meta_field: metaFields.value.length > 0 ? metaFields.value[0] : null,
         crm_field: ''
     })
     emit('update:fieldMappings', localMappings.value)
@@ -398,13 +447,21 @@ watch(() => props.pageId, (newVal) => {
     }
 })
 
-watch(() => props.formId, (newVal) => {
+watch(() => props.formId, async (newVal) => {
     if (isInternalUpdate.value) return
     if (newVal && forms.value.length > 0) {
         const form = forms.value.find(f => f.id === newVal)
         if (form) {
             selectedFormId.value = newVal
         }
+            await loadMetaFields(form.id)
+             await nextTick()
+        if (props.fieldMappings.length > 0) {
+                localMappings.value = props.fieldMappings.map(m => ({
+                    meta_field: m.meta_field,
+                    crm_field: m.crm_field
+                }))
+            }
     }
 })
 

@@ -176,6 +176,7 @@ class IntegrationController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // dd($request->field_mappings);
         $request->validate([
             'name' => 'required|string|max:255',
             'crm_entity' => 'required|string',
@@ -327,8 +328,8 @@ class IntegrationController extends Controller
             //     $form_id
             // )->firstOrFail();
         
-            $token = 'EAAW4JN9suLQBQ0NOcfe2ZBmpoGOSvCus7R5NQJoSqnpoiV3u2NGZBz1QoG6yDBXcfa3YNftZBSOsmKJ3ZCm6oEPGIFLcUKXdO67VhXCsXPuWDkVNbouRjtxGTdiiRu9chW3yT3Kf3b6HyPxuzpsEBEGaZC0LfyT2SQuoD4sZBL6JqaOdasXOIG04xlhB2hikZAaWuDh8E0ZD';
-        
+            // $token = 'EAAW4JN9suLQBQ0NOcfe2ZBmpoGOSvCus7R5NQJoSqnpoiV3u2NGZBz1QoG6yDBXcfa3YNftZBSOsmKJ3ZCm6oEPGIFLcUKXdO67VhXCsXPuWDkVNbouRjtxGTdiiRu9chW3yT3Kf3b6HyPxuzpsEBEGaZC0LfyT2SQuoD4sZBL6JqaOdasXOIG04xlhB2hikZAaWuDh8E0ZD';
+        $token=env('META_ACCESS_TOKEN');
             $url = self::META_GRAPH_BASE . '/' .
                 self::META_GRAPH_VERSION .
                 "/{$form_id}/leads";
@@ -480,86 +481,148 @@ class IntegrationController extends Controller
     /**
      * جلب تفاصيل الليد من Meta API
      */
-    private function fetchAndStoreLead($leadgenId, Integration $integration)
-    {
-        try {
-            // نجيب الـ token (ممكن يكون long-lived token)
-            $token = env('META_ACCESS_TOKEN');
-            
-            $url = self::META_GRAPH_BASE . '/' . self::META_GRAPH_VERSION . "/{$leadgenId}";
-            
-            $response = Http::get($url, [
-                'access_token' => $token,
-                'fields' => 'created_time,ad_id,field_data'
-            ]);
-
-            if (!$response->successful()) {
-                Log::error('Failed to fetch lead details', [
-                    'leadgen_id' => $leadgenId,
-                    'response' => $response->json()
-                ]);
-                return;
-            }
-
-            $leadData = $response->json();
-            $fields = $this->mapMetaFields($leadData['field_data'] ?? []);
-            
-            // جلب المرحلة المناسبة
-            $stage = Stage::where('stage_type', 'lead')
-                ->orderBy('order')
-                ->first();
-
-            // تطبيق field mappings لو موجودة
-            $mappedData = $this->applyFieldMappings($fields, $integration->field_mappings ?? []);
-
-            // التحقق من عدم وجود الليد مكرر
-            // $existingLead = Lead::where('meta_lead_id', $leadgenId)->first();
-            
-            // if ($existingLead) {
-            //     Log::info('Lead already exists', ['meta_lead_id' => $leadgenId]);
-            //     return;
-            // }
-
-            $lead = Lead::create([
-                'integration_id' => $integration->id,
-                'meta_lead_id' => $leadgenId,
-                'lead_name' => $integration->name ?? 'Facebook Lead',
-                'first_name' => $this->extractName($fields),
-                'last_name' => $fields['last_name'] ?? null,
-                'email' => $fields['email'] ?? null,
-                'work_phone' => $fields['phone_number'] ?? $fields['phone'] ?? $fields['work_phone'] ?? $fields['work_phone_number'] ?? null,
-                // 'mobile' => $fields['mobile'] ?? $fields['cell'] ?? null,
-                'stage_id' => $stage?->id,
-                'lead_source' => $integration->lead_source ?? 'Social Media-Facebook',
-                'project_id' => $integration->project_id,
-                'ad_id' => $leadData['ad_id'] ?? null,
-                'added_by' => $integration->user_id,
-                'responsible_person_id' => $integration->responsible_person_id??1,
-                // 'dont_make_responsible_if_not_clocked_in' => $integration->dont_make_responsible_if_not_clocked_in,
-                'field_mappings_data' => json_encode($mappedData),
-                'raw_meta_data' => json_encode($leadData),
-                // 'created_at' => isset($leadData['created_time']) 
-                //     ? Carbon::parse($leadData['created_time']) 
-                //     : null,
-            ]);
-            LeadHistoryHelper::log(
-                $lead->id,
-                ['action' => 'created']
-            );
-          broadcast(new LeadUpdated($lead, 'created'));
-            Log::info('✅ Lead stored successfully', [
-                'lead_id' => $lead->id,
-                // 'meta_lead_id' => $leadgenId,
-                'lead_name' => $lead->first_name
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('❌ Error fetching/storing lead: ' . $e->getMessage(), [
-                'leadgen_id' => $leadgenId,
-                'integration_id' => $integration->id
-            ]);
+   private function fetchAndStoreLead($leadgenId, Integration $integration)
+{
+    try {
+        // نجيب الـ token
+        $token = env('META_ACCESS_TOKEN');
+        
+        // التحقق من عدم وجود الليد مكرر
+        $existingLead = Lead::where('meta_lead_id', $leadgenId)->first();
+        
+        if ($existingLead) {
+            Log::info('Lead already exists', ['meta_lead_id' => $leadgenId]);
+            return;
         }
+        
+        $url = self::META_GRAPH_BASE . '/' . self::META_GRAPH_VERSION . "/{$leadgenId}";
+        
+        $response = Http::get($url, [
+            'access_token' => $token,
+            'fields' => 'created_time,ad_id,field_data'
+        ]);
+
+        if (!$response->successful()) {
+            Log::error('Failed to fetch lead details', [
+                'leadgen_id' => $leadgenId,
+                'response' => $response->json()
+            ]);
+            return;
+        }
+
+        $leadData = $response->json();
+        $fields = $this->mapMetaFields($leadData['field_data'] ?? []);
+        
+        // جلب المرحلة المناسبة
+        $stage = Stage::where('stage_type', 'lead')
+            ->orderBy('order')
+            ->first();
+
+        // ============= التعديل هنا =============
+        // تجهيز البيانات الأساسية
+        $leadDataArray = [
+                'lead_name' => $integration->name ?? 'Facebook Lead',
+            'integration_id' => $integration->id,
+            'meta_lead_id' => $leadgenId,
+            'stage_id' => $stage?->id,
+            'lead_source' => $integration->lead_source ?? 'Social Media - Facebook',
+            'project_id' => $integration->project_id,
+            'ad_id' => $leadData['ad_id'] ?? null,
+            'added_by' => $integration->user_id,
+            'responsible_person_id' => $integration->responsible_person_id ?? 1,
+            'raw_meta_data' => json_encode($leadData, JSON_UNESCAPED_UNICODE),
+            'created_at' => isset($leadData['created_time']) 
+                ? Carbon::parse($leadData['created_time']) 
+                : now(),
+        ];
+
+        // تجهيز field mappings
+        $fieldMappingsData = [];
+        $mappings = $integration->field_mappings ?? [];
+
+        // الحقول المعروفة في جدول leads
+        $knownColumns = [
+            'lead_name', 'first_name', 'last_name', 'email', 
+            'work_phone', 'whatsapp_number', 'secondary_email',
+            'work_phone_2', 'date_of_birth', 'source_information'
+        ];
+
+        foreach ($mappings as $mapping) {
+            $metaField = $mapping['meta_field'] ?? null;
+            $crmField = $mapping['crm_field'] ?? null;
+
+            if ($metaField && $crmField && isset($fields[$metaField])) {
+                $value = $fields[$metaField];
+                
+                // لو الحقل ده column معروف في جدول leads
+                if (in_array($crmField, $knownColumns)) {
+                    $leadDataArray[$crmField] = $value;
+                } else {
+                    // لو مش معروف، يحطه في field_mappings_data
+                    $fieldMappingsData[$crmField] = $value;
+                }
+            }
+        }
+
+        // تعبئة البيانات الأساسية لو مش موجودة في المابينج
+        if (!isset($leadDataArray['first_name']) || empty($leadDataArray['first_name'])) {
+            $leadDataArray['first_name'] = $this->extractName($fields);
+        }
+
+        if (!isset($leadDataArray['last_name']) && !empty($fields['last_name'] ?? $fields['surname'] ?? null)) {
+            $leadDataArray['last_name'] = $fields['last_name'] ?? $fields['surname'] ?? null;
+        }
+
+        if (!isset($leadDataArray['email']) && !empty($fields['email'] ?? null)) {
+            $leadDataArray['email'] = $fields['email'];
+        }
+
+        if (!isset($leadDataArray['work_phone'])) {
+            $leadDataArray['work_phone'] = $fields['phone_number'] ?? 
+                                           $fields['phone'] ?? 
+                                           $fields['work_phone'] ?? 
+                                           $fields['work_phone_number'] ?? 
+                                           $fields['mobile'] ?? 
+                                           $fields['cell'] ?? 
+                                           null;
+        }
+
+        // بناء lead_name
+        if (!isset($leadDataArray['lead_name']) || empty($leadDataArray['lead_name'])) {
+            $firstName = $leadDataArray['first_name'] ?? '';
+            $lastName = $leadDataArray['last_name'] ?? '';
+            $fullName = trim($firstName . ' ' . $lastName);
+            $leadDataArray['lead_name'] = !empty($fullName) ? $fullName : 'Facebook Lead';
+        }
+
+        // إضافة field_mappings_data
+        $leadDataArray['field_mappings_data'] = json_encode($fieldMappingsData, JSON_UNESCAPED_UNICODE);
+
+        // إنشاء الليد
+        $lead = Lead::create($leadDataArray);
+        // ======================================
+        
+        LeadHistoryHelper::log(
+            $lead->id,
+            ['action' => 'created', 'source' => 'facebook_webhook']
+        );
+        
+        broadcast(new LeadUpdated($lead, 'created'));
+        
+        Log::info('✅ Lead stored successfully', [
+            'lead_id' => $lead->id,
+            'meta_lead_id' => $leadgenId,
+            'lead_name' => $lead->lead_name
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('❌ Error fetching/storing lead: ' . $e->getMessage(), [
+            'leadgen_id' => $leadgenId,
+            'integration_id' => $integration->id,
+            'trace' => $e->getTraceAsString()
+        ]);
     }
+}
     
         private function mapMetaFields(array $fields): array
         {
@@ -583,21 +646,27 @@ class IntegrationController extends Controller
                 ?? $fields['first_name']
                 ?? $fields['full name'] ?? 'Facebook Lead';
         }
-  private function applyFieldMappings(array $fields, array $mappings): array
-    {
-        $result = [];
-        
-        foreach ($mappings as $mapping) {
-            $metaField = $mapping['meta_field'] ?? null;
-            $crmField = $mapping['crm_field'] ?? null;
-            
-            if ($metaField && $crmField && isset($fields[$metaField])) {
+private function applyFieldMappings(array $fields, array $mappings): array
+{
+    $result = [];
+
+    foreach ($mappings as $mapping) {
+        $metaField = $mapping['meta_field'] ?? null;
+        $crmField = $mapping['crm_field'] ?? null;
+
+        if ($metaField && $crmField && isset($fields[$metaField])) {
+            // Check if column exists in 'leads' table
+            if (\Schema::hasColumn('leads', $crmField)) {
                 $result[$crmField] = $fields[$metaField];
+            } else {
+                // Store in JSON field if column not exists
+                $result['field_mappings_data'][$crmField] = $fields[$metaField];
             }
         }
-        
-        return $result;
     }
+
+    return $result;
+}
 public function store_website(Request $request)
 {
     $data = $request->all();
@@ -702,6 +771,27 @@ $fieldMappings = [
 
     return response()->json([
         'status' => 'success'
+    ]);
+}
+public function getFormFields($formId)
+{
+    $token = env('META_ACCESS_TOKEN');
+
+    $url = "https://graph.facebook.com/v18.0/{$formId}";
+
+    $response = Http::get($url, [
+        'access_token' => $token,
+        'fields' => 'questions'
+    ]);
+
+    $questions = $response->json()['questions'] ?? [];
+
+    $fields = array_map(function ($q) {
+        return $q['key'];
+    }, $questions);
+
+    return response()->json([
+        'fields' => $fields
     ]);
 }
 }
