@@ -1745,4 +1745,9 @@ td {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
 }
+.card.basic-data-table tbody tr td span:last-child {
+    font-weight: 500 !important;
+    font-size: 15px !important;
+    color: #000 !important;
+}
 </style>

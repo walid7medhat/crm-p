@@ -1539,4 +1539,9 @@ function viewProperty(propertyId) {
 .btn-outline-success:active {
     transform: translateY(0);
 }
+.card.basic-data-table tbody tr td span:last-child {
+    font-weight: 500 !important;
+    font-size: 15px !important;
+    color: #000 !important;
+}
 </style>

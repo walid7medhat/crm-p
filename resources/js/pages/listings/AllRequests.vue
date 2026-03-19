@@ -1246,4 +1246,9 @@ function  hasActions(order) {
         font-size: 11px;
     }
 }
+.card.basic-data-table tbody tr td span:last-child {
+    font-weight: 500 !important;
+    font-size: 15px !important;
+    color: #000 !important;
+}
 </style>
