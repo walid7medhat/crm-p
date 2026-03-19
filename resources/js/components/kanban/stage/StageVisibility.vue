@@ -44,6 +44,53 @@
 
         <!-- Settings Content -->
         <div v-else class="settings-content">
+            <div class="settings-card stage-editor-card mb-3">
+                <div class="card-head">
+                    <div>
+                        <div class="card-title">Stage Setup</div>
+                        <div class="card-desc">Edit stage name and color for each stage directly from here.</div>
+                    </div>
+                </div>
+
+                <div class="stage-editor-list">
+                    <div v-for="stage in allStages" :key="stage.id" class="stage-editor-row">
+                        <div class="stage-preview-chip" :style="{ '--stage-color': stageDrafts[stage.id]?.color || stage.color || '#e2e8f0' }">
+                            <span class="stage-preview-order">{{ stage.order }}</span>
+                            <span class="stage-preview-name">{{ stageDrafts[stage.id]?.name || stage.name }}</span>
+                        </div>
+
+                        <div class="stage-editor-fields">
+                            <input
+                                v-model="stageDrafts[stage.id].name"
+                                type="text"
+                                class="form-control form-control-sm"
+                                placeholder="Stage name"
+                            />
+                            <input
+                                v-model="stageDrafts[stage.id].color"
+                                type="color"
+                                class="form-control form-control-color stage-color-input"
+                                title="Select stage color"
+                            />
+                            <button
+                                class="btn btn-outline-secondary btn-sm"
+                                :disabled="!isStageDirty(stage) || savingStageMap[stage.id]"
+                                @click="resetStageDraft(stage)"
+                            >
+                                Reset
+                            </button>
+                            <button
+                                class="btn btn-primary btn-sm"
+                                :disabled="!isStageDirty(stage) || savingStageMap[stage.id]"
+                                @click="saveStageMeta(stage)"
+                            >
+                                {{ savingStageMap[stage.id] ? 'Saving…' : 'Save' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="settings-card">
                 <div class="card-head">
                     <div>
@@ -222,6 +269,8 @@ const allStages = ref([])
 const roles = ref([])
 const settings = ref({})
 const changedRoles = ref(new Set())
+const stageDrafts = ref({})
+const savingStageMap = ref({})
 
 const hasChanges = computed(() => changedRoles.value.size > 0)
 
@@ -236,6 +285,14 @@ const fetchSettings = async () => {
         
         allStages.value = data.all_stages || []
         roles.value = data.roles.map(role => ({ name: role }))
+
+        stageDrafts.value = {}
+        allStages.value.forEach(stage => {
+            stageDrafts.value[stage.id] = {
+                name: stage.name || '',
+                color: stage.color || '#3b82f6',
+            }
+        })
         
         // تحويل الإعدادات إلى شكل سهل للاستخدام
         const settingsObj = {}
@@ -361,6 +418,63 @@ const saveAllSettings = async () => {
     }
 }
 
+const isStageDirty = (stage) => {
+    const draft = stageDrafts.value[stage.id]
+    if (!draft) return false
+    const originalName = (stage.name || '').trim()
+    const originalColor = (stage.color || '').toLowerCase()
+    const draftName = (draft.name || '').trim()
+    const draftColor = (draft.color || '').toLowerCase()
+    return draftName !== originalName || draftColor !== originalColor
+}
+
+const resetStageDraft = (stage) => {
+    stageDrafts.value[stage.id] = {
+        name: stage.name || '',
+        color: stage.color || '#3b82f6',
+    }
+}
+
+const saveStageMeta = async (stage) => {
+    const draft = stageDrafts.value[stage.id]
+    if (!draft || !draft.name?.trim()) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Stage name required',
+            text: 'Please enter a valid stage name before saving.',
+        })
+        return
+    }
+
+    savingStageMap.value = { ...savingStageMap.value, [stage.id]: true }
+
+    try {
+        await api.put(`/stages/${stage.id}`, {
+            name: draft.name.trim(),
+            color: draft.color || stage.color,
+        })
+
+        stage.name = draft.name.trim()
+        stage.color = draft.color || stage.color
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Updated',
+            text: `Stage "${stage.name}" updated successfully`,
+            timer: 1400,
+            showConfirmButton: false,
+        })
+    } catch (err) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Update failed',
+            text: err.response?.data?.message || 'Failed to update stage',
+        })
+    } finally {
+        savingStageMap.value = { ...savingStageMap.value, [stage.id]: false }
+    }
+}
+
 // ================= Lifecycle =================
 onMounted(() => {
     fetchSettings()
@@ -416,6 +530,81 @@ onMounted(() => {
     border-radius: 14px;
     box-shadow: 0 1px 6px rgba(15, 23, 42, 0.04);
     overflow: hidden;
+}
+
+.stage-editor-card {
+    margin-bottom: 12px;
+}
+
+.stage-editor-list {
+    padding: 12px 16px 16px;
+    display: grid;
+    gap: 10px;
+}
+
+.stage-editor-row {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.stage-preview-chip {
+    position: relative;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 6px 10px 6px 12px;
+    min-width: 170px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    overflow: hidden;
+}
+
+.stage-preview-chip::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--stage-color);
+}
+
+.stage-preview-order {
+    font-weight: 700;
+    font-size: 12px;
+    color: #0f172a;
+}
+
+.stage-preview-name {
+    font-size: 12px;
+    color: #334155;
+    font-weight: 500;
+    max-width: 130px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stage-editor-fields {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 250px;
+}
+
+.stage-color-input {
+    width: 44px;
+    min-width: 44px;
+    padding: 2px;
+    border-radius: 8px;
 }
 
 .card-head {

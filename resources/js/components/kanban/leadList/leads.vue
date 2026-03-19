@@ -25,14 +25,11 @@
             :ghost-class="'ghost'" :drag-class="'dragging'">
             <template #item="{ element: column, index }">
                 <div class="kanban-column radius-12 d-flex flex-column" :style="{ '--column-color': column.color }">
-                    <div class=" p-0 overflow-hidden shadow-none border-0 bg-transparent h-100 d-flex flex-column">
+                    <div class=" p-0 overflow-visible shadow-none border-0 bg-transparent h-100 d-flex flex-column">
                         <div class="card-body p-0 d-flex flex-column h-100">
                             <!-- Column Header -->
-                            <div class="column-header d-flex align-items-center justify-content-between p-8 cursor-move flex-shrink-0" :style="{ backgroundColor: column.color }">
+                            <div class="column-header d-flex align-items-center justify-content-between cursor-move flex-shrink-0" :style="{ backgroundColor: column.color }">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="stage-circle">
-                                        <div class="stage-dot" :style="{ backgroundColor: column.color }"></div>
-                                    </div>
                                     <div v-if="editingStageId !== column.status" class="header-title-wrapper" @click="startEditingStage(column)">
                                         <p class="header-title">{{ column.title }}</p>
                                          <small class="leads-count-badge" v-if="column.leads.length>0 && stagePagination[column.status] && stagePagination[column.status].total > column.leads.length ">
@@ -52,19 +49,6 @@
                                         ref="stageTitleInput"
                                         type="text"
                                     />
-                                </div>
-                                <div class="dropdown">
-                                    <button type="button" data-bs-toggle="dropdown" aria-expanded="false" class="bg-transparent border-0 p-0 d-flex align-items-center">
-                                        <iconify-icon icon="entypo:dots-three-vertical" class="text-xl text-white"></iconify-icon>
-                                    </button>
-                                     <ul class="dropdown-menu p-12 border bg-base shadow">
-                                        <li>
-                                            <a href="#" class="duplicate-button dropdown-item px-10 py-1 text-secondary-light bg-hover-neutral-200 text-hover-neutral-900 d-flex align-items-center gap-2" @click="editStage(column)">
-                                                <iconify-icon class="text-xs" icon="lucide:edit"></iconify-icon>
-                                                Edit Stage
-                                            </a>
-                                        </li>
-                                    </ul>
                                 </div>
                             </div>
 
@@ -1929,6 +1913,7 @@ const $showNotification = (message, type = 'info') => {
     border-left: 1px dashed rgba(255, 255, 255, 0.55);
     height: 100%;
     flex-shrink: 0;
+    overflow: visible;
 }
 
 .kanban-column:first-child {
@@ -1936,9 +1921,17 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .column-header {
+    min-height: 36px;
+    padding: 3px 8px 3px 10px;
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    position: relative;
+    overflow: visible;
+    z-index: 20;
+    clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 0 100%);
 }
+
 
 .leads-icon {
     width: 11px;
@@ -2053,24 +2046,6 @@ const $showNotification = (message, type = 'info') => {
     background: #c8ebfb;
 }
 
-.stage-circle {
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    border: 1px solid #E2E8F0;
-    background: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.stage-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-}
-
 .dragging {
     cursor: grabbing;
 }
@@ -2168,7 +2143,8 @@ const $showNotification = (message, type = 'info') => {
 .header-title {
     font-weight: 600;
     font-style: SemiBold;
-    font-size: 13px;
+    font-size: 11px;
+    line-height: 1.1;
     color: #01062C;
     margin: 0;
 }
@@ -2176,7 +2152,8 @@ const $showNotification = (message, type = 'info') => {
 .header-title-wrapper {
     cursor: pointer;
     flex: 1;
-    display:flex;
+    display: flex;
+    align-items: center;
 }
 
 .header-title-wrapper:hover .header-title {
@@ -2219,12 +2196,11 @@ const $showNotification = (message, type = 'info') => {
     width: 400px;
 }
 .leads-count-badge {
-    /*font-size: 11px !important;*/
-    color: rgba(255, 255, 255, 0.9);
-    /*background: rgba(0, 0, 0, 0.2);*/
-    /*padding: 2px 8px;*/
-    /*border-radius: 12px;*/
-    margin-left: 8px;
+    font-size: 11px;
+    line-height: 1.1;
+    color: rgba(1, 6, 44, 0.45);
+    margin-left: 3px;
     font-weight: 600 !important;
 }
+
 </style>

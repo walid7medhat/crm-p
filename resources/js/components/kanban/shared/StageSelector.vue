@@ -22,9 +22,6 @@
                             :class="{ 'active-separator': index <= selectedStageIndex }"
                         ></iconify-icon>
                     </div>
-                    <div class="stage-circle">
-                        <div class="stage-dot" :style="{ backgroundColor: stage.color }"></div>
-                    </div>
                     <span class="stage-text" :class="{ 'active-text': index <= selectedStageIndex }">
                         {{ stage.name }}
                     </span>
@@ -150,24 +147,6 @@ const selectStage = (index) => {
 
 .stage-pill:not(.active) {
     color: #94A3B8;
-}
-
-.stage-circle {
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    border: 1px solid #E2E8F0;
-    background: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.stage-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
 }
 
 .stage-text {
