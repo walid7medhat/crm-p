@@ -375,10 +375,10 @@ class IntegrationController extends Controller
         
                     'added_by' =>1,
                     'responsible_person_id'=>1,
-                    'created_at' =>
-        isset($metaLead['created_time'])
-            ? Carbon::parse($metaLead['created_time'])
-            : null,
+        //             'created_at' =>
+        // isset($metaLead['created_time'])
+        //     ? Carbon::parse($metaLead['created_time'])
+        //     : null,
                 ]);
             }
         
