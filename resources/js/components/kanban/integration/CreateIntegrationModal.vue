@@ -44,16 +44,16 @@
             <!-- Content Area -->
             <div class="modal-body-section info-card bg-white m-3 p-3 radius-12 shadow-4 border">
                 <!-- CRM Entities Tab Content -->
-                <CrmEntitiesTab
-                    v-if="activeTab === 'crm-entities'"
-                    v-model:selected-entity="formData.selectedEntity"
-                    v-model:expert-mode="formData.expertMode"
-                    v-model:duplicate-handling="formData.duplicateHandling"
-                />
+                <!--<CrmEntitiesTab-->
+                <!--    v-if="activeTab === 'crm-entities'"-->
+                <!--    v-model:selected-entity="formData.selectedEntity"-->
+                <!--    v-model:expert-mode="formData.expertMode"-->
+                <!--    v-model:duplicate-handling="formData.duplicateHandling"-->
+                <!--/>-->
 
                 <!-- Hidden Field Values Tab Content -->
                 <HiddenFieldValuesTab
-                    v-else-if="activeTab === 'hidden-fields'"
+                    v-if="activeTab === 'hidden-fields'"
                     v-model:project="formData.project"
                     v-model:lead-source="formData.leadSource"
                 />
@@ -145,12 +145,12 @@ const emit = defineEmits(['update:modelValue', 'saved', 'updated'])
 const { proxy } = getCurrentInstance()
 
 const show = ref(props.modelValue)
-const activeTab = ref('crm-entities')
+const activeTab = ref('hidden-fields')
 const loading = ref(false)
 
 // Tabs configuration
 const tabs = [
-    { id: 'crm-entities', name: 'CRM Entities' },
+    // { id: 'crm-entities', name: 'CRM Entities' },
     { id: 'hidden-fields', name: 'Hidden Field Values' },
     { id: 'facebook-leads', name: 'Facebook Lead Ads' },
     { id: 'other-settings', name: 'Other Settings' }
@@ -158,7 +158,7 @@ const tabs = [
 
 // Form data model
 const formData = ref({
-    selectedEntity: null,
+    selectedEntity: 'lead',
     expertMode: false,
     duplicateHandling: 'merge',
     project: null,
@@ -178,8 +178,8 @@ const formData = ref({
 // Check if tab is completed
 const isTabCompleted = (tabId) => {
     switch (tabId) {
-        case 'crm-entities':
-            return !!formData.value.selectedEntity
+        // case 'crm-entities':
+        //     return !!formData.value.selectedEntity
         case 'hidden-fields':
             // !!formData.value.project &&
             return  !!formData.value.leadSource
