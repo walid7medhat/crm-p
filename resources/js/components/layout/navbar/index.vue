@@ -3,7 +3,7 @@
     <div class="row align-items-center justify-content-between">
       <div class="col-auto">
         <div class="d-flex flex-wrap align-items-center gap-4">
-          <button type="button" class="sidebar-toggle back-button" @click="goBack" title="Go back" aria-label="Go back">
+          <button  v-if="showBackButton" type="button" class="sidebar-toggle back-button" @click="goBack" title="Go back" aria-label="Go back">
             <iconify-icon icon="lucide:arrow-left" class="icon text-2xl"></iconify-icon>
           </button>
         
@@ -581,6 +581,11 @@ function logout() {
   sessionStorage.removeItem('token');
   router.push('/sign-in');
 }
+const showBackButton = computed(() => {
+  const hiddenRoutes = ['/kanban', '/kanban_deal'];
+
+  return !hiddenRoutes.some(r => route.path.startsWith(r));
+});
 </script>
 
 <style scoped>

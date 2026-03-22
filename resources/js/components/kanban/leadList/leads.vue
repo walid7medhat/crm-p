@@ -1928,7 +1928,7 @@ const $showNotification = (message, type = 'info') => {
     border-bottom-right-radius: 12px;
     position: relative;
     overflow: visible;
-    z-index: 20;
+    z-index: 1;
     clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 0 100%);
 }
 

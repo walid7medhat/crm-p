@@ -8,7 +8,7 @@
     >
       <iconify-icon icon="iconoir:bell" class="text-primary-light text-xl"></iconify-icon>
       <span v-if="unreadCount > 0" class="notification-badge">
-        {{ unreadCount > 9 ? '9+' : unreadCount }}
+        {{ formatUnreadCount }}
       </span>
     </button>
 
@@ -23,7 +23,7 @@
           <h6 class="text-lg text-primary-light fw-semibold mb-0">Notifications</h6>
         </div>
         <span class="text-primary-600 fw-semibold text-lg w-40-px h-40-px rounded-circle bg-base d-flex justify-content-center align-items-center">
-          {{ unreadCount }}
+          {{ formatUnreadCount }}
         </span>
       </div>
 
@@ -131,6 +131,7 @@ export default {
     document.removeEventListener('click', this.handleClickOutside);
   },
   methods: {
+      
     toggleNotifications() {
       console.log('🔔 Toggle notifications, current state:', this.showDropdown);
       this.showDropdown = !this.showDropdown;
@@ -510,7 +511,16 @@ export default {
         return 'Unknown time';
       }
     }
+  },
+  computed: {
+  formatUnreadCount() {
+    if (this.unreadCount > 2000) return '2k+';
+    if (this.unreadCount > 999) return '1k+';
+    if (this.unreadCount > 99) return '99+';
+    if (this.unreadCount > 9) return '9+';
+    return this.unreadCount;
   }
+}
 }
 </script>
 

@@ -172,15 +172,26 @@
                             </a>
                         </li>
 
-                        <li v-for="page in totalPages" :key="page" class="page-item">
-                            <a href="javascript:void(0)"
+                        <li v-for="(page, index) in visiblePages" :key="index" class="page-item">
+    
+                            <!-- لو رقم -->
+                            <a v-if="page !== '...'"
+                                href="javascript:void(0)"
                                 class="page-link fw-medium radius-4 border-0 px-10 py-10 d-flex align-items-center justify-content-center h-32-px w-32-px"
                                 :class="{
                                     'bg-primary-600 text-white': currentPage === page,
                                     'bg-primary-50 text-secondary-light': currentPage !== page
-                                }" @click="goToPage(page)">
+                                }"
+                                @click="goToPage(page)">
                                 {{ page }}
                             </a>
+                        
+                            <!-- لو نقط -->
+                            <span v-else
+                                class="page-link border-0 px-10 py-10 d-flex align-items-center justify-content-center">
+                                ...
+                            </span>
+                        
                         </li>
 
                         <li class="page-item">
@@ -226,6 +237,38 @@ export default {
         };
     },
     computed: {
+          visiblePages() {
+            const pages = [];
+            const total = this.totalPages;
+            const current = this.currentPage;
+            const delta = 1; 
+        
+            const range = [];
+        
+            for (let i = current - delta; i <= current + delta; i++) {
+                if (i > 1 && i < total) {
+                    range.push(i);
+                }
+            }
+        
+            pages.push(1);
+        
+            if (range.length && range[0] > 2) {
+                pages.push('...');
+            }
+        
+            pages.push(...range);
+        
+            if (range.length && range[range.length - 1] < total - 1) {
+                pages.push('...');
+            }
+        
+            if (total > 1) {
+                pages.push(total);
+            }
+        
+            return pages;
+        },
         entriesPerPage() {
             return Number(this.selectedShow);
         },
@@ -296,7 +339,7 @@ export default {
                    this.$hasPermission('owners-edit') || 
                    this.$hasPermission('owners-delete');
         },
-
+      
         // API methods
         async fetchOwners() {
             try {
