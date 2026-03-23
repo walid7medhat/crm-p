@@ -10,19 +10,14 @@
                         backgroundColor: index <= selectedStageIndex ? stage.color : 'transparent',
                         borderColor: index <= selectedStageIndex ? stage.color : '#E2E8F0',
                         zIndex: stages.length - index,
-                        marginLeft: index > 0 ? '-26px' : '0',
                     }"
                     @click="selectStage(index)"
                 >
-                    <!-- Separator at the end -->
-                    <div v-if="index > 0" class="stage-separator">
-                        <iconify-icon 
-                            icon="lucide:chevrons-right" 
-                            class="separator-icon" 
-                            :class="{ 'active-separator': index <= selectedStageIndex }"
-                        ></iconify-icon>
-                    </div>
-                    <span class="stage-text" :class="{ 'active-text': index <= selectedStageIndex }">
+                    <span
+                        class="stage-text"
+                        :class="{ 'active-text': index <= selectedStageIndex }"
+                        :title="stage.name"
+                    >
                         {{ stage.name }}
                     </span>
 
@@ -121,6 +116,7 @@ const selectStage = (index) => {
 .stage-container {
     display: flex;
     align-items: center;
+    gap: 4px;
     padding: 4px;
     border: 1px solid #E5E7EB; /* Blue outline as seen in image */
     border-radius: 50px;
@@ -132,17 +128,21 @@ const selectStage = (index) => {
 .stage-pill {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 15px;
+    gap: 0;
+    min-width: 140px;
+    max-width: 170px;
+    padding: 4px 11px;
     border-radius: 30px;
     cursor: pointer;
     transition: all 0.2s ease;
-    white-space: nowrap;
     position: relative;
+    overflow: hidden;
+    border: 1px solid transparent;
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.55);
 }
 
 .stage-pill:not(:first-child) {
-    padding-left: 25px;
+    padding-left: 11px;
 }
 
 .stage-pill:not(.active) {
@@ -154,31 +154,15 @@ const selectStage = (index) => {
     font-weight: 400;
     font-size: 13px;
     color: #979797;
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .stage-pill.active .stage-text {
     color: #01062C;
     font-weight: 400;
-}
-
-.stage-separator {
-    display: flex;
-    align-items: center;
-    color: #01062C;
-    flex-shrink: 0;
-    /* margin-left: 8px; */
-    /* margin-right: -12px; */
-    z-index: 2;
-}
-
-.active-separator {
-    color: #FFFF !important;
-    font-weight: 400 !important;
-}
-
-.separator-icon {
-    font-size: 20px;
-    font-weight: 400 !important;
-    color: #D9D9D9;
 }
 </style>

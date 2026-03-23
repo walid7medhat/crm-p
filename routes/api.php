@@ -38,6 +38,10 @@ use App\Http\Controllers\Api\Deal\DealActivityController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\KanbanSettingsController;
+use App\Http\Controllers\Api\LeadScoringSettingController;
+use App\Http\Controllers\Api\InvestmentController;
+use App\Http\Controllers\Api\CityInvestmentSettingsController;
+use App\Http\Controllers\Api\AbuDhabiBenchmarkController;
 Route::get('/test-email', function () {
     try {
         // Test basic email
@@ -143,6 +147,26 @@ Route::prefix('settings')->middleware(['jwt.auth'])->group(function () {
     Route::post('/kanban/card-fields', [KanbanSettingsController::class, 'updateCardFields']);
     Route::post('/kanban/revert-hours', [KanbanSettingsController::class, 'updateRevertHours']);
 });
+Route::middleware(['jwt.auth'])->group(function () {
+    Route::get('/scoring-settings', [LeadScoringSettingController::class, 'show']);
+    Route::post('/scoring-settings', [LeadScoringSettingController::class, 'store']);
+    Route::post('/scoring/test', [LeadScoringSettingController::class, 'test']);
+    Route::get('/city-settings', [CityInvestmentSettingsController::class, 'index']);
+    Route::get('/city-settings/{city}', [CityInvestmentSettingsController::class, 'show']);
+    Route::post('/city-settings/update', [CityInvestmentSettingsController::class, 'update']);
+    Route::get('/abu-dhabi/benchmarks', [AbuDhabiBenchmarkController::class, 'index']);
+
+    Route::prefix('investments')->group(function () {
+        Route::post('/calculate', [InvestmentController::class, 'calculate']);
+        Route::get('/', [InvestmentController::class, 'index']);
+        Route::post('/', [InvestmentController::class, 'store']);
+        Route::post('/compare', [InvestmentController::class, 'compare']);
+        Route::get('/{investment}', [InvestmentController::class, 'show']);
+        Route::get('/{investment}/scenarios', [InvestmentController::class, 'scenarios']);
+        Route::post('/{investment}/scenarios', [InvestmentController::class, 'storeScenarioVersion']);
+        Route::get('/{investment}/pdf', [InvestmentController::class, 'pdf']);
+    });
+});
 Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
     Route::get('/', [StageController::class, 'index']);
     Route::post('/', [StageController::class, 'store']);
@@ -168,6 +192,8 @@ Route::middleware('jwt.auth')->group(function () {
     Route::prefix('deals')->group(function () {
         Route::get('/', [DealController::class, 'index']);
         Route::get('/grouped-by-stage', [DealController::class, 'getDealsGroupedByStage']);
+        Route::get('/{id}/history', [DealController::class, 'history']);
+        Route::get('/{id}/history/view', [DealController::class, 'view_history']);
         Route::get('/{deal}', [DealController::class, 'show']);
         Route::put('/{deal}', [DealController::class, 'update']);
         Route::post('/store/new', [LeadConversionController::class, 'store']);

@@ -15092,13 +15092,20 @@ td.fc-header-center {
 
 /* === trail card end === */
 /* === navbar css start === */
+/* Top bar: below sidebar and below popups/modals */
 .navbar-header {
-  height: 4.5rem;
-  background-color: var(--white);
-  position: sticky;
+  height: var(--app-topbar-height, 3.25rem);
+  min-height: var(--app-topbar-height, 3.25rem);
+  position: absolute;
   top: 0;
-  padding: 1rem 1.5rem;
-  z-index: 2;
+  left: 0;
+  right: 0;
+  padding: 0.25rem 0.75rem;
+  box-sizing: border-box;
+  z-index: 1000;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
 }
 
 .sidebar-toggle,
@@ -15213,7 +15220,8 @@ td.fc-header-center {
   width: 15.625rem;
   height: 100vh;
   background-color: var(--white);
-  z-index: 3;
+  /* Layer order: popup > sidebar > header */
+  z-index: 1200;
 }
 
 @media (min-width: 1200px) {
@@ -15264,6 +15272,8 @@ td.fc-header-center {
 
 .sidebar.active:hover {
   width: auto;
+  /* Keep hovered sidebar above header and page overlays */
+  z-index: 1300;
 }
 
 .sidebar.active .sidebar-menu li a i {
@@ -15368,6 +15378,8 @@ td.fc-header-center {
   padding: 0.75rem 1rem;
   overflow-y: auto;
   border-inline-end: 1px solid var(--neutral-200);
+  position: relative;
+  z-index: 1201;
 }
 
 .sidebar-menu-area:hover::-webkit-scrollbar-thumb {
@@ -15503,6 +15515,8 @@ td.fc-header-center {
   display: none;
   padding-inline-start: 1.5rem;
   transition: none;
+  position: relative;
+  z-index: 1202;
 }
 
 @media (min-width: 1650px) {
@@ -15535,13 +15549,36 @@ td.fc-header-center {
 /* === breadcrumb css start === */
 /* === breadcrumb css end === */
 /* === dashboard body css start === */
+/* main: column flex; navbar is position:absolute — scrollable content uses .dashboard-main-router */
 .dashboard-main {
   margin-inline-start: 0;
   display: flex;
-  flex-wrap: wrap;
-  flex-flow: column;
+  flex-direction: column;
+  flex-wrap: nowrap;
   min-height: 100vh;
   transition: all 0.3s;
+  position: relative;
+  box-sizing: border-box;
+  padding-top: 0;
+}
+
+/* Physical flex spacer — same total height as .navbar-header (padding cannot collapse) */
+.app-navbar-spacer {
+  flex: 0 0 auto;
+  width: 100%;
+  height: calc(var(--app-topbar-height, 3.25rem) + env(safe-area-inset-top, 0px));
+  min-height: calc(var(--app-topbar-height, 3.25rem) + env(safe-area-inset-top, 0px));
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* Page content column (spacer already cleared the nav bar) */
+.dashboard-main-router {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 0;
 }
 
 @media (min-width: 1200px) {
@@ -15644,7 +15681,13 @@ body.swal2-toast-shown  {
    - Full-page gradient background fixed behind all content
    - Sidebar and navbar use glassmorphism (semi-transparent + blur)
    - Main dashboard body is transparent so the background is continuous
+   - Stacking: navbar 1000 < sidebar 1100+ < notification portal 10050 < modals 100600+
    ========================================================================== */
+:root {
+  /* Must equal .navbar-header + .app-navbar-spacer height (#app also sets this) */
+  --app-topbar-height: 3.25rem;
+}
+
 body {
   /* Direct CRM background image */
   background-image: url("/images/crm-bg-ice.png");
@@ -15679,6 +15722,8 @@ body {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  z-index: 1080;
+  pointer-events: auto;
 }
 
 .navbar-header::before {
@@ -15699,4 +15744,58 @@ body {
 /* Main dashboard surface is transparent; inner cards/sections handle their own backgrounds */
 .dashboard-main-body {
   background: transparent;
+  /* Top bar gap is on .dashboard-main-router; keep light inner rhythm only */
+  padding-top: 0.5rem;
+  scroll-margin-top: calc(var(--app-topbar-height, 3.25rem) + env(safe-area-inset-top, 0px));
+}
+
+html {
+  scroll-padding-top: calc(var(--app-topbar-height, 3.25rem) + env(safe-area-inset-top, 0px));
+}
+
+.page-investment-analysis {
+  padding-top: 0.5rem;
+}
+
+/* Teleported notification panel: above kanban (~1050), below Bootstrap modals.
+   Do not add class `to-top` on this panel — global `.dropdown-menu.to-top` uses
+   `top: calc(100% - 28px) !important` which breaks `position:fixed` (100% = viewport). */
+.notification-dropdown-portal {
+  z-index: 10050 !important;
+}
+
+/*
+ * Modals above layout chrome + notification portal
+ */
+body .modal-backdrop,
+body .modal-backdrop.show {
+  z-index: 100600 !important;
+}
+body .modal,
+body .modal.fade,
+body .modal.show {
+  z-index: 100700 !important;
+}
+body .modal-dialog {
+  z-index: inherit;
+  position: relative;
+}
+
+/*
+ * Force all modal/overlay variants above any app chrome (header/sidebar/chat/etc).
+ * Keep content above backdrop.
+ */
+body .modal-backdrop,
+body .modal-backdrop.show {
+  z-index: 2147483000 !important;
+}
+body .modal,
+body .modal.fade,
+body .modal.show {
+  z-index: 2147483100 !important;
+}
+body .stage-modal-overlay,
+body .modal-overlay,
+body .confirmation-modal-overlay {
+  z-index: 2147483100 !important;
 }

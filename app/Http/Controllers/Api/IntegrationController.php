@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use App\Models\Stage;
 use App\Models\Lead;
 use Carbon\Carbon;
@@ -32,10 +33,17 @@ class IntegrationController extends Controller
             if (!$user) {
                 return ApiResponse::error('Unauthorized', 401);
             }
-            $integrations = Integration::where('user_id', $user->id)
+            $hasLeadIntegrationColumn = Schema::hasColumn('leads', 'integration_id');
+
+            $query = Integration::where('user_id', $user->id)
                 ->with(['project', 'responsiblePerson'])
-                ->orderBy('created_at', 'desc')
-                ->get()
+                ->orderBy('created_at', 'desc');
+
+            if ($hasLeadIntegrationColumn) {
+                $query->withCount('leads');
+            }
+
+            $integrations = $query->get()
                 ->map(fn (Integration $i) => [
                     'id' => $i->id,
                     'name' => $i->name,
@@ -50,7 +58,7 @@ class IntegrationController extends Controller
                     'responsible_person' => $i->responsiblePerson ? ['id' => $i->responsiblePerson->id, 'name' => $i->responsiblePerson->name] : null,
                     'status' => $i->status,
                     'created_at' => $i->created_at?->toIso8601String(),
-                    'leads_count'=>$i->leads->count(),
+                    'leads_count' => $hasLeadIntegrationColumn ? (int) ($i->leads_count ?? 0) : 0,
                     'track_enabled' => $i->track_enabled,
                     'track_keyword' => $i->track_keyword,
                 ]);

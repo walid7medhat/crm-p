@@ -265,7 +265,31 @@ public function scopeFilter($query, $request)
 
                 $query->where('deal_number','like',"%$search%")
                     ->orWhere('deal_name','like',"%$search%")
+                    ->orWhere('source','like',"%$search%")
                     ->orWhere('unit_no','like',"%$search%")
+                    ->orWhere('property_reference','like',"%$search%")
+                    ->orWhere('property_link','like',"%$search%")
+                    ->orWhere('currency','like',"%$search%")
+                    ->orWhere('lost_reason','like',"%$search%")
+                    ->orWhereHas('responsiblePerson', function($user) use ($search) {
+                        $user->where('name', 'like', "%$search%")
+                             ->orWhere('email', 'like', "%$search%");
+                    })
+                    ->orWhereHas('project', function($project) use ($search) {
+                        $project->where('title', 'like', "%$search%");
+                    })
+                    ->orWhereHas('area', function($area) use ($search) {
+                        $area->where('name', 'like', "%$search%");
+                    })
+                    ->orWhereHas('subcommunity', function($area) use ($search) {
+                        $area->where('name', 'like', "%$search%");
+                    })
+                    ->orWhereHas('parties', function($party) use ($search) {
+                        $party->where('first_name','like',"%$search%")
+                              ->orWhere('last_name','like',"%$search%")
+                              ->orWhere('email','like',"%$search%")
+                              ->orWhere('phone','like',"%$search%");
+                    })
                     ->orWhereHas('lead',function($lead) use ($search){
 
                         $lead->where('lead_name','like',"%$search%")

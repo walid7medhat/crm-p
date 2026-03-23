@@ -46,6 +46,13 @@
 
           <!-- Form Sections -->
           <div v-else class="complete-fields-form">
+            <div v-if="missingFieldLabels.length > 0" class="alert alert-info py-2 mb-3">
+              <div class="small fw-semibold mb-1">Missing required data:</div>
+              <div class="small">
+                {{ missingFieldLabels.join(' • ') }}
+              </div>
+            </div>
+
             <!-- Source and Deal Name Section -->
             <section v-if="hasSourceAndDealNameFields()" class="form-section">
               <h6 class="section-title mb-3">Source and Deal Name</h6>
@@ -628,9 +635,13 @@
 
         <!-- Footer -->
         <div class="modal-footer-custom p-3">
+          <div v-if="unresolvedMissingKeys.length > 0" class="small text-danger mb-2">
+            <iconify-icon icon="lucide:alert-circle" class="me-1"></iconify-icon>
+            {{ unresolvedMissingKeys.length }} required field(s) still missing.
+          </div>
           <div class="d-flex align-items-center justify-content-end gap-3">
             <button class="btn-clear" @click="closeModal" :disabled="submitting">Cancel</button>
-            <button class="btn-next-step" @click="submitForm" :disabled="submitting">
+            <button class="btn-next-step" @click="submitForm" :disabled="!canSubmit">
               <span v-if="submitting">
                 <b-spinner small></b-spinner> Saving...
               </span>
@@ -664,6 +675,7 @@ const props = defineProps({
   missingFields: { type: Array, default: () => [] },
   missingFieldsGrouped: { type: Object, default: () => ({ sections: [] }) },
   missingFieldsGroupedByStage: { type: Object, default: () => ({ stages: [] }) },
+  groupedMissing: { type: Object, default: () => ({ sections: [], by_stage: [] }) },
   deal: { type: Object, default: null }
 })
 
@@ -673,6 +685,7 @@ const emit = defineEmits(['save', 'closed', 'open-deal'])
 const formData = ref({})
 const submitting = ref(false)
 const loading = ref(false)
+let submitResetTimer = null
 
 // Data from API
 const users = ref([])
@@ -722,6 +735,55 @@ const documentTypesByParty = computed(() => {
   return result
 })
 
+const groupedMissingSections = computed(() => {
+  if (Array.isArray(props.groupedMissing?.sections) && props.groupedMissing.sections.length) {
+    return props.groupedMissing.sections
+  }
+
+  if (Array.isArray(props.missingFieldsGrouped?.sections) && props.missingFieldsGrouped.sections.length) {
+    return props.missingFieldsGrouped.sections
+  }
+
+  return []
+})
+
+const missingFieldLabels = computed(() => {
+  const labels = []
+  groupedMissingSections.value.forEach((section) => {
+    ;(section.fields || []).forEach((field) => {
+      labels.push(field.label || field.key)
+    })
+  })
+  return labels
+})
+
+const unresolvedMissingKeys = computed(() => {
+  const unresolved = []
+  const missingKeys = props.missingFields || []
+
+  missingKeys.forEach((key) => {
+    if (!key) return
+
+    if (key.includes('_document_')) {
+      const [partyType, docType] = key.split('_document_')
+      const docs = formData.value?.[`${partyType}_documents`] || []
+      const hasDoc = Array.isArray(docs) && docs.some((doc) => doc?.file && doc?.document_type === docType)
+      if (!hasDoc) unresolved.push(key)
+      return
+    }
+
+    const value = formData.value?.[key]
+    const isEmpty = value === null || value === undefined || value === ''
+    if (isEmpty) unresolved.push(key)
+  })
+
+  return unresolved
+})
+
+const canSubmit = computed(() => {
+  return !loading.value && !submitting.value && unresolvedMissingKeys.value.length === 0
+})
+
 // Load initial data
 onMounted(async () => {
   await Promise.all([
@@ -743,6 +805,11 @@ watch(() => props.show, async (val) => {
     console.log('Missing fields:', props.missingFields)
   } else if (!val) {
     isInitialized.value = false
+    submitting.value = false
+    if (submitResetTimer) {
+      clearTimeout(submitResetTimer)
+      submitResetTimer = null
+    }
   }
 })
 
@@ -937,6 +1004,9 @@ function getDealTypeName(type) {
 // Submit form
 
 function submitForm() {
+  if (!canSubmit.value) return
+  submitting.value = true
+
   const payload = {}
   const documents = []
   
@@ -1000,12 +1070,22 @@ function submitForm() {
   })))
   
   emit('save', { payload, documents, stage_id: props.targetStageId })
+
+  // Safety fallback in case parent keeps modal open after failed API call.
+  submitResetTimer = setTimeout(() => {
+    submitting.value = false
+    submitResetTimer = null
+  }, 12000)
 }
 
 // Close modal
 function closeModal() {
   formData.value = {}
   submitting.value = false
+  if (submitResetTimer) {
+    clearTimeout(submitResetTimer)
+    submitResetTimer = null
+  }
   emit('closed')
 }
 

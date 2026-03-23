@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,18 +12,45 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasColumn('leads', 'integration_id')) {
+        if (!Schema::hasColumn('leads', 'integration_id') && !Schema::hasColumn('leads', 'meta_lead_id')) {
             return;
         }
-        Schema::table('leads', function (Blueprint $table) {
-            $table->dropForeign(['integration_id']);
-        });
-        Schema::table('leads', function (Blueprint $table) {
-            $table->dropIndex(['integration_id', 'meta_lead_id']);
-        });
-        Schema::table('leads', function (Blueprint $table) {
-            $table->dropColumn(['integration_id', 'meta_lead_id']);
-        });
+
+        // Drop FK only if it exists in this environment.
+        if (Schema::hasColumn('leads', 'integration_id')) {
+            try {
+                Schema::table('leads', function (Blueprint $table) {
+                    $table->dropForeign(['integration_id']);
+                });
+            } catch (\Throwable $e) {
+                // Ignore when FK name differs or is already missing.
+            }
+        }
+
+        // Drop composite index only when present.
+        $indexExists = collect(DB::select("SHOW INDEX FROM `leads`"))
+            ->pluck('Key_name')
+            ->contains('leads_integration_id_meta_lead_id_index');
+
+        if ($indexExists) {
+            Schema::table('leads', function (Blueprint $table) {
+                $table->dropIndex('leads_integration_id_meta_lead_id_index');
+            });
+        }
+
+        $columnsToDrop = [];
+        if (Schema::hasColumn('leads', 'integration_id')) {
+            $columnsToDrop[] = 'integration_id';
+        }
+        if (Schema::hasColumn('leads', 'meta_lead_id')) {
+            $columnsToDrop[] = 'meta_lead_id';
+        }
+
+        if (!empty($columnsToDrop)) {
+            Schema::table('leads', function (Blueprint $table) use ($columnsToDrop) {
+                $table->dropColumn($columnsToDrop);
+            });
+        }
     }
 
     /**

@@ -142,6 +142,10 @@
                                 <iconify-icon icon="lucide:eye" class="dropdown-icon" style="font-size: 18px; color: #666;"></iconify-icon>
                                 <span class="dropdown-text">Stage Visibility Settings</span>
                             </b-dropdown-item>
+                            <b-dropdown-item v-if="isSuperAdmin && activeTab=='leads'" @click="goToLeadScoringSettings" class="dropdown-item-custom">
+                                <iconify-icon icon="lucide:brain-circuit" class="dropdown-icon" style="font-size: 18px; color: #666;"></iconify-icon>
+                                <span class="dropdown-text">Lead Scoring Engine</span>
+                            </b-dropdown-item>
                     
                         </b-dropdown>
                         
@@ -216,6 +220,9 @@ const goToStageVisibility = () => {
 }
 const goToKanbanSettings = () => {
     router.push('/settings/kanban')
+}
+const goToLeadScoringSettings = () => {
+    router.push('/settings/lead-scoring')
 }
 const currentStageType = computed(() => {
     return activeTab.value === 'deals' ? 'deal' : 'lead'

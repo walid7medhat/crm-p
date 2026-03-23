@@ -1,60 +1,56 @@
 <template>
   <div class="navbar-header">
-    <div class="row align-items-center justify-content-between">
-      <div class="col-auto">
-        <div class="d-flex flex-wrap align-items-center gap-4">
-          <button  v-if="showBackButton" type="button" class="sidebar-toggle back-button" @click="goBack" title="Go back" aria-label="Go back">
-            <iconify-icon icon="lucide:arrow-left" class="icon text-2xl"></iconify-icon>
+    <div class="navbar-header-toolbar">
+      <div class="navbar-header-left">
+        <div class="d-flex flex-wrap align-items-center gap-2 gap-md-3">
+          <button type="button" class="sidebar-toggle back-button" @click="goBack" title="Go back" aria-label="Go back">
+            <iconify-icon icon="lucide:arrow-left" class="icon navbar-header-back-icon"></iconify-icon>
           </button>
-        
           <button type="button" @click="toggleSidebarMobile" class="sidebar-mobile-toggle">
-            <iconify-icon icon="heroicons:bars-3-solid" class="icon"></iconify-icon>
+            <iconify-icon icon="heroicons:bars-3-solid" class="icon navbar-header-menu-icon"></iconify-icon>
           </button>
         </div>
       </div>
-      <div class="col-auto">
-        <div class="d-flex flex-wrap align-items-center gap-3">
-          <router-link 
-            v-if="showCreatePropertyButton"
-            to="/property-form" 
-            class="btn btn-primary btn-sm create-property-btn d-flex align-items-center gap-2"
+
+      <div class="navbar-header-right">
+        <router-link 
+          v-if="showCreatePropertyButton"
+          to="/property-form" 
+          class="btn btn-primary btn-sm create-property-btn navbar-create-listing d-flex align-items-center gap-1"
+        >
+          <i class="ri-add-line"></i>
+          <span class="d-none d-sm-inline">Create Listing</span>
+        </router-link>
+        <NotificationBell 
+          ref="notificationBell"
+          :sound-enabled="soundEnabled"
+          :browser-notifications-enabled="browserNotificationsEnabled"
+          @toggle="handleNotificationToggle"
+        />
+        <div class="profile-trigger-wrap" ref="profileDropdown">
+          <button 
+            class="profile-avatar-btn rounded-circle" 
+            type="button"
+            @click.stop="openProfilePanel"
           >
-            <i class="ri-add-line"></i>
-            Create Listing
-          </router-link>
-
-          <!-- Notification dropdown -->
-          <NotificationBell 
-            ref="notificationBell"
-            :sound-enabled="soundEnabled"
-            :browser-notifications-enabled="browserNotificationsEnabled"
-            @toggle="handleNotificationToggle"
-          />
-
-          <!-- Profile: avatar opens BIG Profile Details modal (slide-in from right) -->
-          <div class="profile-trigger-wrap" ref="profileDropdown">
-            <button 
-              class="profile-avatar-btn rounded-circle" 
-              type="button"
-              @click.stop="openProfilePanel"
+            <img 
+              v-if="user && user.avatar" 
+              :src="user.avatar" 
+              alt="User Avatar" 
+              class="navbar-profile-img object-fit-cover rounded-circle"
             >
-              <img 
-                v-if="user && user.avatar" 
-                :src="user.avatar" 
-                alt="User Avatar" 
-                class="w-40-px h-40-px object-fit-cover rounded-circle"
-              >
-              <img 
-                v-else 
-                :src="userPlaceholder" 
-                alt="User Avatar" 
-                class="w-40-px h-40-px object-fit-cover rounded-circle"
-              >
-            </button>
-          </div>
+            <img 
+              v-else 
+              :src="userPlaceholder" 
+              alt="User Avatar" 
+              class="navbar-profile-img object-fit-cover rounded-circle"
+            >
+          </button>
+        </div>
+      </div>
 
-          <!-- BIG Profile Details modal (like the picture) -->
-          <Teleport to="body">
+      <!-- BIG Profile Details modal (like the picture) -->
+      <Teleport to="body">
             <Transition name="profile-panel">
               <div v-if="isProfilePanelOpen" class="profile-panel-backdrop" @click="closeProfilePanel">
                 <div ref="profilePanel" class="profile-panel" @click.stop>
@@ -229,8 +225,6 @@
               </div>
             </Transition>
           </Teleport>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -489,14 +483,8 @@ function setupClickOutsideListener() {
 }
 
 function handleClickOutside(event) {
-  // التحقق إذا كان النقر خارج dropdown الإشعارات
-  if (notificationBell.value && 
-      notificationBell.value.notificationDropdown && 
-      !notificationBell.value.notificationDropdown.contains(event.target) &&
-      notificationBell.value.showDropdown) {
-    notificationBell.value.closeNotifications();
-  }
-  
+  // Notification dropdown: handled inside NotificationBell (Teleport + refs); avoid broken notificationDropdown ref here.
+
   if (isProfilePanelOpen.value && profilePanel.value && !profilePanel.value.contains(event.target) && profileDropdown.value && !profileDropdown.value.contains(event.target)) {
     closeProfilePanel();
   }
@@ -581,29 +569,88 @@ function logout() {
   sessionStorage.removeItem('token');
   router.push('/sign-in');
 }
-const showBackButton = computed(() => {
-  const hiddenRoutes = ['/kanban', '/kanban_deal'];
-
-  return !hiddenRoutes.some(r => route.path.startsWith(r));
-});
 </script>
 
 <style scoped>
-/* Transparent glass header so background image shows through */
+/* Glass bar: z-index 1000 = below sidebar (1100+), below modals (global) */
 .navbar-header {
   background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  height: 3.25rem;
-  min-height: 3.25rem;
-  padding: 0.5rem 1rem;
+  height: var(--app-topbar-height, 3.25rem);
+  min-height: var(--app-topbar-height, 3.25rem);
+  padding: 0.25rem 0.75rem;
+  box-sizing: border-box;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Header stays below sidebar */
+  z-index: 1000 !important;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+}
+
+.navbar-header-toolbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  gap: 0.5rem;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.navbar-header-left {
+  justify-self: start;
+  min-width: 0;
+}
+
+.navbar-header-right {
+  justify-self: end;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 0.375rem;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.navbar-header-back-icon {
+  font-size: 1.125rem !important;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.navbar-header-menu-icon {
+  font-size: 1.05rem !important;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.navbar-profile-img {
+  width: 2rem;
+  height: 2rem;
+}
+
+.navbar-create-listing {
+  padding: 0.25rem 0.5rem !important;
+  font-size: 0.75rem !important;
+  line-height: 1.2;
 }
 
 .sidebar-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 36px;
+}
+
 .sidebar-mobile-toggle.menu-btn-with-label {
   display: inline-flex;
   align-items: center;
@@ -625,9 +672,6 @@ const showBackButton = computed(() => {
   opacity: 1;
 }
 
-  min-width: 40px;
-}
-
 .w-40-px {
   width: 40px;
 }
@@ -643,7 +687,7 @@ const showBackButton = computed(() => {
   right: 0;
   left: auto;
   margin-top: 0.5rem;
-  z-index: 1000;
+  z-index: 10050 !important;
 }
 
 .hover-text-danger:hover {
@@ -667,6 +711,7 @@ const showBackButton = computed(() => {
 /* Profile trigger */
 .profile-trigger-wrap {
   position: relative;
+  z-index: 1;
 }
 
 .profile-avatar-btn {
@@ -684,7 +729,8 @@ const showBackButton = computed(() => {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  z-index: 9999;
+  /* Below Bootstrap modals (100600+); above notification portal (10050) */
+  z-index: 50000;
   display: flex;
   justify-content: flex-end;
   font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;

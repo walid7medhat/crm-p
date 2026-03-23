@@ -119,6 +119,13 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'area'=>$this->area?->title,
             'property_type_id'=>$this->propertyType?->id,
             'area_id'=>$this->area?->id,
+            'score' => $this->score,
+            'priority' => $this->priority,
+            'intent' => $this->intent,
+            'next_action' => $this->next_action,
+            'risk' => ($this->priority === 'hot' && $this->updated_at && $this->updated_at->lt(now()->subDays(2)))
+                ? 'cooling down'
+                : '',
 
         ];
     }

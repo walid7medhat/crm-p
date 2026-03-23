@@ -60,6 +60,10 @@ return Application::configure(basePath: dirname(__DIR__))
                     
                     
         $schedule->command('activities:send-reminders')->everyMinute();
+        $schedule->command('leads:score')
+                ->everyTenMinutes()
+                ->withoutOverlapping()
+                ->runInBackground();
      $schedule->command('meta:refresh-app-token')
                  ->cron('0 0 */60 * *') 
                  ->withoutOverlapping()

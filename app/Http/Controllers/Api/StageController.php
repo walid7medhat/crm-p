@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use App\Models\Lead;
 use App\Models\User;
 use DB;
+use Illuminate\Support\Facades\Schema;
 class StageController extends Controller
 {
      public function __construct()
@@ -166,9 +167,15 @@ class StageController extends Controller
             ->first();
         
         if ($stageVisibility) {
-            $visibleStageIds = json_decode($stageVisibility->visible_stages);
-        }else{
-            $visibleStageIds=Stage::where('stage_type','lead')->pluck('id')->toArray();
+            $decoded = json_decode($stageVisibility->visible_stages, true);
+            $visibleStageIds = is_array($decoded) ? array_values(array_filter($decoded)) : [];
+        } else {
+            $visibleStageIds = [];
+        }
+
+        // Fallback: if role visibility is empty/invalid, show all lead stages
+        if (empty($visibleStageIds)) {
+            $visibleStageIds = Stage::where('stage_type', 'lead')->pluck('id')->toArray();
         }
 
         // ================= stages =================
@@ -312,7 +319,11 @@ class StageController extends Controller
                 $stageLeadsQuery->where('stage_id', $stage->id);
 
                 $paginatedLeads = $stageLeadsQuery
-                    ->orderBy('created_at', 'desc')
+                    ->when(
+                        Schema::hasColumn('leads', 'score'),
+                        fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
+                        fn ($q) => $q->orderBy('created_at', 'desc')
+                    )
                     ->paginate($perPage);
 
                 $stagesWithLeads[] = [
@@ -468,7 +479,11 @@ class StageController extends Controller
 
             // ================= pagination =================
             $paginatedLeads = $leadsQuery
-                ->orderBy('created_at', 'desc')
+                ->when(
+                    Schema::hasColumn('leads', 'score'),
+                    fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
+                    fn ($q) => $q->orderBy('created_at', 'desc')
+                )
                 ->paginate($perPage, ['*'], 'page', $page);
 
             return ApiResponse::success([
@@ -567,7 +582,13 @@ public function getLeadBranchSource()
                 }
             }
             
-            $leads = $leadsQuery->orderBy('created_at', 'desc')->get();
+            $leads = $leadsQuery
+                ->when(
+                    Schema::hasColumn('leads', 'score'),
+                    fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
+                    fn ($q) => $q->orderBy('created_at', 'desc')
+                )
+                ->get();
 
             return ApiResponse::success(
                 LeadResource::collection($leads),

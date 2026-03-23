@@ -66,9 +66,6 @@ import allNotifications from './components/allNotifications.vue'
 import Kanban from './pages/kanban.vue'
 import kanban_deal from './pages/kanban_deal.vue'
 
-// Reports
-// import Reports from './pages/reports/index.vue'
-
 // Suggestions
 import Suggestions from './pages/suggestions/index.vue'
 
@@ -80,24 +77,29 @@ import ProjectForm from './pages/projects/form.vue'
 import ProjectDetails from './pages/projects/show.vue'
 import FloorPlans from './pages/projects/FloorPlans.vue'
 
-import LeadReports from './pages/reports/leads.vue'
+import LeadReports from './pages/lead-reports.vue'
 import AdminChatDashboard from './pages/chat/AdminChatDashboard.vue'
 
 import StageVisibility from './components/kanban/stage/StageVisibility.vue'
 
 import kanban_settings from './components/kanban/KanbanSettings.vue'
+import lead_scoring_settings from './components/kanban/LeadScoringSettings.vue'
+import InvestmentAnalysis from './pages/dashboard/investment.vue'
+import CitySettings from './pages/dashboard/city-settings.vue'
 const routes = [
-  // Kanban Route
-  { path: '/kanban', component: Kanban },
+  // Kanban Route (super_admin only — see meta.requiresSuperAdmin)
+  { path: '/kanban', component: Kanban, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/kanban_deal', component: kanban_deal },
     { path: '/settings/kanban', component: kanban_settings },
-//   { path: '/reports', component: Reports, meta: { requiresAuth: true } },
+    { path: '/settings/lead-scoring', component: lead_scoring_settings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/lead-scoring', redirect: '/settings/lead-scoring' },
 
- 
   { path: '/settings/stage-visibility', component: StageVisibility, meta: { requiresAuth: true } },
-  
- { path: '/lead-reports', component: LeadReports, meta: { requiresAuth: true } },
+
+  { path: '/lead-reports', component: LeadReports, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/suggestion', component: Suggestions, meta: { requiresAuth: true } },
+  { path: '/investment-analysis', component: InvestmentAnalysis, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/settings/city-investments', component: CitySettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/', component: Ai, meta: { requiresAuth: true } },
 
   { path: '/table-basic', component: BasicTable, meta: { requiresAuth: true } },
@@ -241,6 +243,18 @@ const logout = () => {
   window.location.href = '/sign-in'
 }
 
+/** Sidebar “CRM” block (Kanban, reports, lead tools, investments) — must match header isSuperAdmin */
+const isSuperAdminFromStorage = () => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return false
+    const u = JSON.parse(raw)
+    return Array.isArray(u.roles) && u.roles.includes('super_admin')
+  } catch {
+    return false
+  }
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes,
@@ -267,7 +281,16 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !isValidToken) {
     console.log('Auth required, redirecting to sign-in')
     next('/sign-in')
-  } else if (to.path === '/sign-in' && isValidToken) {
+    return
+  }
+
+  if (to.matched.some((r) => r.meta.requiresSuperAdmin) && !isSuperAdminFromStorage()) {
+    console.log('Super admin only — redirecting home')
+    next('/')
+    return
+  }
+
+  if (to.path === '/sign-in' && isValidToken) {
     console.log('User authenticated, redirecting to home')
     next('/')
   } else if ((to.path === '/sign-up' || to.path === '/forgot-password') && isValidToken) {

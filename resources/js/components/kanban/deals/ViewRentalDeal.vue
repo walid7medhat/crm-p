@@ -3,6 +3,26 @@
     <div class="col-12 text-muted text-center py-5">No deal data</div>
   </template>
   <template v-else>
+    <div class="col-12">
+      <div class="view-card p-3 radius-12 mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="info-label mb-1">Completeness Status</div>
+            <div class="info-value mb-0" :class="missingSummary.count ? 'text-warning' : 'text-success'">
+              {{ missingSummary.count ? 'Incomplete' : 'Complete' }}
+            </div>
+          </div>
+          <div class="text-end">
+            <div class="info-label mb-1">Missing Fields</div>
+            <div class="info-value mb-0">{{ missingSummary.count }}</div>
+          </div>
+        </div>
+        <div v-if="missingSummary.count" class="small text-muted mt-2">
+          {{ missingSummary.labels.join(' • ') }}
+        </div>
+      </div>
+    </div>
+
     <!-- Deal Information (from card) -->
     <div class="col-12" v-if="deal.createdBy || deal.source || deal.project">
       <h6 class="section-title mb-3">Deal Information</h6>
@@ -366,6 +386,26 @@ const amountCurrency = computed(() => {
   const cur = d.currency || 'AED'
   if (amt != null && amt !== '') return `${amt} ${cur}`
   return '----'
+})
+
+const missingSummary = computed(() => {
+  const d = props.deal || {}
+  const checks = [
+    ['deal_name', 'Deal Name'],
+    ['source', 'Source'],
+    ['unit_no', 'Unit No'],
+    ['property_type', 'Property Type'],
+    ['tenant_first_name', 'Tenant First Name'],
+    ['tenant_last_name', 'Tenant Last Name'],
+    ['landlord_first_name', 'Landlord First Name'],
+    ['landlord_last_name', 'Landlord Last Name'],
+  ]
+
+  const labels = checks
+    .filter(([key]) => d[key] === null || d[key] === undefined || d[key] === '')
+    .map(([, label]) => label)
+
+  return { count: labels.length, labels }
 })
 </script>
 

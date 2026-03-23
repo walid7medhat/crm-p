@@ -8,17 +8,29 @@ use Carbon\Carbon;
 use App\Helpers\LeadHistoryHelper;
 use App\Events\LeadUpdated;
 use App\Models\KanbanSetting;
+use App\Jobs\ProcessLeadIntelligenceJob;
+use App\Models\LeadScoringSetting;
 class Lead extends Model
 {
     // 
     use HasFactory;
     protected $guarded=[];
+    public const INTELLIGENCE_FIELDS = [
+        'score',
+        'priority',
+        'intent',
+        'next_action',
+        'last_scored_at',
+        'score_breakdown',
+    ];
       protected $casts = [
         'date_of_birth' => 'date',
         'available_to_everyone' => 'boolean',
         'last_stage_change_at' => 'datetime',
         'revert'=>'datetime',
-        'converted_at'=>'datetime'
+        'converted_at'=>'datetime',
+        'last_scored_at' => 'datetime',
+        'score_breakdown' => 'array',
 
     ];
     protected static function booted()
@@ -26,6 +38,25 @@ class Lead extends Model
             static::creating(function ($lead) {
                 if ($lead->responsible_person_id && !$lead->initial_responsible_person_id) {
                     $lead->initial_responsible_person_id = $lead->responsible_person_id;
+                }
+            });
+            static::created(function ($lead) {
+                $settings = LeadScoringSetting::resolved();
+                $automation = $settings['automation_flags'] ?? [];
+                if (($automation['on_create'] ?? true) === true) {
+                    ProcessLeadIntelligenceJob::dispatch($lead->id);
+                }
+            });
+            static::updated(function ($lead) {
+                $intelligenceOnlyKeys = array_merge(self::INTELLIGENCE_FIELDS, ['updated_at']);
+
+                $changedKeys = array_keys($lead->getChanges());
+                $nonIntelligenceChanges = array_diff($changedKeys, $intelligenceOnlyKeys);
+
+                $settings = LeadScoringSetting::resolved();
+                $automation = $settings['automation_flags'] ?? [];
+                if (!empty($nonIntelligenceChanges) && (($automation['on_update'] ?? true) === true)) {
+                    ProcessLeadIntelligenceJob::dispatch($lead->id);
                 }
             });
         // static::updating(function ($lead) {

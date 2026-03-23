@@ -15,8 +15,6 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::table('stages')->where('stage_type', 'deal')->delete();
-
         $now = now();
         $rows = [];
 
@@ -80,7 +78,29 @@ return new class extends Migration
             ];
         }
 
-        DB::table('stages')->insert($rows);
+        // FK-safe strategy:
+        // - Update existing deal stages by (deal_type + order)
+        // - Insert missing rows
+        // - Do not hard-delete old rows because deals.stage_id may reference them
+        foreach ($rows as $row) {
+            $existing = DB::table('stages')
+                ->where('stage_type', 'deal')
+                ->where('deal_type', $row['deal_type'])
+                ->where('order', $row['order'])
+                ->first();
+
+            if ($existing) {
+                DB::table('stages')
+                    ->where('id', $existing->id)
+                    ->update([
+                        'name' => $row['name'],
+                        'color' => $row['color'],
+                        'updated_at' => $now,
+                    ]);
+            } else {
+                DB::table('stages')->insert($row);
+            }
+        }
     }
 
     /**
@@ -88,6 +108,14 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::table('stages')->where('stage_type', 'deal')->delete();
+        // Avoid FK violations when deals are already linked to stages.
+        DB::table('stages')
+            ->where('stage_type', 'deal')
+            ->whereNotIn('id', function ($q) {
+                $q->select('stage_id')
+                    ->from('deals')
+                    ->whereNotNull('stage_id');
+            })
+            ->delete();
     }
 };

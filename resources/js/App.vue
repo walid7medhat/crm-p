@@ -3,7 +3,15 @@
     <Header v-if="showLayout" />
     <main :class="showLayout ? 'dashboard-main' : ''">
       <Navbar v-if="showLayout" />
-      <router-view />
+      <!-- In-flow spacer: reserves height so pages never sit under the absolute navbar -->
+      <div
+        v-if="showLayout"
+        class="app-navbar-spacer"
+        aria-hidden="true"
+      />
+      <div :class="showLayout ? 'dashboard-main-router' : ''">
+        <router-view />
+      </div>
       <Footer v-if="showLayout" />
     </main>
     <ChatFloatingButton
@@ -80,3 +88,38 @@ export default {
   }
 }
 </script>
+
+<!-- Global layout: keeps every routed page below the glass top navbar (sidebar is separate). -->
+<style>
+#app {
+  --app-topbar-height: 3.25rem;
+}
+
+#app main.dashboard-main {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  position: relative;
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding-top: 0 !important;
+}
+
+/* Must match .navbar-header height; reserves space so content never slides under the bar */
+#app main.dashboard-main > .app-navbar-spacer {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  height: calc(var(--app-topbar-height) + env(safe-area-inset-top, 0px)) !important;
+  min-height: calc(var(--app-topbar-height) + env(safe-area-inset-top, 0px)) !important;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+#app main.dashboard-main > .dashboard-main-router {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 0 !important;
+}
+</style>

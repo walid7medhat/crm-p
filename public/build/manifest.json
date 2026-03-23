@@ -1,6 +1,6 @@
 {
-  "_html2canvas-BcFWjrrJ.js": {
-    "file": "assets/html2canvas-BcFWjrrJ.js",
+  "_html2canvas-DQE2U4aX.js": {
+    "file": "assets/html2canvas-DQE2U4aX.js",
     "name": "html2canvas",
     "isDynamicEntry": true,
     "imports": [
@@ -8,27 +8,24 @@
     ]
   },
   "_sweetalert2.esm.all-!~{004}~.js": {
-    "file": "assets/sweetalert2.esm.BYeCAFM5.css",
+    "file": "assets/sweetalert2.esm.DbzOq7kv.css",
     "src": "_sweetalert2.esm.all-!~{004}~.js"
   },
-  "_sweetalert2.esm.all-B6FO94Qi.js": {
-    "file": "assets/sweetalert2.esm.all-B6FO94Qi.js",
+  "_sweetalert2.esm.all-BYjGguha.js": {
+    "file": "assets/sweetalert2.esm.all-BYjGguha.js",
     "name": "sweetalert2.esm.all",
     "css": [
-      "assets/sweetalert2.esm.BYeCAFM5.css"
-    ],
-    "assets": [
-      "assets/user.g8XIt7bn.png"
+      "assets/sweetalert2.esm.DbzOq7kv.css"
     ]
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-Dg-EmToR.js",
+    "file": "assets/index.es-fN8xO6xw.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/main.js",
-      "_sweetalert2.esm.all-B6FO94Qi.js"
+      "_sweetalert2.esm.all-BYjGguha.js"
     ]
   },
   "node_modules/dompurify/dist/purify.es.mjs": {
@@ -38,17 +35,17 @@
     "isDynamicEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app.D0Z-YpcU.css",
+    "file": "assets/app.DyDlFPkV.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-B6IWCIl7.js",
+    "file": "assets/app-Bq-CnJ_4.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_sweetalert2.esm.all-B6FO94Qi.js"
+      "_sweetalert2.esm.all-BYjGguha.js"
     ]
   },
   "resources/js/assets/images/a.jpeg": {
@@ -192,22 +189,23 @@
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/main.js": {
-    "file": "assets/main-C3qWdpMF.js",
+    "file": "assets/main-dKLCQDKC.js",
     "name": "main",
     "src": "resources/js/main.js",
     "isEntry": true,
     "imports": [
-      "_sweetalert2.esm.all-B6FO94Qi.js"
+      "_sweetalert2.esm.all-BYjGguha.js"
     ],
     "dynamicImports": [
-      "_html2canvas-BcFWjrrJ.js",
+      "_html2canvas-DQE2U4aX.js",
       "node_modules/dompurify/dist/purify.es.mjs",
       "node_modules/canvg/lib/index.es.js"
     ],
     "css": [
-      "assets/main.DB3rP69H.css"
+      "assets/main.DkZib_X7.css"
     ],
     "assets": [
+      "assets/flag1.CFmrKp4B.png",
       "assets/flag5.BD-cC3Ws.png",
       "assets/a.CNSB645Y.jpeg",
       "assets/b.B4mY67FF.jpeg",
@@ -216,7 +214,8 @@
       "assets/user-grid-img13.BFWLT_VE.png",
       "assets/avatar1.scz5y5rp.png",
       "assets/forgot-pass-img.BLwoaPgo.png",
-      "assets/envelop-icon.BC-dOgaD.png"
+      "assets/envelop-icon.BC-dOgaD.png",
+      "assets/user.g8XIt7bn.png"
     ]
   }
 }

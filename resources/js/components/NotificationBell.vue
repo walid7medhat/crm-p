@@ -2,28 +2,32 @@
   <div class="notification-wrapper position-relative">
     <!-- Notification Bell Button -->
     <button
-      class="has-indicator w-40-px h-40-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center position-relative border-0"
+      ref="bellBtn"
+      class="has-indicator notification-bell-btn bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center position-relative border-0"
       type="button"
       @click.stop="toggleNotifications"
     >
-      <iconify-icon icon="iconoir:bell" class="text-primary-light text-xl"></iconify-icon>
+      <iconify-icon icon="iconoir:bell" class="text-primary-light notification-bell-icon"></iconify-icon>
       <span v-if="unreadCount > 0" class="notification-badge">
-        {{ formatUnreadCount }}
+        {{ unreadCount > 9 ? '9+' : unreadCount }}
       </span>
     </button>
 
-    <!-- Notification Dropdown -->
-    <div 
-      v-if="showDropdown" 
-      class="notification-dropdown dropdown-menu to-top dropdown-menu-lg p-0 show"
-      @click.stop
-    >
+    <!-- Dropdown teleported so it stacks above kanban while navbar stays z-index 1000 -->
+    <Teleport to="body">
+      <div 
+        v-if="showDropdown" 
+        ref="dropdownPortal"
+        class="notification-dropdown notification-dropdown-portal dropdown-menu dropdown-menu-lg p-0 show"
+        :style="dropdownPosition"
+        @click.stop
+      >
       <div class="m-16 py-12 px-16 radius-8 bg-primary-50 mb-16 d-flex align-items-center justify-content-between gap-2">
         <div>
           <h6 class="text-lg text-primary-light fw-semibold mb-0">Notifications</h6>
         </div>
         <span class="text-primary-600 fw-semibold text-lg w-40-px h-40-px rounded-circle bg-base d-flex justify-content-center align-items-center">
-          {{ formatUnreadCount }}
+          {{ unreadCount }}
         </span>
       </div>
 
@@ -73,12 +77,25 @@
           See All Notifications
         </router-link>
       </div>
-    </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script>
+import api from '@/plugins/axios';
+
 const notificationSound = '/assets/notification-sound.mp3';
+
+function getApiBaseUrl() {
+  const base =
+    (api.defaults && api.defaults.baseURL) ||
+    (typeof window !== 'undefined' && window.__API_BASE_URL__) ||
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_API_URL ||
+    'http://127.0.0.1:8001/api';
+  return String(base).replace(/\/$/, '');
+}
 
 export default {
   name: "NotificationBell",
@@ -99,9 +116,29 @@ export default {
       showDropdown: false,
       userId: null,
       pusherInitialized: false,
-      apiBaseUrl: (typeof window !== 'undefined' && window.__API_BASE_URL__) || import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api',
-      notificationSound
+      notificationSound,
+      dropdownPosition: {}
     };
+  },
+  watch: {
+    showDropdown(val) {
+      if (val) {
+        this.$nextTick(() => {
+          this.positionDropdown();
+          document.addEventListener('scroll', this.positionDropdown, true);
+          window.addEventListener('resize', this.positionDropdown);
+          // Defer so the opening click never hits handleClickOutside (capture/timing)
+          setTimeout(() => {
+            document.addEventListener('click', this.handleClickOutside, true);
+          }, 50);
+        });
+      } else {
+        document.removeEventListener('scroll', this.positionDropdown, true);
+        window.removeEventListener('resize', this.positionDropdown);
+        document.removeEventListener('click', this.handleClickOutside, true);
+        this.dropdownPosition = {};
+      }
+    }
   },
   mounted() {
     console.log('🚀 NotificationBell component mounted');
@@ -118,37 +155,79 @@ export default {
         console.log('📱 Notification permission:', permission);
       });
     }
-    
-    // إضافة event listener للنقر خارج الـ dropdown
-    document.addEventListener('click', this.handleClickOutside);
   },
   beforeUnmount() {
+    document.removeEventListener('scroll', this.positionDropdown, true);
+    window.removeEventListener('resize', this.positionDropdown);
+    document.removeEventListener('click', this.handleClickOutside, true);
     if (window.Echo && this.userId) {
       console.log('🧹 Cleaning up Pusher connection');
       window.Echo.leave(`App.Models.User.${this.userId}`);
     }
-    // إزالة event listener
-    document.removeEventListener('click', this.handleClickOutside);
   },
   methods: {
-      
+    positionDropdown() {
+      const btn = this.$refs.bellBtn;
+      if (!btn || !this.showDropdown) return;
+      const r = btn.getBoundingClientRect();
+      const maxW = 400;
+      const w = Math.min(maxW, window.innerWidth - 16);
+      let left = r.right - w;
+      left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+      this.dropdownPosition = {
+        position: 'fixed',
+        top: `${Math.round(r.bottom + 6)}px`,
+        left: `${Math.round(left)}px`,
+        width: `${w}px`,
+        zIndex: 10050
+      };
+    },
     toggleNotifications() {
       console.log('🔔 Toggle notifications, current state:', this.showDropdown);
       this.showDropdown = !this.showDropdown;
-      // إرسال event للمكون الرئيسي
       this.$emit('toggle', this.showDropdown);
+      if (this.showDropdown) {
+        this.fetchNotifications();
+      }
     },
     
     closeNotifications() {
       this.showDropdown = false;
     },
 
+    /** Clicks on iconify-icon often hit shadow-DOM nodes; contains() fails — use composedPath(). */
     handleClickOutside(event) {
-      // التحقق إذا كان النقر خارج مكون الـ notification
-      const notificationElement = this.$el;
-      if (notificationElement && !notificationElement.contains(event.target)) {
-        this.closeNotifications();
-      }
+      if (!this.showDropdown) return;
+      const path =
+        typeof event.composedPath === 'function' ? event.composedPath() : [event.target];
+      const wrap = this.$el;
+      const bell = this.$refs.bellBtn;
+      const portal = this.$refs.dropdownPortal;
+
+      const inBell =
+        path.some((n) => n === wrap || n === bell) ||
+        (bell &&
+          path.some(
+            (n) =>
+              n &&
+              n.nodeType === 1 &&
+              typeof bell.contains === 'function' &&
+              bell.contains(n)
+          ));
+      if (inBell) return;
+
+      const inPortal =
+        (portal && path.some((n) => n === portal)) ||
+        (portal && path.some((n) => n && portal.contains(n))) ||
+        path.some(
+          (n) =>
+            n &&
+            typeof n.classList !== 'undefined' &&
+            n.classList.contains('notification-dropdown-portal')
+        );
+      if (inPortal) return;
+
+      this.closeNotifications();
     },
 
     async fetchNotifications() {
@@ -157,7 +236,7 @@ export default {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         console.log('🔑 Token available:', !!token);
         
-        const response = await fetch(`${this.apiBaseUrl}/auth/notifications`, {
+        const response = await fetch(`${getApiBaseUrl()}/auth/notifications`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json'
@@ -185,7 +264,7 @@ export default {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         console.log('📝 Marking as read:', id);
         
-        const response = await fetch(`${this.apiBaseUrl}/auth/notifications/${id}/read`, {
+        const response = await fetch(`${getApiBaseUrl()}/auth/notifications/${id}/read`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -224,7 +303,7 @@ export default {
         console.log('📝 Marking all notifications as read');
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         
-        const response = await fetch(`${this.apiBaseUrl}/auth/notifications/read-all`, {
+        const response = await fetch(`${getApiBaseUrl()}/auth/notifications/read-all`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -511,34 +590,44 @@ export default {
         return 'Unknown time';
       }
     }
-  },
-  computed: {
-  formatUnreadCount() {
-    if (this.unreadCount > 2000) return '2k+';
-    if (this.unreadCount > 999) return '1k+';
-    if (this.unreadCount > 99) return '99+';
-    if (this.unreadCount > 9) return '9+';
-    return this.unreadCount;
   }
-}
 }
 </script>
 
 <style scoped>
 .notification-wrapper {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  /* Above profile avatar (.profile-trigger-wrap z-index: 1) so the bell receives clicks */
+  z-index: 3;
+}
+
+.notification-bell-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+}
+
+.notification-bell-icon {
+  font-size: 1rem !important;
+  width: 1rem;
+  height: 1rem;
 }
 
 .notification-badge {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: -4px;
+  right: -4px;
   background: #ef4444;
   color: white;
   border-radius: 50%;
-  min-width: 18px;
-  height: 18px;
-  font-size: 10px;
+  min-width: 15px;
+  height: 15px;
+  font-size: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -546,13 +635,9 @@ export default {
   padding: 0 4px;
 }
 
+/* Position + z-index set inline (portal); class .notification-dropdown-portal in style.css */
 .notification-dropdown {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  width: 400px;
-  z-index: 1050;
-  margin-top: 8px;
+  margin-top: 0;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border: 1px solid #e5e7eb;
   border-radius: 8px;

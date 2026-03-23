@@ -199,6 +199,7 @@
       :missing-fields="pendingCompleteFields?.missingFields || []"
       :missing-fields-grouped="pendingCompleteFields?.missingFieldsGrouped || { sections: [] }"
       :missing-fields-grouped-by-stage="pendingCompleteFields?.missingFieldsGroupedByStage || { stages: [] }"
+      :grouped-missing="pendingCompleteFields?.groupedMissing || { sections: [], by_stage: [] }"
       :deal="pendingCompleteFields?.dealData || null"
       @save="handleCompleteFieldsSave"
       @closed="clearPendingCompleteFields"
@@ -283,6 +284,7 @@ import Swal from 'sweetalert2'
 import ViewDealModal from './ViewDealModal.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
 import CompleteStageFieldsModal from './CompleteStageFieldsModal.vue'
+import { useStageTransition } from '@/composables/useStageTransition'
 
 const props = defineProps({
   filters: {
@@ -293,6 +295,12 @@ const props = defineProps({
 
 // تعريف emit مرة واحدة فقط مع جميع الأحداث
 const emit = defineEmits(['update:deals', 'deal-moved', 'deal-type-change'])
+const {
+  checkStageRequirements,
+  changeStage,
+  updateAndChangeStage,
+  normalizeMissingFromError,
+} = useStageTransition()
 
 const activeTypeTab = ref('primary')
 const showViewDealModal = ref(false)
@@ -613,6 +621,14 @@ const handleDeletedDeal = (deal) => {
 const handleDealUpdatedFromModal = (updatedDeal) => {
   if (updatedDeal?.id) {
     handleUpdatedDeal(updatedDeal)
+    if (selectedDeal.value?.id === updatedDeal.id) {
+      selectedDeal.value = {
+        ...selectedDeal.value,
+        ...updatedDeal,
+        stageId: updatedDeal.stage_id ?? updatedDeal.stage?.id ?? selectedDeal.value.stageId,
+        deal_type: updatedDeal.deal_type ?? selectedDeal.value.deal_type
+      }
+    }
   }
 }
 
@@ -939,14 +955,13 @@ async function onDealDragChange(evt, targetColumn) {
 
   try {
     // التحقق من متطلبات المرحلة
-    const checkRes = await axios.post('/deals/check-stage-requirements', {
-      deal_id: deal.id,
-      target_stage_id: newStageId,
-      deal_type: activeTypeTab.value
+    const normalized = await checkStageRequirements({
+      dealId: deal.id,
+      targetStageId: newStageId,
+      dealType: activeTypeTab.value,
     })
-
-    const valid = checkRes.data?.valid === true
-    const missingFields = checkRes.data?.missing_fields || []
+    const valid = normalized.valid
+    const missingFields = normalized.missingFields
 
     // لو مفيش حقول مفقودة، ننقل الديل على طول
     if (valid || missingFields.length === 0) {
@@ -958,9 +973,6 @@ async function onDealDragChange(evt, targetColumn) {
     // لو في حقول مفقودة، نفتح المودال - بس الديل لسه في مكانه الأصلي
     // مش بنعمله revert هنا لأننا لسه مانقلناهوش
     
-    const missingFieldsGrouped = checkRes.data?.missing_fields_grouped || { sections: [] }
-    const missingFieldsGroupedByStage = checkRes.data?.missing_fields_grouped_by_stage || { stages: [] }
-
     pendingCompleteFields.value = {
       dealId: deal.id,
       targetStageId: newStageId,
@@ -968,8 +980,9 @@ async function onDealDragChange(evt, targetColumn) {
       originalStageId: oldStageId,
       dealData: { ...deal }, // copy عشان البيانات تتغيرش
       missingFields,
-      missingFieldsGrouped,
-      missingFieldsGroupedByStage,
+      missingFieldsGrouped: normalized.missingFieldsGrouped,
+      missingFieldsGroupedByStage: normalized.missingFieldsGroupedByStage,
+      groupedMissing: normalized.groupedMissing,
       canProceedWithoutFields: valid
     }
     
@@ -998,9 +1011,7 @@ async function moveDealDirectly(deal, newStageId, targetColumn, oldStageId) {
     }
 
     // تحديث المرحلة في الخلفية
-    await axios.post(`/deals/${deal.id}/change-stage`, { 
-      stage_id: newStageId 
-    })
+    await changeStage({ dealId: deal.id, stageId: newStageId })
 
     showNotification('Deal moved successfully', 'success')
     
@@ -1090,64 +1101,11 @@ async function handleCompleteFieldsSave({ payload, documents, stage_id }) {
       documentsCount: documents?.length 
     })
     
-    // 1. إنشاء FormData
-    let hasDocuments = documents && documents.length > 0
-    let formData = new FormData()
-    
-    // 2. إضافة الحقول العادية
-    if (payload && Object.keys(payload).length > 0) {
-      Object.keys(payload).forEach(key => {
-        if (payload[key] !== null && payload[key] !== undefined && payload[key] !== '') {
-          // تأكد من أنك لا ترسل حقول المستندات هنا
-          if (!key.includes('_documents')) {
-              formData.append(key, payload[key])
-              console.log('Added field to FormData:', key, payload[key])
-          }
-        }
-      })
-    }
-    
-          if (hasDocuments) {
-          documents.forEach((doc, index) => {
-            if (doc.file) {
-              console.log('Adding document to FormData:', {
-                index,
-                fileName: doc.file.name,
-                docType: doc.document_type,
-                category: doc.category,
-                partyType: doc.party_type
-              })
-              
-              // ✅ الطريقة الصحيحة - الملف تحت مفتاح خاص
-              formData.append(`documents[${index}]`, doc.file)  // ← الملف هنا
-              
-              // والبيانات تحت نفس المفتاح
-              formData.append(`document_types[${index}]`, doc.document_type)
-              formData.append(`categories[${index}]`, doc.category)
-              formData.append(`party_types[${index}]`, doc.party_type)
-            }
-          })
-        }
-    
-    // 4. إضافة stage_id
-    formData.append('stage_id', targetStageId)
-    console.log('Added stage_id:', targetStageId)
-    
-    // 5. للاختبار - شوفي إيه اللي بيتبعت
-    console.log('FormData contents:')
-    for (let pair of formData.entries()) {
-      if (pair[0].includes('file') && pair[1] instanceof File) {
-        console.log(pair[0], 'File:', pair[1].name)
-      } else {
-        console.log(pair[0], pair[1])
-      }
-    }
-    
-    // 6. إرسال الطلب
-    console.log('Sending request to:', `/deals/${dealId}/update-and-change-stage`)
-    
-    const response = await axios.post(`/deals/${dealId}/update-and-change-stage`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+    const response = await updateAndChangeStage({
+      dealId,
+      payload,
+      documents,
+      stageId: targetStageId,
     })
     
     console.log('Response:', response.data)
@@ -1162,12 +1120,14 @@ async function handleCompleteFieldsSave({ payload, documents, stage_id }) {
     console.error('Error in handleCompleteFieldsSave:', err)
     console.error('Error response:', err.response?.data)
     
-    if (err.response?.status === 422 && err.response?.data?.missing_fields) {
+    const normalizedMissing = normalizeMissingFromError(err)
+    if (normalizedMissing) {
       pendingCompleteFields.value = {
         ...pending,
-        missingFields: err.response.data.missing_fields || [],
-        missingFieldsGrouped: err.response.data.missing_fields_grouped || { sections: [] },
-        missingFieldsGroupedByStage: err.response.data.missing_fields_grouped_by_stage || { stages: [] }
+        missingFields: normalizedMissing.missingFields,
+        missingFieldsGrouped: normalizedMissing.missingFieldsGrouped,
+        missingFieldsGroupedByStage: normalizedMissing.missingFieldsGroupedByStage,
+        groupedMissing: normalizedMissing.groupedMissing,
       }
       showCompleteFieldsModal.value = true
       throw err
@@ -1195,10 +1155,7 @@ async function handleStageChangeWithReason({ dealId, targetStageId, reason }) {
     const deal = pendingStageChange.value?.dealData
     if (!deal) return
 
-    await axios.post(`/deals/${dealId}/change-stage`, {
-      stage_id: targetStageId,
-      reason: reason
-    })
+    await changeStage({ dealId, stageId: targetStageId, reason })
     
     showNotification('Deal moved successfully', 'success')
   } catch (error) {

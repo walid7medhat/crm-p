@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class InvestmentScenarioVersion extends Model
+{
+    protected $guarded = [];
+
+    protected function casts(): array
+    {
+        return [
+            'is_current' => 'boolean',
+            'input_payload' => 'array',
+            'calculation_payload' => 'array',
+        ];
+    }
+
+    public function investment(): BelongsTo
+    {
+        return $this->belongsTo(Investment::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+}

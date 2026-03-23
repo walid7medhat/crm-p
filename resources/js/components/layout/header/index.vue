@@ -42,18 +42,39 @@
             <span>Dashboard</span>
           </router-link>
         </li>
-          <!-- <li>
-          <router-link to="/leads" @click="() => goToRoute('/leads')" :class="{ 'active-page': isActive('/leads') }">
-            <iconify-icon icon="material-symbols:map-outline" class="menu-icon" />
-            <span>Lead</span>
-          </router-link>
-        </li>
-         <li>
-          <router-link to="/kanban" @click="() => goToRoute('/kanban')" :class="{ 'active-page': isActive('/kanban') }">
-            <iconify-icon icon="material-symbols:map-outline" class="menu-icon" />
-            <span>Kanban</span>
-          </router-link>
-        </li> -->
+        <!-- CRM analytics & tools: super_admin only -->
+        <template v-if="isSuperAdmin">
+          <li>
+            <router-link to="/kanban" :class="{ 'active-page': isActive('/kanban') }">
+              <iconify-icon icon="material-symbols:map-outline" class="menu-icon" />
+              <span>Kanban</span>
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/lead-reports" :class="{ 'active-page': isActive('/lead-reports') }">
+              <iconify-icon icon="lucide:bar-chart-2" class="menu-icon" />
+              <span>Lead Reports</span>
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/settings/lead-scoring" :class="{ 'active-page': isActive('/settings/lead-scoring') }">
+              <iconify-icon icon="lucide:target" class="menu-icon" />
+              <span>Lead Scoring</span>
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/investment-analysis" :class="{ 'active-page': isActive('/investment-analysis') }">
+              <iconify-icon icon="lucide:line-chart" class="menu-icon" />
+              <span>Investment Analysis</span>
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/settings/city-investments" :class="{ 'active-page': isActive('/settings/city-investments') }">
+              <iconify-icon icon="lucide:landmark" class="menu-icon" />
+              <span>City Investments</span>
+            </router-link>
+          </li>
+        </template>
         <!-- Listings Dropdown -->
         <li v-if="filteredTableItems.length > 0" :class="{ 
           dropdown: true, 
@@ -794,6 +815,19 @@ onMounted(() => {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   /*border: 1px solid rgba(255, 255, 255, 0.2);*/
+  /* Keep sidebar above header in all states */
+  z-index: 1200 !important;
+  position: fixed;
+}
+
+.sidebar-menu-area {
+  position: relative;
+  z-index: 1201;
+}
+
+.sidebar-submenu {
+  position: relative;
+  z-index: 1202;
 }
 
 .sidebar-header {
@@ -812,6 +846,7 @@ onMounted(() => {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   /*border-color: rgba(255, 255, 255, 0.12);*/
+  z-index: 1300 !important;
 }
 @media (max-width: 991px) {
   .sidebar.sidebar-open {

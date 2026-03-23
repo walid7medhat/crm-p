@@ -1,6 +1,11 @@
 <template>
     <div class="kanban-outer">
-        <div ref="kanbanContainerRef" class="kanban-container" @scroll="updateScrollArrows">
+        <div
+            ref="kanbanContainerRef"
+            class="kanban-container"
+            @scroll="updateScrollArrows"
+            @dragover.prevent="onContainerDragOver"
+        >
         <!-- Loading state -->
         <div v-if="loading && columns.length === 0" class="kanban-empty-state kanban-loading">
             <div class="kanban-empty-spinner"></div>
@@ -60,11 +65,18 @@
                                 <draggable v-model="column.leads" :group="'tasks'" item-key="id"
                                     class="tasks-list flex-grow-1" :ghost-class="'ghost'"
                                     :drag-class="'dragging'"
+                                    :scroll="true"
+                                    :bubble-scroll="true"
+                                    :scroll-sensitivity="220"
+                                    :scroll-speed="22"
+                                    @start="onLeadDragStart"
+                                    @end="onLeadDragEnd"
                                     @change="(evt) => onLeadDragChange(evt, column)">
                                     <template #item="{ element: task, index }">
                                             <div
                                                 :key="task.id"
                                                 class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
+                                                :title="task.next_action || ''"
                                                 @click="viewLead(task)"
                                             >
                                                 <!-- Task Header - Lead Name (دائماً ظاهر) -->
@@ -428,6 +440,11 @@ const loadingMoreLeads = ref({})
 const leadsPerPage = ref(20)              
 const SCROLL_SPEED = 10
 const SCROLL_TICK_MS = 16
+const isLeadDragging = ref(false)
+const dragPointerX = ref(null)
+let dragAutoScrollRaf = null
+const DRAG_SCROLL_EDGE_THRESHOLD = 180
+const DRAG_SCROLL_MAX_SPEED = 26
 
 function updateScrollArrows() {
     const el = kanbanContainerRef.value
@@ -460,6 +477,79 @@ function stopScroll() {
     if (scrollInterval.value) {
         clearInterval(scrollInterval.value)
         scrollInterval.value = null
+    }
+}
+
+function onGlobalPointerMove(event) {
+    const x = event?.touches?.[0]?.clientX ?? event?.clientX
+    if (typeof x === 'number') {
+        dragPointerX.value = x
+    }
+}
+
+function onContainerDragOver(event) {
+    if (!isLeadDragging.value) return
+    const x = event?.clientX
+    if (typeof x === 'number') {
+        dragPointerX.value = x
+    }
+}
+
+function stepDragAutoScroll() {
+    if (!isLeadDragging.value) {
+        dragAutoScrollRaf = null
+        return
+    }
+
+    const container = kanbanContainerRef.value
+    if (container && typeof dragPointerX.value === 'number') {
+        const rect = container.getBoundingClientRect()
+        const threshold = DRAG_SCROLL_EDGE_THRESHOLD
+        const maxSpeed = DRAG_SCROLL_MAX_SPEED
+        let delta = 0
+
+        if (dragPointerX.value < rect.left + threshold) {
+            const ratio = Math.min(1, (rect.left + threshold - dragPointerX.value) / threshold)
+            delta = -Math.ceil(maxSpeed * ratio)
+        } else if (dragPointerX.value > rect.right - threshold) {
+            const ratio = Math.min(1, (dragPointerX.value - (rect.right - threshold)) / threshold)
+            delta = Math.ceil(maxSpeed * ratio)
+        }
+
+        if (delta !== 0) {
+            container.scrollLeft += delta
+            updateScrollArrows()
+        }
+    }
+
+    dragAutoScrollRaf = requestAnimationFrame(stepDragAutoScroll)
+}
+
+function onLeadDragStart(event) {
+    isLeadDragging.value = true
+    onGlobalPointerMove(event?.originalEvent || event)
+
+    document.addEventListener('pointermove', onGlobalPointerMove, { passive: true })
+    document.addEventListener('mousemove', onGlobalPointerMove, { passive: true })
+    document.addEventListener('touchmove', onGlobalPointerMove, { passive: true })
+
+    if (!dragAutoScrollRaf) {
+        dragAutoScrollRaf = requestAnimationFrame(stepDragAutoScroll)
+    }
+}
+
+function onLeadDragEnd() {
+    isLeadDragging.value = false
+    dragPointerX.value = null
+    stopScroll()
+
+    document.removeEventListener('pointermove', onGlobalPointerMove)
+    document.removeEventListener('mousemove', onGlobalPointerMove)
+    document.removeEventListener('touchmove', onGlobalPointerMove)
+
+    if (dragAutoScrollRaf) {
+        cancelAnimationFrame(dragAutoScrollRaf)
+        dragAutoScrollRaf = null
     }
 }
 
@@ -913,6 +1003,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+    onLeadDragEnd()
     stopScroll()
     window.removeEventListener('resize', updateScrollArrows)
     cleanup()
@@ -1058,6 +1149,7 @@ const handleNewLead = (lead) => {
         } else {
             columns.value[columnIndex].leads[existingIndex] = { ...lead, stage_id: stageId }
         }
+        sortColumnLeadsByScore(columnIndex)
     }
 }
 
@@ -1078,6 +1170,33 @@ const handleDeletedLead = (lead) => {
             }
         }
     }
+}
+
+function getPriorityLabel(priority) {
+    if (priority === 'hot') return '🔥 HOT'
+    if (priority === 'warm') return '🟡 WARM'
+    return '❄️ COLD'
+}
+
+function getLeadPriorityClass(lead) {
+    if (lead?.priority === 'hot') return 'lead-priority-hot-border'
+    if (lead?.priority === 'warm') return 'lead-priority-warm-border'
+    return 'lead-priority-cold-border'
+}
+
+function sortColumnLeadsByScore(columnIndex) {
+    const leads = columns.value[columnIndex]?.leads
+    if (!Array.isArray(leads)) return
+
+    leads.sort((a, b) => {
+        const scoreA = Number(a?.score ?? 0)
+        const scoreB = Number(b?.score ?? 0)
+        if (scoreB !== scoreA) return scoreB - scoreA
+
+        const aTime = a?.created_at ? new Date(a.created_at).getTime() : 0
+        const bTime = b?.created_at ? new Date(b.created_at).getTime() : 0
+        return bTime - aTime
+    })
 }
 
 const handleLeadUpdatedFromModal = (updatedLead) => {
@@ -1137,9 +1256,11 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
                         } else {
                             columns.value[newColumnIndex].leads[existingIndex] = lead
                         }
+                        sortColumnLeadsByScore(newColumnIndex)
                     }
                 } else {
                     column.leads[index] = lead
+                    sortColumnLeadsByScore(i)
                 }
                 break
             }
@@ -1164,6 +1285,7 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
                 // Update existing lead
                 columns.value[columnIndex].leads[existingIndex] = { ...lead, stage_id: stageId }
             }
+            sortColumnLeadsByScore(columnIndex)
         } else {
             // Try to add to first available column as fallback
             if (columns.value.length > 0) {
@@ -1178,6 +1300,7 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
                     const leadToAdd = { ...lead, stage_id: firstColumn.status }
                     firstColumn.leads.unshift(leadToAdd)
                 }
+                sortColumnLeadsByScore(0)
             }
         }
     }
@@ -1224,6 +1347,7 @@ const handleStageChanged = (lead, changes) => {
                         
                         const leadToAdd = lead.data || lead
                         columns.value[newColumnIndex].leads.unshift(leadToAdd)
+                        sortColumnLeadsByScore(newColumnIndex)
                     }
                 }
                 break
@@ -1968,11 +2092,60 @@ const $showNotification = (message, type = 'info') => {
 .kanban-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     color: #1e293b;
+    border-width: 1px !important;
+    border-style: solid !important;
 }
 
 .kanban-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+
+.lead-priority-hot-border {
+    border-color: #ef4444 !important;
+}
+
+.lead-priority-warm-border {
+    border-color: #f59e0b !important;
+}
+
+.lead-priority-cold-border {
+    border-color: #9ca3af !important;
+}
+
+.lead-intelligence-row {
+    gap: 8px;
+}
+
+.lead-priority-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.lead-priority-hot {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.lead-priority-warm {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.lead-priority-cold {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.lead-score-text {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 600;
 }
 
 /* Ensure all card text is visible on white background (override parent/theme) */

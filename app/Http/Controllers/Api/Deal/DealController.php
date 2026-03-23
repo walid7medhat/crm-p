@@ -18,6 +18,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Requests\Deal\CheckStageRequirementsRequest;
 use App\Http\Requests\Deal\UpdatePartialRequest;
 use App\Services\DealStageValidator;
+use App\Services\DealStageValidatorService;
 use App\Http\Requests\Deal\UpdateDealStageRequest;
 use Illuminate\Support\Facades\Log; 
 use App\Models\DealDocument;
@@ -335,39 +336,54 @@ class DealController extends Controller
         public function history(Request $request, $dealId)
 {
     $deal=Deal::find($dealId);
+    if (!$deal) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Deal not found'
+        ], 404);
+    }
     $query = LeadHistory::where('deal_id', $dealId)
     ->when($deal->lead_id,function($q) use($deal){
          $q->orWhere('lead_id',$deal->lead_id);
     })
-        ->with('user:id,name,avatar');
+        ->with(['user:id,name,avatar', 'deal:id,deal_name,source,unit_no,property_reference,responsible_person_id', 'deal.responsiblePerson:id,name']);
     
     // Search functionality - search in multiple fields
     if ($request->filled('search')) {
-        $searchTerm = $request->search;
+        $searchTerm = trim((string) $request->search);
         $query->where(function($q) use ($searchTerm) {
-            // Search in action field inside changes JSON
+            // Smart/global search across history row, JSON changes, actor, and deal info
             $q->where('changes->action', 'LIKE', "%{$searchTerm}%")
-              // Search in user name
+              ->orWhereRaw('CAST(changes AS CHAR) LIKE ?', ["%{$searchTerm}%"])
               ->orWhereHas('user', function($userQuery) use ($searchTerm) {
                   $userQuery->where('name', 'LIKE', "%{$searchTerm}%");
               })
-              // Search in old_stage
+              ->orWhereHas('deal', function($dealQuery) use ($searchTerm) {
+                  $dealQuery->where('deal_name', 'LIKE', "%{$searchTerm}%")
+                      ->orWhere('source', 'LIKE', "%{$searchTerm}%")
+                      ->orWhere('unit_no', 'LIKE', "%{$searchTerm}%")
+                      ->orWhere('property_reference', 'LIKE', "%{$searchTerm}%")
+                      ->orWhereHas('responsiblePerson', function ($userQuery) use ($searchTerm) {
+                          $userQuery->where('name', 'LIKE', "%{$searchTerm}%");
+                      });
+              })
               ->orWhereRaw("JSON_EXTRACT(changes, '$.old_stage') LIKE ?", ["%{$searchTerm}%"])
-              // Search in new_stage
               ->orWhereRaw("JSON_EXTRACT(changes, '$.new_stage') LIKE ?", ["%{$searchTerm}%"])
-              // Search in old_person
               ->orWhereRaw("JSON_EXTRACT(changes, '$.old_person') LIKE ?", ["%{$searchTerm}%"])
-              // Search in new_person
               ->orWhereRaw("JSON_EXTRACT(changes, '$.new_person') LIKE ?", ["%{$searchTerm}%"]);
         });
     }
 
-    if ($request->filled('action')) {
-        $query->where('changes->action', $request->action);
+    // Keep backward compatibility with current action filter + support event_type alias
+    $actionFilter = $request->input('action', $request->input('event_type'));
+    if (!empty($actionFilter)) {
+        $query->where('changes->action', $actionFilter);
     }
 
-    if ($request->filled('user_id')) {
-        $query->where('user_id', $request->user_id);
+    // Keep backward compatibility + support created_by alias
+    $createdBy = $request->input('user_id', $request->input('created_by'));
+    if (!empty($createdBy)) {
+        $query->where('user_id', $createdBy);
     }
 
     if ($request->filled('from_date')) {
@@ -376,6 +392,39 @@ class DealController extends Controller
 
     if ($request->filled('to_date')) {
         $query->whereDate('created_at', '<=', $request->to_date);
+    }
+
+    // Date preset quick filter: today, yesterday, this_week, this_month, current_quarter, last_week, last_30_days, last_60_days
+    if ($request->filled('date')) {
+        $datePreset = (string) $request->date;
+        switch ($datePreset) {
+            case 'today':
+                $query->whereDate('created_at', now()->toDateString());
+                break;
+            case 'yesterday':
+                $query->whereDate('created_at', now()->subDay()->toDateString());
+                break;
+            case 'this_week':
+                $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                break;
+            case 'this_month':
+                $query->whereYear('created_at', now()->year)->whereMonth('created_at', now()->month);
+                break;
+            case 'current_quarter':
+                $query->whereBetween('created_at', [now()->firstOfQuarter(), now()->lastOfQuarter()]);
+                break;
+            case 'last_week':
+                $query->whereBetween('created_at', [now()->subWeek()->startOfWeek(), now()->subWeek()->endOfWeek()]);
+                break;
+            case 'last_30_days':
+                $query->where('created_at', '>=', now()->subDays(30));
+                break;
+            case 'last_60_days':
+                $query->where('created_at', '>=', now()->subDays(60));
+                break;
+            default:
+                break;
+        }
     }
 
     // Get per_page from request or default to 10
@@ -434,19 +483,22 @@ class DealController extends Controller
         'documents_count' => $deal->documents->count()
     ]);
     
-    $result = $validator->validate($deal, (int) $request->target_stage_id, $request->deal_type);
+    $guard = app(DealStageValidatorService::class);
+    $result = $guard->validateStageChange($deal, (int) $request->target_stage_id, $request->deal_type);
 
     $response = [
         'success' => true,
         'valid' => $result['valid'],
         'missing_fields' => $result['missing_fields'] ?? [],
+        'grouped_missing' => $result['grouped_missing'] ?? ['sections' => [], 'by_stage' => []],
+        'message' => $result['message'] ?? 'Validation checked',
     ];
 
     if (!empty($result['missing_fields'])) {
-        $response['missing_fields_grouped'] = $validator->getMissingFieldsGroupedForUI($result['missing_fields']);
-        $missingByStage = $result['missing_by_stage'] ?? [];
-        $response['missing_by_stage'] = $missingByStage;
-        $response['missing_fields_grouped_by_stage'] = $validator->getMissingFieldsGroupedByStageForUI($missingByStage);
+        // Backward-compatible payload keys expected by current frontend
+        $response['missing_fields_grouped'] = $result['missing_fields_grouped'] ?? ['sections' => []];
+        $response['missing_by_stage'] = $result['missing_by_stage'] ?? [];
+        $response['missing_fields_grouped_by_stage'] = $result['missing_fields_grouped_by_stage'] ?? ['stages' => []];
     }
 
     return response()->json($response);
@@ -695,8 +747,26 @@ public function updateStage(Request $request, $id)
         $oldStageId = $deal->stage_id;
         $changes = [];
 
-        // 1. تحديث المرحلة إذا وجدت
+        // 1. تحديث المرحلة إذا وجدت (guarded by unified validator service)
         if ($request->filled('stage_id')) {
+            $guard = app(DealStageValidatorService::class);
+            $validation = $guard->validateStageChange($deal, (int) $request->stage_id, $deal->deal_type);
+
+            if (!$validation['valid']) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'valid' => false,
+                    'message' => $validation['message'] ?? 'Missing required fields',
+                    'missing_fields' => $validation['missing_fields'] ?? [],
+                    'grouped_missing' => $validation['grouped_missing'] ?? ['sections' => [], 'by_stage' => []],
+                    // Backward-compatible keys
+                    'missing_fields_grouped' => $validation['missing_fields_grouped'] ?? ['sections' => []],
+                    'missing_by_stage' => $validation['missing_by_stage'] ?? [],
+                    'missing_fields_grouped_by_stage' => $validation['missing_fields_grouped_by_stage'] ?? ['stages' => []],
+                ], 422);
+            }
+
             $deal->stage_id = $request->stage_id;
             $changes['stage'] = [
                 'old' => $oldStageId,
@@ -800,20 +870,20 @@ public function changeStage(Request $request, $id)
         ], 400);
     }
 
-    $validator = new DealStageValidator();
-    $deal->load(['parties', 'documents']);
-    $validation = $validator->validate($deal, $newStageId, $dealType);
+    $guard = app(DealStageValidatorService::class);
+    $validation = $guard->validateStageChange($deal, $newStageId, $dealType);
 
     if (!$validation['valid']) {
-        $missingByStage = $validation['missing_by_stage'] ?? [];
         return response()->json([
             'success' => false,
             'valid' => false,
-            'message' => 'Complete all required fields before changing stage.',
-            'missing_fields' => $validation['missing_fields'],
-            'missing_fields_grouped' => $validator->getMissingFieldsGroupedForUI($validation['missing_fields']),
-            'missing_by_stage' => $missingByStage,
-            'missing_fields_grouped_by_stage' => $validator->getMissingFieldsGroupedByStageForUI($missingByStage),
+            'message' => $validation['message'] ?? 'Complete all required fields before changing stage.',
+            'missing_fields' => $validation['missing_fields'] ?? [],
+            'grouped_missing' => $validation['grouped_missing'] ?? ['sections' => [], 'by_stage' => []],
+            // Backward-compatible keys
+            'missing_fields_grouped' => $validation['missing_fields_grouped'] ?? ['sections' => []],
+            'missing_by_stage' => $validation['missing_by_stage'] ?? [],
+            'missing_fields_grouped_by_stage' => $validation['missing_fields_grouped_by_stage'] ?? ['stages' => []],
         ], 422);
     }
 
@@ -959,8 +1029,26 @@ public function updateAndChangeStage(Request $request, $id)
             Log::info('No documents in request');
         }
 
-        // 4. تغيير المرحلة
+        // 4. تغيير المرحلة (guarded by unified validator service)
         if ($request->filled('stage_id')) {
+            $guard = app(DealStageValidatorService::class);
+            $validation = $guard->validateStageChange($deal, (int) $request->stage_id, $deal->deal_type);
+
+            if (!$validation['valid']) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'valid' => false,
+                    'message' => $validation['message'] ?? 'Missing required fields',
+                    'missing_fields' => $validation['missing_fields'] ?? [],
+                    'grouped_missing' => $validation['grouped_missing'] ?? ['sections' => [], 'by_stage' => []],
+                    // Backward-compatible keys
+                    'missing_fields_grouped' => $validation['missing_fields_grouped'] ?? ['sections' => []],
+                    'missing_by_stage' => $validation['missing_by_stage'] ?? [],
+                    'missing_fields_grouped_by_stage' => $validation['missing_fields_grouped_by_stage'] ?? ['stages' => []],
+                ], 422);
+            }
+
             $deal->stage_id = $request->stage_id;
             $deal->save();
             Log::info('Stage changed', ['new_stage' => $request->stage_id]);

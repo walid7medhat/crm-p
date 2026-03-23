@@ -1,5 +1,10 @@
 <template>
   <div class="deal-form-container">
+    <div v-if="missingFieldLabels.length" class="alert alert-warning py-2 mb-3">
+      <div class="small fw-semibold mb-1">Missing fields for selected stage</div>
+      <div class="small">{{ missingFieldLabels.join(' • ') }}</div>
+    </div>
+
     <!-- Source and Deal Name (Common for all) -->
     <section class="form-section">
       <h6 class="section-title mb-3">Source and Deal Name</h6>
@@ -893,7 +898,8 @@ const props = defineProps({
   usersLoading: { type: Boolean, default: false },
   showErrors: { type: Boolean, default: false },
     fieldErrors: { type: Object, default: () => ({}) },
-      selectedStageId: { type: [Number, String], default: null }
+      selectedStageId: { type: [Number, String], default: null },
+  missingFields: { type: Array, default: () => [] }
 })
 
 const emit = defineEmits(['update:modelValue', 'search-areas', 'search-subcommunities'])
@@ -911,6 +917,11 @@ const responsiblePerson = computed(() => {
 
 const projects = ref([])
 const subCommunities = ref([])
+
+const missingFieldLabels = computed(() => {
+  if (!Array.isArray(props.missingFields) || !props.missingFields.length) return []
+  return props.missingFields.map((k) => String(k).replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
+})
 
 // Document type options based on requirements
 const primaryBuyerDocTypes = [
@@ -1294,93 +1305,23 @@ const bedroomOptions = [
 </script>
 
 <style scoped>
-<<<<<<< Updated upstream
-.section-title { 
-  font-size: 14px !important; 
-  font-weight: 600; 
-  color: #01062C; 
-  font-family: 'Montserrat'; 
-}
-
-.form-card { 
-  background: #fff; 
-  border: 1px solid #F3F3F3; 
-  box-shadow: 1px 1px 5px rgba(0,0,0,0.03); 
-}
-
-.radius-12 { 
-  border-radius: 12px; 
-}
-
-.form-label-custom { 
-  font-size: 13px; 
-  font-weight: 500; 
-  color: #000; 
-  margin-bottom: 6px; 
-  display: block; 
-  font-family: 'Montserrat'; 
-}
-
-.custom-input { 
-  height: 42px !important; 
-  border-radius: 10px !important; 
-  border: 1px solid #E2E8F0 !important; 
-  font-size: 13px !important; 
-  font-family: 'Montserrat'; 
-}
-
-.custom-input.is-invalid {
-  border-color: #dc3545 !important;
-}
-
-.input-group-custom { 
-  display: flex; 
-  border: 1px solid #E2E8F0; 
-  border-radius: 10px; 
-  overflow: hidden; 
-}
-
-.input-group-custom .custom-input { 
-  border: none !important; 
-  flex: 1; 
-  border-radius: 10px 0 0 10px !important; 
-}
-
-:deep(.custom-v-select-inline) { 
-  min-width: 120px; 
-}
-
-:deep(.custom-v-select-inline .vs__dropdown-toggle) { 
-  height: 42px; 
-  border: none; 
-  border-left: 1px solid #E2E8F0; 
-  border-radius: 0 10px 10px 0; 
-}
-
-:deep(.custom-v-select.is-invalid .vs__dropdown-toggle) {
-  border-color: #dc3545 !important;
-}
-
-:deep(.vs__dropdown-toggle) {
-  border: 1px solid #E2E8F0;
-  border-radius: 10px;
-  min-height: 42px;
-}
-
-.section-title { font-size: 16px !important; font-weight: 600; color: #01062C; font-family: 'Montserrat'; margin-bottom: 12px; }
-.form-card { background: #fff; border: 1px solid #F3F3F3; box-shadow: 1px 1px 5px rgba(0,0,0,0.03); padding: 1.25rem !important; }
-.radius-12 { border-radius: 12px; }
-.form-label-custom { font-size: 13px !important; font-weight: 500; color: #334155; margin-bottom: 6px; display: block; font-family: 'Montserrat'; }
-.custom-input { height: 44px !important; min-height: 44px; border-radius: 10px !important; border: 1px solid #E2E8F0 !important; font-size: 14px !important; font-family: 'Montserrat'; }
+/* Compact scale — aligned with Create Lead modal */
+.section-title { font-size: 14px !important; font-weight: 600; color: #01062C; font-family: 'Montserrat', sans-serif; margin-bottom: 10px; letter-spacing: -0.01em; }
+.form-card { background: #fff; border: 1px solid #eef2f7; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); padding: 0.875rem 1rem !important; }
+.radius-12 { border-radius: 10px; }
+.form-label-custom { font-size: 12px !important; font-weight: 500; color: #475569; margin-bottom: 4px; display: block; font-family: 'Montserrat', sans-serif; }
+.custom-input { height: 36px !important; min-height: 36px; border-radius: 8px !important; border: 1px solid #E2E8F0 !important; font-size: 13px !important; font-family: 'Montserrat', sans-serif; }
+.custom-input.is-invalid { border-color: #dc3545 !important; }
 .input-group-custom { display: flex; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; }
 .input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 10px 0 0 10px !important; }
-:deep(.custom-v-select) { font-size: 14px; }
-:deep(.custom-v-select .vs__dropdown-toggle) { height: 44px !important; min-height: 44px; border-radius: 10px; border: 1px solid #E2E8F0; font-size: 14px; }
-:deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 14px; }
+:deep(.custom-v-select) { font-size: 13px; }
+:deep(.custom-v-select .vs__dropdown-toggle) { height: 36px !important; min-height: 36px; border-radius: 8px; border: 1px solid #E2E8F0; font-size: 13px; padding: 2px 8px; }
+:deep(.custom-v-select.is-invalid .vs__dropdown-toggle) { border-color: #dc3545 !important; }
+:deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 13px; }
 :deep(.custom-v-select-inline) { min-width: 120px; }
-:deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 44px !important; min-height: 44px; border: none; border-left: 1px solid #E2E8F0; border-radius: 0 10px 10px 0; font-size: 14px; }
-.doc-tabs { gap: 8px; }
-.doc-tab { height: 32px; min-height: 32px; padding: 0 14px; border-radius: 100px; border: 1px solid #E2E8F0; background: #F1F5F9; font-size: 13px; color: #64748B; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+:deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 36px !important; min-height: 36px; border: none; border-left: 1px solid #E2E8F0; border-radius: 0 8px 8px 0; font-size: 13px; }
+.doc-tabs { gap: 6px; }
+.doc-tab { height: 30px; min-height: 30px; padding: 0 12px; border-radius: 100px; border: 1px solid #E2E8F0; background: #F1F5F9; font-size: 12px; color: #64748B; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .doc-tab.active { background: #2196F3; color: #fff; border-color: #2196F3; }
 .upload-zone { border-style: dashed !important; border-color: #E2E8F0 !important; background: #F8FAFC; }
 .upload-icon { font-size: 36px; color: #94A3B8; }
@@ -1389,5 +1330,6 @@ const bedroomOptions = [
 .tag-remove { cursor: pointer; font-size: 16px; }
 .btn-tag-search { background: transparent; border: none; color: #3B82F6; font-size: 14px; cursor: pointer; }
 .add-custom-field-link { font-size: 14px; color: #3B82F6; text-decoration: underline; }
-.form-section { margin-top: 20px; }
+.form-section { margin-top: 14px; }
+.form-section:first-of-type { margin-top: 0; }
 </style>
