@@ -230,23 +230,25 @@ class Deal extends Model
     }
     
         public function scopeVisibleFor($query, $user)
-{
-    if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+            {
+                // &&  auth()->user()->id !=30 &&  auth()->user()->id ==33 for owner and suhil
+                if ($user->hasAnyRole(['manager', 'team_lead', 'admin']) &&  auth()->user()->id !=30 &&  auth()->user()->id !=33) {
 
-        $subordinatesIds = $user->getAllSubordinatesIds();
+                    $subordinatesIds = $user->getAllSubordinatesIds();
 
-        $query->whereIn(
-            'responsible_person_id',
-            array_merge($subordinatesIds, [$user->id])
-        );
+                    $query->whereIn(
+                        'responsible_person_id',
+                        array_merge($subordinatesIds, [$user->id])
+                    );
 
-    } elseif (!$user->hasRole('super_admin')) {
+                } elseif (!$user->hasRole('super_admin') &&  auth()->user()->id !=30 &&  auth()->user()->id !=33) {
 
-        $query->where('responsible_person_id', $user->id);
-    }
+                    $query->where('responsible_person_id', $user->id);
+                }
 
-    return $query;
-}
+                return $query;
+            }
+
 public function scopeFilter($query, $request)
 {
     return $query

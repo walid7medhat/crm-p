@@ -6149,15 +6149,15 @@ margin-top: 20px;
   gap: 16px;
 }
 
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #eaeaea;
-}
+/*.info-item {*/
+/*  display: flex;*/
+  /*flex-direction: column;*/
+/*  gap: 4px;*/
+/*  padding: 12px;*/
+/*  background: #f8f9fa;*/
+/*  border-radius: 8px;*/
+/*  border: 1px solid #eaeaea;*/
+/*}*/
 
 .info-label {
   font-size: 12px;

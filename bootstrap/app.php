@@ -64,10 +64,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->everyTenMinutes()
                 ->withoutOverlapping()
                 ->runInBackground();
-     $schedule->command('meta:refresh-app-token')
+         $schedule->command('meta:refresh-app-token')
                  ->cron('0 0 */60 * *') 
                  ->withoutOverlapping()
                  ->runInBackground();
+        $schedule->command('leads:score')
+            ->everyTenMinutes()
+            ->withoutOverlapping()
+            ->runInBackground();
         // ==================== TEST COMMANDS ====================
         // $schedule->command('activities:send-reminders --timeframe=today --test')
         //     ->dailyAt('10:00')

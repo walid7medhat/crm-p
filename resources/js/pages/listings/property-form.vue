@@ -2939,14 +2939,14 @@ body {
   display: block;
 }
 
-.form-control, .v-select {
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 12px 16px;
-  font-size: 0.95rem;
-  transition: all 0.3s ease;
-  background: white;
-}
+/*.form-control, .v-select {*/
+/*  border: 1px solid #e2e8f0;*/
+/*  border-radius: 10px;*/
+/*  padding: 12px 16px;*/
+/*  font-size: 0.95rem;*/
+/*  transition: all 0.3s ease;*/
+/*  background: white;*/
+/*}*/
 
 .form-control:focus, .v-select:focus {
   border-color: var(--dark-blue-light);

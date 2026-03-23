@@ -7,7 +7,7 @@
       @filters-changed="handleFiltersChanged"
       :initial-filters="initialFilters"
     />
-    <div v-if="isAdmin" class="row mb-4">
+    <div v-if="isAdmin" class="row mb-4 mt-3">
       <div class="col-12">
         <div class="status-toggle-buttons">
           <button 
@@ -88,7 +88,7 @@
         v-else
         v-for="(property, index) in properties"
         :key="property.id || index"
-        class="col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600"
+        class="col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600 mt-3"
       >
        <router-link
             :to="`/property-details/${property.id}`"

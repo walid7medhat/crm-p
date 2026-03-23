@@ -3,8 +3,8 @@
     <div class="navbar-header-toolbar">
       <div class="navbar-header-left">
         <div class="d-flex flex-wrap align-items-center gap-2 gap-md-3">
-          <button type="button" class="sidebar-toggle back-button" @click="goBack" title="Go back" aria-label="Go back">
-            <iconify-icon icon="lucide:arrow-left" class="icon navbar-header-back-icon"></iconify-icon>
+          <button type="button" v-if="showBackButton"  class="sidebar-toggle back-button" @click="goBack" title="Go back" aria-label="Go back">
+            <iconify-icon icon="lucide:arrow-left" class="icon navbar-header-back-icon text-white"></iconify-icon>
           </button>
           <button type="button" @click="toggleSidebarMobile" class="sidebar-mobile-toggle">
             <iconify-icon icon="heroicons:bars-3-solid" class="icon navbar-header-menu-icon"></iconify-icon>
@@ -569,6 +569,12 @@ function logout() {
   sessionStorage.removeItem('token');
   router.push('/sign-in');
 }
+
+const showBackButton = computed(() => {
+  const hiddenRoutes = ['/kanban', '/kanban_deal'];
+
+  return !hiddenRoutes.some(r => route.path.startsWith(r));
+});
 </script>
 
 <style scoped>
@@ -587,7 +593,7 @@ function logout() {
   left: 0;
   right: 0;
   /* Header stays below sidebar */
-  z-index: 1000 !important;
+  z-index: 99 !important;
   pointer-events: auto;
   display: flex;
   align-items: center;

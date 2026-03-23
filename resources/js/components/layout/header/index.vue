@@ -43,38 +43,37 @@
           </router-link>
         </li>
         <!-- CRM analytics & tools: super_admin only -->
-        <template v-if="isSuperAdmin">
-          <li>
+       
+          <li v-if="isAdmin" >
             <router-link to="/kanban" :class="{ 'active-page': isActive('/kanban') }">
               <iconify-icon icon="material-symbols:map-outline" class="menu-icon" />
               <span>Kanban</span>
             </router-link>
           </li>
-          <li>
-            <router-link to="/lead-reports" :class="{ 'active-page': isActive('/lead-reports') }">
+          <li  v-if="isSuperAdmin" >
+            <router-link to="/lead-reports":class="{ 'active-page': isActive('/lead-reports') }">
               <iconify-icon icon="lucide:bar-chart-2" class="menu-icon" />
               <span>Lead Reports</span>
             </router-link>
           </li>
-          <li>
+          <li  v-if="isAdmin">
             <router-link to="/settings/lead-scoring" :class="{ 'active-page': isActive('/settings/lead-scoring') }">
               <iconify-icon icon="lucide:target" class="menu-icon" />
               <span>Lead Scoring</span>
             </router-link>
           </li>
-          <li>
-            <router-link to="/investment-analysis" :class="{ 'active-page': isActive('/investment-analysis') }">
+          <li v-if="isSuperAdmin">
+            <router-link to="/investment-analysis"  :class="{ 'active-page': isActive('/investment-analysis') }">
               <iconify-icon icon="lucide:line-chart" class="menu-icon" />
               <span>Investment Analysis</span>
             </router-link>
           </li>
-          <li>
+          <li  v-if="isSuperAdmin">
             <router-link to="/settings/city-investments" :class="{ 'active-page': isActive('/settings/city-investments') }">
               <iconify-icon icon="lucide:landmark" class="menu-icon" />
               <span>City Investments</span>
             </router-link>
           </li>
-        </template>
         <!-- Listings Dropdown -->
         <li v-if="filteredTableItems.length > 0" :class="{ 
           dropdown: true, 
@@ -816,7 +815,7 @@ onMounted(() => {
   -webkit-backdrop-filter: blur(12px);
   /*border: 1px solid rgba(255, 255, 255, 0.2);*/
   /* Keep sidebar above header in all states */
-  z-index: 1200 !important;
+  z-index: 99 !important;
   position: fixed;
 }
 
@@ -838,11 +837,13 @@ onMounted(() => {
   background: transparent;
   border-bottom: 1px solid rgba(255, 255, 255, 0.16);
 }
-
+.sidebar-menu li a {
+    padding: 0.625rem 0.75rem !important;
+}
 /* 2. Darker only on hover when collapsed (.sidebar.active = collapsed) */
 .sidebar.active:hover {
   width: auto;
-   background: rgb(1 6 45 / 56%);
+   background: rgb(1 6 45 / 56%) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   /*border-color: rgba(255, 255, 255, 0.12);*/
@@ -850,25 +851,25 @@ onMounted(() => {
 }
 @media (max-width: 991px) {
   .sidebar.sidebar-open {
-    background: rgb(1 6 45 / 56%);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: rgb(1 6 45 / 56%) !important;;
+    backdrop-filter: blur(16px) !important;;
+    -webkit-backdrop-filter: blur(16px) !important;;
   }
 }
 @media (min-width: 1200px) {
   .sidebar.active:hover {
     inset-inline-start: 0;
-    width: 18rem;
+    width: 18rem ;;
   }
 }
 @media (min-width: 1400px) {
   .sidebar.active:hover {
-    width: 20rem;
+    width: 20rem ;;
   }
 }
 @media (min-width: 1650px) {
   .sidebar.active:hover {
-    width: 22rem;
+    width: 22rem ;;
   }
 }
 

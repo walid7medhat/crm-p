@@ -197,7 +197,7 @@ class StageController extends Controller
             ]);
 
             // ================= permissions =================
-            if ($user->hasRole('super_admin')) {
+            if ($user->hasRole('super_admin')  || auth()->user()->id ==30 || auth()->user()->id ==33) {
                 // super admin sees everything
             } 
             elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
@@ -219,7 +219,6 @@ class StageController extends Controller
 
             // ================= apply all filters =================
             $baseLeadsQuery->where(function ($q) use ($request) {
-                // ... كل الفلاتر الموجودة حالياً ...
                 if ($request->filled('changed_by')) {
                     $q->whereHas('histories', function($query) use($request) {
                         $query->where('changes->action', 'stage_changed')
@@ -376,8 +375,7 @@ class StageController extends Controller
                 'observers.user'
             ]);
 
-            // ================= نفس شروط الصلاحيات =================
-            if ($user->hasRole('super_admin')) {
+            if ($user->hasRole('super_admin')  || auth()->user()->id ==30 || auth()->user()->id ==33) {
             } 
             elseif ($user->hasAnyRole(['manager', 'team_lead','admin'])) {
                 $subordinatesIds = $user->getAllSubordinatesIds();

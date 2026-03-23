@@ -120,7 +120,7 @@
                     </button>
 
                     <!-- More Options -->
-                    <div class="more-options-wrapper d-flex align-items-center gap-12">
+                    <div class="more-options-wrapper d-flex align-items-center gap-12" v-if="hasCreateStagePermission || (isSuperAdmin  && activeTab=='leads')">
                         <b-dropdown 
                             variant="link" 
                             no-caret 
@@ -134,7 +134,7 @@
                                 </button>
                             </template>
                             
-                            <b-dropdown-item @click="showAddStageModal = true" class="dropdown-item-custom">
+                            <b-dropdown-item @click="showAddStageModal = true" v-if="hasCreateStagePermission"  class="dropdown-item-custom">
                                 <img :src="addStage" alt="Add Stage" class="dropdown-icon" />
                                 <span class="dropdown-text">Add New Stage</span>
                             </b-dropdown-item>
@@ -273,11 +273,15 @@ const appliedSearchParams = ref(null)
 const isSuperAdmin = computed(() => {
     if (!user.value) return false
     
-    const isAdminUser = user.value.roles?.includes('super_admin')
+    const isAdminUser = user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin') 
     
     return isAdminUser
 })
-
+const hasCreateStagePermission = computed(() => {
+    if (!user.value) return false
+    
+    return user.value.permissions?.includes('stages-create')
+})
 function applySearchToApi() {
     const base = lastQuery.value && Object.keys(lastQuery.value).length ? { ...lastQuery.value } : {}
     const term = (search.value || '').trim()
