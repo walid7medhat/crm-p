@@ -213,7 +213,7 @@ function getAdminParentAttribute()
             return $this->listing_team == 1;
         }else{
             $manager = $this->getManagerAttribute();
-            return $manager && $manager->listing_team != 1;
+            return $manager && $manager->listing_team != 1 ;
         }
 
         // Team Lead can always manage
@@ -236,6 +236,9 @@ function getAdminParentAttribute()
      */
     public function canRespondToAccessRequest(ListingAccessRequest $request): bool
     {
+        if($request->request_type=='viewing' && $request->status === 'pending'){
+             return $request->listing->isOwner($this) ||  $this->id !== $request->handled_by;
+        }
         // First check general permission
         if (!$this->canManageAccessRequests()) {
             return false;

@@ -878,13 +878,22 @@ async function confirmResponse() {
         } else {
             throw new Error(response.data.message || 'Failed to respond to request')
         }
-    } catch (err) {
+    }
+    catch (err) {
         console.error('Error responding to request:', err)
         showResponseModal.value = false
         await fetchMyRequests()
+    
+        // اقرأ رسالة السيرفر من Axios
+        let errorMessage = 'Failed to respond to request'
+    
+        if (err.response && err.response.data) {
+            errorMessage = err.response.data.message || errorMessage
+        }
+    
         Swal.fire({
             title: 'Error!',
-            text: 'Failed to respond to request',
+            text: errorMessage,
             icon: 'error',
             confirmButtonColor: '#01062d'
         })
