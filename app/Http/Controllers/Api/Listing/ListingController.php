@@ -540,7 +540,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         }
 
         // Check if user has permission to update this listing
-        if ($listing->added_by !== $user->id && $listing->agent_id !== $user->id && ! $user->hasRole('super_admin')) {
+        if ($listing->added_by !== $user->id && $listing->agent_id !== $user->id && ! $user->hasRole('super_admin') && !$user->canEditListings($listing->agent_id)) {
             return ApiResponse::error('You are not authorized to update this listing', 403);
         }
 

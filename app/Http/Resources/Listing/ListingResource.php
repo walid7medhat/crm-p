@@ -18,7 +18,7 @@ class ListingResource extends JsonResource
         
         if ($user) {
             $canEdit = $user->id == $this->added_by || 
-                    ($this->agent_id && $user->id == $this->agent_id) || $user->hasRole('super_admin');
+                    ($this->agent_id && $user->id == $this->agent_id) || $user->hasRole('super_admin') || $user->canEditListings($this->agent_id);
             $canDelete = auth()->user()->hasRole('super_admin');
             $showDocuments= $user->id == $this->added_by || 
                     ($this->agent_id && $user->id == $this->agent_id) || $user->hasRole('super_admin');

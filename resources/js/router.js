@@ -88,10 +88,10 @@ import InvestmentAnalysis from './pages/dashboard/investment.vue'
 import CitySettings from './pages/dashboard/city-settings.vue'
 const routes = [
   // Kanban Route (super_admin only — see meta.requiresSuperAdmin)
-  { path: '/kanban', component: Kanban, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/kanban', component: Kanban, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/kanban_deal', component: kanban_deal },
     { path: '/settings/kanban', component: kanban_settings },
-    { path: '/settings/lead-scoring', component: lead_scoring_settings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+    { path: '/settings/lead-scoring', component: lead_scoring_settings, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/lead-scoring', redirect: '/settings/lead-scoring' },
 
   { path: '/settings/stage-visibility', component: StageVisibility, meta: { requiresAuth: true } },
@@ -254,6 +254,16 @@ const isSuperAdminFromStorage = () => {
     return false
   }
 }
+const isAdminFromStorage = () => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return false
+    const u = JSON.parse(raw)
+    return Array.isArray(u.roles) && (u.roles.includes('super_admin') || u.roles.includes('admin'))
+  } catch {
+    return false
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -285,6 +295,11 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.matched.some((r) => r.meta.requiresSuperAdmin) && !isSuperAdminFromStorage()) {
+    console.log('Super admin only — redirecting home')
+    next('/')
+    return
+  }
+  if (to.matched.some((r) => r.meta.requiresAdmin) && !isAdminFromStorage()) {
     console.log('Super admin only — redirecting home')
     next('/')
     return

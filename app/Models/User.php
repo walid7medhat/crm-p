@@ -231,6 +231,46 @@ function getAdminParentAttribute()
         return false;
     }
 
+
+    public function canEditListings($agent): bool
+    {
+          if ($this->hasAnyRole(['super_admin','admin'])) {
+                return true;
+            } else {
+              $allowedAgentIds = $this->getAllSubordinatesIds();
+
+                if ($agent && in_array($agent, $allowedAgentIds)) {
+                    $canAssignAgent = true;
+                }
+            }
+        // Super Admin and Admin can always manage
+        if ($this->hasRole('super_admin') || $this->hasRole('admin')) {
+            return true;
+        }
+        
+        // Manager can only manage if in listing team
+        if ($this->hasRole('manager')) {
+            return $this->listing_team == 1 && $canAssignAgent;
+        }else{
+            $manager = $this->getManagerAttribute();
+            return $manager && $manager->listing_team == 1 && $canAssignAgent ;
+        }
+
+        // Team Lead can always manage
+        // if ($this->hasRole('team_lead')) {
+        //     return true;
+        // }
+
+        // Regular Agent can manage only if their manager is in listing team
+        // if ($this->hasRole('agent')) {
+        //     $manager = $this->getManagerAttribute();
+        //     return $manager && $manager->listing_team != 1;
+        // }
+         
+
+        return false;
+    }
+
     /**
      * Check if user can respond to a specific access request
      */

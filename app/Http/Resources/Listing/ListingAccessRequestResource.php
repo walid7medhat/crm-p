@@ -48,7 +48,9 @@ class ListingAccessRequestResource extends JsonResource
                     'price' => $this->listing->price,
                     'size_sqft' => $this->listing->size_sqft,
                     'size_sqmt' => $this->listing->size_sqmt,
-                    'agent' => $this->listing->agent?->name,
+                    'agent' => collect(explode(' ', $this->listing?->agent?->name))
+                        ->take(2)
+                        ->implode(' '),
                       'agent_avatar' => $this->listing->agent && $this->listing->agent->avatar?asset('storage/'. $this->listing->agent->avatar):'',
                 ];
             }),
@@ -57,7 +59,9 @@ class ListingAccessRequestResource extends JsonResource
             'requested_by' =>
                  [
                     'id' => $this->requestedBy?->id,
-                    'name' => $this->requestedBy?->name,
+                    'name' => collect(explode(' ', $this->requestedBy?->name))
+                        ->take(2)
+                        ->implode(' '),
                     'email' => $this->requestedBy?->email,
                     'phone' => $this->requestedBy?->phone,
                     'avatar' => $this->requestedBy && $this->requestedBy->avatar ?  asset('storage/'. $this->requestedBy->avatar) : null,
@@ -112,12 +116,16 @@ class ListingAccessRequestResource extends JsonResource
             'has_review' => !empty($this->review),
             'reviewed_by' => $this->reviewer ? [
                 'id' => $this->reviewer->id,
-                'name' => $this->reviewer->name,
+                'name' =>  collect(explode(' ', $this->reviewer?->name))
+                        ->take(2)
+                        ->implode(' '),
                 'avatar' => $this->reviewer->avatar
             ] : null,
             'handled_by' => $this->handledBy ? [
                 'id' => $this->handledBy->id,
-                'name' => $this->handledBy->name,
+                'name' => collect(explode(' ', $this->handledBy?->name))
+                        ->take(2)
+                        ->implode(' '),
                 'avatar' => $this->handledBy->avatar
                     ? asset('storage/' . $this->handledBy->avatar)
                     : null,
