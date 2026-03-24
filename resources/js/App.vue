@@ -25,6 +25,7 @@
       :show="chatOpen"
       :start-with-agent="chatAgent"
       :start-with-listing-id="chatListingId"
+      :start-with-context="chatContext"
       @close="closeChat"
     />
   </div>
@@ -54,6 +55,7 @@ export default {
     const chatOpen = ref(false)
     const chatAgent = ref(null)
     const chatListingId = ref(null)
+    const chatContext = ref(null)
     const canUseChat = computed(() => {
       try {
         const raw = localStorage.getItem('user')
@@ -66,10 +68,11 @@ export default {
       }
     })
 
-    function openPropertyChat(agent, listingId) {
+    function openPropertyChat(agent, listingId, context = null) {
       if (!canUseChat.value) return
       chatAgent.value = agent
       chatListingId.value = listingId != null ? Number(listingId) : null
+      chatContext.value = context || null
       chatOpen.value = true
     }
 
@@ -77,6 +80,7 @@ export default {
       if (!canUseChat.value) return
       chatAgent.value = null
       chatListingId.value = null
+      chatContext.value = null
       chatOpen.value = true
     }
 
@@ -96,6 +100,7 @@ export default {
       chatOpen,
       chatAgent,
       chatListingId,
+      chatContext,
       canUseChat,
       openChatInbox,
       closeChat,

@@ -9,6 +9,9 @@
       <div class="chat-popup">
         <div class="popup-header">
           <div class="popup-header-left">
+            <button v-if="showChatWindow" type="button" class="popup-back" aria-label="Back to chats" @click="backToConversationList">
+              <i class="ri-arrow-left-line"></i>
+            </button>
             <span class="popup-icon"><i class="ri-chat-3-fill"></i></span>
             <h6 class="popup-title">Messages</h6>
           </div>
@@ -58,6 +61,7 @@
             :conversation-id="activeConversationId"
             :messages="messages"
             :other-user="activeOtherUser"
+            :property-context="propertyContext"
             :current-user-id="currentUserId"
             :current-user-avatar="currentUserAvatar"
             :current-user-name="currentUserName"
@@ -83,6 +87,7 @@ const props = defineProps({
   show: { type: Boolean, default: false },
   startWithAgent: { type: Object, default: null },
   startWithListingId: { type: Number, default: null },
+  startWithContext: { type: Object, default: null },
 })
 
 const emit = defineEmits(['close'])
@@ -103,6 +108,7 @@ const echoChannel = ref(null)
 const messagesPage = ref(1)
 const messagesLastPage = ref(1)
 const startWithAgentFailed = ref(false)
+const propertyContext = ref(null)
 const chatSearchQuery = ref('')
 const agentSearchResults = ref([])
 const searchingAgents = ref(false)
@@ -146,9 +152,9 @@ watch(() => props.show, (visible) => {
       messages.value = []
       startWithAgentFailed.value = true
     } else if (props.startWithAgent && props.startWithListingId != null) {
-      startConversationWithAgent(props.startWithAgent.id, props.startWithListingId)
+      startConversationWithAgent(props.startWithAgent.id, props.startWithListingId, props.startWithContext)
     } else if (props.startWithAgent) {
-      startConversationWithAgent(props.startWithAgent.id, null)
+      startConversationWithAgent(props.startWithAgent.id, null, props.startWithContext)
     } else {
       loadConversations()
       activeConversationId.value = null
@@ -182,13 +188,15 @@ watch(chatSearchQuery, (q) => {
   }, 250)
 })
 
-watch(activeConversationId, (id) => {
+watch(activeConversationId, async (id) => {
   if (id) {
+    await resolvePropertyContext(activeConversation.value)
     loadMessages(id)
     markRead(id)
     subscribeConversation(id)
   } else {
     messages.value = []
+    propertyContext.value = null
     unsubscribeEcho()
   }
 })
@@ -253,7 +261,7 @@ async function searchAgents(query) {
   }
 }
 
-async function startConversationWithAgent(agentId, listingId) {
+async function startConversationWithAgent(agentId, listingId, context = null) {
   const agentIdNum = agentId != null ? Number(agentId) : NaN
   if (!Number.isInteger(agentIdNum) || agentIdNum < 1) {
     console.error('Start conversation: invalid agent_id', agentId)
@@ -271,6 +279,7 @@ async function startConversationWithAgent(agentId, listingId) {
       activeConversationId.value = c.id
       activeConversation.value = c
       conversations.value = [c, ...conversations.value.filter(x => x.id !== c.id)]
+      await sendPropertyContextIfNeeded(c.id, listingId, context)
     }
   } catch (e) {
     const msg = e.response?.data?.message || e.message
@@ -285,6 +294,49 @@ async function startConversationWithAgent(agentId, listingId) {
   }
 }
 
+function buildPropertyContextMessage(context, listingId) {
+  const propertyId = Number(context?.propertyId || listingId || 0)
+  const title = (context?.title || '').trim() || `Property #${propertyId || 'N/A'}`
+  const location = (context?.location || '').trim()
+  const unitNo = (context?.unitNo || '').trim()
+  const reference = (context?.reference || context?.reference_number || context?.referenceNo || context?.ref || '').trim()
+  const price = (context?.price || '').trim()
+  const link = propertyId > 0 && typeof window !== 'undefined'
+    ? `${window.location.origin}/property-details/${propertyId}`
+    : ''
+  const marker = propertyId > 0 ? `[Property:${propertyId}]` : '[Property]'
+
+  const lines = [
+    `${marker} Property inquiry`,
+    `Property: ${title}`,
+    `Reference: ${reference || (propertyId > 0 ? `#${propertyId}` : 'N/A')}`,
+    ...(unitNo ? [`Unit: ${unitNo}`] : []),
+    ...(location ? [`Location: ${location}`] : []),
+    ...(price ? [`Price: ${price}`] : []),
+    ...(link ? [`Link: ${link}`] : []),
+  ]
+  return lines.join('\n')
+}
+
+async function sendPropertyContextIfNeeded(conversationId, listingId, context) {
+  const hasContext = !!(listingId || context?.propertyId || context?.title || context?.reference || context?.reference_number || context?.referenceNo)
+  if (!hasContext || !conversationId) return
+
+  try {
+    const firstPage = await api.get(`/chat/messages/${conversationId}`, { params: { page: 1 } })
+    const existing = firstPage?.data?.data || []
+    const marker = context?.propertyId ? `[Property:${Number(context.propertyId)}]` : '[Property'
+    const alreadyContainsContext = existing.some((m) => (m?.message || '').includes(marker))
+    if (alreadyContainsContext) return
+
+    const msg = buildPropertyContextMessage(context, listingId)
+    if (!msg.trim()) return
+    await api.post('/chat/send', { conversation_id: conversationId, message: msg })
+  } catch (e) {
+    console.error('Send property context message', e)
+  }
+}
+
 function startChatWithAgent(agent) {
   if (!agent?.id) return
   chatSearchQuery.value = ''
@@ -295,6 +347,58 @@ function startChatWithAgent(agent) {
 function openConversation(conv) {
   activeConversationId.value = conv.id
   activeConversation.value = conv
+}
+
+function normalizePropertyContext(raw, listingId) {
+  if (!raw && !listingId) return null
+  const id = Number(raw?.propertyId || raw?.id || listingId || 0)
+  const title = (raw?.title || raw?.name || raw?.reference_number || raw?.reference || '').trim()
+  const reference = (raw?.reference || raw?.reference_number || raw?.referenceNo || '').trim()
+  const unitNo = (raw?.unitNo || raw?.unit_number || '').trim()
+  const location = (raw?.location || [raw?.project?.name, raw?.area?.title || raw?.area?.name].filter(Boolean).join(' - ')).trim()
+  const price = raw?.price
+    ? (typeof raw.price === 'string' ? raw.price : `${raw.price} ${raw?.currency || 'AED'}`)
+    : ''
+  const link = id > 0 && typeof window !== 'undefined' ? `${window.location.origin}/property-details/${id}` : ''
+
+  if (!id && !title && !reference && !link) return null
+  return {
+    id,
+    title: title || `Property #${id || 'N/A'}`,
+    reference: reference || (id ? `#${id}` : ''),
+    unitNo,
+    location,
+    price,
+    link,
+  }
+}
+
+async function resolvePropertyContext(conversation) {
+  const listingId = Number(conversation?.listing_id || 0)
+  if (!listingId) {
+    propertyContext.value = null
+    return
+  }
+
+  const fromStart = normalizePropertyContext(props.startWithContext, listingId)
+  if (fromStart && fromStart.id === listingId) {
+    propertyContext.value = fromStart
+    return
+  }
+
+  const fromConversation = normalizePropertyContext(conversation?.listing, listingId)
+  if (fromConversation) {
+    propertyContext.value = fromConversation
+  }
+
+  try {
+    const res = await api.get(`/listings/properties/${listingId}`)
+    const property = res?.data?.data || null
+    const fromApi = normalizePropertyContext(property, listingId)
+    if (fromApi) propertyContext.value = fromApi
+  } catch (_) {
+    // keep best available context from conversation/start props
+  }
 }
 
 async function loadMessages(conversationId, page = 1) {
@@ -386,6 +490,14 @@ function unsubscribeEcho() {
 function close() {
   emit('close')
 }
+
+function backToConversationList() {
+  activeConversationId.value = null
+  activeConversation.value = null
+  messages.value = []
+  startWithAgentFailed.value = true
+  loadConversations()
+}
 </script>
 
 <style scoped>
@@ -443,6 +555,24 @@ function close() {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+.popup-back {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.popup-back:hover {
+  background: #f1f5f9;
+  color: #1e293b;
 }
 .popup-icon {
   width: 36px;

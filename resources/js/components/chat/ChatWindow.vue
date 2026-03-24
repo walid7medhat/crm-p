@@ -10,6 +10,16 @@
         </div>
       </div>
     </div>
+    <div v-if="propertyContext" class="property-context-card">
+      <div class="property-context-title">{{ propertyContext.title }}</div>
+      <div v-if="propertyContext.reference" class="property-context-meta">Reference: {{ propertyContext.reference }}</div>
+      <div v-if="propertyContext.unitNo" class="property-context-meta">Unit: {{ propertyContext.unitNo }}</div>
+      <div v-if="propertyContext.location" class="property-context-meta">{{ propertyContext.location }}</div>
+      <div v-if="propertyContext.price" class="property-context-meta">Price: {{ propertyContext.price }}</div>
+      <a v-if="propertyContext.link" :href="propertyContext.link" target="_blank" rel="noopener" class="property-context-link">
+        Open Property
+      </a>
+    </div>
     <div ref="messagesContainerRef" class="chat-messages" @scroll="onScroll">
       <div v-if="loadingMore" class="loading-more">Loading...</div>
       <div v-for="msg in sortedMessages" :key="msg.id" class="message-row">
@@ -51,6 +61,7 @@ const props = defineProps({
   conversationId: { type: Number, default: null },
   messages: { type: Array, default: () => [] },
   otherUser: { type: Object, default: null },
+  propertyContext: { type: Object, default: null },
   currentUserId: { type: Number, default: null },
   currentUserAvatar: { type: String, default: '' },
   currentUserName: { type: String, default: '' },
@@ -154,6 +165,31 @@ async function sendMessage() {
   flex-direction: column;
   gap: 2px;
   background: #f8fafc;
+}
+.property-context-card {
+  margin: 10px 12px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fbff;
+  padding: 10px 12px;
+}
+.property-context-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+.property-context-meta {
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.4;
+}
+.property-context-link {
+  display: inline-flex;
+  margin-top: 7px;
+  font-size: 12px;
+  color: #0d6efd;
+  text-decoration: underline;
 }
 .loading-more { text-align: center; padding: 8px; font-size: 12px; color: #666; }
 .message-row { margin-bottom: 6px; }

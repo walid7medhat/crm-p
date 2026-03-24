@@ -1,7 +1,7 @@
 <template>
   <section class="lr-table-wrap">
     <div class="lr-table-head">
-      <h3>{{ title }}</h3>
+      <h6>{{ title }}</h6>
       <div class="lr-table-tools">
         <div class="lr-search-box">
           <iconify-icon icon="lucide:search" />
@@ -64,7 +64,7 @@ defineEmits(['update:search', 'update:page', 'refresh'])
 <style scoped>
 .lr-table-wrap { background: #fff; border: 1px solid #ebeef3; border-radius: 14px; margin: 0 16px; padding: 12px; }
 .lr-table-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.lr-table-head h3 { font-size: 30px; color: #10152f; margin: 0; }
+.lr-table-head h3 { font-size: 18px; color: #10152f; margin: 0; font-weight: 600; }
 .lr-table-tools { display: flex; gap: 8px; align-items: center; }
 .lr-search-box { width: 220px; height: 36px; border: 1px solid #ebeef3; border-radius: 20px; display: flex; align-items: center; padding: 0 10px; color: #9ca2ae; }
 .lr-search-box input { border: none; outline: none; width: 100%; font-size: 12px; }
