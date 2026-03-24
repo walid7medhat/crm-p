@@ -695,13 +695,14 @@
                               </button>
 
                               <!-- Chat with Agent -->
-                              <!--<button -->
-                              <!--  v-if="property?.agent"-->
-                              <!--  class="dropdown-item"-->
-                              <!--  @click="handleChatWithAgentClick">-->
-                              <!--  <i class="ri-chat-3-fill"></i>-->
-                              <!--  Chat with Agent-->
-                              <!--</button>-->
+                              <button
+                                v-if="canUsePropertyChat && property?.agent"
+                                class="dropdown-item"
+                                @click="handleChatWithAgentClick"
+                              >
+                                <i class="ri-chat-3-fill"></i>
+                                Chat with Agent
+                              </button>
                     
                               <!-- Mark as Converted (Sold Out) -->
                               <button 
@@ -2022,6 +2023,11 @@ const isAuthenticated = computed(() => {
 // New computed properties for dropdown actions
 const canAssignAgent = computed(() => {
   return property.value?.user_permissions?.can_assign_agent || false;
+});
+
+const canUsePropertyChat = computed(() => {
+  const userRoles = Array.isArray(getCurrentUser()?.roles) ? getCurrentUser().roles : [];
+  return userRoles.includes('super_admin') || userRoles.includes('admin');
 });
 
 
@@ -4659,6 +4665,7 @@ const openDriveLink = () => {
         assigningAgent,
         availableAgents,
         canAssignAgent,
+        canUsePropertyChat,
         canMarkAsConverted,
         toggleActionsDropdown,
         closeActionsDropdown,
