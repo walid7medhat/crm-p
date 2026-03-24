@@ -2582,6 +2582,12 @@ const revertFromConverted = async () => {
 };
 
     const openChatWithAgent = () => {
+      const userRoles = Array.isArray(getCurrentUser()?.roles) ? getCurrentUser().roles : [];
+      const canUseChat = userRoles.includes('super_admin') || userRoles.includes('admin');
+      if (!canUseChat) {
+        Swal.fire({ title: 'Not allowed', text: 'Chat is available only for admin and super admin.', icon: 'info' });
+        return;
+      }
       if (!property.value?.agent) return;
       chatAgent.value = {
         id: property.value.agent.id,
@@ -4721,6 +4727,19 @@ const openDriveLink = () => {
       this.closeActionsDropdown();
     },
     openChatWithAgentFromStorage() {
+      let parsedUser = null;
+      try {
+        const userData = localStorage.getItem('user');
+        parsedUser = userData ? JSON.parse(userData) : null;
+      } catch (_) {
+        parsedUser = null;
+      }
+      const roles = Array.isArray(parsedUser?.roles) ? parsedUser.roles : [];
+      const canUseChat = roles.includes('super_admin') || roles.includes('admin');
+      if (!canUseChat) {
+        Swal.fire({ title: 'Not allowed', text: 'Chat is available only for admin and super admin.', icon: 'info' });
+        return;
+      }
       if (!window.__openPropertyChat) {
         Swal.fire({ title: 'Error', text: 'Chat is not available.', icon: 'info' });
         return;
