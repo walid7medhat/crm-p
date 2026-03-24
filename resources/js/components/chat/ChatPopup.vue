@@ -208,7 +208,7 @@ function loadUser() {
       const user = JSON.parse(userStr)
       currentUserId.value = user.id
       currentUserName.value = user.name || user.email || ''
-      currentUserAvatar.value = user.avatar_url || (user.avatar ? import.meta.env.VITE_APP_URL + '/storage/' + user.avatar : '') || ''
+      currentUserAvatar.value = user.avatar_url || user.avatar || ''
     }
   } catch (e) {
     console.error('Chat load user', e)

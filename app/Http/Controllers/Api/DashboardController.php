@@ -17,6 +17,7 @@ use App\Models\ListingAccessRequest;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Auth;
+use App\Models\HotDealRequest;
 class DashboardController extends Controller
 {
     public function getStats()
@@ -726,7 +727,7 @@ public function getPropertyTypesWithListings(Request $request)
         })->orWhere('handled_by', $user->id);
         })
                 ->count();
-         
+         $hot_deals=
 
             $orders = ListingAccessRequest::with(['listing', 'requestedBy','convertedBy'])
             
@@ -734,6 +735,11 @@ public function getPropertyTypesWithListings(Request $request)
                     $q->whereIn('requested_by', $user_hierarchy);
                 })
                 ->orderBy('created_at', 'desc')
+                ->count();
+            $hot_deals = HotDealRequest::with(['listing', 'requester'])
+              ->when(!($user->hasRole('admin') || $user->hasRole('super_admin')), function($q) use ($user_hierarchy) {
+                    $q->whereIn('requested_by', $user_hierarchy);
+                })  ->orderBy('created_at', 'desc')
                 ->count();
             $counts = [
                 'listings' => [
@@ -746,6 +752,9 @@ public function getPropertyTypesWithListings(Request $request)
                 ],
                 'orders' => [
                     'all' => $orders,
+                ],
+                'hot_deals' => [
+                    'all' => $hot_deals,
                 ]
             ];
 

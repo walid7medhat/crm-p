@@ -2027,7 +2027,7 @@ const canAssignAgent = computed(() => {
 
 const canUsePropertyChat = computed(() => {
   const userRoles = Array.isArray(getCurrentUser()?.roles) ? getCurrentUser().roles : [];
-  return userRoles.includes('super_admin') || userRoles.includes('admin');
+  return userRoles.includes('super_admin') || userRoles.includes('admin') ||  getCurrentUser()?.is_listing_team;
 });
 
 
@@ -4752,7 +4752,7 @@ const openDriveLink = () => {
         parsedUser = null;
       }
       const roles = Array.isArray(parsedUser?.roles) ? parsedUser.roles : [];
-      const canUseChat = roles.includes('super_admin') || roles.includes('admin');
+      const canUseChat = roles.includes('super_admin') || roles.includes('admin') ||  parsedUser?.is_listing_team;
       if (!canUseChat) {
         Swal.fire({ title: 'Not allowed', text: 'Chat is available only for admin and super admin.', icon: 'info' });
         return;

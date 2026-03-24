@@ -477,10 +477,17 @@ const requestsItems = computed(() => {
       { path: '/all-requests', label: 'All Requests', colorClass: 'text-white w-auto', count: 0 }
     ]
   } else {
-    return [
+    const items = [
       { path: '/my-requests', label: 'Inbound Request', colorClass: 'text-white w-auto', count: 0 },
       { path: '/my-orders', label: 'Outbound Request', colorClass: 'text-white w-auto', count: 0 },
-    ]
+    ];
+    
+    // Only show hot deal requests for listing team members
+    if (user.value?.is_listing_team) {
+    //   items.push({ path: '/hotDeal-requests', label: 'Hot Deal Requests', colorClass: 'text-white w-auto', count: 0 });
+    }
+    
+    return items;
   }
 });
 
@@ -507,6 +514,7 @@ const fetchAllCounts = async () => {
         requestsItems.value.forEach(item => {
           if (item.path === '/my-requests') item.count = counts.requests.all || 0;
           if (item.path === '/my-orders') item.count = counts.orders.all || 0;
+           if (item.path === '/hotDeal-requests') item.count = counts.hot_deals.all || 0;
         });
       }
     }

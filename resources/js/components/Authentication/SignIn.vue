@@ -141,7 +141,8 @@ try {
       avatar: userData.avatar,
       roles: userData.roles,
       permissions: userData.permissions,
-      role_name:userData.role_name
+      role_name:userData.role_name,
+      is_listing_team:userData.is_listing_team
     }));
     
     console.log("✅ User data saved:", userData);
