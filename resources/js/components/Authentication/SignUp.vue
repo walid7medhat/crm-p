@@ -14,7 +14,7 @@
        <div class="form">
         <!-- Success Message بعد التسجيل -->
         <div v-if="registrationSuccess" class="alert alert-success text-center">
-          <h5 class="mb-3">🎉 Registration Successful!</h5>
+          <h5 class="mb-3">Registration Successful!</h5>
           <p class="mb-3">Your account has been created successfully and is pending activation.</p>
           <p class="mb-3"><strong>Your supervisor will activate your account shortly.</strong></p>
           <p class="mb-0">You will receive an email notification once your account is activated.</p>
@@ -28,18 +28,43 @@
         <form v-else @submit.prevent="register">
            <h4 class="mb-12 titleH">Create your account</h4>
           <!-- <p class="mb-32 titleH2">Set up your profile to access the internal sales system</p> -->
-          <div class="icon-field mb-16">
-            <span class="icon top-50 translate-middle-y">
-              <iconify-icon icon="f7:person"></iconify-icon>
-            </span>
-            <input
-              type="text"
-              class="form-control h-56-px bg-neutral-50 radius-12"
-              :class="{ 'is-invalid': errors.name }"
-              placeholder="Full Name"
-              v-model="name"
-              required
-            />
+          <div class="row g-2 mb-16">
+            <div class="col-md-6">
+              <div class="icon-field">
+                <span class="icon top-50 translate-middle-y">
+                  <iconify-icon icon="f7:person"></iconify-icon>
+                </span>
+                <input
+                  type="text"
+                  class="form-control h-56-px bg-neutral-50 radius-12"
+                  :class="{ 'is-invalid': errors.first_name || errors.name }"
+                  placeholder="First Name"
+                  v-model="first_name"
+                  required
+                />
+              </div>
+              <div v-if="errors.first_name" class="invalid-feedback d-block">
+                {{ errors.first_name[0] }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="icon-field">
+                <span class="icon top-50 translate-middle-y">
+                  <iconify-icon icon="f7:person"></iconify-icon>
+                </span>
+                <input
+                  type="text"
+                  class="form-control h-56-px bg-neutral-50 radius-12"
+                  :class="{ 'is-invalid': errors.last_name || errors.name }"
+                  placeholder="Last Name"
+                  v-model="last_name"
+                  required
+                />
+              </div>
+              <div v-if="errors.last_name" class="invalid-feedback d-block">
+                {{ errors.last_name[0] }}
+              </div>
+            </div>
             <div v-if="errors.name" class="invalid-feedback d-block">
               {{ errors.name[0] }}
             </div>
@@ -199,7 +224,8 @@ export default {
   name: 'SignUp',
   data() {
     return {
-      name: '',
+      first_name: '',
+      last_name: '',
       email: '',
       password: '',
       manager_id: '',
@@ -390,6 +416,20 @@ export default {
       let isValid = true;
 
       // Frontend validation
+      if (!this.first_name?.trim()) {
+        this.errors.first_name = ['First name is required'];
+        this.$showNotification('First name is required', 'warning');
+        isValid = false;
+      }
+
+      if (!this.last_name?.trim()) {
+        this.errors.last_name = ['Last name is required'];
+        if (isValid) {
+          this.$showNotification('Last name is required', 'warning');
+        }
+        isValid = false;
+      }
+
       if (this.password.length < 8) {
         this.errors.password = ['Password must be at least 8 characters'];
         this.$showNotification('Password must be at least 8 characters', 'warning');
@@ -427,7 +467,7 @@ export default {
       try {
         // تحويل القيم إلى الأرقام قبل الإرسال
         const payload = {
-          name: this.name,
+          name: `${this.first_name}`.trim() + ` ${this.last_name}`.trim(),
           email: this.email,
           password: this.password,
           parent_id: Number(this.parent_id) // تأكد من إرسال رقم

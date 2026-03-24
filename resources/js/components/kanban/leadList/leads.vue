@@ -443,8 +443,8 @@ const SCROLL_TICK_MS = 16
 const isLeadDragging = ref(false)
 const dragPointerX = ref(null)
 let dragAutoScrollRaf = null
-const DRAG_SCROLL_EDGE_THRESHOLD = 180
-const DRAG_SCROLL_MAX_SPEED = 26
+const DRAG_SCROLL_EDGE_THRESHOLD = 220
+const DRAG_SCROLL_MAX_SPEED = 10
 
 function updateScrollArrows() {
     const el = kanbanContainerRef.value
@@ -495,6 +495,14 @@ function onContainerDragOver(event) {
     }
 }
 
+function onGlobalDragOver(event) {
+    if (!isLeadDragging.value) return
+    const x = event?.clientX
+    if (typeof x === 'number') {
+        dragPointerX.value = x
+    }
+}
+
 function stepDragAutoScroll() {
     if (!isLeadDragging.value) {
         dragAutoScrollRaf = null
@@ -532,6 +540,7 @@ function onLeadDragStart(event) {
     document.addEventListener('pointermove', onGlobalPointerMove, { passive: true })
     document.addEventListener('mousemove', onGlobalPointerMove, { passive: true })
     document.addEventListener('touchmove', onGlobalPointerMove, { passive: true })
+    document.addEventListener('dragover', onGlobalDragOver)
 
     if (!dragAutoScrollRaf) {
         dragAutoScrollRaf = requestAnimationFrame(stepDragAutoScroll)
@@ -546,6 +555,7 @@ function onLeadDragEnd() {
     document.removeEventListener('pointermove', onGlobalPointerMove)
     document.removeEventListener('mousemove', onGlobalPointerMove)
     document.removeEventListener('touchmove', onGlobalPointerMove)
+    document.removeEventListener('dragover', onGlobalDragOver)
 
     if (dragAutoScrollRaf) {
         cancelAnimationFrame(dragAutoScrollRaf)
