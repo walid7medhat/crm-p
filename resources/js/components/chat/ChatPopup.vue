@@ -24,8 +24,27 @@
                 v-model.trim="chatSearchQuery"
                 type="text"
                 class="chat-search-input"
-                placeholder="Search by name or email..."
+                placeholder="Search chats or agents by name/email..."
               />
+            </div>
+            <div v-if="chatSearchQuery && chatSearchQuery.length >= 2" class="chat-agent-search-results">
+              <div class="chat-agent-search-title">
+                System agents
+                <span v-if="searchingAgents" class="chat-agent-search-loading">Searching...</span>
+              </div>
+              <button
+                v-for="agent in agentSearchResults"
+                :key="`agent-${agent.id}`"
+                type="button"
+                class="chat-agent-result-item"
+                @click="startChatWithAgent(agent)"
+              >
+                <span class="chat-agent-result-name">{{ agent.name }}</span>
+                <span class="chat-agent-result-email">{{ agent.email }}</span>
+              </button>
+              <div v-if="!searchingAgents && agentSearchResults.length === 0" class="chat-agent-search-empty">
+                No matching agents found.
+              </div>
             </div>
             <ConversationList
               :conversations="filteredConversations"
@@ -85,6 +104,9 @@ const messagesPage = ref(1)
 const messagesLastPage = ref(1)
 const startWithAgentFailed = ref(false)
 const chatSearchQuery = ref('')
+const agentSearchResults = ref([])
+const searchingAgents = ref(false)
+let agentSearchDebounceTimer = null
 
 const filteredConversations = computed(() => {
   const q = chatSearchQuery.value.toLowerCase()
@@ -113,6 +135,7 @@ watch(() => props.show, (visible) => {
   if (visible) {
     startWithAgentFailed.value = false
     chatSearchQuery.value = ''
+    agentSearchResults.value = []
     loadUser()
     const isSelf = currentUserId.value != null && props.startWithAgent && Number(props.startWithAgent.id) === Number(currentUserId.value)
     if (isSelf) {
@@ -134,7 +157,29 @@ watch(() => props.show, (visible) => {
     }
   } else {
     unsubscribeEcho()
+    if (agentSearchDebounceTimer) {
+      clearTimeout(agentSearchDebounceTimer)
+      agentSearchDebounceTimer = null
+    }
   }
+})
+
+watch(chatSearchQuery, (q) => {
+  const query = (q || '').trim()
+  if (agentSearchDebounceTimer) {
+    clearTimeout(agentSearchDebounceTimer)
+    agentSearchDebounceTimer = null
+  }
+
+  if (query.length < 2) {
+    agentSearchResults.value = []
+    searchingAgents.value = false
+    return
+  }
+
+  agentSearchDebounceTimer = setTimeout(() => {
+    searchAgents(query)
+  }, 250)
 })
 
 watch(activeConversationId, (id) => {
@@ -176,6 +221,38 @@ async function loadConversations() {
   }
 }
 
+function normalizeUsersPayload(res) {
+  const raw = res?.data?.data
+  if (Array.isArray(raw)) return raw
+  if (Array.isArray(raw?.data)) return raw.data
+  if (Array.isArray(res?.data)) return res.data
+  return []
+}
+
+async function searchAgents(query) {
+  searchingAgents.value = true
+  try {
+    const res = await api.get('/users', {
+      params: { search: query }
+    })
+    const list = normalizeUsersPayload(res)
+    agentSearchResults.value = list
+      .map((u) => ({
+        id: Number(u.id),
+        name: u.name || 'Unknown',
+        email: u.email || '',
+        avatar: u.avatar_url || u.avatar || null
+      }))
+      .filter((u) => Number.isInteger(u.id) && u.id > 0 && u.id !== Number(currentUserId.value))
+      .slice(0, 8)
+  } catch (e) {
+    console.error('Search agents', e)
+    agentSearchResults.value = []
+  } finally {
+    searchingAgents.value = false
+  }
+}
+
 async function startConversationWithAgent(agentId, listingId) {
   const agentIdNum = agentId != null ? Number(agentId) : NaN
   if (!Number.isInteger(agentIdNum) || agentIdNum < 1) {
@@ -206,6 +283,13 @@ async function startConversationWithAgent(agentId, listingId) {
     activeConversation.value = null
     messages.value = []
   }
+}
+
+function startChatWithAgent(agent) {
+  if (!agent?.id) return
+  chatSearchQuery.value = ''
+  agentSearchResults.value = []
+  startConversationWithAgent(agent.id, null)
 }
 
 function openConversation(conv) {
@@ -443,5 +527,55 @@ function close() {
   flex: 1;
   min-height: 0;
   max-height: none;
+}
+.chat-agent-search-results {
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 8px 12px;
+  max-height: 190px;
+  overflow-y: auto;
+}
+.chat-agent-search-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+.chat-agent-search-loading {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+.chat-agent-result-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chat-agent-result-item:hover {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+.chat-agent-result-name {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 600;
+}
+.chat-agent-result-email {
+  font-size: 11px;
+  color: #64748b;
+}
+.chat-agent-search-empty {
+  font-size: 12px;
+  color: #64748b;
+  padding: 4px 0 2px;
 }
 </style>

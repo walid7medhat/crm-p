@@ -15,12 +15,13 @@
       <Footer v-if="showLayout" />
     </main>
     <ChatFloatingButton
-      v-if="showLayout"
+      v-if="showLayout && canUseChat"
       :show="!chatOpen"
       :chat-open="chatOpen"
       @open="openChatInbox"
     />
     <ChatPopup
+      v-if="canUseChat"
       :show="chatOpen"
       :start-with-agent="chatAgent"
       :start-with-listing-id="chatListingId"
@@ -53,14 +54,27 @@ export default {
     const chatOpen = ref(false)
     const chatAgent = ref(null)
     const chatListingId = ref(null)
+    const canUseChat = computed(() => {
+      try {
+        const raw = localStorage.getItem('user')
+        if (!raw) return false
+        const u = JSON.parse(raw)
+        const roles = Array.isArray(u?.roles) ? u.roles : []
+        return roles.includes('super_admin') || roles.includes('admin')
+      } catch {
+        return false
+      }
+    })
 
     function openPropertyChat(agent, listingId) {
+      if (!canUseChat.value) return
       chatAgent.value = agent
       chatListingId.value = listingId != null ? Number(listingId) : null
       chatOpen.value = true
     }
 
     function openChatInbox() {
+      if (!canUseChat.value) return
       chatAgent.value = null
       chatListingId.value = null
       chatOpen.value = true
@@ -82,6 +96,7 @@ export default {
       chatOpen,
       chatAgent,
       chatListingId,
+      canUseChat,
       openChatInbox,
       closeChat,
     }
