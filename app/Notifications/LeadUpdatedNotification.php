@@ -69,7 +69,10 @@ public function __construct(Lead $lead, string $actionType, ?User $user = null, 
     public function getMessage()
     {
         $leadName = $this->lead->lead_name ?: "Lead #{$this->lead->lead_number}";
-$userName = $this->user?->name ?? '';
+// $userName = $this->user?->name ?? '';
+$userName=auth()->check()?collect(explode(' ',auth()->user()?->name))
+                        ->take(2)
+                        ->implode(' '):'';
 
         switch ($this->actionType) {
             case 'created':

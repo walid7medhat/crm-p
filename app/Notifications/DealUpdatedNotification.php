@@ -69,7 +69,9 @@ public function __construct(Deal $deal, string $actionType, ?User $user = null, 
     public function getMessage()
     {
         $dealName = $this->deal->deal_name ?: "Deal #{$this->deal->deal_number}";
-$userName = $this->user?->name ?? 'Integration';
+$userName=auth()->check()?collect(explode(' ',auth()->user()?->name))
+                        ->take(2)
+                        ->implode(' '):'';
 
         switch ($this->actionType) {
             case 'created':

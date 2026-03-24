@@ -233,7 +233,7 @@ function getAdminParentAttribute()
 
 
     public function canEditListings($agent): bool
-    {
+    {      $canAssignAgent=false;
           if ($this->hasAnyRole(['super_admin','admin'])) {
                 return true;
             } else {

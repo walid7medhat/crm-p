@@ -366,7 +366,7 @@
         </li>
 
         <!-- All Chats (Super Admin only) -->
-        <li v-if="isSuperAdmin" class="sidebar-item-all-chats">
+        <li v-if="isAdmin" class="sidebar-item-all-chats">
           <router-link to="/admin/chat" :class="{ 'active-page': isActive('/admin/chat') }">
             <iconify-icon icon="ri-chat-3-line" class="menu-icon" />
             <span>All Chats</span>
