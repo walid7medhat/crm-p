@@ -2731,6 +2731,14 @@ const revertFromConverted = async () => {
     watch(property, (p) => {
       if (p?.agent) {
         try {
+          const propertyContext = {
+            propertyId: p.id ?? null,
+            title: p.title || p.name || p.reference_number || `Property #${p.id ?? ''}`,
+            reference: p.reference_number || p.reference || '',
+            unitNo: p.unit_number || '',
+            location: [p?.project?.name, p?.area?.title || p?.area?.name].filter(Boolean).join(' - '),
+            price: p?.price ? `${p.price} ${p?.currency || 'AED'}` : '',
+          };
           sessionStorage.setItem('propertyChatAgent', JSON.stringify({
             id: p.agent.id,
             name: p.agent.name || p.agent.email,
@@ -2738,10 +2746,12 @@ const revertFromConverted = async () => {
             avatar: p.agent.avatar_url || p.agent.avatar || null,
           }));
           sessionStorage.setItem('propertyChatListingId', String(p.id ?? ''));
+          sessionStorage.setItem('propertyChatContext', JSON.stringify(propertyContext));
         } catch (_) {}
       } else {
         sessionStorage.removeItem('propertyChatAgent');
         sessionStorage.removeItem('propertyChatListingId');
+        sessionStorage.removeItem('propertyChatContext');
       }
     }, { immediate: true });
 
@@ -4752,21 +4762,40 @@ const openDriveLink = () => {
         return;
       }
       try {
+        const p = this.property?.value ?? this.property;
         const raw = sessionStorage.getItem('propertyChatAgent');
         const listingId = sessionStorage.getItem('propertyChatListingId');
+        const contextRaw = sessionStorage.getItem('propertyChatContext');
         if (raw) {
           const agent = JSON.parse(raw);
-          window.__openPropertyChat(agent, listingId ? parseInt(listingId, 10) : null);
+          const storedContext = contextRaw ? JSON.parse(contextRaw) : {};
+          const liveContext = p ? {
+            propertyId: p.id ?? null,
+            title: p.title || p.name || p.reference_number || p.reference || `Property #${p.id ?? ''}`,
+            reference: p.reference_number || p.reference || p.ref_no || p.unit_ref || '',
+            unitNo: p.unit_number || '',
+            location: [p?.project?.name, p?.area?.title || p?.area?.name].filter(Boolean).join(' - '),
+            price: p?.price ? `${p.price} ${p?.currency || 'AED'}` : '',
+          } : {};
+          const mergedContext = { ...storedContext, ...liveContext };
+          window.__openPropertyChat(agent, listingId ? parseInt(listingId, 10) : (p?.id ?? null), mergedContext);
           return;
         }
-        const p = this.property?.value ?? this.property;
         if (!p?.agent) {
           Swal.fire({ title: 'No agent', text: 'This property has no agent assigned.', icon: 'info' });
           return;
         }
         window.__openPropertyChat(
           { id: p.agent.id, name: p.agent.name || p.agent.email, email: p.agent.email, avatar: p.agent.avatar_url || p.agent.avatar || null },
-          p.id ?? null
+          p.id ?? null,
+          {
+            propertyId: p.id ?? null,
+            title: p.title || p.name || p.reference_number || `Property #${p.id ?? ''}`,
+            reference: p.reference_number || p.reference || '',
+            unitNo: p.unit_number || '',
+            location: [p?.project?.name, p?.area?.title || p?.area?.name].filter(Boolean).join(' - '),
+            price: p?.price ? `${p.price} ${p?.currency || 'AED'}` : '',
+          }
         );
       } catch (_) {
         Swal.fire({ title: 'Error', text: 'Could not open chat.', icon: 'info' });
