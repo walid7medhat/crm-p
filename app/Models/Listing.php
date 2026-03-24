@@ -27,7 +27,8 @@ class Listing extends Model
         //  'rented_until' => 'date',
           'payment_plan' => 'array',
              'floor_plans_source' => 'array',
-      
+        
+
     ];
  public function getFloorPlansSourcesAttribute()
     {
@@ -338,5 +339,30 @@ class Listing extends Model
     public function latestOffer()
     {
         return $this->hasOne(PropertyOffer::class,'property_id')->latestOfMany();
+    }
+    
+    
+    
+    public function hotDealRequests()
+    {
+        return $this->hasMany(HotDealRequest::class);
+    }
+    
+    public function getPendingHotDealRequest()
+    {
+        return $this->hotDealRequests()->where('status', 'pending')->first();
+    }
+    
+    public function hasPendingHotDealRequest()
+    {
+        return $this->hotDealRequests()->where('status', 'pending')->exists();
+    }
+    
+    public function isHotDealApproved()
+    {
+        return $this->is_hot_deal && $this->hotDealRequests()
+            ->where('status', 'approved')
+            ->whereNotNull('approved_at')
+            ->exists();
     }
 }

@@ -370,7 +370,7 @@ const searchReferenceNumber = ref("");
       { label: "Under Construction", value: "Under Construction" }
     ];
     const sortOptions = [
-        //   { label: "Hot Deal", value: "hot_deal" },
+          { label: "Hot Deal", value: "hot_deal" },
           { label: "Latest Listings", value: "created_at_desc" },
         //   { label: "Oldest Listings", value: "created_at_asc" },
           { label: "Price: Low to High", value: "price_asc" },

@@ -419,6 +419,7 @@ export default {
               created_at: notificationData.created_at || new Date().toISOString()
           });
       }
+      
       else if (notificationData) {
           this.addNotification({
               id: notificationData.id || Date.now(),
@@ -475,7 +476,7 @@ export default {
 
       this.showDropdown = false;
       
-      const type = notification.data.notification_type || notification.type;
+      const type = notification.type ||  notification.data.notification_type ;
       console.log('🔗 Notification type:', type);
       
       if (['request', 'approved', 'rejected'].includes(type)) {
@@ -486,7 +487,7 @@ export default {
           this.$router.push(`/property-details/${notification.data.property_id}`);
       } else if (['property_assigned', 'property_unassigned'].includes(type) && notification.data.property_id) {
           this.$router.push(`/property-details/${notification.data.property_id}`);
-      } else if (notification.data.listing_id) {
+      } else if (notification.data.listing_id && type !== 'App\\Notifications\\HotDealRequestNotification') {
           this.$router.push(`/property-details/${notification.data.listing_id}`);
       } else if (notification.data.property_id) {
           this.$router.push(`/property-details/${notification.data.property_id}`);
@@ -496,7 +497,10 @@ export default {
           this.$router.push('/kanban');
       }else if (type === 'App\\Notifications\\NewListingMatchedNotification') {
            this.$router.push(`/property-details/${notification.data.listing_id}`);
-      } else {
+      }
+      else if (type === 'App\\Notifications\\HotDealRequestNotification') {
+           this.$router.push(`/hotDeal-requests`);
+      }else {
           console.log('📍 No specific action for notification type:', type);
       }
     },

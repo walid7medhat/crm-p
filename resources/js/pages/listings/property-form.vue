@@ -17,14 +17,14 @@
                 placeholder="Select Sale or Rent"
               />
             </div>
-            <!--<div class="col-md-4">-->
-            <!--  <label class="form-label">Hot Deal</label>-->
-            <!--  <v-select -->
-            <!--    v-model="form.is_hot_deal" -->
-            <!--    :options="hotDealOptions" -->
-            <!--    placeholder="Select Hot Deal"-->
-            <!--  />-->
-            <!--</div>-->
+            <div class="col-md-4">
+              <label class="form-label">Hot Deal</label>
+              <v-select 
+                v-model="form.is_hot_deal" 
+                :options="hotDealOptions" 
+                placeholder="Select Hot Deal"
+              />
+            </div>
             
             <!-- Rented Status -->
             <!--<div class="col-md-4">-->

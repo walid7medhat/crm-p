@@ -290,7 +290,7 @@ const typeOptions = [
 ];
 
 const sortOptions = [
-//   { label: "Hot Deal", value: "hot_deal" },
+  { label: "Hot Deal", value: "hot_deal" },
   { label: "Latest Listings", value: "created_at_desc" },
   { label: "Price: Low to High", value: "price_asc" },
   { label: "Price: High to Low", value: "price_desc" }

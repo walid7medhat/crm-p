@@ -342,32 +342,34 @@ export default {
 
     this.showDropdown = false;
     
-    const type = notification.data.notification_type || notification.type;
-    console.log('🔗 Notification type:', type);
+      const type = notification.type ||  notification.data.notification_type ;
+      console.log('🔗 Notification type:', type);
     
-    if (['request', 'approved', 'rejected'].includes(type)) {
-        this.$router.push('/my-requests');
-    } else if (type === 'new_sales_agent') {
-        this.$router.push('/users');
-    } else if (type === 'request_cancelled' && notification.data.property_id) {
-        this.$router.push(`/property-details/${notification.data.property_id}`);
-    } else if (['property_assigned', 'property_unassigned'].includes(type) && notification.data.property_id) {
-        this.$router.push(`/property-details/${notification.data.property_id}`);
-    } else if (notification.data.listing_id) {
-        this.$router.push(`/property-details/${notification.data.listing_id}`);
-    } else if (notification.data.property_id) {
-        this.$router.push(`/property-details/${notification.data.property_id}`);
-    } else if (type ==='App\\Notifications\\LeadUpdatedNotification') {
+       if (['request', 'approved', 'rejected'].includes(type)) {
+          this.$router.push('/my-requests');
+      } else if (type === 'new_sales_agent') {
+          this.$router.push('/users');
+      } else if (type === 'request_cancelled' && notification.data.property_id) {
+          this.$router.push(`/property-details/${notification.data.property_id}`);
+      } else if (['property_assigned', 'property_unassigned'].includes(type) && notification.data.property_id) {
+          this.$router.push(`/property-details/${notification.data.property_id}`);
+      } else if (notification.data.listing_id && type !== 'App\\Notifications\\HotDealRequestNotification') {
+          this.$router.push(`/property-details/${notification.data.listing_id}`);
+      } else if (notification.data.property_id) {
+          this.$router.push(`/property-details/${notification.data.property_id}`);
+      } else if (type === 'App\\Notifications\\LeadUpdatedNotification') {
           this.$router.push('/kanban');
       } else if (type === 'App\\Notifications\\DealUpdatedNotificatio') {
-          this.$router.ush('/kanban');
-      } 
-      else if (type === 'App\\Notifications\\NewListingMatchedNotification') {
+          this.$router.push('/kanban');
+      }else if (type === 'App\\Notifications\\NewListingMatchedNotification') {
            this.$router.push(`/property-details/${notification.data.listing_id}`);
-      } else {
-        console.log('📍 No specific action for notification type:', type);
-    }
-},
+      }
+      else if (type === 'App\\Notifications\\HotDealRequestNotification') {
+           this.$router.push(`/hotDeal-requests`);
+      }else {
+          console.log('📍 No specific action for notification type:', type);
+      }
+    },
   getNotificationTitle(notification) {
     const type = notification.data?.notification_type || notification.type;
     

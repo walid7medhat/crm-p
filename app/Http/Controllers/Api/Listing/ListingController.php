@@ -28,8 +28,12 @@ use Illuminate\Support\Facades\Schema;
 use App\Models\SearchAlert;
 use App\Jobs\CheckSearchAlerts;
 use App\Models\PropertyOffer;
+use App\Traits\HotDealNotifiable;
+use App\Models\HotDealRequest;
+
 class ListingController extends Controller
 {
+    use HotDealNotifiable;
     // Cache constants
     const CACHE_TTL = 1800;
     const CACHE_PREFIX = 'listings_';
@@ -249,7 +253,72 @@ public function permissions(User $user): JsonResponse
             ];
     }
 
-    
+    /**
+     * Handle hot deal status change in store and update methods
+     */
+    private function handleHotDealStatus(Listing $listing, $newHotDealStatus, $oldHotDealStatus = 'No')
+    {
+        // If No change or Not requesting hot deal, return
+        if ($newHotDealStatus == $oldHotDealStatus) {
+            return;
+        }
+
+        $user = Auth::user();
+                        \Log::info('Creating listing with data', [$newHotDealStatus,$oldHotDealStatus,$user->hasRole('sales') && $user->isListingTeam]);
+
+        // If trying to mark as hot deal
+        if ($newHotDealStatus == 'Yes' ) {
+            // Check if user is sales agent under listing team
+            if ($user->hasRole('sales') && $user->isListingTeam) {
+                // Check if there's already a pending request
+                if ($listing->hasPendingHotDealRequest()) {
+                    throw new \Exception('There is already a pending hot deal request for this property.');
+                }
+                
+                // Create a pending request
+                HotDealRequest::create([
+                    'listing_id' => $listing->id,
+                    'requested_by' => $user->id,
+                    'status' => 'pending'
+                ]);
+                
+                // Notify managers and team leads
+                $this->NotifyApprovers($listing, $user);
+                
+                // Don't set as hot deal yet - wait for approval
+                $listing->update(['is_hot_deal' => 'No']);
+                
+                throw new \Exception('Hot deal request has been sent for approval. You will be Notified once it\'s reviewed.', 422);
+            }
+            // If user is admin/super_admin/manager, they can set directly
+            elseif ($user->hasRole(['super_admin', 'admin', 'manager'])) {
+                $listing->update([
+                    'is_hot_deal' => 'Yes',
+                    'hot_deal_approved_by' => $user->id,
+                    'hot_deal_approved_at' => Now()
+                ]);
+            }else if ($user->hasRole('sales') && !$user->isListingTeam ) {
+                $listing->update([
+                    'is_hot_deal' => 'Yes',
+                    ]);
+                
+            }
+            // Otherwise, Not allowed
+            else {
+                throw new \Exception('You are Not authorized to mark properties as hot deals.');
+            }
+        } 
+        // If unmarking as hot deal
+        else {
+            $listing->update(['is_hot_deal' => 'No']);
+            
+            // Optionally cancel any pending requests
+            $pendingRequests = $listing->hotDealRequests()->where('status', 'pending')->get();
+            foreach ($pendingRequests as $request) {
+                $request->update(['status' => 'rejected']);
+            }
+        }
+    } 
      public function store(ListingRequest $request): JsonResponse
         {
 
@@ -334,9 +403,24 @@ public function permissions(User $user): JsonResponse
                 $listing = Listing::create(array_merge($data, [
                     'added_by' => auth()->id(),
                     'status' => $listingStatus,
-                    'hero_image_path' => $heroImagePath
+                    'hero_image_path' => $heroImagePath,
+                    'is_hot_deal' => 'No'
                 ]));
-
+                \Log::info('hot_deal',[ $request->has('is_hot_deal')  , $request->is_hot_deal=='Yes',$request->has('is_hot_deal')  && $request->is_hot_deal=='Yes']);
+// Handle hot deal if requested
+            if ($request->has('is_hot_deal')  && $request->is_hot_deal=='Yes') {
+                try {
+                    $this->handleHotDealStatus($listing, 'Yes', 'No');
+                } catch (\Exception $e) {
+                // dd($e);
+                    // If approval is required, don't throw error, just set is_hot_deal to false
+                    if (strpos($e->getMessage(), 'approval') !== 'No') {
+                        // Already handled in handleHotDealStatus
+                    } else {
+                        throw $e;
+                    }
+                }
+            }
                 \Log::info('Listing created', ['id' => $listing->id]);
 
                 // Handle floor plans upload with compression
@@ -419,7 +503,7 @@ public function permissions(User $user): JsonResponse
                     }
                     \Log::info('Gallery images processed');
                 }
-                  // Handle additional documents (PDF/images, no compression)
+                  // Handle additional documents (PDF/images, No compression)
             if ($request->hasFile('additional_documents') && Schema::hasTable('listing_additional_documents')) {
                 foreach ($request->file('additional_documents') as $index => $file) {
                     if (!$file->isValid()) continue;
@@ -501,7 +585,7 @@ public function permissions(User $user): JsonResponse
         ])->find($listingId);
         
         if (!$listing) {
-            throw new \Exception('Listing not found');
+            throw new \Exception('Listing Not found');
         }
 
         $listing->load(['area.parentRecursive'],'area');
@@ -536,14 +620,21 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         $listing = Listing::find($listingId);
         
         if (!$listing) {
-            return ApiResponse::error('Listing not found', 404);
+            return ApiResponse::error('Listing Not found', 404);
         }
 
         // Check if user has permission to update this listing
         if ($listing->added_by !== $user->id && $listing->agent_id !== $user->id && ! $user->hasRole('super_admin') && !$user->canEditListings($listing->agent_id)) {
-            return ApiResponse::error('You are not authorized to update this listing', 403);
+            return ApiResponse::error('You are Not authorized to update this listing', 403);
         }
-
+  
+            $oldHotDealStatus = $listing->is_hot_deal;
+            $newHotDealStatus = $request->has('is_hot_deal') ? $request->is_hot_deal : $oldHotDealStatus;
+            
+            // Handle hot deal status change first
+            if ($newHotDealStatus !== $oldHotDealStatus) {
+                $this->handleHotDealStatus($listing, $newHotDealStatus, $oldHotDealStatus);
+            }
         $data = $request->validated();
         unset($data['agent_id']); 
 
@@ -740,7 +831,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                 
                 // \Log::info('Hero image updated from gallery successfully');
             } else {
-                // \Log::warning('Gallery image not found for hero image', [
+                // \Log::warning('Gallery image Not found for hero image', [
                 //     'gallery_image_id' => $heroGalleryImageId
                 // ]);
             }
@@ -819,7 +910,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             $listing = Listing::find($listing);
             
             if (!$listing) {
-                return ApiResponse::error('Listing not found', 404);
+                return ApiResponse::error('Listing Not found', 404);
             }
             
             // Delete documents
@@ -1103,7 +1194,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             $floorPlan = FloorPlan::find($floorPlan);
             
             if (!$listing || !$floorPlan) {
-                return ApiResponse::error('Listing or floor plan not found', 404);
+                return ApiResponse::error('Listing or floor plan Not found', 404);
             }
             
             if ($user->hasRole('sales') && $listing->agent_id !== $user->id) {
@@ -1112,7 +1203,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             
             // Check if floor plan belongs to listing
             if ($floorPlan->floor_planable_id !== $listing->id || $floorPlan->floor_planable_type !== Listing::class) {
-                return ApiResponse::error('Floor plan not found for this listing', 404);
+                return ApiResponse::error('Floor plan Not found for this listing', 404);
             }
             
             if ($floorPlan->image_path && $floorPlan->is_from_project==0) {
@@ -1136,7 +1227,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             $galleryImage = GalleryImage::find($galleryImage);
             
             if (!$listing || !$galleryImage) {
-                return ApiResponse::error('Listing or gallery image not found', 404);
+                return ApiResponse::error('Listing or gallery image Not found', 404);
             }
             
             if ($user->hasRole('sales') && $listing->agent_id !== $user->id) {
@@ -1145,7 +1236,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             
             // Check if gallery image belongs to listing
             if ($galleryImage->imageable_id !== $listing->id || $galleryImage->imageable_type !== Listing::class) {
-                return ApiResponse::error('Gallery image not found for this listing', 404);
+                return ApiResponse::error('Gallery image Not found for this listing', 404);
             }
             
             if ($galleryImage->image_path) {
@@ -1163,14 +1254,14 @@ public function update(ListingRequest $request, $listingId): JsonResponse
     /**
      * Update floor plan order
      */
-    public function updateFloorPlanOrder(Request $request, $listing): JsonResponse
+    public function updateFloorPlaNorder(Request $request, $listing): JsonResponse
     {
         try {
             $user = Auth::user();
             $listing = Listing::find($listing);
             
             if (!$listing) {
-                return ApiResponse::error('Listing not found', 404);
+                return ApiResponse::error('Listing Not found', 404);
             }
             
             if ($user->hasRole('sales') && $listing->agent_id !== $user->id) {
@@ -1275,7 +1366,7 @@ public function assignAgent(Request $request, $id)
 
             // تأكد إن property agent_id تبع التحتيه أو هو نفسه
             if ($property->agent_id && !in_array($property->agent_id, $allowedAgentIds)) {
-                return ApiResponse::error('You cannot assign an agent to a property that does not belong to your hierarchy', 403);
+                return ApiResponse::error('You canNot assign an agent to a property that does Not belong to your hierarchy', 403);
             }
         }
 
@@ -1293,11 +1384,11 @@ public function assignAgent(Request $request, $id)
                     })->pluck('id')->toArray();
 
                     if (!in_array($value, $allowedAgentIds)) {
-                        $fail('You cannot assign this agent because they are not under your hierarchy.');
+                        $fail('You canNot assign this agent because they are Not under your hierarchy.');
                     }
                 }
             }],
-            'notes' => 'nullable|string|max:1000'
+            'Notes' => 'nullable|string|max:1000'
         ]);
 
         $oldAgent = $property->agent;
@@ -1309,18 +1400,18 @@ public function assignAgent(Request $request, $id)
 
         $property->update([
             'agent_id' => $request->agent_id,
-            'assignment_notes' => $request->notes,
+            'assignment_Notes' => $request->Notes,
             'assigned_by' => $currentUser->id,
-            'assigned_at' => now()
+            'assigned_at' => Now()
         ]);
 
         // إشعارات كما في الكود السابق
         if ($newAgent) {
-            try { $newAgent->notify(new PropertyAssignedNotification($property, $currentUser)); } 
+            try { $newAgent->Notify(new PropertyAssignedNotification($property, $currentUser)); } 
             catch (\Exception $e) { \Log::error($e->getMessage()); }
         }
         if ($oldAgent && $oldAgent->id != $newAgent->id) {
-            try { $oldAgent->notify(new PropertyUnassignedNotification($property, $currentUser)); } 
+            try { $oldAgent->Notify(new PropertyUnassignedNotification($property, $currentUser)); } 
             catch (\Exception $e) { \Log::error($e->getMessage()); }
         }
 
@@ -1352,7 +1443,7 @@ public function markAsConverted(Request $request, $id)
         $property->update([
             'status' => 'converted',
             'sold_by' => $request->sold_by,
-            'converted_at' => now(),
+            'converted_at' => Now(),
             'converted_by' => Auth::id()
         ]);
 
@@ -1435,7 +1526,7 @@ public function setHeroImage(Request $request, $listingId): JsonResponse
 
         $user = Auth::user();
         if ($listing->added_by !== $user->id && $listing->agent_id !== $user->id) {
-            return ApiResponse::error('You are not authorized to update this listing', 403);
+            return ApiResponse::error('You are Not authorized to update this listing', 403);
         }
 
         $galleryImage = $listing->galleryImages()->where('id', $galleryImageId)->firstOrFail();
@@ -1503,10 +1594,10 @@ public function validateUnitNumber(Request $request)
             $listing = Listing::find($listing);
             $doc = ListingAdditionalDocument::find($document);
             if (!$listing || !$doc) {
-                return ApiResponse::error('Listing or document not found', 404);
+                return ApiResponse::error('Listing or document Not found', 404);
             }
             if ($doc->listing_id != $listing->id) {
-                return ApiResponse::error('Document not found for this listing', 404);
+                return ApiResponse::error('Document Not found for this listing', 404);
             }
             if ($user->hasRole('sales') && $listing->agent_id !== $user->id) {
                 return ApiResponse::error('Access denied', 403);
@@ -1652,7 +1743,7 @@ public function validateUnitNumber(Request $request)
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
-                'message' => 'Offer not found'
+                'message' => 'Offer Not found'
             ], 404);
         }
     }

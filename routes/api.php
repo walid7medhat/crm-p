@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\Listing\FeatureController;
 use App\Http\Controllers\Api\UserInvitationController;
 use App\Http\Controllers\Api\Listing\ListingCommentController;
 use App\Http\Controllers\Api\Listing\ProjectController;
+use App\Http\Controllers\Api\Listing\HotDealApprovalController;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Notifications\ListingAccessRequestNotification;
@@ -345,6 +346,11 @@ Route::prefix('leads')->group(function(){
 Route::post('/search-alerts',[ListingController::class, 'store_search_alert']);
 
 Route::prefix('listings')->group(function(){
+    
+        // Hot deal approval routes
+    Route::get('hot-deal-requests/pending', [HotDealApprovalController::class, 'pendingRequests']);
+    Route::post('hot-deal-requests/{requestId}/process', [HotDealApprovalController::class, 'processRequest']);
+    
     Route::post('/properties/{id}/generate-offer', [ListingController::class, 'generateOffer']);
 Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
     Route::get('/{id}/comments', [ListingCommentController::class, 'index']);

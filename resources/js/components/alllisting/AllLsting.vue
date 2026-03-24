@@ -7,7 +7,7 @@
       @filters-changed="handleFiltersChanged"
       :initial-filters="initialFilters"
     />
-    <div v-if="isAdmin" class="row mb-4 mt-3">
+    <div v-if="isAdmin" class="row mb-4 ">
       <div class="col-12">
         <div class="status-toggle-buttons">
           <button 
@@ -88,7 +88,7 @@
         v-else
         v-for="(property, index) in properties"
         :key="property.id || index"
-        class="col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600 mt-3"
+        class="col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600 "
       >
        <router-link
             :to="`/property-details/${property.id}`"
@@ -130,9 +130,9 @@
                   <span v-else-if="property.completion_status === 'Completed'" class="badge-ready">
                     <i class="ri-checkbox-circle-line me-1"></i>Ready
                   </span>
-                  <!--<span v-if="property.is_hot_deal== 'Yes'" class="badge-off_plan">-->
-                  <!--  Hot Deal-->
-                  <!--</span>-->
+                  <span v-if="property.is_hot_deal== 'Yes'" class="badge-off_plan">
+                    Hot Deal
+                  </span>
                   <span v-if="property.occupancy_status && property.completion_status != 'Under Construction'" class="badge-occupancy_status">
                     {{property.occupancy_status}}
                   </span>

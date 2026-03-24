@@ -59,6 +59,7 @@ import RoleDetails from './pages/roles/details.vue'
 import MyRequests from './pages/listings/my_requests.vue'
 import MyOrders from './pages/listings/my_order.vue'
 import AllRequests from './pages/listings/AllRequests.vue'
+import HotDealRequests from './pages/listings/hot_deal_requests.vue'
 
 import allNotifications from './components/allNotifications.vue'
 
@@ -154,6 +155,7 @@ const routes = [
   { path: '/my-requests', component: MyRequests, meta: { requiresAuth: true } },
   { path: '/my-orders', component: MyOrders, meta: { requiresAuth: true } },
   { path: '/all-requests', name: 'all-requests', component: AllRequests, meta: { requiresAuth: true } },
+  { path: '/hotDeal-requests',name:'hotDeal-requests', component: HotDealRequests, meta: { requiresAuth: true } },
   
   { path: '/users', component: UsersList, meta: { requiresAuth: true } },
   { path: '/users/:id', component: UserDetail, meta: { requiresAuth: true } },

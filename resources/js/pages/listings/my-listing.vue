@@ -9,7 +9,7 @@
     />
     
     <!-- Status Toggle Buttons -->
-    <div class="row mb-4 mt-3">
+    <div class="row mb-4 ">
       <div class="col-12">
         <div class="status-toggle-buttons">
           <button 
