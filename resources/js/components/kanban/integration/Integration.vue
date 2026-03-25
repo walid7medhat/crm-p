@@ -1,801 +1,949 @@
 <template>
-    <div class="tab-content">
-        <p class="main-section-title">Hidden Field Values</p>
-        
-        <!-- Project Field Block -->
-        <div class="field-block">
-            <label class="field-label">Project</label>
-            
-            <v-select 
-                ref="projectSelect"
-                v-model="selectedProject" 
-                :options="computedProjectOptions" 
-                :reduce="option => option.value"
-                label="text"
-                placeholder="Select Project"
-                class="custom-v-select"
-                :loading="loadingProjects"
-                @option:selected="handleProjectSelect"
-                @open="onDropdownOpen"
-            >
-                <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
-                </template>
-                <template #option="option">
-                    <div v-if="option.value === 'add-new-project'" class="add-project-option-wrapper">
-                        <div class="add-project-option" @click.stop.prevent="openAddProjectModal">
-                            <iconify-icon icon="lucide:plus" class="add-project-icon"></iconify-icon>
-                            <span class="add-project-text">{{ option.text }}</span>
-                        </div>
-                    </div>
-                    <div v-else>{{ option.text }}</div>
-                </template>
-            </v-select>
+    <div class="integration-container">
+        <!-- Header with Create Button -->
+        <!--<div class="integration-header">-->
+        <!--    <p class="integration-title">CRM Forms</p>-->
+        <!--    <button class="create-btn" @click="openCreateModal">-->
+        <!--        <iconify-icon icon="lucide:plus" class="create-icon"></iconify-icon>-->
+        <!--        Create Integration-->
+        <!--    </button>-->
+        <!--</div>-->
+
+        <!-- Loading / Error -->
+        <div v-if="loading" class="loading-state">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Loading integrations…</p>
+        </div>
+        <div v-else-if="loadError" class="error-state">
+            <iconify-icon icon="lucide:alert-circle" class="error-icon"></iconify-icon>
+            <p>{{ loadError }}</p>
+            <button class="retry-btn" @click="loadIntegrations">
+                <iconify-icon icon="lucide:refresh-cw" class="retry-icon"></iconify-icon>
+                Retry
+            </button>
         </div>
 
-        <!-- Add Project Modal -->
-        <b-modal 
-            id="add-project-modal" 
-            v-model="showAddProjectModal"
-            hide-header
-            hide-footer
-            size="md"
-            centered
-            body-class="p-0"
-            modal-class="add-project-modal"
-            backdrop="true"
-            @hidden="resetAddProjectForm"
-        >
-            <div class="add-project-modal-content">
-                <!-- Header -->
-                <div class="modal-header-section">
-                    <p class="modal-title">Add New Project</p>
-                    <button class="close-btn" @click="closeAddProjectModal">
-                        <iconify-icon icon="lucide:x" class="close-icon"></iconify-icon>
+        <!-- Table Container -->
+        <div v-else class="table-container">
+            <table class="integration-table">
+                <thead>
+                    <tr>
+                        <!--<th class="checkbox-column">-->
+                        <!--    <div class="form-check">-->
+                        <!--        <input -->
+                        <!--            class="form-check-input-select" -->
+                        <!--            type="checkbox" -->
+                        <!--            :checked="isAllSelected"-->
+                        <!--            @change="toggleSelectAll"-->
+                        <!--        />-->
+                        <!--    </div>-->
+                        <!--</th>-->
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Created On</th>
+                        <th>Active</th>
+                        <th>Track</th>
+                        <th>Count Of Leads</th>
+                        <th>Platform</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="form in paginatedForms" :key="form.id">
+                        <!--<td class="checkbox-column">-->
+                        <!--    <div class="form-check">-->
+                        <!--        <input -->
+                        <!--            class="form-check-input-select" -->
+                        <!--            type="checkbox" -->
+                        <!--            v-model="selectedIds"-->
+                        <!--            :value="form.id"-->
+                        <!--        />-->
+                        <!--    </div>-->
+                        <!--</td>-->
+                        <td>
+                            <span class="form-id-link" @click="viewForm(form.id)">
+                                {{ form.facebook_form_id || form.id }}
+                            </span>
+                        </td>
+                        <td class="form-name">{{ form.name }}</td>
+                        <td class="created-on">{{ formatDate(form.created_at) }}</td>
+                        <td class="active-column">
+                            <div class="active-toggle-wrapper">
+                                <div class="form-switch switch-warning">
+                                    <input 
+                                        class="form-check-input" 
+                                        type="checkbox" 
+                                        :id="`toggle-${form.id}`"
+                                        :checked="form.status === 'active'"
+                                        @change="toggleActive(form)"
+                                    />
+                                </div>
+                                <!--<span class="active-date">{{ formatDateShort(form.updated_at) }}</span>-->
+                            </div>
+                        </td>
+                        <td class="form-name">{{ form.track_keyword }}</td>
+                        <td class="conversation-count">
+                            {{ form.leads_count || 0 }}
+                        </td>
+                        <td class="platform">
+                            <span class="platform-badge">{{ form.platform }}</span>
+                        </td>
+                        <td class="action-column">
+                            <b-dropdown 
+                                variant="link" 
+                                no-caret 
+                                toggle-class="action-dropdown-btn p-0 border-0"
+                                menu-class="action-dropdown-menu"
+                                right
+                            >
+                                <template #button-content>
+                                    <button class="action-btn">
+                                        <iconify-icon icon="lucide:more-vertical" class="action-icon"></iconify-icon>
+                                    </button>
+                                </template>
+                                
+                                <b-dropdown-item @click="editForm(form)" class="dropdown-item-custom">
+                                    <iconify-icon icon="lucide:edit" class="dropdown-icon"></iconify-icon>
+                                    <span>Edit</span>
+                                </b-dropdown-item>
+                                <b-dropdown-item @click="deleteForm(form)" class="dropdown-item-custom">
+                                    <iconify-icon icon="lucide:trash-2" class="dropdown-icon"></iconify-icon>
+                                    <span>Delete</span>
+                                </b-dropdown-item>
+                            </b-dropdown>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty state -->
+        <div v-if="!loading && !loadError && forms.length === 0" class="empty-state">
+            <iconify-icon icon="lucide:inbox" class="empty-icon"></iconify-icon>
+            <p>No integrations yet. Click "Create Integration" to add your first Meta form.</p>
+        </div>
+
+        <!-- Pagination -->
+        <div v-if="!loading && forms.length > 0" class="pagination-container">
+            <div class="pagination-info">
+                <span>Showing {{ startIndex + 1 }} to {{ endIndex }} of {{ totalEntries }} Entries</span>
+                <iconify-icon icon="lucide:chevron-up" class="entries-icon"></iconify-icon>
+            </div>
+            <div class="pagination-controls">
+                <button 
+                    class="pagination-btn prev-btn"
+                    :disabled="currentPage === 1"
+                    @click="changePage(currentPage - 1)"
+                >
+                    <iconify-icon icon="lucide:chevron-left"></iconify-icon>
+                    Previous
+                </button>
+                <div class="page-numbers">
+                    <button
+                        v-for="page in displayedPages"
+                        :key="page"
+                        class="page-number"
+                        :class="{ active: page === currentPage, ellipsis: page === '...' }"
+                        @click="page !== '...' && changePage(page)"
+                        :disabled="page === '...'"
+                    >
+                        {{ page }}
                     </button>
                 </div>
-
-                <!-- Content Area -->
-                <div class="modal-body-section">
-                    <label class="add-project-label">Project Name</label>
-                    <b-form-input 
-                        v-model="newProjectName" 
-                        placeholder="Enter Project Name" 
-                        class="add-project-input"
-                        :disabled="addingProject"
-                        @keyup.enter="handleAddProject"
-                    />
-                </div>
-
-                <!-- Footer Buttons -->
-                <div class="modal-footer-section">
-                    <button class="footer-btn cancel-btn" @click="closeAddProjectModal" :disabled="addingProject">Cancel</button>
-                    <button class="footer-btn apply-btn" @click="handleAddProject" :disabled="!newProjectName?.trim() || addingProject">
-                        <span v-if="addingProject">Adding...</span>
-                        <span v-else>Add</span>
-                    </button>
-                </div>
+                <button 
+                    class="pagination-btn next-btn"
+                    :disabled="currentPage === totalPages"
+                    @click="changePage(currentPage + 1)"
+                >
+                    Next
+                    <iconify-icon icon="lucide:chevron-right"></iconify-icon>
+                </button>
             </div>
-        </b-modal>
-
-        <!-- Source Leads Field Block -->
-        <div class="field-block">
-            <div class="source-leads-header">
-                <span class="source-leads-group-label">Source Leads</span>
-                <span class="source-leads-active-label">Meta Ads - Lead Form</span>
-            </div>
-            <v-select 
-                v-model="selectedLeadValue" 
-                :options="leadValueOptions" 
-                :reduce="option => option.value"
-                label="text"
-                placeholder="Select Lead Value"
-                class="custom-v-select meta-ads-select"
-                :loading="loadingSources"
-            >
-                <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
-                </template>
-                <template #option="{ text, value }">
-                    <div class="meta-ads-option">
-                        <span :class="{ 'selected-text': selectedLeadValue === value }">{{ text }}</span>
-                        <iconify-icon 
-                            v-if="selectedLeadValue === value" 
-                            icon="lucide:check" 
-                            class="check-icon"
-                        ></iconify-icon>
-                    </div>
-                </template>
-            </v-select>
         </div>
     </div>
+
+    <!-- Create/Edit Modal -->
+    <CreateIntegrationModal
+        v-model="showModal"
+        :edit-id="editingId"
+        @saved="handleIntegrationSaved"
+        @updated="handleIntegrationUpdated"
+    />
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, nextTick, getCurrentInstance } from 'vue'
-import { BFormInput, BModal } from 'bootstrap-vue-3'
-import vSelect from 'vue-select'
-import 'vue-select/dist/vue-select.css'
+import { ref, computed, onMounted, getCurrentInstance } from 'vue'
+import { BDropdown, BDropdownItem } from 'bootstrap-vue-3'
+import CreateIntegrationModal from './CreateIntegrationModal.vue'
 import api from '@/plugins/axios'
 
 const { proxy } = getCurrentInstance()
+const forms = ref([])
+const loading = ref(true)
+const loadError = ref('')
+const showModal = ref(false)
+const editingId = ref(null)
 
-const props = defineProps({
-    project: {
-        type: [String, Number],
-        default: null
-    },
-    leadSource: {
-        type: [String, Number],
-        default: null
-    }
-})
+// Pagination
+const currentPage = ref(1)
+const entriesPerPage = ref(10)
+const selectedIds = ref([])
 
-const emit = defineEmits(['update:project', 'update:leadSource'])
 
-const selectedProject = ref(props.project)
-const selectedLeadValue = ref(props.leadSource)
-const showAddProjectModal = ref(false)
-const newProjectName = ref('')
-const projectSelect = ref(null)
-const loadingProjects = ref(false)
-const loadingSources = ref(false)
-const addingProject = ref(false)
 
-// Project options from API
-const projectOptions = ref([])
+// Handle integration saved/updated
+const handleIntegrationSaved = (data) => {
+    console.log('🟢 handleIntegrationSaved called with:', data)
+    console.log('📊 Before load - forms count:', forms.value.length)
+    
+    loadIntegrations().then(() => {
+        console.log('✅ After load - forms count:', forms.value.length)
+    })
+    
+    proxy?.$showNotification?.('Integration created successfully', 'success')
+}
 
-// Lead source options from API /api/sources
-const leadValueOptions = ref([])
+const handleIntegrationUpdated = (data) => {
+    console.log('🔵 handleIntegrationUpdated called with:', data)
+    console.log('📊 Before load - forms count:', forms.value.length)
+    
+    loadIntegrations().then(() => {
+        console.log('✅ After load - forms count:', forms.value.length)
+    })
+    
+    proxy?.$showNotification?.('Integration updated successfully', 'success')
+}
 
-// Load projects from API
-const loadProjects = async () => {
-    loadingProjects.value = true
+// Load integrations from API
+async function loadIntegrations() {
+    console.log('📥 Loading integrations...')
+    loading.value = true
+    loadError.value = ''
     try {
-        const response = await api.get('/listings/projects')
-        const projects = response.data.data || response.data || []
+        const response = await api.get('/integrations')
+        console.log('📦 API response:', response.data)
         
-        projectOptions.value = projects.map(project => ({
-            value: project.id,
-            text: project.name
+        const data = response.data.data || []
+        
+        forms.value = data.map(integration => ({
+            id: integration.id,
+            name: integration.name,
+            crm_entity: integration.crm_entity,
+            expert_mode: integration.expert_mode,
+            duplicate_handling: integration.duplicate_handling,
+            project_id: integration.project_id,
+            project: integration.project,
+            lead_source: integration.lead_source,
+            page_id: integration.page_id,
+            facebook_form_id: integration.facebook_form_id,
+            facebook_form_name: integration.facebook_form_name,
+            field_mappings: integration.field_mappings,
+            responsible_person: integration.responsible_person,
+            status: integration.status || 'active',
+            platform: integration.platform || 'Meta Ads',
+            leads_count: integration.leads_count || 0,
+            created_at: integration.created_at,
+            updated_at: integration.updated_at,
+            track_enabled: integration.track_enabled ?? false,
+            track_keyword: integration.track_keyword ?? ''
         }))
-    } catch (error) {
-        console.error('Failed to load projects:', error)
-        proxy?.$showNotification?.('Failed to load projects', 'error')
+        
+        console.log('✅ Forms updated:', forms.value.length, 'records')
+    } catch (err) {
+        console.error('❌ Failed to load integrations:', err)
+        loadError.value = err.response?.data?.message || 'Failed to load integrations'
+        proxy?.$showNotification?.(loadError.value, 'error')
     } finally {
-        loadingProjects.value = false
+        loading.value = false
     }
 }
 
-// Load lead sources from API /api/sources
-const loadSources = async () => {
-    loadingSources.value = true
+// Modal functions
+const openCreateModal = () => {
+    editingId.value = null
+    showModal.value = true
+}
+
+const editForm = (form) => {
+    editingId.value = form.id
+    showModal.value = true
+}
+
+// Delete function with confirmation
+const deleteForm = async (form) => {
+    const result = await proxy?.$showConfirmation?.({
+        title: 'Delete Integration',
+        text: `Are you sure you want to delete "${form.name}"?`,
+        icon: 'warning',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+    })
+    
+    if (!result) return
+    
     try {
-        const response = await api.get('/sources')
-        const sources = response.data.data || response.data || []
-
-        leadValueOptions.value = sources.map(source => ({
-            value: source.name,
-            text: source.name
-        }))
-
-        // Auto select Meta Lead Form
-        const metaSource = sources.find(
-            source => source.name === 'Lead Form'
-        )
-
-        if (metaSource) {
-            selectedLeadValue.value = metaSource.name
-        }
-
-    } catch (error) {
-        console.error('Failed to load sources:', error)
-        proxy?.$showNotification?.('Failed to load sources', 'error')
-    } finally {
-        loadingSources.value = false
+        await api.delete(`/integrations/${form.id}`)
+        await loadIntegrations()
+        proxy?.$showNotification?.('Integration deleted successfully', 'success')
+    } catch (err) {
+        console.error('Delete failed', err)
+        proxy?.$showNotification?.(err.response?.data?.message || 'Failed to delete integration', 'error')
     }
 }
 
-// Computed options that include the "Add New Project" option
-const computedProjectOptions = computed(() => {
-    return [
-        ...projectOptions.value,
-        // { value: 'add-new-project', text: 'Add New Project' }
-    ]
+// Toggle active status
+const toggleActive = async (form) => {
+    const newStatus = form.status === 'active' ? 'inactive' : 'active'
+    const previousStatus = form.status
+    
+    // Optimistic update
+    form.status = newStatus
+    
+    try {
+        await api.patch(`/integrations/${form.id}`, {
+            status: newStatus
+        })
+        proxy?.$showNotification?.(`Integration ${newStatus === 'active' ? 'activated' : 'deactivated'}`, 'success')
+    } catch (err) {
+        // Revert on error
+        form.status = previousStatus
+        console.error('Toggle active failed', err)
+        proxy?.$showNotification?.(err.response?.data?.message || 'Failed to update status', 'error')
+    }
+}
+
+// View form details
+const viewForm = (id) => {
+    console.log('View form details:', id)
+}
+
+// Load on mount
+onMounted(() => {
+    loadIntegrations()
 })
 
-// Load data on mount
-onMounted(() => {
-    loadProjects()
-    loadSources()
+// Export for parent components
+defineExpose({ loadIntegrations })
+
+// Computed properties for pagination
+const totalEntries = computed(() => forms.value.length)
+const totalPages = computed(() => Math.ceil(totalEntries.value / entriesPerPage.value))
+const startIndex = computed(() => (currentPage.value - 1) * entriesPerPage.value)
+const endIndex = computed(() => Math.min(startIndex.value + entriesPerPage.value, totalEntries.value))
+
+const paginatedForms = computed(() => {
+    return forms.value.slice(startIndex.value, endIndex.value)
+})
+
+const isAllSelected = computed(() => {
+    if (paginatedForms.value.length === 0) return false
+    return paginatedForms.value.every(form => selectedIds.value.includes(form.id))
+})
+
+const displayedPages = computed(() => {
+    const pages = []
+    const total = totalPages.value
+    const current = currentPage.value
+    
+    if (total <= 7) {
+        for (let i = 1; i <= total; i++) {
+            pages.push(i)
+        }
+    } else {
+        if (current <= 4) {
+            for (let i = 1; i <= 5; i++) {
+                pages.push(i)
+            }
+            pages.push('...')
+            pages.push(total)
+        } else if (current >= total - 3) {
+            pages.push(1)
+            pages.push('...')
+            for (let i = total - 4; i <= total; i++) {
+                pages.push(i)
+            }
+        } else {
+            pages.push(1)
+            pages.push('...')
+            for (let i = current - 1; i <= current + 1; i++) {
+                pages.push(i)
+            }
+            pages.push('...')
+            pages.push(total)
+        }
+    }
+    
+    return pages
 })
 
 // Methods
-const openAddProjectModal = () => {
-    // Close dropdown
-    nextTick(() => {
-        const toggle = document.querySelector('.custom-v-select .vs__dropdown-toggle')
-        if (toggle) {
-            toggle.blur()
-        }
-    })
-    
-    newProjectName.value = ''
-    showAddProjectModal.value = true
-    
-    // Focus input
-    nextTick(() => {
-        setTimeout(() => {
-            const input = document.querySelector('.add-project-modal-content .add-project-input')
-            if (input) {
-                input.focus()
+const toggleSelectAll = (event) => {
+    const checked = event.target.checked
+    if (checked) {
+        const paginatedIds = paginatedForms.value.map(form => form.id)
+        paginatedIds.forEach(id => {
+            if (!selectedIds.value.includes(id)) {
+                selectedIds.value.push(id)
             }
-        }, 300)
+        })
+    } else {
+        const paginatedIds = paginatedForms.value.map(form => form.id)
+        selectedIds.value = selectedIds.value.filter(id => !paginatedIds.includes(id))
+    }
+}
+
+const changePage = (page) => {
+    if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page
+        // Clear selections when changing page
+        selectedIds.value = []
+    }
+}
+
+// Date formatting
+const formatDate = (dateString) => {
+    if (!dateString) return 'N/A'
+    
+    const date = new Date(dateString)
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    
+    const timeStr = date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: true 
+    })
+    
+    if (dateOnly.getTime() === today.getTime()) {
+        return `Today / ${timeStr}`
+    } else if (dateOnly.getTime() === yesterday.getTime()) {
+        return `Yesterday / ${timeStr}`
+    } else {
+        const dateStr = date.toLocaleDateString('en-GB', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric' 
+        })
+        return `${dateStr} / ${timeStr}`
+    }
+}
+
+const formatDateShort = (dateString) => {
+    if (!dateString) return 'N/A'
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { 
+        month: '2-digit', 
+        day: '2-digit', 
+        year: 'numeric' 
     })
 }
-
-const closeAddProjectModal = () => {
-    showAddProjectModal.value = false
-    resetAddProjectForm()
-}
-
-const handleProjectSelect = (option) => {
-    if (option === 'add-new-project') {
-        selectedProject.value = null
-        openAddProjectModal()
-        return false
-    }
-}
-
-const handleAddProject = async () => {
-    if (!newProjectName.value || !newProjectName.value.trim()) {
-        return
-    }
-    
-    addingProject.value = true
-    
-    try {
-        // Save to database
-        const response = await api.post('/listings/projects', {
-            name: newProjectName.value.trim()
-        })
-        
-        const newProject = response.data.data || response.data
-        
-        // Add to options list with real ID
-        projectOptions.value.push({
-            value: newProject.id,
-            text: newProject.name
-        })
-        
-        // Select the newly added project
-        selectedProject.value = newProject.id
-        
-        // Show success message
-        proxy?.$showNotification?.('Project added successfully', 'success')
-        
-        // Close modal
-        closeAddProjectModal()
-    } catch (error) {
-        console.error('Failed to add project:', error)
-        proxy?.$showNotification?.(error.response?.data?.message || 'Failed to add project', 'error')
-    } finally {
-        addingProject.value = false
-    }
-}
-
-const onDropdownOpen = () => {
-    nextTick(() => {
-        const dropdownMenu = document.querySelector('.custom-v-select .vs__dropdown-menu')
-        if (dropdownMenu) {
-            const options = dropdownMenu.querySelectorAll('.vs__dropdown-option')
-            if (options.length > 0) {
-                const lastOption = options[options.length - 1]
-                lastOption.classList.add('add-project-option-item')
-            }
-        }
-    })
-}
-
-const resetAddProjectForm = () => {
-    newProjectName.value = ''
-}
-
-// Watches
-watch(selectedProject, (newVal) => {
-    emit('update:project', newVal)
-})
-
-watch(selectedLeadValue, (newVal) => {
-    emit('update:leadSource', newVal)
-})
 </script>
 
-
 <style scoped>
-.tab-content {
-    padding: 0;
-}
-
-.main-section-title {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 16px;
-    font-weight: 600;
-    color: #000000;
-    margin: 0 0 24px 0;
-    padding: 0;
-}
-
-.field-block {
-    background: #FFFFFF;
-    border: 1px solid #EEEEEE;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.field-label {
-    display: block;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    color: #000000;
-    margin-bottom: 10px;
-}
-
-.source-leads-header {
+.integration-container {
+    padding: 24px;
+    background: #ffffff;
+    min-height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-bottom: 10px;
-}
-
-.source-leads-group-label {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 13px;
-    font-weight: 400;
-    color: #AAAAAA;
-}
-
-.source-leads-active-label {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    color: #000000;
-}
-
-/* Custom v-select styles matching CreateLeadModal.vue */
-:deep(.custom-v-select) {
-    font-family: 'Montserrat';
-}
-
-:deep(.custom-v-select .vs__dropdown-toggle) {
-    height: 42px;
-    border-radius: 10px;
-    border: 1px solid #E2E8F0;
-    background: #fff;
-    padding: 0 8px;
-}
-
-:deep(.custom-v-select .vs__selected-options) {
-    flex-wrap: nowrap;
+    height: 100%;
     overflow: hidden;
-    max-width: calc(100% - 30px);
 }
 
-:deep(.custom-v-select .vs__selected) {
-    font-size: 13px;
-    color: #64748B;
-    margin: 0;
-    padding: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-    max-width: 100%;
-    line-height: 40px; 
-}
-
-:deep(.custom-v-select .vs__search) {
-    font-size: 13px;
-    color: #64748B;
-    margin: 0;
-    padding: 0;
-}
-
-:deep(.custom-v-select .vs__search::placeholder) {
-    color: #94A3B8;
-}
-
-:deep(.meta-ads-select .vs__search::placeholder) {
-    color: #94A3B8;
-}
-
-:deep(.custom-v-select .vs__actions) {
-    padding: 0 8px;
-}
-
-:deep(.custom-v-select .vs__open-indicator-icon) {
-    font-size: 16px;
-    color: #64748B;
-}
-
-:deep(svg) {
-    vertical-align: middle !important;
-}
-
-:deep(.custom-v-select .vs__dropdown-menu) {
-    border: none;
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
-    padding: 8px 0;
-    margin-top: 4px;
-    z-index: 1100;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #FFFFFF;
-    
-    /* Add these properties for scrolling */
-    max-height: 300px !important; /* Fixed max height */
-    overflow-y: auto !important; /* Enable vertical scrolling */
-    overflow-x: hidden; /* Hide horizontal scroll */
-}
-
-:deep(.meta-ads-select .vs__dropdown-menu) {
-    border: none;
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
-    padding: 4px 0;
-    margin-top: 4px;
-    z-index: 1100;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #FFFFFF;
-    
-    /* Add these properties for scrolling */
-    max-height: 250px !important; /* Fixed max height */
-    overflow-y: auto !important; /* Enable vertical scrolling */
-    overflow-x: hidden; /* Hide horizontal scroll */
-}
-
-:deep(.custom-v-select .vs__dropdown-option) {
-    padding: 8px 12px;
-    font-size: 13px;
-    color: #000000;
-    transition: all 0.2s;
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 400;
-    background: transparent;
-}
-
-:deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #F8FAFC !important;
-    color: #000000 !important;
-}
-
-:deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: transparent;
-    color: #000000;
-}
-
-/* Meta Ads Select Specific Styling */
-.meta-ads-option {
+.integration-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
+    margin-bottom: 24px;
 }
 
-.meta-ads-option .selected-text {
-    font-weight: 700;
-    color: #000000;
-}
-
-.meta-ads-option .check-icon {
-    font-size: 16px;
-    color: #3B82F6;
-    flex-shrink: 0;
-}
-
-:deep(.meta-ads-select .vs__dropdown-option) {
-    padding: 10px 16px;
-    font-size: 13px;
-    color: #000000;
-    font-weight: 400;
-    background: transparent;
-    cursor: pointer;
-}
-
-:deep(.meta-ads-select .vs__dropdown-option:hover) {
-    background: #F8FAFC !important;
-    color: #000000 !important;
-}
-
-:deep(.meta-ads-select .vs__dropdown-option--highlight) {
-    background: #F8FAFC !important;
-    color: #000000 !important;
-    font-weight: 400;
-}
-
-:deep(.meta-ads-select .vs__dropdown-option--selected) {
-    background: transparent !important;
-    color: #000000;
-}
-
-/* Remove border and special styles from last option in Meta Ads select */
-:deep(.meta-ads-select .vs__dropdown-option:last-child) {
-    padding: 10px 16px !important;
-    border-top: none !important;
-    border-bottom: none !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-    padding-top: 10px !important;
-    padding-bottom: 10px !important;
-}
-
-:deep(.meta-ads-select .vs__dropdown-option:last-child:hover) {
-    background: #F8FAFC !important;
-}
-
-:deep(.meta-ads-select .vs__dropdown-option:last-child.vs__dropdown-option--highlight) {
-    background: #F8FAFC !important;
-}
-
-/* Ensure Meta Ads select options don't inherit border styles from general custom-v-select */
-:deep(.meta-ads-select .vs__dropdown-option) {
-    border-top: none !important;
-    border-bottom: none !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-}
-
-/* Add New Project Option Styling */
-.add-project-option-wrapper {
-    padding: 0;
+.integration-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #343A40;
     margin: 0;
-    border-top: 1px solid #E2E8F0;
-    margin-top: 8px;
-    padding-top: 8px;
-    width: 100%;
 }
 
-/* Target the option that contains add-project-option-wrapper - using last-child as fallback */
-/* Exclude Meta Ads select from these styles */
-:deep(.custom-v-select:not(.meta-ads-select) .vs__dropdown-option:last-child),
-:deep(.custom-v-select:not(.meta-ads-select) .vs__dropdown-option.add-project-option-item) {
-    padding: 0 !important;
-    border-top: 1px solid #E2E8F0;
-    margin-top: 8px;
-    padding-top: 8px !important;
-}
-
-:deep(.custom-v-select:not(.meta-ads-select) .vs__dropdown-option:last-child:hover),
-:deep(.custom-v-select:not(.meta-ads-select) .vs__dropdown-option.add-project-option-item:hover) {
-    background: transparent !important;
-}
-
-:deep(.custom-v-select:not(.meta-ads-select) .vs__dropdown-option:last-child.vs__dropdown-option--highlight),
-:deep(.custom-v-select:not(.meta-ads-select) .vs__dropdown-option.add-project-option-item.vs__dropdown-option--highlight) {
-    background: transparent !important;
-}
-
-.add-project-option {
+.create-btn {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 8px;
     padding: 10px 20px;
-    margin: 0 8px 8px 8px;
-    background: #F4F4F4;
-    border: 1px solid #E5E7EB;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: 'Montserrat', sans-serif;
-    user-select: none;
-    -webkit-user-select: none;
-    pointer-events: auto;
-}
-
-.add-project-option:hover {
-    background: #E5E7EB;
-    border-color: #CBD5E1;
-}
-
-.add-project-icon {
-    font-size: 16px;
-    color: #FAA300;
-    flex-shrink: 0;
-}
-
-.add-project-text {
-    font-size: 13px;
-    font-weight: 400;
-    color: #000000;
-    white-space: nowrap;
-}
-
-.add-project-option .add-project-icon {
-    font-size: 16px;
-    color: #FAA300;
-    flex-shrink: 0;
-}
-
-.add-project-option .add-project-text {
-    font-size: 13px;
-    font-weight: 400;
-    color: #000000;
-    white-space: nowrap;
-}
-
-.add-project-label {
-    display: block;
+    background: #01062C;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
     font-family: 'Montserrat', sans-serif;
     font-size: 14px;
-    font-weight: 600;
-    color: #000000;
-    margin-bottom: 12px;
-    line-height: 1.5;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
-.add-project-input {
-    width: 100%;
-    height: 42px;
-    padding: 0 16px;
-    border: 1px solid #E2E8F0;
+.create-btn:hover {
+    background: #020A3D;
+}
+
+.create-icon {
+    font-size: 18px;
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 48px 24px;
+    color: #64748B;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+}
+
+.error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 48px 24px;
+    color: #EF4444;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+}
+
+.error-icon {
+    font-size: 48px;
+    color: #EF4444;
+}
+
+.retry-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #F1F5F9;
+    border: none;
     border-radius: 8px;
     font-family: 'Montserrat', sans-serif;
     font-size: 13px;
-    color: #1E293B;
-    background: #FFFFFF;
+    color: #64748B;
+    cursor: pointer;
     transition: all 0.2s;
 }
 
-.add-project-input:focus {
-    border-color: #01062C;
-    box-shadow: 0 0 0 3px rgba(1, 6, 44, 0.1);
-    outline: none;
+.retry-btn:hover {
+    background: #E2E8F0;
 }
 
-.add-project-input::placeholder {
+.retry-icon {
+    font-size: 16px;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 48px 24px;
+    color: #64748B;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+}
+
+.empty-icon {
+    font-size: 48px;
     color: #94A3B8;
-    opacity: 1;
+}
+
+.table-container {
+    background: #ffffff;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    max-height: calc(100vh - 250px);
+    overflow-y: auto;
+    overflow-x: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+.table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #F8FAFC;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+}
+
+.integration-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+    table-layout: auto;
+}
+
+.integration-table thead {
+    background-color: #F8FAFC;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.integration-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #343A40;
+    border-bottom: 1px solid #E2E8F0;
+    background-color: #F8FAFC;
+}
+
+.integration-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #E2E8F0;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    color: #1E293B;
+    vertical-align: middle;
+    background-color: #ffffff;
+}
+
+.integration-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.checkbox-column {
+    width: 50px;
+}
+
+.form-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.form-check-input-select {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #CBD5E1;
+    border-radius: 3px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    position: relative;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.form-check-input-select:checked {
+    background-color: #FCA503;
+    border-color: #FCA503;
+    box-shadow: 0 0 0 3px rgba(252, 165, 3, 0.2), 
+                0 0 0 6px rgba(252, 165, 3, 0.1);
+}
+
+.form-check-input-select:checked::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    border-radius: 0;
+}
+
+.form-check-input-select:hover {
+    border-color: #94A3B8;
+}
+
+.form-check-input-select:checked:hover {
+    border-color: #FCA503;
+}
+
+.form-id-link {
+    color: #4D7CFE;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.form-id-link:hover {
+    text-decoration: underline;
+}
+
+.form-name {
+    font-weight: 500;
+    color: #1E293B;
+}
+
+.created-on {
+    color: #64748B;
     font-size: 13px;
 }
 
-/* Add Project Modal Styles */
-:deep(.add-project-modal) {
-    z-index: 1055 !important;
+.platform-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #F1F5F9;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #475569;
 }
 
-:deep(.add-project-modal.show .modal-backdrop) {
-    background-color: rgba(0, 0, 0, 0.5) !important;
-    z-index: 1050 !important;
-    opacity: 1 !important;
+.active-column {
+    min-width: 150px;
 }
 
-:deep(.add-project-modal .modal-backdrop.show) {
-    background-color: rgba(0, 0, 0, 0.5) !important;
-    opacity: 1 !important;
-}
-
-:deep(.add-project-modal .modal-dialog) {
-    max-width: 500px;
-    margin: 1.75rem auto;
-    z-index: 1055 !important;
-    position: relative;
-}
-
-:deep(.add-project-modal .modal-content) {
-    border-radius: 16px;
-    border: none;
-    box-shadow: 0px 10px 40px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-    position: relative;
-    z-index: 1055 !important;
-}
-
-:deep(.add-project-modal .modal-body) {
-    padding: 0;
-}
-
-:deep(.add-project-modal.show) {
-    display: block !important;
-}
-
-:deep(.add-project-modal.show .modal-dialog) {
-    transform: none !important;
-}
-
-.add-project-modal-content {
-    background: #FFFFFF;
-    display: flex;
-    flex-direction: column;
-    border-radius: 10px;
-}
-
-.add-project-modal-content .modal-header-section {
+.active-toggle-wrapper {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 15px 32px;
-    border-bottom: 1px solid #E2E8F0;
+    gap: 12px;
 }
 
-.add-project-modal-content .modal-title {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 14px;
-    color: #01062C;
+.form-switch {
+    padding-left: 0;
     margin: 0;
 }
 
-.add-project-modal-content .close-btn {
+.form-switch .form-check-input {
+    width: 44px;
+    height: 24px;
+    background-color: #CBD5E1;
+    border: none;
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    box-shadow: none !important;
+    margin: 0;
+}
+
+.form-switch .form-check-input::before {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: #ffffff;
+    border-radius: 50%;
+    top: 50%;
+    left: 3px;
+    transform: translateY(-50%);
+    transition: left 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.switch-warning .form-check-input:checked {
+    background-color: #FCA503 !important;
+}
+
+.switch-warning .form-check-input:checked::before {
+    left: calc(100% - 21px);
+}
+
+.active-date {
+    font-size: 13px;
+    color: #64748B;
+    white-space: nowrap;
+}
+
+.conversation-count {
+    font-weight: 500;
+    color: #1E293B;
+}
+
+.action-column {
+    width: 60px;
+    text-align: center;
+}
+
+.action-btn {
     background: transparent;
     border: none;
-    padding: 4px;
+    padding: 4px 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #64748B;
-    border-radius: 4px;
-    transition: all 0.2s;
+    transition: color 0.2s;
 }
 
-.add-project-modal-content .close-btn:hover {
-    background: #F1F5F9;
-    color: #01062C;
+.action-btn:hover {
+    color: #1E293B;
 }
 
-.add-project-modal-content .close-icon {
+.action-icon {
     font-size: 20px;
 }
 
-.add-project-modal-content .modal-body-section {
-    padding: 24px 32px;
+:deep(.action-dropdown-menu) {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
+    padding: 4px;
+    min-width: 120px;
 }
 
-.add-project-modal-content .modal-footer-section {
+:deep(.dropdown-item-custom) {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px !important;
+    border-radius: 6px;
+    transition: all 0.2s;
+    font-size: 13px;
+    color: #1E293B;
+}
+
+:deep(.dropdown-item-custom:hover) {
+    background: #F8FAFC !important;
+}
+
+:deep(.dropdown-item-custom .dropdown-icon) {
+    font-size: 16px;
+    color: #64748B;
+}
+
+.pagination-container {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
-    padding: 20px 32px;
-    border-top: 1px solid #E2E8F0;
-    background: #FFFFFF;
+    justify-content: space-between;
+    margin-top: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
 }
 
-.add-project-modal-content .footer-btn {
-    padding: 10px 24px;
-    border-radius: 8px;
+.pagination-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #64748B;
     font-family: 'Montserrat', sans-serif;
+}
+
+.entries-icon {
+    font-size: 16px;
+    color: #64748B;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.entries-icon:hover {
+    color: #1E293B;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1E293B;
     font-size: 14px;
     font-weight: 500;
+    font-family: 'Montserrat', sans-serif;
     cursor: pointer;
     transition: all 0.2s;
-    border: none;
 }
 
-.add-project-modal-content .footer-btn.cancel-btn {
-    background: #FFFFFF;
-    color: #64748B;
-    border: 1px solid #E2E8F0;
-}
-
-.add-project-modal-content .footer-btn.cancel-btn:hover {
+.pagination-btn:hover:not(:disabled) {
     background: #F8FAFC;
     border-color: #CBD5E1;
 }
 
-.add-project-modal-content .footer-btn.apply-btn {
-    background: #01062C;
-    color: #FFFFFF;
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.add-project-modal-content .footer-btn.apply-btn:hover {
-    background: #020A3D;
+.pagination-btn iconify-icon {
+    font-size: 16px;
+}
+
+.page-numbers {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.page-number {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1E293B;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'Montserrat', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.page-number:hover:not(.ellipsis):not(.active) {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+}
+
+.page-number.active {
+    background: #F1F5F9;
+    border-color: #E2E8F0;
+    color: #1E293B;
+    font-weight: 600;
+}
+
+.page-number.ellipsis {
+    border: none;
+    background: transparent;
+    cursor: default;
+    color: #64748B;
+    min-width: auto;
+    padding: 0 4px;
+}
+
+.page-number:disabled {
+    cursor: default;
 }
 </style>

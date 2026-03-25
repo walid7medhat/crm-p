@@ -185,7 +185,7 @@ const loadSources = async () => {
 
         // Auto select Meta Lead Form
         const metaSource = sources.find(
-            source => source.name === 'Meta Lead Form'
+            source => source.name === 'Lead Form'
         )
 
         if (metaSource) {
