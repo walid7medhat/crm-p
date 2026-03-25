@@ -366,7 +366,7 @@
         </li>
 
         <!-- All Chats (Super Admin only) -->
-        <li v-if="isAdmin" class="sidebar-item-all-chats">
+        <li v-if="isCustomAdmin" class="sidebar-item-all-chats">
           <router-link to="/admin/chat" :class="{ 'active-page': isActive('/admin/chat') }">
             <iconify-icon icon="ri-chat-3-line" class="menu-icon" />
             <span>All Chats</span>
@@ -444,6 +444,15 @@ const isAdmin = computed(() => {
   const isAdminUser = user.value.roles?.includes('super_admin') || 
                      user.value.roles?.includes('admin') ||
                      proxy.$hasPermission('admin');
+  
+  return isAdminUser;
+});
+
+const isCustomAdmin = computed(() => {
+  if (!user.value) return false;
+  
+  const isAdminUser = user.value.roles?.includes('super_admin') || 
+                     (user.value.roles?.includes('admin') && ( user.value.id==30 || user.value.id==33));
   
   return isAdminUser;
 });
@@ -862,6 +871,8 @@ onMounted(() => {
     background: rgb(1 6 45 / 56%) !important;;
     backdrop-filter: blur(16px) !important;;
     -webkit-backdrop-filter: blur(16px) !important;;
+            z-index: 100 !important;
+
   }
 }
 @media (min-width: 1200px) {
