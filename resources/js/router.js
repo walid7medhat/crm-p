@@ -87,6 +87,9 @@ import kanban_settings from './components/kanban/KanbanSettings.vue'
 import lead_scoring_settings from './components/kanban/LeadScoringSettings.vue'
 import InvestmentAnalysis from './pages/dashboard/investment.vue'
 import CitySettings from './pages/dashboard/city-settings.vue'
+import Email from './pages/email/email.vue'
+import StarredEmail from './pages/email/StarredEmail.vue'
+import EmailViewDetails from './pages/email/VeiwDetails.vue'
 const routes = [
   // Kanban Route (super_admin only — see meta.requiresSuperAdmin)
   { path: '/kanban', component: Kanban, meta: { requiresAuth: true, requiresAdmin: true } },
@@ -166,6 +169,11 @@ const routes = [
   { path: '/team-tree', name: 'TeamTree', component: TeamTree, meta: { requiresAuth: true } },
   { path: '/notifications', component: allNotifications, name: 'notifications', meta: { requiresAuth: true } },
   { path: '/admin/chat', component: AdminChatDashboard, name: 'admin-chat', meta: { requiresAuth: true } },
+
+  // Email (SUPER_ADMIN only)
+  { path: '/email', component: Email, name: 'email', meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/email/starred', component: StarredEmail, name: 'email-starred', meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/email/view', component: EmailViewDetails, name: 'email-view', meta: { requiresAuth: true, requiresSuperAdmin: true } },
   
      { path: '/features', component: FeaturesList, meta: { requiresAuth: true } },
   { path: '/add-features', component: FeatureForm, meta: { requiresAuth: true } },

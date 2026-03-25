@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\LeadScoringSettingController;
 use App\Http\Controllers\Api\InvestmentController;
 use App\Http\Controllers\Api\CityInvestmentSettingsController;
 use App\Http\Controllers\Api\AbuDhabiBenchmarkController;
+use App\Http\Controllers\Api\AdminEmailController;
 Route::get('/test-email', function () {
     try {
         // Test basic email
@@ -53,7 +54,7 @@ Route::get('/test-email', function () {
         
         return 'Email sent successfully! Check your email inbox.';
     } catch (\Exception $e) {
-        return 'Email error: ' . $message;
+        return 'Email error: ' . $e->getMessage();
     }
 });
 
@@ -238,6 +239,10 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::post('/read', [ChatController::class, 'read']);
         Route::get('/admin/conversations', [ChatController::class, 'adminConversations']);
     });
+
+    // Admin email blast (SUPER_ADMIN only)
+    Route::get('/agents-emails', [AdminEmailController::class, 'agentsEmails']);
+    Route::post('/send-email', [AdminEmailController::class, 'sendEmail']);
     
     
     Route::get('/profile', [ProfileController::class, 'show']);
