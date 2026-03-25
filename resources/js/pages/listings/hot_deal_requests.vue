@@ -25,10 +25,13 @@
                             <tr v-for="req in hotDealRequests" :key="req.id">
                                 <td>{{ req.id }}</td>
 
-                                <td>
-                                    {{ req.listing?.title }}
+                               <td>
+                                    <div class="d-flex flex-column">
+                                        <span @click="viewProperty(req.listing?.id)"> {{ req.listing?.area?.title || '-' }}</span>
+                                        <span @click="viewProperty(req.listing?.id)"> {{ formatPrice(req.listing?.price) || '-' }}</span>
+                                        <span @click="viewProperty(req.listing?.id)" v-if="req.listing?.number_of_bedrooms"> {{ req.listing?.number_of_bedrooms  || '-' }} Beds</span>
+                                    </div>
                                 </td>
-
                                 <td>
                                     {{ req.requester?.name }}
                                 </td>
@@ -43,8 +46,9 @@
                                     </span>
                                 </td>
 
-                                <td v-if="req.status=='pending'">
+                                <td >
                                     <button 
+                                    v-if="req.status=='pending'"
                                         class="btn btn-success btn-sm me-2"
                                         @click="openAction(req.id, 'approve')"
                                     >
@@ -52,10 +56,17 @@
                                     </button>
 
                                     <button 
+                                       v-if="req.status=='pending'"
                                         class="btn btn-danger btn-sm"
                                         @click="openAction(req.id, 'reject')"
                                     >
                                         Reject
+                                    </button>
+                                      <button 
+                                            class="btn btn-primary btn-sm ml-1"
+                                            @click="viewProperty(req.listing?.id)"
+                                        >
+                                            View
                                     </button>
                                 </td>
                             </tr>
@@ -122,7 +133,13 @@ const comments = ref('')
 onMounted(() => {
     fetchRequests()
 })
-
+function viewProperty(id) {
+    if (!id) return
+    window.open(`/property-details/${id}`, '_blank')
+}
+function formatPrice(price) {
+    return price ? new Intl.NumberFormat().format(price) + ' AED' : '-'
+}
 async function fetchRequests() {
     try {
         loading.value = true

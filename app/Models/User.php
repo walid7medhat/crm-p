@@ -57,7 +57,7 @@ class User extends Authenticatable implements JWTSubject
     public function getAvatarAttribute($value)
 {
     if (!$value) {
-        return '/users/user.png';
+        return 'users/user.png';
     }
 
     return $value;
@@ -194,12 +194,16 @@ function getAdminParentAttribute()
     public function getIsListingTeamAttribute(): bool
     {
         $current = $this;
-
+         
         while ($current->parent_id) {
+            if( $current->listing_team == 1){
+                return true;
+            }else{
             $current = $current->parent; 
 
             if ($current && $current->hasRole('manager')) {
                 return $current->listing_team == 1; 
+            }
             }
         }
 
@@ -331,7 +335,7 @@ public function activeAgent()
     return $this;
 }
 public function getAvatarUrlAttribute(){
-     return $this->avatar ?  asset('storage/'. $this->avatar) : null;
+     return $this->avatar ?  asset('storage/'. $this->avatar) : asset('storage/users/user.png');
 }
 
  public function assignedLeads()

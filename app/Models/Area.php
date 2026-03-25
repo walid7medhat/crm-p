@@ -10,6 +10,7 @@ class Area extends Model
     //
     use HasFactory;
     protected $guarded=[];
+    protected $appends = ['title','area_title'];
        public function addedBy()
     {
         return $this->belongsTo(User::class, 'added_by');

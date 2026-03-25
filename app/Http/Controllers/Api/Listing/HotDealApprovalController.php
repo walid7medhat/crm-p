@@ -30,7 +30,12 @@ class HotDealApprovalController extends Controller
         try {
             $user = Auth::user();
             
-            $query = HotDealRequest::with(['listing', 'requester']);
+            $query = HotDealRequest::with([
+                        'listing:id,area_id,price,number_of_bedrooms',
+                        'listing.area:id,name,parent_id',
+                        'listing.area.parent',
+                        'requester:id,name'
+                    ]);
                 // ->where('status', 'pending');
             
             // If user is manager/team lead, only show requests from their hierarchy
