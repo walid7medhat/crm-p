@@ -13,7 +13,6 @@
     <div v-if="propertyContext" class="property-context-card">
       <div class="property-context-title">{{ propertyContext.title }}</div>
       <div v-if="propertyContext.reference" class="property-context-meta">Reference: {{ propertyContext.reference }}</div>
-      <div v-if="propertyContext.unitNo" class="property-context-meta">Unit: {{ propertyContext.unitNo }}</div>
       <div v-if="propertyContext.location" class="property-context-meta">{{ propertyContext.location }}</div>
       <div v-if="propertyContext.price" class="property-context-meta">Price: {{ propertyContext.price }}</div>
       <a v-if="propertyContext.link" :href="propertyContext.link" target="_blank" rel="noopener" class="property-context-link">
@@ -79,7 +78,16 @@ const loadingMore = ref(false)
 const lastScrollHeight = ref(0)
 
 const sortedMessages = computed(() => {
-  return [...(props.messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  const list = (props.messages || []).filter((m) => {
+    const text = (m?.message || '').trim()
+    if (!text) return true
+    const isLegacyPropertyContext =
+      /^\[Property(?::\d+)?\]/i.test(text) ||
+      /^\[PropertyContext(?::\d+)?\]/i.test(text) ||
+      text.includes('Property inquiry')
+    return !isLegacyPropertyContext
+  })
+  return [...list].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
 })
 
 watch(() => props.messages?.length, () => {

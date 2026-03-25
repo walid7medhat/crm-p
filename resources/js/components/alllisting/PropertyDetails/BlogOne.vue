@@ -2728,6 +2728,16 @@ const revertFromConverted = async () => {
     };
 
     // Sync property agent to sessionStorage so global "Chat with Agent" (App.vue) can open chat
+    const formatChatPrice = (value, currency = 'AED') => {
+      if (value === undefined || value === null || value === '') return ''
+      const numeric = typeof value === 'number'
+        ? value
+        : Number(String(value).replace(/,/g, ''))
+
+      if (Number.isNaN(numeric)) return `${value} ${currency}`
+      return `${numeric.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
+    }
+
     watch(property, (p) => {
       if (p?.agent) {
         try {
@@ -2735,9 +2745,8 @@ const revertFromConverted = async () => {
             propertyId: p.id ?? null,
             title: p.title || p.name || p.reference_number || `Property #${p.id ?? ''}`,
             reference: p.reference_number || p.reference || '',
-            unitNo: p.unit_number || '',
             location: [p?.project?.name, p?.area?.title || p?.area?.name].filter(Boolean).join(' - '),
-            price: p?.price ? `${p.price} ${p?.currency || 'AED'}` : '',
+            price: formatChatPrice(p?.price, p?.currency || 'AED'),
           };
           sessionStorage.setItem('propertyChatAgent', JSON.stringify({
             id: p.agent.id,
@@ -4773,9 +4782,10 @@ const openDriveLink = () => {
             propertyId: p.id ?? null,
             title: p.title || p.name || p.reference_number || p.reference || `Property #${p.id ?? ''}`,
             reference: p.reference_number || p.reference || p.ref_no || p.unit_ref || '',
-            unitNo: p.unit_number || '',
             location: [p?.project?.name, p?.area?.title || p?.area?.name].filter(Boolean).join(' - '),
-            price: p?.price ? `${p.price} ${p?.currency || 'AED'}` : '',
+            price: p?.price !== undefined && p?.price !== null && p?.price !== ''
+              ? `${Number(String(p.price).replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${p?.currency || 'AED'}`
+              : '',
           } : {};
           const mergedContext = { ...storedContext, ...liveContext };
           window.__openPropertyChat(agent, listingId ? parseInt(listingId, 10) : (p?.id ?? null), mergedContext);
@@ -4792,9 +4802,10 @@ const openDriveLink = () => {
             propertyId: p.id ?? null,
             title: p.title || p.name || p.reference_number || `Property #${p.id ?? ''}`,
             reference: p.reference_number || p.reference || '',
-            unitNo: p.unit_number || '',
             location: [p?.project?.name, p?.area?.title || p?.area?.name].filter(Boolean).join(' - '),
-            price: p?.price ? `${p.price} ${p?.currency || 'AED'}` : '',
+            price: p?.price !== undefined && p?.price !== null && p?.price !== ''
+              ? `${Number(String(p.price).replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${p?.currency || 'AED'}`
+              : '',
           }
         );
       } catch (_) {

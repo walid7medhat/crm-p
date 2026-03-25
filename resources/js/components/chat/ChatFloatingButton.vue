@@ -8,7 +8,13 @@
       @click="openChat"
     >
       <i class="ri-chat-3-fill"></i>
-      <span v-if="unreadCount > 0" class="chat-floating-badge">{{ badgeText }}</span>
+      <span
+        v-if="unreadCount > 0"
+        class="chat-floating-badge"
+        :class="{ 'chat-floating-badge--pulse': badgePulsing }"
+      >
+        {{ badgeText }}
+      </span>
     </button>
   </Teleport>
 </template>
@@ -16,6 +22,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import api from '@/plugins/axios'
+import Swal from 'sweetalert2'
 
 const props = defineProps({
   show: { type: Boolean, default: true },
@@ -26,7 +33,10 @@ const emit = defineEmits(['open'])
 
 const visible = ref(false)
 const unreadCount = ref(0)
+const badgePulsing = ref(false)
 const echoChannel = ref(null)
+let audioContext = null
+let badgePulseTimer = null
 
 const badgeText = computed(() => {
   const n = unreadCount.value
@@ -55,10 +65,74 @@ function subscribeToNewMessages() {
     channel.listen('.message.sent', (e) => {
       if (e.sender_id !== user.id) {
         unreadCount.value = Math.max(0, unreadCount.value) + 1
+        badgePulsing.value = true
+        if (badgePulseTimer) clearTimeout(badgePulseTimer)
+        badgePulseTimer = setTimeout(() => {
+          badgePulsing.value = false
+        }, 800)
+        if (!props.chatOpen) {
+          notifyIncomingMessage(e)
+        }
       }
     })
     echoChannel.value = channel
   } catch (_) {}
+}
+
+function playNotificationTone() {
+  try {
+    if (typeof window === 'undefined') return
+    const AudioCtx = window.AudioContext || window.webkitAudioContext
+    if (!AudioCtx) return
+    if (!audioContext) audioContext = new AudioCtx()
+    const now = audioContext.currentTime
+    const osc = audioContext.createOscillator()
+    const gain = audioContext.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(880, now)
+    gain.gain.setValueAtTime(0.0001, now)
+    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.01)
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2)
+    osc.connect(gain)
+    gain.connect(audioContext.destination)
+    osc.start(now)
+    osc.stop(now + 0.22)
+  } catch (_) {}
+}
+
+function notifyIncomingMessage(eventPayload) {
+  const senderName = eventPayload?.sender?.name || 'New message'
+  const text = (eventPayload?.message || '').trim()
+
+  // In-app toast (works without browser Notification permission).
+  try {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'info',
+      title: senderName,
+      html: text ? `<div>${text}</div>` : 'New chat message',
+      showConfirmButton: false,
+      timer: 2500,
+      padding: '8px 10px',
+      backdrop: false,
+    })
+  } catch (_) {}
+
+  if (typeof window !== 'undefined' && 'Notification' in window) {
+    const body = text || 'You have a new chat message.'
+    if (Notification.permission === 'granted') {
+      new Notification(senderName, { body })
+    } else if (Notification.permission === 'default') {
+      Notification.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+          new Notification(senderName, { body })
+        }
+      }).catch(() => {})
+    }
+  }
+
+  playNotificationTone()
 }
 
 function unsubscribeEcho() {
@@ -92,6 +166,13 @@ onMounted(() => {
 onUnmounted(() => {
   unsubscribeEcho()
   if (pollInterval) clearInterval(pollInterval)
+  if (audioContext && typeof audioContext.close === 'function') {
+    audioContext.close().catch(() => {})
+    audioContext = null
+  }
+  if (badgePulseTimer) clearTimeout(badgePulseTimer)
+  badgePulseTimer = null
+  badgePulsing.value = false
 })
 
 watch(() => props.show, (v) => {
@@ -155,5 +236,16 @@ watch(() => props.chatOpen, (isOpen) => {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 6px rgba(220, 53, 69, 0.4);
+}
+
+.chat-floating-badge--pulse {
+  animation: chat-badge-pulse 0.8s ease-in-out;
+}
+
+@keyframes chat-badge-pulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.2); }
+  60% { transform: scale(0.98); }
+  100% { transform: scale(1); }
 }
 </style>

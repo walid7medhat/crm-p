@@ -13,7 +13,16 @@
               <i class="ri-arrow-left-line"></i>
             </button>
             <span class="popup-icon"><i class="ri-chat-3-fill"></i></span>
-            <h6 class="popup-title">Messages</h6>
+            <h6 class="popup-title">
+              Messages
+              <span
+                v-if="showConversationList && inboxNewCount > 0"
+                class="inbox-new-badge"
+                :class="{ 'inbox-new-badge--pulse': inboxPulse }"
+              >
+                {{ badgeText(inboxNewCount) }}
+              </span>
+            </h6>
           </div>
           <button type="button" class="popup-close" aria-label="Close" @click="close">
             <i class="ri-close-line"></i>
@@ -114,6 +123,11 @@ const agentSearchResults = ref([])
 const searchingAgents = ref(false)
 let agentSearchDebounceTimer = null
 
+const inboxNewCount = ref(0)
+const inboxPulse = ref(false)
+const inboxEchoChannel = ref(null)
+let inboxPulseTimer = null
+
 const filteredConversations = computed(() => {
   const q = chatSearchQuery.value.toLowerCase()
   if (!q) return conversations.value
@@ -161,8 +175,12 @@ watch(() => props.show, (visible) => {
       activeConversation.value = null
       messages.value = []
     }
+
+    // When in conversation list, show an animated counter for new incoming messages.
+    subscribeInboxNotifications()
   } else {
     unsubscribeEcho()
+    unsubscribeInboxNotifications()
     if (agentSearchDebounceTimer) {
       clearTimeout(agentSearchDebounceTimer)
       agentSearchDebounceTimer = null
@@ -190,6 +208,7 @@ watch(chatSearchQuery, (q) => {
 
 watch(activeConversationId, async (id) => {
   if (id) {
+    unsubscribeInboxNotifications()
     await resolvePropertyContext(activeConversation.value)
     loadMessages(id)
     markRead(id)
@@ -198,8 +217,52 @@ watch(activeConversationId, async (id) => {
     messages.value = []
     propertyContext.value = null
     unsubscribeEcho()
+
+    // Back to conversation list.
+    subscribeInboxNotifications()
   }
 })
+
+function badgeText(n) {
+  const num = Number(n || 0)
+  return num > 99 ? '99+' : String(num)
+}
+
+function triggerInboxPulse() {
+  inboxPulse.value = true
+  if (inboxPulseTimer) clearTimeout(inboxPulseTimer)
+  inboxPulseTimer = setTimeout(() => {
+    inboxPulse.value = false
+  }, 900)
+}
+
+function subscribeInboxNotifications() {
+  if (!window.Echo) return
+  if (!currentUserId.value) return
+  if (activeConversationId.value) return
+  if (inboxEchoChannel.value) return
+
+  try {
+    const channel = window.Echo.private(`user.${currentUserId.value}`)
+    channel.listen('.message.sent', (e) => {
+      if (e.sender_id === currentUserId.value) return
+      // Only show counter when the user is still in the conversation list.
+      if (!activeConversationId.value) {
+        inboxNewCount.value = Math.max(0, inboxNewCount.value) + 1
+        triggerInboxPulse()
+      }
+    })
+    inboxEchoChannel.value = channel
+  } catch (_) {}
+}
+
+function unsubscribeInboxNotifications() {
+  if (!inboxEchoChannel.value) return
+  try {
+    inboxEchoChannel.value.stopListening('.message.sent')
+  } catch (_) {}
+  inboxEchoChannel.value = null
+}
 
 function loadUser() {
   try {
@@ -296,25 +359,24 @@ async function startConversationWithAgent(agentId, listingId, context = null) {
 
 function buildPropertyContextMessage(context, listingId) {
   const propertyId = Number(context?.propertyId || listingId || 0)
-  const title = (context?.title || '').trim() || `Property #${propertyId || 'N/A'}`
-  const location = (context?.location || '').trim()
-  const unitNo = (context?.unitNo || '').trim()
+  const title = (context?.title || '').trim() || 'Property details'
   const reference = (context?.reference || context?.reference_number || context?.referenceNo || context?.ref || '').trim()
+  const location = (context?.location || '').trim()
   const price = (context?.price || '').trim()
   const link = propertyId > 0 && typeof window !== 'undefined'
     ? `${window.location.origin}/property-details/${propertyId}`
     : ''
-  const marker = propertyId > 0 ? `[Property:${propertyId}]` : '[Property]'
+  const marker = '[PropertyContext]'
 
   const lines = [
-    `${marker} Property inquiry`,
-    `Property: ${title}`,
-    `Reference: ${reference || (propertyId > 0 ? `#${propertyId}` : 'N/A')}`,
-    ...(unitNo ? [`Unit: ${unitNo}`] : []),
-    ...(location ? [`Location: ${location}`] : []),
+    `${marker}`,
+    title,
+    ...(reference && !/^#\d+$/.test(reference) ? [`Reference: ${reference}`] : []),
+    ...(location ? [location] : []),
     ...(price ? [`Price: ${price}`] : []),
-    ...(link ? [`Link: ${link}`] : []),
+    ...(link ? ['Open Property', link] : []),
   ]
+
   return lines.join('\n')
 }
 
@@ -325,11 +387,38 @@ async function sendPropertyContextIfNeeded(conversationId, listingId, context) {
   try {
     const firstPage = await api.get(`/chat/messages/${conversationId}`, { params: { page: 1 } })
     const existing = firstPage?.data?.data || []
-    const marker = context?.propertyId ? `[Property:${Number(context.propertyId)}]` : '[Property'
+    const marker = '[PropertyContext]'
     const alreadyContainsContext = existing.some((m) => (m?.message || '').includes(marker))
     if (alreadyContainsContext) return
 
-    const msg = buildPropertyContextMessage(context, listingId)
+    // Enrich context before sending so receiver always gets full property block.
+    let enrichedContext = context || {}
+    const needsEnrich = isWeakPropertyContext(enrichedContext, Number(listingId || 0))
+
+    if (needsEnrich && listingId) {
+      try {
+        const res = await api.get(`/listings/properties/${Number(listingId)}`)
+        const property = res?.data?.data || null
+        const normalized = normalizePropertyContext(property, Number(listingId))
+        if (normalized) {
+          enrichedContext = {
+            ...normalized,
+            ...enrichedContext,
+            // Prefer API title when incoming title is weak (e.g. "Property details").
+            title: isWeakPropertyContext({ title: enrichedContext?.title }, Number(listingId || 0))
+              ? normalized.title
+              : (enrichedContext?.title || '').trim(),
+            location: (enrichedContext?.location || '').trim() || normalized.location,
+            price: (enrichedContext?.price || '').trim() || normalized.price,
+            reference: (enrichedContext?.reference || '').trim() || normalized.reference,
+          }
+        }
+      } catch (_) {
+        // keep existing context if listing API fails
+      }
+    }
+
+    const msg = buildPropertyContextMessage(enrichedContext, listingId)
     if (!msg.trim()) return
     await api.post('/chat/send', { conversation_id: conversationId, message: msg })
   } catch (e) {
@@ -347,29 +436,135 @@ function startChatWithAgent(agent) {
 function openConversation(conv) {
   activeConversationId.value = conv.id
   activeConversation.value = conv
+  inboxNewCount.value = 0
 }
 
 function normalizePropertyContext(raw, listingId) {
   if (!raw && !listingId) return null
   const id = Number(raw?.propertyId || raw?.id || listingId || 0)
-  const title = (raw?.title || raw?.name || raw?.reference_number || raw?.reference || '').trim()
-  const reference = (raw?.reference || raw?.reference_number || raw?.referenceNo || '').trim()
-  const unitNo = (raw?.unitNo || raw?.unit_number || '').trim()
+  const title = (raw?.title || raw?.name || raw?.area?.name || '').trim()
+  const reference = (raw?.reference || raw?.reference_number || raw?.referenceNo || raw?.ref || '').trim()
   const location = (raw?.location || [raw?.project?.name, raw?.area?.title || raw?.area?.name].filter(Boolean).join(' - ')).trim()
-  const price = raw?.price
-    ? (typeof raw.price === 'string' ? raw.price : `${raw.price} ${raw?.currency || 'AED'}`)
-    : ''
+
+  // Ensure we always display price with 2 decimals and AED.
+  const formatMoney = (value) => {
+    const n = typeof value === 'number'
+      ? value
+      : Number(String(value).replace(/,/g, '').replace(',', '.'))
+    if (Number.isNaN(n)) return null
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+  const normalizeCurrencyPrice = (value, currency = 'AED') => {
+    const text = String(value || '').trim()
+    if (!text) return ''
+    // If value already contains a currency suffix/prefix, keep as-is to avoid "AED AED".
+    if (/[A-Za-z]{3}/.test(text)) return text
+    const n = Number(text.replace(/,/g, ''))
+    if (Number.isNaN(n)) return text
+    return `${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
+  }
+
+  let price = ''
+  if (raw?.price !== undefined && raw?.price !== null && raw?.price !== '') {
+    if (typeof raw.price === 'number') {
+      const formatted = formatMoney(raw.price)
+      price = formatted ? `${formatted} ${raw?.currency || 'AED'}` : `${raw.price.toFixed(2)} ${raw?.currency || 'AED'}`
+    } else {
+      price = normalizeCurrencyPrice(raw.price, raw?.currency || 'AED')
+    }
+  }
   const link = id > 0 && typeof window !== 'undefined' ? `${window.location.origin}/property-details/${id}` : ''
 
   if (!id && !title && !reference && !link) return null
   return {
     id,
-    title: title || `Property #${id || 'N/A'}`,
-    reference: reference || (id ? `#${id}` : ''),
-    unitNo,
-    location,
+    title: title || 'Property details',
+    reference: reference && !/^#\d+$/.test(reference) ? reference : '',
+    location: location || (raw?.location || ''),
     price,
     link,
+  }
+}
+
+function isWeakPropertyContext(ctx, listingId = 0) {
+  if (!ctx) return true
+  const title = String(ctx.title || '').trim()
+  const reference = String(ctx.reference || '').trim()
+  const weakTitle = !title || title === 'Property details' || title.startsWith('Property #')
+  const weakReference = !reference || /^#\d+$/.test(reference) || (listingId && reference === `#${listingId}`)
+  const missingLocation = !String(ctx.location || '').trim()
+  const missingPrice = !String(ctx.price || '').trim()
+  return (weakTitle && weakReference) || missingLocation || missingPrice
+}
+
+function parsePropertyContextMessage(text, listingId) {
+  const body = String(text || '').trim()
+  if (!body) return null
+
+  const lines = body.split('\n').map((l) => l.trim()).filter(Boolean)
+  if (!lines.length) return null
+  if (!/^\[PropertyContext(?::\d+)?\]/i.test(lines[0])) return null
+
+  const propertyId = Number(
+    lines[0].match(/\[PropertyContext:(\d+)\]/i)?.[1] || listingId || 0
+  )
+
+  let idx = 1
+  const title = (lines[idx] || '').trim()
+  if (title) idx += 1
+
+  let reference = ''
+  let location = ''
+  let price = ''
+  let link = propertyId > 0 && typeof window !== 'undefined'
+    ? `${window.location.origin}/property-details/${propertyId}`
+    : ''
+
+  for (; idx < lines.length; idx += 1) {
+    const line = lines[idx]
+    if (/^Reference:/i.test(line)) {
+      reference = line.replace(/^Reference:\s*/i, '').trim()
+      continue
+    }
+    if (/^Price:/i.test(line)) {
+      price = line.replace(/^Price:\s*/i, '').trim()
+      continue
+    }
+    if (/^https?:\/\//i.test(line)) {
+      link = line
+      continue
+    }
+    if (/^Open Property$/i.test(line)) {
+      continue
+    }
+    if (!location) {
+      location = line
+    }
+  }
+
+  if (!title && !reference && !location && !price && !link) return null
+  return {
+    id: propertyId || Number(listingId || 0),
+    title: title || 'Property details',
+    reference: reference && !/^#\d+$/.test(reference) ? reference : '',
+    location: location || '',
+    price: price || '',
+    link,
+  }
+}
+
+async function hydratePropertyContextFromMessages(conversationId, listingId) {
+  if (!conversationId) return null
+  try {
+    const res = await api.get(`/chat/messages/${conversationId}`, { params: { page: 1 } })
+    const list = Array.isArray(res?.data?.data) ? res.data.data : []
+    for (const msg of list) {
+      const parsed = parsePropertyContextMessage(msg?.message, listingId)
+      if (parsed) return parsed
+    }
+    return null
+  } catch (_) {
+    return null
   }
 }
 
@@ -383,11 +578,10 @@ async function resolvePropertyContext(conversation) {
   const fromStart = normalizePropertyContext(props.startWithContext, listingId)
   if (fromStart && fromStart.id === listingId) {
     propertyContext.value = fromStart
-    return
   }
 
   const fromConversation = normalizePropertyContext(conversation?.listing, listingId)
-  if (fromConversation) {
+  if (fromConversation && (!propertyContext.value || isWeakPropertyContext(propertyContext.value, listingId))) {
     propertyContext.value = fromConversation
   }
 
@@ -395,9 +589,31 @@ async function resolvePropertyContext(conversation) {
     const res = await api.get(`/listings/properties/${listingId}`)
     const property = res?.data?.data || null
     const fromApi = normalizePropertyContext(property, listingId)
-    if (fromApi) propertyContext.value = fromApi
+    if (fromApi && (!propertyContext.value || isWeakPropertyContext(propertyContext.value, listingId))) {
+      propertyContext.value = fromApi
+    }
   } catch (_) {
     // keep best available context from conversation/start props
+  }
+
+  // If we still only have weak fallback values, hydrate from property-context chat message.
+  const current = propertyContext.value
+  if (!current || isWeakPropertyContext(current, listingId)) {
+    const fromMessages = await hydratePropertyContextFromMessages(conversation?.id, listingId)
+    if (fromMessages) {
+      propertyContext.value = fromMessages
+    }
+  }
+
+  // Final safety: keep card rich in fallback mode whenever values exist.
+  if (propertyContext.value) {
+    propertyContext.value = {
+      ...propertyContext.value,
+      title: (propertyContext.value.title || '').trim() || 'Property details',
+      location: (propertyContext.value.location || '').trim(),
+      price: (propertyContext.value.price || '').trim(),
+      link: (propertyContext.value.link || '').trim(),
+    }
   }
 }
 
@@ -496,8 +712,10 @@ function backToConversationList() {
   activeConversation.value = null
   messages.value = []
   startWithAgentFailed.value = true
+  inboxNewCount.value = 0
   loadConversations()
 }
+
 </script>
 
 <style scoped>
@@ -707,5 +925,31 @@ function backToConversationList() {
   font-size: 12px;
   color: #64748b;
   padding: 4px 0 2px;
+}
+
+.inbox-new-badge {
+  margin-left: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #dc3545;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.inbox-new-badge--pulse {
+  animation: inbox-badge-pulse 0.9s ease-in-out;
+}
+
+@keyframes inbox-badge-pulse {
+  0% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-1px) scale(1.08); }
+  60% { transform: translateY(0) scale(0.98); }
+  100% { transform: translateY(0) scale(1); }
 }
 </style>

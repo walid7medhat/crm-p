@@ -48,7 +48,17 @@ class ChatController extends Controller
             $query->whereNull('listing_id');
         }
 
-        $conversation = $query->with(['users:id,name,email,avatar', 'listing:id'])->first();
+        $conversation = $query
+            ->with([
+                'users:id,name,email,avatar',
+                // Select the minimum columns we need for the property context card.
+                'listing' => function ($q) {
+                    $q->select(['id', 'reference_number', 'price', 'area_id', 'project_id']);
+                },
+                'listing.area',
+                'listing.project',
+            ])
+            ->first();
 
         if (!$conversation) {
             DB::beginTransaction();
@@ -58,7 +68,14 @@ class ChatController extends Controller
                     'listing_id' => $listingId,
                 ]);
                 $conversation->users()->attach([$user->id, $agentId]);
-                $conversation->load(['users:id,name,email,avatar', 'listing:id']);
+                $conversation->load([
+                    'users:id,name,email,avatar',
+                    'listing' => function ($q) {
+                        $q->select(['id', 'reference_number', 'price', 'area_id', 'project_id']);
+                    },
+                    'listing.area',
+                    'listing.project',
+                ]);
                 DB::commit();
             } catch (\Throwable $e) {
                 DB::rollBack();
@@ -98,7 +115,14 @@ class ChatController extends Controller
         $user = $request->user();
         $isSuperAdmin = $user->hasRole('super_admin');
 
-        $query = Conversation::with(['users:id,name,email,avatar', 'listing:id'])
+        $query = Conversation::with([
+            'users:id,name,email,avatar',
+            'listing' => function ($q) {
+                $q->select(['id', 'reference_number', 'price', 'area_id', 'project_id']);
+            },
+            'listing.area',
+            'listing.project',
+        ])
             ->withCount('messages')
             ->with(['messages' => fn ($q) => $q->latest()->limit(1)]);
 
@@ -254,7 +278,14 @@ class ChatController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        $query = Conversation::with(['users:id,name,email,avatar', 'listing:id'])
+        $query = Conversation::with([
+            'users:id,name,email,avatar',
+            'listing' => function ($q) {
+                $q->select(['id', 'reference_number', 'price', 'area_id', 'project_id']);
+            },
+            'listing.area',
+            'listing.project',
+        ])
             ->withCount('messages')
             ->orderByDesc('updated_at');
 
@@ -310,6 +341,9 @@ class ChatController extends Controller
             'listing' => $conversation->listing ? [
                 'id' => $conversation->listing->id,
                 'reference_number' => $conversation->listing->reference_number ?? null,
+                'title' => $conversation->listing->area?->name ?? null,
+                'price' => $conversation->listing->price,
+                'location' => $this->buildListingLocation($conversation->listing),
             ] : null,
             'other_user' => $other ? [
                 'id' => $other->id,
@@ -328,5 +362,22 @@ class ChatController extends Controller
             'unread_count' => $unreadCount,
             'updated_at' => $conversation->updated_at->toIso8601String(),
         ];
+    }
+
+    private function buildListingLocation($listing): ?string
+    {
+        if (!$listing) return null;
+
+        $projectName = $listing->project?->title ?? $listing->project?->name ?? null;
+        $areaTitle = $listing->area?->area_title ?? $listing->area?->title ?? $listing->area?->name ?? null;
+
+        $parts = array_values(array_filter([
+            $projectName,
+            $areaTitle,
+        ]));
+
+        if (empty($parts)) return null;
+
+        return implode(' - ', $parts);
     }
 }
