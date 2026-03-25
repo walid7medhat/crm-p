@@ -73,13 +73,14 @@
                                     @end="onLeadDragEnd"
                                     @change="(evt) => onLeadDragChange(evt, column)">
                                     <template #item="{ element: task, index }">
+                                          <!--:title="task.next_action || ''"-->
                                             <div
                                                 :key="task.id"
                                                 class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
-                                                :title="task.next_action || ''"
+                                              
                                                 @click="viewLead(task)"
                                             >
-                                                <!-- Task Header - Lead Name (دائماً ظاهر) -->
+                                                <!-- Task Header - Lead Name  -->
                                                 <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
                                                     <p class="task-title flex-grow-1 mb-0">{{ task.lead_name }}</p>
                                                     <div 
@@ -102,7 +103,7 @@
                                                             <!-- Created By / Date -->
                                                             <div v-if="field.key === 'created_by' || field.key === 'created_at'" 
                                                                  class="info-item date-info d-flex align-items-center gap-1 mb-8">
-                                                                <span v-if="field.key === 'created_by'">Created By</span>
+                                                                <span v-if="field.key === 'created_by'">Created :</span>
                                                                 <span>{{ formatDate(task.created_at) }}</span>
                                                             </div>
                                                             
@@ -127,7 +128,7 @@
                                                             <!-- Work Phone -->
                                                             <div v-else-if="field.key === 'work_phone'" class="info-item mb-8">
                                                                 <div class="info-label text-secondary-light text-xs">Phone</div>
-                                                                <div class="info-value">{{ task.work_phone || task.whatsapp_number || '—' }}</div>
+                                                                <div class="info-value">{{ task.work_phone ? task.work_phone.slice(0,8) + '....' : '—' }}</div>
                                                             </div>
                                                             
                                                             <!-- Email -->
@@ -172,7 +173,7 @@
                                                                 <hr class="mb-2 border-neutral-200">
                                                                 <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
                                                                     <div class="info-item">
-                                                                        <div class="info-label text-secondary-light text-xs mb-1">Assigned By</div>
+                                                                        <div class="info-label text-secondary-light text-xs mb-1">Assigned </div>
                                                                         <div class="info-value">{{ formatDate(task.assigned_at) }}</div>
                                                                     </div>
                                                                     <img v-if="task?.parent?.avatar" :src="task.parent.avatar"  :title="task.parent.name" alt="" class="avatar-sm rounded-circle" />
@@ -1506,6 +1507,7 @@ function viewLead(task) {
     showViewModal.value = true
 }
 
+
 function openDuplicateLeadsModal(leadId, event) {
     selectedLeadForDuplicates.value = leadId
     // Get the trigger element from event target
@@ -1921,7 +1923,7 @@ const $showNotification = (message, type = 'info') => {
 .kanban-nav-arrow {
     width: 36px;
     height: 72px;
-    background: #ffffff;
+    background: #ffffff5c;
     box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
     border: none;
     display: flex;

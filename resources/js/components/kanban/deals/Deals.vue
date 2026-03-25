@@ -1570,7 +1570,7 @@ defineExpose({
 .kanban-nav-arrow {
   width: 36px;
   height: 72px;
-  background: #ffffff;
+  background: #ffffff5c;
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
   border: none;
   display: flex;

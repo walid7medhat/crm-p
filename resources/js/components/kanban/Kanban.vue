@@ -803,8 +803,8 @@ const $showNotification = (message, type = 'info') => {
     align-items: center;
     flex-wrap: nowrap;
     width: max-content;
-    max-width: 320px;
-    min-width: 160px;
+    max-width: 340px;
+    min-width: 250px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
@@ -812,7 +812,7 @@ const $showNotification = (message, type = 'info') => {
 .search-wrapper-focused,
 .search-wrapper-tall {
     max-width: 560px;
-    min-width: 280px;
+    min-width: 300px;
     height: 36px;
     min-height: 36px;
     padding: 4px 12px 4px 10px;

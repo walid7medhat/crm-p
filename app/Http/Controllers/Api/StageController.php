@@ -234,8 +234,11 @@ class StageController extends Controller
                 if ($request->filled('email')) {
                     $q->where('email', $request->email);
                 }
-                if ($request->filled('work_phone')) {
-                    $q->where('work_phone', $request->work_phone);
+              if ($request->filled('work_phone')) {
+                    $q->where(function ($query) use ($request) {
+                        $query->where('work_phone', $request->work_phone)
+                              ->orWhere('work_phone_2', $request->work_phone);
+                    });
                 }
                 if ($request->filled('added_by')) {
                     $q->where('added_by', $request->added_by);
@@ -408,7 +411,10 @@ class StageController extends Controller
                 $leadsQuery->where('email', $request->email);
             }
             if ($request->filled('work_phone')) {
-                $leadsQuery->where('work_phone', $request->work_phone);
+                $leadsQuery->where(function ($query) use ($request) {
+                    $query->where('work_phone', $request->work_phone)
+                          ->orWhere('work_phone_2', $request->work_phone);
+                });
             }
             if ($request->filled('added_by')) {
                 $leadsQuery->where('added_by', $request->added_by);

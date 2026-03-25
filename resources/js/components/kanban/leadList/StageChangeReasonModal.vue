@@ -43,7 +43,7 @@
 
                             <div class="required-selects-grid">
                                 <div class="info-group compact-group" v-if="props.missingFields.includes('area_id')">
-                                    <label class="form-label compact-label mb-1">Area</label>
+                                    <label class="form-label compact-label mb-1">Location</label>
                                     <v-select
                                         v-model="form.area_id"
                                         :options="areas"
