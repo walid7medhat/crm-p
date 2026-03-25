@@ -24,23 +24,8 @@
             </div>
 
             <div class="form-row">
-              <label class="form-label">Subtitle</label>
-              <input v-model.trim="subtitle" type="text" class="form-control" placeholder="e.g. New Feature Available" />
-            </div>
-
-            <div class="form-row">
-              <label class="form-label">CTA URL</label>
-              <input v-model.trim="ctaUrl" type="text" class="form-control" placeholder="https://..." />
-            </div>
-
-            <div class="form-row">
-              <div class="row-head">
-                <label class="form-label">Recipients *</label>
-                <button type="button" class="btn btn-sm btn-light" @click="toggleSelectAll" :disabled="loadingAgents">
-                  {{ allSelected ? 'Clear All' : 'Select All' }}
-                </button>
-              </div>
-
+              <label class="form-label">Agents *</label>
+              <div class="small-muted" style="margin: -4px 0 8px 0;">Choose who will receive the email.</div>
               <div v-if="loadingAgents" class="small-muted">Loading agents…</div>
               <div v-else class="recipients-box">
                 <div class="recipients-search">
@@ -48,6 +33,14 @@
                   <input v-model.trim="agentSearch" type="text" placeholder="Search by name/email…" />
                 </div>
                 <div class="recipients-list">
+                  <div class="d-flex align-items-center justify-content-between gap-2 px-1 pb-2" style="position: sticky; top: 0; background: #fff; z-index: 1;">
+                    <div class="small-muted mb-0">Quick select</div>
+                    <div class="d-flex gap-2">
+                      <button type="button" class="btn btn-sm btn-light" @click="toggleSelectAll" :disabled="loadingAgents">
+                        {{ allSelected ? 'Clear All' : 'Select All' }}
+                      </button>
+                    </div>
+                  </div>
                   <label v-for="a in filteredAgents" :key="a.email" class="recipient-item">
                     <input type="checkbox" :value="a.email" v-model="recipients" />
                     <span class="recipient-name">{{ a.name || a.email }}</span>
@@ -58,6 +51,11 @@
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">URL</label>
+              <input v-model.trim="ctaUrl" type="text" class="form-control" placeholder="https://..." />
             </div>
 
             <div class="form-row">
@@ -296,7 +294,7 @@ onMounted(() => {
   font-size: 13px;
 }
 .recipients-list{
-  max-height: 220px;
+  max-height: 240px;
   overflow: auto;
   background:#fff;
   padding: 6px 10px;

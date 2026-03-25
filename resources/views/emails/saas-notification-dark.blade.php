@@ -37,7 +37,7 @@
           <tr>
             <td style="padding:0 0 14px 0; text-align:center;">
               <div style="display:inline-block; padding:8px 12px; border-radius:999px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10); color:#e5e7eb; font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;">
-                OIA Properties Listing Portal
+                Oia Properties Listing Portal
               </div>
               @if(!empty($subtitle))
                 <div style="margin-top:10px; color:#93c5fd; font-size:13px; font-weight:600;">
@@ -131,7 +131,7 @@
                 </p>
               @endif
               <p style="margin:0; color:#64748b; font-size:12px;">
-                &copy; {{ date('Y') }} OIA Properties Listing Portal. All rights reserved.
+                &copy; {{ date('Y') }} Oia Properties Listing Portal. All rights reserved.
               </p>
             </td>
           </tr>
