@@ -290,6 +290,7 @@ Route::post('/leads/{lead}/assign-responsible-person', [LeadController::class, '
 Route::get('/available-responsible-persons', [LeadController::class, 'getAvailableResponsiblePersons']);
 Route::post('/check-revert', [LeadController::class, 'checkRevert']);
 Route::get('get/lead/branch_source',[StageController::class,'getLeadBranchSource']);
+Route::get('/get-offices', [StageController::class, 'getOffices']);
 Route::prefix('leads')->group(function(){
     Route::get('/{leadId}/history',[LeadController::class, 'history']);
     Route::get('/{leadId}/history/view',[LeadController::class, 'view_history']);

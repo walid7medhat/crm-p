@@ -275,9 +275,7 @@ class StageController extends Controller
                     $q->where('first_name', 'like', "%{$request->first_name}%");
                 }
                 if ($request->filled('lead_branch_source')) {
-                    $branch_team = User::where('id', $request->lead_branch_source)->first();
-                    $team = $branch_team->getAllSubordinatesIds();
-                    $q->whereIn('responsible_person_id', $team);
+                     $q->where('lead_branch_source', $request->lead_branch_source);
                 }
                 if ($request->filled('office_branch')) {
                     $branch_team = User::where('id', $request->office_branch)->first();
@@ -449,9 +447,8 @@ class StageController extends Controller
                 $leadsQuery->where('first_name', 'like', "%{$request->first_name}%");
             }
             if ($request->filled('lead_branch_source')) {
-                    $branch_team = User::where('id', $request->lead_branch_source)->first();
-                    $team = $branch_team->getAllSubordinatesIds();
-                    $q->whereIn('responsible_person_id', $team);
+                   
+                    $q->where('lead_branch_source', $request->lead_branch_source);
                 }
             if ($request->filled('office_branch')) {
                 $branch_team = User::where('id', $request->office_branch)->first();
@@ -565,6 +562,24 @@ public function getLeadBranchSource()
     return ApiResponse::success($branches, 'Lead Branches');
 }
 
+public function getOffices()
+{
+      $branches = User::role('admin')
+        ->whereHas('parent', function ($q) {
+            $q->whereNull('parent_id');
+        })        
+        ->select('name', 'id')
+        ->pluck('id')->toArray();
+    // Get users with role 'admin' who have a parent_id (directly under a branch)
+    $offices = User::role('admin')
+        ->whereNotNull('parent_id')
+        ->with('parent') // to get the branch info if needed
+        ->select('id', 'name', 'parent_id')
+        ->whereIn('parent_id',$branches)
+        ->get();
+    
+    return ApiResponse::success($offices, 'Offices retrieved successfully');
+}
 
 
 

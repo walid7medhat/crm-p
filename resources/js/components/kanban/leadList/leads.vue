@@ -696,7 +696,8 @@ const executeFetchLeads = async () => {
             ...(q.work_phone && { work_phone: q.work_phone }),
             ...(q.email && { email: q.email }),
             ...(q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '' && { bedrooms: q.bedrooms }),
-            ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id })
+            ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id }),
+            ...(q.office_branch != null && q.office_branch !== '' && { team_id: q.office_branch })
         }
         
         const response = await api.get('/stages/kanban/stages-with-leads', {

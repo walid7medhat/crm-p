@@ -187,10 +187,11 @@ const emit = defineEmits(['update:modelValue', 'search'])
 
 const show = ref(props.modelValue)
 const showFilterSettings = ref(false)
-const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'work_phone', 'responsible_person', 'lead_branch_source', 'stage', 'email', 'bedrooms','source','team'])
+const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'work_phone', 'responsible_person', 'lead_branch_source','office', 'stage', 'email', 'bedrooms','source','team'])
 // const activePill = ref('leads-in-progress')
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
 const teamOptions = ref([{ value: null, text: 'Select Team' }])
+const officeOptions = ref([{ value: null, text: 'Select Office' }])
 
 
 watch(() => props.modelValue, (val) => {
@@ -205,6 +206,8 @@ watch(() => props.modelValue, (val) => {
         })
     }
 }, { immediate: true })
+// Add these refs with your other refs
+
 
 const queryToFormKeys = {
     lead_name: 'leadName',
@@ -221,7 +224,8 @@ const queryToFormKeys = {
     bedrooms: 'bedrooms',
     search: 'search',
     source: 'source',
-    team_id: 'team'
+    team_id: 'team',
+    office_branch: 'office',
 }
 
 function syncFormFromQuery(query) {
@@ -307,7 +311,8 @@ const form = ref({
      source: '',
        createdFrom: '',    
     createdTo: '',  
-      team: ''
+      team: '',
+      office: ''
 })
 
 const responsiblePersons = ref([])
@@ -417,7 +422,7 @@ const searchFieldsConfig = computed(() => {
         { id: 'work_phone', label: 'Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
         { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] },
         { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
-        
+           
     ]
     
     if (isAdminOrSuperAdmin.value) {
@@ -428,6 +433,7 @@ const searchFieldsConfig = computed(() => {
         { id: 'stage', label: 'Stage', formKey: 'stage', queryKey: 'stage_id', type: 'select', options: [] },
         { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions },
         { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
+        { id: 'office', label: 'Branch',  formKey: 'office',  queryKey: 'office_branch', type: 'select',  options: officeOptions.value },
         { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] }
     )
     
@@ -647,11 +653,12 @@ function applySearch() {
         email: form.value.email || undefined,
         bedrooms: form.value.bedrooms ?? undefined,
         search: form.value.search || undefined,
-       source: form.value.source || undefined ,
+        source: form.value.source || undefined ,
         created_from: createdFrom  || undefined,  
         created_to: createdTo || undefined,     
         created_at: createdAt  || undefined,   
-         team_id: teamId || undefined 
+        team_id: teamId || undefined ,
+        office_branch: form.value.office || undefined 
     }
     Object.keys(query).forEach(k => { if (query[k] === '' || query[k] === undefined) delete query[k] })
     console.log('Search Query:', query)
@@ -706,7 +713,7 @@ async function fetchBranchSources() {
         if (Array.isArray(data) && data.length) {
             branchSourceOptions.value = [
                 { value: null, text: 'Select Branch Source' },
-                ...data.map(b => ({ value: b.id, text: b.name }))
+                ...data.map(b => ({ value: b.name, text: b.name }))
             ]
         }
     } catch (_) {}
@@ -753,6 +760,39 @@ async function fetchTeams() {
         console.error('Error fetching teams:', error)
     }
 }
+// Add fetch function to get offices (users directly under branches)
+async function fetchOffices() {
+    try {
+        const res = await api.get('/get-offices') // You'll need to create this endpoint
+        const data = res.data?.data
+        if (Array.isArray(data) && data.length) {
+            officeOptions.value = [
+                { value: null, text: 'Select Office' },
+                ...data.map(office => ({ value: office.id, text: office.name }))
+            ]
+        }
+    } catch (error) {
+        console.error('Error fetching offices:', error)
+        // Fallback: fetch from users with admin role who have parent_id
+        try {
+            const res2 = await api.get('/users', {
+                params: {
+                    role: 'admin',
+                    has_parent: true
+                }
+            })
+            const admins = res2.data?.data
+            if (Array.isArray(admins) && admins.length) {
+                officeOptions.value = [
+                    { value: null, text: 'Select Office' },
+                    ...admins.map(admin => ({ value: admin.id, text: admin.name }))
+                ]
+            }
+        } catch (err) {
+            console.error('Error fetching admin users:', err)
+        }
+    }
+}
 function resetFormValues() {
     form.value = {
         search: '',
@@ -772,7 +812,8 @@ function resetFormValues() {
         email: '',
         bedrooms: '',
          source: '',
-         team: ''
+         team: '',
+         office: ''
     }
 }
 
@@ -794,6 +835,7 @@ onMounted(() => {
     fetchStages()
     fetchSources()
         fetchTeams()
+        fetchOffices() 
 })
 </script>
 

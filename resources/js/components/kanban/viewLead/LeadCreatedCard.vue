@@ -15,24 +15,24 @@
                 </div>
                 <div class="lead-created-card">
                     <div class="lead-created-card-header">
-                        <span class="lead-created-title">Lead Created</span>
+                        <span class="lead-created-title">Lead Created :</span>
                         <span class="lead-created-time">{{ timeLabel }}</span>
                     </div>
                     <div class="lead-created-card-body">
                         <div class="lead-created-row">
-                            <span class="lead-created-label">Lead Name</span>
+                            <span class="lead-created-label">Lead Name :</span>
                             <span class="lead-created-value">{{ leadName }}</span>
                         </div>
                         <div v-if="source" class="lead-created-row">
-                            <span class="lead-created-label">Source</span>
+                            <span class="lead-created-label">Source :</span>
                             <span class="lead-created-value">{{ source }}</span>
                         </div>
                         <div v-if="branch" class="lead-created-row">
-                            <span class="lead-created-label">Lead Branch Source</span>
+                            <span class="lead-created-label">Lead Branch Source :</span>
                             <span class="lead-created-value">{{ branch }}</span>
                         </div>
                          <div v-if="branchOffice" class="lead-created-row">
-                            <span class="lead-created-label">Lead Branch</span>
+                            <span class="lead-created-label">Lead Branch :</span>
                             <span class="lead-created-value">{{ branchOffice }}</span>
                         </div>
                         
@@ -206,7 +206,7 @@ const creatorTooltip = computed(() => creatorName.value !== '—' ? `Created by 
 
 .lead-created-row {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 2px;
 }
 
@@ -217,7 +217,7 @@ const creatorTooltip = computed(() => creatorName.value !== '—' ? `Created by 
 }
 
 .lead-created-value {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #01062C;
 }
