@@ -303,7 +303,7 @@ function getAdminParentAttribute()
         }
 
         // Check if user owns the listing
-        return $request->listing->isOwnedBy($this) ||  $this->id != $request->handled_by;
+        return $request->listing->isOwnedBy($this) ||  $this->id == $request->handled_by;
     }
 
     /**
