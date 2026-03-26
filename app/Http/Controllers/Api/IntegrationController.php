@@ -601,10 +601,11 @@ class IntegrationController extends Controller
         // إنشاء الليد
         $lead = Lead::create($leadDataArray);
         // ======================================
-        
+         $lead->lead_branch_source=$lead->responsiblePerson?->admin_parent?->name;
+          $lead->save();
         LeadHistoryHelper::log(
             $lead->id,
-            ['action' => 'created', 'source' => 'facebook_webhook']
+            ['action' => 'created', 'source' => 'facebook_webhook','name'=>$lead->lead_name,'lead_branch_source'=>$lead->responsiblePerson?->admin_parent?->name]
         );
         
         broadcast(new LeadUpdated($lead, 'created'));
@@ -708,8 +709,10 @@ $fieldMappings = [
         'field_mappings_data' => json_encode($data),
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
+     $lead->lead_branch_source=$lead->responsiblePerson?->admin_parent?->name;
+          $lead->save();
 
-    LeadHistoryHelper::log($lead->id, ['action' => 'created']);
+    LeadHistoryHelper::log($lead->id, ['action' => 'created','name'=>$lead->lead_name,'lead_branch_source'=>$lead->responsiblePerson?->admin_parent?->name]);
     broadcast(new LeadUpdated($lead, 'created'));
 
     return response()->json([
@@ -765,8 +768,9 @@ $fieldMappings = [
         'field_mappings_data' => json_encode($data),
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
-
-    LeadHistoryHelper::log($lead->id, ['action' => 'created']);
+ $lead->lead_branch_source=$lead->responsiblePerson?->admin_parent?->name;
+          $lead->save();
+    LeadHistoryHelper::log($lead->id, ['action' => 'created','name'=>$lead->lead_name,'lead_branch_source'=>$lead->responsiblePerson?->admin_parent?->name]);
     broadcast(new LeadUpdated($lead, 'created'));
 
     return response()->json([

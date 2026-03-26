@@ -279,6 +279,11 @@ class StageController extends Controller
                     $team = $branch_team->getAllSubordinatesIds();
                     $q->whereIn('responsible_person_id', $team);
                 }
+                if ($request->filled('office_branch')) {
+                    $branch_team = User::where('id', $request->office_branch)->first();
+                    $team = $branch_team->getAllSubordinatesIds();
+                    $q->whereIn('responsible_person_id', $team);
+                }
                 if ($request->filled('team_id')) {
                     $teamLead = User::find($request->team_id);
                     if ($teamLead) {
@@ -444,9 +449,14 @@ class StageController extends Controller
                 $leadsQuery->where('first_name', 'like', "%{$request->first_name}%");
             }
             if ($request->filled('lead_branch_source')) {
-                $branch_team = User::where('id', $request->lead_branch_source)->first();
+                    $branch_team = User::where('id', $request->lead_branch_source)->first();
+                    $team = $branch_team->getAllSubordinatesIds();
+                    $q->whereIn('responsible_person_id', $team);
+                }
+            if ($request->filled('office_branch')) {
+                $branch_team = User::where('id', $request->office_branch)->first();
                 $team = $branch_team->getAllSubordinatesIds();
-                $leadsQuery->whereIn('responsible_person_id', $team);
+                $q->whereIn('responsible_person_id', $team);
             }
             if ($request->filled('team_id')) {
                 $teamLead = User::find($request->team_id);

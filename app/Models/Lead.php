@@ -78,6 +78,12 @@ class Lead extends Model
     {
         return $this->hasMany(LeadHistory::class)->latest();
     }
+    public function createdHistory()
+    {
+        return $this->hasOne(LeadHistory::class)
+            ->where('changes->action', 'created')
+            ->oldest(); 
+    }
 
       public function integration()
     {

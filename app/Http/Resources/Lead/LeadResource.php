@@ -71,9 +71,9 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             // Lead Source
             'lead_source' => $this->lead_source,
             'source_information' => $this->source_information,
-                'lead_branch_source' =>
-            // $this->lead_branch_source ??
+                'office_branch' =>
             $this->responsiblePerson?->admin_parent?->name,
+             'lead_branch_source' => $this->lead_branch_source ,
             'ad_id' => $this->ad_id,
             'available_to_everyone' => $this->available_to_everyone,
             
@@ -126,6 +126,9 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'risk' => ($this->priority === 'hot' && $this->updated_at && $this->updated_at->lt(now()->subDays(2)))
                 ? 'cooling down'
                 : '',
+            'original_name' => data_get($this->createdHistory, 'changes.name', $this->name),
+
+            'original_branch' => data_get($this->createdHistory, 'changes.lead_branch_source'),
 
         ];
     }

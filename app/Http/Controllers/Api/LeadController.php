@@ -196,9 +196,11 @@ class LeadController extends Controller
                     ]);
                 }
             }
+          $lead->lead_branch_source=$lead->responsiblePerson?->admin_parent?->name;
+          $lead->save();
             LeadHistoryHelper::log(
                 $lead->id,
-                ['action' => 'created']
+                ['action' => 'created','name'=>$lead->lead_name,'lead_branch_source'=>$lead->responsiblePerson?->admin_parent?->name]
             );
         broadcast(new LeadUpdated($lead, 'created'));
 
@@ -718,7 +720,9 @@ class LeadController extends Controller
         // تحديد نوع الـ broadcast
         if (!empty($changes) && isset($changes['action']) && $changes['action'] === 'assigned') {
             broadcast(new LeadUpdated($lead, 'assigned', null, array_merge($changes, $broadcastChanges)));
-        } 
+        } else {
+            broadcast(new LeadUpdated($lead, 'stage_changed', null, $broadcastChanges));
+        }
            broadcast(new LeadUpdated($lead, 'stage_changed', null, $broadcastChanges));
         return ApiResponse::success(
             new LeadResource($lead->load(['stage', 'responsiblePerson', 'participants', 'observers.user'])),
@@ -792,7 +796,7 @@ class LeadController extends Controller
        
  LeadHistoryHelper::log(
                 $lead->id,
-                ['action' => 'created']
+                ['action' => 'created','name'=>$lead->lead_name,'lead_branch_source'=>$lead->responsiblePerson?->admin_parent?->name]
             );
         broadcast(new LeadUpdated($lead, 'created'));
 

@@ -27,6 +27,15 @@
                             <span class="lead-created-label">Source</span>
                             <span class="lead-created-value">{{ source }}</span>
                         </div>
+                        <div v-if="branch" class="lead-created-row">
+                            <span class="lead-created-label">Lead Branch Source</span>
+                            <span class="lead-created-value">{{ branch }}</span>
+                        </div>
+                         <div v-if="branchOffice" class="lead-created-row">
+                            <span class="lead-created-label">Lead Branch</span>
+                            <span class="lead-created-value">{{ branchOffice }}</span>
+                        </div>
+                        
                     </div>
                     <div
                         class="lead-created-avatar"
@@ -79,7 +88,9 @@ const timeLabel = computed(() => {
     return `${h}:${m} ${ampm}`
 })
 
-const leadName = computed(() => props.lead?.lead_name || '—')
+const leadName = computed(() => props.lead?.original_name || props.lead?.lead_name || '—')
+const branch = computed(() => props.lead?.original_branch ||  '—')
+const branchOffice=computed(() => props.lead?.office_branch ||  '—')
 const source = computed(() => props.lead?.lead_source || null)
 const creatorName = computed(() => props.lead?.added_by_user?.name || '—')
 const creatorAvatar = computed(() => props.lead?.added_by_user?.avatar || null)
