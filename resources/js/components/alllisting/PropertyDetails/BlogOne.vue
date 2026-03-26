@@ -2027,7 +2027,9 @@ const canAssignAgent = computed(() => {
 
 const canUsePropertyChat = computed(() => {
   const userRoles = Array.isArray(getCurrentUser()?.roles) ? getCurrentUser().roles : [];
-  return userRoles.includes('super_admin') || userRoles.includes('admin') ||  getCurrentUser()?.is_listing_team;
+  return true
+//   return userRoles.includes('super_admin') || userRoles.includes('admin') ||  getCurrentUser()?.is_listing_team;
+
 });
 
 

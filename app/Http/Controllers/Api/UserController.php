@@ -44,7 +44,7 @@ class UserController extends Controller
             ->when($request->has('status'), function($query) use ($request) {
                 $query->where('status', $request->status);
             });
-            if(!$request->has('agents')){
+            if(!$request->has('agents') && !$request->has('chat')){
             
             // Apply hierarchical filtering based on user role
             if ($user->hasRole('sales')) {

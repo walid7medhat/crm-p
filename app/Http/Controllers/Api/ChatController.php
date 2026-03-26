@@ -126,9 +126,9 @@ class ChatController extends Controller
             ->withCount('messages')
             ->with(['messages' => fn ($q) => $q->latest()->limit(1)]);
 
-        if (!$isSuperAdmin) {
+        // if (!$isSuperAdmin) {
             $query->whereHas('users', fn ($q) => $q->where('user_id', $user->id));
-        }
+        // }
 
         $conversations = $query->orderByDesc('updated_at')->paginate(20);
 

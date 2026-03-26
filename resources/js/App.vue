@@ -63,7 +63,9 @@ export default {
         const u = JSON.parse(raw)
         console.log("is_listing_team"+ u?.is_listing_team);
         const roles = Array.isArray(u?.roles) ? u.roles : []
-        return roles.includes('super_admin') || roles.includes('admin') || u?.is_listing_team
+          return true
+        // return roles.includes('super_admin') || roles.includes('admin') || u?.is_listing_team
+      
       } catch {
         return false
       }

@@ -303,7 +303,7 @@ function normalizeUsersPayload(res) {
 async function searchAgents(query) {
   searchingAgents.value = true
   try {
-    const res = await api.get('/users', {
+    const res = await api.get('/users/?chat=yes', {
       params: { search: query }
     })
     const list = normalizeUsersPayload(res)
