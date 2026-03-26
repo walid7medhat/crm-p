@@ -18,7 +18,14 @@ class ListingAccessRequestResource extends JsonResource
 // Calculate permissions based on user role and hierarchy
         $canManageAccessRequests = $user->canManageAccessRequests();
         if($this->request_type=='viewing'){
-            $canRespond = $this->listing->isOwner($user) || $user->id==$this->handled_by;
+            \Log::info('viewing', [
+                'listing_id' => $this->listing->id,
+                'user_id' => $user->id,
+                'can_manage' => $canManageAccessRequests,
+                'is_owner' => $this->listing->isOwner($user),
+                'is_handler' => $user->id == $this->handled_by,
+            ]);
+            $canRespond =$canManageAccessRequests || $this->listing->isOwner($user) || $user->id==$this->handled_by;
         }else{
         $canRespond = $canManageAccessRequests && ($this->listing->isOwnedBy($user) || $user->id==$this->handled_by);
         }

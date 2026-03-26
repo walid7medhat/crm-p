@@ -223,6 +223,9 @@ function getAdminParentAttribute()
         // Manager can only manage if in listing team
         if ($this->hasRole('manager')) {
             return $this->listing_team == 1;
+        }elseif ($this->hasRole('team_lead')) {
+            $manager = $this->getManagerAttribute();
+            return $manager && $manager->listing_team == 1;
         }else{
             $manager = $this->getManagerAttribute();
             return $manager && $manager->listing_team != 1 ;
@@ -263,6 +266,9 @@ function getAdminParentAttribute()
         // Manager can only manage if in listing team
         if ($this->hasRole('manager')) {
             return $this->listing_team == 1 && $canAssignAgent;
+        }elseif ($this->hasRole('team_lead')) {
+            $manager = $this->getManagerAttribute();
+            return $manager && $manager->listing_team == 1;
         }else{
             $manager = $this->getManagerAttribute();
             return $manager && $manager->listing_team == 1 && $canAssignAgent ;
@@ -288,8 +294,8 @@ function getAdminParentAttribute()
      */
     public function canRespondToAccessRequest(ListingAccessRequest $request): bool
     {
-        if($request->request_type=='viewing' && $request->status === 'pending'){
-             return $request->listing->isOwner($this) ||  $this->id !== $request->handled_by;
+        if($request->request_type=='viewing' && $request->status == 'pending'){
+             return $this->canManageAccessRequests() || $request->listing->isOwner($this) ||  $this->id == $request->handled_by;
         }
         // First check general permission
         if (!$this->canManageAccessRequests()) {
@@ -297,7 +303,7 @@ function getAdminParentAttribute()
         }
 
         // Check if user owns the listing
-        return $request->listing->isOwnedBy($this) ||  $this->id !== $request->handled_by;
+        return $request->listing->isOwnedBy($this) ||  $this->id != $request->handled_by;
     }
 
     /**

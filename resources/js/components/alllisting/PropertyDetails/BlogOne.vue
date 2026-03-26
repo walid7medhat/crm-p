@@ -2590,10 +2590,8 @@ const revertFromConverted = async () => {
 };
 
     const openChatWithAgent = () => {
-      const userRoles = Array.isArray(getCurrentUser()?.roles) ? getCurrentUser().roles : [];
-      const canUseChat = userRoles.includes('super_admin') || userRoles.includes('admin');
-      if (!canUseChat) {
-        Swal.fire({ title: 'Not allowed', text: 'Chat is available only for admin and super admin.', icon: 'info' });
+      if (!getCurrentUser()) {
+        Swal.fire({ title: 'Please log in', text: 'You need to be logged in to start a chat.', icon: 'info' });
         return;
       }
       if (!property.value?.agent) return;
@@ -4762,10 +4760,8 @@ const openDriveLink = () => {
       } catch (_) {
         parsedUser = null;
       }
-      const roles = Array.isArray(parsedUser?.roles) ? parsedUser.roles : [];
-      const canUseChat = roles.includes('super_admin') || roles.includes('admin') ||  parsedUser?.is_listing_team;
-      if (!canUseChat) {
-        Swal.fire({ title: 'Not allowed', text: 'Chat is available only for admin and super admin.', icon: 'info' });
+      if (!parsedUser) {
+        Swal.fire({ title: 'Please log in', text: 'You need to be logged in to start a chat.', icon: 'info' });
         return;
       }
       if (!window.__openPropertyChat) {

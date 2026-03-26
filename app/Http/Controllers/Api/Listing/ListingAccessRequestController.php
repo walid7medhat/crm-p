@@ -385,20 +385,22 @@ public function respond(Request $request, ListingAccessRequest $accessRequest): 
             })->pluck('id')->toArray();
 
             $requests = ListingAccessRequest::with(['listing', 'requestedBy','convertedBy','handledBy'])
-                ->whereHas('listing', function ($query) use ($user, $user_hierarchy) {
-                    $query->where(function($q) use ($user, $user_hierarchy) {
-                        if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
-                            return; 
-                        }
-                        
-                        $q->whereIn('agent_id', $user_hierarchy);
-                       
-                        
-                    });
-                })
-                ->orWhere('handled_by', $user->id)
-                ->orderBy('created_at', 'desc')
-                ->get();
+                        ->where(function ($mainQuery) use ($user, $user_hierarchy) {
+                    
+                            $mainQuery->whereHas('listing', function ($query) use ($user, $user_hierarchy) {
+                    
+                                if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+                                    return;
+                                }
+                    
+                                $query->whereIn('agent_id', $user_hierarchy);
+                            })
+                    
+                            ->orWhere('handled_by', $user->id);
+                    
+                        })
+                        ->orderBy('created_at', 'desc')
+                        ->get();
 
             return ApiResponse::success(
                 ListingAccessRequestResource::collection($requests),
