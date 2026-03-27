@@ -1,105 +1,107 @@
 <template>
     <div class="lead-info-view">
-        <div class="info-group">
-            <label class="form-label-custom">Lead Name</label>
-            <div class="info-value">{{ lead?.lead_name || '—' }}</div>
-        </div>
-        
-        <div class="info-group">
-            <label class="form-label-custom">Salutation</label>
-            <div class="info-value">{{ lead?.salutation || '—' }}</div>
-        </div>
-        <div class="info-group">
-            <label class="form-label-custom">First Name</label>
-            <div class="info-value">{{ lead?.first_name || '—' }}</div>
-        </div>
-        <div class="info-group">
-            <label class="form-label-custom">Last Name</label>
-            <div class="info-value">{{ lead?.last_name || '—' }}</div>
-        </div>
-        <div class="info-group">
-            <label class="form-label-custom" >Primary Phone</label>
-            <div class="info-value" >
-                  <span v-if="canView">{{ lead?.work_phone || '—' }}</span>
-                 <span v-else>
-                    {{ lead?.work_phone?.slice(0,3) || '' }}
-                    <span class="blurred-stars">{{ maskValue(lead?.work_phone?.slice(3)) }}</span>
-                </span>
+        <div class="info-section">
+            <div class="info-group">
+                <label class="form-label-custom">Lead Name</label>
+                <div class="info-value">{{ lead?.lead_name || '—' }}</div>
             </div>
-        </div>
-        <div class="info-group">
-            <label class="form-label-custom ">Primary Email</label>
-            <div class="info-value"  >
-                <span v-if="canView">{{ lead?.email || '—' }}</span>
-                <span v-else>
-                    {{ lead?.email?.slice(0,3) || '' }}
-                    <span class="blurred-stars">{{ maskValue(lead?.email?.slice(3))}}</span>
-                </span>
+            <div class="info-group">
+                <label class="form-label-custom">Salutation</label>
+                <div class="info-value">{{ lead?.salutation || '—' }}</div>
             </div>
-        </div>
-        <div class="info-group">
-            <label class="form-label-custom ">Secondary Email</label>
-            <div class="info-value"  >
-                <span v-if="canView">{{ lead?.secondary_email || '—' }}</span>
-                <span v-else>
-                    {{ lead?.secondary_email?.slice(0,3) || '' }}
-                    <span class="blurred-stars">{{ maskValue(lead?.secondary_email?.slice(3))}}</span>
-                </span>
+            <div class="info-group">
+                <label class="form-label-custom">First Name</label>
+                <div class="info-value">{{ lead?.first_name || '—' }}</div>
             </div>
-        </div>
-        <div class="info-group" >
-            <label class="form-label-custom">Secondary Phone</label>
-            <div class="info-value" >
-                 <span v-if="canView">{{ lead?.work_phone_2 || '—' }}</span>
-                <span v-else>
-                    {{ lead?.work_phone_2?.slice(0,3) || '' }}
-                    <span class="blurred-stars">{{ maskValue(lead?.work_phone_2?.slice(3)) }}</span>
-                </span>
+            <div class="info-group">
+                <label class="form-label-custom">Last Name</label>
+                <div class="info-value">{{ lead?.last_name || '—' }}</div>
             </div>
-        </div>
-       </div>
-       <div class="lead-info-view">
-        <div class="info-group" v-if="lead?.bedrooms">
-            <label class="form-label-custom">Bedrooms</label>
-            <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
-        </div>
-         <div class="info-group" v-if="lead?.area">
-            <label class="form-label-custom">Location</label>
-            <div class="info-value">{{ lead?.area || '—' }}</div>
-        </div>
-                 <div class="info-group" v-if="lead?.property_type">
-            <label class="form-label-custom">Property Type</label>
-            <div class="info-value">{{ lead?.property_type || '—' }}</div>
-        </div>
-        <!--<div class="info-group">-->
-        <!--    <label class="form-label-custom">Comment</label>-->
-        <!--    <div class="info-value info-value-block">{{ lead?.comment || '—' }}</div>-->
-        <!--</div>-->
-        <div class="info-group" v-if="lead?.source_information">
-            <label class="form-label-custom">More Information</label>
-            <div class="info-value">{{ lead?.source_information || '—' }}</div>
-        </div>
-        <div class="info-group" v-if="lead?.budget">
-            <label class="form-label-custom">Budget</label>
-            <div class="info-value">{{ lead?.budget != null ? lead.budget : '—' }} {{ lead?.currency || '' }}</div>
-        </div>
-        
-         <template v-if="hasAdditionalFacebookQuestions">
-            <div class="info-group" v-for="(answer, question) in facebookQuestions" :key="question">
-                <label class="form-label-custom">{{ formatQuestion(question) }}</label>
-            
+            <div class="info-group">
+                <label class="form-label-custom">Primary Phone</label>
                 <div class="info-value">
-                    <a v-if="question === 'link' || question === 'Page_URL'" :href="answer" target="_blank" class="facebook-link">
-                        {{ answer }}
-                    </a>
-            
+                    <span v-if="canView">{{ lead?.work_phone || '—' }}</span>
                     <span v-else>
-                        {{ answer }}
+                        {{ lead?.work_phone?.slice(0,3) || '' }}
+                        <span class="blurred-stars">{{ maskValue(lead?.work_phone?.slice(3)) }}</span>
                     </span>
                 </div>
             </div>
-        </template>
-          <div class="info-group">
+            <div class="info-group">
+                <label class="form-label-custom">Primary Email</label>
+                <div class="info-value">
+                    <span v-if="canView">{{ lead?.email || '—' }}</span>
+                    <span v-else>
+                        {{ lead?.email?.slice(0,3) || '' }}
+                        <span class="blurred-stars">{{ maskValue(lead?.email?.slice(3))}}</span>
+                    </span>
+                </div>
+            </div>
+            <div class="info-group">
+                <label class="form-label-custom">Secondary Email</label>
+                <div class="info-value">
+                    <span v-if="canView">{{ lead?.secondary_email || '—' }}</span>
+                    <span v-else>
+                        {{ lead?.secondary_email?.slice(0,3) || '' }}
+                        <span class="blurred-stars">{{ maskValue(lead?.secondary_email?.slice(3))}}</span>
+                    </span>
+                </div>
+            </div>
+            <div class="info-group">
+                <label class="form-label-custom">Secondary Phone</label>
+                <div class="info-value">
+                    <span v-if="canView">{{ lead?.work_phone_2 || '—' }}</span>
+                    <span v-else>
+                        {{ lead?.work_phone_2?.slice(0,3) || '' }}
+                        <span class="blurred-stars">{{ maskValue(lead?.work_phone_2?.slice(3)) }}</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">More Information</div>
+            <div class="info-group" v-if="lead?.bedrooms">
+                <label class="form-label-custom">Bedrooms</label>
+                <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
+            </div>
+            <div class="info-group" v-if="lead?.area">
+                <label class="form-label-custom">Location</label>
+                <div class="info-value">{{ lead?.area || '—' }}</div>
+            </div>
+            <div class="info-group" v-if="lead?.property_type">
+                <label class="form-label-custom">Property Type</label>
+                <div class="info-value">{{ lead?.property_type || '—' }}</div>
+            </div>
+            <div class="info-group" v-if="lead?.source_information">
+                <label class="form-label-custom">More Information</label>
+                <div class="info-value">{{ lead?.source_information || '—' }}</div>
+            </div>
+            <div class="info-group" v-if="lead?.budget">
+                <label class="form-label-custom">Budget</label>
+                <div class="info-value">{{ lead?.budget != null ? lead.budget : '—' }} {{ lead?.currency || '' }}</div>
+            </div>
+            <template v-if="hasAdditionalFacebookQuestions">
+                <div class="info-group" v-for="(answer, question) in facebookQuestions" :key="question">
+                    <label class="form-label-custom">{{ formatQuestion(question) }}</label>
+                    <div class="info-value">
+                        <a v-if="question === 'link' || question === 'Page_URL'" :href="answer" target="_blank" class="facebook-link">
+                            {{ answer }}
+                        </a>
+                        <span v-else>
+                            {{ answer }}
+                        </span>
+                    </div>
+                </div>
+            </template>
+            <div v-if="!lead?.bedrooms && !lead?.area && !lead?.property_type && !lead?.source_information && !lead?.budget && !hasAdditionalFacebookQuestions" class="info-empty">
+                No additional information
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Responsible Person</div>
+            <div class="info-group">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <label class="form-label-custom">Responsible Person</label>
                 <b-button 
@@ -113,7 +115,7 @@
                 </b-button>
             </div>
             <div class="d-flex align-items-center gap-3">
-                <div class="avatar-wrapper">
+                <div class="avatar-wrapper person-hover-anchor" @mouseenter="showPersonCard = true" @mouseleave="showPersonCard = false">
                     <img 
                         v-if="lead?.responsible_person?.avatar" 
                         :src="lead?.responsible_person?.avatar" 
@@ -123,6 +125,33 @@
                     <div v-else class="avatar-placeholder">
                         <iconify-icon icon="lucide:user" class="avatar-icon"></iconify-icon>
                     </div>
+                    <transition name="person-card-pop">
+                        <div v-if="showPersonCard" class="person-hover-card">
+                            <div class="person-hover-head">
+                                <img
+                                    v-if="lead?.responsible_person?.avatar"
+                                    :src="lead?.responsible_person?.avatar"
+                                    alt=""
+                                    class="person-hover-avatar"
+                                />
+                                <div v-else class="person-hover-avatar person-hover-avatar-fallback">
+                                    <iconify-icon icon="lucide:user" class="avatar-icon"></iconify-icon>
+                                </div>
+                                <div>
+                                    <div class="person-hover-name">{{ lead?.responsible_person?.name || '—' }}</div>
+                                    <div class="person-hover-role">{{ lead?.responsible_person?.position || lead?.responsible_person?.role_name || 'Team Member' }}</div>
+                                </div>
+                            </div>
+                            <div class="person-hover-line">
+                                <span>Reports To</span>
+                                <b>{{ lead?.responsible_person?.manager_name || lead?.responsible_person?.team_lead_name || 'Not specified' }}</b>
+                            </div>
+                            <div class="person-hover-line">
+                                <span>Branch</span>
+                                <b>{{ lead?.responsible_person?.branch_name || lead?.lead_branch_source || 'Not specified' }}</b>
+                            </div>
+                        </div>
+                    </transition>
                 </div>
                 <div class="flex-grow-1">
                     <div class="info-value">{{ lead?.responsible_person?.name || '—' }}</div>
@@ -232,6 +261,7 @@
         <!--    <label class="form-label-custom">Lead Branch Source</label>-->
         <!--    <div class="info-value">{{ lead?.lead_branch_source || '—' }}</div>-->
         <!--</div>-->
+        </div>
     </div>
 </template>
 
@@ -256,6 +286,7 @@ const personSearchQuery = ref('')
 const personsList = ref([])
 const selectedPersonId = ref(null)
 const personUpdateError = ref('')
+const showPersonCard = ref(false)
 
 // Computed property for permission
 const canView = computed(() => {
@@ -406,6 +437,33 @@ const hasAdditionalFacebookQuestions = computed(() => {
     margin-bottom: 1rem;
 }
 
+.lead-info-view {
+    overflow: visible;
+}
+
+.info-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 18px;
+    background: #ffffff;
+    overflow: visible;
+}
+
+.info-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 12px;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.info-empty {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
 .lead-info-view .form-label-custom {
     display: block;
     font-size: 13px;
@@ -444,6 +502,95 @@ const hasAdditionalFacebookQuestions = computed(() => {
     width: 48px;
     height: 48px;
     flex-shrink: 0;
+}
+
+.person-hover-anchor {
+    position: relative;
+    overflow: visible;
+}
+
+.person-hover-card {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 10px);
+    transform: translateY(-50%);
+    width: 220px;
+    z-index: 1200;
+    border-radius: 12px;
+    border: 1px solid #dbe3ef;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.2);
+    backdrop-filter: blur(8px);
+    padding: 10px;
+}
+
+.person-hover-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.person-hover-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+}
+
+.person-hover-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+}
+
+.person-hover-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.person-hover-role {
+    margin-top: 1px;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.person-hover-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11px;
+    padding: 4px 0;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.person-hover-line span {
+    color: #64748b;
+}
+
+.person-hover-line b {
+    color: #0f172a;
+    font-weight: 700;
+    text-align: right;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.person-card-pop-enter-active,
+.person-card-pop-leave-active {
+    transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.person-card-pop-enter-from,
+.person-card-pop-leave-to {
+    opacity: 0;
+    transform: translateY(-50%) translateX(4px) scale(0.98);
 }
 
 .avatar-md {

@@ -21,6 +21,20 @@
             <b-button variant="primary" @click="showSelectedFiltersModal = false; showSearchModal = true">Edit search</b-button>
         </div>
     </b-modal>
+
+    <b-modal
+      v-model="showSettingsHub"
+      hide-header
+      hide-footer
+      body-class="p-0"
+      modal-class="settings-hub-bootstrap-modal"
+      content-class="settings-hub-bootstrap-modal-content"
+      size="xl"
+      centered
+    >
+      <SettingsHub @close="showSettingsHub = false" />
+    </b-modal>
+
     <CreateLeadModal v-model="showCreateModal" @lead-created="handleLeadCreated" />
     <CreateDealModal v-model="showCreateDealModal" @deal-created="handleDealCreated" />
     <CreateIntegrationModal  v-model="showCreateIntegrationModal" @integration-created="handleIntegrationCreated"  @saved="handleIntegrationCreated"
@@ -119,38 +133,16 @@
                     </button>
 
                     <!-- More Options -->
-                    <div class="more-options-wrapper d-flex align-items-center gap-12" v-if="hasCreateStagePermission || (isSuperAdmin  && activeTab=='leads')">
-                        <b-dropdown 
-                            variant="link" 
-                            no-caret 
-                            toggle-class="action-icon-btn-dropdown p-0 border-0"
-                            menu-class="stage-dropdown-menu"
-                            right
-                        >
-                            <template #button-content>
-                                <button class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">
-                                    <iconify-icon icon="lucide:more-vertical" class="text-lg font-weight-bold"></iconify-icon>
-                                </button>
-                            </template>
-                            
-                            <b-dropdown-item @click="showAddStageModal = true" v-if="hasCreateStagePermission"  class="dropdown-item-custom">
-                                <img :src="addStage" alt="Add Stage" class="dropdown-icon" />
-                                <span class="dropdown-text">Add New Stage</span>
-                            </b-dropdown-item>
-                            <b-dropdown-item v-if="isSuperAdmin  && activeTab=='leads'" @click="goToStageVisibility" class="dropdown-item-custom">
-                                <iconify-icon icon="lucide:eye" class="dropdown-icon" style="font-size: 18px; color: #666;"></iconify-icon>
-                                <span class="dropdown-text">Stage Visibility Settings</span>
-                            </b-dropdown-item>
-                            <b-dropdown-item v-if="isSuperAdmin && activeTab=='leads'" @click="goToLeadScoringSettings" class="dropdown-item-custom">
-                                <iconify-icon icon="lucide:brain-circuit" class="dropdown-icon" style="font-size: 18px; color: #666;"></iconify-icon>
-                                <span class="dropdown-text">Lead Scoring Engine</span>
-                            </b-dropdown-item>
-                        </b-dropdown>
+                    <div class="more-options-wrapper d-flex align-items-center gap-12" v-if="hasCreateStagePermission || isSuperAdmin">
+                     
                         
-                        <button   v-if="activeTab === 'leads' && isSuperAdmin" 
-                                    @click="goToKanbanSettings" 
-                                    class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">
-                            <img :src="leadsSettings" id="settingsIcon" alt="Settings" />
+                        <button
+                          v-if="isSuperAdmin"
+                          @click="showSettingsHub = true"
+                          class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border"
+                          type="button"
+                        >
+                            <iconify-icon icon="lucide:settings" class="text-lg font-weight-bold" />
                         </button>
                     </div>
                 </div>
@@ -169,17 +161,14 @@ import CreateLeadModal from './createLead/CreateLeadModal.vue'
 import CreateDealModal from './deals/CreateDealModal.vue'
 import CreateIntegrationModal from './integration/CreateIntegrationModal.vue'
 import AddStageModal from './stage/AddStageModal.vue'
-const leadsSettings = '/assets/images/kanban/leads-setting.svg'
-const addStage = '/assets/images/kanban/add-stage.svg'
 import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem, BModal, BButton } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
+import SettingsHub from './settings/SettingsHub.vue'
 const activeTab = ref('leads')
 const showSearchModal = ref(false)
 const showSelectedFiltersModal = ref(false)
+const showSettingsHub = ref(false)
 const showCreateModal = ref(false)
 const showCreateDealModal = ref(false)
 const showCreateIntegrationModal = ref(false)
@@ -210,16 +199,6 @@ const tabs = computed(() => {
     
     return baseTabs
 })
-
-const goToStageVisibility = () => {
-    router.push('/settings/stage-visibility')
-}
-const goToKanbanSettings = () => {
-    router.push('/settings/kanban')
-}
-const goToLeadScoringSettings = () => {
-    router.push('/settings/lead-scoring')
-}
 const activeTabIndex = computed({
     get: () => tabs.value.findIndex(t => t.id === activeTab.value),
     set: (index) => {
@@ -1032,10 +1011,5 @@ const $showNotification = (message, type = 'info') => {
     color: #666666;
     vertical-align: middle !important;
     margin-right: 10px;
-}
-#settingsIcon{
-    filter:invert(1);
-    width: 20px;
-    padding: 2px;
 }
 </style>

@@ -231,6 +231,7 @@ Route::middleware(['jwt.auth'])->group(function () {
 
     // Chat
     Route::prefix('chat')->group(function () {
+        Route::get('/users-search', [ChatController::class, 'usersSearch']);
         Route::post('/start', [ChatController::class, 'start']);
         Route::get('/unread-count', [ChatController::class, 'unreadCount']);
         Route::get('/conversations', [ChatController::class, 'conversations']);

@@ -33,7 +33,7 @@ class FeatureAnnouncementMail extends Mailable
                 'ctaText' => 'Start Chatting Now',
                 'ctaUrl' => $this->ctaUrl,
                 'fallbackUrl' => $this->ctaUrl,
-                'footerNote' => 'You’re receiving this email because you have an active account on OIA Properties Listing Portal.',
+                'footerNote' => 'You’re receiving this email because you have an active account on Oia Properties Listing Portal.',
             ]);
     }
 }

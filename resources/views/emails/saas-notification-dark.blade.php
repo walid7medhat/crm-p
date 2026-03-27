@@ -17,7 +17,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>{{ $subtitle ?? 'Notification' }} — OIA Properties Listing Portal</title>
+  <title>{{ $subtitle ?? 'Notification' }} — Oia Properties Listing Portal</title>
   <!--[if mso]>
   <noscript>
     <xml>
@@ -36,7 +36,7 @@
           <!-- Top brand -->
           <tr>
             <td style="padding:0 0 14px 0; text-align:center;">
-              <div style="display:inline-block; padding:8px 12px; border-radius:999px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10); color:#e5e7eb; font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;">
+              <div style="display:inline-block; padding:8px 12px; border-radius:999px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10); color:#e5e7eb; font-size:12px; font-weight:700; letter-spacing:0.01em;">
                 Oia Properties Listing Portal
               </div>
               @if(!empty($subtitle))
@@ -56,7 +56,7 @@
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td style="padding:28px 26px 8px 26px;">
-                    @php($safeName = isset($userName) && $userName ? trim($userName) : '')
+                    @php($safeName = isset($userName) && $userName ? mb_convert_case(trim($userName), MB_CASE_TITLE, 'UTF-8') : '')
                     <p style="margin:0 0 14px 0; color:#cbd5e1; font-size:14px; line-height:1.6;">
                       Hello{{ $safeName ? ' ' . e($safeName) : '' }},
                     </p>

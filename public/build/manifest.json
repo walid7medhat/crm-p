@@ -1,31 +1,31 @@
 {
-  "_html2canvas-B1KmSR3X.js": {
-    "file": "assets/html2canvas-B1KmSR3X.js",
+  "_App-!~{004}~.js": {
+    "file": "assets/App.JBlPBcHE.css",
+    "src": "_App-!~{004}~.js"
+  },
+  "_App-1RDwmCif.js": {
+    "file": "assets/App-1RDwmCif.js",
+    "name": "App",
+    "css": [
+      "assets/App.JBlPBcHE.css"
+    ]
+  },
+  "_html2canvas-C-IathVx.js": {
+    "file": "assets/html2canvas-C-IathVx.js",
     "name": "html2canvas",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/main.js"
     ]
   },
-  "_sweetalert2.esm.all-!~{004}~.js": {
-    "file": "assets/sweetalert2.esm.Co1DPQ_s.css",
-    "src": "_sweetalert2.esm.all-!~{004}~.js"
-  },
-  "_sweetalert2.esm.all-iyPIrX2U.js": {
-    "file": "assets/sweetalert2.esm.all-iyPIrX2U.js",
-    "name": "sweetalert2.esm.all",
-    "css": [
-      "assets/sweetalert2.esm.Co1DPQ_s.css"
-    ]
-  },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-Dsccn9Oo.js",
+    "file": "assets/index.es-DyJDiVD8.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/main.js",
-      "_sweetalert2.esm.all-iyPIrX2U.js"
+      "_App-1RDwmCif.js"
     ]
   },
   "node_modules/dompurify/dist/purify.es.mjs": {
@@ -40,12 +40,12 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-CmWIjtuE.js",
+    "file": "assets/app-DjYL93CT.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_sweetalert2.esm.all-iyPIrX2U.js"
+      "_App-1RDwmCif.js"
     ]
   },
   "resources/js/assets/images/a.jpeg": {
@@ -189,20 +189,20 @@
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/main.js": {
-    "file": "assets/main-_rkutB5Q.js",
+    "file": "assets/main-Ct6SXWCb.js",
     "name": "main",
     "src": "resources/js/main.js",
     "isEntry": true,
     "imports": [
-      "_sweetalert2.esm.all-iyPIrX2U.js"
+      "_App-1RDwmCif.js"
     ],
     "dynamicImports": [
-      "_html2canvas-B1KmSR3X.js",
+      "_html2canvas-C-IathVx.js",
       "node_modules/dompurify/dist/purify.es.mjs",
       "node_modules/canvg/lib/index.es.js"
     ],
     "css": [
-      "assets/main.DJnjcbAL.css"
+      "assets/main.DVWLEGRv.css"
     ],
     "assets": [
       "assets/flag1.CFmrKp4B.png",

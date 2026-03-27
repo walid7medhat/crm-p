@@ -48,7 +48,40 @@
                 <div class="card-head">
                     <div>
                         <div class="card-title">Stage Setup</div>
-                        <div class="card-desc">Edit stage name and color for each stage directly from here.</div>
+                        <div class="card-desc">Create stages, then edit name and color. Permissions update below.</div>
+                    </div>
+                </div>
+
+                <div class="new-stage-bar">
+                    <div class="new-stage-bar-label">
+                        <iconify-icon icon="lucide:plus-circle" class="new-stage-icon" />
+                        <span>New stage</span>
+                    </div>
+                    <div class="new-stage-bar-fields">
+                        <input
+                            v-model="newStageName"
+                            type="text"
+                            class="form-control form-control-sm new-stage-input"
+                            placeholder="Stage name"
+                            :disabled="creatingNewStage"
+                            @keydown.enter.prevent="createNewStage"
+                        />
+                        <input
+                            v-model="newStageColor"
+                            type="color"
+                            class="form-control form-control-color new-stage-color"
+                            title="Stage color"
+                            :disabled="creatingNewStage"
+                        />
+                        <button
+                            type="button"
+                            class="btn btn-primary btn-sm new-stage-add"
+                            :disabled="creatingNewStage || !newStageName.trim()"
+                            @click="createNewStage"
+                        >
+                            <span v-if="creatingNewStage">Adding…</span>
+                            <span v-else>Add stage</span>
+                        </button>
                     </div>
                 </div>
 
@@ -86,6 +119,56 @@
                             >
                                 {{ savingStageMap[stage.id] ? 'Saving…' : 'Save' }}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card mb-3">
+                <div class="card-head">
+                    <div>
+                        <div class="card-title">Revert Settings</div>
+                        <div class="card-desc">Set after how many hours a lead should revert to the first stage.</div>
+                    </div>
+                </div>
+                <div class="revert-card-body">
+                    <div class="revert-control">
+                        <div class="revert-row">
+                            <label class="form-label mb-0">Revert after</label>
+                            <div class="revert-inline">
+                                <div class="stepper" role="group" aria-label="Revert hours stepper">
+                                    <button type="button" class="stepper-btn stepper-btn-icon" @click="adjustRevertHours(-1)" aria-label="Decrease">
+                                        <iconify-icon icon="lucide:minus" />
+                                    </button>
+                                    <input
+                                        type="text"
+                                        inputmode="numeric"
+                                        v-model="revertHoursText"
+                                        class="form-control revert-input"
+                                        @blur="commitRevertHoursText"
+                                        @keydown.enter.prevent="commitRevertHoursText"
+                                        aria-label="Revert hours"
+                                    />
+                                    <button type="button" class="stepper-btn stepper-btn-icon" @click="adjustRevertHours(1)" aria-label="Increase">
+                                        <iconify-icon icon="lucide:plus" />
+                                    </button>
+                                </div>
+                                <span class="text-muted">hours</span>
+                            </div>
+                        </div>
+
+                        <div class="revert-presets">
+                            <button type="button" class="preset-btn" :class="{ active: revertHours === 12 }" @click="setRevertHours(12)">12h</button>
+                            <button type="button" class="preset-btn" :class="{ active: revertHours === 24 }" @click="setRevertHours(24)">1d</button>
+                            <button type="button" class="preset-btn" :class="{ active: revertHours === 48 }" @click="setRevertHours(48)">2d</button>
+                            <button type="button" class="preset-btn" :class="{ active: revertHours === 72 }" @click="setRevertHours(72)">3d</button>
+                            <button type="button" class="preset-btn" :class="{ active: revertHours === 168 }" @click="setRevertHours(168)">7d</button>
+                            <button type="button" class="preset-btn" :class="{ active: revertHours === 720 }" @click="setRevertHours(720)">30d</button>
+                        </div>
+
+                        <div class="revert-meta">
+                            <span class="revert-range">Range: {{ REVERT_MIN }}-{{ REVERT_MAX }} hours</span>
+                            <span class="revert-helper">Current: <strong>{{ revertHours }}</strong> hours</span>
                         </div>
                     </div>
                 </div>
@@ -272,7 +355,18 @@ const changedRoles = ref(new Set())
 const stageDrafts = ref({})
 const savingStageMap = ref({})
 
-const hasChanges = computed(() => changedRoles.value.size > 0)
+const newStageName = ref('')
+const newStageColor = ref('#3b82f6')
+const creatingNewStage = ref(false)
+
+const REVERT_MIN = 1
+const REVERT_MAX = 720
+const revertHours = ref(24)
+const revertHoursText = ref('24')
+const initialRevertHours = ref(24)
+
+const hasRevertChanges = computed(() => Number(revertHours.value) !== Number(initialRevertHours.value))
+const hasChanges = computed(() => changedRoles.value.size > 0 || hasRevertChanges.value)
 
 // ================= Methods =================
 const fetchSettings = async () => {
@@ -280,8 +374,12 @@ const fetchSettings = async () => {
     error.value = null
     
     try {
-        const response = await api.get('/stages/visibility/settings')
-        const data = response.data.data
+        const [visibilityResponse, kanbanResponse] = await Promise.all([
+            api.get('/stages/visibility/settings'),
+            api.get('/settings/kanban'),
+        ])
+        const data = visibilityResponse.data.data
+        const kanbanData = kanbanResponse?.data?.data || {}
         
         allStages.value = data.all_stages || []
         roles.value = data.roles.map(role => ({ name: role }))
@@ -308,6 +406,10 @@ const fetchSettings = async () => {
         
         settings.value = settingsObj
         changedRoles.value.clear()
+
+        revertHours.value = Number(kanbanData.revert_hours || 24)
+        initialRevertHours.value = revertHours.value
+        normalizeRevertHours()
         
     } catch (err) {
         error.value = err.response?.data?.message || 'Failed to load settings'
@@ -363,7 +465,7 @@ const applyPreset = (preset) => {
 }
 
 const saveAllSettings = async () => {
-    if (changedRoles.value.size === 0) {
+    if (changedRoles.value.size === 0 && !hasRevertChanges.value) {
         Swal.fire({
             icon: 'info',
             title: 'No Changes',
@@ -376,7 +478,7 @@ const saveAllSettings = async () => {
     
     const result = await Swal.fire({
         title: 'Save Changes?',
-        text: `You have changes in ${changedRoles.value.size} role(s)`,
+        text: `You have changes in ${changedRoles.value.size} role(s)${hasRevertChanges.value ? ' and revert settings' : ''}`,
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Yes, save',
@@ -388,16 +490,24 @@ const saveAllSettings = async () => {
     saving.value = true
     
     try {
+        normalizeRevertHours()
+
         const promises = Array.from(changedRoles.value).map(roleName => {
             return api.post('/stages/visibility/settings', {
                 role_name: roleName,
                 visible_stages: settings.value[roleName]
             })
         })
+        if (hasRevertChanges.value) {
+            promises.push(api.post('/settings/kanban/revert-hours', { hours: revertHours.value }))
+        }
         
-        await Promise.all(promises)
+        if (promises.length > 0) {
+            await Promise.all(promises)
+        }
         
         changedRoles.value.clear()
+        initialRevertHours.value = Number(revertHours.value)
         
         Swal.fire({
             icon: 'success',
@@ -475,6 +585,34 @@ const saveStageMeta = async (stage) => {
     }
 }
 
+const normalizeRevertHours = () => {
+    const n = Number(revertHours.value)
+    if (Number.isNaN(n)) {
+        revertHours.value = 24
+    } else {
+        revertHours.value = Math.max(REVERT_MIN, Math.min(REVERT_MAX, n))
+    }
+    revertHoursText.value = String(revertHours.value)
+}
+
+const setRevertHours = (value) => {
+    revertHours.value = Number(value)
+    normalizeRevertHours()
+}
+
+const adjustRevertHours = (delta) => {
+    setRevertHours(Number(revertHours.value) + Number(delta))
+}
+
+const commitRevertHoursText = () => {
+    const cleaned = String(revertHoursText.value || '').replace(/[^\d]/g, '')
+    if (!cleaned) {
+        revertHoursText.value = String(revertHours.value)
+        return
+    }
+    setRevertHours(parseInt(cleaned, 10))
+}
+
 // ================= Lifecycle =================
 onMounted(() => {
     fetchSettings()
@@ -483,9 +621,8 @@ onMounted(() => {
 
 <style scoped>
 .stage-visibility-container {
-    padding: 24px;
-    padding-top: 40px;
-    min-height: 100vh;
+    padding: 16px 18px 20px;
+    min-height: auto;
     border: 1px solid #e5e7eb;
     border-radius: 16px;
     background: #ffffff;
@@ -536,10 +673,178 @@ onMounted(() => {
     margin-bottom: 12px;
 }
 
+.new-stage-bar {
+    margin: 0 16px 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px dashed #cbd5e1;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.new-stage-bar-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.new-stage-icon {
+    font-size: 16px;
+    color: #2563eb;
+}
+
+.new-stage-bar-fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.new-stage-input {
+    flex: 1 1 200px;
+    min-width: 160px;
+    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    font-size: 12px !important;
+}
+
+.new-stage-color {
+    width: 44px;
+    height: 34px;
+    padding: 2px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+}
+
+.new-stage-add {
+    border-radius: 10px;
+    font-weight: 700;
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
 .stage-editor-list {
     padding: 12px 16px 16px;
     display: grid;
     gap: 10px;
+}
+
+.revert-card-body {
+    padding: 14px 16px 16px;
+}
+
+.revert-control {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.revert-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: nowrap;
+}
+
+.revert-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+}
+
+.stepper-btn {
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #0f172a;
+    font-weight: 700;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.stepper-btn-icon {
+    width: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.stepper-btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.stepper-btn:active {
+    transform: translateY(1px);
+}
+
+.revert-input {
+    width: 88px !important;
+    text-align: center;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    box-shadow: none;
+}
+
+.revert-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.preset-btn {
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.preset-btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.preset-btn.active {
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #ffffff;
+}
+
+.revert-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.revert-helper strong {
+    color: #0f172a;
 }
 
 .stage-editor-row {

@@ -17,10 +17,32 @@
                     :key="pill.id"
                     class="pill-btn"
                     :class="{ 'active': activePill === pill.id }"
-                    @click="activePill = pill.id"
+                    @click="handleSidebarPillClick(pill)"
                 >
-                    {{ pill.label }}
+                    <span>{{ pill.label }}</span>
+                    <span v-if="pill.type === 'city'" class="pill-count">{{ pill.children.length }}</span>
                 </button>
+                <transition name="city-child-list">
+                    <div
+                        v-if="activeCityPill"
+                        class="city-children-wrap"
+                    >
+                        <div class="city-children-title">Branches in {{ activeCityPill.label }}</div>
+                        <button
+                            v-for="child in activeCityPill.children"
+                            :key="`city_child_${child.value}`"
+                            type="button"
+                            class="city-child-btn"
+                            :class="{ active: form.office === child.value }"
+                            @click="selectCityBranch(activeCityPill, child)"
+                        >
+                            {{ child.text }}
+                        </button>
+                        <div v-if="activeCityPill.children.length === 0" class="city-children-empty">
+                            No branches available
+                        </div>
+                    </div>
+                </transition>
             </div>
             <div class="form-content-wrapper flex-grow-1 position-relative">
                 <button class="close-btn" @click="show = false">
@@ -30,8 +52,17 @@
                     <template v-for="field in visibleSearchFields" :key="field.id">
                         <div class="col-md-6 mt-3">
                             <label class="form-label-custom">{{ field.label }}</label>
+                            <button
+                                v-if="field.id === 'created_on'"
+                                type="button"
+                                class="custom-date-trigger"
+                                @click="openDatePicker"
+                            >
+                                <span>{{ createdOnDisplay }}</span>
+                                <iconify-icon icon="lucide:calendar-days" />
+                            </button>
                             <b-form-input
-                                v-if="field.type === 'text'"
+                                v-else-if="field.type === 'text'"
                                 v-model="form[field.formKey]"
                                 :placeholder="field.placeholder"
                                 class="custom-input"
@@ -79,10 +110,32 @@
                     :key="pill.id"
                     class="pill-btn"
                     :class="{ 'active': activePill === pill.id }"
-                    @click="activePill = pill.id"
+                    @click="handleSidebarPillClick(pill)"
                 >
-                    {{ pill.label }}
+                    <span>{{ pill.label }}</span>
+                    <span v-if="pill.type === 'city'" class="pill-count">{{ pill.children.length }}</span>
                 </button>
+                <transition name="city-child-list">
+                    <div
+                        v-if="activeCityPill"
+                        class="city-children-wrap"
+                    >
+                        <div class="city-children-title">Branches in {{ activeCityPill.label }}</div>
+                        <button
+                            v-for="child in activeCityPill.children"
+                            :key="`city_child_dropdown_${child.value}`"
+                            type="button"
+                            class="city-child-btn"
+                            :class="{ active: form.office === child.value }"
+                            @click="selectCityBranch(activeCityPill, child)"
+                        >
+                            {{ child.text }}
+                        </button>
+                        <div v-if="activeCityPill.children.length === 0" class="city-children-empty">
+                            No branches available
+                        </div>
+                    </div>
+                </transition>
             </div>
             <div class="form-content-wrapper flex-grow-1 position-relative">
                 <button class="close-btn" @click="emit('update:modelValue', false)">
@@ -92,8 +145,17 @@
                     <template v-for="field in visibleSearchFields" :key="field.id">
                         <div class="col-md-6 mt-3">
                             <label class="form-label-custom">{{ field.label }}</label>
+                            <button
+                                v-if="field.id === 'created_on'"
+                                type="button"
+                                class="custom-date-trigger"
+                                @click="openDatePicker"
+                            >
+                                <span>{{ createdOnDisplay }}</span>
+                                <iconify-icon icon="lucide:calendar-days" />
+                            </button>
                             <b-form-input
-                                v-if="field.type === 'text'"
+                                v-else-if="field.type === 'text'"
                                 v-model="form[field.formKey]"
                                 :placeholder="field.placeholder"
                                 class="custom-input"
@@ -118,28 +180,6 @@
                             </v-select>
                         </div>
                     </template>
-                   <!-- Custom Date Range -->
-                    <div v-if="showCustomDateRange" class="row mt-4 pt-2 ">
-                        <div class="col-12">
-                            <label class="form-label-custom fw-bold mb-3">Custom Date Range</label>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label-custom">From Date</label>
-                            <b-form-input
-                                v-model="form.createdFrom"
-                                type="date"
-                                class="custom-input"
-                            />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label-custom">To Date</label>
-                            <b-form-input
-                                v-model="form.createdTo"
-                                type="date"
-                                class="custom-input"
-                            />
-                        </div>
-                    </div>
                 </div>
                 <div class="d-flex align-items-center justify-content-between mt-3 pt-4">
                     <div class="d-flex gap-4">
@@ -160,6 +200,57 @@
         :initial-selected-lead-ids="selectedLeadFieldIds"
         @apply="onFilterApply"
     />
+
+    <div v-if="showDateModal" class="lr-modal-backdrop" @click.self="showDateModal = false">
+        <div class="lr-date-modal">
+            <div class="lr-date-left">
+                <button
+                    v-for="preset in datePresets"
+                    :key="preset.value"
+                    type="button"
+                    class="lr-date-preset"
+                    :class="{ active: selectedPreset === preset.value }"
+                    @click="selectPresetRange(preset.value)"
+                >
+                    {{ preset.label }}
+                </button>
+            </div>
+
+            <div class="lr-date-right">
+                <div class="lr-calendar-head">
+                    <button type="button" @click="changeMonth(-1)"><iconify-icon icon="lucide:chevron-left" /></button>
+                    <div>{{ monthLabel }}</div>
+                    <button type="button" @click="changeMonth(1)"><iconify-icon icon="lucide:chevron-right" /></button>
+                </div>
+
+                <div class="lr-weekdays">
+                    <span v-for="d in weekDays" :key="d">{{ d }}</span>
+                </div>
+
+                <div class="lr-calendar-grid">
+                    <button
+                        v-for="cell in calendarCells"
+                        :key="cell.key"
+                        type="button"
+                        class="lr-day"
+                        :class="{
+                          muted: !cell.currentMonth,
+                          selected: isSelectedDate(cell.date),
+                          inrange: isInRange(cell.date)
+                        }"
+                        @click="pickDate(cell.date)"
+                    >
+                        {{ cell.day }}
+                    </button>
+                </div>
+
+                <div class="lr-date-actions large">
+                    <button type="button" class="btn-cancel" @click="showDateModal = false">Cancel</button>
+                    <button type="button" class="btn-apply" @click="applyDateRange">Apply</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup>
@@ -187,6 +278,7 @@ const emit = defineEmits(['update:modelValue', 'search'])
 
 const show = ref(props.modelValue)
 const showFilterSettings = ref(false)
+const showDateModal = ref(false)
 const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'work_phone', 'responsible_person', 'lead_branch_source','office', 'stage', 'email', 'bedrooms','source','team'])
 // const activePill = ref('leads-in-progress')
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
@@ -286,13 +378,66 @@ watch(() => props.currentQuery, (query) => {
 }, { deep: true })
 
 
-const sidebarPills = [
-    { id: 'closed-leads', label: 'Converted Leads' },
-    { id: 'leads-in-progress', label: 'Leads In Progress' },
-    { id: 'my-leads', label: 'My Leads' },
-    { id: 'dubai', label: 'Dubai' },
-    { id: 'abu-dhabi', label: 'Abu Dhabi' }
-]
+const normalizeCityText = (value) => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim()
+
+const detectCityKeyFromOffice = (office) => {
+    const probes = [
+        office?.city,
+        office?.city_name,
+        office?.branch_source,
+        office?.branchSource,
+        office?.parent_name,
+        office?.parent?.name,
+        office?.region,
+        office?.office_city,
+        office?.text,
+        office?.name,
+    ]
+        .map(normalizeCityText)
+        .filter(Boolean)
+
+    const all = probes.join(' | ')
+    if (all.includes('dubai')) return 'dubai'
+    if (all.includes('abu dhabi') || all.includes('abudhabi') || all.includes('abu-dhabi')) return 'abu-dhabi'
+    return ''
+}
+
+const cityBranchGroups = computed(() => {
+    const options = (officeOptions.value || []).filter(o => o && o.value != null)
+    const groups = {
+        dubai: { id: 'dubai', label: 'Dubai', children: [] },
+        'abu-dhabi': { id: 'abu-dhabi', label: 'Abu Dhabi', children: [] },
+    }
+
+    options.forEach((office) => {
+        const cityKey = office.cityKey || detectCityKeyFromOffice(office.raw || office)
+        if (cityKey === 'dubai') groups.dubai.children.push(office)
+        else if (cityKey === 'abu-dhabi') groups['abu-dhabi'].children.push(office)
+    })
+
+    return Object.values(groups)
+})
+
+const sidebarPills = computed(() => {
+    const base = [
+        { id: 'closed-leads', label: 'Converted Leads', type: 'default' },
+        { id: 'leads-in-progress', label: 'Leads In Progress', type: 'default' },
+        { id: 'my-leads', label: 'My Leads', type: 'default' },
+    ]
+
+    const cityPills = cityBranchGroups.value.map(group => ({
+        id: group.id,
+        label: group.label,
+        type: 'city',
+        children: group.children,
+    }))
+
+    return [...base, ...cityPills]
+})
+
+const activeCityPill = computed(() => {
+    return sidebarPills.value.find(p => p.id === activePill.value && p.type === 'city') || null
+})
 
 const form = ref({
     search: '',
@@ -365,6 +510,21 @@ const createdOnOptions = [
 ]
 
 const sourceOptions = ref([{ value: null, text: 'Select Source' }])
+const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const selectedPreset = ref('')
+const startDate = ref(null)
+const endDate = ref(null)
+const calendarMonth = ref(new Date())
+const datePresets = [
+    { value: 'today', label: 'Today' },
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'this_week', label: 'This Week' },
+    { value: 'last_week', label: 'Last Week' },
+    { value: 'this_month', label: 'This Month' },
+    { value: 'last_month', label: 'Last Month' },
+    { value: 'last_year', label: 'Last Year' },
+    { value: 'custom_date', label: 'Custom Date' },
+]
 // const searchFieldsConfig = [
 //     { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
 //     { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
@@ -441,8 +601,13 @@ const searchFieldsConfig = computed(() => {
     return fields
 })
 
-const showCustomDateRange = computed(() => {
-    return form.value.createdOn === 'custom_date'  
+const monthLabel = computed(() => calendarMonth.value.toLocaleString('en-US', { month: 'long', year: 'numeric' }))
+const createdOnDisplay = computed(() => {
+    if (form.value.createdOn === 'custom_date' && form.value.createdFrom && form.value.createdTo) {
+        return `${form.value.createdFrom} to ${form.value.createdTo}`
+    }
+    const preset = createdOnOptions.find(opt => opt.value === form.value.createdOn)
+    return preset?.text || 'Select Date'
 })
 
 const visibleSearchFields = computed(() => {
@@ -496,22 +661,29 @@ function applySearch() {
     let createdTo = undefined
     let createdAt = undefined
     let branchSource = form.value.branchSource || undefined
+    let queryOfficeBranch = undefined
     let responsiblePersonId = form.value.responsible ?? undefined
     let closed = form.value.closed ?? undefined
     let teamId = form.value.team ?? undefined
     switch (activePill.value) {
         case 'dubai':
-            const dubaiOption = branchSourceOptions.value.find(opt => 
+            const dubaiOption = branchSourceOptions.value.find(opt =>
                 opt.text?.toLowerCase().includes('dubai')
             )
             branchSource = dubaiOption?.value
+            if (form.value.office) {
+                queryOfficeBranch = form.value.office
+            }
             break
             
         case 'abu-dhabi':
-            const abuDhabiOption = branchSourceOptions.value.find(opt => 
+            const abuDhabiOption = branchSourceOptions.value.find(opt =>
                 opt.text?.toLowerCase().includes('abu dhabi')
             )
             branchSource = abuDhabiOption?.value
+            if (form.value.office) {
+                queryOfficeBranch = form.value.office
+            }
             break
             
         case 'my-leads':
@@ -658,7 +830,7 @@ function applySearch() {
         created_to: createdTo || undefined,     
         created_at: createdAt  || undefined,   
         team_id: teamId || undefined ,
-        office_branch: form.value.office || undefined 
+        office_branch: queryOfficeBranch || form.value.office || undefined
     }
     Object.keys(query).forEach(k => { if (query[k] === '' || query[k] === undefined) delete query[k] })
     console.log('Search Query:', query)
@@ -697,6 +869,18 @@ console.log(activePill);
     console.log(pill.id);
     emit('search', { query, activePill: pill ? { id: pill.id, label: pill.label } : null, activeFilters })
     show.value = false
+}
+
+function handleSidebarPillClick(pill) {
+    activePill.value = pill.id
+    if (pill.type !== 'city') {
+        form.value.office = ''
+    }
+}
+
+function selectCityBranch(cityPill, child) {
+    activePill.value = cityPill.id
+    form.value.office = child.value
 }
 
 async function fetchResponsiblePersons() {
@@ -768,7 +952,12 @@ async function fetchOffices() {
         if (Array.isArray(data) && data.length) {
             officeOptions.value = [
                 { value: null, text: 'Select Office' },
-                ...data.map(office => ({ value: office.id, text: office.name }))
+                ...data.map(office => ({
+                    value: office.id,
+                    text: office.name,
+                    cityKey: detectCityKeyFromOffice(office),
+                    raw: office,
+                }))
             ]
         }
     } catch (error) {
@@ -785,7 +974,12 @@ async function fetchOffices() {
             if (Array.isArray(admins) && admins.length) {
                 officeOptions.value = [
                     { value: null, text: 'Select Office' },
-                    ...admins.map(admin => ({ value: admin.id, text: admin.name }))
+                    ...admins.map(admin => ({
+                        value: admin.id,
+                        text: admin.name,
+                        cityKey: detectCityKeyFromOffice(admin),
+                        raw: admin,
+                    }))
                 ]
             }
         } catch (err) {
@@ -815,6 +1009,122 @@ function resetFormValues() {
          team: '',
          office: ''
     }
+}
+
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
+const formatYmd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const sameDay = (a, b) => a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+const inRange = (d, a, b) => a && b && startOfDay(d) >= startOfDay(a) && startOfDay(d) <= startOfDay(b)
+
+const calendarCells = computed(() => {
+    const y = calendarMonth.value.getFullYear()
+    const m = calendarMonth.value.getMonth()
+    const first = new Date(y, m, 1)
+    const offset = first.getDay()
+    const daysInMonth = new Date(y, m + 1, 0).getDate()
+    const prevDays = new Date(y, m, 0).getDate()
+    const cells = []
+
+    for (let i = offset - 1; i >= 0; i -= 1) {
+        const day = prevDays - i
+        const date = new Date(y, m - 1, day)
+        cells.push({ key: `p-${day}`, day, date, currentMonth: false })
+    }
+    for (let day = 1; day <= daysInMonth; day += 1) {
+        const date = new Date(y, m, day)
+        cells.push({ key: `c-${day}`, day, date, currentMonth: true })
+    }
+    while (cells.length < 42) {
+        const day = cells.length - (offset + daysInMonth) + 1
+        const date = new Date(y, m + 1, day)
+        cells.push({ key: `n-${day}`, day, date, currentMonth: false })
+    }
+    return cells
+})
+
+function openDatePicker() {
+    if (form.value.createdOn && form.value.createdOn !== 'custom_date') {
+        selectedPreset.value = form.value.createdOn
+        selectPresetRange(form.value.createdOn)
+    } else if (form.value.createdOn === 'custom_date' && form.value.createdFrom && form.value.createdTo) {
+        selectedPreset.value = 'custom_date'
+        startDate.value = startOfDay(new Date(form.value.createdFrom))
+        endDate.value = startOfDay(new Date(form.value.createdTo))
+        calendarMonth.value = new Date(startDate.value.getFullYear(), startDate.value.getMonth(), 1)
+    }
+    showDateModal.value = true
+}
+
+function selectPresetRange(preset) {
+    selectedPreset.value = preset
+    const today = new Date()
+    const y = today.getFullYear()
+    const m = today.getMonth()
+
+    if (preset === 'custom_date') return
+    if (preset === 'today') {
+        startDate.value = startOfDay(today)
+        endDate.value = startOfDay(today)
+    } else if (preset === 'yesterday') {
+        const d = new Date(y, m, today.getDate() - 1)
+        startDate.value = startOfDay(d)
+        endDate.value = startOfDay(d)
+    } else if (preset === 'this_week') {
+        const s = new Date(y, m, today.getDate() - today.getDay())
+        const e = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6)
+        startDate.value = startOfDay(s)
+        endDate.value = startOfDay(e)
+    } else if (preset === 'last_week') {
+        const end = new Date(y, m, today.getDate() - today.getDay() - 1)
+        const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - 6)
+        startDate.value = startOfDay(start)
+        endDate.value = startOfDay(end)
+    } else if (preset === 'this_month') {
+        startDate.value = new Date(y, m, 1)
+        endDate.value = new Date(y, m + 1, 0)
+    } else if (preset === 'last_month') {
+        startDate.value = new Date(y, m - 1, 1)
+        endDate.value = new Date(y, m, 0)
+    } else if (preset === 'last_year') {
+        startDate.value = new Date(y - 1, 0, 1)
+        endDate.value = new Date(y - 1, 11, 31)
+    }
+    calendarMonth.value = new Date(startDate.value.getFullYear(), startDate.value.getMonth(), 1)
+}
+
+function pickDate(date) {
+    if (!startDate.value || (startDate.value && endDate.value)) {
+        startDate.value = startOfDay(date)
+        endDate.value = null
+        selectedPreset.value = 'custom_date'
+        return
+    }
+    if (startOfDay(date) < startOfDay(startDate.value)) {
+        endDate.value = startDate.value
+        startDate.value = startOfDay(date)
+    } else {
+        endDate.value = startOfDay(date)
+    }
+}
+
+const isSelectedDate = (date) => sameDay(date, startDate.value) || sameDay(date, endDate.value)
+const isInRange = (date) => inRange(date, startDate.value, endDate.value)
+
+function changeMonth(delta) {
+    calendarMonth.value = new Date(calendarMonth.value.getFullYear(), calendarMonth.value.getMonth() + delta, 1)
+}
+
+function applyDateRange() {
+    if (selectedPreset.value && selectedPreset.value !== 'custom_date') {
+        form.value.createdOn = selectedPreset.value
+        form.value.createdFrom = ''
+        form.value.createdTo = ''
+    } else if (startDate.value && endDate.value) {
+        form.value.createdOn = 'custom_date'
+        form.value.createdFrom = formatYmd(startDate.value)
+        form.value.createdTo = formatYmd(endDate.value)
+    }
+    showDateModal.value = false
 }
 
 const resetForm = () => {
@@ -876,12 +1186,94 @@ onMounted(() => {
     border: 1px solid #E2E8F0;
     width: fit-content;
     text-wrap: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .pill-btn.active {
     background: #01062C;
     color: #fff;
     border-color: #01062C;
+}
+
+.pill-count {
+    min-width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+}
+
+.pill-btn.active .pill-count {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+}
+
+.city-children-wrap {
+    margin-top: -6px;
+    padding: 8px 8px 2px 8px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.city-children-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    padding: 0 4px;
+}
+
+.city-child-btn {
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #334155;
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    transition: all 0.16s ease;
+}
+
+.city-child-btn:hover {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+}
+
+.city-child-btn.active {
+    background: #eaf3ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+
+.city-children-empty {
+    padding: 4px 8px 8px;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.city-child-list-enter-active,
+.city-child-list-leave-active {
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.city-child-list-enter-from,
+.city-child-list-leave-to {
+    opacity: 0;
+    transform: translateY(-4px);
 }
 
 .form-content-wrapper {
@@ -922,6 +1314,160 @@ onMounted(() => {
     opacity: 1;
     font-size: 13px !important;
     font-family: 'Montserrat';
+}
+
+.custom-date-trigger {
+    width: 100%;
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #64748B;
+    font-family: 'Montserrat';
+}
+
+.custom-date-trigger:hover {
+    border-color: #cbd5e1;
+}
+
+.lr-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+    padding: 12px;
+}
+
+.lr-date-modal {
+    width: min(860px, 96vw);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 25px 80px rgba(2, 6, 23, 0.25);
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    overflow: hidden;
+}
+
+.lr-date-left {
+    background: #f8fafc;
+    border-right: 1px solid #e2e8f0;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lr-date-preset {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 10px;
+    padding: 7px 10px;
+    font-size: 12px;
+    color: #334155;
+    text-align: left;
+    transition: all .15s ease;
+}
+
+.lr-date-preset.active {
+    background: #01062C;
+    border-color: #01062C;
+    color: #fff;
+}
+
+.lr-date-right {
+    padding: 14px;
+}
+
+.lr-calendar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.lr-calendar-head button {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 9px;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+}
+
+.lr-calendar-head button iconify-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.lr-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.lr-weekdays span {
+    text-align: center;
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.lr-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.lr-day {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 10px;
+    min-height: 34px;
+    font-size: 12px;
+    color: #334155;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 0;
+}
+
+.lr-day.muted {
+    opacity: .45;
+}
+
+.lr-day.selected {
+    background: #01062C;
+    border-color: #01062C;
+    color: #fff;
+}
+
+.lr-day.inrange:not(.selected) {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+
+.lr-date-actions.large {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
 }
 
 /* Custom v-select styles (same as CreateLeadModal) */

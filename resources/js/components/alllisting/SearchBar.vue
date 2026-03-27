@@ -3,7 +3,10 @@
     <div class="search-bar">
       
       <!-- Main Search Row -->
-      <div class="main-search-row main-search-row-single">
+      <div
+        class="main-search-row main-search-row-single"
+        :class="{ 'notify-me-grid': layoutVariant === 'notify-me' }"
+      >
                 <!-- Location -->
                    <!-- Location: wider, placeholder centered, options in 2 lines -->
                 <div class="form-group form-group-inline form-group-location">
@@ -81,8 +84,8 @@
         </div>
 
      
-          <!-- Agent Filter -->
-        <div class="form-group form-group-inline ">
+         <!-- Agent Filter -->
+        <div v-if="!hideAgent" class="form-group form-group-inline ">
           <label class="form-label form-label-inline form-label-location">Agent</label>
           <v-select
             v-model="selectedAgent"
@@ -320,6 +323,14 @@ export default {
     initialFilters: {
       type: Object,
       default: null
+    },
+    hideAgent: {
+      type: Boolean,
+      default: false
+    },
+    layoutVariant: {
+      type: String,
+      default: ''
     }
   },
   setup(props) {
@@ -942,6 +953,24 @@ const searchReferenceNumber = ref("");
   margin-bottom: 10px;
   width: 100%;
   align-items: flex-end;
+}
+
+/* Used in Notify me modal to show 3 fields on top and 3 fields below */
+.notify-me-grid {
+  flex-wrap: wrap !important;
+}
+
+.notify-me-grid .form-group-inline {
+  flex: 0 0 calc(33.333% - 7px) !important;
+  min-width: 0 !important;
+}
+
+.notify-me-grid .form-group-inline.form-group-location {
+  flex: 0 0 calc(33.333% - 7px) !important;
+}
+
+.notify-me-grid .form-group-inline.form-group-range {
+  flex: 0 0 calc(33.333% - 7px) !important;
 }
 
 .form-group-inline {

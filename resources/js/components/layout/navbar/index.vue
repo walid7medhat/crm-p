@@ -21,6 +21,15 @@
           <i class="ri-add-line"></i>
           <span class="d-none d-sm-inline">Create Listing</span>
         </router-link>
+        <router-link
+          v-if="showCreatePropertyButton"
+          to="/notify-me"
+          class="btn btn-primary btn-sm create-property-btn navbar-create-listing d-flex align-items-center gap-1"
+          title="Notify me"
+        >
+          <i class="ri-notification-2-line"></i>
+          <span class="d-none d-sm-inline">Notify me</span>
+        </router-link>
         <NotificationBell 
           ref="notificationBell"
           :sound-enabled="soundEnabled"

@@ -36,12 +36,12 @@
                 v-model.trim="chatSearchQuery"
                 type="text"
                 class="chat-search-input"
-                placeholder="Search chats or agents by name/email..."
+                placeholder="Search chats or users by name/email..."
               />
             </div>
             <div v-if="chatSearchQuery && chatSearchQuery.length >= 2" class="chat-agent-search-results">
               <div class="chat-agent-search-title">
-                System agents
+                System users
                 <span v-if="searchingAgents" class="chat-agent-search-loading">Searching...</span>
               </div>
               <button
@@ -55,7 +55,7 @@
                 <span class="chat-agent-result-email">{{ agent.email }}</span>
               </button>
               <div v-if="!searchingAgents && agentSearchResults.length === 0" class="chat-agent-search-empty">
-                No matching agents found.
+                No matching users found.
               </div>
             </div>
             <ConversationList
@@ -303,9 +303,17 @@ function normalizeUsersPayload(res) {
 async function searchAgents(query) {
   searchingAgents.value = true
   try {
-    const res = await api.get('/users/?chat=yes', {
-      params: { search: query }
-    })
+    let res
+    try {
+      res = await api.get('/chat/users-search', {
+        params: { q: query, limit: 8 }
+      })
+    } catch (_) {
+      // Backward-compatible fallback for environments that still use users chat filter.
+      res = await api.get('/users', {
+        params: { search: query, chat: 'yes' }
+      })
+    }
     const list = normalizeUsersPayload(res)
     agentSearchResults.value = list
       .map((u) => ({

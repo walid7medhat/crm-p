@@ -3,7 +3,7 @@
         <div class="page-header">
             <div>
                 <h6 class="page-title">Kanban Settings</h6>
-                <p class="page-subtitle">Configure revert rules and build the exact layout of your lead card.</p>
+                <p class="page-subtitle">Build the exact layout of your lead card and preview it live.</p>
             </div>
             <div class="page-actions">
                 <button class="btn btn-outline-secondary btn-sm" :disabled="loading" @click="resetToSaved">
@@ -28,62 +28,7 @@
             <button class="btn btn-outline-primary mt-2" @click="fetchSettings">Try Again</button>
         </div>
 
-        <div v-else class="settings-grid">
-            <!-- Revert Settings -->
-            <div class="panel-card">
-                <div class="panel-header">
-                    <div class="panel-icon">
-                        <iconify-icon icon="lucide:timer-reset" />
-                    </div>
-                    <div>
-                        <div class="panel-title">Revert Settings</div>
-                        <div class="panel-desc">Set after how many hours a lead will be reverted and assigned to the “New Leads” stage.</div>
-                    </div>
-                </div>
-
-                <div class="panel-body">
-                    <div class="revert-control">
-                        <div class="revert-row">
-                            <label class="form-label mb-0">Revert after</label>
-                            <div class="revert-inline">
-                                <div class="stepper" role="group" aria-label="Revert hours stepper">
-                                    <button type="button" class="stepper-btn stepper-btn-icon" @click="adjustHours(-1)" aria-label="Decrease">
-                                        <iconify-icon icon="lucide:minus" />
-                                    </button>
-                                    <input
-                                        type="text"
-                                        inputmode="numeric"
-                                        v-model="revertHoursText"
-                                        class="form-control revert-input"
-                                        @blur="commitHoursText"
-                                        @keydown.enter.prevent="commitHoursText"
-                                        aria-label="Revert hours"
-                                    />
-                                    <button type="button" class="stepper-btn stepper-btn-icon" @click="adjustHours(1)" aria-label="Increase">
-                                        <iconify-icon icon="lucide:plus" />
-                                    </button>
-                                </div>
-                                <span class="text-muted">hours</span>
-                            </div>
-                        </div>
-
-                        <div class="revert-presets">
-                            <button type="button" class="preset-btn" :class="{ active: revertHours === 12 }" @click="setHours(12)">12h</button>
-                            <button type="button" class="preset-btn" :class="{ active: revertHours === 24 }" @click="setHours(24)">1d</button>
-                            <button type="button" class="preset-btn" :class="{ active: revertHours === 48 }" @click="setHours(48)">2d</button>
-                            <button type="button" class="preset-btn" :class="{ active: revertHours === 72 }" @click="setHours(72)">3d</button>
-                            <button type="button" class="preset-btn" :class="{ active: revertHours === 168 }" @click="setHours(168)">7d</button>
-                            <button type="button" class="preset-btn" :class="{ active: revertHours === 720 }" @click="setHours(720)">30d</button>
-                        </div>
-
-                        <div class="revert-meta">
-                            <span class="revert-range">Range: {{ REVERT_MIN }}–{{ REVERT_MAX }} hours</span>
-                            <span class="revert-helper">Leads will revert after <strong>{{ revertHours }}</strong> hours</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+        <div v-else>
             <!-- Card Fields builder + Live preview -->
             <div class="builder-card">
                 <div class="builder-header">
@@ -98,6 +43,53 @@
                 </div>
 
                 <div class="builder-body">
+                    <div class="card-behavior-panel mb-3">
+                        <div class="card-behavior-head">
+                            <div class="card-behavior-title">Stage card behavior</div>
+                            <div class="card-behavior-desc">Control how much data appears by stage position.</div>
+                        </div>
+                        <div class="card-behavior-grid">
+                            <label class="behavior-toggle">
+                                <input v-model="cardBehavior.showMoreFromQualified" type="checkbox" />
+                                <span>Show more data from Qualified stage</span>
+                            </label>
+                            <label class="behavior-input-row">
+                                <span>Qualified starts at stage order</span>
+                                <input
+                                    v-model.number="cardBehavior.qualifiedStartOrder"
+                                    type="number"
+                                    min="1"
+                                    class="form-control form-control-sm behavior-number"
+                                    :disabled="!cardBehavior.showMoreFromQualified"
+                                />
+                            </label>
+                            <div v-if="cardBehavior.showMoreFromQualified" class="qualified-fields-picker">
+                                <div class="qualified-fields-head">
+                                    <span>After Qualified: choose fields to show on card</span>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary btn-sm"
+                                        @click="selectAllQualifiedFields"
+                                        :disabled="allFields.length === 0"
+                                    >
+                                        Select all
+                                    </button>
+                                </div>
+                                <div class="qualified-fields-list">
+                                    <button
+                                        v-for="field in allFields"
+                                        :key="`qualified_${field.key}`"
+                                        type="button"
+                                        class="qualified-field-chip"
+                                        :class="{ active: isQualifiedFieldSelected(field.key) }"
+                                        @click="toggleQualifiedField(field.key)"
+                                    >
+                                        {{ field.label }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="builder-layout">
                         <!-- Fields list -->
                         <div class="fields-panel">
@@ -128,7 +120,7 @@
                                 >
                                     <template #item="{ element: field }">
                                         <div
-                                            class="field-row"
+                                            class="field-row field-row--compact"
                                             :class="{ 'is-disabled': !field.enabled, 'is-enabled': field.enabled }"
                                             role="button"
                                             tabindex="0"
@@ -173,19 +165,29 @@
                         </div>
 
                         <!-- Live preview -->
-                        <div class="preview-panel">
+                        <div class="preview-panel preview-panel--hero">
                             <div class="preview-header">
-                                <div class="preview-title">Live Preview</div>
-                                <div class="preview-subtitle">Matches your Kanban lead card style.</div>
+                                <div>
+                                    <div class="preview-title">Live card preview</div>
+                                    <div class="preview-subtitle">Polished mock — updates as you toggle fields.</div>
+                                </div>
+                                <div v-if="enabledFields.length" class="preview-live-pill">
+                                    <span class="preview-live-dot" aria-hidden="true" />
+                                    {{ enabledFields.length }} visible
+                                </div>
                             </div>
 
-                            <div class="preview-surface">
-                                <div v-if="enabledFields.length === 0" class="preview-empty">
-                                    Enable at least one field to see the preview.
+                            <div class="preview-surface preview-surface--hero">
+                                <div class="preview-hero-mesh" aria-hidden="true" />
+                                <div v-if="enabledFields.length === 0" class="preview-empty preview-empty--floating">
+                                    Enable at least one field on the left to see the card preview.
                                 </div>
 
-                                <div v-else class="preview-card-wrap">
-                                    <div class="kanban-card bg-white p-12 radius-12 shadow-sm border-0">
+                                <div v-else class="preview-card-stage">
+                                    <div class="preview-card-aura" aria-hidden="true" />
+                                    <div class="preview-card-frame">
+                                <div class="preview-card-wrap">
+                                    <div class="kanban-card kanban-card--preview bg-white p-12 radius-12 shadow-sm border-0">
                                         <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
                                             <p class="task-title flex-grow-1 mb-0">{{ previewTask.lead_name }}</p>
 
@@ -276,6 +278,8 @@
                                         </div>
                                     </div>
                                 </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -286,58 +290,31 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import draggable from 'vuedraggable'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 
+const KANBAN_CARD_BEHAVIOR_STORAGE_KEY = 'kanban_card_behavior_settings_v1'
 const loading = ref(true)
 const saving = ref(false)
 const error = ref(null)
 
 const cardFields = ref([])
-const revertHours = ref(24)
 const allFields = ref([])
 const initialSnapshot = ref(null)
-
-const REVERT_MIN = 1
-const REVERT_MAX = 720
-
-const revertHoursText = ref(String(revertHours.value))
+const defaultCardBehavior = {
+    showMoreFromQualified: true,
+    qualifiedStartOrder: 4,
+    qualifiedFieldKeys: [],
+}
+const cardBehavior = ref({ ...defaultCardBehavior })
 
 const enabledFields = computed(() => {
     return cardFields.value
         .filter(field => field.enabled)
         .sort((a, b) => a.order - b.order)
 })
-
-const clampRevertHours = () => {
-    const n = Number(revertHours.value)
-    if (Number.isNaN(n)) {
-        revertHours.value = 24
-    } else {
-        revertHours.value = Math.max(REVERT_MIN, Math.min(REVERT_MAX, n))
-    }
-    revertHoursText.value = String(revertHours.value)
-}
-
-const setHours = (value) => {
-    revertHours.value = Number(value)
-    clampRevertHours()
-}
-
-const adjustHours = (delta) => {
-    setHours(Number(revertHours.value) + Number(delta))
-}
-
-const commitHoursText = () => {
-    const cleaned = String(revertHoursText.value || '').replace(/[^\d]/g, '')
-    if (!cleaned) {
-        revertHoursText.value = String(revertHours.value)
-        return
-    }
-    setHours(parseInt(cleaned, 10))
-}
 
 const fetchSettings = async () => {
     loading.value = true
@@ -348,19 +325,44 @@ const fetchSettings = async () => {
         const data = response.data.data
 
         cardFields.value = data.card_fields || []
-        revertHours.value = data.revert_hours || 24
         allFields.value = data.all_fields || []
+        const apiBehavior = data.card_behavior || {}
+        const localBehaviorRaw = localStorage.getItem(KANBAN_CARD_BEHAVIOR_STORAGE_KEY)
+        let localBehavior = {}
+        try {
+            localBehavior = localBehaviorRaw ? JSON.parse(localBehaviorRaw) : {}
+        } catch {
+            localBehavior = {}
+        }
+        cardBehavior.value = {
+            ...defaultCardBehavior,
+            ...apiBehavior,
+            ...localBehavior,
+        }
+        if (!Number.isFinite(Number(cardBehavior.value.qualifiedStartOrder)) || Number(cardBehavior.value.qualifiedStartOrder) < 1) {
+            cardBehavior.value.qualifiedStartOrder = 4
+        }
 
         cardFields.value = cardFields.value.map((field, index) => ({
             ...field,
             order: field.order || index + 1
         }))
 
-        clampRevertHours()
+        const allKeys = allFields.value.map(f => f.key)
+        const hasQualifiedKeysInApi = Object.prototype.hasOwnProperty.call(apiBehavior, 'qualifiedFieldKeys')
+        const hasQualifiedKeysInLocal = Object.prototype.hasOwnProperty.call(localBehavior, 'qualifiedFieldKeys')
+        if (!Array.isArray(cardBehavior.value.qualifiedFieldKeys)) {
+            cardBehavior.value.qualifiedFieldKeys = [...allKeys]
+        } else if (!hasQualifiedKeysInApi && !hasQualifiedKeysInLocal && cardBehavior.value.qualifiedFieldKeys.length === 0) {
+            // Default: all lead fields available after qualified
+            cardBehavior.value.qualifiedFieldKeys = [...allKeys]
+        } else {
+            cardBehavior.value.qualifiedFieldKeys = cardBehavior.value.qualifiedFieldKeys.filter(key => allKeys.includes(key))
+        }
 
         initialSnapshot.value = {
-            revertHours: revertHours.value,
-            cardFields: JSON.parse(JSON.stringify(cardFields.value))
+            cardFields: JSON.parse(JSON.stringify(cardFields.value)),
+            cardBehavior: JSON.parse(JSON.stringify(cardBehavior.value)),
         }
     } catch (err) {
         error.value = err.response?.data?.message || 'Failed to load settings'
@@ -395,11 +397,30 @@ const selectAll = (enabled) => {
     updateFieldOrder()
 }
 
+const isQualifiedFieldSelected = (key) => {
+    return Array.isArray(cardBehavior.value.qualifiedFieldKeys) && cardBehavior.value.qualifiedFieldKeys.includes(key)
+}
+
+const toggleQualifiedField = (key) => {
+    const current = Array.isArray(cardBehavior.value.qualifiedFieldKeys) ? [...cardBehavior.value.qualifiedFieldKeys] : []
+    if (current.includes(key)) {
+        cardBehavior.value.qualifiedFieldKeys = current.filter(k => k !== key)
+    } else {
+        cardBehavior.value.qualifiedFieldKeys = [...current, key]
+    }
+}
+
+const selectAllQualifiedFields = () => {
+    cardBehavior.value.qualifiedFieldKeys = allFields.value.map(field => field.key)
+}
+
 const resetToSaved = () => {
     if (!initialSnapshot.value) return
-    revertHours.value = initialSnapshot.value.revertHours
     cardFields.value = JSON.parse(JSON.stringify(initialSnapshot.value.cardFields || []))
-    clampRevertHours()
+    cardBehavior.value = {
+        ...defaultCardBehavior,
+        ...(initialSnapshot.value.cardBehavior || {}),
+    }
     updateFieldOrder()
 }
 
@@ -408,14 +429,13 @@ const saveAllSettings = async () => {
 
     try {
         updateFieldOrder()
-        clampRevertHours()
 
         await api.post('/settings/kanban/card-fields', { fields: cardFields.value })
-        await api.post('/settings/kanban/revert-hours', { hours: revertHours.value })
+        localStorage.setItem(KANBAN_CARD_BEHAVIOR_STORAGE_KEY, JSON.stringify(cardBehavior.value))
 
         initialSnapshot.value = {
-            revertHours: revertHours.value,
-            cardFields: JSON.parse(JSON.stringify(cardFields.value))
+            cardFields: JSON.parse(JSON.stringify(cardFields.value)),
+            cardBehavior: JSON.parse(JSON.stringify(cardBehavior.value)),
         }
 
         Swal.fire({
@@ -473,13 +493,20 @@ const formatPreviewDate = (dateString) => {
 }
 
 onMounted(fetchSettings)
+
+watch(
+    () => cardFields.value.map(f => `${f.key}:${f.enabled}`).join('|'),
+    () => {
+        const allKeys = allFields.value.map(f => f.key)
+        cardBehavior.value.qualifiedFieldKeys = (cardBehavior.value.qualifiedFieldKeys || []).filter(key => allKeys.includes(key))
+    },
+)
 </script>
 
 <style scoped>
 .kanban-settings-container {
-    padding: 24px;
-    padding-top: 40px;
-    min-height: 100vh;
+    padding: 16px 18px 20px;
+    min-height: auto;
     border: 1px solid #e5e7eb;
     border-radius: 16px;
     background: #ffffff;
@@ -514,171 +541,12 @@ onMounted(fetchSettings)
     flex-wrap: wrap;
 }
 
-.settings-grid {
-    display: grid;
-    grid-template-columns: 360px 1fr;
-    gap: 16px;
-    align-items: start;
-}
-
-.panel-card,
 .builder-card {
     background: #ffffff;
     border: 1px solid #e5e7eb;
     border-radius: 14px;
     box-shadow: 0 1px 6px rgba(15, 23, 42, 0.04);
     overflow: hidden;
-}
-
-.panel-header {
-    display: flex;
-    gap: 12px;
-    padding: 16px 16px 12px 16px;
-    border-bottom: 1px solid #eef2f7;
-}
-
-.panel-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #0f172a;
-    flex-shrink: 0;
-    font-size: 18px;
-}
-
-.panel-title {
-    font-weight: 700;
-    color: #0f172a;
-    font-size: 14px;
-    line-height: 1.2;
-}
-
-.panel-desc {
-    margin-top: 4px;
-    color: #64748b;
-    font-size: 12.5px;
-    max-width: 46ch;
-}
-
-.panel-body {
-    padding: 14px 16px 16px 16px;
-}
-
-.revert-control {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.revert-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    flex-wrap: nowrap;
-}
-
-.revert-row .form-label {
-    white-space: nowrap;
-}
-
-.revert-inline {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.stepper {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    background: #ffffff;
-}
-
-.stepper-btn {
-    height: 34px;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #ffffff;
-    color: #0f172a;
-    font-weight: 700;
-    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
-}
-
-.stepper-btn-icon {
-    width: 34px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-}
-
-.stepper-btn:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-}
-
-.stepper-btn:active {
-    transform: translateY(1px);
-}
-
-.revert-input {
-    width: 88px !important;
-    text-align: center;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    box-shadow: none;
-}
-
-.revert-presets {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.preset-btn {
-    height: 32px;
-    padding: 0 10px;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #ffffff;
-    color: #334155;
-    font-size: 12px;
-    font-weight: 700;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.preset-btn:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-}
-
-.preset-btn.active {
-    background: #0f172a;
-    border-color: #0f172a;
-    color: #ffffff;
-}
-
-.revert-meta {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    color: #64748b;
-    font-size: 12px;
-}
-
-.revert-helper strong {
-    color: #0f172a;
 }
 
 .builder-header {
@@ -712,10 +580,107 @@ onMounted(fetchSettings)
     padding: 16px;
 }
 
+.card-behavior-panel {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 12px;
+}
+
+.card-behavior-head {
+    margin-bottom: 8px;
+}
+
+.card-behavior-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.card-behavior-desc {
+    margin-top: 2px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.card-behavior-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.qualified-fields-picker {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+    padding: 10px;
+}
+
+.qualified-fields-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.qualified-fields-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.qualified-field-chip {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.qualified-field-chip.active {
+    border-color: #0f172a;
+    background: #0f172a;
+    color: #ffffff;
+}
+
+.behavior-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.behavior-toggle input {
+    accent-color: #0f172a;
+}
+
+.behavior-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.behavior-number {
+    width: 96px;
+}
+
 .builder-layout {
     display: grid;
-    grid-template-columns: 420px 1fr;
-    gap: 16px;
+    grid-template-columns: minmax(260px, 340px) minmax(320px, 1fr);
+    gap: 18px;
     align-items: start;
 }
 
@@ -914,9 +879,9 @@ onMounted(fetchSettings)
 }
 
 .fields-list {
-    max-height: 540px;
+    max-height: min(520px, 52vh);
     overflow-y: auto;
-    padding: 6px;
+    padding: 4px 6px 8px;
     background: #ffffff;
 }
 
@@ -924,12 +889,23 @@ onMounted(fetchSettings)
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
     padding: 10px 10px;
     border-radius: 12px;
     transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
     border: 1px solid transparent;
     cursor: pointer;
+}
+
+.field-row--compact {
+    padding: 6px 8px;
+    border-radius: 10px;
+    gap: 6px;
+}
+
+.field-row--compact.is-enabled::before {
+    width: 3px;
+    margin-right: 8px;
 }
 
 .field-row:hover {
@@ -974,6 +950,16 @@ onMounted(fetchSettings)
     min-width: 0;
 }
 
+.field-row--compact .field-label {
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.field-row--compact .field-key {
+    font-size: 9px;
+    margin-top: 1px;
+}
+
 .field-label {
     font-weight: 700;
     font-size: 13px;
@@ -996,6 +982,16 @@ onMounted(fetchSettings)
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
+}
+
+.field-row--compact .drag-handle {
+    font-size: 15px;
+    padding: 4px;
+}
+
+.field-row--compact .field-checkbox {
+    width: 14px;
+    height: 14px;
 }
 
 .drag-handle {
@@ -1043,6 +1039,69 @@ onMounted(fetchSettings)
     background: #ffffff;
 }
 
+.preview-panel--hero {
+    border: none;
+    border-radius: 16px;
+    overflow: visible;
+    background: transparent;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+}
+
+.preview-panel--hero .preview-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #0f172a 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px 16px 0 0;
+}
+
+.preview-panel--hero .preview-title {
+    color: #f8fafc;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+}
+
+.preview-panel--hero .preview-subtitle {
+    color: rgba(248, 250, 252, 0.72);
+    font-size: 12px;
+}
+
+.preview-live-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #e0f2fe;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    white-space: nowrap;
+}
+
+.preview-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.25);
+    animation: preview-pulse 2s ease-in-out infinite;
+}
+
+@keyframes preview-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.55;
+    }
+}
+
 .preview-header {
     padding: 12px 14px;
     background: #f8fafc;
@@ -1070,9 +1129,91 @@ onMounted(fetchSettings)
     background: linear-gradient(180deg, #ffffff, #fbfdff);
 }
 
+.preview-surface--hero {
+    position: relative;
+    min-height: min(420px, 48vh);
+    padding: 28px 22px 32px;
+    border-radius: 0 0 16px 16px;
+    overflow: hidden;
+    align-items: stretch;
+    justify-content: center;
+    background: #0b1220;
+}
+
+.preview-hero-mesh {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 80% 60% at 20% 20%, rgba(59, 130, 246, 0.35), transparent 55%),
+        radial-gradient(ellipse 70% 50% at 85% 75%, rgba(16, 185, 129, 0.22), transparent 50%),
+        radial-gradient(ellipse 50% 40% at 50% 100%, rgba(99, 102, 241, 0.2), transparent 45%),
+        linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
+    pointer-events: none;
+}
+
+.preview-surface--hero .preview-empty--floating {
+    position: relative;
+    z-index: 1;
+    margin: auto;
+    max-width: 320px;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px dashed rgba(148, 163, 184, 0.45);
+    color: #cbd5e1;
+    backdrop-filter: blur(8px);
+}
+
+.preview-card-stage {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px 12px;
+}
+
+.preview-card-aura {
+    position: absolute;
+    width: min(400px, 92%);
+    height: 70%;
+    left: 50%;
+    top: 52%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, transparent 70%);
+    filter: blur(28px);
+    pointer-events: none;
+}
+
+.preview-card-frame {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    padding: 14px;
+    border-radius: 20px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+        0 4px 6px rgba(0, 0, 0, 0.15),
+        0 24px 48px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
 .preview-card-wrap {
     width: 100%;
     max-width: 360px;
+}
+
+.preview-surface--hero .preview-card-wrap {
+    max-width: 100%;
+}
+
+.kanban-card--preview {
+    border-radius: 14px !important;
+    border: 1px solid rgba(15, 23, 42, 0.06) !important;
+    box-shadow:
+        0 2px 4px rgba(15, 23, 42, 0.04),
+        0 18px 40px rgba(15, 23, 42, 0.1) !important;
+    background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%) !important;
 }
 
 .preview-empty {
@@ -1193,9 +1334,6 @@ onMounted(fetchSettings)
 }
 
 @media (max-width: 1200px) {
-    .settings-grid {
-        grid-template-columns: 1fr;
-    }
     .builder-layout {
         grid-template-columns: 1fr;
     }

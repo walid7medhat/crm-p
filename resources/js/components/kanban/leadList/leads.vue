@@ -73,7 +73,6 @@
                                     @end="onLeadDragEnd"
                                     @change="(evt) => onLeadDragChange(evt, column)">
                                     <template #item="{ element: task, index }">
-                                          <!--:title="task.next_action || ''"-->
                                             <div
                                                 :key="task.id"
                                                 class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
@@ -99,7 +98,7 @@
                                                 
                                                  <div class="task-info">
                                                         <!-- عرض الفيلدات حسب الإعدادات والترتيب -->
-                                                        <template v-for="field in enabledFields" :key="field.key">
+                                                        <template v-for="field in enabledFieldsForColumn(column, task)" :key="field.key">
                                                             <!-- Created By / Date -->
                                                             <div v-if="field.key === 'created_by' || field.key === 'created_at'" 
                                                                  class="info-item date-info d-flex align-items-center gap-1 mb-8">
@@ -114,7 +113,7 @@
                                                             </div>
                                                             
                                                             <!-- Source -->
-                                                            <div v-else-if="field.key === 'lead_source'" class="info-item mb-8">
+                                                            <div v-else-if="field.key === 'lead_source' && task.lead_source" class="info-item mb-8">
                                                                 <div class="info-label text-secondary-light text-xs mb-1">Source</div>
                                                                 <div class="info-value">{{ task.lead_source }}</div>
                                                             </div>
@@ -126,15 +125,15 @@
                                                             </div>
                                                               
                                                             <!-- Work Phone -->
-                                                            <div v-else-if="field.key === 'work_phone'" class="info-item mb-8">
+                                                            <div v-else-if="field.key === 'work_phone' && task.work_phone" class="info-item mb-8">
                                                                 <div class="info-label text-secondary-light text-xs">Phone</div>
-                                                                <div class="info-value">{{ task.work_phone ? task.work_phone.slice(0,8) + '....' : '—' }}</div>
+                                                                <div class="info-value">{{ task.work_phone.slice(0,8) + '....' }}</div>
                                                             </div>
                                                             
                                                             <!-- Email -->
-                                                            <div v-else-if="field.key === 'email'" class="info-item mb-8">
+                                                            <div v-else-if="field.key === 'email' && task.email" class="info-item mb-8">
                                                                 <div class="info-label text-secondary-light text-xs">Email</div>
-                                                                <div class="info-value">{{ task.email || '—' }}</div>
+                                                                <div class="info-value">{{ formatMaskedEmail(task.email) }}</div>
                                                             </div>
                                                             
                                                             <!-- Bedrooms -->
@@ -156,11 +155,43 @@
                                                             </div>
                                                             
                                                             <!-- Responsible Person -->
-                                                            <div v-else-if="field.key === 'responsible_person'" class="responsible-info d-flex align-items-center justify-content-between mb-12">
+                                                            <div v-else-if="field.key === 'responsible_person' && hasResponsiblePerson(task)" class="responsible-info d-flex align-items-center justify-content-between mb-12">
                                                                 <div class="d-flex align-items-center gap-2">
-                                                                    <img v-if="task.responsible_person?.avatar" :title="task.responsible_person?.name" :src="task.responsible_person.avatar" alt="" class="avatar-sm rounded-circle" />
-                                                                    <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
-                                                                        <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
+                                                                    <div
+                                                                        class="person-hover-anchor"
+                                                                        @mouseenter.stop="showPersonHoverCard(task, 'responsible')"
+                                                                        @mouseleave.stop="hidePersonHoverCard"
+                                                                    >
+                                                                        <img v-if="task.responsible_person?.avatar" :title="task.responsible_person?.name" :src="task.responsible_person.avatar" alt="" class="avatar-sm rounded-circle" />
+                                                                        <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
+                                                                            <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
+                                                                        </div>
+                                                                        <transition name="person-hover-pop">
+                                                                            <div
+                                                                                v-if="isPersonHoverVisible(task, 'responsible') && activePersonHover?.data"
+                                                                                class="person-hover-card"
+                                                                                @mouseenter.stop="cancelPersonHoverHide"
+                                                                                @mouseleave.stop="hidePersonHoverCard"
+                                                                            >
+                                                                                <div class="person-hover-head">
+                                                                                    <img
+                                                                                        v-if="activePersonHover.data.avatar"
+                                                                                        :src="activePersonHover.data.avatar"
+                                                                                        alt=""
+                                                                                        class="person-hover-avatar"
+                                                                                    />
+                                                                                    <div v-else class="person-hover-avatar person-hover-avatar-fallback d-flex align-items-center justify-content-center">
+                                                                                        <iconify-icon icon="solar:user-bold" class="text-neutral-600" />
+                                                                                    </div>
+                                                                                    <div class="person-hover-head-text">
+                                                                                        <div class="person-hover-name">{{ activePersonHover.data.name }}</div>
+                                                                                        <div class="person-hover-role">{{ activePersonHover.data.position }}</div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="person-hover-line"><span>Reports To</span><b>{{ activePersonHover.data.manager }}</b></div>
+                                                                                <div class="person-hover-line"><span>Branch</span><b>{{ activePersonHover.data.branch }}</b></div>
+                                                                            </div>
+                                                                        </transition>
                                                                     </div>
                                                                     <div>
                                                                         <div class="info-value">{{ task.responsible_person?.name }}</div>
@@ -169,18 +200,54 @@
                                                             </div>
                                                             
                                                             <!-- Assigned By -->
-                                                            <div v-else-if="field.key === 'assigned_by'">
+                                                            <div v-else-if="field.key === 'assigned_by' && hasAssignedBy(task)">
                                                                 <hr class="mb-2 border-neutral-200">
                                                                 <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
                                                                     <div class="info-item">
                                                                         <div class="info-label text-secondary-light text-xs mb-1">Assigned </div>
                                                                         <div class="info-value">{{ formatDate(task.assigned_at) }}</div>
                                                                     </div>
-                                                                    <img v-if="task?.parent?.avatar" :src="task.parent.avatar"  :title="task.parent.name" alt="" class="avatar-sm rounded-circle" />
-                                                                    <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
-                                                                        <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
+                                                                    <div
+                                                                        class="person-hover-anchor"
+                                                                        @mouseenter.stop="showPersonHoverCard(task, 'assigned')"
+                                                                        @mouseleave.stop="hidePersonHoverCard"
+                                                                    >
+                                                                        <img v-if="task?.parent?.avatar" :src="task.parent.avatar"  :title="task.parent.name" alt="" class="avatar-sm rounded-circle" />
+                                                                        <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
+                                                                            <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
+                                                                        </div>
+                                                                        <transition name="person-hover-pop">
+                                                                            <div
+                                                                                v-if="isPersonHoverVisible(task, 'assigned') && activePersonHover?.data"
+                                                                                class="person-hover-card person-hover-card-right"
+                                                                                @mouseenter.stop="cancelPersonHoverHide"
+                                                                                @mouseleave.stop="hidePersonHoverCard"
+                                                                            >
+                                                                                <div class="person-hover-head">
+                                                                                    <img
+                                                                                        v-if="activePersonHover.data.avatar"
+                                                                                        :src="activePersonHover.data.avatar"
+                                                                                        alt=""
+                                                                                        class="person-hover-avatar"
+                                                                                    />
+                                                                                    <div v-else class="person-hover-avatar person-hover-avatar-fallback d-flex align-items-center justify-content-center">
+                                                                                        <iconify-icon icon="solar:user-bold" class="text-neutral-600" />
+                                                                                    </div>
+                                                                                    <div class="person-hover-head-text">
+                                                                                        <div class="person-hover-name">{{ activePersonHover.data.name }}</div>
+                                                                                        <div class="person-hover-role">{{ activePersonHover.data.position }}</div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="person-hover-line"><span>Reports To</span><b>{{ activePersonHover.data.manager }}</b></div>
+                                                                                <div class="person-hover-line"><span>Branch</span><b>{{ activePersonHover.data.branch }}</b></div>
+                                                                            </div>
+                                                                        </transition>
                                                                     </div>
                                                                 </div>
+                                                            </div>
+                                                            <div v-else-if="hasDynamicFieldValue(task, field.key)" class="info-item mb-8">
+                                                                <div class="info-label text-secondary-light text-xs">{{ field.label || field.key }}</div>
+                                                                <div class="info-value">{{ getDynamicFieldDisplay(task, field.key) }}</div>
                                                             </div>
                                                           
                                                         </template>
@@ -576,6 +643,13 @@ const editingStageTitle = ref('')
 const stageTitleInput = ref(null)
 
 const cardFields = ref([])
+const allFields = ref([])
+const KANBAN_CARD_BEHAVIOR_STORAGE_KEY = 'kanban_card_behavior_settings_v1'
+const cardBehavior = ref({
+    showMoreFromQualified: true,
+    qualifiedStartOrder: 4,
+    qualifiedFieldKeys: [],
+})
 
 
 const stageChangeReasonModal = ref(null)
@@ -608,6 +682,29 @@ const fetchCardSettings = async () => {
         const response = await api.get('/settings/kanban')
         const data = response.data.data
         cardFields.value = data.card_fields || []
+        allFields.value = data.all_fields || []
+        const apiBehavior = data.card_behavior || {}
+        const localBehaviorRaw = localStorage.getItem(KANBAN_CARD_BEHAVIOR_STORAGE_KEY)
+        let localBehavior = {}
+        try {
+            localBehavior = localBehaviorRaw ? JSON.parse(localBehaviorRaw) : {}
+        } catch {
+            localBehavior = {}
+        }
+        cardBehavior.value = {
+            ...cardBehavior.value,
+            ...apiBehavior,
+            ...localBehavior,
+        }
+        if (!Number.isFinite(Number(cardBehavior.value.qualifiedStartOrder)) || Number(cardBehavior.value.qualifiedStartOrder) < 1) {
+            cardBehavior.value.qualifiedStartOrder = 4
+        }
+        const allKeys = allFields.value.map(f => f.key)
+        if (!Array.isArray(cardBehavior.value.qualifiedFieldKeys) || cardBehavior.value.qualifiedFieldKeys.length === 0) {
+            cardBehavior.value.qualifiedFieldKeys = [...allKeys]
+        } else {
+            cardBehavior.value.qualifiedFieldKeys = cardBehavior.value.qualifiedFieldKeys.filter(key => allKeys.includes(key))
+        }
     } catch (error) {
         console.error('Error fetching card settings:', error)
     }
@@ -992,8 +1089,147 @@ const enabledFields = computed(() => {
         .filter(field => field.enabled)
         .sort((a, b) => a.order - b.order)
 })
+
+const orderCardFields = (fields) => {
+    const filtered = fields.filter(field => field.key !== 'lead_name')
+    const normal = filtered.filter(field => field.key !== 'responsible_person' && field.key !== 'assigned_by')
+    const responsible = filtered.find(field => field.key === 'responsible_person')
+    const assigned = filtered.find(field => field.key === 'assigned_by')
+    if (responsible) normal.push(responsible)
+    if (assigned) normal.push(assigned)
+    return normal
+}
+
+const hasResponsiblePerson = (task) => {
+    return !!(task?.responsible_person?.name || task?.responsible_person?.avatar)
+}
+
+const hasAssignedBy = (task) => {
+    return !!(task?.assigned_at || task?.parent?.name || task?.parent?.avatar)
+}
+
+const enabledFieldsForColumn = (column, task) => {
+    const fields = enabledFields.value
+    const allLeadFields = Array.isArray(allFields.value) && allFields.value.length > 0 ? allFields.value : fields
+    const stageOrder = Number(column?.order || 0)
+    const qualifiedStart = Number(cardBehavior.value.qualifiedStartOrder || 4)
+    const isFromQualified = stageOrder >= qualifiedStart
+
+    if (cardBehavior.value.showMoreFromQualified) {
+        if (isFromQualified) {
+            const qualifiedKeys = Array.isArray(cardBehavior.value.qualifiedFieldKeys)
+                ? cardBehavior.value.qualifiedFieldKeys
+                : []
+            return orderCardFields(
+                allLeadFields
+                    .filter(field => qualifiedKeys.includes(field.key))
+                    .filter(field => hasDynamicFieldValue(task, field.key) || field.key === 'responsible_person' || field.key === 'assigned_by')
+            )
+        }
+        // First stages stay on normal card control
+        return orderCardFields(
+            fields
+                .filter(field => hasDynamicFieldValue(task, field.key) || field.key === 'responsible_person' || field.key === 'assigned_by')
+        )
+    }
+
+    return orderCardFields(
+        fields
+            .filter(field => hasDynamicFieldValue(task, field.key) || field.key === 'responsible_person' || field.key === 'assigned_by')
+    )
+}
 const isFieldEnabled = (fieldKey) => {
     return cardFields.value.some(field => field.key === fieldKey && field.enabled)
+}
+
+const activePersonHover = ref(null)
+const personHoverHideTimer = ref(null)
+
+const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallbackName = 'Unknown') => {
+    const name = person?.name || person?.full_name || fallbackName
+    const position = person?.position || person?.designation || person?.job_title || person?.role_name || person?.role || 'Team Member'
+    const manager =
+        person?.manager_name ||
+        person?.team_lead_name ||
+        person?.reports_to_name ||
+        person?.parent_name ||
+        person?.manager?.name ||
+        person?.team_lead?.name ||
+        person?.parent?.name ||
+        (type === 'responsible' ? (task?.parent?.name || task?.manager?.name || task?.team_lead?.name) : null) ||
+        (type === 'assigned' ? (task?.parent?.manager_name || task?.parent?.manager?.name || task?.manager?.name) : null) ||
+        'Not specified'
+    const branch =
+        person?.branch_name ||
+        person?.branch?.name ||
+        person?.office ||
+        person?.team ||
+        person?.department ||
+        person?.location ||
+        person?.team_name ||
+        task?.lead_branch_source ||
+        task?.branch_name ||
+        task?.branch?.name ||
+        task?.office_branch_name ||
+        task?.office_branch ||
+        'Not specified'
+    const avatar = person?.avatar || person?.image || person?.photo || ''
+    return { name, position, manager, branch, avatar }
+}
+
+const showPersonHoverCard = (task, type) => {
+    cancelPersonHoverHide()
+    const person = type === 'assigned' ? task?.parent : task?.responsible_person
+    const fallbackName = type === 'assigned' ? (task?.parent?.name || 'Assigned By') : (task?.responsible_person?.name || 'Responsible Person')
+    activePersonHover.value = {
+        leadId: task?.id,
+        type,
+        data: normalizePersonHoverData(person, task, type, fallbackName),
+    }
+}
+
+const hidePersonHoverCard = () => {
+    cancelPersonHoverHide()
+    personHoverHideTimer.value = setTimeout(() => {
+        activePersonHover.value = null
+    }, 90)
+}
+
+const cancelPersonHoverHide = () => {
+    if (personHoverHideTimer.value) {
+        clearTimeout(personHoverHideTimer.value)
+        personHoverHideTimer.value = null
+    }
+}
+
+const isPersonHoverVisible = (task, type) => {
+    return activePersonHover.value?.leadId === task?.id && activePersonHover.value?.type === type
+}
+
+const hasDynamicFieldValue = (task, key) => {
+    const value = task?.[key]
+    if (value == null) return false
+    if (typeof value === 'string') return value.trim().length > 0
+    if (Array.isArray(value)) return value.length > 0
+    if (typeof value === 'object') return Object.keys(value).length > 0
+    return true
+}
+
+const getDynamicFieldDisplay = (task, key) => {
+    const value = task?.[key]
+    if (value == null) return '—'
+    if (key === 'email') return formatMaskedEmail(value)
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value)
+    if (Array.isArray(value)) return value.map(v => (typeof v === 'object' ? (v?.name || v?.label || JSON.stringify(v)) : String(v))).join(', ')
+    if (typeof value === 'object') return value?.name || value?.label || JSON.stringify(value)
+    return String(value)
+}
+
+const formatMaskedEmail = (email) => {
+    const raw = String(email || '').trim()
+    if (!raw) return ''
+    if (raw.length <= 8) return `${raw}....`
+    return `${raw.slice(0, 8)}....`
 }
 watch(cardFields, () => {
     console.log('Card fields updated:', cardFields.value)
@@ -1017,6 +1253,7 @@ onMounted(async () => {
 onUnmounted(() => {
     onLeadDragEnd()
     stopScroll()
+    cancelPersonHoverHide()
     window.removeEventListener('resize', updateScrollArrows)
     cleanup()
 })
@@ -2192,6 +2429,100 @@ const $showNotification = (message, type = 'info') => {
 .assignedBy .avatar-sm{
       width: 28px;
     height: 28px;
+}
+
+.person-hover-anchor {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.person-hover-card {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: -10px;
+    width: 230px;
+    z-index: 60;
+    border-radius: 12px;
+    border: 1px solid #dbe3ef;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.2);
+    backdrop-filter: blur(8px);
+    padding: 10px;
+}
+
+.person-hover-card-right {
+    right: -10px;
+    left: auto;
+}
+
+.person-hover-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.person-hover-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+}
+
+.person-hover-avatar-fallback {
+    background: #f1f5f9;
+}
+
+.person-hover-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.person-hover-role {
+    margin-top: 1px;
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.2;
+}
+
+.person-hover-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11px;
+    padding: 4px 0;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.person-hover-line span {
+    color: #64748b;
+}
+
+.person-hover-line b {
+    color: #0f172a;
+    font-weight: 700;
+    text-align: right;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.person-hover-pop-enter-active,
+.person-hover-pop-leave-active {
+    transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.person-hover-pop-enter-from,
+.person-hover-pop-leave-to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
 }
 
 .info-label {

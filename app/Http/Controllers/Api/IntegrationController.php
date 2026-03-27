@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use App\Models\Stage;
 use App\Models\Lead;
 use Carbon\Carbon;
@@ -32,9 +33,16 @@ class IntegrationController extends Controller
             if (!$user) {
                 return ApiResponse::error('Unauthorized', 401);
             }
-            $integrations = Integration::where('user_id', $user->id)
+            $query = Integration::where('user_id', $user->id)
                 ->with(['project', 'responsiblePerson'])
-                ->orderBy('created_at', 'desc')
+                ->orderBy('created_at', 'desc');
+
+            // Avoid failing the endpoint when lead relation count cannot be queried.
+            if (Schema::hasTable('leads') && Schema::hasColumn('leads', 'integration_id')) {
+                $query->withCount('leads');
+            }
+
+            $integrations = $query
                 ->get()
                 ->map(fn (Integration $i) => [
                     'id' => $i->id,
@@ -50,7 +58,7 @@ class IntegrationController extends Controller
                     'responsible_person' => $i->responsiblePerson ? ['id' => $i->responsiblePerson->id, 'name' => $i->responsiblePerson->name] : null,
                     'status' => $i->status,
                     'created_at' => $i->created_at?->toIso8601String(),
-                    'leads_count'=>$i->leads->count(),
+                    'leads_count' => (int) ($i->leads_count ?? 0),
                     'track_enabled' => $i->track_enabled,
                     'track_keyword' => $i->track_keyword,
                 ]);
@@ -657,7 +665,7 @@ private function applyFieldMappings(array $fields, array $mappings): array
 
         if ($metaField && $crmField && isset($fields[$metaField])) {
             // Check if column exists in 'leads' table
-            if (\Schema::hasColumn('leads', $crmField)) {
+            if (Schema::hasColumn('leads', $crmField)) {
                 $result[$crmField] = $fields[$metaField];
             } else {
                 // Store in JSON field if column not exists

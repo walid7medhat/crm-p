@@ -2,7 +2,7 @@
     <div class="row g-4">
         <!-- Left Column: Lead Information -->
         <div class="col-md-5">
-            <div class="info-card bg-white p-3 radius-12 shadow-sm">
+            <div class="info-card bg-white p-3 radius-12">
                 <div class="modal-header-custom d-flex justify-content-between align-items-center pb-9 mb-3 border-bottom">
                 <div class="d-flex align-items-center gap-2">
                     <span class="modal-title">Lead Information</span>
@@ -115,7 +115,9 @@
                
             />
             <!-- Lead Created (first section from bottom) -->
-            <LeadCreatedCard v-if="lead?.id" :lead="lead" />
+            <div v-if="lead?.id" class="lead-created-section bg-white p-3 radius-12 shadow-sm">
+                <LeadCreatedCard :lead="lead" />
+            </div>
         </div>
 
         <!-- Spacer when bar is visible so content isn't hidden behind fixed bar -->
@@ -357,7 +359,8 @@ onMounted(() => {
 </script><style scoped>
 /* GeneralTab Wrapper Styles */
 .info-card {
-    border: 1px solid #F4F4F4;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 .edit-icon-btn {
@@ -452,6 +455,11 @@ onMounted(() => {
 
 .activity-card {
     border: 1px solid #F4F4F4;
+}
+
+.lead-created-section {
+    border: 1px solid #F4F4F4;
+    margin-top: 12px;
 }
 
 /* Utility Classes */

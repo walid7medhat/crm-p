@@ -1,5 +1,5 @@
 <template>
-    <div class="lead-created-section info-card bg-white p-3 radius-12 shadow-sm mb-3">
+    <div class="lead-created-section bg-white p-0 radius-12 mb-0">
         <div class="lead-created-timeline">
             <!-- Date above timeline -->
             <div class="timeline-date-row">
@@ -99,7 +99,7 @@ const creatorTooltip = computed(() => creatorName.value !== '—' ? `Created by 
 
 <style scoped>
 .lead-created-section {
-    border: 1px solid #F4F4F4;
+    border: none;
 }
 
 .modal-title {
@@ -171,11 +171,11 @@ const creatorTooltip = computed(() => creatorName.value !== '—' ? `Created by 
     flex: 1;
     min-width: 0;
     background: #fff;
-    border: 1px solid #E2E8F0;
+    border: none;
     border-radius: 10px;
     padding: 12px 14px;
     padding-right: 52px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: none;
     position: relative;
 }
 

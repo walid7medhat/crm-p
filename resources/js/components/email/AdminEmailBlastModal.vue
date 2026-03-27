@@ -24,13 +24,13 @@
             </div>
 
             <div class="form-row">
-              <label class="form-label">Agents *</label>
+              <label class="form-label">Users *</label>
               <div class="small-muted" style="margin: -4px 0 8px 0;">Choose who will receive the email.</div>
-              <div v-if="loadingAgents" class="small-muted">Loading agents…</div>
+              <div v-if="loadingAgents" class="small-muted">Loading users…</div>
               <div v-else class="recipients-box">
                 <div class="recipients-search">
                   <i class="ri-search-line"></i>
-                  <input v-model.trim="agentSearch" type="text" placeholder="Search by name/email…" />
+                  <input v-model.trim="agentSearch" type="text" placeholder="Search users by name/email…" />
                 </div>
                 <div class="recipients-list">
                   <div class="d-flex align-items-center justify-content-between gap-2 px-1 pb-2" style="position: sticky; top: 0; background: #fff; z-index: 1;">
@@ -47,7 +47,7 @@
                     <span class="recipient-email">{{ a.email }}</span>
                   </label>
                   <div v-if="filteredAgents.length === 0" class="small-muted" style="padding: 10px 2px;">
-                    No agents found.
+                    No users found.
                   </div>
                 </div>
               </div>
@@ -71,6 +71,12 @@
 
             <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
             <div v-if="success" class="alert alert-success py-2">{{ success }}</div>
+            <div v-if="failedRecipients.length" class="alert alert-warning py-2">
+              <div class="fw-semibold mb-1">Not delivered to:</div>
+              <div class="small">
+                <div v-for="email in failedRecipients" :key="email">{{ email }}</div>
+              </div>
+            </div>
           </div>
 
           <div class="email-modal-foot">
@@ -102,6 +108,7 @@ const body = ref('')
 const sending = ref(false)
 const error = ref('')
 const success = ref('')
+const failedRecipients = ref([])
 
 const canUse = computed(() => {
   try {
@@ -136,6 +143,7 @@ function open() {
   show.value = true
   success.value = ''
   error.value = ''
+  failedRecipients.value = []
   if (!agents.value.length) loadAgents()
 }
 
@@ -167,6 +175,7 @@ async function loadAgents() {
 async function send() {
   error.value = ''
   success.value = ''
+  failedRecipients.value = []
   if (!isValid.value) {
     error.value = 'Please fill subject, body, and select at least one recipient.'
     return
@@ -180,8 +189,15 @@ async function send() {
       body: body.value,
       recipients: recipients.value,
     })
-    if (res?.data?.success) {
-      success.value = `Sent successfully to ${res.data.sent || recipients.value.length} recipients.`
+    const sentCount = Number(res?.data?.sent || 0)
+    const failed = Array.isArray(res?.data?.failed) ? res.data.failed : []
+    failedRecipients.value = failed.map((f) => f?.email).filter(Boolean)
+
+    if (failed.length === 0 && res?.data?.success) {
+      success.value = `Sent successfully to ${sentCount || recipients.value.length} recipients.`
+    } else if (sentCount > 0 && failed.length > 0) {
+      success.value = `Sent to ${sentCount} recipients.`
+      error.value = `${failed.length} recipient(s) failed.`
     } else {
       error.value = res?.data?.message || 'Failed to send email.'
     }

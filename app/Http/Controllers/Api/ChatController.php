@@ -16,6 +16,50 @@ use Illuminate\Support\Str;
 class ChatController extends Controller
 {
     /**
+     * Search users available for chat.
+     * GET /api/chat/users-search?q=...
+     */
+    public function usersSearch(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $q = trim((string) $request->input('q', ''));
+        $limit = min(max((int) $request->input('limit', 8), 1), 25);
+
+        if (mb_strlen($q) < 2) {
+            return response()->json(['success' => true, 'data' => []]);
+        }
+
+        $users = User::query()
+            ->where('id', '!=', $user->id)
+            ->where(function ($query) use ($q) {
+                $query->where('name', 'like', '%' . $q . '%')
+                    ->orWhere('email', 'like', '%' . $q . '%');
+            })
+            ->select(['id', 'name', 'email', 'avatar'])
+            ->orderBy('name')
+            ->limit($limit)
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'email' => $u->email,
+                    'avatar' => $u->avatar_url ?? null,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $users,
+        ]);
+    }
+
+    /**
      * Start or get existing conversation with an agent (optionally for a listing).
      * POST /api/chat/start
      */
@@ -353,7 +397,7 @@ class ChatController extends Controller
             ] : null,
             'last_message' => $lastMessage ? [
                 'id' => $lastMessage->id,
-                'message' => Str::limit($lastMessage->message, 60),
+                'message' => Str::limit($this->cleanSystemContextText($lastMessage->message), 60),
                 'sender_id' => $lastMessage->sender_id,
                 'sender_name' => $lastMessage->sender?->name,
                 'is_from_me' => $lastMessage->sender_id === $currentUser->id,
@@ -362,6 +406,19 @@ class ChatController extends Controller
             'unread_count' => $unreadCount,
             'updated_at' => $conversation->updated_at->toIso8601String(),
         ];
+    }
+
+    private function cleanSystemContextText(?string $text): string
+    {
+        $value = trim((string) $text);
+        if ($value === '') {
+            return '';
+        }
+
+        $value = preg_replace('/^\[PropertyContext(?::\d+)?\]\s*/i', '', $value) ?? $value;
+        $value = preg_replace('/^\[Property(?::\d+)?\]\s*/i', '', $value) ?? $value;
+
+        return trim($value);
     }
 
     private function buildListingLocation($listing): ?string
