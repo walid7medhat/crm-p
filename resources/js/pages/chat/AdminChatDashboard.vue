@@ -298,7 +298,7 @@ function loadUser() {
       currentUserRoles.value = Array.isArray(user.roles) ? user.roles : []
       currentUserId.value = user.id
       currentUserName.value = user.name || user.email || ''
-      currentUserAvatar.value = user.avatar_url || (user.avatar ? (import.meta.env.VITE_APP_URL || '') + '/storage/' + user.avatar : '') || ''
+      currentUserAvatar.value = user.avatar || (user.avatar ? (import.meta.env.VITE_APP_URL || '') + '/storage/' + user.avatar : '') || ''
     }
   } catch (_) {}
 
