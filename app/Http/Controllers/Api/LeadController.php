@@ -459,22 +459,37 @@ class LeadController extends Controller
     {
         try {
             $user = auth()->user();
-
+            $officeId=request()->office_id;
+            $officeAndDescendants=[];
+            if ($officeId && is_numeric($officeId) ) {
+                $selectedOffice = User::find($officeId);
+                if ($selectedOffice) {
+                    // Get all users under this office (including descendants)
+                    $officeAndDescendants = $selectedOffice->getAllSubordinatesIds();
+                    
+                }
+            }
             if (($user->hasRole('admin') || $user->hasRole('super_admin'))) {
                $responsiblePersons = User::role(['team_lead', 'sales', 'manager','admin'])
                 ->whereNotNull('parent_id')
-                ->whereHas('parent', function($q) {
+                // ->whereHas('parent', function($q) {
+                //     // not get branch
+                //     $q->whereNotNull('parent_id'); 
+                // })
+                ->when(!empty($officeAndDescendants), function($qq) use($officeAndDescendants){
                     // not get branch
-                    $q->whereNotNull('parent_id'); 
+                    $qq->whereIn('id',$officeAndDescendants); 
                 })
-                ->get(['id', 'name', 'email', 'avatar'])
+                ->get(['id', 'name', 'email', 'avatar','parent_id'])
                 ->map(function($user) {
                     return [
                         'id'     => $user->id,
                         'name'   => $user->name,
                         'email'  => $user->email,
                         'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
-                        'role_name'=>$user->roles()->first()->name
+                        'role_name'=>$user->roles()->first()->name,
+                        'parent_name'=>$user->parent?->name,
+                        'branch_name'=>$user->office?->name
                     ];
                 });
 
@@ -484,13 +499,19 @@ class LeadController extends Controller
                 $subordinatesIds = $user->getAllSubordinatesIds();
                 $responsiblePersons = User::role(['team_lead','sales'])
                     ->whereIn('id', $subordinatesIds)
-                    ->get(['id', 'name', 'email','avatar'])
+                     ->when(!empty($officeAndDescendants), function($qq) use($officeAndDescendants){
+                            // not get branch
+                            $qq->whereIn('id',$officeAndDescendants); 
+                        })
+                    ->get(['id', 'name', 'email','avatar','parent_id'])
                      ->map(function($user) {
                     return [
                                 'id'     => $user->id,
                                 'name'   => $user->name,
                                 'email'  => $user->email,
                                 'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                                'parent_name'=>$user->parent?->name,
+                                'branch_name'=>$user->office?->name
                             ];
                         });
             }

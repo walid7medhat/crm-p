@@ -250,6 +250,12 @@
                                                     <div class="info-label text-secondary-light text-xs">WhatsApp</div>
                                                     <div class="info-value">{{ previewTask.whatsapp_number }}</div>
                                                 </div>
+                                                 <div v-else-if="field.key === 'api_first_question'" class="info-item mb-8">
+                                                    <div class="info-label text-secondary-light text-xs">More Information</div>
+                                                    <div class="info-value">{{ previewTask.api_first_question }}</div>
+                                                </div>
+
+                                                
 
                                                 <div v-else-if="field.key === 'responsible_person'" class="responsible-info d-flex align-items-center justify-content-between mb-12">
                                                     <div class="d-flex align-items-center gap-2">
@@ -473,7 +479,8 @@ const previewTask = computed(() => {
         budget: '1,250,000',
         currency: 'AED',
         whatsapp_number: '+971 50 123 4567',
-        responsible_person: { name: 'Sarah Ali' }
+        responsible_person: { name: 'Sarah Ali' },
+        api_first_question:'What’S Your Budget Range?:from_2,0....'
     }
 })
 

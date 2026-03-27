@@ -153,6 +153,13 @@
                                                                 <div class="info-label text-secondary-light text-xs">WhatsApp</div>
                                                                 <div class="info-value">{{ task.whatsapp_number }}</div>
                                                             </div>
+
+                                                            <div v-else-if="field.key === 'api_first_question' && task.api_first_question" class="info-item mb-8">
+                                                                <div class="info-label text-secondary-light text-xs">More Information</div>
+                                                                <div class="info-value">{{formatMaskedQuestion(task.api_first_question)}}</div>
+                                                            </div>
+
+                                                            
                                                             
                                                             <!-- Responsible Person -->
                                                             <div v-else-if="field.key === 'responsible_person' && hasResponsiblePerson(task)" class="responsible-info d-flex align-items-center justify-content-between mb-12">
@@ -1231,6 +1238,24 @@ const formatMaskedEmail = (email) => {
     if (raw.length <= 8) return `${raw}....`
     return `${raw.slice(0, 8)}....`
 }
+const formatMaskedQuestion = (questionData) => {
+    if (!questionData) return '—'
+    
+
+    
+    if (typeof questionData === 'string') {
+        let questionText = questionData.replace(/_/g, ' ')
+        questionText = questionText.replace(/\b\w/g, l => l.toUpperCase())
+        
+        if (questionText.length > 20) {
+            questionText = questionText.substring(0, 30) + '...'
+        }
+        
+        return questionText
+    }
+    
+    return '—'
+}
 watch(cardFields, () => {
     console.log('Card fields updated:', cardFields.value)
 }, { deep: true })
@@ -1398,7 +1423,7 @@ const handleNewLead = (lead) => {
         } else {
             columns.value[columnIndex].leads[existingIndex] = { ...lead, stage_id: stageId }
         }
-        sortColumnLeadsByScore(columnIndex)
+        // sortColumnLeadsByScore(columnIndex)
     }
 }
 
@@ -1438,9 +1463,9 @@ function sortColumnLeadsByScore(columnIndex) {
     if (!Array.isArray(leads)) return
 
     leads.sort((a, b) => {
-        const scoreA = Number(a?.score ?? 0)
-        const scoreB = Number(b?.score ?? 0)
-        if (scoreB !== scoreA) return scoreB - scoreA
+        // const scoreA = Number(a?.score ?? 0)
+        // const scoreB = Number(b?.score ?? 0)
+        // if (scoreB !== scoreA) return scoreB - scoreA
 
         const aTime = a?.created_at ? new Date(a.created_at).getTime() : 0
         const bTime = b?.created_at ? new Date(b.created_at).getTime() : 0
@@ -1505,11 +1530,11 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
                         } else {
                             columns.value[newColumnIndex].leads[existingIndex] = lead
                         }
-                        sortColumnLeadsByScore(newColumnIndex)
+                        // sortColumnLeadsByScore(newColumnIndex)
                     }
                 } else {
                     column.leads[index] = lead
-                    sortColumnLeadsByScore(i)
+                    // sortColumnLeadsByScore(i)
                 }
                 break
             }
@@ -1534,7 +1559,7 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
                 // Update existing lead
                 columns.value[columnIndex].leads[existingIndex] = { ...lead, stage_id: stageId }
             }
-            sortColumnLeadsByScore(columnIndex)
+            // sortColumnLeadsByScore(columnIndex)
         } else {
             // Try to add to first available column as fallback
             if (columns.value.length > 0) {
@@ -1549,7 +1574,7 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
                     const leadToAdd = { ...lead, stage_id: firstColumn.status }
                     firstColumn.leads.unshift(leadToAdd)
                 }
-                sortColumnLeadsByScore(0)
+                // sortColumnLeadsByScore(0)
             }
         }
     }
@@ -1596,7 +1621,7 @@ const handleStageChanged = (lead, changes) => {
                         
                         const leadToAdd = lead.data || lead
                         columns.value[newColumnIndex].leads.unshift(leadToAdd)
-                        sortColumnLeadsByScore(newColumnIndex)
+                        // sortColumnLeadsByScore(newColumnIndex)
                     }
                 }
                 break
@@ -2102,7 +2127,7 @@ const $showNotification = (message, type = 'info') => {
 /* Show scrollbar when hovering the stage column */
 .kanban-column:hover .column-content-scrollable {
     scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 #f1f5f9;
+    scrollbar-color: #cbd5e1 transparent;
 }
 
 .kanban-column:hover .column-content-scrollable::-webkit-scrollbar {
@@ -2114,11 +2139,11 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .kanban-column:hover .column-content-scrollable::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: transparent;
 }
 
 .kanban-column:hover .column-content-scrollable::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: transparent;
 }
 
 .kanban-outer {

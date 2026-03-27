@@ -324,11 +324,13 @@ class StageController extends Controller
                 $stageLeadsQuery->where('stage_id', $stage->id);
 
                 $paginatedLeads = $stageLeadsQuery
-                    ->when(
-                        Schema::hasColumn('leads', 'score'),
-                        fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
-                        fn ($q) => $q->orderBy('created_at', 'desc')
-                    )
+                    // ->when(
+                    //     Schema::hasColumn('leads', 'score'),
+                    //     fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
+                    //     fn ($q) => $q->orderBy('created_at', 'desc')
+                    // )
+                    ->orderBy('created_at', 'desc')
+                    ->orderBy('id', 'desc')
                     ->paginate($perPage);
 
                 $stagesWithLeads[] = [
@@ -490,11 +492,13 @@ class StageController extends Controller
 
             // ================= pagination =================
             $paginatedLeads = $leadsQuery
-                ->when(
-                    Schema::hasColumn('leads', 'score'),
-                    fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
-                    fn ($q) => $q->orderBy('created_at', 'desc')
-                )
+                // ->when(
+                //     Schema::hasColumn('leads', 'score'),
+                //     fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
+                //     fn ($q) => $q->orderBy('created_at', 'desc')
+                // )
+                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->paginate($perPage, ['*'], 'page', $page);
 
             return ApiResponse::success([
@@ -513,35 +517,87 @@ class StageController extends Controller
             return ApiResponse::error($e->getMessage());
         }
     }
+// public function getTeamsWithLeads(Request $request): JsonResponse
+// {
+//     try {
+//         $user = auth()->user();
+        
+//         if (!$user->hasAnyRole(['super_admin', 'admin', 'manager'])) {
+//             return ApiResponse::error('Unauthorized', 403);
+//         }
+
+       
+//         $teams = User::whereHas('children', function($query) {
+//             // users who have at least one child/subordinate
+//         })
+//         ->whereIn('id',$user->getAllSubordinatesIds())
+//         ->where('id','!=',auth()->user()->id)
+//         ->withCount('children') 
+//         ->get()
+//         ->map(function($user) {
+//             $allSubordinates = $user->getAllSubordinatesIds();
+//             $teamSize = count($allSubordinates) - 1; 
+            
+//             return [
+//                 'id' => $user->id,
+//                 'name' => $user->name,
+//                 'email' => $user->email,
+//                 'team_size' => $teamSize,
+//                 'role' => $user->roles->pluck('name')->first()
+//             ];
+//         });
+
+//         return ApiResponse::success($teams, 'Teams fetched successfully');
+
+//     } catch (\Exception $e) {
+//         return ApiResponse::error($e->getMessage());
+//     }
+// }
 public function getTeamsWithLeads(Request $request): JsonResponse
 {
     try {
         $user = auth()->user();
+        $officeId = $request->input('office_id'); // Get office filter from request
         
         if (!$user->hasAnyRole(['super_admin', 'admin', 'manager'])) {
             return ApiResponse::error('Unauthorized', 403);
         }
 
-       
-        $teams = User::whereHas('children', function($query) {
+        $query = User::whereHas('children', function($query) {
             // users who have at least one child/subordinate
         })
-        ->whereIn('id',$user->getAllSubordinatesIds())
-        ->where('id','!=',auth()->user()->id)
-        ->withCount('children') 
-        ->get()
-        ->map(function($user) {
-            $allSubordinates = $user->getAllSubordinatesIds();
-            $teamSize = count($allSubordinates) - 1; 
-            
-            return [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'team_size' => $teamSize,
-                'role' => $user->roles->pluck('name')->first()
-            ];
-        });
+        ->whereIn('id', $user->getAllSubordinatesIds())
+        ->where('id', '!=', auth()->user()->id);
+        
+        // Filter by office if provided
+        if ($officeId) {
+            $selectedOffice = User::find($officeId);
+            if ($selectedOffice) {
+                $officeAndDescendants = $selectedOffice->getAllSubordinatesIds();
+                $query->whereIn('id', $officeAndDescendants);
+            }
+        }
+        
+        $teams = $query->withCount('children')
+            ->get(['id', 'name', 'email', 'parent_id'])
+            ->map(function($user) {
+                $allSubordinates = $user->getAllSubordinatesIds();
+                $teamSize = count($allSubordinates) - 1;
+                
+                // Get the admin parent (branch/office) for this team
+                $adminParent = $user->getAdminParentAttribute();
+                
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'team_size' => $teamSize,
+                    'role' => $user->roles->pluck('name')->first(),
+                    'parent_id' => $user->parent_id,
+                    'admin_parent_id' => $adminParent ? $adminParent->id : null,
+                    'admin_parent_name' => $adminParent ? $adminParent->name : null
+                ];
+            });
 
         return ApiResponse::success($teams, 'Teams fetched successfully');
 
@@ -612,11 +668,13 @@ public function getOffices()
             }
             
             $leads = $leadsQuery
-                ->when(
-                    Schema::hasColumn('leads', 'score'),
-                    fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
-                    fn ($q) => $q->orderBy('created_at', 'desc')
-                )
+                // ->when(
+                //     Schema::hasColumn('leads', 'score'),
+                //     fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
+                //     fn ($q) => $q->orderBy('created_at', 'desc')
+                // )
+                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->get();
 
             return ApiResponse::success(

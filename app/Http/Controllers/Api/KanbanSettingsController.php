@@ -88,6 +88,7 @@ class KanbanSettingsController extends Controller
             ['key' => 'bedrooms', 'label' => 'Bedrooms', 'group' => 'property'],
             ['key' => 'budget', 'label' => 'Budget', 'group' => 'property'],
             ['key' => 'whatsapp_number', 'label' => 'WhatsApp', 'group' => 'contact'],
+            ['key' => 'api_first_question', 'label' => 'More Inforamtion', 'group' => 'contact'],
             // ['key' => 'company_name', 'label' => 'Company', 'group' => 'business'],
             // ['key' => 'interested_in', 'label' => 'Interested In', 'group' => 'property'],
             // ['key' => 'nationality', 'label' => 'Nationality', 'group' => 'personal'],

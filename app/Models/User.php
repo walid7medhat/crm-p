@@ -173,6 +173,23 @@ function getAdminParentAttribute()
 
     return null; 
 }
+function getOfficeAttribute()
+{
+    $current = $this;
+
+    while ($current->parent_id) {
+        // for not branch get parent
+        if(!($current && $current->hasRole('admin') && $current->parent && $current->parent->parent && $current->parent->parent->parent_id==null )){
+        $current = $current->parent; 
+        }
+
+        if ($current && $current->hasRole('admin') && $current->parent && $current->parent->parent && $current->parent->parent->parent_id==null ) {
+            return $current; 
+        }
+    }
+
+    return null; 
+}
  public function getManagerAttribute()
     {
         $current = $this;

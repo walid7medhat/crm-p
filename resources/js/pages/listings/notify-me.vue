@@ -162,6 +162,7 @@ async function submit() {
   submitting.value = true
   try {
     await api.post('/search-alerts', notifyFilters.value)
+     close()
     await Swal.fire({
       icon: 'success',
       title: 'Notify me is set',
@@ -169,7 +170,8 @@ async function submit() {
       confirmButtonText: 'Done',
     })
     // Navigate only after the user closes the alert (prevents the page from unmounting early).
-    router.back()
+   
+    // router.back()
   } catch (e) {
     const message = e?.response?.data?.message || e?.message || 'Failed to save alert'
     Swal.fire({

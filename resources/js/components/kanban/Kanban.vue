@@ -133,7 +133,7 @@
                     </button>
 
                     <!-- More Options -->
-                    <div class="more-options-wrapper d-flex align-items-center gap-12" v-if="hasCreateStagePermission || isSuperAdmin">
+                    <div class="more-options-wrapper d-flex align-items-center gap-12" v-if="(hasCreateStagePermission || isSuperAdmin)  ">
                      
                         
                         <button
@@ -177,7 +177,7 @@ const searchInputFocused = ref(false)
 const leadsRef = ref(null)
 const integrationRef = ref(null)
 const searchDropdownAnchorRef = ref(null)
-const search = ref('')
+const search = ref(null)
 const searchDebounceTimer = ref(null)
 const SEARCH_DEBOUNCE_MS = 400
 
@@ -782,8 +782,8 @@ const $showNotification = (message, type = 'info') => {
     align-items: center;
     flex-wrap: nowrap;
     width: max-content;
-    max-width: 340px;
-    min-width: 250px;
+    max-width: 360px;
+    min-width: 300px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
@@ -791,7 +791,7 @@ const $showNotification = (message, type = 'info') => {
 .search-wrapper-focused,
 .search-wrapper-tall {
     max-width: 560px;
-    min-width: 300px;
+    min-width: 340px;
     height: 36px;
     min-height: 36px;
     padding: 4px 12px 4px 10px;
@@ -800,8 +800,8 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .search-wrapper-expanded {
-    max-width: 560px;
-    min-width: 280px;
+    max-width: 900px;
+    min-width: 300px;
 }
 
 .search-wrapper-tall {

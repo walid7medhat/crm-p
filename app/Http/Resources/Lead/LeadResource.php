@@ -129,7 +129,39 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'original_name' => data_get($this->createdHistory, 'changes.name', $this->name),
 
             'original_branch' => data_get($this->createdHistory, 'changes.lead_branch_source'),
+           'api_first_question' => $this->getFirstApiQuestion(),
 
         ];
     }
+    protected function getFirstApiQuestion()
+{
+    $rawMetaData = is_string($this->raw_meta_data) 
+        ? json_decode($this->raw_meta_data, true) 
+        : $this->raw_meta_data;
+    
+    $basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone', 'work_phone_number', 'phone_number', 'full name', 'first_name', 'last_name', 'Page_Name', 'form_name', 'form_id', 'No_Label_name', 'No_Label_email', 'No_Label_phone'];
+    
+    $facebookFields = [];
+    
+    if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) {
+        foreach ($rawMetaData['field_data'] as $field) {
+            if (isset($field['name']) && isset($field['values'][0])) {
+                $fieldName = $field['name'];
+                $fieldValue = $field['values'][0];
+                
+                if (!in_array($fieldName, $basicFields)) {
+                    $facebookFields[$fieldName] = $fieldValue;
+                }
+            }
+        }
+    }
+    
+    if (!empty($facebookFields)) {
+        $firstQuestionKey = array_key_first($facebookFields);
+        return $firstQuestionKey ." : " . $facebookFields[$firstQuestionKey];
+          
+    }
+    
+    return null;
+}
 }

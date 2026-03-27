@@ -201,7 +201,7 @@
         @apply="onFilterApply"
     />
 
-    <div v-if="showDateModal" class="lr-modal-backdrop" @click.self="showDateModal = false">
+    <div v-if="showDateModal" class="lr-modal-backdrop" @click.stop>
         <div class="lr-date-modal">
             <div class="lr-date-left">
                 <button
@@ -284,7 +284,11 @@ const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'work
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
 const teamOptions = ref([{ value: null, text: 'Select Team' }])
 const officeOptions = ref([{ value: null, text: 'Select Office' }])
-
+// Add these refs with your other refs
+const allResponsiblePersons = ref([])
+const allTeams = ref([])
+const selectedOffice = ref(null)
+const selectedPillType = ref(null)
 
 watch(() => props.modelValue, (val) => {
     show.value = val
@@ -466,12 +470,37 @@ const stageOptions = ref([{ value: null, text: 'Select Stage' }])
 
 const personOptions = computed(() => {
     const opts = [{ value: null, text: 'Select Person' }]
-    responsiblePersons.value.forEach(p => {
-        opts.push({ value: p.id, text: p.name || `User ${p.id}` })
+    
+    let filteredPersons = [...allResponsiblePersons.value]
+    
+    
+    
+    filteredPersons.forEach(p => {
+        opts.push({ 
+            value: p.id, 
+            text: p.name || `User ${p.id}`,
+           
+        })
     })
+    
+    console.log('Person options filtered:', filteredPersons.length)
     return opts
 })
 
+const computedTeamOptions = computed(() => {
+    const opts = [{ value: null, text: 'Select Team' }]
+    
+    let filteredTeams = [...allTeams.value]
+    
+    
+    
+    filteredTeams.forEach(team => {
+        opts.push({ value: team.id, text: team.name })
+    })
+    
+    console.log('Team options filtered:', filteredTeams.length)
+    return opts
+})
 const dateOptions = [
     { value: null, text: 'Any Date' }
 ]
@@ -621,7 +650,7 @@ const visibleSearchFields = computed(() => {
                 f.formKey === 'stage' ? stageOptions.value :
                 f.formKey === 'source' ? sourceOptions.value :
                 f.formKey === 'createdOn' ? createdOnOptions :
-                f.formKey === 'team' ? teamOptions.value :
+                f.formKey === 'team' ? computedTeamOptions.value : // Use computedTeamOptions instead of teamOptions
                 (f.options || []),
             placeholder: f.placeholder || (f.type === 'select' ? 'Select' : '')
         }))
@@ -655,8 +684,6 @@ function getDisplayValue(field, rawValue) {
 }
 
 function applySearch() {
-   
-    
     let createdFrom = undefined
     let createdTo = undefined
     let createdAt = undefined
@@ -665,6 +692,7 @@ function applySearch() {
     let responsiblePersonId = form.value.responsible ?? undefined
     let closed = form.value.closed ?? undefined
     let teamId = form.value.team ?? undefined
+    
     switch (activePill.value) {
         case 'dubai':
             const dubaiOption = branchSourceOptions.value.find(opt =>
@@ -695,13 +723,14 @@ function applySearch() {
             closed = 1 
             break
     }
+    
     if (form.value.createdOn) {
         const today = new Date()
-        today.setHours(0, 0, 0, 0) // بداية اليوم
+        today.setHours(0, 0, 0, 0)
         
         switch (form.value.createdOn) {
             case 'today':
-                createdAt = today.toISOString().split('T')[0] // YYYY-MM-DD
+                createdAt = today.toISOString().split('T')[0]
                 break
                 
             case 'yesterday':
@@ -718,7 +747,7 @@ function applySearch() {
                 
             case 'this_week':
                 const startOfWeek = new Date(today)
-                startOfWeek.setDate(today.getDate() - today.getDay()) // الأحد
+                startOfWeek.setDate(today.getDate() - today.getDay())
                 const endOfWeek = new Date(startOfWeek)
                 endOfWeek.setDate(startOfWeek.getDate() + 6)
                 createdFrom = startOfWeek.toISOString().split('T')[0]
@@ -816,27 +845,31 @@ function applySearch() {
     const query = {
         lead_name: form.value.leadName || undefined,
         first_name: form.value.firstName || undefined,
-         responsible_person_id: responsiblePersonId,
+        responsible_person_id: responsiblePersonId,
         lead_branch_source: branchSource,
         closed: closed,
-        // created_at: form.value.createdOn || undefined,
         work_phone: form.value.workPhone || undefined,
         stage_id: form.value.stage ?? undefined,
         email: form.value.email || undefined,
         bedrooms: form.value.bedrooms ?? undefined,
         search: form.value.search || undefined,
-        source: form.value.source || undefined ,
-        created_from: createdFrom  || undefined,  
+        source: form.value.source || undefined,
+        created_from: createdFrom || undefined,  
         created_to: createdTo || undefined,     
-        created_at: createdAt  || undefined,   
-        team_id: teamId || undefined ,
+        created_at: createdAt || undefined,   
+        team_id: teamId || undefined,
         office_branch: queryOfficeBranch || form.value.office || undefined
     }
-    Object.keys(query).forEach(k => { if (query[k] === '' || query[k] === undefined) delete query[k] })
+    
+    Object.keys(query).forEach(k => { 
+        if (query[k] === '' || query[k] === undefined) delete query[k] 
+    })
+    
     console.log('Search Query:', query)
 
     const activeFilters = []
     const visibleFields = searchFieldsConfig.value.filter(f => selectedLeadFieldIds.value.includes(f.id))
+    
     visibleFields.forEach(field => {
         const raw = form.value[field.formKey]
         if (!hasValue(raw)) return
@@ -864,30 +897,91 @@ function applySearch() {
             })
         }
     })
-console.log(activePill);
-    const pill = sidebarPills.find(p => p.id === activePill.value)
-    console.log(pill.id);
-    emit('search', { query, activePill: pill ? { id: pill.id, label: pill.label } : null, activeFilters })
+    
+    console.log('activePill:', activePill.value);
+    
+    // FIX: Safely get the pill object, ensuring we handle if it's not found
+    const pill = sidebarPills.value.find(p => p.id === activePill.value)
+    
+    // FIX: Only emit if pill exists, otherwise emit with null
+    const pillData = pill ? { id: pill.id, label: pill.label } : null
+    
+    console.log('Pill data:', pillData);
+    
+    emit('search', { query, activePill: pillData, activeFilters })
     show.value = false
 }
 
-function handleSidebarPillClick(pill) {
+async function handleSidebarPillClick(pill) {
+    console.log('Sidebar pill clicked:', pill)
     activePill.value = pill.id
+    
     if (pill.type !== 'city') {
         form.value.office = ''
+        selectedOffice.value = null
+        selectedPillType.value = pill.id === 'dubai' || pill.id === 'abu-dhabi' ? pill.id : null
+    } else {
+        selectedPillType.value = pill.id
     }
+    
+    // Reset responsible and team when branch/pill changes
+    form.value.responsible = ''
+    form.value.team = ''
+    
+    // Fetch filtered data
+    await Promise.all([
+        fetchResponsiblePersonsWithFilter(),
+        fetchTeamsWithFilter()
+    ])
 }
 
-function selectCityBranch(cityPill, child) {
+async function selectCityBranch(cityPill, child) {
+    console.log('City branch selected:', cityPill, child)
     activePill.value = cityPill.id
     form.value.office = child.value
+    selectedOffice.value = child.value
+    selectedPillType.value = cityPill.id
+    
+    // Reset responsible and team when branch changes
+    form.value.responsible = ''
+    form.value.team = ''
+    
+    // Fetch filtered data
+    await Promise.all([
+        fetchResponsiblePersonsWithFilter(),
+        fetchTeamsWithFilter()
+    ])
 }
 
-async function fetchResponsiblePersons() {
+async function fetchResponsiblePersonsWithFilter() {
     try {
-        const res = await api.get('/available-responsible-persons')
-        if (res.data?.data) responsiblePersons.value = res.data.data
-    } catch (_) {}
+        const params = {}
+        
+        // Add office filter if selected
+        if (selectedOffice.value) {
+            params.office_id = selectedOffice.value
+        }
+        
+        // Add pill filter if needed
+        if (selectedPillType.value) {
+            params.pill_type = selectedPillType.value
+        }
+        
+        const res = await api.get('/available-responsible-persons', { params })
+        console.log(res.data.data);
+        if (res.data.data) {
+            
+            allResponsiblePersons.value = res.data.data.map(person => ({
+                ...person,
+             
+            }))
+        } else {
+            allResponsiblePersons.value = []
+        }
+    } catch (error) {
+        console.error('Error fetching responsible persons with filter:', error)
+        allResponsiblePersons.value = []
+    }
 }
 
 async function fetchBranchSources() {
@@ -932,16 +1026,51 @@ async function fetchSources() {
 }
 async function fetchTeams() {
     try {
-        const res = await api.get('/teams-with-leads') // You'll need to create this endpoint
+        const res = await api.get('/teams-with-leads')
         const data = res.data?.data
         if (Array.isArray(data) && data.length) {
-            teamOptions.value = [
-                { value: null, text: 'Select Team' },
-                ...data.map(team => ({ value: team.id, text: team.name }))
-            ]
+            // Store full team data with office and city info
+            allTeams.value = data.map(team => ({
+                id: team.id,
+                name: team.name,
+                office_id: team.office_id || null,
+                city: team.city || null
+            }))
         }
     } catch (error) {
         console.error('Error fetching teams:', error)
+    }
+}
+async function fetchTeamsWithFilter() {
+    try {
+        const params = {}
+        
+        // Add office filter if selected
+        if (selectedOffice.value) {
+            params.office_id = selectedOffice.value
+        }
+        
+        // Add pill filter if needed
+        if (selectedPillType.value) {
+            params.pill_type = selectedPillType.value
+        }
+        
+        const res = await api.get('/teams-with-leads', { params })
+        const data = res.data?.data
+        if (Array.isArray(data) && data.length) {
+            allTeams.value = data.map(team => ({
+                id: team.id,
+                name: team.name,
+                office_id: team.office_id || null,
+                city: team.city || null,
+                admin_parent_id: team.admin_parent_id || null
+            }))
+        } else {
+            allTeams.value = []
+        }
+    } catch (error) {
+        console.error('Error fetching teams with filter:', error)
+        allTeams.value = []
     }
 }
 // Add fetch function to get offices (users directly under branches)
@@ -1125,6 +1254,7 @@ function applyDateRange() {
         form.value.createdTo = formatYmd(endDate.value)
     }
     showDateModal.value = false
+     applySearch()
 }
 
 const resetForm = () => {
@@ -1132,20 +1262,91 @@ const resetForm = () => {
     show.value = false
     emit('search', { query: null, activePill: null, activeFilters: [] })
 }
+// Watch for officeOptions to set selected office if exists
+watch(officeOptions, (newOptions) => {
+    if (form.value.office && newOptions.length) {
+        const selected = newOptions.find(opt => opt.value === form.value.office)
+        if (selected) {
+            selectedOffice.value = form.value.office
+        }
+    }
+}, { deep: true })
 watch(() => form.value.createdOn, (newVal, oldVal) => {
     if (oldVal === 'custom_date' && newVal !== 'custom_date') {
         form.value.createdFrom = ''
         form.value.createdTo = ''
     }
 })
-onMounted(() => {
-      updateUserFromStorage() 
-    fetchResponsiblePersons()
-    fetchBranchSources()
-    fetchStages()
-    fetchSources()
-        fetchTeams()
-        fetchOffices() 
+// Watch for office changes to filter responsible persons and teams
+watch(() => form.value.office, async (newOffice, oldOffice) => {
+    console.log('Office changed from:', oldOffice, 'to:', newOffice)
+    
+    if (newOffice !== oldOffice) {
+        if (newOffice) {
+            selectedOffice.value = newOffice
+        } else {
+            selectedOffice.value = null
+        }
+        
+        // Clear responsible and team when office changes
+        if (form.value.responsible) {
+            form.value.responsible = ''
+        }
+        if (form.value.team) {
+            form.value.team = ''
+        }
+        
+        // Fetch filtered data based on selected office
+        console.log('Fetching data for office:', selectedOffice.value)
+        await Promise.all([
+            fetchResponsiblePersonsWithFilter(),
+            fetchTeamsWithFilter()
+        ])
+    }
+}, { immediate: true }) // Add immediate to run on mount
+
+// Watch for active pill changes
+// Watch for active pill changes
+watch(activePill, async (newPill, oldPill) => {
+    console.log('Pill changed from:', oldPill, 'to:', newPill)
+    
+    if (newPill !== oldPill) {
+        if (newPill === 'dubai' || newPill === 'abu-dhabi') {
+            selectedPillType.value = newPill
+        } else {
+            selectedPillType.value = null
+        }
+        
+        // Clear responsible and team when pill changes
+        if (form.value.responsible) {
+            form.value.responsible = ''
+        }
+        if (form.value.team) {
+            form.value.team = ''
+        }
+        
+        // Fetch filtered data based on selected pill
+        console.log('Fetching data for pill:', selectedPillType.value)
+        await Promise.all([
+            fetchResponsiblePersonsWithFilter(),
+            fetchTeamsWithFilter()
+        ])
+    }
+})
+onMounted(async () => {
+    updateUserFromStorage() 
+    
+    // Fetch all data initially
+    await Promise.all([
+        fetchResponsiblePersonsWithFilter(),
+        fetchBranchSources(),
+        fetchStages(),
+        fetchSources(),
+        fetchTeamsWithFilter(),
+        fetchOffices()
+    ])
+    
+    console.log('Initial data loaded')
 })
 </script>
 
@@ -1566,7 +1767,7 @@ onMounted(() => {
     font-weight: 500;
 }
 
-.btn-reset {
+.btn-reset,.btn-cancel {
     background: #F4F4F4;
     border: none;
     padding: 10px 25px;
@@ -1575,7 +1776,7 @@ onMounted(() => {
     color: #01062C;
 }
 
-.btn-search {
+.btn-search,.btn-apply {
     background: #000;
     border: none;
     padding: 10px 25px;

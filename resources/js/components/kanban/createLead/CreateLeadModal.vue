@@ -431,7 +431,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted,nextTick  } from 'vue'
 import { BModal, BFormInput, BFormSelect, BFormTextarea } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -464,10 +464,12 @@ const isLoadingAreas = ref(false)
 const propertyTypeOptions = ref([])
 const getLoggedInUserId = () => {
     try {
-        const raw = localStorage.getItem('user') || localStorage.getItem('auth_user') || localStorage.getItem('currentUser')
+        const raw = localStorage.getItem('user') 
         if (!raw) return null
         const parsed = JSON.parse(raw)
         const id = Number(parsed?.id)
+        console.log(id);
+        console.log(Number.isFinite(id) );
         return Number.isFinite(id) ? id : null
     } catch (error) {
         return null
@@ -487,13 +489,26 @@ watch(() => props.modelValue, (val) => {
 
 watch(show, (val) => {
     if (val) {
+        // Reset stage_id when modal opens
+        console.log('Modal opened, resetting stage_id to null')
         form.value.stage_id = null
+        
+        // Ensure the StageSelector gets the null value
         emit('update:modelValue', null)
+        
+        // Force refresh of StageSelector
+        nextTick(() => {
+            console.log('Form stage_id after reset:', form.value.stage_id)
+        })
     } else {
         // Clear validation errors when modal is closed
         validationErrors.value = {}
         errorMessage.value = ''
     }
+})
+// Watch form.stage_id to see if it gets updated
+watch(() => form.value.stage_id, (newVal) => {
+    console.log('Form stage_id changed to:', newVal)
 })
 
 const fetchSources = async () => {

@@ -84,8 +84,8 @@
             <template v-if="hasAdditionalFacebookQuestions">
                 <div class="info-group" v-for="(answer, question) in facebookQuestions" :key="question">
                     <label class="form-label-custom">{{ formatQuestion(question) }}</label>
-                    <div class="info-value">
-                        <a v-if="question === 'link' || question === 'Page_URL'" :href="answer" target="_blank" class="facebook-link">
+                    <div class="info-value ">
+                        <a v-if="question === 'link' || question === 'Page_URL' || question ==='inbox_url'" :href="answer" target="_blank" class="facebook-link">
                             {{ answer }}
                         </a>
                         <span v-else>
@@ -202,8 +202,18 @@
                                     class="person-item-avatar" 
                                 />
                                 <div class="person-item-info">
-                                    <div class="person-item-name">{{ user.name }}</div>
-                                    <div class="person-item-email">{{ user.email }}</div>
+                                    <div class="person-item-name">
+                                        <span class="user-item-name">{{ user.name }}</span>
+                                           <span v-if="user.role_name" class="user-position-badge">
+                                                    {{user.role_name }}
+                                                </span>
+                                    </div>
+                                    <div class=" user-item-meta-line"> 
+                                                <span class="meta-label">Parent:</span>
+                                                <span class="meta-value">{{ user.parent_name }}</span>
+                                                <span class="meta-divider" v-if="user.branch_name">|</span>
+                                                <span class="meta-label" v-if="user.branch_name">Branch:</span>
+                                                <span class="meta-value" v-if="user.branch_name">{{ user.branch_name}}</span></div>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center gap-2">
@@ -472,9 +482,17 @@ const hasAdditionalFacebookQuestions = computed(() => {
     margin-bottom: 6px;
 }
 
+.lead-info-view .info-value,
+.lead-info-view .info-value a {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
 .lead-info-view .info-value {
     font-size: 14px;
     color: #1E293B;
+
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 .lead-info-view .info-value-block {
@@ -755,6 +773,45 @@ const hasAdditionalFacebookQuestions = computed(() => {
     font-family: 'Montserrat';
 }
 
+.user-position-badge {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 999px;
+        margin-left: 10px;
+
+}
+.user-item-name{
+    text-transform: capitalize;
+}
+.user-item-meta-line {
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    line-height: 1.3;
+    color: #64748b;
+    font-family: 'Montserrat';
+}
+
+.meta-label {
+    font-weight: 600;
+    color: #64748b;
+}
+
+.meta-value {
+    font-weight: 500;
+    color: #334155;
+}
+
+.meta-divider {
+    color: #cbd5e1;
+}
 .current-badge {
     background: #E2E8F0;
     color: #475569;

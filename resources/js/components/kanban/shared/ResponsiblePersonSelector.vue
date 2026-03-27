@@ -355,6 +355,7 @@ const parentName = computed(() => {
     font-size: 14px;
     color: #01062C;
     font-family: 'Montserrat';
+    text-transform: capitalize;
 }
 
 .user-item-head {

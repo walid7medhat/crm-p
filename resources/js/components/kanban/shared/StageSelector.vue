@@ -38,15 +38,27 @@ const stages = ref([])
 const scrollContainerRef = ref(null)
 const colors = ['#7BD3EA', '#E3DA32', '#F2C934', '#8EC82F', '#00A74C']
 
+const getUserFromStorage = () => {
+    try {
+        const userData = localStorage.getItem('user')
+        return userData ? JSON.parse(userData) : null
+    } catch (error) {
+        console.error('Error getting user from storage:', error)
+        return null
+    }
+}
+
+const user = ref(getUserFromStorage())
+
+// Check if user is admin or super_admin
+const isSuperAdmin = computed(() => {
+    if (!user.value) return false
+    return user.value.roles?.includes('super_admin') 
+})
+
 function getColorByIndex(index) {
     return colors[index % colors.length]
 }
-
-const selectedStageIndex = computed(() => {
-    if (!props.modelValue || stages.value.length === 0) return -1
-    const index = stages.value.findIndex(stage => stage.id === props.modelValue)
-    return index >= 0 ? index : -1
-})
 
 const scrollSelectedIntoView = () => {
     const el = scrollContainerRef.value
@@ -58,8 +70,55 @@ const scrollSelectedIntoView = () => {
     }
 }
 
+// Function to auto-select stage based on user role
+const autoSelectStage = () => {
+    console.log('=== autoSelectStage called ===')
+    console.log('stages.length:', stages.value.length)
+    console.log('props.modelValue:', props.modelValue)
+    console.log('currentStageId.value:', currentStageId.value)
+    
+    if (!stages.value.length) {
+        console.log('No stages available, returning')
+        return false
+    }
+    
+    // IMPORTANT: Only auto-select if there's NO modelValue from parent
+    // AND currentStageId is not set
+    if (props.modelValue === null && !currentStageId.value) {
+        let stageToSelectId
+        
+        if (isSuperAdmin.value) {
+            // Admin: select first stage
+            stageToSelectId = stages.value[0].id
+            console.log('Admin auto-selecting first stage:', stageToSelectId, stages.value[0].name)
+        } else {
+            // Regular user: select second stage if exists, otherwise first
+            if (stages.value.length > 1) {
+                stageToSelectId = stages.value[1].id
+                console.log('Regular user auto-selecting second stage:', stageToSelectId, stages.value[1].name)
+            } else {
+                stageToSelectId = stages.value[0].id
+                console.log('Regular user auto-selecting first stage:', stageToSelectId, stages.value[0].name)
+            }
+        }
+        
+        currentStageId.value = stageToSelectId
+        emit('update:modelValue', stageToSelectId)
+        console.log('Auto-selected stage, emitted value:', stageToSelectId)
+        
+        nextTick(() => {
+            scrollSelectedIntoView()
+        })
+        return true
+    } else {
+        console.log('Skipping auto-select because there is already a value:', props.modelValue || currentStageId.value)
+        return false
+    }
+}
+
 const fetchStages = async () => {
     try {
+        console.log('Fetching stages...')
         const response = await api.get('/stages')
         let stagesData = []
 
@@ -78,18 +137,54 @@ const fetchStages = async () => {
             order: stage.order || index
         }))
 
-        nextTick(() => {
-            scrollSelectedIntoView()
-        })
+        console.log('Stages loaded successfully:', stages.value)
+        
+        // Auto-select after stages are loaded ONLY if no value is set
+        autoSelectStage()
+
     } catch (error) {
         console.error('Error fetching stages:', error)
         console.error('Error response:', error.response?.data)
     }
 }
 
+const currentStageId = ref(props.modelValue)
+
+// Watch for changes in props.modelValue
+watch(() => props.modelValue, (newVal, oldVal) => {
+    console.log('modelValue changed from', oldVal, 'to', newVal)
+    currentStageId.value = newVal
+    
+    // Only auto-select if modelValue becomes null AND there's no current value
+    // AND this is not a case where we want to preserve the value
+    if (newVal === null && stages.value.length > 0 && !currentStageId.value) {
+        console.log('modelValue is null and no stage selected, checking auto-select...')
+        autoSelectStage()
+    }
+})
+
+// Watch for changes in stages array
+watch(stages, (newStages) => {
+    console.log('Stages array changed, length:', newStages.length)
+    // Only auto-select if there's no stage selected and no value from parent
+    if (newStages.length > 0 && !currentStageId.value && props.modelValue === null) {
+        console.log('Stages loaded, no stage selected, and no parent value, auto-selecting...')
+        autoSelectStage()
+    }
+}, { deep: true })
+
+const selectedStageIndex = computed(() => {
+    if (!currentStageId.value || stages.value.length === 0) return -1
+    const index = stages.value.findIndex(stage => stage.id === currentStageId.value)
+    console.log('Selected stage index:', index, 'for stage ID:', currentStageId.value)
+    return index >= 0 ? index : -1
+})
+
 const selectStage = (index) => {
     if (stages.value[index]) {
-        emit('update:modelValue', stages.value[index].id)
+        currentStageId.value = stages.value[index].id
+        emit('update:modelValue', currentStageId.value)
+        console.log('User selected stage:', stages.value[index].name)
     }
 }
 
@@ -107,10 +202,15 @@ watch(selectedStageIndex, () => {
 })
 
 onMounted(() => {
+    console.log('StageSelector mounted')
     fetchStages()
     nextTick(scrollSelectedIntoView)
 })
 </script>
+
+<style scoped>
+/* باقي الستايلات كما هي */
+</style>
 
 <style scoped>
 .stage-selector-wrapper {
@@ -122,14 +222,20 @@ onMounted(() => {
     align-items: center;
     gap: 4px;
     padding: 4px 4px 8px;
-    border: 1px solid #E5E7EB;
-    border-radius: 50px;
     box-shadow: 1px 1px 5px 5px #00000005;
     width: 100%;
     min-width: 0;
     overflow-x: scroll;
     scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 #f1f5f9;
+    scrollbar-color: #cbd5e1 transparent;
+    scroll-behavior: smooth;
+}
+
+.stage-container::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+    background: transparent;
 }
 
 .stage-container::-webkit-scrollbar {
@@ -137,8 +243,9 @@ onMounted(() => {
 }
 
 .stage-container::-webkit-scrollbar-track {
-    background: #f1f5f9;
+    background: transparent;
     border-radius: 999px;
+    display: none;
 }
 
 .stage-container::-webkit-scrollbar-thumb {
