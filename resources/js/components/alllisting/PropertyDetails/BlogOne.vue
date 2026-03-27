@@ -3626,7 +3626,9 @@ const createNewDesignContent = (currentUser) => {
     <!-- Slide 5 - Floor Plan (optional) -->
     ${hasFloorPlans ? createSlide5() : ''}
     
-    ${hasProject ? createSlide7() : ''}
+    ${hasProject ? createSlide7ProjectDetails() : ''}
+
+    ${hasProject ? createSlide7Amenities() : ''}
     
     <!-- Slide 6 - Thank You (Full Blue Page) -->
     ${createSlide6(currentUser)}
@@ -3653,7 +3655,9 @@ const createSlide1 = (currentUser) => {
               ${property.value?.property_type?.name || ''}
             </h1>
             <p style="font-size:3mm !important; line-height:4mm !important; margin:0 !important;">
-              <span style="display:inline-block !important; width:5% !important; vertical-align:top !important;"><img src="${locationIcon}" style="display:inline-block !important; width:3mm !important;" /></span>
+              <span style="display:inline-block !important; width:5% !important; vertical-align:top !important;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 30" style="vertical-align:middle !important; margin-right:1mm !important;" fill="#FAA300">
+            <path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/>
+          </svg></span>
               <span style="display:inline-block !important; width:85% !important; color:#000000 !important">${property.value?.area?.title || 'Park Valley, Reem Hills, Al Reem Island, Abu Dhabi, UAE'}</span>
             </p>
             <h1 style="font-size:6mm !important; margin:3mm 0 0 0 !important; color:#faa300 !important; font-weight:bold !important; text-align:left !important;">AED ${formatPrice(property.value?.price) || '1,345,673'}</h1>
@@ -4205,35 +4209,186 @@ const createSlide6 = (currentUser) => {
   `;
 };
 
-const createSlide7 = () => {
-const project = property.value?.project;
-if (!project) return '';
+ 
+const createSlide7ProjectDetails = () => {
+  const project = property.value?.project;
+  if (!project) return '';
 
-const projectTitle = project?.title || project?.name || '';
-const projectLocation = project?.area?.area_parents_title || project?.area?.name || '';
-const projectAbout = project?.about || '';
+  const projectTitle    = project?.title || project?.name || '';
+  const projectLocation = (project?.area?.area_parents_title || project?.area?.name || '').toUpperCase();
+  const projectAbout    = project?.about || '';
+  const projectImage    = project?.image || '';
+  const propertyType    = property.value?.property_type?.name || '';
 
-const features = Array.isArray(project?.features)
-  ? project.features.map(f => f?.name || f?.title || f).filter(Boolean)
-  : [];
-const projectImage =project?.image || '';
-const developer = project?.developer?.name || project?.developer || '';
+  const hasAbout    = projectAbout.trim().length > 0;
+  const hasLocation = projectLocation.trim().length > 0;
 
-const hasAbout = projectAbout.trim().length > 0;
-const hasFeatures = features.length > 0;
-const hasDeveloper = !!developer;
+  if (!projectImage && !hasAbout) return '';
 
-const hasAnySection =
-  hasAbout &&
-  hasFeatures &&
-  hasDeveloper &&
-  !!projectImage;
+  const projectAboutLimited = limitText(projectAbout, 200);
 
+  return `
+<div style="
+    width:${PDF_CONFIG.pageWidth}mm !important;
+    height:${PDF_CONFIG.pageHeight}mm !important;
+    margin:0 !important;
+    padding:0 !important;
+    background:#fff !important;
+    position:relative !important;
+    overflow:hidden !important;
+  ">
 
-if (!hasAnySection) return '';
-const projectAboutLimited = limitText(projectAbout, 600);
+    <!-- CONTENT WRAPPER: 90% height, flex row — same pattern as all other slides -->
+    <div style="
+      width:100% !important;
+      height:90% !important;
+      display:flex !important;
+      overflow:hidden !important;
+    ">
 
-const featuresLimited = features.slice(0, 10);
+      <!-- LEFT: full height project image -->
+      <div style="width:50% !important; height:100% !important; flex-shrink:0 !important; overflow:hidden !important;">
+        ${projectImage ? `
+        <div style="
+          width:100%;
+          height:100%;
+          background-image:url('${projectImage}');
+          background-size:cover;
+          background-position:center;
+          background-repeat:no-repeat;
+          background-color:#f5f5f5;
+        "></div>` : `<div style="width:100%;height:100%;background:#f0f0f0;"></div>`}
+      </div>
+
+      <!-- RIGHT: content panel -->
+      <div style="
+        width:50% !important;
+        height:100% !important;
+        padding:8mm 7mm 12mm 7mm !important;
+        box-sizing:border-box !important;
+        display:flex !important;
+        flex-direction:column !important;
+        overflow:hidden !important;
+        font-size:2.8mm !important;
+        font-family:Arial, sans-serif !important;
+      ">
+
+        <!-- LOCATION -->
+        ${hasLocation ? `
+        <div style="display:flex; align-items:center; gap:2.5mm; margin-bottom:2mm;">
+          <div style="width:6mm; height:0.7mm; background:#faa300; flex-shrink:0;"></div>
+          <span style="font-size:2.3mm; font-weight:bold; color:#faa300; letter-spacing:0.4mm;">${projectLocation}</span>
+        </div>` : ''}
+
+        <!-- TITLE -->
+        <div style="font-size:5mm; font-weight:bold; color:#1c2230; margin:0 0 3mm 0; line-height:1.15;">
+          ${projectTitle}
+        </div>
+
+        <!-- TYPOLOGY -->
+        ${propertyType ? `
+        <div style="
+          display:inline-flex; align-items:center; gap:2mm;
+          border:0.4mm solid #cccccc; border-radius:2mm;
+          padding:1.5mm 3mm; margin-bottom:4mm; width:fit-content;
+        ">
+          <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="#faa300">
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+          </svg>
+          <span style="font-size:2.8mm; font-weight:bold; color:#faa300;">Typology:</span>
+          <span style="font-size:2.8mm; color:#444;">${propertyType}</span>
+        </div>` : ''}
+
+        <!-- ABOUT -->
+        ${hasAbout ? `
+        <div style="margin-bottom:4mm;">
+          <div style="display:flex; align-items:center; gap:2mm; margin-bottom:2mm;">
+            <div style="width:2mm; height:2mm; border-radius:50%; background:#faa300; flex-shrink:0;"></div>
+            <span style="font-size:3mm; font-weight:bold; color:#1c2230;">About Project</span>
+          </div>
+          <p style="
+            font-size:2.6mm; line-height:4.2mm; color:#444;
+            margin:0; text-align:justify;
+            overflow:hidden; word-break:break-word;
+          ">${formatTextForPDF(projectAboutLimited)}</p>
+        </div>` : ''}
+
+        <!-- USP SECTION -->
+      <!--  <div style="margin-bottom:4mm;">
+          <div style="display:flex; align-items:center; gap:2mm; margin-bottom:2mm;">
+            <div style="width:2mm; height:2mm; border-radius:50%; background:#faa300; flex-shrink:0;"></div>
+            <span style="font-size:3mm; font-weight:bold; color:#1c2230;">Unique Selling Proposition</span>
+          </div>
+          <div style="padding-left:3mm;">
+            <div style="display:flex; align-items:flex-start; gap:2mm; margin-bottom:1.5mm;">
+              <span style="color:#faa300; font-size:3mm; line-height:4mm; flex-shrink:0;">&#10003;</span>
+              <span style="font-size:2.6mm; line-height:4mm; color:#444;">Direct access to premier amenities with stunning views.</span>
+            </div>
+            <div style="display:flex; align-items:flex-start; gap:2mm; margin-bottom:1.5mm;">
+              <span style="color:#faa300; font-size:3mm; line-height:4mm; flex-shrink:0;">&#10003;</span>
+              <span style="font-size:2.6mm; line-height:4mm; color:#444;">Purpose-built community with furnished options and smart access.</span>
+            </div>
+            <div style="display:flex; align-items:flex-start; gap:2mm;">
+              <span style="color:#faa300; font-size:3mm; line-height:4mm; flex-shrink:0;">&#10003;</span>
+              <span style="font-size:2.6mm; line-height:4mm; color:#444;">Walking distance to major retail and leisure destinations.</span>
+            </div>
+          </div>
+        </div>-->
+
+        <!-- EST. DAILY RATES TABLE -->
+    <!--    <div style="
+          border:0.4mm solid #e0e0e0; border-radius:2mm;
+          overflow:hidden; font-size:2.6mm;
+        ">
+          <div style="
+            background:#f7f7f7; padding:2mm 3mm;
+            display:flex; justify-content:space-between; align-items:center;
+            border-bottom:0.4mm solid #e0e0e0;
+          ">
+            <span style="font-weight:bold; color:#1c2230; font-size:2.8mm;">Est. Daily Rates (AED)</span>
+            <span style="font-size:2.3mm; color:#888;">Seasonality: Peak Winter &amp; F1</span>
+          </div>
+          <div style="
+            display:flex; padding:1.5mm 3mm;
+            border-bottom:0.4mm solid #e0e0e0;
+            background:#ffffff;
+          ">
+            <span style="width:40%; font-size:2.3mm; color:#888; letter-spacing:0.2mm;">UNIT TYPE</span>
+            <span style="width:30%; font-size:2.3mm; color:#2e7d52; font-weight:bold; letter-spacing:0.2mm;">LOW SEASON</span>
+            <span style="width:30%; font-size:2.3mm; color:#faa300; font-weight:bold; letter-spacing:0.2mm;">HIGH SEASON</span>
+          </div>
+          <div style="display:flex; padding:1.5mm 3mm; border-bottom:0.4mm solid #f0f0f0;">
+            <span style="width:40%; font-size:2.6mm; color:#1c2230; font-weight:bold;">Studio / 1BR</span>
+            <span style="width:30%; font-size:2.6mm; color:#555;">400 - 550</span>
+            <span style="width:30%; font-size:2.6mm; color:#faa300; font-weight:bold;">750 - 1,200</span>
+          </div>
+          <div style="display:flex; padding:1.5mm 3mm; border-bottom:0.4mm solid #f0f0f0;">
+            <span style="width:40%; font-size:2.6mm; color:#1c2230; font-weight:bold;">2 Bedroom</span>
+            <span style="width:30%; font-size:2.6mm; color:#555;">700 - 950</span>
+            <span style="width:30%; font-size:2.6mm; color:#faa300; font-weight:bold;">1,300 - 1,800</span>
+          </div>
+        </div>
+        -->
+
+      </div>
+    </div>
+    <!-- END CONTENT WRAPPER -->
+
+    ${createFooter()}
+  </div>
+  `;
+};
+
+// ─── Slide 7b: Amenities & Features (separate slide) ─────────────────────────
+const createSlide7Amenities = () => {
+  const project = property.value?.project;
+  if (!project) return '';
+
+  const features = Array.isArray(project?.features)
+    ? project.features.map(f => f?.name || f?.title || f).filter(Boolean)
+    : [];
+
+  if (!features.length) return '';
 
   return `
   <div style="
@@ -4245,85 +4400,35 @@ const featuresLimited = features.slice(0, 10);
     position:relative !important;
     overflow:hidden !important;
   ">
-        <div style="height:15% !important; width:100% !important; text-align:left !important; !important">
-        <h1 style="font-size:6mm !important; margin:0 !important; padding:30px !important ;">Project Details</h1>
-        </div>
+    <div style="height:15% !important; width:100% !important; text-align:left !important;">
+      <h1 style="font-size:6mm !important; margin:0 !important; padding:30px !important;">Amenities &amp; Features</h1>
+    </div>
 
     <div style="
       height:75% !important;
-      display:flex !important;
       padding:8mm !important;
       box-sizing:border-box !important;
     ">
-
-      <!-- LEFT -->
       <div style="
-        width:50% !important;
-        padding-right:6mm !important;
-        box-sizing:border-box !important;
+        display:flex !important;
+        flex-wrap:wrap !important;
+        gap:2mm !important;
+        align-content:flex-start !important;
       ">
-
-        <h1 style="font-size:6mm !important; margin:0 0 4mm 0 !important;">
-          ${projectTitle || ''}
-        </h1>
-
-        <p style="font-size:3mm !important; line-height:4mm !important; margin-bottom:4mm !important;">
-          <img src="${locationIcon}" style="width:3mm !important; vertical-align:middle !important;" />
-          <span style="margin-left:.5mm !important;">${projectLocation || ''}</span>
-        </p>
-
-        ${projectAbout ? `
-        <div style="margin-top: 32px;">
-        <p style="font-size:3mm !important; font-weight:bold !important; margin-bottom:2mm !important; text-decoration: underline !important;">About Project</p>
-        <p style="
-           font-size:2.8mm !important;
-          line-height:4mm !important;
-          text-align:justify !important;
-          margin-bottom:6mm !important;
-          max-height:48mm !important;
-          overflow:hidden !important;
-          word-break:break-word !important;
-        ">
-          ${formatTextForPDF(projectAboutLimited)}
-        </p></div>` : ''}
-
-        ${features.length ? `
-        <div>
-          <p style="font-size:3mm !important; font-weight:bold !important; margin-bottom:2mm !important; text-decoration: underline !important;">
-            Amenities & Features
-          </p>
-          ${featuresLimited.map(f => `
-            <span style="
-              display:inline-block !important;
-              background:#f5f5f5 !important;
-              border:1px solid #d7dedd !important;
-              border-radius:2mm !important;
-              padding:1.5mm 3mm !important;
-              font-size:2.8mm !important;
-              margin:0 2mm 2mm 0 !important;
-            ">
-              ${f}
-            </span>
-          `).join('')}
-        </div>` : ''}
-
+        ${features.map(f => `
+          <span style="
+            display:inline-block !important;
+            background:#f5f5f5 !important;
+            border:1px solid #d7dedd !important;
+            border-radius:2mm !important;
+            padding:1mm 4mm 2mm 4mm !important;
+            font-size:3mm !important;
+            margin:0 !important;
+          ">
+            ${f}
+          </span>
+        `).join('')}
       </div>
-
-      <!-- RIGHT -->
-      <div style="
-        width:50% !important;
-        height:100% !important;
-        overflow:hidden !important;
-      ">
-        ${projectImage ? `
-        <img src="${projectImage}" style="
-          width:100% !important;
-          height:100mm !important;
-          object-fit:cover !important;
-          border-radius:2mm !important;
-        " />` : ''}
-      </div>
-
     </div>
 
     ${createFooter()}
