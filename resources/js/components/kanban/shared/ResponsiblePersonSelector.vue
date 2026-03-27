@@ -12,80 +12,91 @@
                         />
                     </div>
                     <div class="responsible-info">
-                        <div class="info-row">
-                            <span class="info-label">Name</span>
-                            <span class="info-separator">:</span>
-                            <span class="info-value fw-bold">{{ currentResponsiblePerson?.name || '--' }}</span>
+                        <div class="info-value fw-bold">{{ currentResponsiblePerson?.name || '--' }}</div>
+                        <div class="info-subline">
+                            <span class="sub-key">Position:</span>
+                            <span class="sub-value">{{ positionName }}</span>
+                        </div>
+                        <div class="info-subline">
+                            <span class="sub-key">Parent:</span>
+                            <span class="sub-value">{{ parentName }}</span>
                         </div>
                     </div>
-                </div>
-                <div class="d-flex flex-column align-items-end gap-2">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="department-badge">
-                            Department : {{ departmentName  || 'Sales' }}
-                        </div>
-                        <b-dropdown 
-                            variant="link" 
-                            toggle-class="text-decoration-none p-0 no-caret-custom" 
-                            no-caret
-                            right
-                            class="change-person-dropdown"
-                            :show="dropdownShow"
-                            @update:show="dropdownShow = $event"
-                        >
-                            <template #button-content>
-                                <button class="btn-change-person">
-                                    Change Person
-                                    <iconify-icon icon="lucide:user-plus" class="ms-1"></iconify-icon>
+                    <b-dropdown 
+                        variant="link" 
+                        toggle-class="text-decoration-none p-0 no-caret-custom" 
+                        no-caret
+                        right
+                        class="change-person-dropdown"
+                        :show="dropdownShow"
+                        @update:show="dropdownShow = $event"
+                    >
+                        <template #button-content>
+                            <button class="btn-change-person">
+                                Change
+                                <iconify-icon icon="lucide:user-plus" class="ms-1"></iconify-icon>
+                            </button>
+                        </template>
+                        
+                        <div class="dropdown-search-wrapper p-3">
+                            <div class="d-flex align-items-center justify-content-between border-bottom mb-3">
+                                <span class="modal-title-dropdown">Change Responsible Person</span>
+                                <button class="close-btn-top" @click="dropdownShow = false">
+                                    <iconify-icon icon="lucide:x"></iconify-icon>
                                 </button>
-                            </template>
+                            </div>
+                            <div class="search-input-wrapper mb-3">
+                                <b-form-input 
+                                    v-model="searchQuery" 
+                                    placeholder="Search Person" 
+                                    class="dropdown-search-input"
+                                />
+                                <iconify-icon icon="lucide:search" class="search-icon"></iconify-icon>
+                            </div>
                             
-                            <div class="dropdown-search-wrapper p-3">
-                                <div class="d-flex align-items-center justify-content-between border-bottom mb-3">
-                                    <span class="modal-title-dropdown">Change Responsible Person</span>
-                                    <button class="close-btn-top" @click="dropdownShow = false">
-                                        <iconify-icon icon="lucide:x"></iconify-icon>
-                                    </button>
-                                </div>
-                                <div class="search-input-wrapper mb-3">
-                                    <b-form-input 
-                                        v-model="searchQuery" 
-                                        placeholder="Search Person" 
-                                        class="dropdown-search-input"
-                                    />
-                                    <iconify-icon icon="lucide:search" class="search-icon"></iconify-icon>
-                                </div>
-                                
-                                <div class="user-list-scroll">
-                                    <div 
-                                        v-for="user in filteredUsers" 
-                                        :key="user.id"
-                                        class="user-item d-flex align-items-center justify-content-between p-2"
-                                        @click="selectUser(user)"
-                                        :class="{ 'selected': modelValue === user.id }"
-                                    >
-                                        <div class="d-flex align-items-center gap-2">
-                                            <img 
-                                                :src="user.avatar || defaultAvatar" 
-                                                class="user-item-avatar" 
-                                            />
-                                            <div class="user-item-info">
+                            <div class="user-list-scroll">
+                                <div 
+                                    v-for="user in filteredUsers" 
+                                    :key="user.id"
+                                    class="user-item d-flex align-items-center justify-content-between p-2"
+                                    @click="selectUser(user)"
+                                    :class="{ 'selected': modelValue === user.id }"
+                                >
+                                    <div class="d-flex align-items-center gap-2">
+                                        <img 
+                                            :src="user.avatar || defaultAvatar" 
+                                            class="user-item-avatar" 
+                                        />
+                                        <div class="user-item-info">
+                                            <div class="user-item-head">
                                                 <div class="user-item-name">{{ user.name }}</div>
+                                                <span v-if="getUserPosition(user) !== '—'" class="user-position-badge">
+                                                    {{ getUserPosition(user) }}
+                                                </span>
+                                            </div>
+                                            <div class="user-item-meta-line">
+                                                <span class="meta-label">Parent:</span>
+                                                <span class="meta-value">{{ getUserParent(user) }}</span>
+                                                <span class="meta-divider">|</span>
+                                                <span class="meta-label">Branch:</span>
+                                                <span class="meta-value">{{ getUserBranch(user) }}</span>
                                             </div>
                                         </div>
-                                        <iconify-icon 
-                                            v-if="modelValue === user.id" 
-                                            icon="lucide:check" 
-                                            class="text-warning"
-                                        ></iconify-icon>
                                     </div>
-                                    <div v-if="filteredUsers.length === 0" class="text-center p-3 text-muted">
-                                        No persons found
-                                    </div>
+                                    <iconify-icon 
+                                        v-if="modelValue === user.id" 
+                                        icon="lucide:check" 
+                                        class="text-warning"
+                                    ></iconify-icon>
+                                </div>
+                                <div v-if="filteredUsers.length === 0" class="text-center p-3 text-muted">
+                                    No persons found
                                 </div>
                             </div>
-                        </b-dropdown>
-                    </div>
+                        </div>
+                    </b-dropdown>
+                </div>
+                <div class="d-flex flex-column align-items-end gap-2">
                     <div v-if="validationError" class="invalid-feedback d-block" style="margin-top: -8px;">
                         {{ validationError }}
                     </div>
@@ -157,8 +168,24 @@ const selectUser = (user) => {
     dropdownShow.value = false
     searchQuery.value = ''
 }
-const departmentName = computed(() => {
-    return currentResponsiblePerson.value?.role_name || 'Sales'
+const getUserPosition = (user) => {
+    return user?.position || user?.designation || user?.job_title || user?.role_name || '—'
+}
+
+const getUserParent = (user) => {
+    return user?.parent_name || user?.manager_name || user?.team_lead_name || user?.parent?.name || '—'
+}
+
+const getUserBranch = (user) => {
+    return user?.branch_name || user?.branch?.name || user?.office_name || user?.office?.name || '—'
+}
+
+const positionName = computed(() => {
+    return currentResponsiblePerson.value?.position || currentResponsiblePerson.value?.designation || currentResponsiblePerson.value?.job_title || currentResponsiblePerson.value?.role_name || '—'
+})
+
+const parentName = computed(() => {
+    return currentResponsiblePerson.value?.parent_name || currentResponsiblePerson.value?.manager_name || currentResponsiblePerson.value?.team_lead_name || currentResponsiblePerson.value?.parent?.name || '—'
 })
 </script>
 
@@ -190,41 +217,34 @@ const departmentName = computed(() => {
     font-size: 14px;
 }
 
-.info-row {
+.info-subline {
     display: flex;
     align-items: center;
-    margin-bottom: 4px;
+    gap: 6px;
+    margin-top: 2px;
+    font-size: 12px;
 }
 
-.info-label {
-    width: 60px;
+.sub-key {
     color: #64748B;
+    font-weight: 500;
 }
 
-.info-separator {
-    margin: 0 8px;
-    color: #64748B;
+.sub-value {
+    color: #334155;
+    font-weight: 600;
 }
 
 .info-value {
     color: #01062C;
 }
 
-.department-badge {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    padding: 8px 20px;
-    border-radius: 100px;
-    font-size: 13px;
-    color: #475569;
-}
-
 .btn-change-person {
     background:#FAA300;
     border: none;
-    padding: 8px 20px;
+    padding: 7px 14px;
     border-radius: 100px;
-    font-size: 14px;
+    font-size: 13px;
     color: #FFFFFF;
     display: flex;
     align-items: center;
@@ -335,6 +355,48 @@ const departmentName = computed(() => {
     font-size: 14px;
     color: #01062C;
     font-family: 'Montserrat';
+}
+
+.user-item-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-position-badge {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 999px;
+}
+
+.user-item-meta-line {
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    line-height: 1.3;
+    color: #64748b;
+    font-family: 'Montserrat';
+}
+
+.meta-label {
+    font-weight: 600;
+    color: #64748b;
+}
+
+.meta-value {
+    font-weight: 500;
+    color: #334155;
+}
+
+.meta-divider {
+    color: #cbd5e1;
 }
 
 .invalid-feedback {

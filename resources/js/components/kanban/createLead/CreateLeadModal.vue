@@ -462,6 +462,18 @@ const showAdditionalPanel = ref(false)
 const areas = ref([])
 const isLoadingAreas = ref(false)
 const propertyTypeOptions = ref([])
+const getLoggedInUserId = () => {
+    try {
+        const raw = localStorage.getItem('user') || localStorage.getItem('auth_user') || localStorage.getItem('currentUser')
+        if (!raw) return null
+        const parsed = JSON.parse(raw)
+        const id = Number(parsed?.id)
+        return Number.isFinite(id) ? id : null
+    } catch (error) {
+        return null
+    }
+}
+const loggedInUserId = getLoggedInUserId()
 const locationFirstLine = (area) => {
     return area.name || ''
 }
@@ -511,6 +523,14 @@ const fetchUsers = async () => {
         const response = await api.get('/available-responsible-persons')
         if (response.data && (response.data.data || response.data).length > 0) {
             users.value = response.data.data || response.data
+            const defaultUser =
+                users.value.find((user) => Number(user.id) === Number(loggedInUserId)) ||
+                users.value.find((user) => Number(user.id) === Number(form.value.responsible_person_id))
+
+            if (defaultUser) {
+                form.value.responsible_person_id = defaultUser.id
+                form.value.responsible_person = defaultUser
+            }
         }
     } catch (error) {
         console.error('Error fetching users:', error)
@@ -539,7 +559,7 @@ const form = ref({
     source_information: '',
     bedrooms: null,
     purpose_buying: null,
-    responsible_person_id: 1, // Default or selected
+    responsible_person_id: loggedInUserId, // Default logged-in user
     // responsible_person: {
     //     id: 1,
     //     name: 'Ahmad Mahfoz',
@@ -823,6 +843,7 @@ watch(() => form.value.responsible_person_id, () => {
 })
 
 const resetForm = () => {
+    const defaultUser = users.value.find((user) => Number(user.id) === Number(loggedInUserId)) || null
     form.value = {
         lead_name: '',
         stage_id: null,
@@ -838,7 +859,8 @@ const resetForm = () => {
         source_information: '',
         bedrooms: null,
         purpose_buying: null,
-        responsible_person_id: 1,
+        responsible_person_id: defaultUser?.id || loggedInUserId,
+        responsible_person: defaultUser,
         budget: null,
         currency: "AED",
         area_id: null,
