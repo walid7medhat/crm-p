@@ -4313,62 +4313,9 @@ const createSlide7ProjectDetails = () => {
           ">${formatTextForPDF(projectAboutLimited)}</p>
         </div>` : ''}
 
-        <!-- USP SECTION -->
-      <!--  <div style="margin-bottom:4mm;">
-          <div style="display:flex; align-items:center; gap:2mm; margin-bottom:2mm;">
-            <div style="width:2mm; height:2mm; border-radius:50%; background:#faa300; flex-shrink:0;"></div>
-            <span style="font-size:3mm; font-weight:bold; color:#1c2230;">Unique Selling Proposition</span>
-          </div>
-          <div style="padding-left:3mm;">
-            <div style="display:flex; align-items:flex-start; gap:2mm; margin-bottom:1.5mm;">
-              <span style="color:#faa300; font-size:3mm; line-height:4mm; flex-shrink:0;">&#10003;</span>
-              <span style="font-size:2.6mm; line-height:4mm; color:#444;">Direct access to premier amenities with stunning views.</span>
-            </div>
-            <div style="display:flex; align-items:flex-start; gap:2mm; margin-bottom:1.5mm;">
-              <span style="color:#faa300; font-size:3mm; line-height:4mm; flex-shrink:0;">&#10003;</span>
-              <span style="font-size:2.6mm; line-height:4mm; color:#444;">Purpose-built community with furnished options and smart access.</span>
-            </div>
-            <div style="display:flex; align-items:flex-start; gap:2mm;">
-              <span style="color:#faa300; font-size:3mm; line-height:4mm; flex-shrink:0;">&#10003;</span>
-              <span style="font-size:2.6mm; line-height:4mm; color:#444;">Walking distance to major retail and leisure destinations.</span>
-            </div>
-          </div>
-        </div>-->
+   
 
-        <!-- EST. DAILY RATES TABLE -->
-    <!--    <div style="
-          border:0.4mm solid #e0e0e0; border-radius:2mm;
-          overflow:hidden; font-size:2.6mm;
-        ">
-          <div style="
-            background:#f7f7f7; padding:2mm 3mm;
-            display:flex; justify-content:space-between; align-items:center;
-            border-bottom:0.4mm solid #e0e0e0;
-          ">
-            <span style="font-weight:bold; color:#1c2230; font-size:2.8mm;">Est. Daily Rates (AED)</span>
-            <span style="font-size:2.3mm; color:#888;">Seasonality: Peak Winter &amp; F1</span>
-          </div>
-          <div style="
-            display:flex; padding:1.5mm 3mm;
-            border-bottom:0.4mm solid #e0e0e0;
-            background:#ffffff;
-          ">
-            <span style="width:40%; font-size:2.3mm; color:#888; letter-spacing:0.2mm;">UNIT TYPE</span>
-            <span style="width:30%; font-size:2.3mm; color:#2e7d52; font-weight:bold; letter-spacing:0.2mm;">LOW SEASON</span>
-            <span style="width:30%; font-size:2.3mm; color:#faa300; font-weight:bold; letter-spacing:0.2mm;">HIGH SEASON</span>
-          </div>
-          <div style="display:flex; padding:1.5mm 3mm; border-bottom:0.4mm solid #f0f0f0;">
-            <span style="width:40%; font-size:2.6mm; color:#1c2230; font-weight:bold;">Studio / 1BR</span>
-            <span style="width:30%; font-size:2.6mm; color:#555;">400 - 550</span>
-            <span style="width:30%; font-size:2.6mm; color:#faa300; font-weight:bold;">750 - 1,200</span>
-          </div>
-          <div style="display:flex; padding:1.5mm 3mm; border-bottom:0.4mm solid #f0f0f0;">
-            <span style="width:40%; font-size:2.6mm; color:#1c2230; font-weight:bold;">2 Bedroom</span>
-            <span style="width:30%; font-size:2.6mm; color:#555;">700 - 950</span>
-            <span style="width:30%; font-size:2.6mm; color:#faa300; font-weight:bold;">1,300 - 1,800</span>
-          </div>
-        </div>
-        -->
+     
 
       </div>
     </div>
