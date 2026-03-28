@@ -31,10 +31,10 @@
                             <span class="lead-created-label">Lead Branch Source :</span>
                             <span class="lead-created-value">{{ branch }}</span>
                         </div>
-                         <div v-if="branchOffice" class="lead-created-row">
-                            <span class="lead-created-label">Lead Branch :</span>
-                            <span class="lead-created-value">{{ branchOffice }}</span>
-                        </div>
+                        <!-- <div v-if="branchOffice" class="lead-created-row">-->
+                        <!--    <span class="lead-created-label">Lead Branch :</span>-->
+                        <!--    <span class="lead-created-value">{{ branchOffice }}</span>-->
+                        <!--</div>-->
                         
                     </div>
                     <div

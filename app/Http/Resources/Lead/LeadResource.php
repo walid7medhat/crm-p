@@ -139,7 +139,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
         ? json_decode($this->raw_meta_data, true) 
         : $this->raw_meta_data;
     
-    $basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone', 'work_phone_number', 'phone_number', 'full name', 'first_name', 'last_name', 'Page_Name', 'form_name', 'form_id', 'No_Label_name', 'No_Label_email', 'No_Label_phone'];
+    $basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone', 'work_phone_number', 'phone_number', 'full name', 'first_name', 'last_name','Date','Time', 'Page_Name', 'form_name', 'form_id', 'No_Label_name', 'No_Label_email', 'No_Label_phone'];
     
     $facebookFields = [];
     

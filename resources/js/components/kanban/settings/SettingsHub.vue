@@ -5,10 +5,10 @@
         <h6 class="settings-hub-title">Settings System</h6>
         <p class="settings-hub-subtitle">Choose a section to configure your Kanban experience.</p>
       </div>
-      <div class="settings-hub-badge">
-        <iconify-icon icon="lucide:settings-2" class="badge-icon" />
-        Unified UI
-      </div>
+      <!--<div class="settings-hub-badge">-->
+      <!--  <iconify-icon icon="lucide:settings-2" class="badge-icon" />-->
+      <!--  Unified UI-->
+      <!--</div>-->
 
       <button
         type="button"

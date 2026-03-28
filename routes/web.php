@@ -89,6 +89,27 @@ Route::post('/test-broadcast-auth', function (\Illuminate\Http\Request $request)
     }
 })->middleware('auth:api');
 
+
+Route::get('/build-assets', function () {
+    if (request('key') !== 'secret_private_123') {
+        abort(403);
+    }
+
+ $nodePath = '/home/oiapr/.nvm/versions/node/v18.20.8/bin';
+
+    $command = "export PATH=$nodePath:\$PATH && cd /home/oiapr/listings.oiaproperties.com && npm run build 2>&1";
+
+    exec($command, $output, $code);
+
+    return response()->json([
+        'success' => $code === 0,
+        'code' => $code,
+        'output' => $output
+    ]);
+  
+});
+
+
 Route::get('/test-event', function () {
     try {
         $user = \App\Models\User::find(1);

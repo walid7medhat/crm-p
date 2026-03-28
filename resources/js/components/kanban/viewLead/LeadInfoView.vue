@@ -57,11 +57,7 @@
                     </span>
                 </div>
             </div>
-        </div>
-
-        <div class="info-section">
-            <div class="info-section-title">More Information</div>
-            <div class="info-group" v-if="lead?.bedrooms">
+             <div class="info-group" v-if="lead?.bedrooms">
                 <label class="form-label-custom">Bedrooms</label>
                 <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
             </div>
@@ -81,9 +77,14 @@
                 <label class="form-label-custom">Budget</label>
                 <div class="info-value">{{ lead?.budget != null ? lead.budget : '—' }} {{ lead?.currency || '' }}</div>
             </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">More Information</div>
+           
             <template v-if="hasAdditionalFacebookQuestions">
                 <div class="info-group" v-for="(answer, question) in facebookQuestions" :key="question">
-                    <label class="form-label-custom">{{ formatQuestion(question) }}</label>
+                    <!--<label class="form-label-custom">{{ formatQuestion(question) }}</label>-->
                     <div class="info-value ">
                         <a v-if="question === 'link' || question === 'Page_URL' || question ==='inbox_url'" :href="answer" target="_blank" class="facebook-link">
                             {{ answer }}
@@ -419,7 +420,7 @@ const formatQuestion = (question) => {
 }
 
 // Basic fields for Facebook questions
-const basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone','work_phone_number','phone_number','full name', 'first_name', 'last_name','Page_Name','form_name','form_id','No_Label_name','No_Label_email','No_Label_phone']
+const basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone','work_phone_number','phone_number','full name', 'first_name', 'last_name','Date','Time','Page_Name','form_name','form_id','No_Label_name','No_Label_email','No_Label_phone']
 
 // Facebook questions computed
 const facebookQuestions = computed(() => {
