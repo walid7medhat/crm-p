@@ -120,7 +120,7 @@
                         v-if="lead?.responsible_person?.avatar" 
                         :src="lead?.responsible_person?.avatar" 
                         class="avatar-md rounded-circle" 
-                        :title="lead?.responsible_person?.name"
+                        
                     />
                     <div v-else class="avatar-placeholder">
                         <iconify-icon icon="lucide:user" class="avatar-icon"></iconify-icon>
@@ -532,7 +532,7 @@ const hasAdditionalFacebookQuestions = computed(() => {
     top: 50%;
     left: calc(100% + 10px);
     transform: translateY(-50%);
-    width: 220px;
+    width: 200px;
     z-index: 1200;
     border-radius: 12px;
     border: 1px solid #dbe3ef;

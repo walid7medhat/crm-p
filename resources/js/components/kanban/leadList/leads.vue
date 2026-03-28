@@ -99,10 +99,14 @@
                                                  <div class="task-info">
                                                         <!-- عرض الفيلدات حسب الإعدادات والترتيب -->
                                                         <template v-for="field in enabledFieldsForColumn(column, task)" :key="field.key">
-                                                            <!-- Created By / Date -->
-                                                            <div v-if="field.key === 'created_by' || field.key === 'created_at'" 
+                                                            <div v-if="field.key === 'created_by' " 
                                                                  class="info-item date-info d-flex align-items-center gap-1 mb-8">
                                                                 <span v-if="field.key === 'created_by'">Created :</span>
+                                                                <span>{{ formatDate(task.created_at) }}</span>
+                                                            </div>
+                                                            <!-- Created By / Date -->
+                                                            <div v-else-if=" field.key === 'created_at'" 
+                                                                 class="info-item date-info d-flex align-items-center gap-1 mb-8">
                                                                 <span>{{ formatDate(task.created_at) }}</span>
                                                             </div>
                                                             
@@ -169,7 +173,7 @@
                                                                         @mouseenter.stop="showPersonHoverCard(task, 'responsible')"
                                                                         @mouseleave.stop="hidePersonHoverCard"
                                                                     >
-                                                                        <img v-if="task.responsible_person?.avatar" :title="task.responsible_person?.name" :src="task.responsible_person.avatar" alt="" class="avatar-sm rounded-circle" />
+                                                                        <img v-if="task.responsible_person?.avatar"  :src="task.responsible_person.avatar" alt="" class="avatar-sm rounded-circle" />
                                                                         <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
                                                                             <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
                                                                         </div>
@@ -219,7 +223,7 @@
                                                                         @mouseenter.stop="showPersonHoverCard(task, 'assigned')"
                                                                         @mouseleave.stop="hidePersonHoverCard"
                                                                     >
-                                                                        <img v-if="task?.parent?.avatar" :src="task.parent.avatar"  :title="task.parent.name" alt="" class="avatar-sm rounded-circle" />
+                                                                        <img v-if="task?.parent?.avatar" :src="task.parent.avatar"   alt="" class="avatar-sm rounded-circle" />
                                                                         <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
                                                                             <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
                                                                         </div>
@@ -2467,7 +2471,7 @@ const $showNotification = (message, type = 'info') => {
     position: absolute;
     top: calc(100% + 8px);
     left: -10px;
-    width: 230px;
+    width: 200px;
     z-index: 60;
     border-radius: 12px;
     border: 1px solid #dbe3ef;
