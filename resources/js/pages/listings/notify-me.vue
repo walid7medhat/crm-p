@@ -205,7 +205,7 @@ async function submit() {
   background: #ffffff;
   border-radius: 16px;
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.22);
-  overflow: hidden;
+  /*overflow: hidden;*/
   display: flex;
   flex-direction: column;
 }
@@ -246,7 +246,7 @@ async function submit() {
 
 .notifyme-body {
   padding: 14px 18px 10px;
-  overflow: auto;
+  /*overflow: auto;*/
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
@@ -311,7 +311,10 @@ async function submit() {
 .notifyme-submit {
   min-width: 190px;
 }
-
+:deep(.vs__dropdown-menu) {
+  max-height: 200px;
+  overflow-y: auto;
+}
 /* Hide unwanted parts of the existing SearchBar inside this modal */
 :deep(.secondary-filters) {
   display: none !important;

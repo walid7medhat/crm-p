@@ -217,7 +217,8 @@ function persistLocalStatuses() {
 async function fetchConversations(page = 1) {
   loading.value = true
   try {
-    const endpoint = isSuperAdmin.value ? '/chat/admin/conversations' : '/chat/conversations'
+    // const endpoint = isSuperAdmin.value ? '/chat/admin/conversations' : '/chat/conversations'
+    const endpoint = '/chat/admin/conversations' 
     const res = await api.get(endpoint, {
       params: { page, per_page: 200 }
     })

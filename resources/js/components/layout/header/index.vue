@@ -450,9 +450,9 @@ const isAdmin = computed(() => {
 
 const isCustomAdmin = computed(() => {
   if (!user.value) return false;
-  
+   const userId = Number(user.value.id);
   const isAdminUser = user.value.roles?.includes('super_admin') || 
-                     (user.value.roles?.includes('admin') && ( user.value.id==30 || user.value.id==33));
+                     (user.value.roles?.includes('admin') && ( userId==30 || userId==33));
   
   return isAdminUser;
 });
