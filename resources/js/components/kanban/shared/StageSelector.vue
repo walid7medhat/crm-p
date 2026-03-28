@@ -1,28 +1,62 @@
 <template>
     <div class="stage-selector-wrapper py-3 pb-0">
-        <div ref="scrollContainerRef" class="stage-container" @wheel.prevent="handleWheelScroll">
-            <template v-for="(stage, index) in stages" :key="stage.id">
-                <div
-                    class="stage-pill"
-                    :class="{ active: index <= selectedStageIndex }"
-                    :style="{
-                        backgroundColor: index <= selectedStageIndex ? stage.color : 'transparent',
-                        borderColor: index <= selectedStageIndex ? stage.color : '#E2E8F0',
-                        zIndex: stages.length - index,
-                    }"
-                    @click="selectStage(index)"
-                >
-                    <span class="stage-text" :title="stage.name">
-                        {{ stage.name }}
-                    </span>
-                </div>
-            </template>
+        <!-- Track = exact height of pills row so arrows align vertically in the middle -->
+        <div class="stage-selector-track">
+            <div
+                ref="scrollContainerRef"
+                class="stage-container"
+                @wheel.prevent="handleWheelScroll"
+                @scroll.passive="updateScrollAffordance"
+            >
+                <template v-for="(stage, index) in stages" :key="stage.id">
+                    <div
+                        class="stage-pill"
+                        :class="{ active: index <= selectedStageIndex }"
+                        :style="{
+                            backgroundColor: index <= selectedStageIndex ? stage.color : 'transparent',
+                            borderColor: index <= selectedStageIndex ? stage.color : '#E2E8F0',
+                            zIndex: stages.length - index,
+                        }"
+                        @click="selectStage(index)"
+                    >
+                        <span class="stage-text" :title="stage.name">
+                            {{ stage.name }}
+                        </span>
+                    </div>
+                </template>
+            </div>
+            <button
+                v-show="canScrollLeft"
+                type="button"
+                class="scroll-hover-edge scroll-hover-edge--left"
+                aria-label="Scroll stages left"
+                @mouseenter="startEdgeScroll('left')"
+                @mouseleave="stopEdgeScroll"
+                @click.prevent.stop="scrollArrowClick('left')"
+            >
+                <span class="scroll-edge-inner">
+                    <iconify-icon icon="lucide:chevron-left" class="scroll-edge-icon" />
+                </span>
+            </button>
+            <button
+                v-show="canScrollRight"
+                type="button"
+                class="scroll-hover-edge scroll-hover-edge--right"
+                aria-label="Scroll stages right"
+                @mouseenter="startEdgeScroll('right')"
+                @mouseleave="stopEdgeScroll"
+                @click.prevent.stop="scrollArrowClick('right')"
+            >
+                <span class="scroll-edge-inner">
+                    <iconify-icon icon="lucide:chevron-right" class="scroll-edge-icon" />
+                </span>
+            </button>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import api from '@/plugins/axios'
 
 const props = defineProps({
@@ -36,6 +70,12 @@ const emit = defineEmits(['update:modelValue'])
 
 const stages = ref([])
 const scrollContainerRef = ref(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
+let edgeScrollRafId = null
+/** Hover edge: slow continuous scroll */
+const EDGE_SCROLL_SLOW_PX = 4
+
 const colors = ['#7BD3EA', '#E3DA32', '#F2C934', '#8EC82F', '#00A74C']
 
 const getUserFromStorage = () => {
@@ -60,14 +100,77 @@ function getColorByIndex(index) {
     return colors[index % colors.length]
 }
 
+const updateScrollAffordance = () => {
+    const el = scrollContainerRef.value
+    if (!el) {
+        canScrollLeft.value = false
+        canScrollRight.value = false
+        return
+    }
+    const { scrollLeft, scrollWidth, clientWidth } = el
+    const max = Math.max(0, scrollWidth - clientWidth)
+    const eps = 2
+    canScrollLeft.value = scrollLeft > eps
+    canScrollRight.value = max > eps && scrollLeft < max - eps
+}
+
+const stopEdgeScroll = () => {
+    if (edgeScrollRafId != null) {
+        cancelAnimationFrame(edgeScrollRafId)
+        edgeScrollRafId = null
+    }
+}
+
+const scrollArrowClick = (direction) => {
+    const el = scrollContainerRef.value
+    if (!el) return
+    const jump = Math.max(160, Math.round(el.clientWidth * 0.4))
+    el.scrollBy({
+        left: direction === 'right' ? jump : -jump,
+        behavior: 'auto',
+    })
+    nextTick(updateScrollAffordance)
+}
+
+const startEdgeScroll = (direction) => {
+    stopEdgeScroll()
+    const step = () => {
+        const el = scrollContainerRef.value
+        if (!el) {
+            stopEdgeScroll()
+            return
+        }
+        const max = el.scrollWidth - el.clientWidth
+        if (direction === 'right') {
+            if (el.scrollLeft >= max - 0.5) {
+                stopEdgeScroll()
+                updateScrollAffordance()
+                return
+            }
+            el.scrollBy({ left: EDGE_SCROLL_SLOW_PX, behavior: 'auto' })
+        } else {
+            if (el.scrollLeft <= 0.5) {
+                stopEdgeScroll()
+                updateScrollAffordance()
+                return
+            }
+            el.scrollBy({ left: -EDGE_SCROLL_SLOW_PX, behavior: 'auto' })
+        }
+        updateScrollAffordance()
+        edgeScrollRafId = requestAnimationFrame(step)
+    }
+    edgeScrollRafId = requestAnimationFrame(step)
+}
+
 const scrollSelectedIntoView = () => {
     const el = scrollContainerRef.value
     if (!el || selectedStageIndex.value < 0) return
     const pills = el.querySelectorAll('.stage-pill')
     const selected = pills[selectedStageIndex.value]
     if (selected?.scrollIntoView) {
-        selected.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+        selected.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' })
     }
+    nextTick(updateScrollAffordance)
 }
 
 // Function to auto-select stage based on user role
@@ -142,6 +245,10 @@ const fetchStages = async () => {
         // Auto-select after stages are loaded ONLY if no value is set
         autoSelectStage()
 
+        nextTick(() => {
+            updateScrollAffordance()
+        })
+
     } catch (error) {
         console.error('Error fetching stages:', error)
         console.error('Error response:', error.response?.data)
@@ -198,13 +305,27 @@ const handleWheelScroll = (event) => {
 watch(selectedStageIndex, () => {
     nextTick(() => {
         scrollSelectedIntoView()
+        updateScrollAffordance()
     })
+})
+
+watch(() => stages.value.length, () => {
+    nextTick(updateScrollAffordance)
 })
 
 onMounted(() => {
     console.log('StageSelector mounted')
     fetchStages()
-    nextTick(scrollSelectedIntoView)
+    nextTick(() => {
+        scrollSelectedIntoView()
+        updateScrollAffordance()
+    })
+    window.addEventListener('resize', updateScrollAffordance)
+})
+
+onUnmounted(() => {
+    stopEdgeScroll()
+    window.removeEventListener('resize', updateScrollAffordance)
 })
 </script>
 
@@ -217,7 +338,14 @@ onMounted(() => {
     overflow: hidden;
 }
 
+.stage-selector-track {
+    position: relative;
+    isolation: isolate;
+}
+
 .stage-container {
+    position: relative;
+    z-index: 0;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -225,10 +353,72 @@ onMounted(() => {
     box-shadow: 1px 1px 5px 5px #00000005;
     width: 100%;
     min-width: 0;
-    overflow-x: scroll;
+    overflow-x: auto;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
+}
+
+/* Full row height + flex center = vertically aligned with stage pills */
+.scroll-hover-edge {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 48px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    border: none;
+    cursor: pointer;
+    background: transparent;
+    color: #334155;
+}
+
+.scroll-hover-edge:hover .scroll-edge-inner {
+    border-color: rgba(250, 163, 0, 0.55);
+    background: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 18px rgba(1, 6, 44, 0.08);
+    color: #01062c;
+}
+
+.scroll-hover-edge:active .scroll-edge-inner {
+    transform: scale(0.94);
+}
+
+.scroll-hover-edge--left {
+    left: 0;
+    justify-content: flex-start;
+    padding-left: 2px;
+}
+
+.scroll-hover-edge--right {
+    right: 0;
+    justify-content: flex-end;
+    padding-right: 2px;
+}
+
+/* Glass pill: transparent fill + crisp border */
+.scroll-edge-inner {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid rgba(226, 232, 240, 0.95);
+    background: rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 14px rgba(15, 23, 42, 0.06);
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.scroll-edge-icon {
+    font-size: 20px;
+    flex-shrink: 0;
 }
 
 .stage-container::-webkit-scrollbar-button {
@@ -265,7 +455,7 @@ onMounted(() => {
     padding: 4px 11px;
     border-radius: 30px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease;
     position: relative;
     overflow: hidden;
     border: 1px solid transparent;

@@ -204,11 +204,18 @@
                                         <div class="task-info">
                                             <template v-for="field in enabledFields" :key="field.key">
                                                 <div
-                                                    v-if="field.key === 'created_by' || field.key === 'created_at'"
+                                                    v-if="field.key === 'created_at'"
                                                     class="info-item date-info d-flex align-items-center gap-1 mb-8"
                                                 >
-                                                    <span v-if="field.key === 'created_by'">Created By</span>
+                                                    <span class="text-secondary-light text-xs">Created</span>
                                                     <span>{{ formatPreviewDate(previewTask.created_at) }}</span>
+                                                </div>
+                                                <div
+                                                    v-else-if="field.key === 'created_by'"
+                                                    class="info-item mb-8"
+                                                >
+                                                    <div class="info-label text-secondary-light text-xs">Created By</div>
+                                                    <div class="info-value">{{ previewTask.added_by_user?.name || '—' }}</div>
                                                 </div>
 
                                                 <div v-else-if="field.key === 'first_name'" class="info-item mb-8">
@@ -468,6 +475,8 @@ const previewTask = computed(() => {
         lead_name: 'Mamsha Gardens Plot #A-102',
         duplicate_no: 2,
         created_at: new Date().toISOString(),
+        added_by: 1,
+        added_by_user: { name: 'Example Creator' },
         assigned_at: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
         salutation: 'Mr.',
         first_name: 'Ahmed',

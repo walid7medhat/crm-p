@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\InvestmentController;
 use App\Http\Controllers\Api\CityInvestmentSettingsController;
 use App\Http\Controllers\Api\AbuDhabiBenchmarkController;
 use App\Http\Controllers\Api\AdminEmailController;
+use App\Http\Controllers\Api\PasswordResetController;
 Route::get('/test-email', function () {
     try {
         // Test basic email
@@ -133,6 +134,8 @@ Route::post('/website-lead/wordpress', [IntegrationController::class, 'store_wor
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
+    Route::post('forgot-password', [PasswordResetController::class, 'forgotPassword']);
+    Route::post('reset-password', [PasswordResetController::class, 'resetPassword']);
     Route::get('users/role/{role}', [UserController::class, 'getByRole']);
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);

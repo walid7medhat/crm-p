@@ -1,17 +1,17 @@
 {
   "_App-!~{004}~.js": {
-    "file": "assets/App.Ch5854Yu.css",
+    "file": "assets/App.CwQ0C8zh.css",
     "src": "_App-!~{004}~.js"
   },
-  "_App-CijSTteC.js": {
-    "file": "assets/App-CijSTteC.js",
+  "_App-CkHWEgKG.js": {
+    "file": "assets/App-CkHWEgKG.js",
     "name": "App",
     "css": [
-      "assets/App.Ch5854Yu.css"
+      "assets/App.CwQ0C8zh.css"
     ]
   },
-  "_html2canvas-Dozw8O4g.js": {
-    "file": "assets/html2canvas-Dozw8O4g.js",
+  "_html2canvas-BDltrK2O.js": {
+    "file": "assets/html2canvas-BDltrK2O.js",
     "name": "html2canvas",
     "isDynamicEntry": true,
     "imports": [
@@ -19,13 +19,13 @@
     ]
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-Bt8DdMtG.js",
+    "file": "assets/index.es-CN2MpIPN.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/main.js",
-      "_App-CijSTteC.js"
+      "_App-CkHWEgKG.js"
     ]
   },
   "node_modules/dompurify/dist/purify.es.mjs": {
@@ -35,17 +35,17 @@
     "isDynamicEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app.DxbIWzIC.css",
+    "file": "assets/app.q4D8kA-h.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-DdE8ONLt.js",
+    "file": "assets/app-DdUurjuT.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_App-CijSTteC.js"
+      "_App-CkHWEgKG.js"
     ]
   },
   "resources/js/assets/images/a.jpeg": {
@@ -181,20 +181,20 @@
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/main.js": {
-    "file": "assets/main-qHxJpinz.js",
+    "file": "assets/main-CFSgNMiW.js",
     "name": "main",
     "src": "resources/js/main.js",
     "isEntry": true,
     "imports": [
-      "_App-CijSTteC.js"
+      "_App-CkHWEgKG.js"
     ],
     "dynamicImports": [
-      "_html2canvas-Dozw8O4g.js",
+      "_html2canvas-BDltrK2O.js",
       "node_modules/dompurify/dist/purify.es.mjs",
       "node_modules/canvg/lib/index.es.js"
     ],
     "css": [
-      "assets/main.BqSt4IJ2.css"
+      "assets/main.DmjPCDuu.css"
     ],
     "assets": [
       "assets/flag1.CFmrKp4B.png",

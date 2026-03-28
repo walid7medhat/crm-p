@@ -4,9 +4,7 @@
 <script>
 import ResetPassword from '@/components/Authentication/ResetPassword.vue'
 export default {
-    name: "ResetPassword",
-    components: {
-        ResetPassword,
-    },
+    name: 'ResetPasswordPage',
+    components: { ResetPassword },
 }
 </script>

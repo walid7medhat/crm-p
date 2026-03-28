@@ -123,8 +123,8 @@ const routes = [
 
   { path: '/sign-in', component: SignIn, name: 'login', meta: { layout: false, requiresAuth: false } },
   { path: '/sign-up', component: SignUp, meta: { layout: false, requiresAuth: false } },
-  { path: '/reset-password',name:"reset-password",component :ResetPassword, meta: { layout: false, requiresAuth: false }},
-  { path: '/forgot-password',component :ForgotPassword,  meta: { layout: false, requiresAuth: false }},
+  { path: '/forgot-password', component: ForgotPassword, meta: { layout: false, requiresAuth: false } },
+  { path: '/reset-password', name: 'reset-password', component: ResetPassword, meta: { layout: false, requiresAuth: false } },
 
   { path: '/developers', component: DevelopersList, meta: { requiresAuth: true } },
   { path: '/add-developer', component: AddDeveloper, meta: { requiresAuth: true } },
@@ -322,7 +322,7 @@ router.beforeEach((to, from, next) => {
   if (to.path === '/sign-in' && isValidToken) {
     console.log('User authenticated, redirecting to home')
     next('/')
-  } else if ((to.path === '/sign-up' || to.path === '/forgot-password') && isValidToken) {
+  } else if ((to.path === '/sign-up' || to.path === '/forgot-password' || to.path === '/reset-password') && isValidToken) {
     console.log('User authenticated, redirecting from auth pages to home')
     next('/')
   } else {

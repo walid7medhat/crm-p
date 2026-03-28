@@ -99,15 +99,21 @@
                                                  <div class="task-info">
                                                         <!-- عرض الفيلدات حسب الإعدادات والترتيب -->
                                                         <template v-for="field in enabledFieldsForColumn(column, task)" :key="field.key">
-                                                            <div v-if="field.key === 'created_by' " 
-                                                                 class="info-item date-info d-flex align-items-center gap-1 mb-8">
-                                                                <span v-if="field.key === 'created_by'">Created :</span>
+                                                            <!-- Created at (timestamp) — API: created_at -->
+                                                            <div
+                                                                v-if="field.key === 'created_at'"
+                                                                class="info-item date-info d-flex align-items-center gap-1 mb-8"
+                                                            >
+                                                                <span class="text-secondary-light text-xs">Created</span>
                                                                 <span>{{ formatDate(task.created_at) }}</span>
                                                             </div>
-                                                            <!-- Created By / Date -->
-                                                            <div v-else-if=" field.key === 'created_at'" 
-                                                                 class="info-item date-info d-flex align-items-center gap-1 mb-8">
-                                                                <span>{{ formatDate(task.created_at) }}</span>
+                                                            <!-- Created by (person) — settings key created_by maps to added_by / added_by_user on lead -->
+                                                            <div
+                                                                v-else-if="field.key === 'created_by'"
+                                                                class="info-item mb-8"
+                                                            >
+                                                                <div class="info-label text-secondary-light text-xs">Created By</div>
+                                                                <div class="info-value">{{ getCreatedByDisplay(task) }}</div>
                                                             </div>
                                                             
                                                             <!-- First Name -->
@@ -1217,7 +1223,24 @@ const isPersonHoverVisible = (task, type) => {
     return activePersonHover.value?.leadId === task?.id && activePersonHover.value?.type === type
 }
 
+const getCreatedByDisplay = (task) => {
+    const u = task?.added_by_user
+    if (u?.name) return u.name
+    if (typeof u === 'string' && u.trim()) return u.trim()
+    if (task?.added_by != null && task?.added_by !== '') {
+        return String(task.added_by)
+    }
+    return '—'
+}
+
 const hasDynamicFieldValue = (task, key) => {
+    if (key === 'created_by') {
+        return !!(
+            task?.added_by_user?.name ||
+            (typeof task?.added_by_user === 'object' && task.added_by_user && Object.keys(task.added_by_user).length > 0) ||
+            (task?.added_by != null && task?.added_by !== '')
+        )
+    }
     const value = task?.[key]
     if (value == null) return false
     if (typeof value === 'string') return value.trim().length > 0
@@ -1227,6 +1250,9 @@ const hasDynamicFieldValue = (task, key) => {
 }
 
 const getDynamicFieldDisplay = (task, key) => {
+    if (key === 'created_by') {
+        return getCreatedByDisplay(task)
+    }
     const value = task?.[key]
     if (value == null) return '—'
     if (key === 'email') return formatMaskedEmail(value)

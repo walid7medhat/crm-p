@@ -50,7 +50,7 @@
           </div>
          
 
-          <div class="d-flex justify-content-between gap-2">
+          <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
             <div class="form-check style-check d-flex align-items-center">
               <input
                 class="form-check-input border border-neutral-300 "
@@ -60,10 +60,9 @@
               />
               <label class="form-check-label text-white" for="remember">Remember me</label>
             </div>
-             <router-link to="/forgot-password" class="text-white small">
-              Forgot Password?
+            <router-link to="/forgot-password" class="text-white fw-semibold text-sm text-decoration-none">
+              Forgot password?
             </router-link>
-          
           </div>
 
           <button
