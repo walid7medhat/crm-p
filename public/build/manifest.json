@@ -1,17 +1,17 @@
 {
   "_App-!~{004}~.js": {
-    "file": "assets/App.B1KfmRqU.css",
+    "file": "assets/App.Ch5854Yu.css",
     "src": "_App-!~{004}~.js"
   },
-  "_App-B4xm_InH.js": {
-    "file": "assets/App-B4xm_InH.js",
+  "_App-CijSTteC.js": {
+    "file": "assets/App-CijSTteC.js",
     "name": "App",
     "css": [
-      "assets/App.B1KfmRqU.css"
+      "assets/App.Ch5854Yu.css"
     ]
   },
-  "_html2canvas-CBwchRBi.js": {
-    "file": "assets/html2canvas-CBwchRBi.js",
+  "_html2canvas-Dozw8O4g.js": {
+    "file": "assets/html2canvas-Dozw8O4g.js",
     "name": "html2canvas",
     "isDynamicEntry": true,
     "imports": [
@@ -19,13 +19,13 @@
     ]
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-BlonJv1F.js",
+    "file": "assets/index.es-Bt8DdMtG.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/main.js",
-      "_App-B4xm_InH.js"
+      "_App-CijSTteC.js"
     ]
   },
   "node_modules/dompurify/dist/purify.es.mjs": {
@@ -40,25 +40,17 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-BY6RjnFS.js",
+    "file": "assets/app-DdE8ONLt.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_App-B4xm_InH.js"
+      "_App-CijSTteC.js"
     ]
   },
   "resources/js/assets/images/a.jpeg": {
     "file": "assets/a.CNSB645Y.jpeg",
     "src": "resources/js/assets/images/a.jpeg"
-  },
-  "resources/js/assets/images/auth/envelop-icon.png": {
-    "file": "assets/envelop-icon.BC-dOgaD.png",
-    "src": "resources/js/assets/images/auth/envelop-icon.png"
-  },
-  "resources/js/assets/images/auth/forgot-pass-img.png": {
-    "file": "assets/forgot-pass-img.BLwoaPgo.png",
-    "src": "resources/js/assets/images/auth/forgot-pass-img.png"
   },
   "resources/js/assets/images/avatar/avatar1.png": {
     "file": "assets/avatar1.scz5y5rp.png",
@@ -189,20 +181,20 @@
     "src": "resources/js/assets/images/flags/flag5.png"
   },
   "resources/js/main.js": {
-    "file": "assets/main-B62AuQMp.js",
+    "file": "assets/main-qHxJpinz.js",
     "name": "main",
     "src": "resources/js/main.js",
     "isEntry": true,
     "imports": [
-      "_App-B4xm_InH.js"
+      "_App-CijSTteC.js"
     ],
     "dynamicImports": [
-      "_html2canvas-CBwchRBi.js",
+      "_html2canvas-Dozw8O4g.js",
       "node_modules/dompurify/dist/purify.es.mjs",
       "node_modules/canvg/lib/index.es.js"
     ],
     "css": [
-      "assets/main.C4p3Qxgz.css"
+      "assets/main.BqSt4IJ2.css"
     ],
     "assets": [
       "assets/flag1.CFmrKp4B.png",
@@ -213,8 +205,6 @@
       "assets/user-grid-img14.BGOE21rx.png",
       "assets/user-grid-img13.BFWLT_VE.png",
       "assets/avatar1.scz5y5rp.png",
-      "assets/forgot-pass-img.BLwoaPgo.png",
-      "assets/envelop-icon.BC-dOgaD.png",
       "assets/user.g8XIt7bn.png"
     ]
   }

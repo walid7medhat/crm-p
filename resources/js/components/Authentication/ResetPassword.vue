@@ -5,40 +5,55 @@
 
         <!-- Logo -->
         <div class="logo">
-          <router-link to="/" class="mb-40 max-w-290-px">
-            <img :src="logo" class="main-logo" />
-          </router-link>
+          <img :src="logo" class="main-logo" />
         </div>
 
         <div class="form">
-          <form @submit.prevent="sendReset">
-            
-            <h4 class="mb-12 titleH">Forgot Password</h4>
+          <form @submit.prevent="resetPassword">
+
+            <h4 class="mb-12 titleH">Reset Password</h4>
             <p class="mb-32 titleH2">
-              Enter your email to receive reset link
+              Enter your new password
             </p>
 
-            <!-- Email -->
-            <div class="icon-field mb-16">
-              <span class="icon top-50 translate-middle-y">
-                <iconify-icon icon="mage:email"></iconify-icon>
-              </span>
-              <input
-                type="email"
-                class="form-control h-56-px bg-neutral-50 radius-12"
-                placeholder="Email"
-                v-model="email"
-                required
-              />
+            <!-- Password -->
+            <div class="position-relative mb-20">
+              <div class="icon-field">
+                <span class="icon top-50 translate-middle-y">
+                  <iconify-icon icon="solar:lock-password-outline"></iconify-icon>
+                </span>
+                <input
+                  :type="showPassword ? 'text' : 'password'"
+                  class="form-control h-56-px bg-neutral-50 radius-12"
+                  placeholder="New Password"
+                  v-model="password"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Confirm -->
+            <div class="position-relative mb-20">
+              <div class="icon-field">
+                <span class="icon top-50 translate-middle-y">
+                  <iconify-icon icon="solar:lock-password-outline"></iconify-icon>
+                </span>
+                <input
+                  :type="showPassword ? 'text' : 'password'"
+                  class="form-control h-56-px bg-neutral-50 radius-12"
+                  placeholder="Confirm Password"
+                  v-model="password_confirmation"
+                  required
+                />
+              </div>
             </div>
 
             <!-- Button -->
             <button
               type="submit"
               class="btn btn-primary text-sm btn-sm px-12 py-16 w-100 radius-12 mt-32"
-              :disabled="loading"
             >
-              {{ loading ? 'Sending...' : 'Send Reset Link' }}
+              Reset Password
             </button>
 
             <!-- Message -->
@@ -51,8 +66,8 @@
           <!-- Back -->
           <div class="mt-32 text-center text-sm">
             <p class="mb-0 text-white">
-              Remember your password?
-              <router-link to="/sign-in" class="text-white fw-semibold">
+              Back to
+              <router-link to="/login" class="text-white fw-semibold">
                 Sign In
               </router-link>
             </p>
@@ -71,23 +86,30 @@ export default {
   data() {
     return {
       email: '',
-      loading: false,
+      password: '',
+      password_confirmation: '',
+      token: '',
       message: '',
       logo: '/assets/images/LogoWhite.png'
     };
   },
+  mounted() {
+    this.token = this.$route.query.token;
+    this.email = this.$route.query.email;
+  },
   methods: {
-    async sendReset() {
-      this.loading = true;
+    async resetPassword() {
       try {
-        const res = await api.post('/auth/forgot-password', {
-          email: this.email
+        const res = await api.post('/auth/reset-password', {
+          email: this.email,
+          password: this.password,
+          password_confirmation: this.password_confirmation,
+          token: this.token
         });
+
         this.message = res.data.message;
       } catch (e) {
         this.message = e.response?.data?.message || 'Error';
-      } finally {
-        this.loading = false;
       }
     }
   }

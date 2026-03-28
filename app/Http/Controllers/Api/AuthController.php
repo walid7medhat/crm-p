@@ -13,7 +13,9 @@ use App\Helpers\ApiResponse;
 use App\Http\Resources\User\NotificationResource;
 use Illuminate\Http\JsonResponse;
 use App\Notifications\NewSalesAgentNotification;
-
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 class AuthController extends Controller
 {
      public function register(RegisterRequest $request): JsonResponse
@@ -65,6 +67,42 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
+    public function forgotPassword(Request $request): JsonResponse
+{
+    $request->validate([
+        'email' => 'required|email|exists:users,email',
+    ]);
+
+    $status = Password::sendResetLink($request->only('email'));
+
+    return $status === Password::RESET_LINK_SENT
+        ? ApiResponse::success(null, 'Reset link sent to your email')
+        : ApiResponse::error('Unable to send reset link');
+}
+
+public function resetPassword(Request $request): JsonResponse
+{
+    $request->validate([
+        'email' => 'required|email',
+        'token' => 'required',
+        'password' => 'required|min:6|confirmed',
+    ]);
+
+    $status = Password::reset(
+        $request->only('email', 'password', 'password_confirmation', 'token'),
+        function ($user, $password) {
+            $user->forceFill([
+                'password' => Hash::make($password),
+                'remember_token' => Str::random(60),
+            ])->save();
+        }
+    );
+
+    return $status === Password::PASSWORD_RESET
+        ? ApiResponse::success(null, 'Password reset successfully')
+        : ApiResponse::error('Failed to reset password');
+}
     private function sendParentNotification(User $parent, User $newSales)
     {
         try {

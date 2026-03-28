@@ -134,7 +134,8 @@ Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
     Route::get('users/role/{role}', [UserController::class, 'getByRole']);
-
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
     Route::middleware(['jwt.auth'])->group(function () {
   
         Route::post('logout', [AuthController::class,'logout']);

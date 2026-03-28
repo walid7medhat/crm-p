@@ -48,6 +48,7 @@
               @click="togglePassword"
             ></span>
           </div>
+         
 
           <div class="d-flex justify-content-between gap-2">
             <div class="form-check style-check d-flex align-items-center">
@@ -59,6 +60,9 @@
               />
               <label class="form-check-label text-white" for="remember">Remember me</label>
             </div>
+             <router-link to="/forgot-password" class="text-white small">
+              Forgot Password?
+            </router-link>
           
           </div>
 

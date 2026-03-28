@@ -31,6 +31,7 @@ import RoleAccess from './pages/roleAccess/role-access.vue'
 import SignIn from './pages/authentication/sign-in.vue'
 import SignUp from './pages/authentication/sign-up.vue'
 import ForgotPassword from './pages/authentication/forgot-password.vue'
+import ResetPassword from './pages/authentication/reset-password.vue'
 
 import DevelopersList from './pages/developers/developers-list.vue'
 import AddDeveloper from './pages/developers/add-developer.vue'
@@ -122,7 +123,8 @@ const routes = [
 
   { path: '/sign-in', component: SignIn, name: 'login', meta: { layout: false, requiresAuth: false } },
   { path: '/sign-up', component: SignUp, meta: { layout: false, requiresAuth: false } },
-  { path: '/forgot-password', component: ForgotPassword, meta: { layout: false, requiresAuth: false } },
+  { path: '/reset-password',name:"reset-password",component :ResetPassword, meta: { layout: false, requiresAuth: false }},
+  { path: '/forgot-password',component :ForgotPassword,  meta: { layout: false, requiresAuth: false }},
 
   { path: '/developers', component: DevelopersList, meta: { requiresAuth: true } },
   { path: '/add-developer', component: AddDeveloper, meta: { requiresAuth: true } },
