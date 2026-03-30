@@ -96,7 +96,7 @@
                                 :clearable="form.office && form.office.length > 0"
                                 append-to-body
                                 multiple
-                                class="custom-v-select"
+                                class="custom-v-select office-multi-select"
                                 @update:model-value="handleOfficeChange"
                             >
                                 <template #open-indicator="{ attributes }">
@@ -210,7 +210,7 @@
                                 :clearable="form.office && form.office.length > 0"
                                 append-to-body
                                 multiple
-                                class="custom-v-select"
+                                class="custom-v-select office-multi-select"
                                 @update:model-value="handleOfficeChange"
                             >
                                 <template #open-indicator="{ attributes }">
@@ -325,29 +325,55 @@ const allTeams = ref([])
 const selectedOffice = ref(null)
 const selectedPillType = ref(null)
 
+const normalizeOfficeId = (value) => {
+    if (value === null || value === undefined || value === '') return null
+    const numeric = Number(value)
+    return Number.isNaN(numeric) ? String(value) : numeric
+}
+
+const normalizeOfficeSelection = (value) => {
+    const values = Array.isArray(value) ? value : [value]
+    const normalized = values
+        .flatMap((item) => {
+            if (typeof item === 'string' && item.includes(',')) {
+                return item.split(',').map(part => part.trim()).filter(Boolean)
+            }
+            return [item]
+        })
+        .map(normalizeOfficeId)
+        .filter(item => item !== null)
+
+    return [...new Set(normalized)]
+}
+
 // Helper functions for branch selection
 const isBranchSelected = (branchValue) => {
     if (!form.value.office) return false
+    const normalizedBranch = normalizeOfficeId(branchValue)
+    const selected = normalizeOfficeSelection(form.value.office)
     if (Array.isArray(form.value.office)) {
-        return form.value.office.includes(branchValue)
+        return selected.includes(normalizedBranch)
     }
-    return form.value.office === branchValue
+    return normalizeOfficeId(form.value.office) === normalizedBranch
 }
 
 const isCitySelected = (cityId) => {
     if (!form.value.office || !Array.isArray(form.value.office)) return false
     const cityPill = sidebarPills.value.find(p => p.id === cityId)
     if (!cityPill) return false
-    return cityPill.children.some(child => form.value.office.includes(child.value))
+    const selected = normalizeOfficeSelection(form.value.office)
+    return cityPill.children.some(child => selected.includes(normalizeOfficeId(child.value)))
 }
 
 // Handle office change to update filters
 const handleOfficeChange = async (newOffice) => {
     console.log('Office changed to:', newOffice)
+    const normalizedOffices = normalizeOfficeSelection(newOffice)
+    form.value.office = normalizedOffices
     
     // Update selectedOffice for filtering
-    if (newOffice && newOffice.length) {
-        selectedOffice.value = newOffice
+    if (normalizedOffices.length) {
+        selectedOffice.value = [...normalizedOffices]
     } else {
         selectedOffice.value = null
     }
@@ -427,7 +453,7 @@ function syncFormFromQuery(query) {
         const formKey = queryToFormKeys[qKey]
         if (query[qKey] !== undefined && query[qKey] !== '') {
             if (formKey === 'office' && query[qKey]) {
-                next[formKey] = Array.isArray(query[qKey]) ? query[qKey] : [query[qKey]]
+                next[formKey] = normalizeOfficeSelection(query[qKey])
             } else {
                 next[formKey] = query[qKey]
             }
@@ -977,35 +1003,18 @@ async function handleSidebarPillClick(pill) {
     activePill.value = pill.id
     
     if (pill.type === 'city') {
-        // Check if this city is already fully selected
-        const allBranchIds = pill.children.map(child => child.value)
-        const isFullySelected = allBranchIds.length > 0 && 
-            allBranchIds.every(branchId => form.value.office.includes(branchId))
-        
-        if (isFullySelected) {            // If already fully selected, clear all branches from this city
-            form.value.office = form.value.office.filter(branchId => 
-                !allBranchIds.includes(branchId)
-            )
-        } else {
-            // If not fully selected, select all branches in this city
-            // Remove any existing selections from this city first
-            form.value.office = form.value.office.filter(branchId => 
-                !allBranchIds.includes(branchId)
-            )
-            // Then add all branches
-            form.value.office = [...form.value.office, ...allBranchIds]
-        }
-        
-        // Update selectedOffice
-        if (form.value.office.length) {
-            selectedOffice.value = form.value.office
-        } else {
-            selectedOffice.value = null
-        }
+        // City pill now only opens its branch list; selection happens per branch button.
+        // Keep current selected branches unchanged so users can mix multiple branches easily.
+        const normalizedOffices = normalizeOfficeSelection(form.value.office)
+        form.value.office = normalizedOffices
+        selectedOffice.value = normalizedOffices.length ? [...normalizedOffices] : null
         selectedPillType.value = pill.id
-        
-        // Trigger filtering based on selected offices
-        await handleOfficeChange(form.value.office)
+
+        // Refresh dependent dropdowns based on current office selection
+        await Promise.all([
+            fetchResponsiblePersonsWithFilter(),
+            fetchTeamsWithFilter()
+        ])
     } else {
         // For non-city pills, clear office selection
         form.value.office = []
@@ -1029,20 +1038,20 @@ async function selectCityBranch(cityPill, child) {
     activePill.value = cityPill.id
     
     // Toggle selection for multi-select
-    if (!form.value.office) {
-        form.value.office = []
-    }
+    const branchId = normalizeOfficeId(child.value)
+    const offices = normalizeOfficeSelection(form.value.office)
     
-    const index = form.value.office.indexOf(child.value)
+    const index = offices.indexOf(branchId)
     if (index === -1) {
-        form.value.office.push(child.value)
+        offices.push(branchId)
     } else {
-        form.value.office.splice(index, 1)
+        offices.splice(index, 1)
     }
+    form.value.office = offices
     
     // Update selectedOffice and trigger filtering
-    if (form.value.office.length) {
-        selectedOffice.value = form.value.office
+    if (offices.length) {
+        selectedOffice.value = [...offices]
     } else {
         selectedOffice.value = null
     }
@@ -1376,13 +1385,16 @@ const resetForm = () => {
 
 watch(officeOptions, (newOptions) => {
     if (form.value.office && form.value.office.length && newOptions.length) {
-        const validOffices = form.value.office.filter(officeId => 
-            newOptions.some(opt => opt.value === officeId)
+        const normalizedSelection = normalizeOfficeSelection(form.value.office)
+        const validOffices = normalizedSelection.filter(officeId =>
+            newOptions.some(opt => normalizeOfficeId(opt.value) === officeId)
         )
-        if (validOffices.length !== form.value.office.length) {
+        if (validOffices.length !== normalizedSelection.length) {
             form.value.office = validOffices
+        } else {
+            form.value.office = normalizedSelection
         }
-        selectedOffice.value = form.value.office
+        selectedOffice.value = [...form.value.office]
     }
 }, { deep: true })
 
@@ -1767,6 +1779,35 @@ onMounted(async () => {
     display: block;
     max-width: 100%;
     line-height: 40px;
+}
+
+/* Branch multi-select: show all selected options clearly */
+:deep(.office-multi-select .vs__selected-options) {
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+    max-width: calc(100% - 30px);
+    gap: 4px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+:deep(.office-multi-select .vs__selected) {
+    display: inline-flex !important;
+    align-items: center;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+    padding: 2px 8px !important;
+    border-radius: 999px;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    color: #1e3a8a;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+:deep(.office-multi-select .vs__search) {
+    min-width: 80px;
+    line-height: 1.4;
 }
 
 :deep(.custom-v-select .vs__search) {
