@@ -19,9 +19,54 @@
                         <span class="lead-created-time">{{ timeLabel }}</span>
                     </div>
                     <div class="lead-created-card-body">
-                        <div class="lead-created-row">
-                            <span class="lead-created-label">Lead Name :</span>
-                            <span class="lead-created-value">{{ leadName }}</span>
+                        <div class="lead-created-row lead-created-row-main">
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="lead-created-label">Lead Name :</span>
+                                <span class="lead-created-value">{{ leadName }}</span>
+                            </div>
+                            <div
+                                class="lead-created-avatar person-hover-anchor"
+                                :title="creatorTooltip"
+                                @mouseenter="showCreatorCard = true"
+                                @mouseleave="showCreatorCard = false"
+                            >
+                                <img
+                                    v-if="creatorAvatar"
+                                    :src="creatorAvatar"
+                                    class="lead-created-avatar-img"
+                                    :alt="creatorName"
+                                />
+                                <div v-else class="lead-created-avatar-placeholder">
+                                    <iconify-icon icon="lucide:user" class="lead-created-avatar-icon"></iconify-icon>
+                                </div>
+                                <transition name="person-card-pop">
+                                    <div v-if="showCreatorCard" class="person-hover-card">
+                                        <div class="person-hover-head">
+                                            <img
+                                                v-if="creatorAvatar"
+                                                :src="creatorAvatar"
+                                                alt=""
+                                                class="person-hover-avatar"
+                                            />
+                                            <div v-else class="person-hover-avatar person-hover-avatar-fallback">
+                                                <iconify-icon icon="lucide:user" class="lead-created-avatar-icon"></iconify-icon>
+                                            </div>
+                                            <div>
+                                                <div class="person-hover-name">{{ creatorName || '—' }}</div>
+                                                <div class="person-hover-role">{{ creatorRole || 'Team Member' }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="person-hover-line">
+                                            <span>Reports To</span>
+                                            <b>{{ creatorManager || 'Not specified' }}</b>
+                                        </div>
+                                        <div class="person-hover-line">
+                                            <span>Branch</span>
+                                            <b>{{ creatorBranch || branch || 'Not specified' }}</b>
+                                        </div>
+                                    </div>
+                                </transition>
+                            </div>
                         </div>
                         <div v-if="source" class="lead-created-row">
                             <span class="lead-created-label">Source :</span>
@@ -37,20 +82,6 @@
                         <!--</div>-->
                         
                     </div>
-                    <div
-                        class="lead-created-avatar"
-                        :title="creatorTooltip"
-                    >
-                        <img
-                            v-if="creatorAvatar"
-                            :src="creatorAvatar"
-                            class="lead-created-avatar-img"
-                            :alt="creatorName"
-                        />
-                        <div v-else class="lead-created-avatar-placeholder">
-                            <iconify-icon icon="lucide:user" class="lead-created-avatar-icon"></iconify-icon>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -58,7 +89,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
     lead: {
@@ -94,7 +125,15 @@ const branchOffice=computed(() => props.lead?.office_branch ||  '—')
 const source = computed(() => props.lead?.lead_source || null)
 const creatorName = computed(() => props.lead?.added_by_user?.name || '—')
 const creatorAvatar = computed(() => props.lead?.added_by_user?.avatar || null)
+const creatorRole = computed(() => {
+    const role = props.lead?.added_by_user?.role_name
+    if (!role) return null
+    return String(role).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+})
+const creatorManager = computed(() => props.lead?.added_by_user?.parent_name || null)
+const creatorBranch = computed(() => props.lead?.added_by_user?.branch_name || null)
 const creatorTooltip = computed(() => creatorName.value !== '—' ? `Created by ${creatorName.value}` : 'Created by')
+const showCreatorCard = ref(false)
 </script>
 
 <style scoped>
@@ -174,7 +213,7 @@ const creatorTooltip = computed(() => creatorName.value !== '—' ? `Created by 
     border: none;
     border-radius: 10px;
     padding: 12px 14px;
-    padding-right: 52px;
+    padding-right: 14px;
     box-shadow: none;
     position: relative;
 }
@@ -210,6 +249,12 @@ const creatorTooltip = computed(() => creatorName.value !== '—' ? `Created by 
     gap: 2px;
 }
 
+.lead-created-row-main {
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
 .lead-created-label {
     font-size: 12px;
     font-weight: 400;
@@ -223,13 +268,101 @@ const creatorTooltip = computed(() => creatorName.value !== '—' ? `Created by 
 }
 
 .lead-created-avatar {
-    position: absolute;
-    top: 12px;
-    right: 12px;
     width: 32px;
     height: 32px;
     flex-shrink: 0;
     cursor: default;
+}
+
+.person-hover-anchor {
+    position: relative;
+    overflow: visible;
+}
+
+.person-card-pop-enter-active,
+.person-card-pop-leave-active {
+    transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.person-card-pop-enter-from,
+.person-card-pop-leave-to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+}
+
+.person-hover-card {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: 200px;
+    z-index: 3000;
+    border-radius: 12px;
+    border: 1px solid #dbe3ef;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.2);
+    backdrop-filter: blur(8px);
+    padding: 10px;
+}
+
+.person-hover-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.person-hover-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+}
+
+.person-hover-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+}
+
+.person-hover-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.person-hover-role {
+    margin-top: 1px;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.person-hover-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11px;
+    padding: 4px 0;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.person-hover-line span {
+    color: #64748b;
+}
+
+.person-hover-line b {
+    color: #0f172a;
+    font-weight: 700;
+    text-align: right;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .lead-created-avatar-img {

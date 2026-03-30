@@ -64,8 +64,12 @@
                                  <td>{{order.reference_number}}</td>
                                 <td v-if="hasShowAllColumn">
                                     <div class="d-flex align-items-center">
-                                                    <img :src=" order.requested_by.avatar || defaultAvatar"  alt=""
-                                            class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
+                                                    <img :src="avatarUrl(order.requested_by?.avatar)"
+                                            :alt="getRequesterName(order)"
+                                            class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden"
+                                            style="object-fit: cover;"
+                                            @error="handleImageError"
+                                        />
                                         <div class="flex-grow-1">
                                             
                                             <span class=" name text-md mb-0 fw-bolder text-primary-light d-block">{{ getRequesterName(order) }}</span>
@@ -74,8 +78,12 @@
                                 </td>
                                 <td>
                                      <div class="d-flex align-items-center">
-                                      <img :src=" order.listing.agent_avatar || defaultAvatar"  alt=""
-                                            class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
+                                      <img :src="avatarUrl(order.listing?.agent_avatar)"
+                                            :alt="order.listing?.agent || ''"
+                                            class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden"
+                                            style="object-fit: cover;"
+                                            @error="handleImageError"
+                                        />
                                              <div class="d-flex flex-column">
                                               <span class="text-md mb-1 fw-bolder text-primary-light">
                                                   
@@ -525,8 +533,43 @@ import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
 
-const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
+const defaultAvatar = '/assets/images/user.png'
 const filtericon = '/assets/images/filter.png'
+
+/** Same as UsersTable / AllRequests: Laravel asset() may use wrong host vs SPA for /storage/ URLs */
+function resolveMediaUrl(url) {
+    if (!url || typeof url !== 'string') return null
+    try {
+        const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : undefined)
+        const path = parsed.pathname + parsed.search
+        if (!path.includes('/storage/')) {
+            return parsed.href
+        }
+        const badLocal = /^(127\.0\.0\.1|localhost)$/i.test(parsed.hostname)
+        const pageOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+        if (!pageOrigin) return parsed.href
+        if (badLocal || parsed.origin !== pageOrigin) {
+            return `${pageOrigin}${path}`
+        }
+        return parsed.href
+    } catch {
+        if (typeof window === 'undefined') return url
+        if (url.startsWith('/')) return `${window.location.origin}${url}`
+        return `${window.location.origin}/storage/${url.replace(/^\/+/, '')}`
+    }
+}
+
+function avatarUrl(raw) {
+    if (!raw) return defaultAvatar
+    return resolveMediaUrl(raw) || defaultAvatar
+}
+
+function handleImageError(event) {
+    const el = event.target
+    if (el.dataset.avatarFallback === '1') return
+    el.dataset.avatarFallback = '1'
+    el.src = defaultAvatar
+}
 
 // Router
 const router = useRouter()
@@ -747,7 +790,7 @@ function getRequesterEmail(order) {
 }
 
 function getRequesterAvatar(order) {
-    return order.requested_by?.avatar || defaultAvatar
+    return avatarUrl(order.requested_by?.avatar)
 }
 
 function truncateText(text, maxLength) {

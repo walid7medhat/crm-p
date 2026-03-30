@@ -107,8 +107,8 @@
                                     <div class="d-flex align-items-center">
                                         <div class="position-relative">
                                             <img
-                                                :src="user.avatar || defaultAvatar"
-                                                alt="User Avatar"
+                                                :src="avatarUrl(user)"
+                                                :alt="user.name || ''"
                                                 class="flex-shrink-0 me-12 radius-8"
                                                 width="40"
                                                 height="40"
@@ -763,8 +763,44 @@ export default {
             return diffMinutes <= 15; // Online if logged in within last 15 minutes
         },
 
+        /**
+         * Laravel UserResource uses asset('storage/...'), which often points at APP_URL
+         * (e.g. http://127.0.0.1:8001) while the SPA runs on another host. Use the same
+         * origin as the page for /storage/ URLs so images load in production.
+         */
+        resolveMediaUrl(url) {
+            if (!url || typeof url !== 'string') return null;
+            try {
+                const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : undefined);
+                const path = parsed.pathname + parsed.search;
+                if (!path.includes('/storage/')) {
+                    return parsed.href;
+                }
+                const badLocal = /^(127\.0\.0\.1|localhost)$/i.test(parsed.hostname);
+                const pageOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+                if (!pageOrigin) return parsed.href;
+                if (badLocal || parsed.origin !== pageOrigin) {
+                    return `${pageOrigin}${path}`;
+                }
+                return parsed.href;
+            } catch {
+                if (typeof window === 'undefined') return url;
+                if (url.startsWith('/')) return `${window.location.origin}${url}`;
+                return `${window.location.origin}/storage/${url.replace(/^\/+/, '')}`;
+            }
+        },
+
+        avatarUrl(user) {
+            const raw = user?.avatar;
+            if (!raw) return this.defaultAvatar;
+            return this.resolveMediaUrl(raw) || this.defaultAvatar;
+        },
+
         handleImageError(event) {
-            event.target.src = defaultAvatar;
+            const el = event.target;
+            if (el.dataset.avatarFallback === '1') return;
+            el.dataset.avatarFallback = '1';
+            el.src = this.defaultAvatar;
         }
     }
 };

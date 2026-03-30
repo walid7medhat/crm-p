@@ -45,15 +45,48 @@
                             <span class="comment-label">Comment</span>
                             <div class="comment-header-right">
                                 <span class="comment-time">{{ comment.time }}</span>
-                                <img 
-                                    v-if="comment.userAvatar" 
-                                    :src="comment.userAvatar" 
-                                    class="comment-user-avatar"
-                                    alt="User"
-                                    :title="comment.userName"
-                                />
-                                <div v-else class="comment-user-avatar-placeholder">
-                                    <iconify-icon icon="lucide:user" class="comment-avatar-icon"></iconify-icon>
+                                <div
+                                    class="comment-avatar-hover-anchor"
+                                    @mouseenter="activeHoverUserId = comment.id"
+                                    @mouseleave="activeHoverUserId = null"
+                                >
+                                    <img 
+                                        v-if="comment.userAvatar" 
+                                        :src="comment.userAvatar" 
+                                        class="comment-user-avatar"
+                                        alt="User"
+                                        :title="comment.userName"
+                                    />
+                                    <div v-else class="comment-user-avatar-placeholder">
+                                        <iconify-icon icon="lucide:user" class="comment-avatar-icon"></iconify-icon>
+                                    </div>
+                                    <transition name="person-card-pop">
+                                        <div v-if="activeHoverUserId === comment.id" class="person-hover-card">
+                                            <div class="person-hover-head">
+                                                <img
+                                                    v-if="comment.userAvatar"
+                                                    :src="comment.userAvatar"
+                                                    alt=""
+                                                    class="person-hover-avatar"
+                                                />
+                                                <div v-else class="person-hover-avatar person-hover-avatar-fallback">
+                                                    <iconify-icon icon="lucide:user" class="comment-avatar-icon"></iconify-icon>
+                                                </div>
+                                                <div>
+                                                    <div class="person-hover-name">{{ comment.userName || '—' }}</div>
+                                                    <div class="person-hover-role">{{ comment.userRole || 'Team Member' }}</div>
+                                                </div>
+                                            </div>
+                                            <div class="person-hover-line">
+                                                <span>Reports To</span>
+                                                <b>{{ comment.userParentName || 'Not specified' }}</b>
+                                            </div>
+                                            <div class="person-hover-line">
+                                                <span>Branch</span>
+                                                <b>{{ comment.userBranchName || 'Not specified' }}</b>
+                                            </div>
+                                        </div>
+                                    </transition>
                                 </div>
                             </div>
                         </div>
@@ -155,6 +188,7 @@ const props = defineProps({
 })
 
 const comments = ref([])
+const activeHoverUserId = ref(null)
 const loading = ref(false)
 const loadingOlder = ref(false)
 const nextPageUrl = ref(null)
@@ -282,12 +316,20 @@ const transformComment = (comment) => {
         dateLabel: formatDateLabel(comment.created_at),
         userAvatar: comment.user_avatar,
         userName: comment.user_name,
+        userRole: comment.user_role_name ? formatRoleName(comment.user_role_name) : null,
+        userParentName: comment.user_parent_name || null,
+        userBranchName: comment.user_branch_name || null,
         attachments: comment.attachments || [],
         mentions: comment.mentions || [],
         mentioned_users: comment.mentioned_users || [],
         created_at: comment.created_at,
         updated_at: comment.updated_at
     }
+}
+
+const formatRoleName = (role) => {
+    if (!role) return ''
+    return String(role).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 // Group comments by date
@@ -441,13 +483,15 @@ defineExpose({
 
 .activity-timeline {
     position: relative;
-    max-height: 500px;
-    overflow-y: scroll;
+    max-height: none;
+    overflow: visible;
+    z-index: 1;
 }
 
 .activity-group {
     margin-bottom: 20px;
     position: relative;
+    overflow: visible;
 }
 
 .timeline-date-header {
@@ -523,6 +567,7 @@ defineExpose({
     box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.08);
     padding: 12px;
     border: 1px solid #F4F4F4;
+    overflow: visible;
 }
 
 .comment-card-header {
@@ -530,6 +575,7 @@ defineExpose({
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
+    overflow: visible;
 }
 
 .comment-label {
@@ -543,6 +589,9 @@ defineExpose({
     display: flex;
     align-items: center;
     gap: 8px;
+    overflow: visible;
+    position: relative;
+    z-index: 2;
 }
 
 .comment-time {
@@ -569,6 +618,98 @@ defineExpose({
     align-items: center;
     justify-content: center;
     border: 1px solid #E5E7EB;
+}
+
+.comment-avatar-hover-anchor {
+    position: relative;
+    overflow: visible;
+    z-index: 3;
+}
+
+.person-card-pop-enter-active,
+.person-card-pop-leave-active {
+    transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.person-card-pop-enter-from,
+.person-card-pop-leave-to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+}
+
+.person-hover-card {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: 200px;
+    z-index: 3000;
+    border-radius: 12px;
+    border: 1px solid #dbe3ef;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.2);
+    backdrop-filter: blur(8px);
+    padding: 10px;
+}
+
+.person-hover-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.person-hover-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+}
+
+.person-hover-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+}
+
+.person-hover-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.person-hover-role {
+    margin-top: 1px;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.person-hover-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11px;
+    padding: 4px 0;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.person-hover-line span {
+    color: #64748b;
+}
+
+.person-hover-line b {
+    color: #0f172a;
+    font-weight: 700;
+    text-align: right;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .comment-avatar-icon {

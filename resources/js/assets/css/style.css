@@ -15217,7 +15217,7 @@ td.fc-header-center {
   position: fixed;
   inset-block-start: 0;
   inset-inline-start: -100%;
-  width: 15.625rem;
+  width: 13.5rem;
   height: 100vh;
   background-color: var(--white);
   /* Layer order: popup > sidebar > header */
@@ -15227,17 +15227,17 @@ td.fc-header-center {
 @media (min-width: 1200px) {
   .sidebar {
     inset-inline-start: 0;
-    width: 13.75rem;
+    width: 11.75rem;
   }
 }
 @media (min-width: 1400px) {
   .sidebar {
-    width: 17.1875rem;
+    width: 13rem;
   }
 }
 @media (min-width: 1650px) {
   .sidebar {
-    width: 19.5rem;
+    width: 14rem;
   }
 }
 .sidebar-close-btn {
@@ -15287,12 +15287,12 @@ td.fc-header-center {
 }
 @media (min-width: 1400px) {
   .sidebar.active:hover {
-    width: 17.1875rem;
+    width: 13rem;
   }
 }
 @media (min-width: 1650px) {
   .sidebar.active:hover {
-    width: 19.5rem;
+    width: 14rem;
   }
 }
 .sidebar.active:hover .sidebar-logo img.light-logo {
@@ -15583,17 +15583,17 @@ td.fc-header-center {
 
 @media (min-width: 1200px) {
   .dashboard-main {
-    margin-inline-start: 13.75rem;
+    margin-inline-start: 13rem;
   }
 }
 @media (min-width: 1400px) {
   .dashboard-main {
-    margin-inline-start: 17.1875rem;
+    margin-inline-start: 14.3125rem;
   }
 }
 @media (min-width: 1650px) {
   .dashboard-main {
-    margin-inline-start: 19.5rem;
+    margin-inline-start: 15.5625rem;
   }
 }
 .dashboard-main-body {

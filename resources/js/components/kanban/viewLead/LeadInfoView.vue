@@ -1,6 +1,12 @@
 <template>
     <div class="lead-info-view">
         <div class="info-section">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="info-section-title mb-0">Lead Information</div>
+                <button v-if="showEditIcon && canEdit" class="lead-edit-inline-btn" @click="emit('edit-request')">
+                    <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:pencil"></iconify-icon>
+                </button>
+            </div>
             <div class="info-group">
                 <label class="form-label-custom">Lead Name</label>
                 <div class="info-value">{{ lead?.lead_name || '—' }}</div>
@@ -57,34 +63,25 @@
                     </span>
                 </div>
             </div>
-             <div class="info-group" v-if="lead?.bedrooms">
-                <label class="form-label-custom">Bedrooms</label>
-                <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
-            </div>
-            <div class="info-group" v-if="lead?.area">
-                <label class="form-label-custom">Location</label>
-                <div class="info-value">{{ lead?.area || '—' }}</div>
-            </div>
-            <div class="info-group" v-if="lead?.property_type">
-                <label class="form-label-custom">Property Type</label>
-                <div class="info-value">{{ lead?.property_type || '—' }}</div>
-            </div>
-            <div class="info-group" v-if="lead?.source_information">
-                <label class="form-label-custom">More Information</label>
-                <div class="info-value">{{ lead?.source_information || '—' }}</div>
-            </div>
-            <div class="info-group" v-if="lead?.budget">
-                <label class="form-label-custom">Budget</label>
-                <div class="info-value">{{ lead?.budget != null ? lead.budget : '—' }} {{ lead?.currency || '' }}</div>
-            </div>
         </div>
 
         <div class="info-section">
             <div class="info-section-title">More Information</div>
            
-            <template v-if="hasAdditionalFacebookQuestions">
+            <template v-if="hasAdditionalQuestions">
                 <div class="info-group" v-for="(answer, question) in facebookQuestions" :key="question">
-                    <!--<label class="form-label-custom">{{ formatQuestion(question) }}</label>-->
+                    <label class="form-label-custom">{{ formatQuestion(question) }}</label>
+                    <div class="info-value">
+                        <a v-if="question === 'link' || question === 'Page_URL' || question ==='inbox_url'" :href="answer" target="_blank" class="facebook-link">
+                            {{ answer }}
+                        </a>
+                        <span v-else>
+                            {{ answer }}
+                        </span>
+                    </div>
+                </div>
+                <div class="info-group" v-for="(answer, question) in metaQuestions" :key="`meta-${question}`">
+                    <label class="form-label-custom">{{ formatQuestion(question) }}</label>
                     <div class="info-value ">
                         <a v-if="question === 'link' || question === 'Page_URL' || question ==='inbox_url'" :href="answer" target="_blank" class="facebook-link">
                             {{ answer }}
@@ -95,12 +92,45 @@
                     </div>
                 </div>
             </template>
-            <div v-if="!lead?.bedrooms && !lead?.area && !lead?.property_type && !lead?.source_information && !lead?.budget && !hasAdditionalFacebookQuestions" class="info-empty">
+            <div v-else class="info-empty">
                 No additional information
             </div>
         </div>
 
         <div class="info-section">
+            <div class="info-section-title">Client Required Info</div>
+            <template v-if="hasClientRequiredInfo">
+                <div class="info-group" v-if="lead?.bedrooms">
+                    <label class="form-label-custom">Bedrooms</label>
+                    <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
+                </div>
+                <div class="info-group" v-if="lead?.area">
+                    <label class="form-label-custom">Location</label>
+                    <div class="info-value">{{ lead?.area || '—' }}</div>
+                </div>
+                <div class="info-group" v-if="lead?.property_type">
+                    <label class="form-label-custom">Property Type</label>
+                    <div class="info-value">{{ lead?.property_type || '—' }}</div>
+                </div>
+                <div class="info-group" v-if="lead?.budget != null">
+                    <label class="form-label-custom">Budget</label>
+                    <div class="info-value">{{ lead?.budget != null ? lead.budget : '—' }} {{ lead?.currency || '' }}</div>
+                </div>
+                <div class="info-group" v-if="lead?.source_information">
+                    <label class="form-label-custom">Source Information</label>
+                    <div class="info-value">{{ lead?.source_information || '—' }}</div>
+                </div>
+                <div class="info-group" v-for="(value, key) in clientRequiredMetaFields" :key="`client-${key}`">
+                    <label class="form-label-custom">{{ formatQuestion(key) }}</label>
+                    <div class="info-value">{{ value }}</div>
+                </div>
+            </template>
+            <div v-else class="info-empty">
+                No additional information
+            </div>
+        </div>
+
+        <div v-if="showResponsibleSection" class="info-section">
             <div class="info-section-title">Responsible Person</div>
             <div class="info-group">
             <div class="d-flex align-items-center justify-content-between mb-2">
@@ -283,9 +313,21 @@ import api from '@/plugins/axios'
 
 const props = defineProps({
     lead: Object,
+    showResponsibleSection: {
+        type: Boolean,
+        default: true,
+    },
+    canEdit: {
+        type: Boolean,
+        default: false,
+    },
+    showEditIcon: {
+        type: Boolean,
+        default: false,
+    },
 })
 
-const emit = defineEmits(['person-updated'])
+const emit = defineEmits(['person-updated','edit-request'])
 
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
 
@@ -441,6 +483,52 @@ const facebookQuestions = computed(() => {
 const hasAdditionalFacebookQuestions = computed(() => {
     return Object.keys(facebookQuestions.value).length > 0
 })
+
+const metaQuestions = computed(() => {
+    const meta = props.lead?.meta
+    if (!meta || typeof meta !== 'object') return {}
+    const result = {}
+    Object.keys(meta).forEach((key) => {
+        const value = meta[key]
+        if (
+            value == null ||
+            value === '' ||
+            typeof value === 'object' ||
+            basicFields.includes(key) ||
+            ['client_required_info', 'additional_fields', 'questions_answers'].includes(key)
+        ) return
+        result[key] = value
+    })
+    return result
+})
+
+const clientRequiredMetaFields = computed(() => {
+    const meta = props.lead?.meta
+    const source =
+        props.lead?.client_required_info ||
+        props.lead?.additional_fields ||
+        meta?.client_required_info ||
+        meta?.additional_fields
+    if (!source || typeof source !== 'object') return {}
+    return Object.fromEntries(
+        Object.entries(source).filter(([, value]) => value !== null && value !== '')
+    )
+})
+
+const hasAdditionalQuestions = computed(() => {
+    return hasAdditionalFacebookQuestions.value || Object.keys(metaQuestions.value).length > 0
+})
+
+const hasClientRequiredInfo = computed(() => {
+    return Boolean(
+        props.lead?.bedrooms ||
+        props.lead?.area ||
+        props.lead?.property_type ||
+        props.lead?.source_information ||
+        props.lead?.budget != null ||
+        Object.keys(clientRequiredMetaFields.value).length > 0
+    )
+})
 </script>
 
 <style scoped>
@@ -470,6 +558,23 @@ const hasAdditionalFacebookQuestions = computed(() => {
     border-bottom: none;
 }
 
+
+.lead-edit-inline-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lead-edit-inline-btn:hover {
+    opacity: 0.85;
+}
+
+.edit-icon-btn {
+    font-size: 18px;
+}
 .info-empty {
     font-size: 12px;
     color: #94a3b8;

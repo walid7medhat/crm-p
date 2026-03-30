@@ -30482,7 +30482,7 @@ td.fc-header-center {
 
     inset-inline-start: -100%; /* هذا هو الإصلاح - يخفي السايدبار خارج الشاشة */
 
-    width: 15.625rem;
+    width: 13.5rem;
 
     height: calc(100vh - 40px);
 
@@ -30540,7 +30540,7 @@ td.fc-header-center {
 
      inset-inline-start: 0; 
 
-    width: 13.75rem;
+    width: 11.75rem;
 
   }
 
@@ -30550,7 +30550,7 @@ td.fc-header-center {
 
   .sidebar {
 
-    width: 17.1875rem;
+    width: 13rem;
 
   }
 
@@ -30560,7 +30560,7 @@ td.fc-header-center {
 
   .sidebar {
 
-    width: 15.938rem;
+    width: 14rem;
 
   }
 
@@ -30655,7 +30655,7 @@ td.fc-header-center {
 
   .sidebar.active:hover {
 
-    width: 17.1875rem;
+    width: 13rem;
 
   }
 
@@ -30665,7 +30665,7 @@ td.fc-header-center {
 
   .sidebar.active:hover {
 
-    width: 19.5rem;
+    width: 14rem;
 
   }
 
@@ -30910,8 +30910,8 @@ td.fc-header-center {
 .sidebar-menu li.dropdown > a {
 
   position: relative;
-  font-size: 14px;
-  padding: 15px;
+  font-size: 0.8125rem;
+  padding: 0.5rem 0.5625rem;
 
 }
 
@@ -31011,7 +31011,7 @@ td.fc-header-center {
 
 .sidebar-menu li a {
 
-  padding: 0.625rem 0.75rem;
+  padding: 0.5rem 0.5625rem;
 
   font-weight: 500;
 
@@ -31033,7 +31033,7 @@ td.fc-header-center {
 
   -o-border-radius: 8px;
 
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 
 }
 
@@ -31043,7 +31043,7 @@ td.fc-header-center {
 
   .sidebar-menu li a {
 
-    font-size: 1rem;
+    font-size: 0.875rem;
 
   }
 
@@ -31079,7 +31079,7 @@ td.fc-header-center {
 
     
 
-    padding: 15px;
+    padding: 11px;
 
     
 
@@ -31139,11 +31139,11 @@ td.fc-header-center {
 
 .sidebar-menu .sidebar-submenu {
 
-  padding-block-start: 0.75rem;
+  padding-block-start: 0.5rem;
 
   display: none;
 
-  padding-inline-start: 1.5rem;
+  padding-inline-start: 1.125rem;
 
   transition: none;
 
@@ -31155,7 +31155,7 @@ td.fc-header-center {
 
   .sidebar-menu .sidebar-submenu {
 
-    padding-inline-start: 1rem;
+    padding-inline-start: 0.875rem;
 
   }
 
@@ -31173,8 +31173,8 @@ td.fc-header-center {
 
 .sidebar-menu .sidebar-submenu li a {
 
-  padding:10px 15px !important;
-  font-size: 12px;
+  padding: 7px 10px !important;
+  font-size: 11px;
 }
 
 
@@ -31237,7 +31237,8 @@ td.fc-header-center {
 
   .dashboard-main {
 
-    margin-inline-start: 15rem;
+    /* sidebar 11.75rem + same 1.25rem gap as before (was 15rem vs 13.75rem sidebar) */
+    margin-inline-start: 13rem;
 
   }
 
@@ -31247,7 +31248,7 @@ td.fc-header-center {
 
   .dashboard-main {
 
-    margin-inline-start: 18.5rem;
+    margin-inline-start: 14.3125rem;
 
   }
 
@@ -31257,7 +31258,7 @@ td.fc-header-center {
 
   .dashboard-main {
 
-    margin-inline-start: 17.5rem;
+    margin-inline-start: 15.5625rem;
 
   }
 

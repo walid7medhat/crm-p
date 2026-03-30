@@ -3,17 +3,8 @@
         <!-- Left Column: Lead Information -->
         <div class="col-md-5">
             <div class="info-card bg-white p-3 radius-12">
-                <div class="modal-header-custom d-flex justify-content-between align-items-center pb-9 mb-3 border-bottom">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="modal-title">Lead Information</span>
-                </div>
-                    <button @click="toggleEditMode" v-if="!isEditMode && lead?.can_edit">
-                        <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:pencil"></iconify-icon>
-                    </button>
-                </div>
-
                 <!-- View Mode (read-only; do not use ViewLead.vue here – it is a full modal and would cause infinite recursion) -->
-                <LeadInfoView v-if="!isEditMode" :lead="lead"   @person-updated="handlePersonUpdated" />
+                <LeadInfoView v-if="!isEditMode" :lead="lead" :show-responsible-section="false" :can-edit="lead?.can_edit" :show-edit-icon="true" @edit-request="toggleEditMode" />
 
                 <!-- Edit Mode (footer Save/Cancel moved to global bottom bar below) -->
                 <EditLead 
@@ -79,6 +70,7 @@
                         <!-- <button class="btn-admin-action btn-restore-all">Restore All</button> -->
                     </div>
                 </div>
+
                 <!-- Activity View -->
                 <ActivitySection 
                     v-if="activeViewTab === 'activity'" 
@@ -92,7 +84,14 @@
                     :lead-id="lead?.id"
                     @comment-created="handleCommentCreated"
                 />
+
             </div>
+
+            <ResponsiblePersonSection
+                v-if="activeViewTab === 'comments' && lead?.id"
+                :lead="lead"
+                @person-updated="handlePersonUpdated"
+            />
 
             <!-- Lead Activity List -->
             <ActivityList 
@@ -150,6 +149,7 @@ import CommentsSection from './CommentsSection.vue'
 import ActivityList from './ActivityList.vue'
 import CommentList from './CommentList.vue'
 import LeadActivityTimeline from './LeadActivityTimeline.vue'
+import ResponsiblePersonSection from './ResponsiblePersonSection.vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 const props = defineProps({
@@ -188,15 +188,20 @@ const resetEditMode = () => {
     isEditMode.value = false
 }
 const handlePersonUpdated = (updatedPerson) => {
-    // تحديث بيانات الـ lead في الـ parent
-    if (selectedLead.value) {
-        selectedLead.value.responsible_person = {
+    if (!props.lead) return
+    emit('update:lead', {
+        ...props.lead,
+        responsible_person_id: updatedPerson.id,
+        responsible_person: {
+            ...(props.lead.responsible_person || {}),
             id: updatedPerson.id,
             name: updatedPerson.name,
-            avatar: updatedPerson.avatar
+            avatar: updatedPerson.avatar,
+            role_name: updatedPerson.role_name || props.lead?.responsible_person?.role_name,
+            manager_name: updatedPerson.manager_name || props.lead?.responsible_person?.manager_name,
+            branch_name: updatedPerson.branch_name || props.lead?.responsible_person?.branch_name,
         }
-        selectedLead.value.responsible_person_id = updatedPerson.id
-    }
+    })
 }
 const confirmDeleteAllComments = () => {
     Swal.fire({

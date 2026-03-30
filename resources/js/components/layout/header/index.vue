@@ -848,15 +848,20 @@ onMounted(() => {
 }
 
 .sidebar-header {
-  padding: 0.875rem 1rem;
-  min-height: 4.5rem;
+  padding: 0.65rem 0.75rem;
+  min-height: 4rem;
   box-sizing: border-box;
   justify-content: flex-start;
   background: transparent;
   border-bottom: 1px solid rgba(255, 255, 255, 0.16);
 }
 .sidebar-menu li a {
-    padding: 0.625rem 0.75rem !important;
+    padding: 0.45rem 0.5rem !important;
+}
+.sidebar-menu li a span,
+.sidebar-submenu li a span {
+  font-size: 0.8125rem;
+  line-height: 1.3;
 }
 /* 2. Darker only on hover when collapsed (.sidebar.active = collapsed) */
 .sidebar.active:hover {
@@ -879,17 +884,17 @@ onMounted(() => {
 @media (min-width: 1200px) {
   .sidebar.active:hover {
     inset-inline-start: 0;
-    width: 18rem ;;
+    width: 11.75rem;
   }
 }
 @media (min-width: 1400px) {
   .sidebar.active:hover {
-    width: 20rem ;;
+    width: 13rem;
   }
 }
 @media (min-width: 1650px) {
   .sidebar.active:hover {
-    width: 22rem ;;
+    width: 14rem;
   }
 }
 
@@ -904,8 +909,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 40px;
-  width: 40px;
+  min-width: 36px;
+  width: 36px;
   padding: 0;
   background: transparent;
   border: none;
@@ -914,22 +919,22 @@ onMounted(() => {
 }
 .sidebar-toggle-with-label {
   width: auto;
-  gap: 0.5rem;
+  gap: 0.375rem;
   justify-content: flex-start;
 }
 /* Same place, same style as menu items but smaller and not bold */
 .sidebar-toggle-label {
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 400;
   color: #ffffff;
   white-space: nowrap;
 }
 .sidebar-menu-icon {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   color: #ffffff !important;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.5rem;
+  height: 1.5rem;
 }
 .sidebar-toggle:hover .sidebar-menu-icon {
   color: rgba(255, 255, 255, 0.9) !important;
@@ -968,7 +973,7 @@ onMounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border-radius: 10px;
-  padding: 12px 16px;
+  padding: 8px 10px;
 }
 
 
@@ -980,11 +985,11 @@ onMounted(() => {
 .menu-count {
   background: #ffff;
   color: rgb(95, 95, 95);
-  border-radius: 12px;
-  padding: 2px 8px;
-  font-size: 0.75rem;
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 0.6875rem;
   font-weight: 600;
-  min-width: 24px;
+  min-width: 20px;
   text-align: center;
   margin-left: auto;
 }
@@ -1005,10 +1010,10 @@ onMounted(() => {
 .sidebar-submenu li a {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   width: 100%;
-  padding: 12px 16px;
-  margin-bottom: 4px;
+  padding: 8px 10px;
+  margin-bottom: 2px;
   border-radius: 10px;
   color: rgba(255, 255, 255, 0.95);
   transition: background 0.15s ease, color 0.15s ease;
@@ -1022,7 +1027,7 @@ onMounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border-radius: 10px;
-  padding: 12px 16px;
+  padding: 8px 10px;
   color: #fff;
 }
 
@@ -1037,9 +1042,16 @@ onMounted(() => {
 }
 .sidebar .menu-icon {
   color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 1.125rem !important;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
 }
 .sidebar .imgicon {
   opacity: 0.95;
+  width: 1.25rem;
+  height: auto;
+  flex-shrink: 0;
 }
 .sidebar .dropdown-arrow {
   border-left-color: rgba(255, 255, 255, 0.9);
@@ -1048,7 +1060,7 @@ onMounted(() => {
 .nav-link a {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   width: 100%;
 }
 
