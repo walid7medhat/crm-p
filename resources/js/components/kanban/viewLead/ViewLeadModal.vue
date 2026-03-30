@@ -6,7 +6,12 @@
         hide-footer
         size="xl"
         centered
-        body-class="p-0"
+        body-class="p-0 view-lead-modal"
+        :z-index="1040"
+        :no-enforce-focus="true"
+        :trap-focus="false"
+        :no-close-on-backdrop="true"
+        :no-close-on-esc="true"
     >
         <div v-if="show" class="view-lead-modal-content p-3">
             <!-- Header -->
@@ -20,7 +25,9 @@
             </div>
 
             <!-- Stages Progress -->
-            <StageSelector v-model="leadStageId" />
+            <StageSelector v-model="leadStageId"   
+            :require-validation="true"
+            @stage-change-request="handleStageChangeRequest"/>
 
             <!-- Tabs -->
             <div class="tabs-container mb-3 border-bottom">
@@ -57,6 +64,20 @@
                 <HistoryTab v-if="activeTab === 'history' && canViewHistory"  :lead="lead" :is-active="activeTab === 'history'" />
             </div>
         </div>
+           <!-- Stage Change Reason Modal -->
+    <StageChangeReasonModal
+        ref="stageChangeReasonModal"
+        v-model="showStageChangeModal"
+        :leadId="pendingStageChange?.leadId"
+        :targetStageId="pendingStageChange?.targetStageId"
+        :targetStageName="pendingStageChange?.targetStageName"
+        :targetStageOrder="pendingStageChange?.targetStageOrder"
+        :missingFields="missingFieldsForLead"
+        :leadData="pendingStageChange?.leadData"
+        :isConversion="pendingStageChange?.isConversion || false"
+        @submit="handleStageChangeWithReason"
+        @closed="clearPendingStageChange"
+    />
     </b-modal>
 </template>
 
@@ -64,6 +85,8 @@
 import { ref, watch, onMounted, onUnmounted,computed } from 'vue'
 import { BModal, BDropdown } from 'bootstrap-vue-3'
 import StageSelector from '../shared/StageSelector.vue'
+import StageChangeReasonModal from '../leadList/StageChangeReasonModal.vue'
+
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
@@ -84,8 +107,14 @@ const activeTab = ref('general')
 const echoListener = ref(null)
 const echoAssignedListener = ref(null)
 const user = ref(JSON.parse(localStorage.getItem('user')))
+const isUserAction = ref(false)
 
-
+// Stage Change Modal State
+const stageChangeReasonModal = ref(null)
+const showStageChangeModal = ref(false)
+const pendingStageChange = ref(null)
+const missingFieldsForLead = ref([])
+const stageOrderMap = ref({})
 
 const canViewHistory = computed(() => {
     if (!user.value || !lead.value) return false
@@ -104,6 +133,256 @@ const switchTab = (tab) => {
     activeTab.value = tab
 }
 
+// Fetch stage orders
+const fetchStageOrders = async () => {
+    try {
+        const response = await api.get('/stages')
+        let stages = []
+        
+        if (response.data && response.data.data) {
+            stages = response.data.data
+        } else if (response.data && Array.isArray(response.data)) {
+            stages = response.data
+        }
+        
+        if (!Array.isArray(stages)) {
+            stages = []
+        }
+        
+        const map = {}
+        stages.forEach(stage => {
+            if (stage && stage.id) {
+                map[stage.id] = stage.order || 0
+            }
+        })
+        stageOrderMap.value = map
+        console.log('Stage order map loaded:', stageOrderMap.value)
+    } catch (error) {
+        console.error('Error fetching stage orders:', error)
+        stageOrderMap.value = {}
+    }
+}
+
+// Handle stage change request from StageSelector
+const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
+    console.log('🎯 handleStageChangeRequest called:', { stageId, stageName, stageOrder })
+    
+    const targetStageOrder = stageOrderMap.value[stageId] || stageOrder || 0
+    
+    // Define required fields based on stage order
+    const requiredFieldsMap = {
+        3: ['salutation'],
+        4: ['salutation', 'property_type_id', 'area_id', 'budget', 'purpose_buying', 'bedrooms', 'status_lead'],
+        5: ['salutation', 'available_date'],
+        7: ['salutation', 'branch'],
+        8: ['why_lost_lead'],
+        9: ['status_lead'],
+        10: ['status_lead']
+    }
+    
+    // For conversion (stage 6), check all required fields
+    if (targetStageOrder === 6) {
+        const requiredFieldsForConversion = [
+            'salutation', 'property_type_id', 'area_id', 'budget', 
+            'lead_source', 'purpose_buying', 'bedrooms', 'status_lead',
+            
+        ]
+        
+        const missingFields = requiredFieldsForConversion.filter(field => {
+            const value = lead.value[field]
+            return !value || value === '' || value === null || value === undefined
+        })
+        
+        if (missingFields.length > 0) {
+            console.log('Missing fields for conversion:', missingFields)
+            
+            pendingStageChange.value = {
+                leadId: lead.value.id,
+                targetStageId: stageId,
+                targetStageName: stageName,
+                targetStageOrder: targetStageOrder,
+                originalStageId: lead.value.stage_id,
+                leadData: { ...lead.value },
+                isConversion: true
+            }
+            
+            missingFieldsForLead.value = missingFields
+            showStageChangeModal.value = true
+            setTimeout(() => {
+                const textarea = document.querySelector('.stage-change-modal textarea')
+
+                if (textarea) {
+                    textarea.focus()
+                    
+                    // 💣 دي اللي هتحل المشكلة
+                    textarea.click()
+                }
+
+                // 💣 دي أهم سطر
+                document.body.classList.remove('modal-open')
+            }, 100)
+            return
+        }
+        
+        // All data complete, proceed with stage change
+        await executeStageChange(stageId, lead.value.stage_id)
+        return
+    }
+    
+    // For other stages
+    const requiredFields = requiredFieldsMap[targetStageOrder] || []
+    const leadMissingFields = requiredFields.filter(field => {
+        const value = lead.value[field]
+        return !value || value === '' || value === null || value === undefined
+    })
+    
+    if (leadMissingFields.length > 0 || [3,4,5,7,8,9,10].includes(targetStageOrder)) {
+        console.log('Missing fields for stage:', targetStageOrder, leadMissingFields)
+        
+        pendingStageChange.value = {
+            leadId: lead.value.id,
+            targetStageId: stageId,
+            targetStageName: stageName,
+            targetStageOrder: targetStageOrder,
+            originalStageId: lead.value.stage_id,
+            leadData: { ...lead.value },
+            isConversion: false
+        }
+        
+        missingFieldsForLead.value = leadMissingFields
+        showStageChangeModal.value = true
+       setTimeout(() => {
+            const textarea = document.querySelector('.stage-change-modal textarea')
+
+            if (textarea) {
+                textarea.focus()
+                
+                // 💣 دي اللي هتحل المشكلة
+                textarea.click()
+            }
+
+            // 💣 دي أهم سطر
+            document.body.classList.remove('modal-open')
+        }, 100)
+        return
+    }
+    
+    // No missing fields, proceed with stage change
+    await executeStageChange(stageId, lead.value.stage_id)
+}
+// Execute stage change API call
+const executeStageChange = async (newStageId, oldStageId) => {
+    try {
+        isUserAction.value = true  // Mark that this is a user action
+        const response = await api.post(`/leads/${lead.value.id}/change-stage`, {
+            stage_id: newStageId
+        })
+        const updatedLeadData = response.data?.data || response.data
+        if (updatedLeadData) {
+            lead.value = { ...lead.value, ...updatedLeadData }
+        }
+        // Update the stage selector value
+        leadStageId.value = newStageId
+        emit('lead-updated', lead.value)
+        $showNotification('Stage updated successfully', 'success')
+    } catch (error) {
+        console.error('❌ Error updating stage:', error)
+        $showNotification(error.response?.data?.message || 'Failed to update stage', 'error')
+        // Revert the stage selector
+        leadStageId.value = oldStageId
+    } finally {
+        setTimeout(() => {
+            isUserAction.value = false
+        }, 500)
+    }
+}
+
+// Handle stage change with reason from modal
+const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...additionalData }) => {
+    console.log('handleStageChangeWithReason called:', { leadId, targetStageId, reason, additionalData })
+    
+    try {
+        const leadData = pendingStageChange.value?.leadData
+        if (!leadData) {
+            console.error('No lead data found')
+            return
+        }
+
+        const isConversion = pendingStageChange.value?.isConversion || false
+        const targetStageOrder = pendingStageChange.value?.targetStageOrder || 0
+
+        // Prepare payload
+        const payload = {
+            stage_id: targetStageId,
+            reason: reason || null,
+        }
+        
+        // Add fields from modal
+        if (additionalData.salutation) payload.salutation = additionalData.salutation
+        if (additionalData.budget) payload.budget = additionalData.budget
+        if (additionalData.area_id) payload.area_id = additionalData.area_id
+        if (additionalData.property_type_id) payload.property_type_id = additionalData.property_type_id
+        
+        // Handle bedrooms conversion
+        let bedroomsValue = additionalData.bedrooms
+        if (bedroomsValue === 'Studio' || bedroomsValue === 'studio') {
+            bedroomsValue = 0
+        }
+        if (bedroomsValue !== undefined && bedroomsValue !== '') payload.bedrooms = bedroomsValue
+        
+        if (additionalData.purpose_buying) payload.purpose_buying = additionalData.purpose_buying
+        if (additionalData.lead_source) payload.lead_source = additionalData.lead_source
+        if (additionalData.available_date) payload.available_date = additionalData.available_date
+        if (additionalData.branch) payload.branch = additionalData.branch
+        if (additionalData.lost_reason) payload.why_lost_lead = additionalData.lost_reason
+        
+        // Handle lead status based on stage
+        if (additionalData.lead_status) {
+            if (targetStageOrder === 4 || (isConversion && targetStageOrder === 6)) {
+                payload.status_lead = additionalData.lead_status
+            } else if (targetStageOrder === 9) {
+                payload.status_lead_pool = additionalData.lead_status
+            } else if (targetStageOrder === 10) {
+                payload.unqualified_status = additionalData.lead_status
+            }
+        }
+
+        console.log('Sending payload:', payload)
+
+        // Send request
+        const response = await api.post(`/leads/${leadId}/change-stage`, payload)
+        
+        $showNotification(response.data?.message || 'Stage updated successfully', 'success')
+        
+        // Update local lead data
+        if (response.data?.data) {
+            lead.value = { ...lead.value, ...response.data.data }
+        }
+        
+        // Update stage selector
+        if (targetStageId) {
+            leadStageId.value = targetStageId
+        }
+        
+        // Close modal
+        showStageChangeModal.value = false
+        
+        // Emit update to parent
+        emit('lead-updated', lead.value)
+        
+        clearPendingStageChange()
+        
+    } catch (error) {
+        console.error('Error:', error)
+        $showNotification(error.response?.data?.message || 'Failed to update stage', 'error')
+        throw error
+    }
+}
+
+const clearPendingStageChange = () => {
+    pendingStageChange.value = null
+    missingFieldsForLead.value = []
+}
 const fetchLead = async () => {
     try {
         const response = await api.get(`/leads/${props.leadId}`)
@@ -400,7 +679,7 @@ onMounted(() => {
     console.log('🚀 ViewLeadModal: Component mounted')
     console.log('   - show.value:', show.value)
     console.log('   - props.leadId:', props.leadId)
-    
+    fetchStageOrders()
     if (show.value && props.leadId) {
         console.log('   ✅ Initializing lead data and listeners...')
         fetchLead()
@@ -460,23 +739,10 @@ watch(lead, (newLead) => {
 
 // When user clicks a stage in StageSelector, save immediately and show in activity timeline
 watch(leadStageId, async (newStageId, oldStageId) => {
-    if (!newStageId || newStageId==lead.value.stage_id  || oldStageId === undefined || newStageId === oldStageId || !lead.value?.id) return
-    try {
-        const response = await api.post(`/leads/${lead.value.id}/change-stage`, {
-            stage_id: newStageId
-        })
-        const updatedLeadData = response.data?.data || response.data
-        if (updatedLeadData) {
-            lead.value = { ...lead.value, ...updatedLeadData }
-        }
-        emit('lead-updated', lead.value)
-        $showNotification('Stage updated successfully', 'success')
-    } catch (error) {
-        console.error('❌ Error updating stage:', error)
-        $showNotification(error.response?.data?.message || 'Failed to update stage', 'error')
-        leadStageId.value = oldStageId
+    if (!isUserAction.value && newStageId !== oldStageId) {
+        console.log('External stage update detected:', { newStageId, oldStageId })
     }
-})
+}, { immediate: false })
 
 // Notification helper – use global deferred to avoid SweetAlert2 stack overflow
 const $showNotification = (message, type = 'info') => {
@@ -486,6 +752,9 @@ const $showNotification = (message, type = 'info') => {
 </script>
 
 <style scoped>
+.view-lead-modal{
+        z-index: 1000 !important;
+}
 .view-lead-modal-content {
     background: #fff;
     border-radius: 16px;
@@ -698,5 +967,31 @@ const $showNotification = (message, type = 'info') => {
 
 .timeline-date {
     padding-left: 44px;
+}
+
+.modal-backdrop {
+    z-index: 1040 !important;
+}
+
+.modal {
+    z-index: 1050 !important;
+}
+
+.stage-change-modal-overlay {
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+}
+
+
+
+
+.stage-change-modal-overlay * {
+    pointer-events: auto !important;
+    user-select: text !important;
+}
+
+textarea, input, select {
+    pointer-events: auto !important;
+    user-select: text !important;
 }
 </style>

@@ -324,16 +324,19 @@
         :triggerElement="currentTriggerElement"
         @view-lead="handleViewDuplicateLead"
     />
-     <StageChangeReasonModal
-            ref="stageChangeReasonModal"
-            :leadId="pendingStageChange?.leadId"
-            :targetStageId="pendingStageChange?.targetStageId"
-            :targetStageName="pendingStageChange?.targetStageName"
-              :missingFields="missingFieldsForLead" 
-              :leadData="pendingStageChange?.leadData"
-            @submit="handleStageChangeWithReason"
-            @closed="clearPendingStageChange"
-        />
+ <StageChangeReasonModal
+        ref="stageChangeReasonModal"
+        v-model="showStageChangeModal"
+        :leadId="pendingStageChange?.leadId"
+        :targetStageId="pendingStageChange?.targetStageId"
+        :targetStageName="pendingStageChange?.targetStageName"
+        :targetStageOrder="pendingStageChange?.targetStageOrder"
+        :missingFields="missingFieldsForLead"
+        :leadData="pendingStageChange?.leadData"
+        :isConversion="pendingStageChange?.isConversion || false"
+        @submit="handleStageChangeWithReason"
+        @closed="clearPendingStageChange"
+    />
     <ConvertLeadModal
         ref="convertModalRef"
         :leadId="selectedLeadForConversion"
@@ -472,6 +475,7 @@ import Swal from 'sweetalert2'
 // Import Bootstrap
 import * as bootstrap from 'bootstrap'
 
+const showStageChangeModal = ref(false)
 
 const showConvertModal = ref(false)
 const selectedLeadForConversion = ref(null)
@@ -479,6 +483,7 @@ const selectedLeadData = ref(null)
 const convertModalRef = ref(null)
 const CONVERTED_STAGE_ID = 8
 
+const stageOrderMap = ref({})
 
 
 // Get user from storage (same pattern as header/index.vue)
@@ -1296,7 +1301,8 @@ onMounted(async () => {
     await Promise.all([
         fetchLeads(true), // Immediate on mount
         fetchResponsiblePersons(),
-         fetchCardSettings() 
+         fetchCardSettings() ,
+         fetchStageOrders()
     ])
     nextTick(() => updateScrollArrows())
     window.addEventListener('resize', updateScrollArrows)
@@ -1937,89 +1943,180 @@ async function saveStageName(column) {
 }
 const missingFieldsForLead = ref([]) 
 
+
+// When loading stages, also store the order mapping
+// When loading stages, also store the order mapping
+const fetchStageOrders = async () => {
+    try {
+        const response = await api.get('/stages')
+        // تأكد من أن البيانات موجودة بشكل صحيح
+        let stages = []
+        
+        if (response.data && response.data.data) {
+            stages = response.data.data
+        } else if (response.data && Array.isArray(response.data)) {
+            stages = response.data
+        } else if (response.data && response.data.stages) {
+            stages = response.data.stages
+        }
+        
+        // تأكد من أن stages هي array
+        if (!Array.isArray(stages)) {
+            console.warn('Stages is not an array:', stages)
+            stages = []
+        }
+        
+        const map = {}
+        stages.forEach(stage => {
+            if (stage && stage.id) {
+                map[stage.id] = stage.order || 0
+            }
+        })
+        stageOrderMap.value = map
+        console.log('Stage order map loaded:', stageOrderMap.value) // للتتبع
+    } catch (error) {
+        console.error('Error fetching stage orders:', error)
+        // لا تفشل التطبيق إذا فشل جلب الـ orders
+        stageOrderMap.value = {}
+    }
+}
+
 async function onLeadDragChange(evt, column) {
     if (evt.added) {
         const lead = evt.added.element
         const newStageId = column.status
+        const newStageOrder = stageOrderMap.value[newStageId] ?? column.order ?? 0
 
-        // Check if this is the converted stage (ID 8)
-        if (newStageId === CONVERTED_STAGE_ID) {
-            // Store the lead and target stage for the modal
+        console.log('Lead drag change:', { 
+            leadId: lead.id, 
+            newStageId, 
+            newStageOrder,
+            leadData: lead
+        })
+
+        // Check if this is the converted stage (order 6)
+        if (newStageOrder === 6) {
+            // قائمة الحقول المطلوبة للتحويل إلى Converted
+            const requiredFieldsForConversion = [
+                'salutation',
+                'property_type_id',
+                'area_id',
+                'budget',
+                'lead_source',
+                'purpose_buying',
+                'bedrooms',
+                'status_lead',
+              
+            ]
+            
+            // التحقق من الحقول المفقودة
+            const missingFields = requiredFieldsForConversion.filter(field => {
+                const value = lead[field]
+                return !value || value === '' || value === null || value === undefined
+            })
+            
+            console.log('Conversion - Missing fields:', missingFields)
+            
+            // إذا كان هناك حقول مفقودة، أظهر الموديل لإكمالها
+            if (missingFields.length > 0) {
+                console.log('Showing modal to complete missing fields for conversion')
+                
+                pendingStageChange.value = {
+                    leadId: lead.id,
+                    targetStageId: newStageId,
+                    targetStageName: column.title,
+                    targetStageOrder: newStageOrder,
+                    originalStageId: lead.stage_id,
+                    leadData: { ...lead },
+                    isConversion: true
+                }
+                
+                missingFieldsForLead.value = missingFields
+                
+                // إرجاع الـ lead للمرحلة السابقة
+                const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
+                if (sourceColumn) {
+                    const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
+                    if (targetColumnIndex !== -1) {
+                        columns.value[targetColumnIndex].leads =
+                            columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
+                    }
+                    
+                    if (!sourceColumn.leads.find(l => l.id === lead.id)) {
+                        sourceColumn.leads.push(lead)
+                    }
+                }
+                
+                await nextTick()
+                showStageChangeModal.value = true
+                return
+            }
+            
+            // جميع البيانات موجودة، انتقل إلى التحويل
+            console.log('All data complete, showing conversion modal')
             selectedLeadForConversion.value = lead.id
             selectedLeadData.value = lead
             
-            // Remove the lead from the converted stage (revert UI)
             const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
-            columns.value[targetColumnIndex].leads = 
-                columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
+            if (targetColumnIndex !== -1) {
+                columns.value[targetColumnIndex].leads = 
+                    columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
+            }
             
-            // Show conversion modal
             await nextTick()
             if (convertModalRef.value) {
                 convertModalRef.value.show()
             }
-            return // Don't proceed with stage change
-        }
-
-        const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
-
-        if (targetColumnIndex === 0 || targetColumnIndex === 1) {
-            await moveLeadWithStageChange(lead, newStageId)
             return
         }
-const requiredFields = ['property_type_id', 'area_id', 'budget', 'lead_source', 'purpose_buying', 'bedrooms']
 
-const leadMissingFields = requiredFields.filter(f => !lead[f])
-
-if (column.order >= 4  ) {
-          pendingStageChange.value = {
+        // باقي الكود للمراحل الأخرى...
+        const requiredFieldsMap = {
+            3: ['salutation'],
+            4: ['salutation','property_type_id', 'area_id', 'budget', 'purpose_buying', 'bedrooms', 'status_lead'],
+            5: ['salutation','available_date'],
+            7: ['salutation','branch'],
+            8: ['why_lost_lead'],
+            9: ['status_lead'],
+            10: ['status_lead']
+        }
+        
+        const requiredFields = requiredFieldsMap[newStageOrder] || []
+        const leadMissingFields = requiredFields.filter(f => !lead[f])
+        
+        if (leadMissingFields.length > 0 || [3,4,5,7,8,9,10].includes(newStageOrder)) {
+            console.log('Showing modal for stage order:', newStageOrder, 'Missing fields:', leadMissingFields)
+            
+            pendingStageChange.value = {
                 leadId: lead.id,
                 targetStageId: newStageId,
                 targetStageName: column.title,
+                targetStageOrder: newStageOrder,
                 originalStageId: lead.stage_id,
-                leadData: lead
+                leadData: { ...lead },
+                isConversion: false
             }
-    selectedLeadForConversion.value = lead.id
-    selectedLeadData.value = lead
-    missingFieldsForLead.value = leadMissingFields  
-    await nextTick()
-    if (stageChangeReasonModal.value) stageChangeReasonModal.value.show()
-    const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
-    if (sourceColumn) {
-        columns.value[targetColumnIndex].leads =
-            columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
-
-        if (!sourceColumn.leads.find(l => l.id === lead.id)) {
-            sourceColumn.leads.push(lead)
+            
+            missingFieldsForLead.value = leadMissingFields
+            
+            const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
+            if (sourceColumn) {
+                const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
+                if (targetColumnIndex !== -1) {
+                    columns.value[targetColumnIndex].leads =
+                        columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
+                }
+                
+                if (!sourceColumn.leads.find(l => l.id === lead.id)) {
+                    sourceColumn.leads.push(lead)
+                }
+            }
+            
+            await nextTick()
+            showStageChangeModal.value = true
+            return
         }
-    }
-    return 
-}
-        // if (!isAdminOrSuperAdmin.value && lead.stage_id !== newStageId) {
-        //     pendingStageChange.value = {
-        //         leadId: lead.id,
-        //         targetStageId: newStageId,
-        //         targetStageName: column.title,
-        //         originalStageId: lead.stage_id,
-        //         leadData: lead
-        //     }
-
-        //     await nextTick()
-        //     stageChangeReasonModal.value?.show()
-
-        //     // revert UI
-        //     const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
-        //     if (sourceColumn) {
-        //         columns.value[targetColumnIndex].leads =
-        //             columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
-
-        //         if (!sourceColumn.leads.find(l => l.id === lead.id)) {
-        //             sourceColumn.leads.push(lead)
-        //         }
-        //     }
-        //     return
-        // }
-
+        
         await moveLeadWithStageChange(lead, newStageId)
     }
 }
@@ -2039,55 +2136,124 @@ async function moveLeadWithStageChange(lead, newStageId) {
     }
 }
 
-function clearPendingStageChange() {
-    pendingStageChange.value = null
-}
 
 
 async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...additionalData }) {
+    console.log('handleStageChangeWithReason called:', { leadId, targetStageId, reason, additionalData })
+    
     try {
         const lead = pendingStageChange.value?.leadData
-        if (!lead) return
+        if (!lead) {
+            console.error('No lead data found')
+            return
+        }
 
-        // تجهيز البيانات للإرسال
+        const isConversion = pendingStageChange.value?.isConversion || false
+        const targetStageOrder = pendingStageChange.value?.targetStageOrder || 0
+
+        // Prepare payload with correct field names for backend
         const payload = {
             stage_id: targetStageId,
-            reason: reason
+            reason: reason || null,
+        }
+        
+        if (additionalData.salutation) payload.salutation = additionalData.salutation
+        if (additionalData.budget) payload.budget = additionalData.budget
+        if (additionalData.area_id) payload.area_id = additionalData.area_id
+        if (additionalData.property_type_id) payload.property_type_id = additionalData.property_type_id
+        if (additionalData.bedrooms) payload.bedrooms = additionalData.bedrooms
+        if (additionalData.purpose_buying) payload.purpose_buying = additionalData.purpose_buying
+        if (additionalData.lead_source) payload.lead_source = additionalData.lead_source
+        if (additionalData.available_date) payload.available_date = additionalData.available_date
+        if (additionalData.branch) payload.branch = additionalData.branch
+        if (additionalData.lost_reason) payload.why_lost_lead = additionalData.lost_reason
+        
+        // معالجة lead_status حسب المرحلة
+        if (additionalData.lead_status) {
+            // المرحلة 4 (Qualified) - status_lead
+            if (targetStageOrder === 4 || (isConversion && targetStageOrder === 6)) {
+                payload.status_lead = additionalData.lead_status
+            }
+            // المرحلة 9 (Lead Pool) - status_lead_pool
+            else if (targetStageOrder === 9) {
+                payload.status_lead_pool = additionalData.lead_status
+            }
+            // المرحلة 10 (Unqualified) - unqualified_status
+            else if (targetStageOrder === 10) {
+                payload.unqualified_status = additionalData.lead_status
+            }
         }
 
-        // إضافة الحقول الإضافية إذا كانت موجودة
-        if (additionalData) {
-            // إضافة كل الحقول المرسلة من المودال
-            Object.keys(additionalData).forEach(key => {
-                if (additionalData[key] !== null && additionalData[key] !== undefined) {
-                    payload[key] = additionalData[key]
-                }
-            })
-        }
+        console.log('Sending payload to backend:', payload)
 
-        // إرسال الطلب
-        await api.post(`/leads/${leadId}/change-stage`, payload)
+        // Send request
+        const response = await api.post(`/leads/${leadId}/change-stage`, payload)
         
-        // Success - real-time updates will handle UI
-        $showNotification('Lead moved successfully', 'success')
+        console.log('Backend response:', response.data)
         
-        // تحديث الـ lead في الواجهة مباشرة (كحل إضافي)
+        $showNotification(response.data?.message || 'Lead data updated successfully', 'success')
+        
+        // Update lead data locally
         if (lead) {
             lead.stage_id = targetStageId
-            // تحديث الحقول الإضافية في الـ lead
-            Object.keys(payload).forEach(key => {
-                if (key !== 'stage_id' && key !== 'reason') {
-                    lead[key] = payload[key]
-                }
-            })
+            // تحديث الحقول المحلية
+            if (payload.salutation) lead.salutation = payload.salutation
+            if (payload.budget) lead.budget = payload.budget
+            if (payload.area_id) lead.area_id = payload.area_id
+            if (payload.property_type_id) lead.property_type_id = payload.property_type_id
+            if (payload.bedrooms) lead.bedrooms = payload.bedrooms
+            if (payload.purpose_buying) lead.purpose_buying = payload.purpose_buying
+            if (payload.lead_source) lead.lead_source = payload.lead_source
+            if (payload.available_date) lead.available_date = payload.available_date
+            if (payload.branch) lead.branch = payload.branch
+            if (payload.why_lost_lead) lead.why_lost_lead = payload.why_lost_lead
+            
+            // تحديث status_lead حسب المرحلة
+            if (payload.status_lead) lead.status_lead = payload.status_lead
+            if (payload.status_lead_pool) lead.status_lead = payload.status_lead_pool
+            if (payload.unqualified_status) lead.status_lead = payload.unqualified_status
+        }
+        
+        // Close modal
+        showStageChangeModal.value = false
+        
+        await nextTick()
+        
+        // If this was for conversion (stage 6), open conversion modal
+        if (isConversion && targetStageOrder === 6) {
+            console.log('Opening conversion modal')
+            selectedLeadForConversion.value = leadId
+            selectedLeadData.value = lead
+            
+            await nextTick()
+            if (convertModalRef.value) {
+                convertModalRef.value.show()
+            }
         }
         
         clearPendingStageChange()
+        await fetchLeads(true)
+        
     } catch (error) {
-        $showNotification(error.response?.data?.message || 'Failed to move lead', 'error')
-        throw error // Re-throw to show error in modal
+        console.error('Error in handleStageChangeWithReason:', error)
+        const errorMessage = error.response?.data?.message || 
+                            error.response?.data?.error || 
+                            'Failed to update lead data'
+        $showNotification(errorMessage, 'error')
+        throw error
     }
 }
+
+function clearPendingStageChange() {
+    pendingStageChange.value = null
+    missingFieldsForLead.value = []
+    showStageChangeModal.value = false
+}
+watch(showStageChangeModal, (newVal) => {
+    if (!newVal) {
+        clearPendingStageChange()
+    }
+})
 
 // Notification helper
 const $showNotification = (message, type = 'info') => {

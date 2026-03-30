@@ -552,7 +552,7 @@ class LeadController extends Controller
     /**
      * Change lead stage
      */
-   public function changeStage(Request $request, Lead $lead): JsonResponse
+public function changeStage(Request $request, Lead $lead): JsonResponse
 {
     try {
         $user = auth()->user();
@@ -561,23 +561,48 @@ class LeadController extends Controller
             return ApiResponse::error('You are not authorized to change stage of this lead', 403);
         }
 
+        // Validation rules using existing columns
         $request->validate([
             'stage_id' => 'required|exists:stages,id',
             'reason' => 'nullable|string|max:255',
+            
+            // Stage 3: Follow Up
+            'salutation' => 'nullable|string|max:50|in:Mr.,Ms.,Mrs.,Dr.',
+            
+            // Stage 4: Qualified - استخدام status_lead
             'area_id' => 'nullable|exists:areas,id',
             'property_type_id' => 'nullable|exists:property_types,id',
             'budget' => 'nullable|numeric|min:0|max:999999999.99',
             'lead_source' => 'nullable|string|max:100',
             'purpose_buying' => 'nullable|string|max:100',
-            'bedrooms' => 'nullable|string|max:50|in:studio,1,2,3,4,5,6,7,8,9',
+            'bedrooms' => 'nullable',
+            'status_lead' => 'nullable|string|max:50|in:cold,warm,hot', // استخدام العمود الموجود
+            
+            // Stage 5: Future - عمود جديد
+            'available_date' => 'nullable|date',
+            
+            // Stage 7: Shared - عمود جديد
+            'branch' => 'nullable|string|max:100|in:Abu Dhabi,Dubai,Sharjah',
+            
+            // Stage 8: Lost - استخدام why_lost_lead
+            'why_lost_lead' => 'nullable|string|max:255|in:lost_by_other_company,lost_by_our_company',
+            
+            // Stage 9: Lead Pool - استخدام status_lead
+            'status_lead_pool' => 'nullable|string|max:100|in:no_answer,canceled',
+            
+            // Stage 10: Unqualified - استخدام status_lead
+            'unqualified_status' => 'nullable',
+            
+            'responsible_person_id' => 'nullable|exists:users,id',
         ]);
 
         $oldStage = $lead->stage;
         $newStage = Stage::find($request->stage_id);
         
-        // حفظ القيم القديمة للهيستوري
+        // حفظ القيم القديمة
         $old = $lead->getAttributes();
 
+        // Check revert condition for stage 3
         if ($newStage->order == 3 && $lead->stage->order == 2) {
             if ($lead->shouldRevertToStageOne()) {
                 $lead->revertToStageOne();
@@ -589,9 +614,6 @@ class LeadController extends Controller
             }
         }
         
-        \Log::info($newStage->order == 2 && !is_null($lead->revert));
-        
-        // متغيرات للتغييرات
         $changes = [];
         $fields = [];
         
@@ -640,12 +662,40 @@ class LeadController extends Controller
             'last_stage_change_at' => now(),
         ];
 
-        // إضافة الحقول الإضافية إذا كانت موجودة في الطلب
-        $additionalFields = ['area_id', 'property_type_id', 'budget', 'lead_source', 'purpose_buying', 'bedrooms', 'responsible_person_id'];
+        // إضافة جميع الحقول حسب المرحلة
+        $additionalFields = [
+            // الحقول الموجودة
+            'area_id', 'property_type_id', 'budget', 'lead_source', 
+            'purpose_buying', 'bedrooms', 'responsible_person_id',
+            'salutation',
+            'status_lead',      // يستخدم للمراحل 4, 9, 10
+            'why_lost_lead',    // يستخدم للمرحلة 8
+            'available_date',   // للمرحلة 5
+            'branch'            // للمرحلة 7
+        ];
         
         foreach ($additionalFields as $field) {
             if ($request->has($field) && $request->$field !== null) {
-                $updateData[$field] = $request->$field;
+                // معالجة خاصة للمراحل المختلفة
+                if ($field === 'status_lead') {
+                    // حسب المرحلة نحدد القيمة
+                    $targetStageOrder = $newStage->order;
+                    
+                    if ($targetStageOrder == 4) {
+                        // Qualified: cold, warm, hot
+                        $updateData['status_lead'] = $request->status_lead;
+                    } elseif ($targetStageOrder == 9) {
+                        // Lead Pool: no_answer, canceled
+                        $updateData['status_lead'] = $request->status_lead_pool;
+                    } elseif ($targetStageOrder == 10) {
+                        // Unqualified: not_interested, wrong_contact, job_seeker, other
+                        $updateData['status_lead'] = $request->unqualified_status;
+                    }
+                } elseif ($field === 'why_lost_lead') {
+                    $updateData['why_lost_lead'] = $request->why_lost_lead;
+                } else {
+                    $updateData[$field] = $request->$field;
+                }
             }
         }
 
@@ -661,9 +711,14 @@ class LeadController extends Controller
             ]);
         }
 
-        // =================== تسجيل الهيستوري للـ fields ===================
+        // =================== تسجيل الهيستوري ===================
         $new = $lead->getAttributes();
-        $ignoreKeys = ['stage_id', 'last_stage_change_at', 'responsible_person_id', 'updated_at', 'created_at'];
+        $ignoreKeys = [
+            'stage_id', 'last_stage_change_at', 'responsible_person_id', 
+            'updated_at', 'created_at', 'revert', 'score', 'priority', 
+            'intent', 'next_action', 'last_scored_at', 'score_breakdown',
+            'converted_to_deal_id', 'converted_at'
+        ];
 
         // تجميع الحقول المتغيرة
         foreach ($new as $key => $value) {
@@ -677,10 +732,9 @@ class LeadController extends Controller
                     'new' => $value
                 ];
             }
-            
         }
 
-        // تسجيل تغيير المسؤول بشكل منفصل
+        // تسجيل تغيير المسؤول
         if (isset($updateData['responsible_person_id']) && $updateData['responsible_person_id'] != $old['responsible_person_id']) {
             $fields['responsible_person_id'] = [
                 'old' => $old['responsible_person_id'],
@@ -733,18 +787,16 @@ class LeadController extends Controller
             'new_stage_id' => $newStage->id
         ];
 
-        // إضافة الحقول المتغيرة إلى الـ broadcast
         if (!empty($fields)) {
             $broadcastChanges['updated_fields'] = $fields;
         }
 
-        // تحديد نوع الـ broadcast
         if (!empty($changes) && isset($changes['action']) && $changes['action'] === 'assigned') {
             broadcast(new LeadUpdated($lead, 'assigned', null, array_merge($changes, $broadcastChanges)));
         } else {
             broadcast(new LeadUpdated($lead, 'stage_changed', null, $broadcastChanges));
         }
-           broadcast(new LeadUpdated($lead, 'stage_changed', null, $broadcastChanges));
+        
         return ApiResponse::success(
             new LeadResource($lead->load(['stage', 'responsiblePerson', 'participants', 'observers.user'])),
             'Lead stage and data updated successfully'

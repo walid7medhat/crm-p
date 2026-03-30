@@ -18,9 +18,34 @@ class NewListingMatchedNotification extends Notification implements ShouldQueue
     }
 
     public function via(object $notifiable): array
-    {
-        return ['database', 'broadcast'];
-    }
+{
+    return ['database', 'broadcast', 'mail'];
+}
+
+public function toMail(object $notifiable): \Illuminate\Notifications\Messages\MailMessage
+{
+    $listingUrl = url("/property-details/{$this->listing->id}");
+    $userName = $notifiable->name ?? null;
+
+    $bodyLines = [
+        "A new property matches your saved search.",
+        "Title: {$this->listing->title}",
+        "Unit: {$this->listing->unit_number}",
+        "Type: {$this->listing->property_type?->name}"
+    ];
+
+    return (new \Illuminate\Notifications\Messages\MailMessage)
+        ->subject("🏠 New Property Matched Your Search")
+        ->view('emails.new_listing_matched', [
+            'userName' => $userName,
+            'subtitle' => 'New Listing Alert',
+            'headline' => $this->listing->title ?? 'Property Listing',
+            'bodyLines' => $bodyLines,
+            'ctaText' => 'View Property',
+            'ctaUrl' => $listingUrl,
+            'fallbackUrl' => $listingUrl,
+        ]);
+}
 
     public function toArray(object $notifiable): array
     {

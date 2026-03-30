@@ -21,6 +21,7 @@
                 >
                     <span>{{ pill.label }}</span>
                     <span v-if="pill.type === 'city'" class="pill-count">{{ pill.children.length }}</span>
+                    <span v-if="pill.type === 'city' && isCitySelected(pill.id)" class="selected-indicator">✓</span>
                 </button>
                 <transition name="city-child-list">
                     <div
@@ -33,7 +34,7 @@
                             :key="`city_child_${child.value}`"
                             type="button"
                             class="city-child-btn"
-                            :class="{ active: form.office === child.value }"
+                            :class="{ active: isBranchSelected(child.value) }"
                             @click="selectCityBranch(activeCityPill, child)"
                         >
                             {{ child.text }}
@@ -68,7 +69,7 @@
                                 class="custom-input"
                             />
                             <v-select
-                                v-else-if="field.type === 'select'"
+                                v-else-if="field.type === 'select' && field.id !== 'office'"
                                 v-model="form[field.formKey]"
                                 :options="field.options"
                                 :reduce="opt => opt.value"
@@ -76,6 +77,25 @@
                                 :placeholder="field.placeholder || 'Select'"
                                 :clearable="hasValue(form[field.formKey])"
                                 append-to-body
+                                class="custom-v-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                            <!-- Multi-select for office/branch -->
+                            <v-select
+                                v-else-if="field.type === 'select' && field.id === 'office'"
+                                v-model="form[field.formKey]"
+                                :options="field.options"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                :placeholder="field.placeholder || 'Select Branches'"
+                                :clearable="hasValue(form[field.formKey])"
+                                append-to-body
+                                multiple
                                 class="custom-v-select"
                             >
                                 <template #open-indicator="{ attributes }">
@@ -114,6 +134,7 @@
                 >
                     <span>{{ pill.label }}</span>
                     <span v-if="pill.type === 'city'" class="pill-count">{{ pill.children.length }}</span>
+                    <span v-if="pill.type === 'city' && isCitySelected(pill.id)" class="selected-indicator">✓</span>
                 </button>
                 <transition name="city-child-list">
                     <div
@@ -126,7 +147,7 @@
                             :key="`city_child_dropdown_${child.value}`"
                             type="button"
                             class="city-child-btn"
-                            :class="{ active: form.office === child.value }"
+                            :class="{ active: isBranchSelected(child.value) }"
                             @click="selectCityBranch(activeCityPill, child)"
                         >
                             {{ child.text }}
@@ -161,7 +182,7 @@
                                 class="custom-input"
                             />
                             <v-select
-                                v-else-if="field.type === 'select'"
+                                v-else-if="field.type === 'select' && field.id !== 'office'"
                                 v-model="form[field.formKey]"
                                 :options="field.options"
                                 :reduce="opt => opt.value"
@@ -171,7 +192,25 @@
                                 append-to-body
                                 class="custom-v-select"
                             >
-                               
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                            <!-- Multi-select for office/branch -->
+                            <v-select
+                                v-else-if="field.type === 'select' && field.id === 'office'"
+                                v-model="form[field.formKey]"
+                                :options="field.options"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                :placeholder="field.placeholder || 'Select Branches'"
+                                :clearable="hasValue(form[field.formKey])"
+                                append-to-body
+                                multiple
+                                class="custom-v-select"
+                            >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
                                         <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
@@ -263,15 +302,11 @@ import api from '@/plugins/axios'
 
 const props = defineProps({
     modelValue: Boolean,
-    /** When true, render as dropdown panel instead of modal */
     asDropdown: { type: Boolean, default: false },
-    /** When provided, this pill is selected when the modal opens */
     initialActivePill: { type: String, default: undefined },
-    /** When false, form is reset when modal opens (e.g. filters were cleared in parent) */
     hasActiveFilters: { type: Boolean, default: true },
-    /** Current search query from parent; form is synced from this when modal opens or when it changes */
     currentQuery: { type: Object, default: null },
-     showTeamFilter: { type: Boolean, default: false }
+    showTeamFilter: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update:modelValue', 'search'])
@@ -280,15 +315,31 @@ const show = ref(props.modelValue)
 const showFilterSettings = ref(false)
 const showDateModal = ref(false)
 const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'work_phone', 'responsible_person', 'lead_branch_source','office', 'stage', 'email', 'bedrooms','source','team'])
-// const activePill = ref('leads-in-progress')
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
 const teamOptions = ref([{ value: null, text: 'Select Team' }])
 const officeOptions = ref([{ value: null, text: 'Select Office' }])
-// Add these refs with your other refs
 const allResponsiblePersons = ref([])
 const allTeams = ref([])
 const selectedOffice = ref(null)
 const selectedPillType = ref(null)
+const selectedBranches = ref([]) // Track selected branches for multi-select
+
+// Helper functions for branch selection
+const isBranchSelected = (branchValue) => {
+    if (!form.value.office) return false
+    if (Array.isArray(form.value.office)) {
+        return form.value.office.includes(branchValue)
+    }
+    return form.value.office === branchValue
+}
+
+const isCitySelected = (cityId) => {
+    if (!form.value.office || !Array.isArray(form.value.office)) return false
+    const cityPill = sidebarPills.value.find(p => p.id === cityId)
+    if (!cityPill) return false
+    // Check if any branch from this city is selected
+    return cityPill.children.some(child => form.value.office.includes(child.value))
+}
 
 watch(() => props.modelValue, (val) => {
     show.value = val
@@ -302,8 +353,6 @@ watch(() => props.modelValue, (val) => {
         })
     }
 }, { immediate: true })
-// Add these refs with your other refs
-
 
 const queryToFormKeys = {
     lead_name: 'leadName',
@@ -345,22 +394,30 @@ function syncFormFromQuery(query) {
         email: '',
         bedrooms: '',
         leadName: '',
-          team: ''
+        team: '',
+        office: [] // Initialize as array for multi-select
     }
     Object.keys(queryToFormKeys).forEach(qKey => {
         const formKey = queryToFormKeys[qKey]
         if (query[qKey] !== undefined && query[qKey] !== '') {
-            next[formKey] = query[qKey]
+            // Handle office_branch which might be array or single value
+            if (formKey === 'office' && query[qKey]) {
+                next[formKey] = Array.isArray(query[qKey]) ? query[qKey] : [query[qKey]]
+            } else {
+                next[formKey] = query[qKey]
+            }
         }
     })
     form.value = next
 }
+
 watch(() => props.initialActivePill, (newVal) => {
     console.log('initialActivePill changed:', newVal)
     if (newVal && show.value) {
         activePill.value = newVal
     }
 }, { immediate: true })
+
 watch(show, (val) => {
     emit('update:modelValue', val)
     if (val) {
@@ -373,6 +430,7 @@ watch(show, (val) => {
         else syncFormFromQuery(props.currentQuery)
     }
 })
+
 watch(() => props.hasActiveFilters, (val) => {
     if (!val && show.value) resetFormValues()
 })
@@ -380,7 +438,6 @@ watch(() => props.hasActiveFilters, (val) => {
 watch(() => props.currentQuery, (query) => {
     if (show.value && props.hasActiveFilters) syncFormFromQuery(query)
 }, { deep: true })
-
 
 const normalizeCityText = (value) => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim()
 
@@ -457,11 +514,11 @@ const form = ref({
     email: '',
     bedrooms: '',
     leadName: '',
-     source: '',
-       createdFrom: '',    
+    source: '',
+    createdFrom: '',    
     createdTo: '',  
-      team: '',
-      office: ''
+    team: '',
+    office: [] // Changed to array for multi-select
 })
 
 const responsiblePersons = ref([])
@@ -473,13 +530,10 @@ const personOptions = computed(() => {
     
     let filteredPersons = [...allResponsiblePersons.value]
     
-    
-    
     filteredPersons.forEach(p => {
         opts.push({ 
             value: p.id, 
             text: p.name || `User ${p.id}`,
-           
         })
     })
     
@@ -492,8 +546,6 @@ const computedTeamOptions = computed(() => {
     
     let filteredTeams = [...allTeams.value]
     
-    
-    
     filteredTeams.forEach(team => {
         opts.push({ value: team.id, text: team.name })
     })
@@ -501,6 +553,7 @@ const computedTeamOptions = computed(() => {
     console.log('Team options filtered:', filteredTeams.length)
     return opts
 })
+
 const dateOptions = [
     { value: null, text: 'Any Date' }
 ]
@@ -518,11 +571,11 @@ const bedroomsOptions = [
     { value: 3, text: '3' },
     { value: 4, text: '4+' }
 ]
+
 const createdOnOptions = [
     { value: null, text: 'Any Date' },
     { value: 'today', text: 'Today' },
     { value: 'yesterday', text: 'Yesterday' },
-    // { value: 'tomorrow', text: 'Tomorrow' },
     { value: 'this_week', text: 'This Week' },
     { value: 'this_month', text: 'This Month' },
     { value: 'current_quarter', text: 'Current Quarter' },
@@ -532,9 +585,6 @@ const createdOnOptions = [
     { value: 'last_90_days', text: 'Last 90 Days' },
     { value: 'last_week', text: 'Last Week' },
     { value: 'last_month', text: 'Last Month' },
-    // { value: 'next_week', text: 'Next Week' },
-    // { value: 'next_month', text: 'Next Month' },
-    // { value: 'exact_date', text: 'Exact Date' }
     { value: 'custom_date', text: 'Custom Date' }
 ]
 
@@ -554,21 +604,7 @@ const datePresets = [
     { value: 'last_year', label: 'Last Year' },
     { value: 'custom_date', label: 'Custom Date' },
 ]
-// const searchFieldsConfig = [
-//     { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
-//     { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
-//     // { id: 'closed', label: 'Converted', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
-//      { id: 'created_on', label: 'Created On', formKey: 'createdOn', queryKey: 'created_at', type: 'select', options: createdOnOptions },
-//     { id: 'work_phone', label: 'Work Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
-//     { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] },
-//     { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
-//     { id: 'stage', label: 'Stage', formKey: 'stage', queryKey: 'stage_id', type: 'select', options: [] },
-//     { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
-//     { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions },
-//     { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] },
 
-       
-// ]
 const getUserFromStorage = () => {
     try {
         const userData = localStorage.getItem('user')
@@ -578,6 +614,7 @@ const getUserFromStorage = () => {
         return null
     }
 }
+
 const user = ref(getUserFromStorage())
 
 const updateUserFromStorage = () => {
@@ -590,10 +627,9 @@ const updateUserFromStorage = () => {
         user.value = null
     }
 }
-// Applied search params (from search modal, not from URL)
+
 const appliedSearchParams = ref(null)
 
-// Check if user is admin or super_admin (same pattern as header/index.vue)
 const isAdminOrSuperAdmin = computed(() => {
     if (!user.value) return false
     
@@ -602,6 +638,7 @@ const isAdminOrSuperAdmin = computed(() => {
     
     return isAdminUser
 })
+
 const searchFieldsConfig = computed(() => {
     const fields = [
         { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
@@ -611,7 +648,6 @@ const searchFieldsConfig = computed(() => {
         { id: 'work_phone', label: 'Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
         { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] },
         { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
-           
     ]
     
     if (isAdminOrSuperAdmin.value) {
@@ -622,7 +658,7 @@ const searchFieldsConfig = computed(() => {
         { id: 'stage', label: 'Stage', formKey: 'stage', queryKey: 'stage_id', type: 'select', options: [] },
         { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions },
         { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
-        { id: 'office', label: 'Branch',  formKey: 'office',  queryKey: 'office_branch', type: 'select',  options: officeOptions.value },
+        { id: 'office', label: 'Branch', formKey: 'office', queryKey: 'office_branch', type: 'select', options: officeOptions.value, multiple: true },
         { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] }
     )
     
@@ -650,7 +686,7 @@ const visibleSearchFields = computed(() => {
                 f.formKey === 'stage' ? stageOptions.value :
                 f.formKey === 'source' ? sourceOptions.value :
                 f.formKey === 'createdOn' ? createdOnOptions :
-                f.formKey === 'team' ? computedTeamOptions.value : // Use computedTeamOptions instead of teamOptions
+                f.formKey === 'team' ? computedTeamOptions.value :
                 (f.options || []),
             placeholder: f.placeholder || (f.type === 'select' ? 'Select' : '')
         }))
@@ -659,6 +695,7 @@ const visibleSearchFields = computed(() => {
 const defaultLeadFieldIds = computed(() =>
     searchFieldsConfig.value.map(f => f.id)
 )
+
 function restoreDefaultFields() {
     selectedLeadFieldIds.value = [...defaultLeadFieldIds.value]
 }
@@ -670,11 +707,24 @@ function onFilterApply(payload) {
 }
 
 function hasValue(val) {
+    if (Array.isArray(val)) return val.length > 0
     return val !== null && val !== undefined && val !== ''
 }
 
 function getDisplayValue(field, rawValue) {
     if (rawValue === null || rawValue === undefined || rawValue === '') return null
+    if (Array.isArray(rawValue)) {
+        // Handle multi-select display
+        if (field.type === 'select') {
+            const opts = field.options || []
+            const selectedTexts = rawValue.map(val => {
+                const opt = opts.find(o => o.value === val)
+                return opt ? opt.text : String(val)
+            })
+            return selectedTexts.join(', ')
+        }
+        return rawValue.join(', ')
+    }
     if (field.type === 'select') {
         const opts = field.formKey === 'responsible' ? personOptions.value : (field.formKey === 'branchSource' ? branchSourceOptions.value : (field.formKey === 'stage' ? stageOptions.value : (field.options || [])))
         const opt = opts.find(o => o.value === rawValue)
@@ -693,14 +743,21 @@ function applySearch() {
     let closed = form.value.closed ?? undefined
     let teamId = form.value.team ?? undefined
     
+    // Handle multi-select offices
+    let officeBranches = form.value.office && form.value.office.length ? form.value.office : undefined
+    
     switch (activePill.value) {
         case 'dubai':
             const dubaiOption = branchSourceOptions.value.find(opt =>
                 opt.text?.toLowerCase().includes('dubai')
             )
             branchSource = dubaiOption?.value
-            if (form.value.office) {
-                queryOfficeBranch = form.value.office
+            // If no specific branches selected, add all Dubai branches
+            if (!officeBranches || officeBranches.length === 0) {
+                const dubaiPill = sidebarPills.value.find(p => p.id === 'dubai')
+                if (dubaiPill && dubaiPill.children.length) {
+                    officeBranches = dubaiPill.children.map(child => child.value)
+                }
             }
             break
             
@@ -709,8 +766,12 @@ function applySearch() {
                 opt.text?.toLowerCase().includes('abu dhabi')
             )
             branchSource = abuDhabiOption?.value
-            if (form.value.office) {
-                queryOfficeBranch = form.value.office
+            // If no specific branches selected, add all Abu Dhabi branches
+            if (!officeBranches || officeBranches.length === 0) {
+                const abuDhabiPill = sidebarPills.value.find(p => p.id === 'abu-dhabi')
+                if (abuDhabiPill && abuDhabiPill.children.length) {
+                    officeBranches = abuDhabiPill.children.map(child => child.value)
+                }
             }
             break
             
@@ -858,11 +919,11 @@ function applySearch() {
         created_to: createdTo || undefined,     
         created_at: createdAt || undefined,   
         team_id: teamId || undefined,
-        office_branch: queryOfficeBranch || form.value.office || undefined
+        office_branch: officeBranches || undefined // This will be an array for multiple offices
     }
     
     Object.keys(query).forEach(k => { 
-        if (query[k] === '' || query[k] === undefined) delete query[k] 
+        if (query[k] === '' || query[k] === undefined || (Array.isArray(query[k]) && query[k].length === 0)) delete query[k] 
     })
     
     console.log('Search Query:', query)
@@ -900,10 +961,7 @@ function applySearch() {
     
     console.log('activePill:', activePill.value);
     
-    // FIX: Safely get the pill object, ensuring we handle if it's not found
     const pill = sidebarPills.value.find(p => p.id === activePill.value)
-    
-    // FIX: Only emit if pill exists, otherwise emit with null
     const pillData = pill ? { id: pill.id, label: pill.label } : null
     
     console.log('Pill data:', pillData);
@@ -917,11 +975,13 @@ async function handleSidebarPillClick(pill) {
     activePill.value = pill.id
     
     if (pill.type !== 'city') {
-        form.value.office = ''
+        // For non-city pills, clear office selection
+        form.value.office = []
         selectedOffice.value = null
         selectedPillType.value = pill.id === 'dubai' || pill.id === 'abu-dhabi' ? pill.id : null
     } else {
         selectedPillType.value = pill.id
+        // Don't clear office when clicking on city pill - let user select branches
     }
     
     // Reset responsible and team when branch/pill changes
@@ -938,8 +998,22 @@ async function handleSidebarPillClick(pill) {
 async function selectCityBranch(cityPill, child) {
     console.log('City branch selected:', cityPill, child)
     activePill.value = cityPill.id
-    form.value.office = child.value
-    selectedOffice.value = child.value
+    
+    // Toggle selection for multi-select
+    if (!form.value.office) {
+        form.value.office = []
+    }
+    
+    const index = form.value.office.indexOf(child.value)
+    if (index === -1) {
+        // Add if not already selected
+        form.value.office.push(child.value)
+    } else {
+        // Remove if already selected
+        form.value.office.splice(index, 1)
+    }
+    
+    selectedOffice.value = form.value.office.length ? form.value.office : null
     selectedPillType.value = cityPill.id
     
     // Reset responsible and team when branch changes
@@ -957,8 +1031,10 @@ async function fetchResponsiblePersonsWithFilter() {
     try {
         const params = {}
         
-        // Add office filter if selected
-        if (selectedOffice.value) {
+        // Add office filter if selected (now supports multiple offices)
+        if (selectedOffice.value && Array.isArray(selectedOffice.value) && selectedOffice.value.length) {
+            params.office_ids = selectedOffice.value.join(',')
+        } else if (selectedOffice.value && !Array.isArray(selectedOffice.value)) {
             params.office_id = selectedOffice.value
         }
         
@@ -970,10 +1046,8 @@ async function fetchResponsiblePersonsWithFilter() {
         const res = await api.get('/available-responsible-persons', { params })
         console.log(res.data.data);
         if (res.data.data) {
-            
             allResponsiblePersons.value = res.data.data.map(person => ({
                 ...person,
-             
             }))
         } else {
             allResponsiblePersons.value = []
@@ -1010,6 +1084,7 @@ async function fetchStages() {
         }
     } catch (_) {}
 }
+
 async function fetchSources() {
     try {
         const res = await api.get('/sources')
@@ -1024,12 +1099,12 @@ async function fetchSources() {
         console.error('Error fetching sources:', error)
     }
 }
+
 async function fetchTeams() {
     try {
         const res = await api.get('/teams-with-leads')
         const data = res.data?.data
         if (Array.isArray(data) && data.length) {
-            // Store full team data with office and city info
             allTeams.value = data.map(team => ({
                 id: team.id,
                 name: team.name,
@@ -1041,12 +1116,15 @@ async function fetchTeams() {
         console.error('Error fetching teams:', error)
     }
 }
+
 async function fetchTeamsWithFilter() {
     try {
         const params = {}
         
-        // Add office filter if selected
-        if (selectedOffice.value) {
+        // Add office filter if selected (now supports multiple offices)
+        if (selectedOffice.value && Array.isArray(selectedOffice.value) && selectedOffice.value.length) {
+            params.office_ids = selectedOffice.value.join(',')
+        } else if (selectedOffice.value && !Array.isArray(selectedOffice.value)) {
             params.office_id = selectedOffice.value
         }
         
@@ -1073,10 +1151,10 @@ async function fetchTeamsWithFilter() {
         allTeams.value = []
     }
 }
-// Add fetch function to get offices (users directly under branches)
+
 async function fetchOffices() {
     try {
-        const res = await api.get('/get-offices') // You'll need to create this endpoint
+        const res = await api.get('/get-offices')
         const data = res.data?.data
         if (Array.isArray(data) && data.length) {
             officeOptions.value = [
@@ -1091,7 +1169,6 @@ async function fetchOffices() {
         }
     } catch (error) {
         console.error('Error fetching offices:', error)
-        // Fallback: fetch from users with admin role who have parent_id
         try {
             const res2 = await api.get('/users', {
                 params: {
@@ -1116,6 +1193,7 @@ async function fetchOffices() {
         }
     }
 }
+
 function resetFormValues() {
     form.value = {
         search: '',
@@ -1123,9 +1201,9 @@ function resetFormValues() {
         firstName: '',
         responsible: '',
         createdOn: '',
-         createdFrom: '',     
+        createdFrom: '',     
         createdTo: '',  
-         created_from: '',     
+        created_from: '',     
         created_to: '',  
         stageChangedBy: '',
         branchSource: '',
@@ -1134,9 +1212,9 @@ function resetFormValues() {
         stage: '',
         email: '',
         bedrooms: '',
-         source: '',
-         team: '',
-         office: ''
+        source: '',
+        team: '',
+        office: [] // Reset to empty array
     }
 }
 
@@ -1254,7 +1332,7 @@ function applyDateRange() {
         form.value.createdTo = formatYmd(endDate.value)
     }
     showDateModal.value = false
-     applySearch()
+    applySearch()
 }
 
 const resetForm = () => {
@@ -1262,27 +1340,32 @@ const resetForm = () => {
     show.value = false
     emit('search', { query: null, activePill: null, activeFilters: [] })
 }
-// Watch for officeOptions to set selected office if exists
+
 watch(officeOptions, (newOptions) => {
-    if (form.value.office && newOptions.length) {
-        const selected = newOptions.find(opt => opt.value === form.value.office)
-        if (selected) {
-            selectedOffice.value = form.value.office
+    if (form.value.office && form.value.office.length && newOptions.length) {
+        // Verify selected offices still exist
+        const validOffices = form.value.office.filter(officeId => 
+            newOptions.some(opt => opt.value === officeId)
+        )
+        if (validOffices.length !== form.value.office.length) {
+            form.value.office = validOffices
         }
+        selectedOffice.value = form.value.office
     }
 }, { deep: true })
+
 watch(() => form.value.createdOn, (newVal, oldVal) => {
     if (oldVal === 'custom_date' && newVal !== 'custom_date') {
         form.value.createdFrom = ''
         form.value.createdTo = ''
     }
 })
-// Watch for office changes to filter responsible persons and teams
+
 watch(() => form.value.office, async (newOffice, oldOffice) => {
     console.log('Office changed from:', oldOffice, 'to:', newOffice)
     
-    if (newOffice !== oldOffice) {
-        if (newOffice) {
+    if (JSON.stringify(newOffice) !== JSON.stringify(oldOffice)) {
+        if (newOffice && newOffice.length) {
             selectedOffice.value = newOffice
         } else {
             selectedOffice.value = null
@@ -1296,17 +1379,15 @@ watch(() => form.value.office, async (newOffice, oldOffice) => {
             form.value.team = ''
         }
         
-        // Fetch filtered data based on selected office
-        console.log('Fetching data for office:', selectedOffice.value)
+        // Fetch filtered data based on selected offices
+        console.log('Fetching data for offices:', selectedOffice.value)
         await Promise.all([
             fetchResponsiblePersonsWithFilter(),
             fetchTeamsWithFilter()
         ])
     }
-}, { immediate: true }) // Add immediate to run on mount
+}, { deep: true, immediate: true })
 
-// Watch for active pill changes
-// Watch for active pill changes
 watch(activePill, async (newPill, oldPill) => {
     console.log('Pill changed from:', oldPill, 'to:', newPill)
     
@@ -1333,10 +1414,10 @@ watch(activePill, async (newPill, oldPill) => {
         ])
     }
 })
+
 onMounted(async () => {
     updateUserFromStorage() 
     
-    // Fetch all data initially
     await Promise.all([
         fetchResponsiblePersonsWithFilter(),
         fetchBranchSources(),
@@ -1351,6 +1432,13 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* Add selected indicator style */
+.selected-indicator {
+    margin-left: 4px;
+    font-size: 12px;
+}
+
+/* Keep existing styles */
 .lead-search-dropdown-panel {
     width: 1140px;
     max-width: calc(100vw - 32px);
@@ -1671,7 +1759,7 @@ onMounted(async () => {
     gap: 10px;
 }
 
-/* Custom v-select styles (same as CreateLeadModal) */
+/* Custom v-select styles */
 :deep(.custom-v-select) {
     font-family: 'Montserrat';
 }
@@ -1718,14 +1806,6 @@ onMounted(async () => {
     padding: 0 8px;
 }
 
-/* :deep(.custom-v-select .vs__clear) {
-    display: none !important;
-}
-
-:deep(.custom-v-select:has(.vs__selected) .vs__clear) {
-    display: block !important;
-} */
-
 :deep(.custom-v-select .vs__open-indicator-icon) {
     font-size: 16px;
     color: #64748B;
@@ -1762,7 +1842,6 @@ onMounted(async () => {
 
 .footer-link {
     font-size: 14px;
-    /* text-decoration: underline; */
     color: #3B82F6;
     font-weight: 500;
 }
@@ -1790,11 +1869,9 @@ onMounted(async () => {
     .modal-dialog {
         z-index: 1060 !important;
     }
-    /* Appended v-select dropdown (append-to-body) must sit above modal */
     .vs__dropdown-menu {
         z-index: 9999 !important;
     }
-    /* Highlight color for dropdown options when appended to body */
     .vs__dropdown-option--highlight {
         background: #FAA300 !important;
         color: #fff !important;
@@ -1804,4 +1881,3 @@ onMounted(async () => {
         color: #fff !important;
     }
 </style>
-

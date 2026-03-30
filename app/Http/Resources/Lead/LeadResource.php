@@ -79,6 +79,8 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             
             // Status
             'status_lead' => $this->status_lead,
+            'available_date'=>$this->available_date,
+            'branch'=>$this->branch,
             'status_unit' => $this->status_unit,
             'status_project' => $this->status_project,
             'lists' => $this->lists,

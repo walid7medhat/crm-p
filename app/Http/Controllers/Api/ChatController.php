@@ -168,6 +168,7 @@ class ChatController extends Controller
             'listing.project',
         ])
             ->withCount('messages')
+            ->whereHas('messages')
             ->with(['messages' => fn ($q) => $q->latest()->limit(1)]);
 
         // if (!$isSuperAdmin) {
@@ -439,4 +440,39 @@ class ChatController extends Controller
 
         return implode(' - ', $parts);
     }
+
+
+    /**
+ * Admin: delete a conversation (super_admin only)
+ * DELETE /api/chat/admin/conversations/{conversation}
+ */
+public function adminDeleteConversation(Request $request, Conversation $conversation): JsonResponse
+{
+    $user = $request->user();
+
+    // تحقق صلاحيات السوبر ادمن
+    $isSuperAdmin = $user->hasRole('super_admin') || $user->id == 30 || $user->id == 33;
+    if (!$isSuperAdmin) {
+        return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+    }
+
+    try {
+        DB::beginTransaction();
+
+        // حذف كل الرسائل المرتبطة بالمحادثة
+        $conversation->messages()->delete();
+
+        // إلغاء الربط بين المحادثة والمستخدمين
+        $conversation->users()->detach();
+
+        // حذف المحادثة نفسها
+        $conversation->delete();
+
+        DB::commit();
+        return response()->json(['success' => true, 'message' => 'Conversation deleted successfully.']);
+    } catch (\Throwable $e) {
+        DB::rollBack();
+        return response()->json(['success' => false, 'message' => 'Failed to delete conversation.'], 500);
+    }
+}
 }

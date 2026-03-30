@@ -64,6 +64,13 @@ typings/
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 
-node_modules
-package-lock.json
-composer.lock
+
+/public/build
+/public/hot
+/storage/*.key
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/bootstrap/cache/*.php
+
+/storage/logs/*

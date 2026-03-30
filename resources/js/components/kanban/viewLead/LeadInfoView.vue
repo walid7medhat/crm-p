@@ -1,7 +1,7 @@
 <template>
     <div class="lead-info-view">
         <div class="info-section">
-            <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="d-flex align-items-center justify-content-between mb-3">
                 <div class="info-section-title mb-0">Lead Information</div>
                 <button v-if="showEditIcon && canEdit" class="lead-edit-inline-btn" @click="emit('edit-request')">
                     <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:pencil"></iconify-icon>
@@ -65,7 +65,7 @@
             </div>
         </div>
 
-        <div class="info-section">
+        <div class="info-section" v-if="hasAdditionalQuestions">
             <div class="info-section-title">More Information</div>
            
             <template v-if="hasAdditionalQuestions">
@@ -97,7 +97,7 @@
             </div>
         </div>
 
-        <div class="info-section">
+        <div class="info-section" v-if="hasClientRequiredInfo">
             <div class="info-section-title">Client Required Info</div>
             <template v-if="hasClientRequiredInfo">
                 <div class="info-group" v-if="lead?.bedrooms">
@@ -116,9 +116,33 @@
                     <label class="form-label-custom">Budget</label>
                     <div class="info-value">{{ lead?.budget != null ? lead.budget : '—' }} {{ lead?.currency || '' }}</div>
                 </div>
+                 <div class="info-group" v-if="lead?.branch != null">
+                    <label class="form-label-custom">Shared Branch</label>
+                    <div class="info-value">{{ formatWithMapping(lead?.branch, {
+                                                'Abu Dhabi': 'Abu Dhabi',
+                                                'Dubai': 'Dubai',
+                                                'Sharjah': 'Sharjah'
+                                            }) }}</div>
+                </div>
+                 <div class="info-group" v-if="lead?.available_date != null">
+                    <label class="form-label-custom">Available Date</label>
+                    <div class="info-value">{{ lead?.available_date != null ? lead.available_date : '—' }}</div>
+                </div>
+                   <div class="info-group" v-if="lead?.status_lead != null">
+                    <label class="form-label-custom">Lead Status</label>
+                    <div class="info-value">{{ formatLeadStatus(lead?.status_lead) }}</div>
+                </div>
                 <div class="info-group" v-if="lead?.source_information">
                     <label class="form-label-custom">Source Information</label>
                     <div class="info-value">{{ lead?.source_information || '—' }}</div>
+                </div>
+                 <div class="info-group" v-if="lead?.unqualified_status">
+                    <label class="form-label-custom">Unqualified Status</label>
+                    <div class="info-value">{{ lead?.unqualified_status || '—' }}</div>
+                </div>
+                 <div class="info-group" v-if="lead?.why_lost_lead">
+                    <label class="form-label-custom">Lost For</label>
+                    <div class="info-value">{{ formatLostReason(lead?.why_lost_lead) }}</div>
                 </div>
                 <div class="info-group" v-for="(value, key) in clientRequiredMetaFields" :key="`client-${key}`">
                     <label class="form-label-custom">{{ formatQuestion(key) }}</label>
@@ -460,7 +484,43 @@ const formatQuestion = (question) => {
         .replace(/_/g, ' ')
         .replace(/\b\w/g, l => l.toUpperCase())
 }
+// دالة لتنسيق lost reason
+const formatLostReason = (reason) => {
+    if (!reason) return '—'
+    const mapping = {
+        'lost_by_other_company': 'Lost by Other Company',
+        'lost_by_our_company': 'Lost by Our Company'
+    }
+    return mapping[reason] || formatText(reason)
+}
 
+// دالة لتنسيق lead status حسب النوع
+const formatLeadStatus = (status, type = 'qualified') => {
+    if (!status) return '—'
+    
+    const mapping = {
+        // Qualified
+        'cold': 'Cold Lead',
+        'warm': 'Warm Lead',
+        'hot': 'Hot Lead',
+        // Lead Pool
+        'no_answer': 'Lead Pool - No Answer',
+        'canceled': 'Lead Pool - Canceled',
+        // Unqualified
+        'unqualified_not_interested': 'Unqualified - Not Interested',
+        'unqualified_wrong_contact': 'Unqualified - Wrong Contact Details',
+        'unqualified_job_seeker': 'Unqualified - Job Seeker',
+        'unqualified_other': 'Unqualified - Other'
+    }
+    
+    return mapping[status] || formatText(status)
+}
+
+// دالة عامة مع إمكانية إضافة mapping مخصص
+const formatWithMapping = (value, mapping = {}) => {
+    if (!value) return '—'
+    return mapping[value] || formatText(value)
+}
 // Basic fields for Facebook questions
 const basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone','work_phone_number','phone_number','full name', 'first_name', 'last_name','Date','Time','Page_Name','form_name','form_id','No_Label_name','No_Label_email','No_Label_phone']
 
@@ -526,6 +586,11 @@ const hasClientRequiredInfo = computed(() => {
         props.lead?.property_type ||
         props.lead?.source_information ||
         props.lead?.budget != null ||
+        props.lead?.branch != null ||
+        props.lead?.available_date != null ||
+        props.lead?.status_lead != null ||
+        props.lead?.unqualified_status != null ||
+        props.lead?.why_lost_lead != null ||
         Object.keys(clientRequiredMetaFields.value).length > 0
     )
 })

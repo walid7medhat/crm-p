@@ -87,11 +87,7 @@
 
             </div>
 
-            <ResponsiblePersonSection
-                v-if="activeViewTab === 'comments' && lead?.id"
-                :lead="lead"
-                @person-updated="handlePersonUpdated"
-            />
+          
 
             <!-- Lead Activity List -->
             <ActivityList 
@@ -105,6 +101,11 @@
                 ref="commentListRef"
                 :lead-id="lead?.id" 
                  :key="commentListKey"
+            />
+              <ResponsiblePersonSection
+                v-if="lead?.id"
+                :lead="lead"
+                @person-updated="handlePersonUpdated"
             />
             <!-- Lead Activity timeline: under comments, grouped by date (who assigned, created, history). Key forces refetch when stage changes so "Stage changed" appears immediately. -->
             <LeadActivityTimeline 

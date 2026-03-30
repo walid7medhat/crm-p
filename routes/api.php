@@ -243,6 +243,7 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::post('/send', [ChatController::class, 'send']);
         Route::post('/read', [ChatController::class, 'read']);
         Route::get('/admin/conversations', [ChatController::class, 'adminConversations']);
+        Route::delete('/admin/conversations/{conversation}', [ChatController::class, 'adminDeleteConversation']);
     });
 
     // Admin email blast (SUPER_ADMIN only)

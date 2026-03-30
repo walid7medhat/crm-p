@@ -90,7 +90,7 @@
                     <button
                       v-if="isSuperAdmin"
                       class="btn btn-sm btn-outline-danger"
-                      @click="deleteConversation(c)"
+                      @click="confirmDeleteConversation(c)"
                     >
                       <i class="bx bx-trash"></i>
                       Delete
@@ -146,6 +146,7 @@
         </div>
       </div>
     </Teleport>
+   
   </div>
 </template>
 
@@ -153,6 +154,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/plugins/axios'
 import ChatWindow from '@/components/chat/ChatWindow.vue'
+import Swal from 'sweetalert2'
 
 const allConversations = ref([])
 const loading = ref(false)
@@ -172,6 +174,8 @@ const localStatusMap = ref({})
 
 const isSuperAdmin = computed(() => currentUserRoles.value.includes('super_admin'))
 const isNormalAdmin = computed(() => currentUserRoles.value.includes('admin') && !isSuperAdmin.value)
+const conversationToDelete = ref(null) 
+const showDeleteModal = ref(false) 
 
 const filteredConversations = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -239,14 +243,34 @@ function toggleConversationStatus(conv) {
   persistLocalStatuses()
 }
 
-function deleteConversation(conv) {
+function confirmDeleteConversation(conv) {
   if (!isSuperAdmin.value) return
-  const ok = window.confirm(`Delete conversation #${conv.id}? This action cannot be undone.`)
-  if (!ok) return
-  allConversations.value = allConversations.value.filter((item) => item.id !== conv.id)
-  if (selectedConversation.value?.id === conv.id) {
-    selectedConversation.value = null
-  }
+
+  Swal.fire({
+    title: `Delete conversation #${conv.id}?`,
+    text: "This action cannot be undone.",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, delete it!',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true,
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        const res = await api.delete(`/chat/admin/conversations/${conv.id}`)
+        if (res.data?.success) {
+          allConversations.value = allConversations.value.filter(item => item.id !== conv.id)
+          if (selectedConversation.value?.id === conv.id) selectedConversation.value = null
+          Swal.fire('Deleted!', 'The conversation has been deleted.', 'success')
+        } else {
+          Swal.fire('Failed!', res.data?.message || 'Could not delete conversation.', 'error')
+        }
+      } catch (e) {
+        console.error(e)
+        Swal.fire('Error!', 'Something went wrong while deleting.', 'error')
+      }
+    }
+  })
 }
 
 function openConversation(conv) {

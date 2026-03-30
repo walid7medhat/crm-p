@@ -63,10 +63,14 @@ const props = defineProps({
     modelValue: {
         type: Number,
         default: null
+    },
+       requireValidation: {
+        type: Boolean,
+        default: true
     }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'stage-change-request'])
 
 const stages = ref([])
 const scrollContainerRef = ref(null)
@@ -289,9 +293,25 @@ const selectedStageIndex = computed(() => {
 
 const selectStage = (index) => {
     if (stages.value[index]) {
-        currentStageId.value = stages.value[index].id
-        emit('update:modelValue', currentStageId.value)
-        console.log('User selected stage:', stages.value[index].name)
+        const selectedStage = stages.value[index]
+        const newStageId = selectedStage.id
+        
+        console.log('User clicked stage:', selectedStage.name, 'ID:', newStageId)
+        
+        // If validation is required, emit a custom event to let parent handle validation
+        if (props.requireValidation) {
+            // Emit a request to change stage with validation
+            emit('stage-change-request', {
+                stageId: newStageId,
+                stageName: selectedStage.name,
+                stageOrder: selectedStage.order
+            })
+        } else {
+            // Direct update without validation
+            currentStageId.value = newStageId
+            emit('update:modelValue', newStageId)
+            console.log('Direct stage update (no validation):', selectedStage.name)
+        }
     }
 }
 
