@@ -80,6 +80,7 @@
                                 'search-wrapper-expanded': activeFilters && activeFilters.length,
                                 'search-wrapper-tall': searchInputFocused
                             }"
+                               @click="openSearchModal"
                         >
                             <div v-if="activeFilters.length" class="search-filters-pills d-flex align-items-center">
                                 <div
@@ -357,6 +358,17 @@ const initializeStageUpdates = () => {
         console.error('❌ Failed to initialize Echo for stages:', error)
         startPolling()
     }
+}
+const openSearchModal = () => {
+    showSearchModal.value = true
+    searchInputFocused.value = true
+    // Focus on input after modal opens
+    nextTick(() => {
+        const searchInput = document.querySelector('.search-input')
+        if (searchInput) {
+            searchInput.focus()
+        }
+    })
 }
 
 const handleStageUpdate = (event) => {

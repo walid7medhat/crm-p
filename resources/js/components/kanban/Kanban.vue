@@ -79,6 +79,7 @@
                                 'search-wrapper-expanded': activeFilters && activeFilters.length,
                                 'search-wrapper-tall': searchInputFocused
                             }"
+                               @click="openSearchModal"
                         >
                             <div v-if="activeFilters.length" class="search-filters-pills d-flex align-items-center">
                                 <div
@@ -211,6 +212,7 @@ const activeTabIndex = computed({
 const activeTabName = computed(() => {
     return tabs.value.find(t => t.id === activeTab.value)?.name || ''
 })
+
 // Get user from storage (same pattern as header/index.vue)
 const getUserFromStorage = () => {
     try {
@@ -322,7 +324,17 @@ const initializeStageUpdates = () => {
         startPolling()
     }
 }
-
+const openSearchModal = () => {
+    showSearchModal.value = true
+    searchInputFocused.value = true
+    // Focus on input after modal opens
+    nextTick(() => {
+        const searchInput = document.querySelector('.search-input')
+        if (searchInput) {
+            searchInput.focus()
+        }
+    })
+}
 const handleStageUpdate = (event) => {
     console.log('📊 Handling stage update:', event.action_type)
     
