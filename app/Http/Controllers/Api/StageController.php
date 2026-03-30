@@ -278,9 +278,51 @@ class StageController extends Controller
                      $q->where('lead_branch_source', $request->lead_branch_source);
                 }
                 if ($request->filled('office_branch')) {
-                    $branch_team = User::where('id', $request->office_branch)->first();
-                    $team = $branch_team->getAllSubordinatesIds();
-                    $q->whereIn('responsible_person_id', $team);
+                    $officeBranches = $request->office_branch;
+                    
+                    // Convert to array if it's a string (coming as comma-separated)
+                    if (is_string($officeBranches)) {
+                        $officeBranches = explode(',', $officeBranches);
+                    }
+                    
+                    // If it's an array and not empty
+                    if (is_array($officeBranches) && count($officeBranches) > 0) {
+                        $allTeamMembers = [];
+                        
+                        foreach ($officeBranches as $officeBranchId) {
+                            // تأكد من أن $officeBranchId هو رقم صحيح
+                            if (is_numeric($officeBranchId)) {
+                                $branchTeam = User::find($officeBranchId);
+                                if ($branchTeam) {
+                                    // استدعاء الدالة على الـ Model وليس Collection
+                                    $teamMembers = $branchTeam->getAllSubordinatesIds();
+                                    if (is_array($teamMembers)) {
+                                        $allTeamMembers = array_merge($allTeamMembers, $teamMembers);
+                                    }
+                                    // Also add the branch lead themselves
+                                    $allTeamMembers[] = $branchTeam->id;
+                                }
+                            }
+                        }
+                        
+                        // Remove duplicates
+                        $allTeamMembers = array_unique($allTeamMembers);
+                        
+                        if (!empty($allTeamMembers)) {
+                            $q->whereIn('responsible_person_id', $allTeamMembers);
+                        }
+                    }
+                    // Handle single office_branch for backward compatibility
+                    elseif (is_numeric($officeBranches)) {
+                        $branchTeam = User::find($officeBranches);
+                        if ($branchTeam) {
+                            $teamMembers = $branchTeam->getAllSubordinatesIds();
+                            if (is_array($teamMembers)) {
+                                $teamMembers[] = $branchTeam->id;
+                                $q->whereIn('responsible_person_id', $teamMembers);
+                            }
+                        }
+                    }
                 }
                 if ($request->filled('team_id')) {
                     $teamLead = User::find($request->team_id);
@@ -450,13 +492,56 @@ class StageController extends Controller
             }
             if ($request->filled('lead_branch_source')) {
                    
-                    $q->where('lead_branch_source', $request->lead_branch_source);
+                    $leadsQuery->where('lead_branch_source', $request->lead_branch_source);
                 }
             if ($request->filled('office_branch')) {
-                $branch_team = User::where('id', $request->office_branch)->first();
-                $team = $branch_team->getAllSubordinatesIds();
-                $q->whereIn('responsible_person_id', $team);
-            }
+                    $officeBranches = $request->office_branch;
+                    
+                    // Convert to array if it's a string (coming as comma-separated)
+                    if (is_string($officeBranches)) {
+                        $officeBranches = explode(',', $officeBranches);
+                    }
+                    
+                    // If it's an array and not empty
+                    if (is_array($officeBranches) && count($officeBranches) > 0) {
+                        $allTeamMembers = [];
+                        
+                        foreach ($officeBranches as $officeBranchId) {
+                            // تأكد من أن $officeBranchId هو رقم صحيح
+                            if (is_numeric($officeBranchId)) {
+                                $branchTeam = User::find($officeBranchId);
+                                if ($branchTeam) {
+                                    // استدعاء الدالة على الـ Model وليس Collection
+                                    $teamMembers = $branchTeam->getAllSubordinatesIds();
+                                    if (is_array($teamMembers)) {
+                                        $allTeamMembers = array_merge($allTeamMembers, $teamMembers);
+                                    }
+                                    // Also add the branch lead themselves
+                                    $allTeamMembers[] = $branchTeam->id;
+                                }
+                            }
+                        }
+                        
+                        // Remove duplicates
+                        $allTeamMembers = array_unique($allTeamMembers);
+                        
+                        if (!empty($allTeamMembers)) {
+                            $leadsQuery->whereIn('responsible_person_id', $allTeamMembers);
+                        }
+                    }
+                    // Handle single office_branch for backward compatibility
+                    elseif (is_numeric($officeBranches)) {
+                        $branchTeam = User::find($officeBranches);
+                        if ($branchTeam) {
+                            $teamMembers = $branchTeam->getAllSubordinatesIds();
+                            if (is_array($teamMembers)) {
+                                $teamMembers[] = $branchTeam->id;
+                                $leadsQuery->whereIn('responsible_person_id', $teamMembers);
+                            }
+                        }
+                    }
+                }
+
             if ($request->filled('team_id')) {
                 $teamLead = User::find($request->team_id);
                 if ($teamLead) {
@@ -557,7 +642,47 @@ public function getTeamsWithLeads(Request $request): JsonResponse
 {
     try {
         $user = auth()->user();
-        $officeId = $request->input('office_id'); // Get office filter from request
+        
+        // Handle multiple office IDs
+        $officeIds = $request->input('office_ids');
+        $officeAndDescendants = [];
+        
+        if ($officeIds) {
+            // Convert to array if it's a string (coming as comma-separated)
+            if (is_string($officeIds)) {
+                $officeIds = explode(',', $officeIds);
+            }
+            
+            // If it's an array of IDs
+            if (is_array($officeIds) && count($officeIds) > 0) {
+                foreach ($officeIds as $officeId) {
+                    $selectedOffice = User::find($officeId);
+                    if ($selectedOffice) {
+                        // Get all users under this office (including descendants)
+                        $officeDescendants = $selectedOffice->getAllSubordinatesIds();
+                        $officeAndDescendants = array_merge($officeAndDescendants, $officeDescendants);
+                    }
+                }
+                // Remove duplicates
+                $officeAndDescendants = array_unique($officeAndDescendants);
+            } 
+            // Handle single office_id for backward compatibility
+            elseif (is_numeric($officeIds)) {
+                $selectedOffice = User::find($officeIds);
+                if ($selectedOffice) {
+                    $officeAndDescendants = $selectedOffice->getAllSubordinatesIds();
+                }
+            }
+        }
+        
+        // Also check for single office_id for backward compatibility
+        $singleOfficeId = $request->input('office_id');
+        if ($singleOfficeId && empty($officeAndDescendants)) {
+            $selectedOffice = User::find($singleOfficeId);
+            if ($selectedOffice) {
+                $officeAndDescendants = $selectedOffice->getAllSubordinatesIds();
+            }
+        }
         
         if (!$user->hasAnyRole(['super_admin', 'admin', 'manager'])) {
             return ApiResponse::error('Unauthorized', 403);
@@ -569,13 +694,9 @@ public function getTeamsWithLeads(Request $request): JsonResponse
         ->whereIn('id', $user->getAllSubordinatesIds())
         ->where('id', '!=', auth()->user()->id);
         
-        // Filter by office if provided
-        if ($officeId) {
-            $selectedOffice = User::find($officeId);
-            if ($selectedOffice) {
-                $officeAndDescendants = $selectedOffice->getAllSubordinatesIds();
-                $query->whereIn('id', $officeAndDescendants);
-            }
+        // Filter by offices if provided (now supports multiple)
+        if (!empty($officeAndDescendants)) {
+            $query->whereIn('id', $officeAndDescendants);
         }
         
         $teams = $query->withCount('children')
@@ -605,7 +726,6 @@ public function getTeamsWithLeads(Request $request): JsonResponse
         return ApiResponse::error($e->getMessage());
     }
 }
-
 public function getLeadBranchSource()
 {
     $branches = User::role('admin')

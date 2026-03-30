@@ -816,7 +816,19 @@ const executeFetchLeads = async () => {
             ...(q.email && { email: q.email }),
             ...(q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '' && { bedrooms: q.bedrooms }),
             ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id }),
-            ...(q.office_branch != null && q.office_branch !== '' && { team_id: q.office_branch })
+            // ...(q.office_branch != null && q.office_branch !== '' && { team_id: q.office_branch })
+        }
+         // Handle office_branch as array for multi-select
+        if (q.office_branch != null && q.office_branch !== '') {
+            // If office_branch is an array and not empty
+            if (Array.isArray(q.office_branch) && q.office_branch.length > 0) {
+                // Send as array to backend
+                params.office_branch = q.office_branch
+            } 
+            // If it's a single value (for backward compatibility)
+            else if (!Array.isArray(q.office_branch)) {
+                params.office_branch = q.office_branch
+            }
         }
         
         const response = await api.get('/stages/kanban/stages-with-leads', {

@@ -455,30 +455,51 @@ class LeadController extends Controller
     /**
      * Get Available Responsible Persons for Assignment
      */
-    public function getAvailableResponsiblePersons(): JsonResponse
-    {
-        try {
-            $user = auth()->user();
-            $officeId=request()->office_id;
-            $officeAndDescendants=[];
-            if ($officeId && is_numeric($officeId) ) {
-                $selectedOffice = User::find($officeId);
+  public function getAvailableResponsiblePersons(): JsonResponse
+{
+    try {
+        $user = auth()->user();
+        
+        // Handle multiple office IDs
+        $officeIds = request()->office_ids;
+        $officeAndDescendants = [];
+        
+        if ($officeIds) {
+            // Convert to array if it's a string (coming as comma-separated)
+            if (is_string($officeIds)) {
+                $officeIds = explode(',', $officeIds);
+            }
+            
+            // If it's an array of IDs
+            if (is_array($officeIds) && count($officeIds) > 0) {
+                foreach ($officeIds as $officeId) {
+                    $selectedOffice = User::find($officeId);
+                    if ($selectedOffice) {
+                        // Get all users under this office (including descendants)
+                        $officeAndDescendants = array_merge(
+                            $officeAndDescendants,
+                            $selectedOffice->getAllSubordinatesIds()
+                        );
+                    }
+                }
+                // Remove duplicates
+                $officeAndDescendants = array_unique($officeAndDescendants);
+            } 
+            // Handle single office_id for backward compatibility
+            elseif (is_numeric($officeIds)) {
+                $selectedOffice = User::find($officeIds);
                 if ($selectedOffice) {
-                    // Get all users under this office (including descendants)
                     $officeAndDescendants = $selectedOffice->getAllSubordinatesIds();
-                    
                 }
             }
-            if (($user->hasRole('admin') || $user->hasRole('super_admin'))) {
-               $responsiblePersons = User::role(['team_lead', 'sales', 'manager','admin'])
+        }
+        
+        if (($user->hasRole('admin') || $user->hasRole('super_admin'))) {
+            $responsiblePersons = User::role(['team_lead', 'sales', 'manager','admin'])
                 ->whereNotNull('parent_id')
-                // ->whereHas('parent', function($q) {
-                //     // not get branch
-                //     $q->whereNotNull('parent_id'); 
-                // })
                 ->when(!empty($officeAndDescendants), function($qq) use($officeAndDescendants){
-                    // not get branch
-                    $qq->whereIn('id',$officeAndDescendants); 
+                    // Filter by multiple office IDs
+                    $qq->whereIn('id', $officeAndDescendants); 
                 })
                 ->get(['id', 'name', 'email', 'avatar','parent_id'])
                 ->map(function($user) {
@@ -487,46 +508,40 @@ class LeadController extends Controller
                         'name'   => $user->name,
                         'email'  => $user->email,
                         'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
-                        'role_name'=>$user->roles()->first()->name,
-                        'parent_name'=>$user->parent?->name,
-                        'branch_name'=>$user->office?->name
+                        'role_name' => $user->roles()->first()->name,
+                        'parent_name' => $user->parent?->name,
+                        'branch_name' => $user->office?->name
                     ];
                 });
-
-            } 
-            // elseif ($user->hasRole(['manager', 'team_lead'])) {
-            else{
-                $subordinatesIds = $user->getAllSubordinatesIds();
-                $responsiblePersons = User::role(['team_lead','sales'])
-                    ->whereIn('id', $subordinatesIds)
-                     ->when(!empty($officeAndDescendants), function($qq) use($officeAndDescendants){
-                            // not get branch
-                            $qq->whereIn('id',$officeAndDescendants); 
-                        })
-                    ->get(['id', 'name', 'email','avatar','parent_id'])
-                     ->map(function($user) {
+        } else {
+            $subordinatesIds = $user->getAllSubordinatesIds();
+            $responsiblePersons = User::role(['team_lead','sales'])
+                ->whereIn('id', $subordinatesIds)
+                ->when(!empty($officeAndDescendants), function($qq) use($officeAndDescendants){
+                    // Filter by multiple office IDs
+                    $qq->whereIn('id', $officeAndDescendants); 
+                })
+                ->get(['id', 'name', 'email','avatar','parent_id'])
+                ->map(function($user) {
                     return [
-                                'id'     => $user->id,
-                                'name'   => $user->name,
-                                'email'  => $user->email,
-                                'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
-                                'parent_name'=>$user->parent?->name,
-                                'branch_name'=>$user->office?->name
-                            ];
-                        });
-            }
-            // else {
-            //     return ApiResponse::error('You are not authorized to view responsible persons list', 403);
-            // }
-
-            return ApiResponse::success(
-                $responsiblePersons,
-                'Available responsible persons retrieved successfully'
-            );
-        } catch (\Exception $e) {
-            return ApiResponse::error('Failed to retrieve available responsible persons: ' . $e->getMessage());
+                        'id'     => $user->id,
+                        'name'   => $user->name,
+                        'email'  => $user->email,
+                        'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                        'parent_name' => $user->parent?->name,
+                        'branch_name' => $user->office?->name
+                    ];
+                });
         }
+
+        return ApiResponse::success(
+            $responsiblePersons,
+            'Available responsible persons retrieved successfully'
+        );
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to retrieve available responsible persons: ' . $e->getMessage());
     }
+}
 
     /**
      * Delete a lead

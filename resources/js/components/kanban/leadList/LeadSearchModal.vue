@@ -88,15 +88,16 @@
                             <!-- Multi-select for office/branch -->
                             <v-select
                                 v-else-if="field.type === 'select' && field.id === 'office'"
-                                v-model="form[field.formKey]"
+                                v-model="form.office"
                                 :options="field.options"
                                 :reduce="opt => opt.value"
                                 label="text"
                                 :placeholder="field.placeholder || 'Select Branches'"
-                                :clearable="hasValue(form[field.formKey])"
+                                :clearable="form.office && form.office.length > 0"
                                 append-to-body
                                 multiple
                                 class="custom-v-select"
+                                @update:model-value="handleOfficeChange"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -201,15 +202,16 @@
                             <!-- Multi-select for office/branch -->
                             <v-select
                                 v-else-if="field.type === 'select' && field.id === 'office'"
-                                v-model="form[field.formKey]"
+                                v-model="form.office"
                                 :options="field.options"
                                 :reduce="opt => opt.value"
                                 label="text"
                                 :placeholder="field.placeholder || 'Select Branches'"
-                                :clearable="hasValue(form[field.formKey])"
+                                :clearable="form.office && form.office.length > 0"
                                 append-to-body
                                 multiple
                                 class="custom-v-select"
+                                @update:model-value="handleOfficeChange"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -322,7 +324,6 @@ const allResponsiblePersons = ref([])
 const allTeams = ref([])
 const selectedOffice = ref(null)
 const selectedPillType = ref(null)
-const selectedBranches = ref([]) // Track selected branches for multi-select
 
 // Helper functions for branch selection
 const isBranchSelected = (branchValue) => {
@@ -337,8 +338,33 @@ const isCitySelected = (cityId) => {
     if (!form.value.office || !Array.isArray(form.value.office)) return false
     const cityPill = sidebarPills.value.find(p => p.id === cityId)
     if (!cityPill) return false
-    // Check if any branch from this city is selected
     return cityPill.children.some(child => form.value.office.includes(child.value))
+}
+
+// Handle office change to update filters
+const handleOfficeChange = async (newOffice) => {
+    console.log('Office changed to:', newOffice)
+    
+    // Update selectedOffice for filtering
+    if (newOffice && newOffice.length) {
+        selectedOffice.value = newOffice
+    } else {
+        selectedOffice.value = null
+    }
+    
+    // Clear responsible and team when office changes
+    if (form.value.responsible) {
+        form.value.responsible = ''
+    }
+    if (form.value.team) {
+        form.value.team = ''
+    }
+    
+    // Fetch filtered data based on selected offices
+    await Promise.all([
+        fetchResponsiblePersonsWithFilter(),
+        fetchTeamsWithFilter()
+    ])
 }
 
 watch(() => props.modelValue, (val) => {
@@ -395,12 +421,11 @@ function syncFormFromQuery(query) {
         bedrooms: '',
         leadName: '',
         team: '',
-        office: [] // Initialize as array for multi-select
+        office: []
     }
     Object.keys(queryToFormKeys).forEach(qKey => {
         const formKey = queryToFormKeys[qKey]
         if (query[qKey] !== undefined && query[qKey] !== '') {
-            // Handle office_branch which might be array or single value
             if (formKey === 'office' && query[qKey]) {
                 next[formKey] = Array.isArray(query[qKey]) ? query[qKey] : [query[qKey]]
             } else {
@@ -518,7 +543,7 @@ const form = ref({
     createdFrom: '',    
     createdTo: '',  
     team: '',
-    office: [] // Changed to array for multi-select
+    office: []
 })
 
 const responsiblePersons = ref([])
@@ -537,7 +562,6 @@ const personOptions = computed(() => {
         })
     })
     
-    console.log('Person options filtered:', filteredPersons.length)
     return opts
 })
 
@@ -550,7 +574,6 @@ const computedTeamOptions = computed(() => {
         opts.push({ value: team.id, text: team.name })
     })
     
-    console.log('Team options filtered:', filteredTeams.length)
     return opts
 })
 
@@ -621,7 +644,6 @@ const updateUserFromStorage = () => {
     try {
         const userData = localStorage.getItem('user')
         user.value = userData ? JSON.parse(userData) : null
-        console.log('User updated from storage:', user.value)
     } catch (error) {
         console.error('Error getting user from storage:', error)
         user.value = null
@@ -662,7 +684,6 @@ const searchFieldsConfig = computed(() => {
         { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] }
     )
     
-    console.log(isAdminOrSuperAdmin.value)
     return fields
 })
 
@@ -714,7 +735,6 @@ function hasValue(val) {
 function getDisplayValue(field, rawValue) {
     if (rawValue === null || rawValue === undefined || rawValue === '') return null
     if (Array.isArray(rawValue)) {
-        // Handle multi-select display
         if (field.type === 'select') {
             const opts = field.options || []
             const selectedTexts = rawValue.map(val => {
@@ -743,7 +763,6 @@ function applySearch() {
     let closed = form.value.closed ?? undefined
     let teamId = form.value.team ?? undefined
     
-    // Handle multi-select offices
     let officeBranches = form.value.office && form.value.office.length ? form.value.office : undefined
     
     switch (activePill.value) {
@@ -752,13 +771,6 @@ function applySearch() {
                 opt.text?.toLowerCase().includes('dubai')
             )
             branchSource = dubaiOption?.value
-            // If no specific branches selected, add all Dubai branches
-            if (!officeBranches || officeBranches.length === 0) {
-                const dubaiPill = sidebarPills.value.find(p => p.id === 'dubai')
-                if (dubaiPill && dubaiPill.children.length) {
-                    officeBranches = dubaiPill.children.map(child => child.value)
-                }
-            }
             break
             
         case 'abu-dhabi':
@@ -766,13 +778,6 @@ function applySearch() {
                 opt.text?.toLowerCase().includes('abu dhabi')
             )
             branchSource = abuDhabiOption?.value
-            // If no specific branches selected, add all Abu Dhabi branches
-            if (!officeBranches || officeBranches.length === 0) {
-                const abuDhabiPill = sidebarPills.value.find(p => p.id === 'abu-dhabi')
-                if (abuDhabiPill && abuDhabiPill.children.length) {
-                    officeBranches = abuDhabiPill.children.map(child => child.value)
-                }
-            }
             break
             
         case 'my-leads':
@@ -919,7 +924,7 @@ function applySearch() {
         created_to: createdTo || undefined,     
         created_at: createdAt || undefined,   
         team_id: teamId || undefined,
-        office_branch: officeBranches || undefined // This will be an array for multiple offices
+        office_branch: officeBranches || undefined
     }
     
     Object.keys(query).forEach(k => { 
@@ -959,40 +964,64 @@ function applySearch() {
         }
     })
     
-    console.log('activePill:', activePill.value);
-    
     const pill = sidebarPills.value.find(p => p.id === activePill.value)
     const pillData = pill ? { id: pill.id, label: pill.label } : null
-    
-    console.log('Pill data:', pillData);
     
     emit('search', { query, activePill: pillData, activeFilters })
     show.value = false
 }
 
+
 async function handleSidebarPillClick(pill) {
     console.log('Sidebar pill clicked:', pill)
     activePill.value = pill.id
     
-    if (pill.type !== 'city') {
+    if (pill.type === 'city') {
+        // Check if this city is already fully selected
+        const allBranchIds = pill.children.map(child => child.value)
+        const isFullySelected = allBranchIds.length > 0 && 
+            allBranchIds.every(branchId => form.value.office.includes(branchId))
+        
+        if (isFullySelected) {            // If already fully selected, clear all branches from this city
+            form.value.office = form.value.office.filter(branchId => 
+                !allBranchIds.includes(branchId)
+            )
+        } else {
+            // If not fully selected, select all branches in this city
+            // Remove any existing selections from this city first
+            form.value.office = form.value.office.filter(branchId => 
+                !allBranchIds.includes(branchId)
+            )
+            // Then add all branches
+            form.value.office = [...form.value.office, ...allBranchIds]
+        }
+        
+        // Update selectedOffice
+        if (form.value.office.length) {
+            selectedOffice.value = form.value.office
+        } else {
+            selectedOffice.value = null
+        }
+        selectedPillType.value = pill.id
+        
+        // Trigger filtering based on selected offices
+        await handleOfficeChange(form.value.office)
+    } else {
         // For non-city pills, clear office selection
         form.value.office = []
         selectedOffice.value = null
-        selectedPillType.value = pill.id === 'dubai' || pill.id === 'abu-dhabi' ? pill.id : null
-    } else {
-        selectedPillType.value = pill.id
-        // Don't clear office when clicking on city pill - let user select branches
+        selectedPillType.value = null
+        
+        // Clear responsible and team
+        form.value.responsible = ''
+        form.value.team = ''
+        
+        // Fetch filtered data
+        await Promise.all([
+            fetchResponsiblePersonsWithFilter(),
+            fetchTeamsWithFilter()
+        ])
     }
-    
-    // Reset responsible and team when branch/pill changes
-    form.value.responsible = ''
-    form.value.team = ''
-    
-    // Fetch filtered data
-    await Promise.all([
-        fetchResponsiblePersonsWithFilter(),
-        fetchTeamsWithFilter()
-    ])
 }
 
 async function selectCityBranch(cityPill, child) {
@@ -1006,17 +1035,20 @@ async function selectCityBranch(cityPill, child) {
     
     const index = form.value.office.indexOf(child.value)
     if (index === -1) {
-        // Add if not already selected
         form.value.office.push(child.value)
     } else {
-        // Remove if already selected
         form.value.office.splice(index, 1)
     }
     
-    selectedOffice.value = form.value.office.length ? form.value.office : null
+    // Update selectedOffice and trigger filtering
+    if (form.value.office.length) {
+        selectedOffice.value = form.value.office
+    } else {
+        selectedOffice.value = null
+    }
     selectedPillType.value = cityPill.id
     
-    // Reset responsible and team when branch changes
+    // Clear responsible and team
     form.value.responsible = ''
     form.value.team = ''
     
@@ -1044,7 +1076,6 @@ async function fetchResponsiblePersonsWithFilter() {
         }
         
         const res = await api.get('/available-responsible-persons', { params })
-        console.log(res.data.data);
         if (res.data.data) {
             allResponsiblePersons.value = res.data.data.map(person => ({
                 ...person,
@@ -1214,8 +1245,10 @@ function resetFormValues() {
         bedrooms: '',
         source: '',
         team: '',
-        office: [] // Reset to empty array
+        office: []
     }
+    selectedOffice.value = null
+    selectedPillType.value = null
 }
 
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
@@ -1343,7 +1376,6 @@ const resetForm = () => {
 
 watch(officeOptions, (newOptions) => {
     if (form.value.office && form.value.office.length && newOptions.length) {
-        // Verify selected offices still exist
         const validOffices = form.value.office.filter(officeId => 
             newOptions.some(opt => opt.value === officeId)
         )
@@ -1358,60 +1390,6 @@ watch(() => form.value.createdOn, (newVal, oldVal) => {
     if (oldVal === 'custom_date' && newVal !== 'custom_date') {
         form.value.createdFrom = ''
         form.value.createdTo = ''
-    }
-})
-
-watch(() => form.value.office, async (newOffice, oldOffice) => {
-    console.log('Office changed from:', oldOffice, 'to:', newOffice)
-    
-    if (JSON.stringify(newOffice) !== JSON.stringify(oldOffice)) {
-        if (newOffice && newOffice.length) {
-            selectedOffice.value = newOffice
-        } else {
-            selectedOffice.value = null
-        }
-        
-        // Clear responsible and team when office changes
-        if (form.value.responsible) {
-            form.value.responsible = ''
-        }
-        if (form.value.team) {
-            form.value.team = ''
-        }
-        
-        // Fetch filtered data based on selected offices
-        console.log('Fetching data for offices:', selectedOffice.value)
-        await Promise.all([
-            fetchResponsiblePersonsWithFilter(),
-            fetchTeamsWithFilter()
-        ])
-    }
-}, { deep: true, immediate: true })
-
-watch(activePill, async (newPill, oldPill) => {
-    console.log('Pill changed from:', oldPill, 'to:', newPill)
-    
-    if (newPill !== oldPill) {
-        if (newPill === 'dubai' || newPill === 'abu-dhabi') {
-            selectedPillType.value = newPill
-        } else {
-            selectedPillType.value = null
-        }
-        
-        // Clear responsible and team when pill changes
-        if (form.value.responsible) {
-            form.value.responsible = ''
-        }
-        if (form.value.team) {
-            form.value.team = ''
-        }
-        
-        // Fetch filtered data based on selected pill
-        console.log('Fetching data for pill:', selectedPillType.value)
-        await Promise.all([
-            fetchResponsiblePersonsWithFilter(),
-            fetchTeamsWithFilter()
-        ])
     }
 })
 
@@ -1438,7 +1416,7 @@ onMounted(async () => {
     font-size: 12px;
 }
 
-/* Keep existing styles */
+/* Keep all existing styles from your original code */
 .lead-search-dropdown-panel {
     width: 1140px;
     max-width: calc(100vw - 32px);
