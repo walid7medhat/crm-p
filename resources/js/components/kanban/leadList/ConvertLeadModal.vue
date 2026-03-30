@@ -8,28 +8,37 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body convert-lead-body">
-                    <div class="d-flex flex-column gap-3">
+                    <div class="options-container">
                         <label class="deal-type-option" :class="{ selected: form.deal_type === 'primary' }">
+                            <div class="option-icon">
+                                <img :src="primaryIcon" alt="Primary / Off Plan" width="32" height="32">
+                            </div>
                             <input type="radio" name="dealType" value="primary" v-model="form.deal_type" class="deal-type-radio">
                             <span class="deal-type-label">Primary / Off Plan</span>
                             <span class="selected-mark" :class="{ show: form.deal_type === 'primary' }">
-                                <iconify-icon icon="lucide:check"></iconify-icon>
+                                <img :src="checkIcon" alt="✓" >
                             </span>
                         </label>
 
                         <label class="deal-type-option" :class="{ selected: form.deal_type === 'secondary' }">
+                            <div class="option-icon">
+                                <img :src="secondaryIcon" alt="Secondary" width="32" height="32">
+                            </div>
                             <input type="radio" name="dealType" value="secondary" v-model="form.deal_type" class="deal-type-radio">
                             <span class="deal-type-label">Secondary</span>
                             <span class="selected-mark" :class="{ show: form.deal_type === 'secondary' }">
-                                <iconify-icon icon="lucide:check"></iconify-icon>
+                                <img :src="checkIcon" alt="✓" >
                             </span>
                         </label>
 
                         <label class="deal-type-option" :class="{ selected: form.deal_type === 'rental' }">
+                            <div class="option-icon">
+                                <img :src="rentalIcon" alt="Rental" width="32" height="32">
+                            </div>
                             <input type="radio" name="dealType" value="rental" v-model="form.deal_type" class="deal-type-radio">
                             <span class="deal-type-label">Rental</span>
                             <span class="selected-mark" :class="{ show: form.deal_type === 'rental' }">
-                                <iconify-icon icon="lucide:check"></iconify-icon>
+                                <img :src="checkIcon" alt="✓" >
                             </span>
                         </label>
                     </div>
@@ -43,7 +52,7 @@
                         :disabled="!form.deal_type || loading"
                     >
                         <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                        AddDeal
+                        Add Deal
                     </button>
                 </div>
             </div>
@@ -56,6 +65,12 @@ import { ref, watch, nextTick } from 'vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import * as bootstrap from 'bootstrap'
+
+// Import images from public folder (no import needed, just use direct path)
+const primaryIcon = '/assets/images/deal-types/primary.svg'
+const secondaryIcon = '/assets/images/deal-types/secondary.svg'
+const rentalIcon = '/assets/images/deal-types/rental.svg'
+const checkIcon = '/assets/images/deal-types/check.svg'
 
 const props = defineProps({
     leadId: {
@@ -164,48 +179,88 @@ defineExpose({
 }
 
 .convert-lead-content {
-    border-radius: 16px;
-    border: 2px solid #2a9ef0;
+    border-radius: 24px;
+    border: 1px solid #e5e7eb;
     overflow: hidden;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.01);
 }
 
 .convert-lead-header {
-    padding: 24px 44px 18px;
-    border-bottom: 1px solid #eceff4;
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    background: white;
 }
 
 .convert-lead-header .modal-title {
-    font-size: 44px;
+    font-size: 22px !important;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1.3;
     color: #111827;
+    margin: 0;
 }
 
 .convert-lead-header .btn-close {
     opacity: 1;
-    transform: scale(1.35);
+    transform: scale(1.2);
+    filter: brightness(0.6);
 }
 
 .convert-lead-body {
-    padding: 28px 44px;
+    padding: 24px 32px;
+    background: white;
+}
+
+.options-container {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    justify-content: space-between;
 }
 
 .deal-type-option {
-    border: 2px solid #eceff4;
-    border-radius: 22px;
-    min-height: 56px;
-    padding: 12px 20px;
+    flex: 1;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px 16px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
     background: #fff;
+    position: relative;
+    gap: 12px;
+}
+
+.deal-type-option:hover {
+    border-color: #FAA300;
+    background: #fef9e6;
+    transform: translateY(-2px);
 }
 
 .deal-type-option.selected {
-    background: #00073a;
-    border-color: #00073a;
+    background: #01062C;
+    border-color: #01062C;
+}
+
+.option-icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.option-icon img {
+    filter: brightness(0) saturate(100%) invert(67%) sepia(71%) saturate(1235%) hue-rotate(1deg) brightness(102%) contrast(103%);
+    transition: all 0.2s ease;
+}
+
+.deal-type-option.selected .option-icon img {
+    filter: brightness(0) saturate(100%) invert(67%) sepia(71%) saturate(1235%) hue-rotate(1deg) brightness(102%) contrast(103%);
 }
 
 .deal-type-radio {
@@ -215,29 +270,36 @@ defineExpose({
 }
 
 .deal-type-label {
-    font-size: 20px !important;
+    font-size: 15px;
     font-weight: 500;
-    color: #1f2937;
+    color: #000;
+    text-align: center;
 }
 
 .deal-type-option.selected .deal-type-label {
     color: #fff;
-    font-weight: 600;
 }
 
 .selected-mark {
-    width: 32px;
-    height: 32px;
+   position: absolute;
+    top: -10px;
+    right: -2px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #f5ab00;
-    color: #fff;
-    font-size: 16px;
     opacity: 0;
-    transform: scale(0.85);
-    transition: all 0.2s ease;
+    /* background: #FAA300;
+    color: #fff; */
+   
+}
+
+.selected-mark img {
+    /* filter: brightness(0) invert(1);
+    width: 16px;
+    height: 16px; */
 }
 
 .selected-mark.show {
@@ -245,62 +307,59 @@ defineExpose({
     transform: scale(1);
 }
 
+.deal-type-option.selected .selected-mark {
+    /* background: #FAA300; */
+}
+
 .convert-lead-footer {
-    border-top: 1px solid #eceff4;
-    padding: 22px 44px 28px;
+    border-top: 1px solid #f0f0f0;
+    padding: 20px 32px 28px;
     justify-content: flex-end;
-    gap: 18px;
+    gap: 12px;
+    background: white;
 }
 
 .btn-cancel,
 .btn-add-deal {
-    min-width: 127px;
-    height: 46px;
-    border-radius: 999px;
+    min-width: 110px;
+    height: 44px;
+    border-radius: 12px;
     border: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-align: center;
     line-height: 1;
-    font-size: 12px;
-    font-weight: 500;
-    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 0 24px;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .btn-cancel {
-    background: #efeff2;
-    color: #111827;
+    background: #F4F4F4;
+    color: #000000;
+}
+
+.btn-cancel:hover {
+    background: #e5e7eb;
 }
 
 .btn-add-deal {
-    background: #000;
+    background: #000000;
     color: #fff;
 }
 
-.btn-add-deal:disabled {
-    opacity: 0.65;
+.btn-add-deal:hover:not(:disabled) {
+    background: #FAA300;
+    color: #000000;
+    transform: translateY(-1px);
 }
 
-@media (max-width: 1200px) {
-    .convert-lead-dialog {
-        max-width: 95vw;
-    }
-
-    .convert-lead-header .modal-title {
-        font-size: 34px;
-    }
-
-    .deal-type-label {
-        font-size: 20px;
-    }
-
-    .btn-cancel,
-    .btn-add-deal {
-        min-width: 120px;
-        height: 40px;
-        font-size: 12px;
-    }
+.btn-add-deal:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
@@ -311,31 +370,60 @@ defineExpose({
         padding-right: 20px;
     }
 
+    .convert-lead-header {
+        padding-top: 20px;
+        padding-bottom: 16px;
+    }
+
     .convert-lead-header .modal-title {
-        font-size: 24px;
+        font-size: 18px !important;
+    }
+
+    .convert-lead-body {
+        padding: 20px;
+    }
+
+    .options-container {
+        gap: 12px;
     }
 
     .deal-type-option {
-        min-height: 52px;
-        border-radius: 14px;
-        padding: 10px 14px;
+        padding: 16px 12px;
+        gap: 10px;
+    }
+
+    .option-icon {
+        width: 48px;
+        height: 48px;
+    }
+
+    .option-icon img {
+        width: 28px;
+        height: 28px;
     }
 
     .deal-type-label {
-        font-size: 20px;
+        font-size: 13px;
     }
 
     .selected-mark {
-        width: 28px;
-        height: 28px;
-        font-size: 14px;
+        width: 24px;
+        height: 24px;
+        top: 8px;
+        right: 8px;
+    }
+
+    .selected-mark img {
+        width: 14px;
+        height: 14px;
     }
 
     .btn-cancel,
     .btn-add-deal {
-        min-width: 104px;
-        height: 36px;
-        font-size: 11px;
+        min-width: 90px;
+        height: 40px;
+        font-size: 13px;
+        padding: 0 18px;
     }
 }
 </style>
