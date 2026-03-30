@@ -1,78 +1,49 @@
 <!-- components/Deals/ConvertLeadModal.vue -->
 <template>
     <div class="modal fade" id="convertLeadModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h6 class="modal-title text-xl mb-0">Select Coverted Lead Type</h6>
+        <div class="modal-dialog modal-dialog-centered convert-lead-dialog">
+            <div class="modal-content convert-lead-content">
+                <div class="modal-header convert-lead-header">
+                    <h6 class="modal-title mb-0">Select Converted Lead Type</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                  
-                    
-                    <!-- Deal Type Selection -->
+                <div class="modal-body convert-lead-body">
                     <div class="d-flex flex-column gap-3">
-                        <label 
-                            class="deal-type-option p-3 border rounded-3 d-flex align-items-center gap-3 cursor-pointer"
-                            :class="{ 'border-primary bg-primary-light': form.deal_type === 'primary' }"
-                        >
-                            <input 
-                                type="radio" 
-                                name="dealType" 
-                                value="primary" 
-                                v-model="form.deal_type"
-                                class="form-check-input mt-0"
-                            >
-                            <div>
-                                <h6 class="mb-1">Primary / Off Plan</h6>
-                            </div>
+                        <label class="deal-type-option" :class="{ selected: form.deal_type === 'primary' }">
+                            <input type="radio" name="dealType" value="primary" v-model="form.deal_type" class="deal-type-radio">
+                            <span class="deal-type-label">Primary / Off Plan</span>
+                            <span class="selected-mark" :class="{ show: form.deal_type === 'primary' }">
+                                <iconify-icon icon="lucide:check"></iconify-icon>
+                            </span>
                         </label>
 
-                        <label 
-                            class="deal-type-option p-3 border rounded-3 d-flex align-items-center gap-3 cursor-pointer"
-                            :class="{ 'border-primary bg-primary-light': form.deal_type === 'secondary' }"
-                        >
-                            <input 
-                                type="radio" 
-                                name="dealType" 
-                                value="secondary" 
-                                v-model="form.deal_type"
-                                class="form-check-input mt-0"
-                            >
-                            <div>
-                                <h6 class="mb-1">Secondary</h6>
-                            </div>
+                        <label class="deal-type-option" :class="{ selected: form.deal_type === 'secondary' }">
+                            <input type="radio" name="dealType" value="secondary" v-model="form.deal_type" class="deal-type-radio">
+                            <span class="deal-type-label">Secondary</span>
+                            <span class="selected-mark" :class="{ show: form.deal_type === 'secondary' }">
+                                <iconify-icon icon="lucide:check"></iconify-icon>
+                            </span>
                         </label>
 
-                        <label 
-                            class="deal-type-option p-3 border rounded-3 d-flex align-items-center gap-3 cursor-pointer"
-                            :class="{ 'border-primary bg-primary-light': form.deal_type === 'rental' }"
-                        >
-                            <input 
-                                type="radio" 
-                                name="dealType" 
-                                value="rental" 
-                                v-model="form.deal_type"
-                                class="form-check-input mt-0"
-                            >
-                            <div>
-                                <h6 class="mb-1">Rental</h6>
-                            </div>
+                        <label class="deal-type-option" :class="{ selected: form.deal_type === 'rental' }">
+                            <input type="radio" name="dealType" value="rental" v-model="form.deal_type" class="deal-type-radio">
+                            <span class="deal-type-label">Rental</span>
+                            <span class="selected-mark" :class="{ show: form.deal_type === 'rental' }">
+                                <iconify-icon icon="lucide:check"></iconify-icon>
+                            </span>
                         </label>
                     </div>
-
-
                 </div>
-                <div class="modal-footer justify-content-between">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button 
-                        type="button" 
-                        class="btn btn-primary" 
+                <div class="modal-footer convert-lead-footer">
+                    <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button
+                        type="button"
+                        class="btn btn-add-deal"
                         @click="submitConversion"
                         :disabled="!form.deal_type || loading"
                     >
                         <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                       Add Deal
+                        AddDeal
                     </button>
                 </div>
             </div>
@@ -188,29 +159,182 @@ defineExpose({
 </script>
 
 <style scoped>
+.convert-lead-dialog {
+    max-width: 760px;
+}
+
+.convert-lead-content {
+    border-radius: 16px;
+    border: 2px solid #2a9ef0;
+    overflow: hidden;
+}
+
+.convert-lead-header {
+    padding: 24px 44px 18px;
+    border-bottom: 1px solid #eceff4;
+}
+
+.convert-lead-header .modal-title {
+    font-size: 44px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #111827;
+}
+
+.convert-lead-header .btn-close {
+    opacity: 1;
+    transform: scale(1.35);
+}
+
+.convert-lead-body {
+    padding: 28px 44px;
+}
+
 .deal-type-option {
+    border: 2px solid #eceff4;
+    border-radius: 22px;
+    min-height: 56px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     cursor: pointer;
+    transition: all 0.2s ease;
+    background: #fff;
+}
+
+.deal-type-option.selected {
+    background: #00073a;
+    border-color: #00073a;
+}
+
+.deal-type-radio {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.deal-type-label {
+    font-size: 20px !important;
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.deal-type-option.selected .deal-type-label {
+    color: #fff;
+    font-weight: 600;
+}
+
+.selected-mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5ab00;
+    color: #fff;
+    font-size: 16px;
+    opacity: 0;
+    transform: scale(0.85);
     transition: all 0.2s ease;
 }
 
-.deal-type-option:hover {
-    background-color: #f8f9fa;
-    border-color: #0d6efd !important;
+.selected-mark.show {
+    opacity: 1;
+    transform: scale(1);
 }
 
-.deal-type-option .form-check-input {
-    cursor: pointer;
-    width: 1.2em;
-    height: 1.2em;
+.convert-lead-footer {
+    border-top: 1px solid #eceff4;
+    padding: 22px 44px 28px;
+    justify-content: flex-end;
+    gap: 18px;
 }
 
-.bg-primary-light {
-    background-color:#01062C !important;
+.btn-cancel,
+.btn-add-deal {
+    min-width: 210px;
+    height: 78px;
+    border-radius: 999px;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1;
+    font-size: 16px;
+    font-weight: 500;
 }
-.deal-type-option h6{
-        font-size: 16px !important;
+
+.btn-cancel {
+    background: #efeff2;
+    color: #111827;
 }
-.deal-type-option.bg-primary-light h6{
-    color:#fff !important;
+
+.btn-add-deal {
+    background: #000;
+    color: #fff;
+}
+
+.btn-add-deal:disabled {
+    opacity: 0.65;
+}
+
+@media (max-width: 1200px) {
+    .convert-lead-dialog {
+        max-width: 95vw;
+    }
+
+    .convert-lead-header .modal-title {
+        font-size: 34px;
+    }
+
+    .deal-type-label {
+        font-size: 20px;
+    }
+
+    .btn-cancel,
+    .btn-add-deal {
+        min-width: 170px;
+        height: 64px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 768px) {
+    .convert-lead-header,
+    .convert-lead-body,
+    .convert-lead-footer {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .convert-lead-header .modal-title {
+        font-size: 24px;
+    }
+
+    .deal-type-option {
+        min-height: 52px;
+        border-radius: 14px;
+        padding: 10px 14px;
+    }
+
+    .deal-type-label {
+        font-size: 20px;
+    }
+
+    .selected-mark {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+
+    .btn-cancel,
+    .btn-add-deal {
+        min-width: 120px;
+        height: 46px;
+        font-size: 13px;
+    }
 }
 </style>

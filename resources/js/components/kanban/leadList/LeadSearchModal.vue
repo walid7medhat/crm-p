@@ -85,6 +85,23 @@
                                     </span>
                                 </template>
                             </v-select>
+                            <v-select
+                                v-if="field.id === 'source' && form.source === 'website'"
+                                v-model="form.sourceWebsite"
+                                :options="websiteSourceOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                placeholder="Select Website"
+                                :clearable="hasValue(form.sourceWebsite)"
+                                append-to-body
+                                class="custom-v-select mt-2"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
                             <!-- Multi-select for office/branch -->
                             <v-select
                                 v-else-if="field.type === 'select' && field.id === 'office'"
@@ -98,6 +115,8 @@
                                 multiple
                                 class="custom-v-select office-multi-select"
                                 @update:model-value="handleOfficeChange"
+                                @click.stop
+                                @mousedown.stop
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -199,6 +218,23 @@
                                     </span>
                                 </template>
                             </v-select>
+                            <v-select
+                                v-if="field.id === 'source' && form.source === 'website'"
+                                v-model="form.sourceWebsite"
+                                :options="websiteSourceOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                placeholder="Select Website"
+                                :clearable="hasValue(form.sourceWebsite)"
+                                append-to-body
+                                class="custom-v-select mt-2"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
                             <!-- Multi-select for office/branch -->
                             <v-select
                                 v-else-if="field.type === 'select' && field.id === 'office'"
@@ -212,6 +248,8 @@
                                 multiple
                                 class="custom-v-select office-multi-select"
                                 @update:model-value="handleOfficeChange"
+                                @click.stop
+                                @mousedown.stop
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -421,6 +459,7 @@ const queryToFormKeys = {
     bedrooms: 'bedrooms',
     search: 'search',
     source: 'source',
+    source_website: 'sourceWebsite',
     team_id: 'team',
     office_branch: 'office',
 }
@@ -446,6 +485,7 @@ function syncFormFromQuery(query) {
         email: '',
         bedrooms: '',
         leadName: '',
+        sourceWebsite: '',
         team: '',
         office: []
     }
@@ -459,6 +499,10 @@ function syncFormFromQuery(query) {
             }
         }
     })
+    if (next.source === 'allproperties' || next.source === 'oiaproperties') {
+        next.sourceWebsite = next.source
+        next.source = 'website'
+    }
     form.value = next
 }
 
@@ -637,7 +681,16 @@ const createdOnOptions = [
     { value: 'custom_date', text: 'Custom Date' }
 ]
 
-const sourceOptions = ref([{ value: null, text: 'Select Source' }])
+const sourceOptions = ref([
+    { value: null, text: 'Select Source' },
+    { value: 'meta', text: 'Meta' },
+    { value: 'website', text: 'Website' }
+])
+const websiteSourceOptions = ref([
+    { value: null, text: 'Select Website' },
+    { value: 'allproperties', text: 'allproperties' },
+    { value: 'oiaproperties', text: 'oiaproperties' }
+])
 const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 const selectedPreset = ref('')
 const startDate = ref(null)
@@ -945,7 +998,10 @@ function applySearch() {
         email: form.value.email || undefined,
         bedrooms: form.value.bedrooms ?? undefined,
         search: form.value.search || undefined,
-        source: form.value.source || undefined,
+        source: form.value.source === 'website'
+            ? (form.value.sourceWebsite || 'website')
+            : (form.value.source || undefined),
+        source_website: form.value.source === 'website' ? (form.value.sourceWebsite || undefined) : undefined,
         created_from: createdFrom || undefined,  
         created_to: createdTo || undefined,     
         created_at: createdAt || undefined,   
@@ -1126,18 +1182,8 @@ async function fetchStages() {
 }
 
 async function fetchSources() {
-    try {
-        const res = await api.get('/sources')
-        const data = res.data?.data
-        if (Array.isArray(data) && data.length) {
-            sourceOptions.value = [
-                { value: null, text: 'Select Source' },
-                ...data.map(s => ({ value: s.name, text: s.name }))
-            ]
-        }
-    } catch (error) {
-        console.error('Error fetching sources:', error)
-    }
+    // Source options are fixed by requirement:
+    // Meta or Website, with a second selector for website source.
 }
 
 async function fetchTeams() {
@@ -1253,6 +1299,7 @@ function resetFormValues() {
         email: '',
         bedrooms: '',
         source: '',
+        sourceWebsite: '',
         team: '',
         office: []
     }
@@ -1402,6 +1449,12 @@ watch(() => form.value.createdOn, (newVal, oldVal) => {
     if (oldVal === 'custom_date' && newVal !== 'custom_date') {
         form.value.createdFrom = ''
         form.value.createdTo = ''
+    }
+})
+
+watch(() => form.value.source, (newVal) => {
+    if (newVal !== 'website') {
+        form.value.sourceWebsite = ''
     }
 })
 
