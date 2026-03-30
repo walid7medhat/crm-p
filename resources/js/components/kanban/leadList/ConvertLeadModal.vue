@@ -254,8 +254,8 @@ defineExpose({
 
 .btn-cancel,
 .btn-add-deal {
-    min-width: 210px;
-    height: 78px;
+    min-width: 127px;
+    height: 46px;
     border-radius: 999px;
     border: none;
     display: inline-flex;
@@ -263,8 +263,9 @@ defineExpose({
     justify-content: center;
     text-align: center;
     line-height: 1;
-    font-size: 16px;
+    font-size: 12px;
     font-weight: 500;
+    padding: 0 14px;
 }
 
 .btn-cancel {
@@ -296,9 +297,9 @@ defineExpose({
 
     .btn-cancel,
     .btn-add-deal {
-        min-width: 170px;
-        height: 64px;
-        font-size: 14px;
+        min-width: 120px;
+        height: 40px;
+        font-size: 12px;
     }
 }
 
@@ -332,9 +333,9 @@ defineExpose({
 
     .btn-cancel,
     .btn-add-deal {
-        min-width: 120px;
-        height: 46px;
-        font-size: 13px;
+        min-width: 104px;
+        height: 36px;
+        font-size: 11px;
     }
 }
 </style>
