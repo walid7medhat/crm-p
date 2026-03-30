@@ -287,7 +287,9 @@ public function permissions(User $user): JsonResponse
                 
                 // Don't set as hot deal yet - wait for approval
                 $listing->update(['is_hot_deal' => 'No']);
-                
+                 return ApiResponse::success($listing,'Hot deal request has been sent for approval. You will be notified once it\'s reviewed.');
+                     
+                     
                 throw new \Exception('Hot deal request has been sent for approval. You will be Notified once it\'s reviewed.', 422);
             }
             // If user is admin/super_admin/manager, they can set directly
@@ -892,13 +894,13 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         );
     } catch (\Exception $e) {
         DB::rollBack();
-        // \Log::error('Failed to update listing', [
-        //     'listing_id' => $listingId,
-        //     'message' => $e->getMessage(),
-        //     'file' => $e->getFile(),
-        //     'line' => $e->getLine(),
-        //     'trace' => $e->getTraceAsString()
-        // ]);
+        \Log::error('Failed to update listing', [
+            'listing_id' => $listingId,
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
         
         return ApiResponse::error('Failed to update listing: ' . $e->getMessage());
     }

@@ -27,7 +27,14 @@ class ListingAccessRequestResource extends JsonResource
             ]);
             $canRespond =$canManageAccessRequests || $this->listing->isOwner($user) || $user->id==$this->handled_by;
         }else{
-        $canRespond = $canManageAccessRequests && ($this->listing->isOwnedBy($user) || $user->id==$this->handled_by);
+          $subordinatesIds = $user->getAllSubordinatesIds();
+
+            $canRespond = $canManageAccessRequests && (
+                in_array($this->listing->user_id, $subordinatesIds) ||
+                in_array($this->handled_by, $subordinatesIds) ||
+                $this->listing->isOwnedBy($user) ||
+                $user->id == $this->handled_by
+            );
         }
         $canConvert = $user->canConvertAccessRequest($this);
         return [

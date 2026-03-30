@@ -314,7 +314,13 @@ function getOfficeAttribute()
      */
     public function canRespondToAccessRequest(ListingAccessRequest $request): bool
     {
-        if($request->request_type=='viewing' && $request->status == 'pending'){
+            $subordinatesIds = $this->getAllSubordinatesIds();
+
+    $canAccessHierarchy =
+        in_array($request->listing->user_id, $subordinatesIds) ||
+        in_array($request->handled_by, $subordinatesIds);
+        
+        if($request->request_type=='viewing' && ($request->status == 'pending' || $request->status == 'in_progress')){
              return $this->canManageAccessRequests() || $request->listing->isOwner($this) ||  $this->id == $request->handled_by;
         }
         // First check general permission
@@ -323,7 +329,7 @@ function getOfficeAttribute()
         }
 
         // Check if user owns the listing
-        return $request->listing->isOwnedBy($this) ||  $this->id == $request->handled_by;
+        return $request->listing->isOwnedBy($this) ||  $this->id == $request->handled_by  || $canAccessHierarchy;
     }
 
     /**
@@ -331,7 +337,7 @@ function getOfficeAttribute()
      */
     public function canConvertAccessRequest($request): bool
     {
-        if($request->request_type=='viewing' && $request->status === 'pending'){
+        if($request->request_type=='viewing' && ($request->status === 'pending'  || $request->status == 'in_progress')){
              return $request->listing->isOwner($this);
         }
         // First check general permission
