@@ -114,6 +114,9 @@ const onlineStatus = ref('')
 const typingUser = ref('')
 const typingTimeout = ref(null)
 const echoChannel = ref(null)
+let chatAudioContext = null
+let chatAudioElement = null
+let lastSoundAt = 0
 const messagesPage = ref(1)
 const messagesLastPage = ref(1)
 const startWithAgentFailed = ref(false)
@@ -181,6 +184,14 @@ watch(() => props.show, (visible) => {
   } else {
     unsubscribeEcho()
     unsubscribeInboxNotifications()
+    if (chatAudioElement) {
+      chatAudioElement.pause()
+      chatAudioElement = null
+    }
+    if (chatAudioContext && typeof chatAudioContext.close === 'function') {
+      chatAudioContext.close().catch(() => {})
+      chatAudioContext = null
+    }
     if (agentSearchDebounceTimer) {
       clearTimeout(agentSearchDebounceTimer)
       agentSearchDebounceTimer = null
@@ -236,6 +247,45 @@ function triggerInboxPulse() {
   }, 900)
 }
 
+function playReceiveMessageSound() {
+  try {
+    if (typeof window === 'undefined') return
+    const nowMs = Date.now()
+    if (nowMs - lastSoundAt < 250) return
+    lastSoundAt = nowMs
+
+    if (!chatAudioElement) {
+      chatAudioElement = new Audio('/assets/notification-sound.mp3?v=3')
+      chatAudioElement.preload = 'auto'
+      chatAudioElement.volume = 0.42
+      chatAudioElement.playbackRate = 1.08
+    }
+
+    chatAudioElement.currentTime = 0
+    const playPromise = chatAudioElement.play()
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        // Fallback soft ping if autoplay is blocked
+        const AudioCtx = window.AudioContext || window.webkitAudioContext
+        if (!AudioCtx) return
+        if (!chatAudioContext) chatAudioContext = new AudioCtx()
+        const now = chatAudioContext.currentTime
+        const osc = chatAudioContext.createOscillator()
+        const gain = chatAudioContext.createGain()
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(1100, now)
+        gain.gain.setValueAtTime(0.0001, now)
+        gain.gain.exponentialRampToValueAtTime(0.09, now + 0.01)
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15)
+        osc.connect(gain)
+        gain.connect(chatAudioContext.destination)
+        osc.start(now)
+        osc.stop(now + 0.16)
+      })
+    }
+  } catch (_) {}
+}
+
 function subscribeInboxNotifications() {
   if (!window.Echo) return
   if (!currentUserId.value) return
@@ -250,6 +300,7 @@ function subscribeInboxNotifications() {
       if (!activeConversationId.value) {
         inboxNewCount.value = Math.max(0, inboxNewCount.value) + 1
         triggerInboxPulse()
+        playReceiveMessageSound()
       }
     })
     inboxEchoChannel.value = channel
@@ -694,6 +745,7 @@ function subscribeConversation(conversationId) {
           is_mine: false,
         }]
         markRead(conversationId)
+        playReceiveMessageSound()
       }
     })
     echoChannel.value = channel

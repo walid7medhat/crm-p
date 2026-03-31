@@ -853,13 +853,14 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .search-tag {
-    background: rgba(59, 130, 246, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: #eaf2ff;
+    border: 1px solid #bfd3ff;
     border-radius: 999px;
     padding: 5px 12px;
     font-size: 13px;
-    font-weight: 500;
-    color: #fff;
+    font-weight: 600;
+    color: #1e3a8a;
+    box-shadow: 0 1px 2px rgba(30, 58, 138, 0.12);
     white-space: nowrap;
     width: fit-content;
 }
@@ -867,8 +868,8 @@ const $showNotification = (message, type = 'info') => {
 .close-tag-icon {
     font-size: 12px;
     cursor: pointer;
-    color: rgba(255, 255, 255, 0.9);
-    background: rgba(255, 255, 255, 0.2);
+    color: #1e3a8a;
+    background: #dbe8ff;
     border-radius: 50%;
     width: 18px;
     height: 18px;

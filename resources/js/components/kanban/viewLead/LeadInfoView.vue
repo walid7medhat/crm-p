@@ -216,7 +216,7 @@
             <!-- Person Update Modal -->
             <b-modal
                 v-model="showPersonModal"
-                title="Change Responsible Person"
+                title=" Responsible "
                 hide-footer
                 size="md"
                 class="person-modal"
@@ -840,12 +840,12 @@ const hasClientRequiredInfo = computed(() => {
 }
 
 :deep(.person-modal .modal-title) {
-    font-size: 16px !important; 
+    font-size: 24px !important;
     font-weight: 600 !important;
     color: #1E293B;
 }
 .person-modal .modal-title {
-    font-size: 16px !important; 
+    font-size: 24px !important;
     font-weight: 600 !important;
     color: #1E293B;
 }
@@ -871,6 +871,10 @@ const hasClientRequiredInfo = computed(() => {
     padding-right: 45px !important;
     border: 1px solid #E2E8F0 !important;
     font-size: 14px !important;
+}
+
+.person-search-input::placeholder {
+    font-size: 15px !important;
 }
 
 .search-icon {

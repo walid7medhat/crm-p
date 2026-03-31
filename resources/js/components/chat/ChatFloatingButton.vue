@@ -36,6 +36,7 @@ const unreadCount = ref(0)
 const badgePulsing = ref(false)
 const echoChannel = ref(null)
 let audioContext = null
+let audioElement = null
 let badgePulseTimer = null
 
 const badgeText = computed(() => {
@@ -83,20 +84,32 @@ function playNotificationTone() {
   try {
     if (typeof window === 'undefined') return
     const AudioCtx = window.AudioContext || window.webkitAudioContext
-    if (!AudioCtx) return
-    if (!audioContext) audioContext = new AudioCtx()
-    const now = audioContext.currentTime
-    const osc = audioContext.createOscillator()
-    const gain = audioContext.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(880, now)
-    gain.gain.setValueAtTime(0.0001, now)
-    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.01)
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2)
-    osc.connect(gain)
-    gain.connect(audioContext.destination)
-    osc.start(now)
-    osc.stop(now + 0.22)
+    if (!audioElement) {
+      audioElement = new Audio('/assets/notification-sound.mp3?v=3')
+      audioElement.preload = 'auto'
+      audioElement.volume = 0.42
+      audioElement.playbackRate = 1.08
+    }
+    audioElement.currentTime = 0
+    const playPromise = audioElement.play()
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        if (!AudioCtx) return
+        if (!audioContext) audioContext = new AudioCtx()
+        const now = audioContext.currentTime
+        const osc = audioContext.createOscillator()
+        const gain = audioContext.createGain()
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(1100, now)
+        gain.gain.setValueAtTime(0.0001, now)
+        gain.gain.exponentialRampToValueAtTime(0.09, now + 0.01)
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15)
+        osc.connect(gain)
+        gain.connect(audioContext.destination)
+        osc.start(now)
+        osc.stop(now + 0.16)
+      })
+    }
   } catch (_) {}
 }
 
@@ -169,6 +182,10 @@ onUnmounted(() => {
   if (audioContext && typeof audioContext.close === 'function') {
     audioContext.close().catch(() => {})
     audioContext = null
+  }
+  if (audioElement) {
+    audioElement.pause()
+    audioElement = null
   }
   if (badgePulseTimer) clearTimeout(badgePulseTimer)
   badgePulseTimer = null

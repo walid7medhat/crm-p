@@ -399,7 +399,7 @@
         <!-- Responsible Person -->
         <div class="responsible-person-box p-3 radius-8 shadow-sm mb-3">
             <div class="d-flex align-items-center justify-content-between mb-3">
-                <label class="info-label mb-0">Responsible Person</label>
+                <label class="info-label mb-0"> Person</label>
                 <div class="d-flex flex-column align-items-end">
                     <b-dropdown 
                         variant="link" 
@@ -411,7 +411,7 @@
                         <template #button-content>
                             <div class="btn-change-person-text">
                                 <iconify-icon icon="lucide:user-plus" class="change-person-icon"></iconify-icon>
-                                <span>Change Person</span>
+                                <span>Change Responsible Person</span>
                             </div>
                         </template>
                     
@@ -422,7 +422,7 @@
                         <div class="search-input-wrapper mb-3">
                             <b-form-input 
                                 v-model="searchQuery" 
-                                placeholder="Search Person" 
+                                placeholder="Search Responsible Person" 
                                 class="dropdown-search-input"
                             />
                             <iconify-icon icon="lucide:search" class="search-icon"></iconify-icon>

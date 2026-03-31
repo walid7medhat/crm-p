@@ -1,7 +1,7 @@
 <template>
     <div class="col-12" :class="{ 'mt-3': !hideSectionTitle }">
         <div class="responsible-person-card p-3">
-            <span v-if="!hideSectionTitle" class="section-title d-block mb-3">Responsible Person</span>
+            <span v-if="!hideSectionTitle" class="section-title d-block mb-3">سسResponsible Person</span>
             <div class="d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
                     <div class="avatar-wrapper">
@@ -40,7 +40,7 @@
                         
                         <div class="dropdown-search-wrapper p-3">
                             <div class="d-flex align-items-center justify-content-between border-bottom mb-3">
-                                <span class="modal-title-dropdown">Change Responsible Person</span>
+                                <span class="modal-title-dropdown"> Person</span>
                                 <button class="close-btn-top" @click="dropdownShow = false">
                                     <iconify-icon icon="lucide:x"></iconify-icon>
                                 </button>
@@ -48,7 +48,7 @@
                             <div class="search-input-wrapper mb-3">
                                 <b-form-input 
                                     v-model="searchQuery" 
-                                    placeholder="Search Person" 
+                                    placeholder="Search Responsible Person" 
                                     class="dropdown-search-input"
                                 />
                                 <iconify-icon icon="lucide:search" class="search-icon"></iconify-icon>

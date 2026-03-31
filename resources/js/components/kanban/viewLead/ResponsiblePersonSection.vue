@@ -70,12 +70,10 @@
                 <div class="search-input-wrapper mb-3">
                     <b-form-input
                         v-model="personSearchQuery"
-                        placeholder="Search Person by name or email"
+                        placeholder="Search by name"
                         class="person-search-input"
                     />
-                    <iconify-icon icon="lucide:search" class="search-icon"></iconify-icon>
                 </div>
-
                 <div v-if="isLoadingPersons" class="text-center py-4">
                     <b-spinner small variant="warning" label="Loading..."></b-spinner>
                     <p class="mt-2 text-muted">Loading persons...</p>
@@ -100,10 +98,8 @@
                                     <span v-if="user.role_name" class="user-position-badge">{{ user.role_name }}</span>
                                 </div>
                                 <div class="user-item-meta-line">
-                                    <span class="meta-label">Parent:</span>
                                     <span class="meta-value">{{ user.parent_name }}</span>
                                     <span class="meta-divider" v-if="user.branch_name">|</span>
-                                    <span class="meta-label" v-if="user.branch_name">Branch:</span>
                                     <span class="meta-value" v-if="user.branch_name">{{ user.branch_name }}</span>
                                 </div>
                             </div>
@@ -254,4 +250,110 @@ const updateResponsiblePerson = async () => {
 .current-badge { background: #E2E8F0; color: #475569; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 12px; }
 .modal-footer-custom { display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #E2E8F0; padding-top: 1.5rem; }
 .modal-footer-custom .btn { padding: .5rem 1.5rem; border-radius: 100px; font-size: 14px; font-weight: 500; }
+
+/* Modal polish */
+:deep(.person-modal .modal-content) {
+    border: 1px solid #e6edf5;
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+    overflow: hidden;
+}
+
+:deep(.person-modal .modal-header) {
+    padding: 10px 14px;
+    border-bottom: 1px solid #edf1f6;
+    background: linear-gradient(180deg, #fcfdff 0%, #ffffff 100%);
+}
+
+:deep(.person-modal .modal-title) {
+    font-size: 11px !important;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+/* Strong override for teleported bootstrap modal header title */
+:deep(.person-modal .modal-header .modal-title),
+:deep(.modal.person-modal .modal-title) {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+}
+
+/* Directly target bootstrap h5 title element */
+:deep(.person-modal .modal-header h5.modal-title),
+:deep(.modal.person-modal .modal-header h5.modal-title) {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+}
+
+:deep(.person-modal .modal-dialog) {
+    max-width: 560px;
+}
+
+:deep(.person-modal .btn-close) {
+    transform: scale(0.85);
+}
+
+:deep(.person-modal .modal-body) {
+    padding: 10px 14px 12px;
+    background: #fbfcfe;
+}
+
+.person-modal-content {
+    background: #fff;
+}
+
+.person-search-input {
+    height: 30px;
+    border-radius: 7px;
+    border: 1px solid #d3deea;
+    font-size: 10px;
+    padding: 0 9px;
+    background: #ffffff;
+    box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.03);
+}
+
+.person-search-input:focus {
+    border-color: #b9cbe3;
+    box-shadow: 0 0 0 2px rgba(185, 203, 227, 0.25);
+}
+
+.person-search-input::placeholder {
+    font-size: 8px;
+    color: #9aa9bc;
+}
+
+.person-list-scroll {
+    border: 1px solid #edf1f6;
+    border-radius: 10px;
+    background: #fff;
+    padding: 6px;
+}
+
+.person-item { padding: 8px !important; }
+.person-item-name { font-size: 12px; }
+.user-position-badge { font-size: 10px; padding: 2px 7px; }
+.user-item-meta-line { font-size: 10px; }
+.meta-value { font-size: 10px; }
+.current-badge { font-size: 10px; }
+
+.modal-footer-custom {
+    border-top: 1px solid #edf1f6;
+    padding-top: 12px;
+}
+
+.modal-footer-custom .btn {
+    font-size: 12px;
+    padding: 0.4rem 1rem;
+    min-width: 96px;
+}
+</style>
+
+<style>
+/* Global override because bootstrap modal is teleported outside scoped root */
+.person-modal .modal-header h5.modal-title {
+    font-size: 17px !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+}
 </style>

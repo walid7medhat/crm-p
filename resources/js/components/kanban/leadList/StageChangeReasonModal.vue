@@ -36,33 +36,45 @@
                             <div v-if="missingFields.includes('status_lead')" class="form-group mb-3">
                                 <label class="form-label">Lead Status</label>
 
-                                <select v-if="targetStageOrder === 4 || (isConversion && targetStageOrder === 6)" v-model="formData.lead_status" class="form-select">
-                                    <option value="">Not Selected</option>
-                                    <option value="cold">Cold Lead</option>
-                                    <option value="warm">Warm Lead</option>
-                                    <option value="hot">Hot Lead</option>
-                                </select>
+                                <v-select
+                                    v-if="targetStageOrder === 4 || (isConversion && targetStageOrder === 6)"
+                                    v-model="formData.lead_status"
+                                    :options="hotWarmLeadOptions"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    placeholder="Not Selected"
+                                    class="searchable-select"
+                                />
 
-                                <select v-else-if="targetStageOrder === 9" v-model="formData.lead_status" class="form-select">
-                                    <option value="">Select Status</option>
-                                    <option value="no_answer">Lead Pool - No Answer</option>
-                                    <option value="canceled">Lead Pool - Canceled</option>
-                                </select>
+                                <v-select
+                                    v-else-if="targetStageOrder === 9"
+                                    v-model="formData.lead_status"
+                                    :options="leadPoolStatusOptions"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    placeholder="Select Status"
+                                    class="searchable-select"
+                                />
 
-                                <select v-else-if="targetStageOrder === 10" v-model="formData.lead_status" class="form-select">
-                                    <option value="">Select Status</option>
-                                    <option value="unqualified_not_interested">Unqualified - Not Interested</option>
-                                    <option value="unqualified_wrong_contact">Unqualified - Wrong Contact Details</option>
-                                    <option value="unqualified_job_seeker">Unqualified - Job Seeker</option>
-                                    <option value="unqualified_other">Unqualified - Other</option>
-                                </select>
+                                <v-select
+                                    v-else-if="targetStageOrder === 10"
+                                    v-model="formData.lead_status"
+                                    :options="unqualifiedStatusOptions"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    placeholder="Select Status"
+                                    class="searchable-select"
+                                />
 
-                                <select v-else v-model="formData.lead_status" class="form-select">
-                                    <option value="">Not Selected</option>
-                                    <option value="cold">Cold</option>
-                                    <option value="warm">Warm</option>
-                                    <option value="hot">Hot</option>
-                                </select>
+                                <v-select
+                                    v-else
+                                    v-model="formData.lead_status"
+                                    :options="defaultLeadStatusOptions"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    placeholder="Not Selected"
+                                    class="searchable-select"
+                                />
                             </div>
 
                             <!-- Available Date -->
@@ -74,22 +86,27 @@
                             <!-- Branch -->
                             <div v-if="missingFields.includes('branch')" class="form-group mb-3">
                                 <label class="form-label">Branch</label>
-                                <select v-model="formData.branch" class="form-select">
-                                    <option value="">Select Branch</option>
-                                    <option value="Abu Dhabi">Abu Dhabi</option>
-                                    <option value="Dubai">Dubai</option>
-                                    <option value="Sharjah">Sharjah</option>
-                                </select>
+                                <v-select
+                                    v-model="formData.branch"
+                                    :options="branchOptions"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    placeholder="Select Branch"
+                                    class="searchable-select"
+                                />
                             </div>
 
                             <!-- Lost Reason -->
                             <div v-if="missingFields.includes('why_lost_lead') || missingFields.includes('lost_reason')" class="form-group mb-3">
                                 <label class="form-label">Lost Reason</label>
-                                <select v-model="formData.lost_reason" class="form-select">
-                                    <option value="">Select Lost Reason</option>
-                                    <option value="lost_by_other_company">Lost by Other Company</option>
-                                    <option value="lost_by_our_company">Lost by Our Company</option>
-                                </select>
+                                <v-select
+                                    v-model="formData.lost_reason"
+                                    :options="lostReasonOptions"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    placeholder="Select Lost Reason"
+                                    class="searchable-select"
+                                />
                             </div>
                         </div>
                         <!-- 🟦 Basic Info -->
@@ -100,57 +117,67 @@
 
                             <div v-if="missingFields.includes('salutation')" class="form-group mb-3">
                                 <label class="form-label">Salutation</label>
-                                <select v-model="formData.salutation" class="form-select">
-                                    <option value="">Not Selected</option>
-                                    <option value="Mr.">Mr.</option>
-                                    <option value="Ms.">Ms.</option>
-                                    <option value="Mrs.">Mrs.</option>
-                                    <option value="Dr.">Dr.</option>
-                                </select>
+                                <v-select
+                                    v-model="formData.salutation"
+                                    :options="salutationOptions"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    placeholder="Not Selected"
+                                    class="searchable-select"
+                                />
                             </div>
 
                             <div v-if="missingFields.includes('budget')" class="form-group mb-3">
-                                <label class="form-label">Budget</label>
-                                <input type="number" v-model="formData.budget" placeholder="Enter Budget" class="form-control">
+                                <label class="form-label">Budget (AED)</label>
+                                <input type="number" v-model="formData.budget" placeholder="Enter Budget" class="form-control budget-input">
                             </div>
 
                             <div v-if="missingFields.includes('area_id')" class="form-group mb-3">
                                 <label class="form-label">Location / Area</label>
-                                <select v-model="formData.area_id" class="form-select">
-                                    <option value="">Not Selected</option>
-                                    <option v-for="area in areas" :key="area.id" :value="area.id">
-                                        {{ area.name }}
-                                    </option>
-                                </select>
+                                <v-select
+                                    v-model="formData.area_id"
+                                    :options="areaOptions"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    placeholder="Not Selected"
+                                    class="searchable-select"
+                                />
                             </div>
 
                             <div v-if="missingFields.includes('property_type_id')" class="form-group mb-3">
                                 <label class="form-label">Property Type</label>
-                                <select v-model="formData.property_type_id" class="form-select">
-                                    <option value="">Not Selected</option>
-                                    <option v-for="type in propertyTypes" :key="type.id" :value="type.id">
-                                        {{ type.name }}
-                                    </option>
-                                </select>
+                                <v-select
+                                    v-model="formData.property_type_id"
+                                    :options="propertyTypeOptions"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    placeholder="Not Selected"
+                                    class="searchable-select"
+                                />
                             </div>
 
                             <div v-if="missingFields.includes('bedrooms')" class="form-group mb-3">
                                 <label class="form-label">How Many Bedrooms?</label>
-                                <select v-model="formData.bedrooms" class="form-select">
-                                    <option value="">Select Bedrooms</option>
-                                    <option value="Studio">Studio</option>
-                                    <option v-for="n in 9" :key="n" :value="n">{{ n }}</option>
-                                </select>
+                                <v-select
+                                    v-model="formData.bedrooms"
+                                    :options="bedroomOptions"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    placeholder="Select Bedrooms"
+                                    class="searchable-select"
+                                />
                             </div>
 
                             <div v-if="missingFields.includes('purpose_buying')" class="form-group mb-3">
                                 <label class="form-label">Purpose Of Purchase</label>
-                                <select v-model="formData.purpose_buying" class="form-select">
-                                    <option value="">Not Selected</option>
-                                    <option value="Investment">Investment</option>
-                                    <option value="Residential">Residential</option>
-                                    <option value="Commercial">Commercial</option>
-                                </select>
+                                <v-select
+                                    v-model="formData.purpose_buying"
+                                    :options="purposeOptions"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    placeholder="Not Selected"
+                                    class="searchable-select"
+                                />
                             </div>
                         </div>
 
@@ -172,6 +199,8 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import vSelect from 'vue-select'
+import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
 
 const props = defineProps({
@@ -223,6 +252,70 @@ const propertyTypes = ref([])
 const showFields = computed(() => {
     return [3, 4, 5, 7, 8, 9, 10].includes(props.targetStageOrder)
 })
+
+const hotWarmLeadOptions = [
+    { value: 'cold', text: 'Cold Lead' },
+    { value: 'warm', text: 'Warm Lead' },
+    { value: 'hot', text: 'Hot Lead' }
+]
+
+const leadPoolStatusOptions = [
+    { value: 'no_answer', text: 'Lead Pool - No Answer' },
+    { value: 'canceled', text: 'Lead Pool - Canceled' }
+]
+
+const unqualifiedStatusOptions = [
+    { value: 'unqualified_not_interested', text: 'Unqualified - Not Interested' },
+    { value: 'unqualified_wrong_contact', text: 'Unqualified - Wrong Contact Details' },
+    { value: 'unqualified_job_seeker', text: 'Unqualified - Job Seeker' },
+    { value: 'unqualified_other', text: 'Unqualified - Other' }
+]
+
+const defaultLeadStatusOptions = [
+    { value: 'cold', text: 'Cold' },
+    { value: 'warm', text: 'Warm' },
+    { value: 'hot', text: 'Hot' }
+]
+
+const branchOptions = [
+    { value: 'Abu Dhabi', text: 'Abu Dhabi' },
+    { value: 'Dubai', text: 'Dubai' },
+    { value: 'Sharjah', text: 'Sharjah' }
+]
+
+const lostReasonOptions = [
+    { value: 'lost_by_other_company', text: 'Lost by Other Company' },
+    { value: 'lost_by_our_company', text: 'Lost by Our Company' }
+]
+
+const salutationOptions = [
+    { value: 'Mr.', text: 'Mr.' },
+    { value: 'Ms.', text: 'Ms.' },
+    { value: 'Mrs.', text: 'Mrs.' },
+    { value: 'Dr.', text: 'Dr.' }
+]
+
+const purposeOptions = [
+    { value: 'Investment', text: 'Investment' },
+    { value: 'Residential', text: 'Residential' },
+    { value: 'Commercial', text: 'Commercial' }
+]
+
+const bedroomOptions = computed(() => {
+    const base = [{ value: 'Studio', text: 'Studio' }]
+    const nums = Array.from({ length: 9 }, (_, i) => ({ value: i + 1, text: String(i + 1) }))
+    return [...base, ...nums]
+})
+
+const areaOptions = computed(() => (areas.value || []).map(area => ({
+    value: area.id,
+    text: area.name
+})))
+
+const propertyTypeOptions = computed(() => (propertyTypes.value || []).map(type => ({
+    value: type.id,
+    text: type.name
+})))
 
 const formData = ref({
     reason: '',
@@ -430,13 +523,14 @@ defineExpose({
 }
 
 .stage-change-modal {
-    background: white;
-    border-radius: 12px;
+    background: #ffffff;
+    border-radius: 10px;
     width: 90%;
-    max-width: 500px;
-    max-height: 90vh;
+    max-width: 560px;
+    max-height: 92vh;
     overflow-y: auto;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    border: 1px solid #e8edf3;
+    box-shadow: 0 18px 55px rgba(15, 23, 42, 0.18);
     pointer-events: auto !important;
     position: relative;
     z-index: 2001 !important;
@@ -456,86 +550,101 @@ defineExpose({
 }
 
 .stage-change-modal.modal-wide {
-    max-width: 600px;
+    max-width: 760px;
 }
 
 .modal-header {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid #edf1f6;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background: linear-gradient(180deg, #fcfdff 0%, #ffffff 100%);
 }
 
 .modal-title {
     margin: 0;
-    font-size: 1.1rem !important; 
-    font-weight: 600;
-    color: #1f2937;
+    font-size: 0.95rem !important;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: 0.1px;
 }
 
 .btn-close {
     background: none;
     border: none;
-    font-size: 1.25rem;
+    font-size: 1rem;
     cursor: pointer;
     color: #6b7280;
 }
 
 .modal-body {
-    padding: 1.5rem;
+    padding: 0.8rem 1rem;
+    background: #fbfcfe;
 }
 
 .modal-footer {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #e5e7eb;
+    padding: 0.7rem 1rem;
+    border-top: 1px solid #edf1f6;
     display: flex;
     justify-content: flex-end;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    background: #ffffff;
 }
 
 .reason-textarea {
     width: 100%;
-    padding: 0.625rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 0.875rem;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid #d6dee8;
+    border-radius: 7px;
+    font-size: 0.75rem;
+    min-height: 70px;
     resize: vertical;
+    color: #0f172a;
+    background: #ffffff;
 }
 
 .reason-textarea:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
 }
 
 .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 0.55rem;
 }
 
 .form-label {
     display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    font-size: 0.85rem;
-    color: #374151;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+    font-size: 0.74rem;
+    color: #1f2937;
 }
 
 .form-control,
 .form-select {
     width: 100%;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 0.875rem;
+    padding: 0.4rem 0.55rem;
+    border: 1px solid #d6dee8;
+    border-radius: 7px;
+    font-size: 0.75rem;
     transition: border-color 0.15s ease-in-out;
+    min-height: 34px;
+    color: #0f172a;
+    background: #ffffff;
+}
+
+.form-control::placeholder {
+    font-size: 0.75rem;
+    color: #9ca3af;
 }
 
 .form-control:focus,
 .form-select:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
 }
 
 .input-group {
@@ -557,38 +666,40 @@ defineExpose({
 }
 
 .btn {
-    padding: 0.5rem 1rem;
+    padding: 0.25rem 0.7rem;
     border-radius: 50px;
-    height: 44px;
-    width: 90px;
+    height: 36px;
+    width: 84px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
-    font-size: 14px;
+    font-size: 12px;
+    border: 1px solid transparent;
 }
 .modal-footer{
         justify-content: center;
 
 }
 .btn-light {
-    background-color: #F4F4F4;
-    border: 1px solid #F4F4F4;
-    color: #000;
+    background-color: #f3f5f8;
+    border-color: #e3e8ef;
+    color: #0f172a;
 }
 
 .btn-light:hover {
-    background-color: #e5e7eb;
+    background-color: #e7ebf1;
 }
 
 .btn-primary {
-    background-color: #000;
-    border: 1px solid #000;
+    background-color: #0b1220;
+    border-color: #0b1220;
     color: #FFFFFF;
 }
 
 .btn-primary:hover {
-    background-color: #F4F4F4;
-    color: #000;
+    background-color: #111827;
+    border-color: #111827;
+    color: #fff;
 }
 
 .btn-primary:disabled {
@@ -613,11 +724,95 @@ defineExpose({
 }
 .box-shadow {
    
-    background-color: #fff;
-    border: 1px solid #F3F3F3;
-    padding: 20px;
-    margin: 10px 0px;
-    border-radius: 13px;
-    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.06);
+    background-color: #ffffff;
+    border: 1px solid #edf1f6;
+    padding: 10px;
+    margin: 6px 0px;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+}
+
+/* Two fields per line in dynamic form */
+.dynamic-form .box-shadow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 10px;
+}
+
+.dynamic-form .box-shadow .form-group {
+    margin-bottom: 0 !important;
+}
+
+:deep(.searchable-select .vs__dropdown-toggle) {
+    min-height: 34px;
+    border: 1px solid #d6dee8;
+    border-radius: 7px;
+    padding: 0 8px;
+    background: #fff;
+}
+
+:deep(.searchable-select .vs__selected-options) {
+    align-items: center;
+    min-height: 32px;
+}
+
+:deep(.searchable-select .vs__selected),
+:deep(.searchable-select .vs__search),
+:deep(.searchable-select .vs__search::placeholder) {
+    font-size: 0.75rem;
+    color: #111827;
+}
+
+:deep(.searchable-select .vs__actions) {
+    padding: 0 4px 0 8px;
+}
+
+:deep(.searchable-select .vs__dropdown-menu) {
+    font-size: 0.75rem;
+    z-index: 3000;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
+    border-radius: 8px;
+}
+
+:deep(.searchable-select .vs__dropdown-option) {
+    color: #111827 !important;
+    background: #fff !important;
+}
+
+:deep(.searchable-select .vs__dropdown-option--highlight) {
+    color: #111827 !important;
+    background: #f3f4f6 !important;
+}
+
+:deep(.searchable-select .vs__dropdown-option--selected) {
+    color: #111827 !important;
+    background: #e5e7eb !important;
+}
+
+.budget-input::placeholder {
+    font-size: 0.62rem !important;
+    color: #9ca3af !important;
+}
+
+/* Smooth, clean scroll for long content */
+.stage-change-modal::-webkit-scrollbar {
+    width: 8px;
+}
+
+.stage-change-modal::-webkit-scrollbar-thumb {
+    background: #cfd8e3;
+    border-radius: 999px;
+}
+
+@media (max-width: 768px) {
+    .stage-change-modal,
+    .stage-change-modal.modal-wide {
+        max-width: 96vw;
+    }
+
+    .dynamic-form .box-shadow {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
