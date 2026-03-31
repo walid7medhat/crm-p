@@ -90,6 +90,7 @@ function onFiltersChanged(filters) {
   notifyFilters.value = { ...defaultFilters, ...(filters || {}) }
 }
 
+
 const hasAnyCriteria = computed(() => {
   const f = notifyFilters.value || {}
   const ref = (f.referenceNumber || '').trim()
@@ -148,6 +149,62 @@ const activeChips = computed(() => {
 function close() {
   router.back()
 }
+function convertFiltersToAPI(filters) {
+  const apiFilters = {}
+
+  if (filters.saleRent && filters.saleRent !== 'All') {
+    apiFilters.listing_status = filters.saleRent.toLowerCase()
+  }
+
+  if (filters.area?.id) {
+    apiFilters.area_id = filters.area.id
+  }
+
+  if (filters.project?.id) {
+    apiFilters.project_id = filters.project.id
+  }
+
+  if (filters.propertyType?.id) {
+    apiFilters.property_type_id = filters.propertyType.id
+  }
+
+  if (filters.agent?.id) {
+    apiFilters.agent_id = filters.agent.id
+  }
+
+  if (filters.completionStatus?.value) {
+    apiFilters.completion_status = filters.completionStatus.value
+  }
+
+  if (filters.beds && filters.beds !== 'All') {
+    apiFilters.number_of_bedrooms =
+      filters.beds === 'Studio'
+        ? 'Studio'
+        : parseInt(filters.beds)
+  }
+
+  if (filters.priceFrom > 0) {
+    apiFilters.min_price = filters.priceFrom
+  }
+
+  if (filters.priceTo < 10000000) {
+    apiFilters.max_price = filters.priceTo
+  }
+
+  if (filters.sizeFrom > 0) {
+    apiFilters.min_size = filters.sizeFrom
+  }
+
+  if (filters.sizeTo < 10000) {
+    apiFilters.max_size = filters.sizeTo
+  }
+
+  if (filters.referenceNumber?.trim()) {
+    apiFilters.reference_number = filters.referenceNumber.trim()
+  }
+
+  return apiFilters
+}
 
 async function submit() {
   if (!hasAnyCriteria.value) {
@@ -161,7 +218,10 @@ async function submit() {
 
   submitting.value = true
   try {
-    await api.post('/search-alerts', notifyFilters.value)
+      
+      const payload = convertFiltersToAPI(notifyFilters.value)
+
+    await api.post('/search-alerts', payload)
      close()
     await Swal.fire({
       icon: 'success',

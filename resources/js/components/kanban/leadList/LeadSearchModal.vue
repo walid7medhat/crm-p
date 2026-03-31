@@ -688,8 +688,8 @@ const sourceOptions = ref([
 ])
 const websiteSourceOptions = ref([
     { value: null, text: 'Select Website' },
-    { value: 'allproperties', text: 'allproperties' },
-    { value: 'oiaproperties', text: 'oiaproperties' }
+    { value: 'Allproperties.ae', text: 'Allproperties.ae' },
+    { value: 'Oiaproperties.com', text: 'Oiaproperties.com' }
 ])
 const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 const selectedPreset = ref('')

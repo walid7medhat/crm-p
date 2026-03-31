@@ -482,6 +482,14 @@ const removeFilter = (f) => {
     
     activeFilters.value = activeFilters.value.filter(x => x.id !== f.id)
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null
+    if(!Object.keys(nextQuery).length){
+    activeFilter.value = null
+    activeFilters.value = []
+    lastQuery.value = null
+    search.value = ''
+    }
+    
+    
     if (leadsRef.value) {
         const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
@@ -507,6 +515,12 @@ const clearMoreFilters = () => {
     
     activeFilters.value = keep
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null
+      if(!Object.keys(nextQuery).length){
+        activeFilter.value = null
+        activeFilters.value = []
+        lastQuery.value = null
+        search.value = ''
+    }
     if (leadsRef.value) {
         const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {

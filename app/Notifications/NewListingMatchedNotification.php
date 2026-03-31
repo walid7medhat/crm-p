@@ -29,13 +29,14 @@ public function toMail(object $notifiable): \Illuminate\Notifications\Messages\M
 
     $bodyLines = [
         "A new property matches your saved search.",
-        "Title: {$this->listing->title}",
-        "Unit: {$this->listing->unit_number}",
-        "Type: {$this->listing->property_type?->name}"
+        "Title: {$this->listing->area?->title}",
+        // "Unit: {$this->listing->unit_number}",
+        "Type: {$this->listing->propertyType?->name}",
+        "Price: {$this->listing->price}"
     ];
 
     return (new \Illuminate\Notifications\Messages\MailMessage)
-        ->subject("🏠 New Property Matched Your Search")
+        ->subject("New Property Matched Your Search")
         ->view('emails.new_listing_matched', [
             'userName' => $userName,
             'subtitle' => 'New Listing Alert',
@@ -52,9 +53,9 @@ public function toMail(object $notifiable): \Illuminate\Notifications\Messages\M
         return [
             'message' => "A new property matches your saved search",
             'listing_id' => $this->listing->id,
-            'listing_title' => $this->listing->title,
-            'listing_unit_number' => $this->listing->unit_number,
-            'listing_type' => $this->listing->property_type?->name,
+            'listing_title' => $this->listing?->area->title,
+            // 'listing_unit_number' => $this->listing->unit_number,
+            'listing_type' => $this->listing->propertyType?->name,
             'listing_link' => url("/property-details/{$this->listing->id}"),
             'timestamp' => now()->toISOString(),
         ];
@@ -71,16 +72,4 @@ public function toMail(object $notifiable): \Illuminate\Notifications\Messages\M
         ];
     }
 
-    public function toMail(object $notifiable): MailMessage
-    {
-        return (new MailMessage)
-            ->subject('🏠 New Property Matched Your Search')
-            ->greeting('Hello ' . $notifiable->name . '!')
-            ->line("A new property matches your saved search:")
-            ->line("Title: {$this->listing->title}")
-            ->line("Unit: {$this->listing->unit_number}")
-            ->line("Type: {$this->listing->property_type?->name}")
-            ->action('View Property', url("/properties/{$this->listing->id}"))
-            ->line('Thank you for using our platform!');
-    }
 }

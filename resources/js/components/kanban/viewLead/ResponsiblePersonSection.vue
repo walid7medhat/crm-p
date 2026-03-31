@@ -3,7 +3,6 @@
         <div class="info-section-title mb-3">Responsible Person</div>
         <div class="info-group">
             <div class="d-flex align-items-center justify-content-between mb-2">
-                <label class="form-label-custom">Responsible Person</label>
                 <b-button
                     variant="link"
                     class="p-0 edit-person-btn"

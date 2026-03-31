@@ -359,7 +359,9 @@ export default {
     // Status toggle functions
     const setStatus = (status) => {
       activeStatus.value = status;
-        fetchProperties(currentFilters.value, 1); 
+        
+      const apiFilters = convertFiltersToAPI(currentFilters.value); 
+      fetchProperties(apiFilters, 1);
     };
 
   const togglePropertyStatus = async (property) => {
@@ -529,7 +531,8 @@ const fetchProperties = async (filters = {}, page = 1) => {
     // Change page
     const changePage = (page) => {
       if (page < 1 || page > pagination.value.last_page || page === '...') return;
-      fetchProperties(currentFilters.value, page);
+        const apiFilters = convertFiltersToAPI(currentFilters.value); 
+     fetchProperties(apiFilters, page);
     };
 
     const encodeFiltersToQuery = (filters) => {

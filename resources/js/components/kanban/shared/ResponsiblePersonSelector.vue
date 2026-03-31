@@ -1,7 +1,7 @@
 <template>
     <div class="col-12" :class="{ 'mt-3': !hideSectionTitle }">
         <div class="responsible-person-card p-3">
-            <span v-if="!hideSectionTitle" class="section-title d-block mb-3">سسResponsible Person</span>
+            <span v-if="!hideSectionTitle" class="section-title d-block mb-3">Responsible Person</span>
             <div class="d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
                     <div class="avatar-wrapper">

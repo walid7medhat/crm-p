@@ -19,20 +19,13 @@
               </span>
             </td>
           </tr>
-          @if(!empty($subtitle))
-            <tr>
-              <td align="center" style="padding-bottom:18px; color:#93c5fd; font-size:22px; font-weight:700;">
-                {{ $subtitle }}
-              </td>
-            </tr>
-          @endif
           <tr>
             <td style="background:#091633; border:1px solid #23365d; border-radius:16px; padding:28px;">
               <p style="margin:0 0 16px; color:#dbeafe; font-size:18px; line-height:1.5;">
                 Hello{{ $safeName ? ' ' . e($safeName) : '' }},
               </p>
 
-              <h1 style="margin:0 0 18px; color:#ffffff; font-size:44px; line-height:1.15; font-weight:800;">
+              <h1 style="margin:0 0 16px; color:#ffffff; font-size:20px; line-height:1.3; font-weight:700;">
                 {{ $headline }}
               </h1>
 
@@ -44,8 +37,8 @@
 
               <table role="presentation" cellpadding="0" cellspacing="0" style="margin:22px 0 20px;">
                 <tr>
-                  <td align="center" style="border-radius:14px; background:#2f6ef6;">
-                    <a href="{{ $ctaUrl }}" style="display:inline-block; padding:16px 34px; color:#ffffff; font-size:34px; font-weight:700; text-decoration:none; border-radius:14px;">
+                  <td align="center" style="border-radius:10px; background:#2f6ef6;">
+                    <a href="{{ $ctaUrl }}" style="display:inline-block; padding:10px 18px; color:#ffffff; font-size:16px; font-weight:700; text-decoration:none; border-radius:10px;">
                       {{ $ctaText }}
                     </a>
                   </td>
