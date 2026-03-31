@@ -13,7 +13,8 @@
             <ModalHeader title="Create New Lead" @close="show = false" />
 
             <!-- Stage Selector -->
-            <StageSelector class="px-1" v-model="form.stage_id" />
+            <StageSelector class="px-1" v-model="form.stage_id"    :require-validation="false"
+                    @stage-change-request="handleStageChangeRequest" />
             <div v-if="validationErrors.stage_id" class="invalid-feedback d-block px-1 mb-2">
                 {{ validationErrors.stage_id[0] }}
             </div>
@@ -157,60 +158,20 @@
                         </div>
 
                         <!-- Additional Fields Builder -->
-                        <div class="col-12">
+                        <div class="col-12" v-if="currentStageOrder !== 0">
                             <div class="additional-fields-card p-3">
-                                <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
                                     <div>
-                                        <span class="section-title d-block">Additional fields</span>
-                                        <small class="text-secondary-light d-block">Show only what you need. Add/remove fields anytime.</small>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" @click="showAdditionalPanel = !showAdditionalPanel">
-                                        {{ showAdditionalPanel ? 'Hide fields' : 'Add fields' }}
-                                    </button>
-                                </div>
-
-                                <!-- Always-visible summary of selected fields -->
-                                <div class="selected-fields-row" v-if="selectedAdditionalSummary.length">
-                                    <div class="selected-pill" v-for="k in selectedAdditionalSummary" :key="k">
-                                        <span class="selected-pill-label">{{ additionalLabel(k) }}</span>
-                                        <button
-                                            v-if="k !== 'lead_source'"
-                                            type="button"
-                                            class="selected-pill-x"
-                                            title="Remove"
-                                            @click="removeAdditional(k)"
-                                        >
-                                            ×
-                                        </button>
-                                        <span v-else class="required-pill">Required</span>
+                                        <span class="section-title d-block">Property Details</span>
+                                        <small class="text-secondary-light d-block">Required fields for {{ getStageName() }} stage</small>
                                     </div>
                                 </div>
 
-                                <!-- All fields checklist -->
-                                <div v-if="showAdditionalPanel" class="additional-checklist">
-                                    <label
-                                        v-for="opt in additionalFieldOptions"
-                                        :key="opt.key"
-                                        class="additional-check"
-                                        :class="{ disabled: opt.required, active: isAdditionalEnabled(opt.key) }"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            class="additional-check-input"
-                                            :checked="isAdditionalEnabled(opt.key)"
-                                            :disabled="opt.required"
-                                            @change="toggleAdditional(opt.key)"
-                                        />
-                                        <span class="additional-check-label">{{ opt.label }}</span>
-                                        <span v-if="opt.required" class="required-pill">Required</span>
-                                    </label>
-                                </div>
+                                <div class="row ">
+                                  
 
-                                <!-- Selected additional fields inputs (render here, not at page bottom) -->
-                                <div class="row g-3 mt-1 additional-fields-grid" v-if="enabledAdditionalKeys.length">
-                                    <!-- Bedrooms -->
-                                    <div v-if="shouldShowAdditional('bedrooms')" class="col-md-3">
-                                        <div class="additional-input-wrap">
+                                    <!-- Bedrooms (Stage 4) -->
+                                    <div v-if="shouldShowField('bedrooms')" class="col-md-4">
                                         <label class="form-label-custom">How Many Bedrooms</label>
                                         <v-select 
                                             v-model="form.bedrooms" 
@@ -219,7 +180,6 @@
                                             label="text"
                                             placeholder="Select Bedrooms"
                                             class="custom-v-select"
-                                            :class="{ 'is-invalid-select': validationErrors.bedrooms }"
                                         >
                                             <template #open-indicator="{ attributes }">
                                                 <span v-bind="attributes">
@@ -227,35 +187,24 @@
                                                 </span>
                                             </template>
                                         </v-select>
-                                        <div v-if="validationErrors.bedrooms" class="invalid-feedback d-block">
-                                            {{ validationErrors.bedrooms[0] }}
-                                        </div>
-                                        </div>
                                     </div>
 
-                                    <!-- Budget -->
-                                    <div v-if="shouldShowAdditional('budget')" class="col-md-3">
-                                        <div class="additional-input-wrap">
+                                    <!-- Budget (Stage 4) -->
+                                    <div v-if="shouldShowField('budget')" class="col-md-4">
                                         <label class="form-label-custom">Budget</label>
-                                        <div class="input-group-custom" :class="{ 'is-invalid-group': validationErrors.budget }">
+                                        <div class="input-group-custom">
                                             <b-form-input 
                                                 v-model="form.budget"  
                                                 type="number" 
                                                 placeholder="Enter Budget" 
                                                 class="custom-input"
-                                                :class="{ 'is-invalid': validationErrors.budget }"
                                             />
                                             <div class="currency-pill" aria-label="Currency">AED</div>
                                         </div>
-                                        <div v-if="validationErrors.budget" class="invalid-feedback d-block">
-                                            {{ validationErrors.budget[0] }}
-                                        </div>
-                                        </div>
                                     </div>
 
-                                    <!-- Purpose -->
-                                    <div v-if="shouldShowAdditional('purpose_buying')" class="col-md-3">
-                                        <div class="additional-input-wrap">
+                                    <!-- Purpose (Stage 4) -->
+                                    <div v-if="shouldShowField('purpose_buying')" class="col-md-4">
                                         <label class="form-label-custom">Purpose Of Purchase</label>
                                         <v-select 
                                             v-model="form.purpose_buying" 
@@ -264,7 +213,6 @@
                                             label="text"
                                             placeholder="Select Purpose"
                                             class="custom-v-select"
-                                            :class="{ 'is-invalid-select': validationErrors.purpose_buying }"
                                         >
                                             <template #open-indicator="{ attributes }">
                                                 <span v-bind="attributes">
@@ -272,18 +220,11 @@
                                                 </span>
                                             </template>
                                         </v-select>
-                                        <div v-if="validationErrors.purpose_buying" class="invalid-feedback d-block">
-                                            {{ validationErrors.purpose_buying[0] }}
-                                        </div>
-                                        </div>
                                     </div>
 
-                                    <!-- Source (required) -->
-                                    <div class="col-md-3">
-                                        <div class="additional-input-wrap required">
-                                        <label class="form-label-custom">
-                                            Source <span class="text-danger">*</span>
-                                        </label>
+                                    <!-- Source (Stage 4) -->
+                                    <div v-if="shouldShowField('lead_source')" class="col-md-4">
+                                        <label class="form-label-custom">Source <span class="text-danger">*</span></label>
                                         <v-select 
                                             v-model="form.lead_source" 
                                             :options="sourceOptions" 
@@ -291,7 +232,6 @@
                                             label="text"
                                             placeholder="Select Source"
                                             class="custom-v-select"
-                                            :class="{ 'is-invalid-select': validationErrors.lead_source }"
                                         >
                                             <template #open-indicator="{ attributes }">
                                                 <span v-bind="attributes">
@@ -299,16 +239,11 @@
                                                 </span>
                                             </template>
                                         </v-select>
-                                        <div v-if="validationErrors.lead_source" class="invalid-feedback d-block">
-                                            {{ validationErrors.lead_source[0] }}
-                                        </div>
-                                        </div>
                                     </div>
 
-                                    <!-- Location -->
-                                    <div v-if="shouldShowAdditional('area_id')" class="col-md-6">
-                                        <div class="additional-input-wrap">
-                                        <label class="form-label-custom">Location</label>
+                                    <!-- Location / Area (Stage 4) -->
+                                    <div v-if="shouldShowField('area_id')" class="col-md-4">
+                                        <label class="form-label-custom">Location / Area</label>
                                         <v-select
                                             v-model="form.area_id"
                                             :options="areas"
@@ -326,39 +261,23 @@
                                                 <div class="location-option">
                                                     <i class="ri-map-pin-line location-option-icon"></i>
                                                     <div class="location-option-text">
-                                                        <span class="location-option-name">
-                                                            {{ locationFirstLine(option) }}
-                                                        </span>
-                                                        <span class="location-option-subtitle">
-                                                            {{ locationSecondLine(option) }}
-                                                        </span>
+                                                        <span class="location-option-name">{{ locationFirstLine(option) }}</span>
+                                                        <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
                                                     </div>
                                                 </div>
                                             </template>
 
                                             <template #selected-option="option">
                                                 <div v-if="option" class="location-selected">
-                                                    <span class="location-selected-name">
-                                                        {{ locationFirstLine(option) }}
-                                                    </span>
-                                                    <span class="location-selected-subtitle">
-                                                        {{ locationSecondLine(option) }}
-                                                    </span>
-                                                </div>
-                                            </template>
-
-                                            <template #no-options>
-                                                <div class="text-center p-2">
-                                                    {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
+                                                    <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
+                                                    <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
                                                 </div>
                                             </template>
                                         </v-select>
-                                        </div>
                                     </div>
 
-                                    <!-- Property Type -->
-                                    <div v-if="shouldShowAdditional('property_type_id')" class="col-md-6">
-                                        <div class="additional-input-wrap">
+                                    <!-- Property Type (Stage 4) -->
+                                    <div v-if="shouldShowField('property_type_id')" class="col-md-4">
                                         <label class="form-label-custom">Property Type</label>
                                         <v-select 
                                             v-model="form.property_type_id"
@@ -368,7 +287,73 @@
                                             placeholder="Select Property Type"
                                             class="custom-v-select"
                                         />
-                                        </div>
+                                    </div>
+
+                                    <!-- Lead Status (Stages 4, 9, 10) -->
+                                    <div v-if="shouldShowField('lead_status') || shouldShowField('lead_status_pool') || shouldShowField('unqualified_status')" class="col-md-4">
+                                        <label class="form-label-custom">Lead Status</label>
+                                        <v-select 
+                                            v-model="form.status_lead" 
+                                            :options="getLeadStatusOptions()" 
+                                            :reduce="option => option.value"
+                                            label="text"
+                                            placeholder="Select Status"
+                                            class="custom-v-select"
+                                        >
+                                            <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
+                                            </template>
+                                        </v-select>
+                                    </div>
+
+                                    <!-- Available Date (Stage 5) -->
+                                    <div v-if="shouldShowField('available_date')" class="col-md-4">
+                                        <label class="form-label-custom">Available Date</label>
+                                        <b-form-input 
+                                            v-model="form.available_date" 
+                                            type="date" 
+                                            class="custom-input"
+                                        />
+                                    </div>
+
+                                    <!-- Branch (Stage 7) -->
+                                    <div v-if="shouldShowField('branch')" class="col-md-4">
+                                        <label class="form-label-custom">Branch</label>
+                                        <v-select 
+                                            v-model="form.branch" 
+                                            :options="branchOptions" 
+                                            :reduce="option => option.value"
+                                            label="text"
+                                            placeholder="Select Branch"
+                                            class="custom-v-select"
+                                        >
+                                            <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
+                                            </template>
+                                        </v-select>
+                                    </div>
+
+                                    <!-- Lost Reason (Stage 8) -->
+                                    <div v-if="shouldShowField('lost_reason')" class="col-md-4">
+                                        <label class="form-label-custom">Lost Reason</label>
+                                        <v-select 
+                                            v-model="form.lost_reason" 
+                                            :options="lostReasonOptions" 
+                                            :reduce="option => option.value"
+                                            label="text"
+                                            placeholder="Select Lost Reason"
+                                            class="custom-v-select"
+                                        >
+                                            <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
+                                            </template>
+                                        </v-select>
                                     </div>
                                 </div>
                             </div>
@@ -462,6 +447,126 @@ const showAdditionalPanel = ref(false)
 const areas = ref([])
 const isLoadingAreas = ref(false)
 const propertyTypeOptions = ref([])
+
+
+const currentStageOrder = computed(() => {
+    const selectedStage = stages.value.find(s => s.id === form.value.stage_id)
+    return selectedStage?.order || 0
+})
+const handleStageChangeRequest = ({ stageId, stageName, stageOrder }) => {
+    console.log('🎯 handleStageChangeRequest called:', { stageId, stageName, stageOrder })
+    
+    form.value.stage_id = stageId
+    
+    console.log('✅ Stage selected:', stageName, 'ID:', stageId)
+}
+
+// تحميل المراحل
+const stages = ref([])
+
+// دالة لتحديد ما إذا كان الحقل يجب أن يظهر
+const shouldShowField = (fieldKey) => {
+    const order = currentStageOrder.value
+    
+    const fieldVisibility = {
+        // Stage 3: Follow Up
+        'salutation': [1,2,3,4,5,6],
+        // Stage 4: Qualified
+        'bedrooms': [1,2,3,4,5,6],
+        'budget': [1,2,3,4,5,6],
+        'purpose_buying': [1,2,3,4,5,6],
+        'lead_source': [1,2,3,4,5,6],
+        'area_id': [1,2,3,4,5,6],
+        'property_type_id': [1,2,3,4,5,6],
+        'lead_status': [4,5],
+        // Stage 5: Future
+        'available_date': [5],
+        // Stage 7: Shared
+        'branch': [7],
+        // Stage 8: Lost
+        'lost_reason': [8],
+        // Stage 9: Lead Pool
+        'lead_status_pool': [9],
+        // Stage 10: Unqualified
+        'unqualified_status': [10],
+    }
+    
+      const stages = fieldVisibility[fieldKey] || []
+    return stages.includes(order) && order !== 0  
+}
+// Branch Options
+const branchOptions = [
+    { value: 'Abu Dhabi', text: 'Abu Dhabi' },
+    { value: 'Dubai', text: 'Dubai' },
+    { value: 'Sharjah', text: 'Sharjah' }
+]
+
+// Lost Reason Options
+const lostReasonOptions = [
+    { value: 'lost_by_other_company', text: 'Lost by Other Company' },
+    { value: 'lost_by_our_company', text: 'Lost by Our Company' }
+]
+
+// دالة للحصول على اسم المرحلة
+const getStageName = () => {
+    const stage = stages.value.find(s => s.id === form.value.stage_id)
+    return stage?.name || ''
+}
+// دالة لتحديد خيارات Lead Status حسب المرحلة
+const getLeadStatusOptions = () => {
+    const order = currentStageOrder.value
+    
+    if (order === 4) {
+        return [
+            { value: 'cold', text: 'Cold Lead' },
+            { value: 'warm', text: 'Warm Lead' },
+            { value: 'hot', text: 'Hot Lead' }
+        ]
+    } else if (order === 9) {
+        return [
+            { value: 'no_answer', text: 'Lead Pool - No Answer' },
+            { value: 'canceled', text: 'Lead Pool - Canceled' }
+        ]
+    } else if (order === 10) {
+        return [
+            { value: 'unqualified_not_interested', text: 'Unqualified - Not Interested' },
+            { value: 'unqualified_wrong_contact', text: 'Unqualified - Wrong Contact Details' },
+            { value: 'unqualified_job_seeker', text: 'Unqualified - Job Seeker' },
+            { value: 'unqualified_other', text: 'Unqualified - Other' }
+        ]
+    }
+    return []
+}
+
+const fetchStages = async () => {
+    try {
+        const response = await api.get('/stages')
+        
+        // افترض أن الـ API يعيد { data: { data: [...] } }
+        let stagesData = response.data?.data?.data || response.data?.data || response.data || []
+        
+        // إذا كانت stagesData كائن وليس مصفوفة
+        if (!Array.isArray(stagesData)) {
+            // إذا كان الكائن يحتوي على stages
+            if (stagesData.stages && Array.isArray(stagesData.stages)) {
+                stagesData = stagesData.stages
+            } else {
+                stagesData = []
+            }
+        }
+        
+        stages.value = stagesData.map(stage => ({
+            id: stage.id,
+            name: stage.name,
+            order: stage.order
+        }))
+        
+        console.log('Stages loaded:', stages.value)
+    } catch (error) {
+        console.error('Error fetching stages:', error)
+        stages.value = []
+    }
+}
 const getLoggedInUserId = () => {
     try {
         const raw = localStorage.getItem('user') 
@@ -553,10 +658,26 @@ const fetchUsers = async () => {
         isLoadingUsers.value = false
     }
 }
+watch(() => form.value.stage_id, (newStageId) => {
+    console.log('Stage changed to:', newStageId)
+    // إعادة تعيين الحقول الخاصة بالمرحلة السابقة
+    if (!shouldShowField('bedrooms')) form.value.bedrooms = null
+    if (!shouldShowField('budget')) form.value.budget = null
+    if (!shouldShowField('purpose_buying')) form.value.purpose_buying = null
+    if (!shouldShowField('area_id')) form.value.area_id = null
+    if (!shouldShowField('property_type_id')) form.value.property_type_id = null
+    if (!shouldShowField('lead_status')) form.value.lead_status = null
+    if (!shouldShowField('available_date')) form.value.available_date = null
+    if (!shouldShowField('branch')) form.value.branch = null
+    if (!shouldShowField('lost_reason')) form.value.lost_reason = null
+})
 
 onMounted(() => {
     fetchUsers()
     fetchSources()
+     fetchStages() 
+    fetchAreas() 
+    fetchPropertyTypes()
 })
 
 const form = ref({
@@ -586,6 +707,10 @@ const form = ref({
     currency: "AED",
     area_id: null,
     property_type_id: null,
+    status_lead: null,
+    available_date: null,
+    branch: null,
+    lost_reason: null
 })
 
 
@@ -856,6 +981,34 @@ watch(() => form.value.responsible_person_id, () => {
         clearErrorMessageIfNeeded()
     }
 })
+// أضف هذه الـ watches بعد الـ watches الموجودة
+watch(() => form.value.status_lead, () => {
+    if (validationErrors.value.status_lead) {
+        delete validationErrors.value.status_lead
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.available_date, () => {
+    if (validationErrors.value.available_date) {
+        delete validationErrors.value.available_date
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.branch, () => {
+    if (validationErrors.value.branch) {
+        delete validationErrors.value.branch
+        clearErrorMessageIfNeeded()
+    }
+})
+
+watch(() => form.value.lost_reason, () => {
+    if (validationErrors.value.lost_reason) {
+        delete validationErrors.value.lost_reason
+        clearErrorMessageIfNeeded()
+    }
+})
 
 const resetForm = () => {
     const defaultUser = users.value.find((user) => Number(user.id) === Number(loggedInUserId)) || null
@@ -880,6 +1033,10 @@ const resetForm = () => {
         currency: "AED",
         area_id: null,
         property_type_id: null,
+          status_lead: null,
+        available_date: null,
+        branch: null,
+        lost_reason: null
     }
     validationErrors.value = {}
     errorMessage.value = ''
