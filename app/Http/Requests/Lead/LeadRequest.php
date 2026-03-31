@@ -93,6 +93,11 @@ class LeadRequest extends FormRequest
              
             'area_id' => 'nullable|exists:areas,id',
             'property_type_id' => 'nullable|exists:property_types,id',
+
+            'status_lead' => 'nullable|string|max:50',  
+            'available_date' => 'nullable|date',
+            'branch' => 'nullable|string|max:100',
+            'why_lost_lead' => 'nullable|string|max:255',
         ];
 
         if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
