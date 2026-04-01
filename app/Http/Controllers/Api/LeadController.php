@@ -11,6 +11,7 @@ use App\Http\Requests\Lead\AssignResponsiblePersonRequest;
 use App\Http\Resources\Lead\LeadResource;
 use App\Http\Resources\Lead\LeadCollection;
 use App\Models\Lead;
+use App\Models\Integration;
 use App\Models\LeadParticipant;
 use App\Models\LeadObserver;
 use App\Models\Stage;
@@ -46,11 +47,12 @@ class LeadController extends Controller
                 $perPage = $request->get('per_page', 20);
         
                 $leadsQuery = Lead::with([
-                    'stage', 
-                    'addedBy', 
-                    'responsiblePerson', 
+                    'stage',
+                    'addedBy',
+                    'responsiblePerson',
                     'participants',
-                    'observers.user'
+                    'observers.user',
+                    'integration:id,project_id',
                 ]);
                 if ($request->filled('responsible_person_id')) {
                     $leadsQuery->where('responsible_person_id', $request->responsible_person_id);
@@ -147,6 +149,12 @@ class LeadController extends Controller
             $leadData['added_by'] = $user->id;
             $leadData['last_stage_change_at'] = now();
 
+            if ($request->has('budget_from') || $request->has('budget_to')) {
+                $bt = $request->input('budget_to');
+                $bf = $request->input('budget_from');
+                $leadData['budget'] = ($bt !== null && $bt !== '') ? $bt : (($bf !== null && $bf !== '') ? $bf : null);
+            }
+
             // if (!empty($leadData['responsible_person_id']) && $user->hasRole(['super_admin','admin', 'manager', 'team_lead'])) {
             //     $leadData['responsible_person_id'] = $user->id;
             // } else {
@@ -206,11 +214,12 @@ class LeadController extends Controller
 
             return ApiResponse::success(
                 new LeadResource($lead->load([
-                    'stage', 
-                    'addedBy', 
+                    'stage',
+                    'addedBy',
                     'responsiblePerson',
                     'participants',
-                    'observers.user'
+                    'observers.user',
+                    'integration:id,project_id',
                 ])),
                 'Lead created successfully',
                 201
@@ -243,16 +252,48 @@ class LeadController extends Controller
 
             return ApiResponse::success(
                 new LeadResource($lead->load([
-                    'stage', 
-                    'addedBy', 
-                    'responsiblePerson', 
+                    'stage',
+                    'addedBy',
+                    'responsiblePerson',
                     'participants',
-                    'observers.user'
+                    'observers.user',
+                    'integration:id,project_id',
                 ])),
                 'Lead retrieved successfully'
             );
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve lead: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Resolve project_id for matching listings (integration project or lead.project_id).
+     * Authorized like lead show — works when integration.owner !== auth (unlike GET /integrations/{id}).
+     */
+    public function leadIntegrationProject(Lead $lead): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            if (!$user->canViewLead($lead)) {
+                return ApiResponse::error('You are not authorized to view this lead', 403);
+            }
+
+            $lead->loadMissing('integration:id,project_id');
+
+            $projectId = $lead->integration?->project_id;
+            if ($projectId === null && $lead->integration_id) {
+                $projectId = Integration::query()->whereKey($lead->integration_id)->value('project_id');
+            }
+            if ($projectId === null) {
+                $projectId = $lead->project_id;
+            }
+
+            return ApiResponse::success([
+                'project_id' => $projectId !== null ? (int) $projectId : null,
+                'integration_id' => $lead->integration_id,
+            ], 'Project scope resolved');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to resolve project: ' . $e->getMessage(), 500);
         }
     }
 
@@ -306,6 +347,13 @@ class LeadController extends Controller
                 if ($request->has('stage_id') && $lead->stage_id != $request->stage_id) {
                     $leadData['last_stage_change_at'] = now();
                 }
+
+                if ($request->has('budget_from') || $request->has('budget_to')) {
+                    $bt = $request->input('budget_to');
+                    $bf = $request->input('budget_from');
+                    $leadData['budget'] = ($bt !== null && $bt !== '') ? $bt : (($bf !== null && $bf !== '') ? $bf : null);
+                }
+
                 $old = $lead->getAttributes();
 
                 $lead->update($leadData);
@@ -386,7 +434,12 @@ class LeadController extends Controller
                     ]
                 );
                 return ApiResponse::success(
-                    new LeadResource($lead->load(['responsiblePerson', 'participants', 'observers.user'])),
+                    new LeadResource($lead->load([
+                        'responsiblePerson',
+                        'participants',
+                        'observers.user',
+                        'integration:id,project_id',
+                    ])),
                     'Lead updated successfully'
                 );
             } catch (\Exception $e) {
@@ -588,6 +641,8 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             'area_id' => 'nullable|exists:areas,id',
             'property_type_id' => 'nullable|exists:property_types,id',
             'budget' => 'nullable|numeric|min:0|max:999999999.99',
+            'budget_from' => 'nullable|numeric|min:0|max:999999999.99',
+            'budget_to' => 'nullable|numeric|min:0|max:999999999.99',
             'lead_source' => 'nullable|string|max:100',
             'purpose_buying' => 'nullable|string|max:100',
             'bedrooms' => 'nullable',
@@ -680,7 +735,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         // إضافة جميع الحقول حسب المرحلة
         $additionalFields = [
             // الحقول الموجودة
-            'area_id', 'property_type_id', 'budget', 'lead_source', 
+            'area_id', 'property_type_id', 'budget', 'budget_from', 'budget_to', 'lead_source', 
             'purpose_buying', 'bedrooms', 'responsible_person_id',
             'salutation',
             'status_lead',      // يستخدم للمراحل 4, 9, 10
@@ -712,6 +767,14 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                     $updateData[$field] = $request->$field;
                 }
             }
+        }
+
+        if ($request->has('budget_from') || $request->has('budget_to')) {
+            $bt = $request->has('budget_to') ? $request->input('budget_to') : $lead->budget_to;
+            $bf = $request->has('budget_from') ? $request->input('budget_from') : $lead->budget_from;
+            $updateData['budget_from'] = $bf;
+            $updateData['budget_to'] = $bt;
+            $updateData['budget'] = ($bt !== null && $bt !== '') ? $bt : (($bf !== null && $bf !== '') ? $bf : null);
         }
 
         // تحديث الـ Lead
@@ -813,7 +876,13 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         }
         
         return ApiResponse::success(
-            new LeadResource($lead->load(['stage', 'responsiblePerson', 'participants', 'observers.user'])),
+            new LeadResource($lead->load([
+                'stage',
+                'responsiblePerson',
+                'participants',
+                'observers.user',
+                'integration:id,project_id',
+            ])),
             'Lead stage and data updated successfully'
         );
 

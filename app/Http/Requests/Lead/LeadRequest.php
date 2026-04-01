@@ -88,8 +88,10 @@ class LeadRequest extends FormRequest
             'observers' => 'nullable|array',
             'observers.*' => 'exists:users,id',
             
-            'budget'=>'nullable',
-             'currency'=>'nullable',
+            'budget' => 'nullable|numeric|min:0|max:999999999.99',
+            'budget_from' => 'nullable|numeric|min:0|max:999999999.99',
+            'budget_to' => 'nullable|numeric|min:0|max:999999999.99',
+            'currency' => 'nullable',
              
             'area_id' => 'nullable|exists:areas,id',
             'property_type_id' => 'nullable|exists:property_types,id',
@@ -106,6 +108,18 @@ class LeadRequest extends FormRequest
 
         return $rules;
     }
+
+    protected function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $from = $this->input('budget_from');
+            $to = $this->input('budget_to');
+            if ($from !== null && $from !== '' && $to !== null && $to !== '' && (float) $to < (float) $from) {
+                $validator->errors()->add('budget_to', 'The budget to must be greater than or equal to budget from.');
+            }
+        });
+    }
+
     public function attributes(): array
 {
     return [

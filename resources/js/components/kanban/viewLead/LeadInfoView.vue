@@ -112,9 +112,9 @@
                     <label class="form-label-custom">Property Type</label>
                     <div class="info-value">{{ lead?.property_type || '—' }}</div>
                 </div>
-                <div class="info-group" v-if="lead?.budget != null">
+                <div class="info-group" v-if="formatLeadBudgetRange(lead)">
                     <label class="form-label-custom">Budget</label>
-                    <div class="info-value">{{ lead?.budget != null ? lead.budget : '—' }} {{ lead?.currency || '' }}</div>
+                    <div class="info-value">{{ formatLeadBudgetRange(lead) }} {{ lead?.currency || 'AED' }}</div>
                 </div>
                  <div class="info-group" v-if="lead?.branch != null">
                     <label class="form-label-custom">Shared Branch</label>
@@ -153,6 +153,8 @@
                 No additional information
             </div>
         </div>
+
+        <MatchingPropertiesSection v-if="lead?.id" :lead="lead" />
 
         <div v-if="showResponsibleSection" class="info-section">
             <div class="info-section-title">Responsible Person</div>
@@ -334,6 +336,8 @@
 import { ref, computed, watch } from 'vue'
 import { BButton, BModal, BFormInput, BSpinner } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
+import { formatLeadBudgetRange } from '@/utils/budgetInput'
+import MatchingPropertiesSection from './MatchingPropertiesSection.vue'
 
 const props = defineProps({
     lead: Object,
@@ -586,6 +590,8 @@ const hasClientRequiredInfo = computed(() => {
         props.lead?.property_type ||
         props.lead?.source_information ||
         props.lead?.budget != null ||
+        props.lead?.budget_from != null ||
+        props.lead?.budget_to != null ||
         props.lead?.branch != null ||
         props.lead?.available_date != null ||
         props.lead?.status_lead != null ||

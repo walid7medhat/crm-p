@@ -153,9 +153,9 @@
                                                             </div>
                                                             
                                                             <!-- Budget -->
-                                                            <div v-else-if="field.key === 'budget' && task.budget" class="info-item mb-8">
+                                                            <div v-else-if="field.key === 'budget' && formatLeadBudgetRange(task)" class="info-item mb-8">
                                                                 <div class="info-label text-secondary-light text-xs">Budget</div>
-                                                                <div class="info-value">{{ task.budget }} {{ task.currency || '' }}</div>
+                                                                <div class="info-value">{{ formatLeadBudgetRange(task) }} {{ task.currency || '' }}</div>
                                                             </div>
                                                             
                                                             <!-- WhatsApp -->
@@ -356,7 +356,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="taskForm">
+                    <form id="taskForleadsm">
                         <input type="hidden" id="editTaskId" v-model="currentTask.id">
                         <div class="mb-3">
                             <label for="taskTitle"
@@ -471,6 +471,7 @@ import ConvertLeadModal from './ConvertLeadModal.vue'
 
 
 import api from '@/plugins/axios'
+import { formatLeadBudgetRange } from '@/utils/budgetInput'
 import Swal from 'sweetalert2'
 
 // Import Bootstrap

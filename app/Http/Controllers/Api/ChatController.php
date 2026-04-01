@@ -376,6 +376,15 @@ class ChatController extends Controller
         if ($lastMessage && !$lastMessage->relationLoaded('sender')) {
             $lastMessage->load('sender:id,name');
         }
+        $participants = $conversation->users
+            ->map(fn ($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'avatar' => $u->avatar_url ?? null,
+            ])
+            ->values()
+            ->all();
         $unreadCount = $conversation->messages()
             ->where('sender_id', '!=', $currentUser->id)
             ->whereNull('read_at')
@@ -398,11 +407,13 @@ class ChatController extends Controller
                 'email' => $other->email,
                 'avatar' => $other->avatar_url ?? null,
             ] : null,
+            'participants' => $participants,
             'last_message' => $lastMessage ? [
                 'id' => $lastMessage->id,
                 'message' => Str::limit($this->cleanSystemContextText($lastMessage->message), 60),
                 'sender_id' => $lastMessage->sender_id,
                 'sender_name' => $lastMessage->sender?->name,
+                'sender_avatar' => $lastMessage->sender?->avatar_url ?? null,
                 'is_from_me' => $lastMessage->sender_id === $currentUser->id,
                 'created_at' => $lastMessage->created_at->toIso8601String(),
             ] : null,

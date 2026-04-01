@@ -164,7 +164,6 @@
                                 <div class="d-flex align-items-center justify-content-between mb-3">
                                     <div>
                                         <span class="section-title d-block">Client Requirement</span>
-                                        <small class="text-secondary-light d-block">Required fields for {{ getStageName() }} stage</small>
                                     </div>
                                 </div>
 
@@ -190,15 +189,33 @@
                                         </v-select>
                                     </div>
 
-                                    <!-- Budget (Stage 4) -->
+                                    <!-- Budget From / To — same grid as other Client Requirement fields -->
                                     <div v-if="shouldShowField('budget')" class="col-md-4">
-                                        <label class="form-label-custom">Budget</label>
+                                        <label class="form-label-custom">Budget From (AED)</label>
                                         <div class="input-group-custom">
-                                            <b-form-input 
-                                                v-model="form.budget"  
-                                                type="number" 
-                                                placeholder="Enter Budget" 
+                                            <b-form-input
+                                                :model-value="budgetFromDisplay"
+                                                type="text"
+                                                inputmode="numeric"
+                                                autocomplete="off"
+                                                placeholder="0"
                                                 class="custom-input"
+                                                @update:model-value="onBudgetFromInput"
+                                            />
+                                            <div class="currency-pill" aria-label="Currency">AED</div>
+                                        </div>
+                                    </div>
+                                    <div v-if="shouldShowField('budget')" class="col-md-4">
+                                        <label class="form-label-custom">Budget To (AED)</label>
+                                        <div class="input-group-custom">
+                                            <b-form-input
+                                                :model-value="budgetToDisplay"
+                                                type="text"
+                                                inputmode="numeric"
+                                                autocomplete="off"
+                                                placeholder="0"
+                                                class="custom-input"
+                                                @update:model-value="onBudgetToInput"
                                             />
                                             <div class="currency-pill" aria-label="Currency">AED</div>
                                         </div>
@@ -433,6 +450,7 @@ import avatar1 from '@/assets/images/users/user1.png'
 import ModalHeader from '../shared/ModalHeader.vue'
 import StageSelector from '../shared/StageSelector.vue'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
+import { formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
 
 const props = defineProps({
     modelValue: Boolean
@@ -455,19 +473,6 @@ const showAdditionalPanel = ref(false)
 const areas = ref([])
 const isLoadingAreas = ref(false)
 const propertyTypeOptions = ref([])
-
-
-const currentStageOrder = computed(() => {
-    const selectedStage = stages.value.find(s => s.id === form.value.stage_id)
-    return selectedStage?.order || 0
-})
-const handleStageChangeRequest = ({ stageId, stageName, stageOrder }) => {
-    console.log('🎯 handleStageChangeRequest called:', { stageId, stageName, stageOrder })
-    
-    form.value.stage_id = stageId
-    
-    console.log('✅ Stage selected:', stageName, 'ID:', stageId)
-}
 
 // تحميل المراحل
 const stages = ref([])
@@ -589,6 +594,67 @@ const getLoggedInUserId = () => {
     }
 }
 const loggedInUserId = getLoggedInUserId()
+
+const form = ref({
+    lead_name: '',
+    stage_id: null,
+    salutation: null,
+    first_name: '',
+    last_name: '',
+    work_phone: '',
+    email: '',
+    secondary_email: '',
+    work_phone_2: '',
+    comment: '',
+    lead_source: '',
+    source_information: '',
+    bedrooms: null,
+    purpose_buying: null,
+    responsible_person_id: loggedInUserId,
+    budget_from: null,
+    budget_to: null,
+    currency: 'AED',
+    area_id: null,
+    property_type_id: null,
+    status_lead: null,
+    available_date: null,
+    branch: null,
+    lost_reason: null
+})
+
+const budgetFromDisplay = ref('')
+const budgetToDisplay = ref('')
+
+function onBudgetFromInput(val) {
+    const { numeric, display } = parseBudgetThousandsInput(val)
+    form.value.budget_from = numeric
+    budgetFromDisplay.value = display
+}
+
+function onBudgetToInput(val) {
+    const { numeric, display } = parseBudgetThousandsInput(val)
+    form.value.budget_to = numeric
+    budgetToDisplay.value = display
+}
+
+function syncBudgetDisplayFields() {
+    budgetFromDisplay.value = formatBudgetThousands(form.value.budget_from)
+    budgetToDisplay.value = formatBudgetThousands(form.value.budget_to)
+}
+
+const currentStageOrder = computed(() => {
+    const selectedStage = stages.value.find(s => s.id === form.value.stage_id)
+    return selectedStage?.order || 0
+})
+
+const handleStageChangeRequest = ({ stageId, stageName, stageOrder }) => {
+    console.log('🎯 handleStageChangeRequest called:', { stageId, stageName, stageOrder })
+
+    form.value.stage_id = stageId
+
+    console.log('✅ Stage selected:', stageName, 'ID:', stageId)
+}
+
 const locationFirstLine = (area) => {
     return area.name || ''
 }
@@ -670,7 +736,12 @@ watch(() => form.value.stage_id, (newStageId) => {
     console.log('Stage changed to:', newStageId)
     // إعادة تعيين الحقول الخاصة بالمرحلة السابقة
     if (!shouldShowField('bedrooms')) form.value.bedrooms = null
-    if (!shouldShowField('budget')) form.value.budget = null
+    if (!shouldShowField('budget')) {
+        form.value.budget_from = null
+        form.value.budget_to = null
+        budgetFromDisplay.value = ''
+        budgetToDisplay.value = ''
+    }
     if (!shouldShowField('purpose_buying')) form.value.purpose_buying = null
     if (!shouldShowField('area_id')) form.value.area_id = null
     if (!shouldShowField('property_type_id')) form.value.property_type_id = null
@@ -687,40 +758,6 @@ onMounted(() => {
     fetchAreas() 
     fetchPropertyTypes()
 })
-
-const form = ref({
-    lead_name: '',
-    stage_id: null,
-    salutation: null,
-    first_name: '',
-    last_name: '',
-    work_phone: '',
-    email: '',
-    secondary_email:'',
-    work_phone_2: '',
-    comment: '',
-    lead_source: '',
-    source_information: '',
-    bedrooms: null,
-    purpose_buying: null,
-    responsible_person_id: loggedInUserId, // Default logged-in user
-    // responsible_person: {
-    //     id: 1,
-    //     name: 'Ahmad Mahfoz',
-    //     email: 'testuseremail@gmail.com',
-    //     position: '--',
-    //     avatar: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
-    // },
-    budget: null,
-    currency: "AED",
-    area_id: null,
-    property_type_id: null,
-    status_lead: null,
-    available_date: null,
-    branch: null,
-    lost_reason: null
-})
-
 
 const salutationOptions = [
     // { value: null, text: 'Not Selected' },
@@ -825,7 +862,12 @@ const removeAdditional = (key) => {
     if (key === 'area_id') form.value.area_id = null
     if (key === 'property_type_id') form.value.property_type_id = null
     if (key === 'bedrooms') form.value.bedrooms = null
-    if (key === 'budget') form.value.budget = null
+    if (key === 'budget') {
+        form.value.budget_from = null
+        form.value.budget_to = null
+        budgetFromDisplay.value = ''
+        budgetToDisplay.value = ''
+    }
     if (key === 'purpose_buying') form.value.purpose_buying = null
 }
 
@@ -946,11 +988,11 @@ watch(() => form.value.bedrooms, () => {
     }
 })
 
-watch(() => form.value.budget, () => {
-    if (validationErrors.value.budget) {
-        delete validationErrors.value.budget
-        clearErrorMessageIfNeeded()
-    }
+watch(() => [form.value.budget_from, form.value.budget_to], () => {
+    ;['budget', 'budget_from', 'budget_to'].forEach((k) => {
+        if (validationErrors.value[k]) delete validationErrors.value[k]
+    })
+    clearErrorMessageIfNeeded()
 })
 
 // currency is fixed, no watcher needed
@@ -1037,7 +1079,8 @@ const resetForm = () => {
         purpose_buying: null,
         responsible_person_id: defaultUser?.id || loggedInUserId,
         responsible_person: defaultUser,
-        budget: null,
+        budget_from: null,
+        budget_to: null,
         currency: "AED",
         area_id: null,
         property_type_id: null,
@@ -1048,6 +1091,7 @@ const resetForm = () => {
     }
     validationErrors.value = {}
     errorMessage.value = ''
+    syncBudgetDisplayFields()
 }
 
 const submitForm = async () => {

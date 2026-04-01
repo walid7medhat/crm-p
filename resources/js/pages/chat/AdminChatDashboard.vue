@@ -22,13 +22,6 @@
               placeholder="Search by property, user, or message..."
             />
           </div>
-
-          <select v-model="statusFilter" class="chat-filter-select">
-            <option value="all">All status</option>
-            <option value="open">Open</option>
-            <option value="closed">Closed</option>
-          </select>
-
           <input v-model="dateFilter" type="date" class="chat-filter-date" />
         </div>
 
@@ -38,28 +31,46 @@
           <table class="table align-middle chat-table">
             <thead>
               <tr>
-                <th>Property Name</th>
-                <th>User Name</th>
+                <th>From / To</th>
+                <th>Property</th>
                 <th>Last Message</th>
                 <th>Date / Time</th>
-                <th>Status</th>
                 <th class="text-end">Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="c in pagedConversations" :key="c.id">
                 <td>
-                  <div class="property-cell">
-                    <div class="property-title">{{ getPropertyName(c) }}</div>
-                    <div class="property-meta" v-if="c.listing?.reference_number">
-                      Ref: {{ c.listing.reference_number }}
+                  <div class="chat-participants">
+                    <div class="participant-row">
+                      <img :src="getFromParticipant(c).avatar" class="participant-avatar" alt="" />
+                      <div>
+                        <div class="participant-label">From</div>
+                        <div class="participant-name">{{ getFromParticipant(c).name }}</div>
+                      </div>
+                    </div>
+                    <div class="participant-row">
+                      <img :src="getToParticipant(c).avatar" class="participant-avatar" alt="" />
+                      <div>
+                        <div class="participant-label">To</div>
+                        <div class="participant-name">{{ getToParticipant(c).name }}</div>
+                      </div>
                     </div>
                   </div>
                 </td>
                 <td>
-                  <div class="user-cell">
-                    <div class="user-name">{{ c.other_user?.name || '—' }}</div>
-                    <div class="user-email">{{ c.other_user?.email || '' }}</div>
+                  <div class="property-cell">
+                    <div class="property-title">{{ getPropertyName(c) }}</div>
+                    <a
+                      v-if="getPropertyLink(c)"
+                      :href="getPropertyLink(c)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="property-link"
+                    >
+                      Open Property
+                    </a>
+                    <div v-else class="property-meta">General Chat</div>
                   </div>
                 </td>
                 <td>
@@ -67,24 +78,10 @@
                 </td>
                 <td class="small">{{ formatDate(c.updated_at) }}</td>
                 <td>
-                  <span class="status-badge" :class="getConversationStatus(c) === 'closed' ? 'is-closed' : 'is-open'">
-                    {{ getConversationStatus(c) === 'closed' ? 'Closed' : 'Open' }}
-                  </span>
-                </td>
-                <td>
                   <div class="action-buttons">
                     <button class="btn btn-sm btn-primary-soft" @click="openConversation(c)">
                       <i class="bx bx-message-square-detail"></i>
                       Open Chat
-                    </button>
-
-                    <button
-                      v-if="isSuperAdmin"
-                      class="btn btn-sm btn-outline-warning"
-                      @click="toggleConversationStatus(c)"
-                    >
-                      <i :class="getConversationStatus(c) === 'closed' ? 'bx bx-lock-open-alt' : 'bx bx-lock-alt'"></i>
-                      {{ getConversationStatus(c) === 'closed' ? 'Reopen' : 'Close' }}
                     </button>
 
                     <button
@@ -159,7 +156,6 @@ import Swal from 'sweetalert2'
 const allConversations = ref([])
 const loading = ref(false)
 const searchQuery = ref('')
-const statusFilter = ref('all')
 const dateFilter = ref('')
 const meta = ref({ current_page: 1, last_page: 1, per_page: 20, total: 0 })
 const selectedConversation = ref(null)
@@ -170,7 +166,6 @@ const currentUserId = ref(null)
 const currentUserAvatar = ref('')
 const currentUserName = ref('')
 const currentUserRoles = ref([])
-const localStatusMap = ref({})
 
 const isSuperAdmin = computed(() => currentUserRoles.value.includes('super_admin'))
 const isNormalAdmin = computed(() => currentUserRoles.value.includes('admin') && !isSuperAdmin.value)
@@ -181,14 +176,12 @@ const filteredConversations = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   return allConversations.value.filter((c) => {
     const property = getPropertyName(c).toLowerCase()
-    const name = (c.other_user?.name || '').toLowerCase()
-    const email = (c.other_user?.email || '').toLowerCase()
+    const fromName = (getFromParticipant(c).name || '').toLowerCase()
+    const toName = (getToParticipant(c).name || '').toLowerCase()
     const message = (c.last_message?.message || '').toLowerCase()
-    const status = getConversationStatus(c)
-    const matchesQuery = !q || property.includes(q) || name.includes(q) || email.includes(q) || message.includes(q)
-    const matchesStatus = statusFilter.value === 'all' || status === statusFilter.value
+    const matchesQuery = !q || property.includes(q) || fromName.includes(q) || toName.includes(q) || message.includes(q)
     const matchesDate = !dateFilter.value || (c.updated_at && c.updated_at.slice(0, 10) === dateFilter.value)
-    return matchesQuery && matchesStatus && matchesDate
+    return matchesQuery && matchesDate
   })
 })
 
@@ -208,14 +201,46 @@ function getPropertyName(conversation) {
   )
 }
 
-function getConversationStatus(conversation) {
-  if (conversation?.status === 'closed' || conversation?.is_closed === true) return 'closed'
-  const local = localStatusMap.value[conversation.id]
-  return local || 'open'
+function getPropertyLink(conversation) {
+  const id = conversation?.listing?.id
+  if (!id) return ''
+  const base = (import.meta.env.VITE_APP_URL || window.location.origin || '').replace(/\/$/, '')
+  return `${base}/property-details/${id}`
 }
 
-function persistLocalStatuses() {
-  localStorage.setItem('chat-admin-local-statuses', JSON.stringify(localStatusMap.value))
+function getFromParticipant(conversation) {
+  const senderId = conversation?.last_message?.sender_id
+  const sender = (conversation?.participants || []).find(p => Number(p.id) === Number(senderId))
+  const fromName = sender?.name || conversation?.last_message?.sender_name || '—'
+  const fromAvatar = sender?.avatar || conversation?.last_message?.sender_avatar || '/assets/images/user.png'
+  return {
+    name: fromName,
+    avatar: fromAvatar
+  }
+}
+
+function getToParticipant(conversation) {
+  const senderId = conversation?.last_message?.sender_id
+  const participants = conversation?.participants || []
+  let receiver = participants.find(p => Number(p.id) !== Number(senderId)) || participants[0]
+
+  // Fallback for environments where backend still returns old shape (no participants array)
+  if (
+    !receiver &&
+    conversation?.other_user &&
+    (!senderId || Number(conversation.other_user.id) !== Number(senderId))
+  ) {
+    receiver = {
+      id: conversation.other_user.id,
+      name: conversation.other_user.name,
+      avatar: conversation.other_user.avatar
+    }
+  }
+
+  return {
+    name: receiver?.name || '—',
+    avatar: receiver?.avatar || '/assets/images/user.png'
+  }
 }
 
 async function fetchConversations(page = 1) {
@@ -234,13 +259,6 @@ async function fetchConversations(page = 1) {
   } finally {
     loading.value = false
   }
-}
-
-function toggleConversationStatus(conv) {
-  if (!isSuperAdmin.value) return
-  const current = getConversationStatus(conv)
-  localStatusMap.value[conv.id] = current === 'closed' ? 'open' : 'closed'
-  persistLocalStatuses()
 }
 
 function confirmDeleteConversation(conv) {
@@ -327,12 +345,6 @@ function loadUser() {
     }
   } catch (_) {}
 
-  try {
-    const statuses = localStorage.getItem('chat-admin-local-statuses')
-    localStatusMap.value = statuses ? JSON.parse(statuses) : {}
-  } catch (_) {
-    localStatusMap.value = {}
-  }
 }
 
 onMounted(() => {
@@ -391,7 +403,7 @@ onMounted(() => {
 }
 .chat-filters {
   display: grid;
-  grid-template-columns: 1fr 160px 160px;
+  grid-template-columns: 1fr 180px;
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -454,6 +466,13 @@ onMounted(() => {
   font-weight: 600;
   color: #0f172a;
 }
+.property-link {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: #2563eb;
+  text-decoration: underline;
+}
 .property-meta,
 .user-email {
   font-size: 0.75rem;
@@ -496,6 +515,34 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 6px;
   flex-wrap: wrap;
+}
+.chat-participants {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.participant-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.participant-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+}
+.participant-label {
+  font-size: 0.68rem;
+  color: #64748b;
+  line-height: 1.1;
+}
+.participant-name {
+  font-size: 0.8rem;
+  color: #0f172a;
+  font-weight: 600;
+  line-height: 1.1;
 }
 .btn-primary-soft {
   color: #1d4ed8;

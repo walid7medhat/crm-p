@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Lead;
 
+use App\Models\Integration;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class LeadResource extends JsonResource
@@ -70,6 +71,11 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             
             // Lead Source
             'lead_source' => $this->lead_source,
+            'integration_id' => $this->integration_id,
+            /** Listing scope: project linked on the lead (e.g. Meta / integration flow). */
+            'project_id' => $this->project_id,
+            /** Project for matching listings: integration project, then DB lookup, then lead.project_id. */
+            'integration_project_id' => $this->resolveIntegrationProjectId(),
             'source_information' => $this->source_information,
                 'office_branch' =>
             $this->responsiblePerson?->admin_parent?->name,
@@ -102,8 +108,10 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'participants' => LeadParticipantResource::collection($this->whenLoaded('participants')),
             'observers' => LeadObserverResource::collection($this->whenLoaded('observers')),
             
-            'budget'=>$this->budget,
-            'currency'=>$this->currency,
+            'budget' => $this->budget,
+            'budget_from' => $this->budget_from,
+            'budget_to' => $this->budget_to,
+            'currency' => $this->currency,
             
             'created_at' => $this->created_at->setTimezone(config('app.timezone')),
             'updated_at' => $this->updated_at,
@@ -135,6 +143,36 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
 
         ];
     }
+
+    /**
+     * Resolves the project id used to scope property listings (integration config or lead column).
+     */
+    protected function resolveIntegrationProjectId(): ?int
+    {
+        /** @var \App\Models\Lead $lead */
+        $lead = $this->resource;
+
+        if ($lead->relationLoaded('integration')) {
+            $pid = $lead->integration?->project_id;
+            if ($pid !== null && $pid !== '') {
+                return (int) $pid;
+            }
+        }
+
+        if ($lead->integration_id) {
+            $pid = Integration::query()->whereKey($lead->integration_id)->value('project_id');
+            if ($pid !== null && $pid !== '') {
+                return (int) $pid;
+            }
+        }
+
+        if ($lead->project_id !== null && $lead->project_id !== '') {
+            return (int) $lead->project_id;
+        }
+
+        return null;
+    }
+
     protected function getFirstApiQuestion()
 {
     $rawMetaData = is_string($this->raw_meta_data) 

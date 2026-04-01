@@ -201,22 +201,53 @@
                     </div>
                 </div>
 
-                <!-- Budget -->
-                <div class="info-group">
-                    <label class="form-label-custom">Budget</label>
-                    <div class="input-group-custom" :class="{ 'is-invalid-group': validationErrors.budget }">
-                        <b-form-input 
-                            v-model="form.budget"  
-                            type="number" 
-                            placeholder="Enter Budget" 
-                            class="custom-input"
-                            :class="{ 'is-invalid': validationErrors.budget }"
-                        />
-                        <div class="currency-pill" aria-label="Currency">AED</div>
+                <!-- Budget From / To — align with other fields (label + control) -->
+                <div class="row g-3 budget-from-to-row">
+                    <div class="col-md-6">
+                        <div class="info-group mb-0">
+                            <label class="form-label-custom">Budget From (AED)</label>
+                            <div
+                                class="input-group-custom"
+                                :class="{ 'is-invalid-group': budgetFieldInvalid }"
+                            >
+                                <b-form-input
+                                    :model-value="budgetFromDisplay"
+                                    type="text"
+                                    inputmode="numeric"
+                                    autocomplete="off"
+                                    placeholder="0"
+                                    class="custom-input"
+                                    :class="{ 'is-invalid': !!(validationErrors.budget_from || validationErrors.budget) }"
+                                    @update:model-value="onBudgetFromInput"
+                                />
+                                <div class="currency-pill" aria-label="Currency">AED</div>
+                            </div>
+                        </div>
                     </div>
-                    <div v-if="validationErrors.budget" class="invalid-feedback d-block">
-                        {{ validationErrors.budget[0] }}
+                    <div class="col-md-6">
+                        <div class="info-group mb-0">
+                            <label class="form-label-custom">Budget To (AED)</label>
+                            <div
+                                class="input-group-custom"
+                                :class="{ 'is-invalid-group': budgetFieldInvalid }"
+                            >
+                                <b-form-input
+                                    :model-value="budgetToDisplay"
+                                    type="text"
+                                    inputmode="numeric"
+                                    autocomplete="off"
+                                    placeholder="0"
+                                    class="custom-input"
+                                    :class="{ 'is-invalid': !!(validationErrors.budget_to || validationErrors.budget) }"
+                                    @update:model-value="onBudgetToInput"
+                                />
+                                <div class="currency-pill" aria-label="Currency">AED</div>
+                            </div>
+                        </div>
                     </div>
+                </div>
+                <div v-if="budgetErrorMessage" class="invalid-feedback d-block mt-1">
+                    {{ budgetErrorMessage }}
                 </div>
 
                 <!-- Purpose -->
@@ -498,6 +529,7 @@ import { BFormInput, BFormTextarea, BDropdown } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
+import { formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
 
 const props = defineProps({
     lead: {
@@ -519,6 +551,17 @@ const selectedPerson = ref(null)
 const validationErrors = ref({})
 const isSubmitting = ref(false)
 const errorMessage = ref('')
+
+const budgetFieldInvalid = computed(() =>
+    !!(validationErrors.value.budget_from || validationErrors.value.budget_to || validationErrors.value.budget)
+)
+const budgetErrorMessage = computed(
+    () =>
+        validationErrors.value.budget_to?.[0] ||
+        validationErrors.value.budget_from?.[0] ||
+        validationErrors.value.budget?.[0] ||
+        ''
+)
 
 const useSecondaryEmail = ref(false)
 const useSecondaryPhone = ref(false)
@@ -599,7 +642,8 @@ const form = ref({
     secondary_email:'',
     work_phone_2: '',
     comment: '',
-    budget: null,
+    budget_from: null,
+    budget_to: null,
     currency: 'AED',
     bedrooms: null,
     purpose_buying: null,
@@ -613,6 +657,26 @@ const form = ref({
     branch: null,
     lost_reason: null
 })
+
+const budgetFromDisplay = ref('')
+const budgetToDisplay = ref('')
+
+function onBudgetFromInput(val) {
+    const { numeric, display } = parseBudgetThousandsInput(val)
+    form.value.budget_from = numeric
+    budgetFromDisplay.value = display
+}
+
+function onBudgetToInput(val) {
+    const { numeric, display } = parseBudgetThousandsInput(val)
+    form.value.budget_to = numeric
+    budgetToDisplay.value = display
+}
+
+function syncBudgetDisplayFields() {
+    budgetFromDisplay.value = formatBudgetThousands(form.value.budget_from)
+    budgetToDisplay.value = formatBudgetThousands(form.value.budget_to)
+}
 
 const stageOptions = ref([
     { value: 1, text: 'New' },
@@ -704,7 +768,12 @@ const removeAdditional = (key) => {
     if (key === 'area_id') form.value.area_id = null
     if (key === 'property_type_id') form.value.property_type_id = null
     if (key === 'bedrooms') form.value.bedrooms = null
-    if (key === 'budget') form.value.budget = null
+    if (key === 'budget') {
+        form.value.budget_from = null
+        form.value.budget_to = null
+        budgetFromDisplay.value = ''
+        budgetToDisplay.value = ''
+    }
     if (key === 'purpose_buying') form.value.purpose_buying = null
 }
 
@@ -798,6 +867,16 @@ const locationFirstLine = (area) => area?.name || ''
 const locationSecondLine = (area) => area?.parent || ''
 // Initialize form with lead data
 const initializeForm = () => {
+    let budgetFrom = props.lead?.budget_from ?? null
+    let budgetTo = props.lead?.budget_to ?? null
+    if (
+        budgetFrom == null &&
+        budgetTo == null &&
+        props.lead?.budget != null &&
+        props.lead?.budget !== ''
+    ) {
+        budgetFrom = props.lead.budget
+    }
     form.value = {
         lead_name: props.lead?.lead_name || '',
         stage_id: props.stageId || props.lead?.stage?.id || null,
@@ -809,7 +888,8 @@ const initializeForm = () => {
         work_phone_2: props.lead?.work_phone_2 || '',
         secondary_email:props.lead?.secondary_email || '',
         comment: props.lead?.comment || '',
-        budget: props.lead?.budget || null,
+        budget_from: budgetFrom,
+        budget_to: budgetTo,
         currency: props.lead?.currency || 'AED',
         bedrooms: props.lead?.bedrooms || null,
         purpose_buying: props.lead?.purpose_buying || null,
@@ -824,6 +904,7 @@ const initializeForm = () => {
         lost_reason: props.lead?.why_lost_lead || null
     }
     selectedPerson.value = props.lead?.responsible_person || null
+    syncBudgetDisplayFields()
 }
 const canEditPhoneEmail = computed(() => {
     return props.lead?.can_edit_phone_email ?? false
@@ -923,11 +1004,11 @@ watch(() => form.value.comment, () => {
     }
 })
 
-watch(() => form.value.budget, () => {
-    if (validationErrors.value.budget) {
-        delete validationErrors.value.budget
-        clearErrorMessageIfNeeded()
-    }
+watch(() => [form.value.budget_from, form.value.budget_to], () => {
+    ;['budget', 'budget_from', 'budget_to'].forEach((k) => {
+        if (validationErrors.value[k]) delete validationErrors.value[k]
+    })
+    clearErrorMessageIfNeeded()
 })
 
 // currency is fixed, no watcher needed
@@ -980,7 +1061,13 @@ onMounted(async () => {
     // Auto-enable additional fields if lead already has values
     const next = new Set(enabledAdditionalKeys.value)
     if (props.lead?.bedrooms != null && props.lead?.bedrooms !== '') next.add('bedrooms')
-    if (props.lead?.budget != null && props.lead?.budget !== '') next.add('budget')
+    if (
+        (props.lead?.budget_from != null && props.lead?.budget_from !== '') ||
+        (props.lead?.budget_to != null && props.lead?.budget_to !== '') ||
+        (props.lead?.budget != null && props.lead?.budget !== '')
+    ) {
+        next.add('budget')
+    }
     if (props.lead?.purpose_buying) next.add('purpose_buying')
     if (props.lead?.area_id) next.add('area_id')
     if (props.lead?.property_type_id) next.add('property_type_id')
@@ -1087,6 +1174,10 @@ defineExpose({
     margin-top: 5px;
     margin-bottom: 5px;
     line-height: 10px;
+}
+
+.budget-from-to-row .info-group {
+    margin-bottom: 0;
 }
 
 .info-label {

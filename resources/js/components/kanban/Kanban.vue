@@ -128,9 +128,9 @@
                     </div>
                     
                     <!-- Create New Button -->
-                    <button class="btn-create-new d-flex align-items-center" @click="handleCreateNew">
+                    <button class="btn-create-new d-flex align-items-center gap-1" type="button" @click="handleCreateNew">
                         <span class="btn-create-new-text">Create New</span>
-                        <iconify-icon icon="lucide:chevrons-up-down" class="text-warning-600 text-md"></iconify-icon>
+                        <iconify-icon icon="lucide:plus" width="18" height="18" class="btn-create-new-icon flex-shrink-0" aria-hidden="true"></iconify-icon>
                     </button>
 
                     <!-- More Options -->
@@ -764,6 +764,11 @@ const $showNotification = (message, type = 'info') => {
 
 .radius-circle {
     border-radius: 50%;
+}
+
+.btn-create-new-icon {
+    color: #ffffff;
+    opacity: 0.95;
 }
 
 .btn-create-new-text {
