@@ -211,7 +211,8 @@
                                                                         </transition>
                                                                     </div>
                                                                     <div>
-                                                                        <div class="info-value">{{ task.responsible_person?.name }}</div>
+                                                                        <div class="info-value" @mouseenter.stop="showPersonHoverCard(task, 'responsible')"
+                                                                        @mouseleave.stop="hidePersonHoverCard">{{ task.responsible_person?.name }}</div>
                                                                     </div>
                                                                 </div>
                                                             </div>

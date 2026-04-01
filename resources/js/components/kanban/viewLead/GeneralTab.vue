@@ -2,7 +2,7 @@
     <div class="row g-4">
         <!-- Left Column: Lead Information -->
         <div class="col-md-5">
-            <div class="info-card bg-white p-3 radius-12">
+            <div class="info-card bg-white  p-3 radius-12">
                 <!-- View Mode (read-only; do not use ViewLead.vue here – it is a full modal and would cause infinite recursion) -->
                 <LeadInfoView v-if="!isEditMode" :lead="lead" :show-responsible-section="false" :can-edit="lead?.can_edit" :show-edit-icon="true" @edit-request="toggleEditMode" />
 
@@ -20,9 +20,15 @@
 
         <!-- Right Column: Activity & Comments -->
         <div class="col-md-7">
+               <ResponsiblePersonSection
+                    v-if="lead?.id"
+                    :lead="lead"
+                    @person-updated="handlePersonUpdated"
+                />
             <div class="activity-card bg-white p-3 radius-12 shadow-sm">
+              
               <div class="d-flex justify-content-between align-items-center mb-4">
-
+                  
                 <!-- Activity/Comments Toggle -->
                 <div class="d-flex gap-2 mb-4 p-1 radius-100 w-fit-content toggle-buttons-container">
                       <button 
@@ -102,11 +108,7 @@
                 :lead-id="lead?.id" 
                  :key="commentListKey"
             />
-              <ResponsiblePersonSection
-                v-if="lead?.id"
-                :lead="lead"
-                @person-updated="handlePersonUpdated"
-            />
+              
             <!-- Lead Activity timeline: under comments, grouped by date (who assigned, created, history). Key forces refetch when stage changes so "Stage changed" appears immediately. -->
             <LeadActivityTimeline 
                 v-if="activeViewTab === 'comments' && lead?.id" 

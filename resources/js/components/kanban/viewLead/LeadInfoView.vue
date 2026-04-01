@@ -98,7 +98,7 @@
         </div>
 
         <div class="info-section" v-if="hasClientRequiredInfo">
-            <div class="info-section-title">Client Required Info</div>
+            <div class="info-section-title">Client Requirement</div>
             <template v-if="hasClientRequiredInfo">
                 <div class="info-group" v-if="lead?.bedrooms">
                     <label class="form-label-custom">Bedrooms</label>
@@ -522,7 +522,7 @@ const formatWithMapping = (value, mapping = {}) => {
     return mapping[value] || formatText(value)
 }
 // Basic fields for Facebook questions
-const basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone','work_phone_number','phone_number','full name', 'first_name', 'last_name','Date','Time','Page_Name','form_name','form_id','No_Label_name','No_Label_email','No_Label_phone']
+const basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone','work_phone_number','phone_number','full name', 'first_name', 'last_name','Date','Time','Page_Name','inbox_url','form_name','form_id','No_Label_name','No_Label_email','No_Label_phone']
 
 // Facebook questions computed
 const facebookQuestions = computed(() => {

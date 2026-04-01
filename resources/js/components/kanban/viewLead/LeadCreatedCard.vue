@@ -1,10 +1,10 @@
 <template>
-    <div class="lead-created-section bg-white p-0 radius-12 mb-0">
+    <div class=" p-0  mb-0">
         <div class="lead-created-timeline">
             <!-- Date above timeline -->
-            <div class="timeline-date-row">
-                <span class="timeline-date-text">{{ dateLabel }}</span>
-            </div>
+            <!--<div class="timeline-date-row">-->
+            <!--    <span class="timeline-date-text"></span>-->
+            <!--</div>-->
             <!-- Timeline line + icon + card -->
             <div class="timeline-row">
                 <div class="timeline-track">
@@ -16,7 +16,7 @@
                 <div class="lead-created-card">
                     <div class="lead-created-card-header">
                         <span class="lead-created-title">Lead Created :</span>
-                        <span class="lead-created-time">{{ timeLabel }}</span>
+                        <span class="lead-created-time">{{ dateLabel }}</span>
                     </div>
                     <div class="lead-created-card-body">
                         <div class="lead-created-row lead-created-row-main">

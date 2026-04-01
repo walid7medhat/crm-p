@@ -24,6 +24,7 @@ class UserResource extends JsonResource
             'parent_role'=>ucwords(str_replace('_', ' ',$this->parent?->roles->first()?->name)),
              'parent_avatar' => $this->parent && $this->parent->avatar ?  asset('storage/'. $this->parent->avatar) : null,
             'admin_parent_name'=>ucwords(str_replace('_', ' ',$this->admin_parent?->name)),
+            'office_name'=>ucwords(str_replace('_', ' ',$this->office?->name)),
             'admin_parent_id'=>$this->admin_parent?->id,
             'added_by' => $this->added_by,
             'added_by_name' => $this->addedBy?->name,

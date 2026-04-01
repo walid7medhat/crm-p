@@ -813,16 +813,16 @@ const $showNotification = (message, type = 'info') => {
     align-items: center;
     flex-wrap: nowrap;
     width: max-content;
-    max-width: 360px;
-    min-width: 300px;
+    max-width: 560px;
+    min-width: 460px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 .search-wrapper-focused,
 .search-wrapper-tall {
-    max-width: 560px;
-    min-width: 340px;
+    max-width: 600px;
+    min-width: 480px;
     height: 36px;
     min-height: 36px;
     padding: 4px 12px 4px 10px;
@@ -925,7 +925,7 @@ const $showNotification = (message, type = 'info') => {
 
 .search-wrapper-focused .search-input-container-tall,
 .search-wrapper-tall .search-input-container-tall {
-    min-width: 440px;
+    min-width: 540px;
     max-width: 100%;
 }
 

@@ -223,6 +223,12 @@ public function permissions(User $user): JsonResponse
             if ($request->filled('max_price')) {
                 $query->where('price', '<=', $request->max_price);
             }
+             if ($request->filled('min_size')) {
+                $query->where('size_sqft', '>=', $request->min_size);
+            }
+            if ($request->filled('max_size')) {
+                $query->where('size_sqft', '<=', $request->max_size);
+            }
 
             $sort = $request->get('sort', 'created_at_desc');
             switch ($sort) {

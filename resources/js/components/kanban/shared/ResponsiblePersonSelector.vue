@@ -14,11 +14,9 @@
                     <div class="responsible-info">
                         <div class="info-value fw-bold">{{ currentResponsiblePerson?.name || '--' }}</div>
                         <div class="info-subline">
-                            <span class="sub-key">Position:</span>
                             <span class="sub-value">{{ positionName }}</span>
                         </div>
                         <div class="info-subline">
-                            <span class="sub-key">Parent:</span>
                             <span class="sub-value">{{ parentName }}</span>
                         </div>
                     </div>
@@ -75,10 +73,8 @@
                                                 </span>
                                             </div>
                                             <div class="user-item-meta-line">
-                                                <span class="meta-label">Parent:</span>
                                                 <span class="meta-value">{{ getUserParent(user) }}</span>
                                                 <span class="meta-divider">|</span>
-                                                <span class="meta-label">Branch:</span>
                                                 <span class="meta-value">{{ getUserBranch(user) }}</span>
                                             </div>
                                         </div>

@@ -1,8 +1,9 @@
 <template>
     <div class="responsible-card bg-white p-3 radius-12 shadow-sm mt-3">
-        <div class="info-section-title mb-3">Responsible Person</div>
+        
         <div class="info-group">
             <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="info-section-title mb-3">Responsible Person</div>
                 <b-button
                     variant="link"
                     class="p-0 edit-person-btn"
@@ -51,8 +52,18 @@
                         </div>
                     </transition>
                 </div>
-                <div class="flex-grow-1">
-                    <div class="info-value">{{ lead?.responsible_person?.name || '—' }}</div>
+                <div class="flex-grow-1"  >
+                    <div class="info-value" @mouseenter="showPersonCard = true" @mouseleave="showPersonCard = false">{{ lead?.responsible_person?.name || '—' }}
+                             <span v-if="lead?.responsible_person?.role_name" class="user-position-badge">{{ lead?.responsible_person?.role_name }}</span>
+                    </div>
+                    <div class="info-subline">
+                           <span class="sub-key">Reports To: </span>
+                           <span class="sub-value"> {{ lead?.responsible_person?.admin_parent_name || lead?.responsible_person?.team_lead_name || 'Not specified' }}</span>
+                       </div>
+                    <div class="info-subline">
+                        <span class="sub-key">Branch: </span>
+                        <span class="sub-value"> {{ lead?.responsible_person?.office_name || lead?.lead_branch_source || 'Not specified' }}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -69,7 +80,7 @@
                 <div class="search-input-wrapper mb-3">
                     <b-form-input
                         v-model="personSearchQuery"
-                        placeholder="Search by name"
+                        placeholder="search by name and phone and email"
                         class="person-search-input"
                     />
                 </div>
@@ -346,6 +357,31 @@ const updateResponsiblePerson = async () => {
     padding: 0.4rem 1rem;
     min-width: 96px;
 }
+.user-item-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #01062C;
+    font-family: 'Montserrat';
+    text-transform: capitalize;
+}
+
+.info-subline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    font-size: 12px;
+}
+
+.sub-key {
+    color: #64748B;
+    font-weight: 500;
+}
+
+.sub-value {
+    color: #334155;
+    font-weight: 600;
+}
 </style>
 
 <style>
@@ -355,4 +391,5 @@ const updateResponsiblePerson = async () => {
     line-height: 1.2 !important;
     margin: 0 !important;
 }
+
 </style>
