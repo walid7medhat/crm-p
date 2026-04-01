@@ -478,7 +478,9 @@ const removeFilter = (f) => {
     if (f.queryKey === 'created_at') {
         delete nextQuery.created_from
         delete nextQuery.created_to
-    }
+    }else if(f.queryKey === 'office_branch'){
+              delete nextQuery.lead_branch_source
+        }
     
     activeFilters.value = activeFilters.value.filter(x => x.id !== f.id)
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null
@@ -510,11 +512,14 @@ const clearMoreFilters = () => {
         if (f.queryKey === 'created_at') {
             delete nextQuery.created_from
             delete nextQuery.created_to
+        }else if(f.queryKey === 'office_branch'){
+              delete nextQuery.lead_branch_source
         }
     })
     
     activeFilters.value = keep
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null
+    console.log(Object.keys(nextQuery).length);
       if(!Object.keys(nextQuery).length){
         activeFilter.value = null
         activeFilters.value = []

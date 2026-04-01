@@ -514,16 +514,20 @@ const removeFilter = (f) => {
     if (f.queryKey === 'created_at') {
         delete nextQuery.created_from
         delete nextQuery.created_to
-    }
+    }else if(f.queryKey === 'office_branch'){
+              delete nextQuery.lead_branch_source
+        }
     
     activeFilters.value = activeFilters.value.filter(x => x.id !== f.id)
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null
     if(!Object.keys(nextQuery).length){
-        activeFilter.value = null
-        activeFilters.value = []
-        lastQuery.value = null
-        search.value = ''
+    activeFilter.value = null
+    activeFilters.value = []
+    lastQuery.value = null
+    search.value = ''
     }
+    
+    
     if (leadsRef.value) {
         const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
@@ -544,20 +548,20 @@ const clearMoreFilters = () => {
         if (f.queryKey === 'created_at') {
             delete nextQuery.created_from
             delete nextQuery.created_to
+        }else if(f.queryKey === 'office_branch'){
+              delete nextQuery.lead_branch_source
         }
     })
     
     activeFilters.value = keep
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null
-    
-    if(!Object.keys(nextQuery).length){
+    console.log(Object.keys(nextQuery).length);
+      if(!Object.keys(nextQuery).length){
         activeFilter.value = null
         activeFilters.value = []
         lastQuery.value = null
         search.value = ''
     }
-    
-    
     if (leadsRef.value) {
         const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
@@ -565,7 +569,6 @@ const clearMoreFilters = () => {
         }
     }
 }
-
 const clearSearchFilter = () => {
     activeFilter.value = null
     activeFilters.value = []

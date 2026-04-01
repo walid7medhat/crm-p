@@ -10,8 +10,6 @@
         :z-index="1040"
         :no-enforce-focus="true"
         :trap-focus="false"
-        :no-close-on-backdrop="true"
-        :no-close-on-esc="true"
     >
         <div v-if="show" class="view-lead-modal-content p-3">
             <!-- Header -->
