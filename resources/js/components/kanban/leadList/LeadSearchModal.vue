@@ -1879,8 +1879,8 @@ onMounted(async () => {
 }
 
 :deep(.custom-v-select .vs__open-indicator-icon) {
-    font-size: 16px;
-    color: #64748B;
+    font-size: 15px;
+    color: #cfdbec;
 }
 
 :deep(.custom-v-select svg) {

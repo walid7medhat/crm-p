@@ -278,7 +278,9 @@
                         class="custom-v-select"
                     >
                         <template #open-indicator="{ attributes }">
-                            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                            <span v-bind="attributes">
+                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                            </span>
                         </template>
 
                         <template #option="option">
@@ -324,7 +326,13 @@
                         label="text"
                         placeholder="Select Property Type"
                         class="custom-v-select"
-                    />
+                    >
+                        <template #open-indicator="{ attributes }">
+                            <span v-bind="attributes">
+                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                            </span>
+                        </template>
+                    </v-select>
                 </div>
 
                 <!-- Lead Status (for Qualified stage) -->
@@ -1159,8 +1167,8 @@ defineExpose({
 }
 
 :deep(.custom-v-select .vs__open-indicator-icon) {
-    font-size: 16px;
-    color: #64748B;
+    font-size: 15px;
+    color: #cfdbec;
 }
 
 :deep(svg) {

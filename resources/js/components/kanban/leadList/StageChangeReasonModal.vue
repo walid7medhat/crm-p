@@ -11,6 +11,7 @@
             <div class="modal-body">
                 <!-- Reason Section -->
                 <div class="mb-4 box-shadow">
+                     <h5 class="section-title">Comment</h5>
                     <label for="reason" class="form-label">
                         Please provide a reason for moving this lead <span class="text-danger">*</span>
                     </label>
@@ -43,8 +44,14 @@
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Not Selected"
-                                    class="searchable-select"
-                                />
+                                    class="custom-v-select searchable-select"
+                                >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                </v-select>
 
                                 <v-select
                                     v-else-if="targetStageOrder === 9"
@@ -53,8 +60,14 @@
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Select Status"
-                                    class="searchable-select"
-                                />
+                                    class="custom-v-select searchable-select"
+                                >
+                               <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                </v-select>
 
                                 <v-select
                                     v-else-if="targetStageOrder === 10"
@@ -63,8 +76,14 @@
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Select Status"
-                                    class="searchable-select"
-                                />
+                                    class="custom-v-select searchable-select"
+                                >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                </v-select>
 
                                 <v-select
                                     v-else
@@ -73,8 +92,14 @@
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Not Selected"
-                                    class="searchable-select"
-                                />
+                                    class="custom-v-select searchable-select"
+                                >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                </v-select>
                             </div>
 
                             <!-- Available Date -->
@@ -92,8 +117,14 @@
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Select Branch"
-                                    class="searchable-select"
-                                />
+                                    class="custom-v-select searchable-select"
+                                >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                </v-select>
                             </div>
 
                             <!-- Lost Reason -->
@@ -105,16 +136,21 @@
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Select Lost Reason"
-                                    class="searchable-select"
-                                />
+                                    class="custom-v-select searchable-select"
+                                >
+                                     <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                </v-select>
                             </div>
                         </div>
-                        <!-- 🟦 Basic Info -->
                         <div 
-                            v-if="['salutation','budget','area_id','property_type_id','bedrooms','purpose_buying'].some(f => missingFields.includes(f))" 
+                            v-if="['salutation'].some(f => missingFields.includes(f))" 
                             class="box-shadow"
                         >
-
+                        <h5 class="section-title">Lead Information</h5>
                             <div v-if="missingFields.includes('salutation')" class="form-group mb-3">
                                 <label class="form-label">Salutation</label>
                                 <v-select
@@ -123,9 +159,23 @@
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Not Selected"
-                                    class="searchable-select"
-                                />
+                                    class="custom-v-select searchable-select"
+                                >
+                                 <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                </v-select>
                             </div>
+                       </div>
+                        <!-- 🟦 Basic Info -->
+                        <div 
+                            v-if="['budget','area_id','property_type_id','bedrooms','purpose_buying'].some(f => missingFields.includes(f))" 
+                            class="box-shadow"
+                        >
+                          <h5 class="section-title">Client Requirement</h5>
+                           
 
                             <div v-if="missingFields.includes('budget')" class="form-group mb-3">
                                 <label class="form-label">Budget (AED)</label>
@@ -140,8 +190,14 @@
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Not Selected"
-                                    class="searchable-select"
-                                />
+                                    class="custom-v-select searchable-select"
+                                >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                </v-select>
                             </div>
 
                             <div v-if="missingFields.includes('property_type_id')" class="form-group mb-3">
@@ -152,8 +208,14 @@
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Not Selected"
-                                    class="searchable-select"
-                                />
+                                    class="custom-v-select searchable-select"
+                                >
+                               <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                </v-select>
                             </div>
 
                             <div v-if="missingFields.includes('bedrooms')" class="form-group mb-3">
@@ -164,8 +226,14 @@
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Select Bedrooms"
-                                    class="searchable-select"
-                                />
+                                    class="custom-v-select searchable-select"
+                                >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                </v-select>
                             </div>
 
                             <div v-if="missingFields.includes('purpose_buying')" class="form-group mb-3">
@@ -176,8 +244,14 @@
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Not Selected"
-                                    class="searchable-select"
-                                />
+                                    class="custom-v-select searchable-select"
+                                >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                </v-select>
                             </div>
                         </div>
 
@@ -814,5 +888,51 @@ defineExpose({
     .dynamic-form .box-shadow {
         grid-template-columns: 1fr;
     }
+}
+:deep(.custom-v-select .vs__search::placeholder) {
+    color: #64748B;
+}
+
+:deep(.custom-v-select .vs__actions) {
+    padding: 0 8px;
+}
+
+:deep(.custom-v-select .vs__open-indicator-icon) {
+    font-size: 15px;
+    color: #cfdbec;
+}
+
+:deep(.custom-v-select svg) {
+    vertical-align: middle !important;
+}
+
+:deep(.custom-v-select .vs__dropdown-menu) {
+    border: 1px solid #E2E8F0;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
+    padding: 0;
+    margin-top: 5px;
+    z-index: 1100;
+}
+
+:deep(.custom-v-select .vs__dropdown-option) {
+    padding: 5px 10px;
+    font-size: 14px;
+    color: #475569;
+    transition: all 0.2s;
+}
+
+:deep(.custom-v-select .vs__dropdown-option--highlight) {
+    background: #FAA300 !important;
+    color: #fff !important;
+}
+
+:deep(.custom-v-select .vs__dropdown-option--selected) {
+    background: #FAA300 !important;
+    color: #fff !important;
+}
+
+.section-title  {
+    grid-column: span 2;
+    font-size:16px !important;
 }
 </style>

@@ -37,60 +37,61 @@
                             </div>
                         </div>
 
-                        <!-- Salutation, First Name, Last Name, Position -->
-                        <div class="col-md-3">
-                            <label class="form-label-custom">Salutation</label>
-                            <v-select 
-                                v-model="form.salutation" 
-                                :options="salutationOptions" 
-                                :reduce="option => option.value"
-                                label="text"
-                                placeholder="Not Selected"
-                                class="custom-v-select"
-                                :class="{ 'is-invalid-select': validationErrors.salutation }"
-                            >
-                                <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
-                                </template>
-                            </v-select>
-                            <div v-if="validationErrors.salutation" class="invalid-feedback d-block">
-                                {{ validationErrors.salutation[0] }}
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label-custom">First Name</label>
-                            <b-form-input 
-                                v-model="form.first_name" 
-                                placeholder="Enter Your First Name *" 
-                                class="custom-input"
-                                :class="{ 'is-invalid': validationErrors.first_name }"
-                            />
-                            <div v-if="validationErrors.first_name" class="invalid-feedback d-block">
-                                {{ validationErrors.first_name[0] }}
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label-custom">Last Name</label>
-                            <b-form-input 
-                                v-model="form.last_name" 
-                                placeholder="Enter Your Last Name *" 
-                                class="custom-input"
-                                :class="{ 'is-invalid': validationErrors.last_name }"
-                            />
-                            <div v-if="validationErrors.last_name" class="invalid-feedback d-block">
-                                {{ validationErrors.last_name[0] }}
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <!-- Field removed as per new form structure -->
-                        </div>
+                      
 
                         <!-- Contact Details Section -->
                             <div class="contact-details-card p-3">
-                                <span class="section-title d-block mb-3">Contact Details</span>
+                                <span class="section-title d-block mb-3">Lead Information</span>
+                                <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                                                  <!-- Salutation, First Name, Last Name, Position -->
+                                    <div class="col">
+                                        <label class="form-label-custom">Salutation</label>
+                                        <v-select 
+                                            v-model="form.salutation" 
+                                            :options="salutationOptions" 
+                                            :reduce="option => option.value"
+                                            label="text"
+                                            placeholder="Not Selected"
+                                            class="custom-v-select"
+                                            :class="{ 'is-invalid-select': validationErrors.salutation }"
+                                        >
+                                            <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
+                                            </template>
+                                        </v-select>
+                                        <div v-if="validationErrors.salutation" class="invalid-feedback d-block">
+                                            {{ validationErrors.salutation[0] }}
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label-custom">First Name</label>
+                                        <b-form-input 
+                                            v-model="form.first_name" 
+                                            placeholder="Enter Your First Name *" 
+                                            class="custom-input"
+                                            :class="{ 'is-invalid': validationErrors.first_name }"
+                                        />
+                                        <div v-if="validationErrors.first_name" class="invalid-feedback d-block">
+                                            {{ validationErrors.first_name[0] }}
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label-custom">Last Name</label>
+                                        <b-form-input 
+                                            v-model="form.last_name" 
+                                            placeholder="Enter Your Last Name *" 
+                                            class="custom-input"
+                                            :class="{ 'is-invalid': validationErrors.last_name }"
+                                        />
+                                        <div v-if="validationErrors.last_name" class="invalid-feedback d-block">
+                                            {{ validationErrors.last_name[0] }}
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="d-flex justify-content-between align-items-center gap-2">
+                                    
                                     <div class="col">
                                         <label class="form-label-custom">Primary Phone</label>
                                         <b-form-input 
@@ -162,7 +163,7 @@
                             <div class="additional-fields-card p-3">
                                 <div class="d-flex align-items-center justify-content-between mb-3">
                                     <div>
-                                        <span class="section-title d-block">Property Details</span>
+                                        <span class="section-title d-block">Client Requirement</span>
                                         <small class="text-secondary-light d-block">Required fields for {{ getStageName() }} stage</small>
                                     </div>
                                 </div>
@@ -253,10 +254,11 @@
                                             placeholder="Select area"
                                             class="custom-v-select"
                                         >
-                                            <template #open-indicator="{ attributes }">
-                                                <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+                                             <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
                                             </template>
-
                                             <template #option="option">
                                                 <div class="location-option">
                                                     <i class="ri-map-pin-line location-option-icon"></i>
@@ -286,7 +288,13 @@
                                             label="text"
                                             placeholder="Select Property Type"
                                             class="custom-v-select"
-                                        />
+                                        >
+                                            <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
+                                            </template>
+                                        </v-select>
                                     </div>
 
                                     <!-- Lead Status (Stages 4, 9, 10) -->
@@ -1213,8 +1221,8 @@ const $showNotification = (message, type = 'info') => {
 }
 
 :deep(.custom-v-select .vs__open-indicator-icon) {
-    font-size: 16px;
-    color: #64748B;
+    font-size: 15px;
+    color: #cfdbec;
 }
 
 :deep(svg) {
