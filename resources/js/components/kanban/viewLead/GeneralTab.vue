@@ -52,27 +52,25 @@
                     <div v-if="lead?.can_delete" class="admin-controls d-flex gap-2">
                         <!-- زر حذف الكل للتعليقات -->
                         <button 
-                            v-if="activeViewTab === 'comments'"
+                            v-if="activeViewTab === 'comments' && canDeleteAll"
                             class="btn-admin-action btn-delete-all"
                             @click="confirmDeleteAllComments"
                             title="Delete all comments"
                         >
                             <iconify-icon icon="lucide:trash-2" width="18" height="18"></iconify-icon>
-                            <span>Delete All </span>
+                            <span>Hide Comments</span>
                         </button>
                         
-                        <!-- زر حذف الكل للأنشطة -->
                         <button 
-                            v-if="activeViewTab === 'activity'"
+                            v-if="activeViewTab === 'activity' && canDeleteAll"
                             class="btn-admin-action btn-delete-all"
                             @click="confirmDeleteAllActivities"
                             title="Delete all activities"
                         >
                             <iconify-icon icon="lucide:trash-2" width="18" height="18"></iconify-icon>
-                            <span>Delete All </span>
+                            <span>Hide Activities</span>
                         </button>
                         
-                        <!-- زر استعادة (اختياري) - يمكن إضافته في وضع خاص -->
                         <!-- <button class="btn-admin-action btn-restore-all">Restore All</button> -->
                     </div>
                 </div>
@@ -177,7 +175,6 @@ const editLeadRef = ref(null)
 const commentListKey = ref(0)
 const activityListKey = ref(0)
 
-// استخدام window.$showNotification بدلاً من toast
 const showNotification = (message, type = 'success') => {
     if (window.$showNotification) {
         window.$showNotification(message, type)
@@ -185,7 +182,24 @@ const showNotification = (message, type = 'success') => {
         console.log(message)
     }
 }
+const getUserFromStorage = () => {
+    try {
+        const userData = localStorage.getItem('user')
+        return userData ? JSON.parse(userData) : null
+    } catch (error) {
+        console.error('Error getting user from storage:', error)
+        return null
+    }
+}
 
+const user = ref(getUserFromStorage())
+const canDeleteAll = computed(() => {
+    if (!user.value) return false
+    
+    const isAdminUser = user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin') 
+    
+    return isAdminUser
+})
 const resetEditMode = () => {
     console.log('🔄 GeneralTab: Resetting edit mode to false')
     isEditMode.value = false

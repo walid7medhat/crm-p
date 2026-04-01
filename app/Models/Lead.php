@@ -124,11 +124,17 @@ class Lead extends Model
     }
   public function comments()
     {
-        return $this->hasMany(LeadComment::class)->latest();
+        if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'super_admin'])) {
+            return $this->hasMany(LeadComment::class)->withTrashed();
+        }
+            return $this->hasMany(LeadComment::class)->latest();
     }
        public function activities()
     {
-        return $this->hasMany(LeadActivity::class)->latest();
+        if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'super_admin'])) {
+            return $this->hasMany(LeadActivity::class)->withTrashed();
+        }
+            return $this->hasMany(LeadActivity::class)->latest();
     }
     public function commentsWithTrashed()
 {

@@ -436,90 +436,90 @@
        
         <!-- Old + Add Custom Field UI replaced by Additional fields section -->
         <!-- Responsible Person -->
-        <div class="responsible-person-box p-3 radius-8 shadow-sm mb-3">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <label class="info-label mb-0"> Person</label>
-                <div class="d-flex flex-column align-items-end">
-                    <b-dropdown 
-                        variant="link" 
-                        toggle-class="text-decoration-none p-0 no-caret-custom" 
-                        no-caret
-                        right
-                        class="change-person-dropdown"
-                    >
-                        <template #button-content>
-                            <div class="btn-change-person-text">
-                                <iconify-icon icon="lucide:user-plus" class="change-person-icon"></iconify-icon>
-                                <span>Change Responsible Person</span>
-                            </div>
-                        </template>
+        <!--<div class="responsible-person-box p-3 radius-8 shadow-sm mb-3">-->
+        <!--    <div class="d-flex align-items-center justify-content-between mb-3">-->
+        <!--        <label class="info-label mb-0"> Person</label>-->
+        <!--        <div class="d-flex flex-column align-items-end">-->
+        <!--            <b-dropdown -->
+        <!--                variant="link" -->
+        <!--                toggle-class="text-decoration-none p-0 no-caret-custom" -->
+        <!--                no-caret-->
+        <!--                right-->
+        <!--                class="change-person-dropdown"-->
+        <!--            >-->
+        <!--                <template #button-content>-->
+        <!--                    <div class="btn-change-person-text">-->
+        <!--                        <iconify-icon icon="lucide:user-plus" class="change-person-icon"></iconify-icon>-->
+        <!--                        <span>Change Responsible Person</span>-->
+        <!--                    </div>-->
+        <!--                </template>-->
                     
-                    <div class="dropdown-search-wrapper p-3">
-                        <div class="d-flex align-items-center justify-content-between border-bottom mb-3 pb-2">
-                            <span class="modal-title-dropdown">Change Responsible Person</span>
-                        </div>
-                        <div class="search-input-wrapper mb-3">
-                            <b-form-input 
-                                v-model="searchQuery" 
-                                placeholder="Search Responsible Person" 
-                                class="dropdown-search-input"
-                            />
-                            <iconify-icon icon="lucide:search" class="search-icon"></iconify-icon>
-                        </div>
+        <!--            <div class="dropdown-search-wrapper p-3">-->
+        <!--                <div class="d-flex align-items-center justify-content-between border-bottom mb-3 pb-2">-->
+        <!--                    <span class="modal-title-dropdown">Change Responsible Person</span>-->
+        <!--                </div>-->
+        <!--                <div class="search-input-wrapper mb-3">-->
+        <!--                    <b-form-input -->
+        <!--                        v-model="searchQuery" -->
+        <!--                        placeholder="Search Responsible Person" -->
+        <!--                        class="dropdown-search-input"-->
+        <!--                    />-->
+        <!--                    <iconify-icon icon="lucide:search" class="search-icon"></iconify-icon>-->
+        <!--                </div>-->
                         
-                        <div class="user-list-scroll">
-                            <div 
-                                v-for="user in filteredUsers" 
-                                :key="user.id"
-                                class="user-item d-flex align-items-center justify-content-between p-2"
-                                @click="selectUser(user)"
-                                :class="{ 'selected': form.responsible_person_id === user.id }"
-                            >
-                                <div class="d-flex align-items-center gap-2">
-                                    <img :src="user.avatar || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'" class="user-item-avatar" />
-                                    <div class="user-item-info">
-                                        <div class="user-item-name">{{ user.name }}</div>
-                                    </div>
-                                </div>
-                                <iconify-icon 
-                                    v-if="form.responsible_person_id === user.id" 
-                                    icon="lucide:check" 
-                                    class="text-warning"
-                                ></iconify-icon>
-                            </div>
-                            <div v-if="filteredUsers?.length === 0" class="text-center p-3 text-muted">
-                                No persons found
-                            </div>
-                                        </div>
-                                    </div>
-                                </b-dropdown>
-                    <div v-if="validationErrors.responsible_person_id" class="invalid-feedback d-block" style="margin-top: 4px;">
-                        {{ validationErrors.responsible_person_id[0] }}
-                    </div>
-                </div>
-            </div>
+        <!--                <div class="user-list-scroll">-->
+        <!--                    <div -->
+        <!--                        v-for="user in filteredUsers" -->
+        <!--                        :key="user.id"-->
+        <!--                        class="user-item d-flex align-items-center justify-content-between p-2"-->
+        <!--                        @click="selectUser(user)"-->
+        <!--                        :class="{ 'selected': form.responsible_person_id === user.id }"-->
+        <!--                    >-->
+        <!--                        <div class="d-flex align-items-center gap-2">-->
+        <!--                            <img :src="user.avatar || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'" class="user-item-avatar" />-->
+        <!--                            <div class="user-item-info">-->
+        <!--                                <div class="user-item-name">{{ user.name }}</div>-->
+        <!--                            </div>-->
+        <!--                        </div>-->
+        <!--                        <iconify-icon -->
+        <!--                            v-if="form.responsible_person_id === user.id" -->
+        <!--                            icon="lucide:check" -->
+        <!--                            class="text-warning"-->
+        <!--                        ></iconify-icon>-->
+        <!--                    </div>-->
+        <!--                    <div v-if="filteredUsers?.length === 0" class="text-center p-3 text-muted">-->
+        <!--                        No persons found-->
+        <!--                    </div>-->
+        <!--                                </div>-->
+        <!--                            </div>-->
+        <!--                        </b-dropdown>-->
+        <!--            <div v-if="validationErrors.responsible_person_id" class="invalid-feedback d-block" style="margin-top: 4px;">-->
+        <!--                {{ validationErrors.responsible_person_id[0] }}-->
+        <!--            </div>-->
+        <!--        </div>-->
+        <!--    </div>-->
         
                
-            <div class="d-flex align-items-center gap-3">
-                <div class="avatar-wrapper">
-                    <img 
-                        v-if="!avatarError && selectedPerson?.avatar" 
-                        :src="selectedPerson.avatar" 
-                        class="avatar-md rounded-circle" 
-                        @error="handleAvatarError"
-                    />
-                    <div v-else class="avatar-placeholder">
-                        <iconify-icon icon="lucide:user" class="avatar-icon"></iconify-icon>
-                    </div>
-                </div>
-                <div class="flex-grow-1">
-                    <div class="d-flex mb-1">
-                        <span class="text-xs text-secondary-light">Name</span>
-                        <span class="text-xs fw-medium">: {{ selectedPerson?.name || '----' }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!--    <div class="d-flex align-items-center gap-3">-->
+        <!--        <div class="avatar-wrapper">-->
+        <!--            <img -->
+        <!--                v-if="!avatarError && selectedPerson?.avatar" -->
+        <!--                :src="selectedPerson.avatar" -->
+        <!--                class="avatar-md rounded-circle" -->
+        <!--                @error="handleAvatarError"-->
+        <!--            />-->
+        <!--            <div v-else class="avatar-placeholder">-->
+        <!--                <iconify-icon icon="lucide:user" class="avatar-icon"></iconify-icon>-->
+        <!--            </div>-->
+        <!--        </div>-->
+        <!--        <div class="flex-grow-1">-->
+        <!--            <div class="d-flex mb-1">-->
+        <!--                <span class="text-xs text-secondary-light">Name</span>-->
+        <!--                <span class="text-xs fw-medium">: {{ selectedPerson?.name || '----' }}</span>-->
+        <!--            </div>-->
+        <!--        </div>-->
+        <!--    </div>-->
+        <!--</div>-->
     </div>
 </template>
 
