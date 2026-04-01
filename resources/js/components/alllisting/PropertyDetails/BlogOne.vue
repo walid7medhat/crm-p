@@ -3645,7 +3645,7 @@ const createSlide1 = (currentUser) => {
             <div style="margin-bottom:8mm !important; width:15mm !important;">
               <img src="${logo}" style="width:100% !important; height:auto !important; max-height:15mm !important;" />
             </div>
-            <p style="font-size:3mm !important; line-height:4mm !important; background:#faa300 !important; display:inline-block !important; padding:1mm 3mm 3mm 3mm !important; text-transform:uppercase !important; border-radius:1.5mm !important; color:#fff !important; margin:0 0 3mm 0 !important;">For Sale</p>
+            <p style="font-size:3mm !important; line-height:4mm !important; background:#faa300 !important; display:inline-block !important; padding:1mm 3mm 3mm 3mm !important; text-transform:uppercase !important; border-radius:1.5mm !important; color:#fff !important; margin:0 0 3mm 0 !important;">For ${property.value.listing_status}</p>
             <h1 style="font-size:6mm !important; margin:0 0 3mm 0 !important; text-align:left !important; line-height:1.2 !important;">
               ${
                 property.value?.number_of_bedrooms === 0
@@ -3715,7 +3715,7 @@ const createSlide2 = () => {
             <ul style="list-style:none !important; margin:0 !important; padding:0 !important; width:100% !important;">
               <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
                 <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Property Type</span>
-                <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${property.value?.property_type?.name || 'Townhouse'}</span>
+                <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${property.value?.property_type?.name || ''}</span>
               </li>
               <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
                 <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Bedrooms</span>
