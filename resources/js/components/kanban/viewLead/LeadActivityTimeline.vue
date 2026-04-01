@@ -48,16 +48,44 @@
                                 <span class="activity-type-label">{{ item.typeLabel }}</span>
                                 <div class="activity-meta">
                                     <span class="activity-time">{{ item.time }}</span>
-                                    <img
-                                        v-if="item.user?.avatar"
-                                        :src="item.user.avatar"
-                                        class="activity-avatar"
-                                        :alt="item.user?.name"
-                                        :title="item.user?.name"
+                                    <img  class="comment-avatar-hover-anchor activity-avatar"
+                                            @mouseenter="activeHoverUserId = item.id"
+                                            @mouseleave="activeHoverUserId = null"
+                                            v-if="item.user?.avatar"
+                                            :src="item.user.avatar"
+                                            :alt="item.user?.name"
+                                     
                                     />
                                     <div v-else class="activity-avatar activity-avatar-placeholder">
                                         <iconify-icon icon="lucide:user"></iconify-icon>
                                     </div>
+                                    <transition name="person-card-pop">
+                                        <div v-if="activeHoverUserId === item.id" class="person-hover-card">
+                                            <div class="person-hover-head">
+                                                <img
+                                                    v-if="item.user.avatar"
+                                                    :src="item.user.avatar"
+                                                    alt=""
+                                                    class="person-hover-avatar"
+                                                />
+                                                <div v-else class="person-hover-avatar person-hover-avatar-fallback">
+                                                    <iconify-icon icon="lucide:user" class="item-avatar-icon"></iconify-icon>
+                                                </div>
+                                                <div>
+                                                    <div class="person-hover-name">{{ item.user.name || '—' }}</div>
+                                                    <div class="person-hover-role">{{ item.user.user_role_name || 'Team Member' }}</div>
+                                                </div>
+                                            </div>
+                                            <div class="person-hover-line">
+                                                <span>Reports To</span>
+                                                <b>{{ item.user.user_parent_name || 'Not specified' }}</b>
+                                            </div>
+                                            <div class="person-hover-line">
+                                                <span>Branch</span>
+                                                <b>{{ item.user.user_branch_name || 'Not specified' }}</b>
+                                            </div>
+                                        </div>
+                                    </transition>
                                 </div>
                             </div>
                             <div class="activity-details" v-html="item.detailsHtml"></div>
@@ -106,6 +134,7 @@ const loadingMore = ref(false)
 const currentPage = ref(1)
 const lastPage = ref(1)
 const perPage = 10
+const activeHoverUserId = ref(null)
 
 const hasMore = computed(() => currentPage.value < lastPage.value)
 
@@ -568,5 +597,90 @@ onMounted(() => {
 
 .radius-12 {
     border-radius: 12px;
+}
+.person-card-pop-enter-active,
+.person-card-pop-leave-active {
+    transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.person-card-pop-enter-from,
+.person-card-pop-leave-to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+}
+
+.person-hover-card {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: 200px;
+    z-index: 3000;
+    border-radius: 12px;
+    border: 1px solid #dbe3ef;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.2);
+    backdrop-filter: blur(8px);
+    padding: 10px;
+}
+
+.person-hover-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.person-hover-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+}
+
+.person-hover-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+}
+
+.person-hover-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.person-hover-role {
+    margin-top: 1px;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.person-hover-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11px;
+    padding: 4px 0;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.person-hover-line span {
+    color: #64748b;
+}
+
+.person-hover-line b {
+    color: #0f172a;
+    font-weight: 700;
+    text-align: right;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 </style>

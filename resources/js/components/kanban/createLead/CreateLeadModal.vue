@@ -1426,7 +1426,9 @@ const $showNotification = (message, type = 'info') => {
     border-radius: 10px;
     box-shadow: 1px 1px 5px 5px #00000005;
 }
-
+.additional-fields-card .col-md-4{
+    padding-top:1.5rem !important;
+}
 .additional-checklist {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -23,6 +23,9 @@ class LeadHistoryResource extends JsonResource
                     'id'   => $this->user?->id,
                     'name' => $this->user?->name,
                     'avatar'=>$this->user?->avatar_url,
+                     'user_role_name' => $this->user?->roles?->first()?->name,
+                    'user_parent_name' => $this->user?->parent?->name,
+                    'user_branch_name' => $this->user?->office?->name,
                 ];
             }),
             'date'      => $this->created_at->format('Y-m-d H:i'),
