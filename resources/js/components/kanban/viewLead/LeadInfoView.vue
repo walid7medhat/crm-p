@@ -3,7 +3,8 @@
         <div class="info-section">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <div class="info-section-title mb-0">Lead Information</div>
-                <button v-if="showEditIcon && canEdit" class="lead-edit-inline-btn" @click="emit('edit-request')">
+                <!-- emit(edit-request) for all info-->
+                <button v-if="showEditIcon && canEdit" class="lead-edit-inline-btn" @click="emit('edit-section', 'leadInfo')">
                     <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:pencil"></iconify-icon>
                 </button>
             </div>
@@ -98,7 +99,13 @@
         </div>
 
         <div class="info-section" v-if="hasClientRequiredInfo">
-            <div class="info-section-title">Client Requirement</div>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="info-section-title mb-0">Client Requirement</div>
+                <!-- emit(edit-request) for all info-->
+                <button v-if="showEditIcon && canEdit" class="lead-edit-inline-btn" @click="emit('edit-section','clientRequirement')">
+                    <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:pencil"></iconify-icon>
+                </button>
+            </div>
             <template v-if="hasClientRequiredInfo">
                 <div class="info-group" v-if="lead?.bedrooms">
                     <label class="form-label-custom">Bedrooms</label>
@@ -355,7 +362,7 @@ const props = defineProps({
     },
 })
 
-const emit = defineEmits(['person-updated','edit-request'])
+const emit = defineEmits(['person-updated', 'edit-request', 'edit-section'])
 
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
 

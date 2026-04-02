@@ -4,7 +4,7 @@
         <div class="col-md-5">
             <div class="info-card bg-white  p-3 radius-12">
                 <!-- View Mode (read-only; do not use ViewLead.vue here – it is a full modal and would cause infinite recursion) -->
-                <LeadInfoView v-if="!isEditMode" :lead="lead" :show-responsible-section="false" :can-edit="lead?.can_edit" :show-edit-icon="true" @edit-request="toggleEditMode" />
+                <LeadInfoView v-if="!isEditMode" :lead="lead" :show-responsible-section="false" :can-edit="lead?.can_edit" :show-edit-icon="true"  @edit-section="handleEditSection" @edit-request="toggleEditMode" />
 
                 <!-- Edit Mode (footer Save/Cancel moved to global bottom bar below) -->
                 <EditLead 
@@ -14,6 +14,7 @@
                     :stage-id="selectedStageId"
                     @updated="handleLeadUpdated"
                     @cancel="handleCancel"
+                    :show-only-section="editingSection"
                 />
             </div>
         </div>
@@ -165,6 +166,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:lead'])
+const editingSection = ref(null)
 
 const isEditMode = ref(false)
 const selectedStageId = ref(props.stageId || props.lead?.stage?.id || null)
@@ -359,7 +361,13 @@ watch(() => props.lead?.id, (newId, oldId) => {
 
 const toggleEditMode = () => {
     isEditMode.value = true
+      editingSection.value = null
     selectedStageId.value = props.stageId || props.lead?.stage?.id || null
+}
+const handleEditSection = (sectionName) => {
+      editingSection.value = sectionName
+     selectedStageId.value = props.stageId || props.lead?.stage?.id || null
+    isEditMode.value = true
 }
 
 const handleCancel = () => {

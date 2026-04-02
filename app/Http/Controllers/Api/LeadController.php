@@ -781,7 +781,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         $lead->update($updateData);
 
         // إضافة التعليق إذا وجد
-        if($request->reason) {
+        if($request->reason && $newStage->order != 3) {
             LeadComment::create([
                 'lead_id' => $lead->id,
                 'comment' => $request->reason,

@@ -866,6 +866,7 @@ const $showNotification = (message, type = 'info') => {
     min-width: 460px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+    cursor: text;
 }
 
 .search-wrapper-focused,

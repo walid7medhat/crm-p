@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="info-section">
+        <div class="info-section"  v-if="!showOnlySection || showOnlySection === 'leadInfo'">
              <div class="info-section-title mb-2">Lead Information</div>
         <div class="info-group edit">
             <label class="form-label-custom">Lead Name</label>
@@ -160,7 +160,7 @@
         <!--    </div>-->
         <!--</div>-->
     </div>
-     <div class="info-section">
+     <div class="info-section"  v-if="!showOnlySection || showOnlySection === 'leadInfo'">
             <div class="info-group mb-3">
                 <label class="form-label-custom">More Information</label>
                 <b-form-textarea 
@@ -174,7 +174,7 @@
                 </div>
             </div>
         </div>
-    <div class="info-section">
+    <div class="info-section"  v-if="!showOnlySection || showOnlySection === 'clientRequirement'">
          <div class="info-section-title mb-2">Client Required Info</div>
         <!-- Additional Fields (same UX as Create) -->
         
@@ -539,11 +539,13 @@ const props = defineProps({
     stageId: {
         type: Number,
         default: null
+    } ,showOnlySection: { 
+        type: String,
+        default: null
     }
 })
 
 const emit = defineEmits(['save', 'cancel', 'updated'])
-
 const avatarError = ref(false)
 const users = ref([])
 const searchQuery = ref('')
