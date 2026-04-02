@@ -2,7 +2,7 @@
 <template>
 
     <div v-if="visible" class="stage-change-modal-overlay" @click.self="closeModal">
-        <div class="stage-change-modal" :class="{ 'modal-wide': missingFields.length > 0 }">
+        <div class="stage-change-modal" :class="{ 'modal-wide': missingFields.length > 0 || interactionMode }">
             <div class="modal-header">
                 <h5 class="modal-title">{{ isConversion ? 'Complete Lead Information' : `Move Lead to ${targetStageName}` }}</h5>
                 <button type="button" class="btn-close" @click="closeModal"></button>
@@ -11,18 +11,116 @@
             <div class="modal-body">
                 <!-- Reason Section -->
                 <div class="mb-4 box-shadow">
-                     <h5 class="section-title">Comment</h5>
-                    <label for="reason" class="form-label">
-                        Please provide a reason for moving this lead <span class="text-danger">*</span>
-                    </label>
-                    <textarea
-                        id="reason"
-                        v-model="formData.reason"
-                        rows="3"
-                        class="form-control reason-textarea"
-                        placeholder="Text Here"
-                        required
-                    ></textarea>
+                    <template v-if="interactionMode">
+                        <label class="form-label">Call Result <span class="text-danger">*</span></label>
+                        <div class="call-result-grid mb-3">
+                            <button
+                                type="button"
+                                class="call-result-card"
+                                :class="{ 'is-active': formData.interaction_result === 'answered' }"
+                                @click="formData.interaction_result = 'answered'"
+                            >
+                                <iconify-icon icon="lucide:phone-call" class="call-result-icon"></iconify-icon>
+                                <span class="call-result-text">Answered</span>
+                            </button>
+                            <button
+                                type="button"
+                                class="call-result-card"
+                                :class="{ 'is-active': formData.interaction_result === 'no_answer' }"
+                                @click="formData.interaction_result = 'no_answer'"
+                            >
+                                <iconify-icon icon="lucide:phone-off" class="call-result-icon"></iconify-icon>
+                                <span class="call-result-text">No Answer</span>
+                            </button>
+                        </div>
+
+                        <div v-if="formData.interaction_result === 'answered'">
+                            <label for="interaction-note" class="form-label">
+                                Purpose <span class="text-danger">*</span>
+                            </label>
+                            <textarea
+                                id="interaction-note"
+                                v-model="formData.interaction_note"
+                                rows="3"
+                                class="form-control reason-textarea"
+                                placeholder="Write purpose..."
+                                required
+                            ></textarea>
+                        </div>
+
+                        <div v-else-if="formData.interaction_result === 'no_answer'">
+                            <label for="interaction-note-reminder" class="form-label">
+                                Reminder Activity <span class="text-danger">*</span>
+                            </label>
+                            <textarea
+                                id="interaction-note-reminder"
+                                v-model="formData.interaction_note"
+                                rows="5"
+                                class="form-control reason-textarea reason-textarea-lg"
+                                placeholder="Type reminder activity title"
+                                required
+                            ></textarea>
+
+                            <div class="reminder-controls mt-3">
+                                <button
+                                    type="button"
+                                    class="activity-control-btn d-flex align-items-center gap-2"
+                                    @click.stop="showDateTimePicker = true"
+                                >
+                                    <iconify-icon icon="lucide:calendar" class="activity-control-icon"></iconify-icon>
+                                    <span class="activity-control-text">{{ formattedReminderDate }}</span>
+                                </button>
+
+                                <div class="reminder-dropdown-wrapper position-relative">
+                                    <button
+                                        type="button"
+                                        class="activity-control-btn activity-control-btn-bell d-flex align-items-center gap-2"
+                                        @click.stop="showReminderDropdown = !showReminderDropdown"
+                                    >
+                                        <iconify-icon icon="lucide:bell" class="activity-control-icon bell-icon"></iconify-icon>
+                                        <span class="activity-control-text">Reminder</span>
+                                    </button>
+                                    <div
+                                        v-if="showReminderDropdown"
+                                        class="reminder-dropdown"
+                                        @click.stop
+                                    >
+                                        <div class="reminder-options">
+                                            <div
+                                                class="reminder-option"
+                                                v-for="option in reminderOptions"
+                                                :key="option.value"
+                                                @click="selectReminderOption(option.value)"
+                                            >
+                                                <span class="reminder-option-text">{{ option.label }}</span>
+                                                <div class="reminder-checkbox" :class="{ 'checked': reminders.includes(option.value) }">
+                                                    <iconify-icon
+                                                        v-if="reminders.includes(option.value)"
+                                                        icon="lucide:check"
+                                                        class="check-icon"
+                                                    ></iconify-icon>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <label for="reason" class="form-label">
+                            Please provide a reason for moving this lead <span class="text-danger">*</span>
+                        </label>
+                        <textarea
+                            id="reason"
+                            v-model="formData.reason"
+                            rows="3"
+                            class="form-control reason-textarea"
+                            placeholder="Text Here"
+                            required
+                        ></textarea>
+                    </template>
                 </div>
 
                 <!-- Dynamic Form Based on missingFields -->
@@ -268,14 +366,24 @@
                 </button>
             </div>
         </div>
+
+        <DateTimePicker
+            :show="showDateTimePicker"
+            :model-value="reminderDate"
+            @update:show="showDateTimePicker = $event"
+            @update:model-value="handleCustomDateSelected"
+            @apply="handleCustomDateApply"
+            @cancel="handleCustomDateCancel"
+        />
     </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
+import DateTimePicker from '../shared/DateTimePicker.vue'
 
 const props = defineProps({
     modelValue: {
@@ -307,6 +415,10 @@ const props = defineProps({
         default: null
     },
     isConversion: {
+        type: Boolean,
+        default: false
+    },
+    interactionMode: {
         type: Boolean,
         default: false
     }
@@ -350,6 +462,59 @@ const defaultLeadStatusOptions = [
     { value: 'warm', text: 'Warm' },
     { value: 'hot', text: 'Hot' }
 ]
+const reminderOptions = [
+    { label: 'When event starts', value: '0' },
+    { label: '15 minutes before', value: '15' },
+    { label: '30 minutes before', value: '30' },
+    { label: '1 hour before', value: '60' },
+    { label: '2 hours before', value: '120' },
+    { label: '1 day before', value: '1440' }
+]
+const showReminderDropdown = ref(false)
+const showDateTimePicker = ref(false)
+const reminderDate = ref(new Date())
+const reminders = ref([])
+
+const formattedReminderDate = computed(() => {
+    const date = reminderDate.value ? new Date(reminderDate.value) : new Date()
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    const dayName = days[date.getDay()]
+    const monthName = months[date.getMonth()]
+    const day = date.getDate()
+    const hours = date.getHours()
+    const minutes = date.getMinutes()
+    const ampm = hours >= 12 ? 'pm' : 'am'
+    const displayHours = hours % 12 || 12
+    const displayMinutes = minutes < 10 ? `0${minutes}` : minutes
+    return `${dayName}, ${monthName} ${day}, ${displayHours}:${displayMinutes} ${ampm}`
+})
+
+const selectReminderOption = (value) => {
+    const index = reminders.value.indexOf(value)
+    if (index > -1) {
+        reminders.value.splice(index, 1)
+    } else {
+        reminders.value.push(value)
+    }
+}
+
+const handleCustomDateSelected = (date) => {
+    reminderDate.value = date
+}
+
+const handleCustomDateApply = (date) => {
+    reminderDate.value = date
+    showReminderDropdown.value = false
+}
+
+const handleCustomDateCancel = () => {}
+
+const handleClickOutside = (event) => {
+    if (!event.target.closest('.reminder-dropdown-wrapper')) {
+        showReminderDropdown.value = false
+    }
+}
 
 const branchOptions = [
     { value: 'Abu Dhabi', text: 'Abu Dhabi' },
@@ -393,6 +558,8 @@ const propertyTypeOptions = computed(() => (propertyTypes.value || []).map(type 
 
 const formData = ref({
     reason: '',
+    interaction_result: '',
+    interaction_note: '',
     salutation: '',
     budget: '',
     currency: 'AED',
@@ -429,6 +596,8 @@ const closeModal = () => {
 const resetForm = () => {
     formData.value = {
         reason: '',
+        interaction_result: '',
+        interaction_note: '',
         salutation: '',
         budget: '',
         currency: 'AED',
@@ -442,14 +611,29 @@ const resetForm = () => {
         branch: '',
         lost_reason: ''
     }
+    reminderDate.value = new Date()
+    reminders.value = []
+    showReminderDropdown.value = false
+    showDateTimePicker.value = false
     isSubmitting.value = false
 }
 
 const handleSubmit = async () => {
-    // Validate reason
-    if (!formData.value.reason.trim()) {
-        $showNotification('Please provide a reason', 'warning')
-        return
+    if (props.interactionMode) {
+        if (!formData.value.interaction_result) {
+            $showNotification('Please select answer or no answer', 'warning')
+            return
+        }
+        if (!formData.value.interaction_note.trim()) {
+            $showNotification('Please provide a note', 'warning')
+            return
+        }
+    } else {
+        // Validate reason
+        if (!formData.value.reason.trim()) {
+            $showNotification('Please provide a reason', 'warning')
+            return
+        }
     }
     
     // Validate based on stage and missing fields
@@ -523,22 +707,61 @@ const handleSubmit = async () => {
             bedroomsValue = 0
         }
     try {
-        const submitData = {
-            leadId: props.leadId,
-            targetStageId: props.targetStageId,
-            reason: formData.value.reason,
-            salutation: formData.value.salutation,
-            budget: formData.value.budget,
-            area_id: formData.value.area_id,
-            property_type_id: formData.value.property_type_id,
-            bedrooms: bedroomsValue,
-            purpose_buying: formData.value.purpose_buying,
-            lead_source: formData.value.lead_source,
-            lead_status: formData.value.lead_status, // سيرسل حسب المرحلة
-            available_date: formData.value.available_date,
-            branch: formData.value.branch,
-            lost_reason: formData.value.lost_reason
+        const createLeadComment = async (text) => {
+            const formData = new FormData()
+            formData.append('lead_id', String(props.leadId))
+            formData.append('comment', text || '')
+            await api.post('/leads/add/new/comments', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            })
         }
+
+        if (props.interactionMode && formData.value.interaction_result === 'no_answer') {
+            const payload = {
+                lead_id: props.leadId,
+                title: formData.value.interaction_note,
+                reminder_date: (reminderDate.value instanceof Date ? reminderDate.value : new Date(reminderDate.value)).toISOString()
+            }
+            if (reminders.value.length > 0) {
+                payload.reminders = reminders.value
+            }
+            await api.post('/leads/activities', payload)
+        }
+
+        const reasonText = props.interactionMode
+            ? (formData.value.interaction_result === 'answered'
+                ? `Answered: ${formData.value.interaction_note}`
+                : `No Answer - Reminder: ${formData.value.interaction_note}`)
+            : formData.value.reason
+
+        if (props.interactionMode && formData.value.interaction_result === 'answered') {
+            await createLeadComment(reasonText)
+        }
+
+        const submitData = props.interactionMode
+            ? {
+                leadId: props.leadId,
+                targetStageId: props.targetStageId,
+                reason: reasonText,
+                interaction_result: formData.value.interaction_result
+            }
+            : {
+                leadId: props.leadId,
+                targetStageId: props.targetStageId,
+                reason: reasonText,
+                interaction_result: formData.value.interaction_result,
+                salutation: formData.value.salutation,
+                budget: formData.value.budget,
+                area_id: formData.value.area_id,
+                property_type_id: formData.value.property_type_id,
+                bedrooms: bedroomsValue,
+                purpose_buying: formData.value.purpose_buying,
+                lead_source: formData.value.lead_source,
+                lead_status: formData.value.lead_status, // سيرسل حسب المرحلة
+                available_date: formData.value.available_date,
+                branch: formData.value.branch,
+                lost_reason: formData.value.lost_reason
+            }
         
         // Remove empty fields
         Object.keys(submitData).forEach(key => {
@@ -573,6 +796,14 @@ watch(visible, (newVal) => {
     }
 })
 
+onMounted(() => {
+    document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside)
+})
+
 defineExpose({
     show: () => { visible.value = true },
     hide: () => { visible.value = false }
@@ -598,9 +829,9 @@ defineExpose({
 
 .stage-change-modal {
     background: #ffffff;
-    border-radius: 10px;
-    width: 90%;
-    max-width: 560px;
+    border-radius: 14px;
+    width: min(92vw, 760px);
+    max-width: 760px;
     max-height: 92vh;
     overflow-y: auto;
     border: 1px solid #e8edf3;
@@ -624,11 +855,11 @@ defineExpose({
 }
 
 .stage-change-modal.modal-wide {
-    max-width: 760px;
+    max-width: 860px;
 }
 
 .modal-header {
-    padding: 0.7rem 1rem;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid #edf1f6;
     display: flex;
     justify-content: space-between;
@@ -638,7 +869,7 @@ defineExpose({
 
 .modal-title {
     margin: 0;
-    font-size: 0.95rem !important;
+    font-size: 0.92rem !important;
     font-weight: 700;
     color: #0f172a;
     letter-spacing: 0.1px;
@@ -653,12 +884,12 @@ defineExpose({
 }
 
 .modal-body {
-    padding: 0.8rem 1rem;
+    padding: 1rem 1.25rem;
     background: #fbfcfe;
 }
 
 .modal-footer {
-    padding: 0.7rem 1rem;
+    padding: 0.85rem 1.25rem;
     border-top: 1px solid #edf1f6;
     display: flex;
     justify-content: flex-end;
@@ -670,12 +901,16 @@ defineExpose({
     width: 100%;
     padding: 0.5rem 0.625rem;
     border: 1px solid #d6dee8;
-    border-radius: 7px;
-    font-size: 0.75rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
     min-height: 70px;
     resize: vertical;
     color: #0f172a;
     background: #ffffff;
+}
+
+.reason-textarea-lg {
+    min-height: 140px;
 }
 
 .reason-textarea:focus {
@@ -690,8 +925,8 @@ defineExpose({
 
 .form-label {
     display: block;
-    margin-bottom: 0.25rem;
-    font-weight: 600;
+    margin-bottom: 0.45rem;
+    font-weight: 650;
     font-size: 0.74rem;
     color: #1f2937;
 }
@@ -818,10 +1053,10 @@ defineExpose({
 }
 
 :deep(.searchable-select .vs__dropdown-toggle) {
-    min-height: 34px;
-    border: 1px solid #d6dee8;
-    border-radius: 7px;
-    padding: 0 8px;
+    min-height: 42px;
+    border: 1px solid #cfd8e3;
+    border-radius: 10px;
+    padding: 0 10px;
     background: #fff;
 }
 
@@ -833,7 +1068,7 @@ defineExpose({
 :deep(.searchable-select .vs__selected),
 :deep(.searchable-select .vs__search),
 :deep(.searchable-select .vs__search::placeholder) {
-    font-size: 0.75rem;
+    font-size: 0.76rem;
     color: #111827;
 }
 
@@ -933,6 +1168,146 @@ defineExpose({
 
 .section-title  {
     grid-column: span 2;
-    font-size:16px !important;
+    font-size:13px !important;
+}
+
+.comment-block-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 2px 0 8px;
+}
+
+.call-result-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.call-result-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    min-height: 86px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #334155;
+    transition: all 0.2s ease;
+}
+
+.call-result-card:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.call-result-card.is-active {
+    border-color: #f2b84b;
+    background: #fff8ea;
+    box-shadow: 0 0 0 2px rgba(242, 184, 75, 0.2);
+}
+
+.call-result-icon {
+    font-size: 20px;
+    color: #f2b84b;
+}
+
+.call-result-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+@media (max-width: 640px) {
+    .call-result-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.reminder-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.activity-control-btn {
+    border: 1px solid #d6dee8;
+    border-radius: 10px;
+    background: #fff;
+    color: #344054;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.activity-control-icon {
+    font-size: 16px;
+    color: #64748b;
+}
+
+.activity-control-btn-bell {
+    min-width: 116px;
+    justify-content: center;
+}
+
+.reminder-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 260px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    z-index: 25;
+}
+
+.reminder-options {
+    display: flex;
+    flex-direction: column;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.reminder-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.reminder-option:hover {
+    background: #f8fafc;
+}
+
+.reminder-option-text {
+    font-size: 12px;
+    color: #334155;
+}
+
+.reminder-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    background: #ffffff;
+}
+
+.reminder-checkbox.checked {
+    background: #4f46e5;
+    border-color: #4f46e5;
+}
+
+.check-icon {
+    font-size: 12px;
 }
 </style>

@@ -28,7 +28,7 @@
         <draggable v-else v-model="columns" item-key="status" class="kanban-wrapper kanban-wrapper-tight d-flex h-100" :group="'columns'"
             handle=".column-header"
             :ghost-class="'ghost'" :drag-class="'dragging'">
-            <template #item="{ element: column, index }">
+            <template #item="{ element: column }">
                 <div class="kanban-column radius-12 d-flex flex-column" :style="{ '--column-color': column.color }">
                     <div class=" p-0 overflow-visible shadow-none border-0 bg-transparent h-100 d-flex flex-column">
                         <div class="card-body p-0 d-flex flex-column h-100">
@@ -335,6 +335,7 @@
         :missingFields="missingFieldsForLead"
         :leadData="pendingStageChange?.leadData"
         :isConversion="pendingStageChange?.isConversion || false"
+        :interactionMode="pendingStageChange?.interactionMode || false"
         @submit="handleStageChangeWithReason"
         @closed="clearPendingStageChange"
     />
@@ -2000,6 +2001,13 @@ async function onLeadDragChange(evt, column) {
         const lead = evt.added.element
         const newStageId = column.status
         const newStageOrder = stageOrderMap.value[newStageId] ?? column.order ?? 0
+        const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
+        const normalizeStageName = (name) => String(name || '').toLowerCase().replace(/[^a-z]/g, '')
+        const sourceStageName = normalizeStageName(sourceColumn?.title)
+        const targetStageName = normalizeStageName(column?.title)
+        const isAssignToFollowUpOrContacted =
+            sourceStageName.includes('assign') &&
+            (targetStageName.includes('followup') || targetStageName.includes('contacted'))
 
         console.log('Lead drag change:', { 
             leadId: lead.id, 
@@ -2007,6 +2015,35 @@ async function onLeadDragChange(evt, column) {
             newStageOrder,
             leadData: lead
         })
+
+        if (isAssignToFollowUpOrContacted) {
+            pendingStageChange.value = {
+                leadId: lead.id,
+                targetStageId: newStageId,
+                targetStageName: column.title,
+                targetStageOrder: newStageOrder,
+                originalStageId: lead.stage_id,
+                leadData: { ...lead },
+                isConversion: false,
+                interactionMode: true
+            }
+            missingFieldsForLead.value = []
+
+            if (sourceColumn) {
+                const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
+                if (targetColumnIndex !== -1) {
+                    columns.value[targetColumnIndex].leads =
+                        columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
+                }
+                if (!sourceColumn.leads.find(l => l.id === lead.id)) {
+                    sourceColumn.leads.push(lead)
+                }
+            }
+
+            await nextTick()
+            showStageChangeModal.value = true
+            return
+        }
 
         // Check if this is the converted stage (order 6)
         if (newStageOrder === 6) {
