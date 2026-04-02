@@ -228,7 +228,48 @@ const updateResponsiblePerson = async () => {
 </script>
 
 <style scoped>
-.responsible-card { border: 1px solid #F4F4F4; margin-bottom: 12px; }
+.responsible-card {
+  position: relative;
+  border: 1px solid rgba(250, 163, 0, 0.18);
+  margin-bottom: 12px;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(250, 163, 0, 0.06), rgba(255, 255, 255, 0) 58%),
+    #ffffff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.responsible-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #f8dca6, #f2b84b);
+  opacity: 1;
+}
+
+.responsible-card:hover {
+  border-color: rgba(250, 163, 0, 0.28);
+  box-shadow:
+    0 2px 4px rgba(15, 23, 42, 0.06),
+    0 14px 32px rgba(15, 23, 42, 0.08);
+}
+
+.responsible-card:focus-within {
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 1),
+    0 0 0 4px rgba(250, 163, 0, 0.24),
+    0 14px 32px rgba(15, 23, 42, 0.08);
+}
+
+.responsible-card .info-group {
+  position: relative;
+  padding-left: 6px; /* keep content off the accent bar */
+}
 .info-section-title { font-size: 12px; font-weight: 700; color: #0f172a; }
 .form-label-custom { font-size: 13px; font-weight: 500; color: #64748B; margin-bottom: 6px; }
 .info-value { font-size: 14px; color: #1E293B; }

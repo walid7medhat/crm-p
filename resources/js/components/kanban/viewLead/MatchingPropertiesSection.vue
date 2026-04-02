@@ -37,10 +37,11 @@
                     class="matching-scroll"
                     @scroll="onMatchingScroll"
                 >
-                    <article
+                    <router-link
                         v-for="item in listings"
                         :key="item.id"
-                        class="matching-card"
+                        :to="`/property-details/${item.id}`"
+                        class="matching-card matching-card-link"
                     >
                         <div class="matching-card-media">
                             <img
@@ -61,6 +62,9 @@
                         </div>
                         <div class="matching-card-body">
                             <div class="matching-price">{{ formatPrice(item.price) }} <span class="matching-currency">AED</span></div>
+                            <div v-if="item.project?.title" class="matching-project-title">
+                                {{ item.project.title }}
+                            </div>
                             <div class="matching-title">{{ displayTitle(item) }}</div>
                             <div class="matching-loc">
                                 <iconify-icon icon="lucide:map-pin" class="matching-loc-icon"></iconify-icon>
@@ -84,18 +88,8 @@
                                     {{ item.size_sqft }} Sqft
                                 </span>
                             </div>
-                            <div class="matching-listed">
-                                <span v-if="item.agent?.name">Listed by: {{ item.agent.name }}</span>
-                                <span v-if="item.created_at" class="matching-listed-date">
-                                    <iconify-icon icon="lucide:calendar" width="11" height="11"></iconify-icon>
-                                    {{ item.created_at }}
-                                </span>
-                            </div>
-                            <router-link :to="`/property-details/${item.id}`" class="matching-btn-details">
-                                View details
-                            </router-link>
                         </div>
-                    </article>
+                    </router-link>
                 </div>
                 <button
                     type="button"
@@ -123,7 +117,7 @@
             </div>
 
             <div class="matching-more-wrap">
-                <router-link :to="moreRoute" class="matching-btn-more">More</router-link>
+                <router-link :to="moreRoute" class="matching-btn-more">More properties</router-link>
             </div>
         </template>
     </div>
@@ -152,7 +146,7 @@ function updateScrollUi() {
     const el = matchingScrollEl.value
     if (!el) return
     const n = listings.value.length
-    dotCount.value = Math.min(12, Math.max(1, n))
+    dotCount.value = Math.min(24, Math.max(1, n))
     const { scrollLeft, scrollWidth, clientWidth } = el
     const max = Math.max(0, scrollWidth - clientWidth)
     const eps = 4
@@ -259,7 +253,16 @@ const moreQuery = computed(() => {
     const l = props.lead
     const q = {}
     const pid = effectiveProjectId.value
-    if (pid) q.project_id = String(pid)
+    /**
+     * Requirement: when we have a scoped project_id, "More" must show ALL properties for that project.
+     * Do not add lead-specific filters (area/beds/budget) or we may hide valid units.
+     */
+    if (pid) {
+        q.project_id = String(pid)
+        return q
+    }
+
+    // Fallback (no project id): keep lead filters for a best-effort search.
     if (l?.area_id) q.area_id = String(l.area_id)
     if (l?.property_type_id) q.type_id = String(l.property_type_id)
     if (l?.bedrooms != null && l.bedrooms !== '') {
@@ -281,7 +284,7 @@ const moreRoute = computed(() => ({
 function buildApiParams() {
     const l = props.lead
     const params = {
-        per_page: 12,
+        per_page: 24,
         page: 1,
         sort: 'created_at_desc'
     }
@@ -338,7 +341,7 @@ async function fetchMatches() {
         const params = buildApiParams()
         const res = await api.get('/listings/properties', { params })
         const data = res.data?.data
-        listings.value = Array.isArray(data) ? data.slice(0, 12) : []
+        listings.value = Array.isArray(data) ? data.slice(0, 24) : []
     } catch (e) {
         console.error('Matching properties', e)
         listings.value = []
@@ -419,14 +422,33 @@ function onImgError(e) {
 </script>
 
 <style scoped>
-.matching-properties-section {
-    margin-top: 0.25rem;
+/* Same card shell + title as LeadInfoView .info-section (scoped there; duplicated here for this child). */
+.matching-properties-section.info-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 18px;
+    margin-top: 0;
+    background: #ffffff;
+    overflow: visible;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.matching-properties-section .info-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 12px;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
 .matching-empty-hint,
 .matching-loading,
 .matching-error {
-    font-size: 0.8rem;
+    font-size: 12px;
     line-height: 1.4;
     color: #64748b;
 }
@@ -436,15 +458,15 @@ function onImgError(e) {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
-    padding: 0 30px 10px;
-    margin-bottom: 0;
+    padding: 0 0 8px;
+    margin: 0;
 }
 
 .matching-scroll {
     display: flex;
     flex-wrap: nowrap;
     align-items: stretch;
-    gap: 10px;
+    gap: clamp(8px, 1.2vw, 12px);
     width: 100%;
     min-width: 0;
     overflow-x: auto;
@@ -452,20 +474,16 @@ function onImgError(e) {
     scroll-snap-type: x mandatory;
     scroll-snap-stop: always;
     scroll-behavior: smooth;
-    scroll-padding: 0 6px;
+    scroll-padding: 0 8px;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    padding: 2px 0 8px;
+    /* Hide the native scrollbar bar (we already have dots + arrows) */
+    scrollbar-width: none; /* Firefox */
+    padding: 2px 2px 8px;
     box-sizing: border-box;
 }
 
 .matching-scroll::-webkit-scrollbar {
-    height: 6px;
-}
-
-.matching-scroll::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
+    display: none; /* Chrome/Safari */
 }
 
 /*
@@ -473,10 +491,19 @@ function onImgError(e) {
  * (Same width for every slide so scroll/snap stays even.)
  */
 .matching-scroll .matching-card {
-    flex: 0 0 calc(91% - 5px);
-    max-width: calc(91% - 5px);
+    /* Small screens: one readable card + peek of next */
+    flex: 0 0 calc(100% - 20px);
+    max-width: calc(100% - 20px);
     scroll-snap-align: start;
     min-width: 0;
+}
+
+@media (min-width: 520px) {
+    .matching-scroll .matching-card {
+        /* Larger screens: one card + ~half of next */
+        flex: 0 0 calc((100% - 10px) / 1.55);
+        max-width: calc((100% - 10px) / 1.55);
+    }
 }
 
 .matching-nav {
@@ -575,11 +602,11 @@ function onImgError(e) {
 }
 
 .matching-nav--prev {
-    left: 2px;
+    left: 4px;
 }
 
 .matching-nav--next {
-    right: 2px;
+    right: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -625,12 +652,16 @@ function onImgError(e) {
 }
 
 @media (max-width: 575px) {
-    .matching-carousel-wrap {
-        padding: 0 26px 8px;
-    }
-
     .matching-nav {
         --nav-size: 36px;
+    }
+
+    .matching-nav--prev {
+        left: 2px;
+    }
+
+    .matching-nav--next {
+        right: 2px;
     }
 
     .matching-nav .matching-nav__icon {
@@ -648,12 +679,27 @@ function onImgError(e) {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.matching-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+.matching-card:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.55), 0 6px 18px rgba(15, 23, 42, 0.08);
 }
 
 .matching-card-media {
     position: relative;
-    aspect-ratio: 16 / 10;
-    min-height: 120px;
+    aspect-ratio: 16 / 11;
+    min-height: clamp(74px, 14vw, 96px);
     background: #f1f5f9;
 }
 
@@ -696,28 +742,39 @@ function onImgError(e) {
 }
 
 .matching-card-body {
-    padding: 12px 14px 14px;
+    padding: clamp(8px, 1.2vw, 11px);
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: clamp(3px, 0.7vw, 5px);
     flex: 1;
 }
 
 .matching-price {
-    font-size: 1.0625rem;
+    font-size: clamp(0.9rem, 1.9vw, 1rem);
     font-weight: 700;
     color: #0f172a;
     line-height: 1.2;
 }
 
 .matching-currency {
-    font-size: 0.7rem;
+    font-size: clamp(0.58rem, 1.3vw, 0.65rem);
     font-weight: 600;
     color: #64748b;
 }
 
+.matching-project-title {
+    font-size: clamp(0.63rem, 1.5vw, 0.72rem);
+    font-weight: 600;
+    color: #64748b;
+    line-height: 1.2;
+    margin-top: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .matching-title {
-    font-size: 0.875rem;
+    font-size: clamp(0.72rem, 1.7vw, 0.82rem);
     font-weight: 600;
     color: #0f172a;
     line-height: 1.35;
@@ -731,10 +788,18 @@ function onImgError(e) {
 .matching-loc {
     display: flex;
     align-items: flex-start;
-    gap: 5px;
-    font-size: 0.78rem;
+    gap: 4px;
+    font-size: clamp(0.64rem, 1.5vw, 0.72rem);
     color: #64748b;
-    line-height: 1.4;
+    line-height: 1.3;
+}
+
+.matching-loc span {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .matching-loc-icon {
@@ -748,8 +813,8 @@ function onImgError(e) {
 .matching-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 10px;
-    font-size: 0.72rem;
+    gap: 5px 9px;
+    font-size: clamp(0.6rem, 1.35vw, 0.66rem);
     color: #64748b;
 }
 
@@ -759,48 +824,11 @@ function onImgError(e) {
     gap: 3px;
 }
 
-.matching-listed {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.72rem;
-    color: #94a3b8;
-    margin-top: 4px;
-}
-
-.matching-listed-date {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    color: #f59e0b;
-}
-
-.matching-btn-details {
-    display: block;
-    text-align: center;
-    margin-top: 6px;
-    padding: 9px 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #fff;
-    background: #f59e0b;
-    border-radius: 8px;
-    text-decoration: none;
-    transition: background 0.15s ease;
-}
-
-.matching-btn-details:hover {
-    background: #ea580c;
-    color: #fff;
-}
-
 .matching-more-wrap {
     display: flex;
     justify-content: center;
-    margin-top: 1.75rem;
-    padding-top: 0.25rem;
+    margin-top: 14px;
+    padding-top: 0;
 }
 
 .matching-btn-more {

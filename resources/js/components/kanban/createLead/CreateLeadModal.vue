@@ -193,14 +193,14 @@
                                     <div v-if="shouldShowField('budget')" class="col-md-4">
                                         <label class="form-label-custom">Budget From (AED)</label>
                                         <div class="input-group-custom">
-                                            <b-form-input
-                                                :model-value="budgetFromDisplay"
+                                            <input
+                                                :value="budgetFromDisplay"
                                                 type="text"
                                                 inputmode="numeric"
                                                 autocomplete="off"
                                                 placeholder="0"
-                                                class="custom-input"
-                                                @update:model-value="onBudgetFromInput"
+                                                class="form-control custom-input"
+                                                @input="onBudgetFromInput($event.target.value)"
                                             />
                                             <div class="currency-pill" aria-label="Currency">AED</div>
                                         </div>
@@ -208,14 +208,14 @@
                                     <div v-if="shouldShowField('budget')" class="col-md-4">
                                         <label class="form-label-custom">Budget To (AED)</label>
                                         <div class="input-group-custom">
-                                            <b-form-input
-                                                :model-value="budgetToDisplay"
+                                            <input
+                                                :value="budgetToDisplay"
                                                 type="text"
                                                 inputmode="numeric"
                                                 autocomplete="off"
                                                 placeholder="0"
-                                                class="custom-input"
-                                                @update:model-value="onBudgetToInput"
+                                                class="form-control custom-input"
+                                                @input="onBudgetToInput($event.target.value)"
                                             />
                                             <div class="currency-pill" aria-label="Currency">AED</div>
                                         </div>

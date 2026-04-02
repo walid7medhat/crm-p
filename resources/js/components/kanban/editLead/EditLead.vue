@@ -210,15 +210,15 @@
                                 class="input-group-custom"
                                 :class="{ 'is-invalid-group': budgetFieldInvalid }"
                             >
-                                <b-form-input
-                                    :model-value="budgetFromDisplay"
+                                <input
+                                    :value="budgetFromDisplay"
                                     type="text"
                                     inputmode="numeric"
                                     autocomplete="off"
                                     placeholder="0"
-                                    class="custom-input"
+                                    class="form-control custom-input"
                                     :class="{ 'is-invalid': !!(validationErrors.budget_from || validationErrors.budget) }"
-                                    @update:model-value="onBudgetFromInput"
+                                    @input="onBudgetFromInput($event.target.value)"
                                 />
                                 <div class="currency-pill" aria-label="Currency">AED</div>
                             </div>
@@ -231,15 +231,15 @@
                                 class="input-group-custom"
                                 :class="{ 'is-invalid-group': budgetFieldInvalid }"
                             >
-                                <b-form-input
-                                    :model-value="budgetToDisplay"
+                                <input
+                                    :value="budgetToDisplay"
                                     type="text"
                                     inputmode="numeric"
                                     autocomplete="off"
                                     placeholder="0"
-                                    class="custom-input"
+                                    class="form-control custom-input"
                                     :class="{ 'is-invalid': !!(validationErrors.budget_to || validationErrors.budget) }"
-                                    @update:model-value="onBudgetToInput"
+                                    @input="onBudgetToInput($event.target.value)"
                                 />
                                 <div class="currency-pill" aria-label="Currency">AED</div>
                             </div>
