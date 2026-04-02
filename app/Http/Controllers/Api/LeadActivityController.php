@@ -763,4 +763,47 @@ public function restoreAllActivities($leadId)
         return ApiResponse::error('Failed to restore activities: ' . $e->getMessage());
     }
 }
+
+public function destroyAllActivitieComments($leadId)
+{
+    try {
+        $user = auth()->user();
+        
+        // تحقق من صلاحية المشرف
+        if (!$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized - Only admins can delete activities', 403);
+        }
+        
+        $lead = Lead::findOrFail($leadId);
+        
+        DB::beginTransaction();
+        
+        // حصر عدد الأنشطة قبل الحذف
+        $activitiesCount = $lead->activities()->count();
+        $commentsCount = $lead->comments()->count();
+        
+        // LeadHistoryHelper::log(
+        //     $lead->id,
+        //     [
+        //         'action' => 'all_activities_comments_deleted_by_admin',
+        //         'activities_count' => $activitiesCount,
+        //         'comments_count' => $commentsCount,
+        //         'deleted_by' => $user->name
+        //     ]
+        // );
+        
+        $lead->activities()->delete();
+        $lead->comments()->delete();
+        
+        DB::commit();
+        
+        return ApiResponse::success([
+            'deleted_count' => $activitiesCount+$commentsCount
+        ], "Successfully deleted {$activitiesCount } activities , {$commentsCount} comments ");
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return ApiResponse::error('Failed to delete activities and comments: ' . $e->getMessage());
+    }
+}
 }

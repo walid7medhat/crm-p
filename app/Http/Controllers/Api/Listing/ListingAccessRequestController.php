@@ -443,6 +443,9 @@ public function respond(Request $request, ListingAccessRequest $accessRequest): 
             'listing_id' => $listing->id, 
             'request_type' => 'viewing'
         ])->latest()->first();
+        if($viewingRequest){
+           $viewingRequest=  $this->canRequestAgain($viewingRequest)?null:$viewingRequest;
+        }
         
         $responseData = [
             'unit_number_requested' => !is_null($unitNumberRequest),
@@ -489,6 +492,9 @@ public function respond(Request $request, ListingAccessRequest $accessRequest): 
         }
 
         if ($request->status === 'pending' || $request->status === 'approved') {
+            if($request->status === 'approved' && $request->request_type=='viewing' && $request->review != null){
+                return true;
+            }
             return false;
         }
 

@@ -16,7 +16,7 @@
                 <div class="lead-created-card">
                     <div class="lead-created-card-header">
                         <span class="lead-created-title">Lead Created :</span>
-                        <span class="lead-created-time">{{ dateLabel }}</span>
+                        <span class="lead-created-time">{{ dateLabel }} {{ timeLabel }}</span>
                     </div>
                     <div class="lead-created-card-body">
                         <div class="lead-created-row lead-created-row-main">

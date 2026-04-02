@@ -331,6 +331,7 @@ Route::prefix('leads')->group(function(){
     
       Route::delete('{leadId}/comments/all', [LeadActivityController::class, 'destroyAllComments']);
         Route::delete('{leadId}/activities/all', [LeadActivityController::class, 'destroyAllActivities']);
+        Route::delete('{leadId}/activities_comments/all', [LeadActivityController::class, 'destroyAllActivitieComments']);
         
         Route::post('{leadId}/comments/restore-all', [LeadActivityController::class, 'restoreAllComments']);
         Route::post('{leadId}/activities/restore-all', [LeadActivityController::class, 'restoreAllActivities']);

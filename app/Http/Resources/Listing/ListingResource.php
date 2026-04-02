@@ -215,7 +215,7 @@ $allowedAgentIds = [];
                 ];
             }),
             'drive_link' => $this->drive_link,
-            'is_hot_deal'=>$this->is_hot_deal,
+            'is_hot_deal'=>$this->is_hot_deal =='Yes' && $this->hot_deal_approved_by && $this->hot_deal_approved_at ? $this->is_hot_deal :'No',
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
         ];

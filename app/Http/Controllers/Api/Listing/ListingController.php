@@ -660,6 +660,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
          
 
         // Remove files from data array before updating listing
+         unset($data['is_hot_deal']);
         unset($data['floor_plans']);
         unset($data['floor_plan_names']);
         unset($data['gallery']);

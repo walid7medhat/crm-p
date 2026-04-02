@@ -19,7 +19,7 @@ class ListingGridResource extends JsonResource
 
             'is_active'=>(bool)$this->is_active,
             'is_archived'=>(bool)$this->is_archived,
-            'is_hot_deal'=>$this->is_hot_deal,
+            'is_hot_deal'=>$this->is_hot_deal =='Yes' && $this->hot_deal_approved_by && $this->hot_deal_approved_at ? $this->is_hot_deal :'No',
             'sold_by'=>$this->sold_by,
             'occupancy_status'=>$this->occupancy_status,
              'reference_number'=>$this->reference_number,

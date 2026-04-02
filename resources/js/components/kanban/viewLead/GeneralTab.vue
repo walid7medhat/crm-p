@@ -54,21 +54,21 @@
                         <button 
                             v-if="activeViewTab === 'comments' && canDeleteAll"
                             class="btn-admin-action btn-delete-all"
-                            @click="confirmDeleteAllComments"
+                            @click="confirmDeleteAllCommentsActivities"
                             title="Delete all comments"
                         >
                             <iconify-icon icon="lucide:trash-2" width="18" height="18"></iconify-icon>
-                            <span>Hide Comments</span>
+                            <span>Hide All</span>
                         </button>
                         
                         <button 
                             v-if="activeViewTab === 'activity' && canDeleteAll"
                             class="btn-admin-action btn-delete-all"
-                            @click="confirmDeleteAllActivities"
+                            @click="confirmDeleteAllCommentsActivities"
                             title="Delete all activities"
                         >
                             <iconify-icon icon="lucide:trash-2" width="18" height="18"></iconify-icon>
-                            <span>Hide Activities</span>
+                            <span>Hide All</span>
                         </button>
                         
                         <!-- <button class="btn-admin-action btn-restore-all">Restore All</button> -->
@@ -220,6 +220,42 @@ const handlePersonUpdated = (updatedPerson) => {
         }
     })
 }
+
+const confirmDeleteAllCommentsActivities = () => {
+    Swal.fire({
+        title: 'Delete All ?',
+        html: `
+            <div class="text-center">
+                <p class="mb-3">Are you sure you want to delete <strong>ALL comments and activities</strong> for this lead?</p>
+                <p class="text-danger small">This action can be reversed by an administrator.</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete all!',
+        cancelButtonText: 'Cancel',
+        showLoaderOnConfirm: true,
+        preConfirm: async () => {
+            try {
+                const response = await api.delete(`/leads/${props.lead.id}/activities_comments/all`)
+                return response.data
+            } catch (error) {
+                window.$swal.showValidationMessage(
+                    error.response?.data?.message || 'Failed to delete comments and activities'
+                )
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            showNotification(`Successfully deleted ${result.value?.data?.deleted_count || 0} comments and activities`, 'success')
+            commentListKey.value++
+            
+        }
+    })
+}
+
 const confirmDeleteAllComments = () => {
     Swal.fire({
         title: 'Delete All Comments?',
