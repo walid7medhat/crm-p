@@ -339,7 +339,7 @@ async function fetchMatches() {
     error.value = ''
     try {
         const params = buildApiParams()
-        const res = await api.get('/listings/properties', { params })
+        const res = await api.get('/listings/properties/?active=1', { params })
         const data = res.data?.data
         listings.value = Array.isArray(data) ? data.slice(0, 24) : []
     } catch (e) {

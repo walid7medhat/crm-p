@@ -134,7 +134,14 @@ public function permissions(User $user): JsonResponse
                 ->where('status', '!=', 'draft')
                 ->where('is_archived', false);
         }
-         if ($request->filled('area_id')) {
+        
+        if($request->has('active') ){
+              $query->where('is_active', true)
+                ->where('status', '!=', 'converted')
+                ->where('status', '!=', 'draft')
+                ->where('is_archived', false);
+        }
+         if ($request->has('area_id')) {
                     $areaId = $request->area_id;
                     $area = Area::find($areaId);
                 
@@ -151,35 +158,42 @@ public function permissions(User $user): JsonResponse
                     }
                 }
 
-        if($request->filled('is_archived')) {
+        if($request->has('is_archived')) {
             $query->where('is_archived', $request->boolean('is_archived'));
         }
 
-        if($request->filled('converted')) {
+        if($request->has('converted')) {
             $query->where('status', 'converted');
         }
 
-        if($request->filled('status')) {
+        if($request->has('status')) {
             $query->where('status', $request->status);
         }
-            if($request->filled('completion_status')) {
+            if($request->has('completion_status')) {
                 $completionStatus = $request->completion_status;
                 $query->where('completion_status', $completionStatus);
             }
 
-        if($request->filled('is_active')) {
+        if($request->has('is_active')) {
+            if($request->is_active){
+                $query->where('is_active', true)
+                ->where('status', '!=', 'converted')
+                ->where('status', '!=', 'draft')
+                ->where('is_archived', false);
+            }else{
             $query->where('is_active', $request->boolean('is_active'));
+            }
         }
-           if($request->filled('agent_id')) {
+           if($request->has('agent_id')) {
                 $query->where('agent_id', $request->agent_id);
             }
-             if($request->filled('owner_id')) {
+             if($request->has('owner_id')) {
                 $query->where('owner_id', $request->owner_id);
             }
-              if($request->filled('project_id')) {
+              if($request->has('project_id')) {
                 $query->where('project_id', $request->project_id);
             }
-            if ($request->filled('search')) {
+            if ($request->has('search')) {
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
@@ -211,22 +225,22 @@ public function permissions(User $user): JsonResponse
                 }
             }
 
-            if ($request->filled('number_of_bedrooms')) {
+            if ($request->has('number_of_bedrooms')) {
                 $bedrooms = $request->number_of_bedrooms;
-                $bedrooms == 'Studio' ? 0 : $bedrooms;
+                $bedrooms == 'Studio'  || 'studio' ? 0 : $bedrooms;
                 $query->where('number_of_bedrooms',$bedrooms );
             }
 
-            if ($request->filled('min_price')) {
+            if ($request->has('min_price')) {
                 $query->where('price', '>=', $request->min_price);
             }
-            if ($request->filled('max_price')) {
+            if ($request->has('max_price')) {
                 $query->where('price', '<=', $request->max_price);
             }
-             if ($request->filled('min_size')) {
+             if ($request->has('min_size')) {
                 $query->where('size_sqft', '>=', $request->min_size);
             }
-            if ($request->filled('max_size')) {
+            if ($request->has('max_size')) {
                 $query->where('size_sqft', '<=', $request->max_size);
             }
 

@@ -64,7 +64,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             
             // Property Information
             'interested_in' => $this->interested_in,
-            'bedrooms' => $this->bedrooms==0?'studio':$this->bedrooms,
+            'bedrooms' => $this->bedrooms===0 || $this->bedrooms==='0'?'studio':$this->bedrooms,
             'purpose_buying' => $this->purpose_buying,
             'nationality' => $this->nationality,
             'citizenship_program' => $this->citizenship_program,
