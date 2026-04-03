@@ -13,6 +13,8 @@ class AreaResource extends JsonResource
             'parent_id' => $this->parent_id,
             'parent_name'=>$this->parent?->name,
             'name' => $this->name,
+            'latitude' => $this->latitude !== null ? (float) $this->latitude : null,
+            'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
             'type' => $this->type,
             'added_by' => $this->added_by,
             'created_at' => $this->created_at,

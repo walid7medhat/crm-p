@@ -128,88 +128,133 @@
     <!-- 🟨 Status & Meta -->
                         <div 
                             v-if="['status_lead','lead_type','property_status','available_date','branch','why_lost_lead','lost_reason'].some(f => missingFields.includes(f))" 
-                            class="box-shadow lead_qualification"
+                            class="box-shadow lead_qualification lead-qualification-card"
                         >
-                             <h5 class="section-title">Lead Qualification </h5>
+                             <h5 class="section-title lead-qualification-card__title">Lead Qualification</h5>
 
+                            <div
+                                v-if="missingFields.includes('status_lead') || missingFields.includes('lead_type') || missingFields.includes('property_status')"
+                                class="lead-qualification-trio"
+                            >
                             <!-- Lead Status -->
-                            <div v-if="missingFields.includes('status_lead')" class="form-group mb-3">
-                                <label class="form-label">Quality  Status</label>
-
-                                <v-select
-                                    v-if="targetStageOrder === 4 || (isConversion && targetStageOrder === 6)"
-                                    v-model="formData.lead_status"
-                                    :options="hotWarmLeadOptions"
-                                    :reduce="opt => opt.value"
-                                    label="text"
-                                    placeholder="Not Selected"
-                                    class="custom-v-select searchable-select"
-                                >
-                                <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
+                            <div v-if="missingFields.includes('status_lead')" class="form-group mb-0 lead-qual-field">
+                                <template v-if="targetStageOrder === 4 || (isConversion && targetStageOrder === 6)">
+                                    <label class="form-label lead-qual-field__label">Quality Status</label>
+                                    <v-select
+                                        v-model="formData.lead_status"
+                                        :options="hotWarmLeadOptions"
+                                        :reduce="opt => opt.value"
+                                        label="text"
+                                        placeholder="Select quality"
+                                        :searchable="false"
+                                        :clearable="false"
+                                        class="custom-v-select searchable-select lead-qual-select lead-qual-select--quality lead-qual-select--unified"
+                                    >
+                                        <template #selected-option="option">
+                                            <span class="qs-sel">
+                                                <span
+                                                    class="qs-dd-dot qs-dd-dot--sm"
+                                                    :class="{ 'is-filled': true }"
+                                                    :style="{
+                                                        '--qs-ring': qualityMetaForValue(option.value).ringColor,
+                                                        '--qs-fill': qualityMetaForValue(option.value).fillColor,
+                                                    }"
+                                                    aria-hidden="true"
+                                                />
+                                                <span class="qs-sel-label">{{ qualityMetaForValue(option.value).label }}</span>
+                                            </span>
+                                        </template>
+                                        <template #option="option">
+                                            <div class="qs-opt-wrap">
+                                                <div class="qs-dd-row">
+                                                    <span
+                                                        class="qs-dd-dot"
+                                                        :class="{ 'is-filled': formData.lead_status === option.value }"
+                                                        :style="{
+                                                            '--qs-ring': qualityMetaForValue(option.value).ringColor,
+                                                            '--qs-fill': qualityMetaForValue(option.value).fillColor,
+                                                        }"
+                                                        aria-hidden="true"
+                                                    />
+                                                    <span class="qs-dd-text">
+                                                        <span class="qs-dd-title">{{ qualityMetaForValue(option.value).label }}</span>
+                                                    </span>
+                                                </div>
+                                                <div class="qs-dd-hover-tip" role="tooltip">
+                                                    <iconify-icon icon="lucide:sparkles" class="qs-dd-hover-tip__icon" />
+                                                    {{ qualityMetaForValue(option.value).tooltip }}
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <template #open-indicator="{ attributes }">
+                                            <span v-bind="attributes">
+                                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                            </span>
+                                        </template>
+                                    </v-select>
                                 </template>
-                                </v-select>
 
-                                <v-select
-                                    v-else-if="targetStageOrder === 9"
-                                    v-model="formData.lead_status"
-                                    :options="leadPoolStatusOptions"
-                                    :reduce="opt => opt.value"
-                                    label="text"
-                                    placeholder="Select Status"
-                                    class="custom-v-select searchable-select"
-                                >
-                               <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
-                                </template>
-                                </v-select>
+                                <template v-else>
+                                    <label class="form-label lead-qual-field__label">Lead Status</label>
+                                    <v-select
+                                        v-if="targetStageOrder === 9"
+                                        v-model="formData.lead_status"
+                                        :options="leadPoolStatusOptions"
+                                        :reduce="opt => opt.value"
+                                        label="text"
+                                        placeholder="Select Status"
+                                        class="custom-v-select searchable-select lead-qual-select lead-qual-select--unified"
+                                    >
+                                        <template #open-indicator="{ attributes }">
+                                            <span v-bind="attributes">
+                                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                            </span>
+                                        </template>
+                                    </v-select>
 
-                                <v-select
-                                    v-else-if="targetStageOrder === 10"
-                                    v-model="formData.lead_status"
-                                    :options="unqualifiedStatusOptions"
-                                    :reduce="opt => opt.value"
-                                    label="text"
-                                    placeholder="Select Status"
-                                    class="custom-v-select searchable-select"
-                                >
-                                <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
-                                </template>
-                                </v-select>
+                                    <v-select
+                                        v-else-if="targetStageOrder === 10"
+                                        v-model="formData.lead_status"
+                                        :options="unqualifiedStatusOptions"
+                                        :reduce="opt => opt.value"
+                                        label="text"
+                                        placeholder="Select Status"
+                                        class="custom-v-select searchable-select lead-qual-select lead-qual-select--unified"
+                                    >
+                                        <template #open-indicator="{ attributes }">
+                                            <span v-bind="attributes">
+                                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                            </span>
+                                        </template>
+                                    </v-select>
 
-                                <v-select
-                                    v-else
-                                    v-model="formData.lead_status"
-                                    :options="defaultLeadStatusOptions"
-                                    :reduce="opt => opt.value"
-                                    label="text"
-                                    placeholder="Not Selected"
-                                    class="custom-v-select searchable-select"
-                                >
-                                <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
+                                    <v-select
+                                        v-else
+                                        v-model="formData.lead_status"
+                                        :options="defaultLeadStatusOptions"
+                                        :reduce="opt => opt.value"
+                                        label="text"
+                                        placeholder="Not Selected"
+                                        class="custom-v-select searchable-select lead-qual-select lead-qual-select--unified"
+                                    >
+                                        <template #open-indicator="{ attributes }">
+                                            <span v-bind="attributes">
+                                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                            </span>
+                                        </template>
+                                    </v-select>
                                 </template>
-                                </v-select>
                             </div>
   <!-- Lead Type (Sale/Rent) -->
-                        <div v-if="missingFields.includes('lead_type')" class="form-group mb-3">
-                            <label class="form-label">Lead Type <span class="text-danger">*</span></label>
+                        <div v-if="missingFields.includes('lead_type')" class="form-group mb-0 lead-qual-field">
+                            <label class="form-label lead-qual-field__label">Lead Type <span class="text-danger">*</span></label>
                             <v-select
                                 v-model="formData.lead_type"
                                 :options="leadTypeOptions"
                                 :reduce="opt => opt.value"
                                 label="text"
                                 placeholder="Select Lead Type"
-                                class="custom-v-select searchable-select"
+                                class="custom-v-select searchable-select lead-qual-select lead-qual-select--enhanced lead-qual-select--unified"
                                 @update:model-value="handleLeadTypeChange"
                             >
                                 <template #open-indicator="{ attributes }">
@@ -221,15 +266,15 @@
                         </div>
 
                         <!-- Property Status (Ready/Off Plan/Both) -->
-                        <div v-if="missingFields.includes('property_status')" class="form-group mb-3">
-                            <label class="form-label">Property Status <span class="text-danger">*</span></label>
+                        <div v-if="missingFields.includes('property_status')" class="form-group mb-0 lead-qual-field">
+                            <label class="form-label lead-qual-field__label">Property Status <span class="text-danger">*</span></label>
                             <v-select
                                 v-model="formData.property_status"
                                 :options="propertyStatusOptions"
                                 :reduce="opt => opt.value"
                                 label="text"
                                 placeholder="Select Property Status"
-                                class="custom-v-select searchable-select"
+                                class="custom-v-select searchable-select lead-qual-select lead-qual-select--enhanced lead-qual-select--unified"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -238,6 +283,7 @@
                                 </template>
                             </v-select>
                         </div>
+                            </div>
                             <!-- Available Date -->
                             <div v-if="missingFields.includes('available_date')" class="form-group mb-3">
                                 <label class="form-label">Available Date</label>
@@ -255,30 +301,30 @@
                                     placeholder="Select Branch"
                                     class="custom-v-select searchable-select"
                                 >
-                                <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
-                                </template>
+                                    <template #open-indicator="{ attributes }">
+                                        <span v-bind="attributes">
+                                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                        </span>
+                                    </template>
                                 </v-select>
                             </div>
 
-                            <!-- Lost Reason -->
+                            <!-- Why Lost -->
                             <div v-if="missingFields.includes('why_lost_lead') || missingFields.includes('lost_reason')" class="form-group mb-3">
-                                <label class="form-label">Lost Reason</label>
+                                <label class="form-label">Why Lost</label>
                                 <v-select
                                     v-model="formData.lost_reason"
                                     :options="lostReasonOptions"
                                     :reduce="opt => opt.value"
                                     label="text"
-                                    placeholder="Select Lost Reason"
+                                    placeholder="Select Reason"
                                     class="custom-v-select searchable-select"
                                 >
-                                     <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
-                                </template>
+                                    <template #open-indicator="{ attributes }">
+                                        <span v-bind="attributes">
+                                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                        </span>
+                                    </template>
                                 </v-select>
                             </div>
                         </div>
@@ -515,6 +561,43 @@ const hotWarmLeadOptions = [
     { value: 'warm', text: 'Warm Lead' },
     { value: 'hot', text: 'Hot Lead' }
 ]
+
+/** Section 3: Cold / Warm / Hot radio columns (same values as hotWarmLeadOptions). */
+const qualityTemperatureRadios = [
+    {
+        value: 'cold',
+        label: 'Cold',
+        ringColor: '#38bdf8',
+        fillColor: '#0ea5e9',
+        tooltip: "Cold leads are fresh or haven't been contacted recently.",
+    },
+    {
+        value: 'warm',
+        label: 'Warm',
+        ringColor: '#f59e0b',
+        fillColor: '#d97706',
+        tooltip: 'Warm leads are engaged recently, likely 1-3 months ago.',
+    },
+    {
+        value: 'hot',
+        label: 'Hot',
+        ringColor: '#f43f5e',
+        fillColor: '#e11d48',
+        tooltip: 'Hot leads are very active and ready for follow-up.',
+    },
+]
+
+function qualityMetaForValue(value) {
+    const q = qualityTemperatureRadios.find((o) => o.value === value)
+    return (
+        q || {
+            ringColor: '#94a3b8',
+            fillColor: '#64748b',
+            tooltip: '',
+            label: '',
+        }
+    )
+}
 
 const leadPoolStatusOptions = [
     { value: 'no_answer', text: 'Lead Pool - No Answer' },
@@ -966,7 +1049,9 @@ defineExpose({
     width: min(92vw, 760px);
     max-width: 760px;
     max-height: 92vh;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     border: 1px solid #e8edf3;
     box-shadow: 0 18px 55px rgba(15, 23, 42, 0.18);
     pointer-events: auto !important;
@@ -1019,6 +1104,11 @@ defineExpose({
 .modal-body {
     padding: 1rem 1.25rem;
     background: #fbfcfe;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-footer {
@@ -1185,6 +1275,83 @@ defineExpose({
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px 10px;
+}
+
+.dynamic-form .box-shadow.lead_qualification.lead-qualification-card {
+    background: linear-gradient(165deg, #ffffff 0%, #f8fafc 45%, #f1f5f9 100%);
+    border: 1px solid rgb(226 232 240 / 0.95);
+    border-radius: 14px;
+    padding: 14px 14px 12px;
+    box-shadow:
+        0 1px 0 rgb(255 255 255 / 0.95) inset,
+        0 10px 40px -12px rgb(15 23 42 / 0.12),
+        0 2px 8px rgb(15 23 42 / 0.04);
+}
+
+.dynamic-form .box-shadow.lead_qualification.lead-qualification-card .section-title {
+    color: #0f172a;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-bottom: 6px;
+}
+
+.lead-qualification-card__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px !important;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgb(226 232 240 / 0.85);
+}
+
+.lead-qualification-card__title::before {
+    content: '';
+    width: 4px;
+    height: 16px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+    box-shadow: 0 0 12px rgb(245 158 11 / 0.45);
+}
+
+.lead-qualification-trio {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: stretch;
+    gap: 14px;
+    width: 100%;
+    margin-bottom: 4px;
+    overflow: visible;
+    position: relative;
+    z-index: 1;
+}
+
+.lead-qual-field {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: visible;
+}
+
+.lead-qual-field__label {
+    font-size: 0.68rem !important;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #64748b !important;
+    margin-bottom: 0 !important;
+}
+
+.lead-qual-field :deep(.v-select) {
+    width: 100%;
+}
+
+@media (max-width: 900px) {
+    .lead-qualification-trio {
+        flex-direction: column;
+        gap: 16px;
+    }
 }
 .dynamic-form .box-shadow .form-group {
     margin-bottom: 0 !important;
@@ -1450,5 +1617,276 @@ defineExpose({
 
 .check-icon {
     font-size: 12px;
+}
+
+/* Quality Status — compact v-select dropdown (Cold / Warm / Hot) */
+.qs-sel {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.qs-sel-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #0f172a;
+}
+
+.qs-dd-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    text-align: left;
+    width: 100%;
+}
+
+.qs-dd-dot {
+    width: 14px;
+    height: 14px;
+    margin-top: 1px;
+    border-radius: 50%;
+    border: 2px solid var(--qs-ring, #94a3b8);
+    background: transparent;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.qs-dd-dot--sm {
+    width: 12px;
+    height: 12px;
+    margin-top: 0;
+    border-width: 2px;
+}
+
+.qs-dd-dot.is-filled {
+    background: var(--qs-fill, #64748b);
+    border-color: var(--qs-fill, #64748b);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--qs-fill, #64748b) 22%, transparent);
+}
+
+.qs-dd-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.qs-dd-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #0f172a;
+    line-height: 1.25;
+}
+
+.qs-opt-wrap {
+    position: relative;
+    width: 100%;
+    min-height: 100%;
+    overflow: visible;
+}
+
+/* Quality tooltip floats outside the list: to the right (desktop) or above (narrow) */
+.qs-dd-hover-tip {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%) translateX(-6px);
+    width: min(280px, calc(100vw - 48px));
+    padding: 11px 14px;
+    font-size: 0.72rem;
+    line-height: 1.55;
+    color: #f8fafc;
+    text-align: left;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgb(255 255 255 / 0.12);
+    border-radius: 10px;
+    box-shadow:
+        0 14px 36px rgb(0 0 0 / 0.38),
+        0 0 0 1px rgb(255 255 255 / 0.06) inset;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease,
+        visibility 0.2s;
+    z-index: 10060;
+    filter: drop-shadow(0 6px 16px rgb(0 0 0 / 0.2));
+}
+
+.qs-dd-hover-tip::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    margin-top: -6px;
+    border: 6px solid transparent;
+    border-right-color: #1e293b;
+}
+
+.qs-dd-hover-tip__icon {
+    display: inline-block;
+    vertical-align: -0.12em;
+    margin-right: 6px;
+    font-size: 0.8rem;
+    color: #5eead4;
+}
+
+.qs-opt-wrap:hover .qs-dd-hover-tip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%) translateX(0);
+}
+
+@media (max-width: 640px) {
+    .qs-dd-hover-tip {
+        left: 0;
+        right: 0;
+        top: auto;
+        bottom: calc(100% + 8px);
+        width: 100%;
+        transform: translateY(4px);
+    }
+
+    .qs-dd-hover-tip::before {
+        right: auto;
+        left: 50%;
+        top: 100%;
+        margin-top: 0;
+        margin-left: -6px;
+        border: 6px solid transparent;
+        border-right-color: transparent;
+        border-top-color: #1e293b;
+    }
+
+    .qs-opt-wrap:hover .qs-dd-hover-tip {
+        transform: translateY(0);
+    }
+}
+
+/* Unified trio selects — equal height, brand accent */
+:deep(.lead-qual-select--unified .vs__dropdown-toggle) {
+    min-height: 48px;
+    height: 48px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow:
+        0 1px 0 rgb(255 255 255 / 0.9) inset,
+        0 2px 8px rgb(15 23 42 / 0.06);
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+:deep(.lead-qual-select--unified .vs__selected-options) {
+    min-height: 44px;
+    align-items: center;
+}
+
+:deep(.lead-qual-select--unified .vs__selected),
+:deep(.lead-qual-select--unified .vs__search) {
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin: 0;
+    padding: 0;
+    color: #0f172a;
+}
+
+:deep(.lead-qual-select--unified.vs--open .vs__dropdown-toggle) {
+    border-color: #f59e0b;
+    box-shadow:
+        0 0 0 3px rgb(245 158 11 / 0.22),
+        0 2px 12px rgb(245 158 11 / 0.12);
+}
+
+:deep(.lead-qual-select--unified .vs__open-indicator-icon) {
+    font-size: 15px;
+    color: #94a3b8;
+}
+
+:deep(.lead-qual-select--quality) {
+    overflow: visible !important;
+}
+
+:deep(.lead-qual-select--quality .vs__dropdown-menu) {
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow:
+        0 16px 40px rgb(15 23 42 / 0.16),
+        0 0 0 1px rgb(255 255 255 / 0.8) inset;
+    z-index: 3100;
+    overflow: visible !important;
+    min-width: 100%;
+}
+
+:deep(.lead-qual-select--quality .vs__dropdown-option) {
+    padding: 0 !important;
+    border-radius: 10px;
+    margin-bottom: 4px;
+    overflow: visible !important;
+}
+
+:deep(.lead-qual-select--quality .vs__dropdown-option:last-child) {
+    margin-bottom: 0;
+}
+
+:deep(.lead-qual-select--quality .vs__dropdown-option--highlight),
+:deep(.lead-qual-select--quality .vs__dropdown-option--selected) {
+    background: transparent !important;
+}
+
+:deep(.lead-qual-select--quality .vs__dropdown-option--highlight .qs-dd-row) {
+    background: #fffbeb !important;
+    box-shadow: inset 0 0 0 1px rgb(245 158 11 / 0.35);
+}
+
+:deep(.lead-qual-select--quality .vs__dropdown-option--selected .qs-dd-row) {
+    background: linear-gradient(90deg, rgb(255 251 235 / 0.95) 0%, #ffffff 100%) !important;
+    box-shadow: inset 3px 0 0 0 #f59e0b;
+}
+
+:deep(.lead-qual-select--quality .qs-dd-row) {
+    padding: 10px 10px;
+    border-radius: 10px;
+    transition: background 0.15s ease;
+}
+
+:deep(.lead-qual-select--enhanced .vs__dropdown-menu) {
+    border-radius: 12px;
+    padding: 6px;
+    z-index: 3100;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 14px 36px rgb(15 23 42 / 0.14);
+}
+
+:deep(.lead-qual-select--enhanced .vs__dropdown-option) {
+    border-radius: 10px;
+    padding: 9px 12px !important;
+    font-size: 0.78rem !important;
+    font-weight: 600;
+}
+
+:deep(.lead-qual-select--enhanced .vs__dropdown-option--highlight) {
+    background: #fffbeb !important;
+    color: #0f172a !important;
+}
+
+:deep(.lead-qual-select--enhanced .vs__dropdown-option--selected) {
+    background: linear-gradient(90deg, #fff7ed 0%, #ffffff 100%) !important;
+    color: #0f172a !important;
+    box-shadow: inset 3px 0 0 0 #f59e0b;
 }
 </style>

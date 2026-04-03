@@ -10,6 +10,7 @@ import EditPropertyForm from './pages/listings/edit-form.vue'
 import MyListing from './pages/listings/my-listing.vue'
 import Archive from './pages/listings/archive.vue'
 import NotifyMe from './pages/listings/notify-me.vue'
+import PropertyMapPage from './pages/listings/property-map.vue'
 
 // Table
 import BasicTable from './pages/table/table-basic.vue'
@@ -115,6 +116,7 @@ const routes = [
   { path: '/archive', component: Archive, meta: { requiresAuth: true } },
   { path: '/alllisting', component: AllLsting, meta: { requiresAuth: true } },
   { path: '/notify-me', component: NotifyMe, meta: { requiresAuth: true } },
+  { path: '/properties-map', component: PropertyMapPage, meta: { requiresAuth: true } },
   { path: '/property-details/:id', name: 'property.show', component: PropertyShow, meta: { requiresAuth: true } },
   { path: '/properties/:id/edit', name: 'property.edit', component: EditPropertyForm, meta: { requiresAuth: true } },
 

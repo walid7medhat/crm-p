@@ -27,64 +27,53 @@ class AreaController extends Controller
     
     public function index(Request $request): JsonResponse
     {
+        $cacheKey = 'areas_'.md5(serialize($request->all()));
+
+        $resolver = function () use ($request) {
+            $query = Area::withCount('child');
+
+            if ($request->has('type')) {
+                $query->where('type', $request->type);
+            }
+
+            if ($request->has('parent_id')) {
+                $query->where('parent_id', $request->parent_id);
+            }
+
+            if ($request->has('with_parent')) {
+                $query->with('parent');
+            }
+
+            if ($request->has('with_child')) {
+                $query->with('child');
+            }
+
+            if ($request->has('has_listings')) {
+                $query->where(function ($subQ) {
+                    $subQ->whereHas('properties_complete')
+                        ->orWhereHas('child.properties_complete')
+                        ->orWhereHas('child.child.properties_complete')
+                        ->orWhereHas('child.child.child.properties_complete');
+                });
+            }
+
+            return $query->get();
+        };
+
         try {
-            $cacheKey = 'areas_' . md5(serialize($request->all()));
-            
-            $areas = Cache::tags(['areas'])->remember($cacheKey, 3600, function () use ($request) {
-                $query = Area::withCount('child');
-                
-                // Filter by type if provided
-                if ($request->has('type')) {
-                    $query->where('type', $request->type);
-                }
-                
-                // Filter by parent_id if provided (null for root areas)
-                if ($request->has('parent_id')) {
-                    $query->where('parent_id', $request->parent_id);
-                }
-                
-                // Load relationships based on query parameters
-                if ($request->has('with_parent')) {
-                    $query->with('parent');
-                }
-                
-                if ($request->has('with_child')) {
-                    $query->with('child');
-                }
-                
-                if($request->has('has_listings')){
-                    $query->where(function ($subQ) {
-                        $subQ->whereHas('properties_complete')
-                            ->orWhereHas('child.properties_complete')
-                            ->orWhereHas('child.child.properties_complete')
-                            ->orWhereHas('child.child.child.properties_complete');
-                    });
-                }
-                
-                return $query->get();
-            });
-            
+            $areas = Cache::supportsTags()
+                ? Cache::tags(['areas'])->remember($cacheKey, 3600, $resolver)
+                : Cache::remember($cacheKey, 3600, $resolver);
+
             return ApiResponse::success(
                 AreaResource::collection($areas),
                 'Areas retrieved successfully'
             );
         } catch (\Exception $e) {
-            Log::error('Error fetching areas: ' . $e->getMessage());
-            
-            $query = Area::withCount('child');
-            
-            if ($request->has('type')) {
-                $query->where('type', $request->type);
-            }
-            
-            if ($request->has('parent_id')) {
-                $query->where('parent_id', $request->parent_id);
-            }
-            
-            $areas = $query->get();
-            
+            Log::error('Error fetching areas: '.$e->getMessage());
+
             return ApiResponse::success(
-                AreaResource::collection($areas),
+                AreaResource::collection($resolver()),
                 'Areas retrieved successfully (cache fallback)'
             );
         }
@@ -101,7 +90,9 @@ class AreaController extends Controller
                 'name' => $request->name,
                 'type' => $request->type,
                 'parent_id' => $request->parent_id,
-                'added_by' => auth()->user()->id
+                'added_by' => auth()->user()->id,
+                'latitude' => $request->input('latitude'),
+                'longitude' => $request->input('longitude'),
             ]);
 
         // dd($request->boolean('create_project'),$request->input());
@@ -174,11 +165,18 @@ class AreaController extends Controller
             
             DB::beginTransaction();
         
-            $area->update([
+            $data = [
                 'name' => $request->name,
                 'type' => $request->type,
                 'parent_id' => $request->parent_id,
-            ]);
+            ];
+            if ($request->exists('latitude')) {
+                $data['latitude'] = $request->input('latitude');
+            }
+            if ($request->exists('longitude')) {
+                $data['longitude'] = $request->input('longitude');
+            }
+            $area->update($data);
             $project=Project::where('area_id',$area->id)->first();
             if($project){
             $project->update(['title'=>$request->name]);

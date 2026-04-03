@@ -30,6 +30,8 @@ use App\Jobs\CheckSearchAlerts;
 use App\Models\PropertyOffer;
 use App\Traits\HotDealNotifiable;
 use App\Models\HotDealRequest;
+use App\Services\ListingMapCoordinateResolver;
+use Illuminate\Support\Facades\Log;
 
 class ListingController extends Controller
 {
@@ -98,6 +100,169 @@ public function permissions(User $user): JsonResponse
         );
     } catch (\Exception $e) {
         return ApiResponse::error('Failed to retrieve user permissions: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Property map: LEFT JOIN listing area + parent/grandparent areas + project area; resolve lat/lng with geocode/default fallback.
+ * Pins use the listing area’s coordinates when set; otherwise the parent area’s, then grandparent’s, then config mapping / project / cache.
+ * Does not filter by map bounds — the client loads all pins for the current filters (paginated).
+ *
+ * Example item:
+ * {
+ *   "id": 1,
+ *   "title": "Unit 12",
+ *   "latitude": 24.49,
+ *   "longitude": 54.61,
+ *   "coordinate_source": "listing_parent_area",
+ *   "map_area_id": 120,
+ *   "area_join_name": "Yas Island",
+ *   "area": { "id": 120, "name": "Yas Island", "latitude": 24.49, "longitude": 54.61 },
+ *   ...
+ * }
+ */
+public function map(Request $request, ListingMapCoordinateResolver $coordinateResolver): JsonResponse
+{
+    try {
+        $validated = $request->validate([
+            'min_lat' => 'nullable|numeric|between:-90,90',
+            'max_lat' => 'nullable|numeric|between:-90,90',
+            'min_lng' => 'nullable|numeric|between:-180,180',
+            'max_lng' => 'nullable|numeric|between:-180,180',
+            'area_id' => 'nullable|integer|exists:areas,id',
+            'property_type_id' => 'nullable|integer|exists:property_types,id',
+            'listing_status' => 'nullable|string|max:50',
+            'min_price' => 'nullable|numeric|min:0',
+            'max_price' => 'nullable|numeric|min:0',
+            'per_page' => 'nullable|integer|min:1|max:3000',
+        ]);
+
+        $maxGeocode = (int) config('services.nominatim.map_max_geocode_fallback_per_request', 40);
+
+        $query = Listing::query()
+            ->leftJoin('areas as listing_area', 'listings.area_id', '=', 'listing_area.id')
+            ->leftJoin('areas as listing_parent_area', 'listing_area.parent_id', '=', 'listing_parent_area.id')
+            ->leftJoin('areas as listing_grandparent_area', 'listing_parent_area.parent_id', '=', 'listing_grandparent_area.id')
+            ->leftJoin('projects', 'listings.project_id', '=', 'projects.id')
+            ->leftJoin('areas as project_area', 'projects.area_id', '=', 'project_area.id')
+            ->select('listings.*')
+            ->addSelect([
+                'listing_area.id as listing_area_id',
+                'listing_area.name as listing_area_name',
+                'listing_area.latitude as listing_area_latitude',
+                'listing_area.longitude as listing_area_longitude',
+                'listing_parent_area.id as listing_parent_area_id',
+                'listing_parent_area.name as listing_parent_area_name',
+                'listing_parent_area.latitude as listing_parent_area_latitude',
+                'listing_parent_area.longitude as listing_parent_area_longitude',
+                'listing_grandparent_area.id as listing_grandparent_area_id',
+                'listing_grandparent_area.name as listing_grandparent_area_name',
+                'listing_grandparent_area.latitude as listing_grandparent_area_latitude',
+                'listing_grandparent_area.longitude as listing_grandparent_area_longitude',
+                'project_area.id as project_area_id',
+                'project_area.name as project_area_name',
+                'project_area.latitude as project_area_latitude',
+                'project_area.longitude as project_area_longitude',
+                'projects.title as project_join_title',
+            ])
+            ->where(function ($q) {
+                $q->where('listings.is_active', true)
+                    ->orWhereNull('listings.is_active');
+            })
+            ->where('listings.status', '!=', 'draft')
+            ->where(function ($q) {
+                $q->where('listings.is_archived', false)
+                    ->orWhereNull('listings.is_archived');
+            });
+
+        if (isset($validated['property_type_id'])) {
+            $query->where('listings.property_type_id', $validated['property_type_id']);
+        }
+
+        if (isset($validated['listing_status'])) {
+            $query->where('listings.listing_status', $validated['listing_status']);
+        }
+
+        if (isset($validated['min_price'])) {
+            $query->where('listings.price', '>=', $validated['min_price']);
+        }
+
+        if (isset($validated['max_price'])) {
+            $query->where('listings.price', '<=', $validated['max_price']);
+        }
+
+        if (isset($validated['area_id'])) {
+            $area = Area::find($validated['area_id']);
+            if ($area) {
+                $childAreaIds = $area->getChildIdsAttribute();
+                $allAreaIds = array_values(array_unique(array_merge([(int) $area->id], $childAreaIds)));
+
+                $query->where(function ($q) use ($allAreaIds) {
+                    $q->whereIn('listings.area_id', $allAreaIds)
+                        ->orWhereIn('projects.area_id', $allAreaIds);
+                });
+            }
+        }
+
+        $perPage = (int) ($validated['per_page'] ?? 2500);
+        $paginator = $query->with([
+            'propertyType:id,name',
+            'project:id,title,area_id',
+        ])
+            ->orderBy('listings.id')
+            ->paginate($perPage);
+
+        $payload = $paginator->getCollection()->map(function (Listing $listing) use ($coordinateResolver, $maxGeocode) {
+            $resolved = $coordinateResolver->resolve($listing, $maxGeocode);
+
+            $lat = $resolved['latitude'];
+            $lng = $resolved['longitude'];
+            $resolvedAreaId = $resolved['map_area_id'];
+            $resolvedName = $resolved['area_join_name'];
+
+            $fallbackTitle = $listing->project_join_title ?? $listing->project?->title;
+            if ($fallbackTitle === null || $fallbackTitle === '') {
+                $fallbackTitle = ($resolvedName !== '') ? $resolvedName : 'Property';
+            }
+
+            return [
+                'id' => $listing->id,
+                'title' => $listing->title ?: $fallbackTitle,
+                'latitude' => $lat,
+                'longitude' => $lng,
+                'coordinate_source' => $resolved['coordinate_source'],
+                'map_area_id' => $resolvedAreaId,
+                'area_join_name' => $resolvedName,
+                'area' => [
+                    'id' => $resolvedAreaId,
+                    'name' => $resolvedName,
+                    'latitude' => $lat,
+                    'longitude' => $lng,
+                ],
+                'price' => $listing->price,
+                'type' => $listing->propertyType?->name,
+                'listing_status' => $listing->listing_status,
+                'project_name' => $listing->project_join_title ?? $listing->project?->title,
+                'area_name' => $resolvedName,
+                'hero_image' => $listing->hero_image_path ? asset('storage/' . $listing->hero_image_path) : null,
+            ];
+        });
+
+        return ApiResponse::success($payload, 'Property map data retrieved successfully', 200, [
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'per_page' => $paginator->perPage(),
+            'total' => $paginator->total(),
+            'map_geocode_fallback_limit' => $maxGeocode,
+        ]);
+    } catch (\Throwable $e) {
+        Log::error('ListingController::map failed', [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ]);
+
+        return ApiResponse::error('Failed to retrieve property map data: ' . $e->getMessage(), 422);
     }
 }
 

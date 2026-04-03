@@ -28,6 +28,8 @@
         "html2pdf.js": "^0.12.1",
         "jsvectormap": "^1.7.0",
         "laravel-echo": "^1.15.0",
+        "leaflet": "^1.9.4",
+        "leaflet.markercluster": "^1.5.3",
         "pusher-js": "^8.4.0",
         "quill": "^2.0.3",
         "sweetalert2": "^11.26.3",

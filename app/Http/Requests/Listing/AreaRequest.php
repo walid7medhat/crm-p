@@ -17,7 +17,9 @@ class AreaRequest extends FormRequest
             'parent_id' => 'nullable|exists:areas,id',
             'name' => 'required|string|max:255',
             'type' => 'required|string|max:255',
-             'create_project' => 'sometimes|boolean',
+            'create_project' => 'sometimes|boolean',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ];
     }
 }
