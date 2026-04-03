@@ -1889,4 +1889,10 @@ defineExpose({
     color: #0f172a !important;
     box-shadow: inset 3px 0 0 0 #f59e0b;
 }
+
+</style>
+<style>
+    .vs__search, .vs__search:focus{
+    z-index:0 !important;
+}
 </style>
