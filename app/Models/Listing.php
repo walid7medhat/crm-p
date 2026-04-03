@@ -17,6 +17,8 @@ class Listing extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'latitude' => 'decimal:7',
+        'longitude' => 'decimal:7',
         'mortgage_amount' => 'decimal:2',
         'size_sqft' => 'integer',
         'size_sqmt' => 'integer',

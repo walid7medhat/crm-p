@@ -284,7 +284,7 @@
                 <template v-if="form.occupancyStatus === 'Rented' && form.completionStatus !== 'Under Construction'">
                   <div class="col-md-4">
                     <label class="form-label">Rent Expiry Date</label>
-                    <input v-model="form.rentExpiryDate" type="date" class="form-control" placeholder="Enter Rent Expiry Date" :min="minRentExpiryDate" />
+                    <input v-model="form.rentExpiryDate" type="date" class="form-control" placeholder="Enter Rent Expiry Date" />
                   </div>
                   <div class="col-md-4">
                     <label class="form-label">Rent Amount</label>
@@ -2670,15 +2670,6 @@ const convertSqftToSqm = () => {
     form.value.size_sqmt = "";
   }
 };
-
-/** Minimum date for rent expiry (today, local) – no backdated entries */
-const minRentExpiryDate = computed(() => {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-});
 
 const bedroomOptions = [
   { label: "Studio", value: 0 }, { label: "1", value: 1 }, { label: "2", value: 2 }, { label: "3", value: 3 },

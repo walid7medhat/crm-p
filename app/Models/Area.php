@@ -9,7 +9,12 @@ class Area extends Model
 {
     //
     use HasFactory;
-    protected $guarded=[];
+    protected $guarded = [];
+
+    protected $casts = [
+        'latitude' => 'decimal:7',
+        'longitude' => 'decimal:7',
+    ];
     protected $appends = ['title','area_title'];
        public function addedBy()
     {
@@ -119,6 +124,30 @@ public function getFullHierarchyAttribute()
     
     return $hierarchy->reverse()->values();
 }
+    /**
+     * Nearest parent with type "city" (e.g. Abu Dhabi, Dubai) for geocoding context.
+     */
+    public function parentCityName(): ?string
+    {
+        $this->loadMissing('parent.parent.parent.parent');
+
+        if ($this->type === 'city') {
+            return $this->name;
+        }
+
+        $p = $this->parent;
+        $depth = 0;
+        while ($p && $depth < 12) {
+            if (($p->type ?? '') === 'city') {
+                return $p->name;
+            }
+            $p = $p->parent;
+            $depth++;
+        }
+
+        return null;
+    }
+
  public function properties_complete(){
         return $this->hasMany(Listing::Class,'area_id');
     }
