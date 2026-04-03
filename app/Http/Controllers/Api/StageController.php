@@ -332,6 +332,35 @@ class StageController extends Controller
                         $q->whereIn('responsible_person_id', $teamMemberIds);
                     }
                 }
+                if ($request->filled('lead_type')) {
+                    $q->where('lead_type', $request->lead_type);
+                }
+                
+                // Filter by Property Status (ready/off_plan/both)
+                if ($request->filled('property_status')) {
+                    $q->where('property_status', $request->property_status);
+                }
+                
+                // Filter by Budget From (minimum budget)
+                if ($request->filled('budget_from')) {
+                    $q->where(function($query) use ($request) {
+                        $query->where('budget_from', '>=', $request->budget_from)
+                              ->orWhere('budget', '>=', $request->budget_from);
+                    });
+                }
+                
+                // Filter by Budget To (maximum budget)
+                if ($request->filled('budget_to')) {
+                    $q->where(function($query) use ($request) {
+                        $query->where('budget_to', '<=', $request->budget_to)
+                              ->orWhere('budget', '<=', $request->budget_to);
+                    });
+                }
+                
+                // Filter by Property Type ID
+                if ($request->filled('property_type_id')) {
+                    $q->where('property_type_id', $request->property_type_id);
+                }
                 if ($request->filled('search')) {
                     $search = $request->search;
                     $q->where(function ($s) use ($search) {
@@ -344,11 +373,18 @@ class StageController extends Controller
                           ->orWhere('bedrooms', 'like', "%{$search}%")
                           ->orWhere('work_phone_2', 'like', "%{$search}%")
                           ->orWhere('lead_source', 'like', "%{$search}%")
+                          ->orWhere('lead_type', 'like', "%{$search}%")
+                          ->orWhere('property_status', 'like', "%{$search}%")
+                          ->orWhere('budget_from', 'like', "%{$search}%")
+                          ->orWhere('budget_to', 'like', "%{$search}%")
                           ->orWhere('source_information', 'like', "%{$search}%")
                           ->orWhere('budget', 'like', "%{$search}%")
                           ->orWhereHas('responsiblePerson', function ($r) use ($search) {
                               $r->where('name', 'like', "%{$search}%");
                           })
+                           ->orWhereHas('propertyType', function ($pt) use ($search) { 
+                                  $pt->where('name', 'like', "%{$search}%");
+                              })
                           ->orWhereHas('stage', function ($st) use ($search) {
                               $st->where('name', 'like', "%{$search}%");
                           })
@@ -550,30 +586,67 @@ class StageController extends Controller
                     $leadsQuery->whereIn('responsible_person_id', $teamMemberIds);
                 }
             }
-            if ($request->filled('search')) {
-                $search = $request->search;
-                $leadsQuery->where(function ($s) use ($search) {
-                    $s->where('lead_name', 'like', "%{$search}%")
-                      ->orWhere('lead_number', 'like', "%{$search}%")
-                      ->orWhere('first_name', 'like', "%{$search}%")
-                      ->orWhere('last_name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('work_phone', 'like', "%{$search}%")
-                      ->orWhere('bedrooms', 'like', "%{$search}%")
-                      ->orWhere('work_phone_2', 'like', "%{$search}%")
-                      ->orWhere('lead_source', 'like', "%{$search}%")
-                      ->orWhere('source_information', 'like', "%{$search}%")
-                      ->orWhere('budget', 'like', "%{$search}%")
-                      ->orWhereHas('responsiblePerson', function ($r) use ($search) {
-                          $r->where('name', 'like', "%{$search}%");
-                      })
-                      ->orWhereHas('stage', function ($st) use ($search) {
-                          $st->where('name', 'like', "%{$search}%");
-                      })->orWhereHas('integration', function ($st) use ($search) {
+           if ($request->filled('lead_type')) {
+                    $leadsQuery->where('lead_type', $request->lead_type);
+                }
+                
+                // Filter by Property Status (ready/off_plan/both)
+                if ($request->filled('property_status')) {
+                    $leadsQuery->where('property_status', $request->property_status);
+                }
+                
+                // Filter by Budget From (minimum budget)
+                if ($request->filled('budget_from')) {
+                    $leadsQuery->where(function($query) use ($request) {
+                        $query->where('budget_from', '>=', $request->budget_from)
+                              ->orWhere('budget', '>=', $request->budget_from);
+                    });
+                }
+                
+                // Filter by Budget To (maximum budget)
+                if ($request->filled('budget_to')) {
+                    $leadsQuery->where(function($query) use ($request) {
+                        $query->where('budget_to', '<=', $request->budget_to)
+                              ->orWhere('budget', '<=', $request->budget_to);
+                    });
+                }
+                
+                // Filter by Property Type ID
+                if ($request->filled('property_type_id')) {
+                    $leadsQuery->where('property_type_id', $request->property_type_id);
+                }
+                if ($request->filled('search')) {
+                    $search = $request->search;
+                    $leadsQuery->where(function ($s) use ($search) {
+                        $s->where('lead_name', 'like', "%{$search}%")
+                          ->orWhere('lead_number', 'like', "%{$search}%")
+                          ->orWhere('first_name', 'like', "%{$search}%")
+                          ->orWhere('last_name', 'like', "%{$search}%")
+                          ->orWhere('email', 'like', "%{$search}%")
+                          ->orWhere('work_phone', 'like', "%{$search}%")
+                          ->orWhere('bedrooms', 'like', "%{$search}%")
+                          ->orWhere('work_phone_2', 'like', "%{$search}%")
+                          ->orWhere('lead_source', 'like', "%{$search}%")
+                          ->orWhere('lead_type', 'like', "%{$search}%")
+                          ->orWhere('property_status', 'like', "%{$search}%")
+                          ->orWhere('budget_from', 'like', "%{$search}%")
+                          ->orWhere('budget_to', 'like', "%{$search}%")
+                          ->orWhere('source_information', 'like', "%{$search}%")
+                          ->orWhere('budget', 'like', "%{$search}%")
+                          ->orWhereHas('responsiblePerson', function ($r) use ($search) {
+                              $r->where('name', 'like', "%{$search}%");
+                          })
+                           ->orWhereHas('propertyType', function ($pt) use ($search) { 
+                                  $pt->where('name', 'like', "%{$search}%");
+                              })
+                          ->orWhereHas('stage', function ($st) use ($search) {
+                              $st->where('name', 'like', "%{$search}%");
+                          })
+                          ->orWhereHas('integration', function ($st) use ($search) {
                               $st->where('track_keyword', 'like', "%{$search}%");
                           });
-                });
-            }
+                    });
+                }
 
             // ================= pagination =================
             $paginatedLeads = $leadsQuery
@@ -726,34 +799,59 @@ public function getTeamsWithLeads(Request $request): JsonResponse
         return ApiResponse::error($e->getMessage());
     }
 }
-public function getLeadBranchSource()
+
+
+private function getBranchIds()
 {
-    $branches = User::role('admin')
+    $query = User::role('admin')
         ->whereHas('parent', function ($q) {
             $q->whereNull('parent_id');
-        })        
-        ->select('name', 'id')
-        ->get();
+        });
+
+    if (!auth()->user()->hasRole('super_admin')) {
+        $query->where('id', auth()->user()->admin_parent?->id);
+    }
+
+    return $query->pluck('id')->toArray();
+}
+public function getLeadBranchSource()
+{
+    $query = User::role('admin')
+        ->whereHas('parent', function ($q) {
+            $q->whereNull('parent_id');
+        });
+
+    if (!auth()->user()->hasRole('super_admin')) {
+        $query->where('id', auth()->user()->admin_parent?->id);
+    }
+
+    $branches = $query->select('id', 'name')->get();
 
     return ApiResponse::success($branches, 'Lead Branches');
 }
-
 public function getOffices()
 {
-      $branches = User::role('admin')
-        ->whereHas('parent', function ($q) {
-            $q->whereNull('parent_id');
-        })        
-        ->select('name', 'id')
-        ->pluck('id')->toArray();
-    // Get users with role 'admin' who have a parent_id (directly under a branch)
+    $branches = $this->getBranchIds();
+
     $offices = User::role('admin')
         ->whereNotNull('parent_id')
-        ->with('parent') // to get the branch info if needed
+        ->whereIn('parent_id', $branches)
+        ->with('parent')
         ->select('id', 'name', 'parent_id')
-        ->whereIn('parent_id',$branches)
-        ->get();
-    
+        ->get()
+        ->map(function ($office) {
+            return [
+                'id' => $office->id,
+                'name' => $office->name,
+                'parent_id' => $office->parent_id,
+                'admin_parent_name' => $office->parent?->name ?? $office->name,
+                'parent' => $office->parent ? [
+                    'id' => $office->parent->id,
+                    'name' => $office->parent->name
+                ] : null
+            ];
+        });
+
     return ApiResponse::success($offices, 'Offices retrieved successfully');
 }
 

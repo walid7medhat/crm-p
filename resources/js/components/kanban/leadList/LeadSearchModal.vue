@@ -354,7 +354,7 @@ const emit = defineEmits(['update:modelValue', 'search'])
 const show = ref(props.modelValue)
 const showFilterSettings = ref(false)
 const showDateModal = ref(false)
-const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'work_phone', 'responsible_person', 'lead_branch_source','office', 'stage', 'email', 'bedrooms','source','team'])
+const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'work_phone', 'responsible_person', 'lead_branch_source','office', 'stage', 'email','source','team'])
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
 const teamOptions = ref([{ value: null, text: 'Select Team' }])
 const officeOptions = ref([{ value: null, text: 'Select Office' }])
@@ -462,6 +462,11 @@ const queryToFormKeys = {
     source_website: 'sourceWebsite',
     team_id: 'team',
     office_branch: 'office',
+    lead_type: 'leadType',
+    property_status: 'propertyStatus',
+    budget_from: 'budgetFrom',
+    budget_to: 'budgetTo',
+     property_type_id: 'propertyType'
 }
 
 function syncFormFromQuery(query) {
@@ -487,7 +492,12 @@ function syncFormFromQuery(query) {
         leadName: '',
         sourceWebsite: '',
         team: '',
-        office: []
+        office: [],
+        leadType: '',
+        propertyStatus: '',
+        budgetFrom: '',
+        budgetTo: '',
+         propertyType: ''
     }
     Object.keys(queryToFormKeys).forEach(qKey => {
         const formKey = queryToFormKeys[qKey]
@@ -559,37 +569,25 @@ const detectCityKeyFromOffice = (office) => {
 }
 
 const cityBranchGroups = computed(() => {
-    const options = (officeOptions.value || []).filter(o => o && o.value != null)
+    const options = (officeOptions.value || [])
+        .filter(o => o && o.value != null)
+
     const groups = {
-        dubai: { id: 'dubai', label: 'Dubai', children: [] },
-        'abu-dhabi': { id: 'abu-dhabi', label: 'Abu Dhabi', children: [] },
+        dubai: { label: 'Dubai', options: [] },
+        'abu-dhabi': { label: 'Abu Dhabi', options: [] },
     }
 
     options.forEach((office) => {
         const cityKey = office.cityKey || detectCityKeyFromOffice(office.raw || office)
-        if (cityKey === 'dubai') groups.dubai.children.push(office)
-        else if (cityKey === 'abu-dhabi') groups['abu-dhabi'].children.push(office)
+
+        if (cityKey === 'dubai') groups.dubai.options.push(office)
+        else if (cityKey === 'abu-dhabi') groups['abu-dhabi'].options.push(office)
     })
 
-    return Object.values(groups)
+    return Object.values(groups).filter(group => group.options.length > 0)
 })
 
-const sidebarPills = computed(() => {
-    const base = [
-        { id: 'closed-leads', label: 'Converted Leads', type: 'default' },
-        { id: 'leads-in-progress', label: 'Leads In Progress', type: 'default' },
-        { id: 'my-leads', label: 'My Leads', type: 'default' },
-    ]
 
-    const cityPills = cityBranchGroups.value.map(group => ({
-        id: group.id,
-        label: group.label,
-        type: 'city',
-        children: group.children,
-    }))
-
-    return [...base, ...cityPills]
-})
 
 const activeCityPill = computed(() => {
     return sidebarPills.value.find(p => p.id === activePill.value && p.type === 'city') || null
@@ -613,7 +611,12 @@ const form = ref({
     createdFrom: '',    
     createdTo: '',  
     team: '',
-    office: []
+    office: [],
+    leadType: '',
+    propertyStatus: '',
+    budgetFrom: '',
+    budgetTo: '',
+     propertyType: ''
 })
 
 const responsiblePersons = ref([])
@@ -706,7 +709,19 @@ const datePresets = [
     { value: 'last_year', label: 'Last Year' },
     { value: 'custom_date', label: 'Custom Date' },
 ]
+const leadTypeOptions = [
+    { value: null, text: 'Select Lead Type' },
+    { value: 'sale', text: 'Sale' },
+    { value: 'rent', text: 'Rent' }
+]
 
+// Property Status Options
+const propertyStatusOptions = [
+    { value: null, text: 'Select Property Status' },
+    { value: 'ready', text: 'Ready' },
+    { value: 'off_plan', text: 'Off Plan' },
+    { value: 'both', text: 'Both' }
+]
 const getUserFromStorage = () => {
     try {
         const userData = localStorage.getItem('user')
@@ -714,6 +729,23 @@ const getUserFromStorage = () => {
     } catch (error) {
         console.error('Error getting user from storage:', error)
         return null
+    }
+}
+const propertyTypeOptions = ref([])
+const fetchPropertyTypes = async () => {
+    try {
+        const res = await api.get('/listings/property-types')
+        const data = res.data.data || res.data
+        propertyTypeOptions.value = [
+            { value: null, text: 'Select Property Type' },
+            ...data.map(type => ({
+                value: type.id,
+                text: type.name
+            }))
+        ]
+    } catch (error) {
+        console.error('Error fetching property types:', error)
+        propertyTypeOptions.value = [{ value: null, text: 'Select Property Type' }]
     }
 }
 
@@ -739,32 +771,86 @@ const isAdminOrSuperAdmin = computed(() => {
     
     return isAdminUser
 })
+const sidebarPills = computed(() => {
+    const base = [
+        { id: 'closed-leads', label: 'Converted Leads', type: 'default' },
+        { id: 'leads-in-progress', label: 'Leads In Progress', type: 'default' },
+        { id: 'my-leads', label: 'My Leads', type: 'default' },
+    ]
+        const isAdminUser = user.value.roles?.includes('super_admin') || 
+                       user.value.roles?.includes('admin')
+   if(isAdminUser){
+    const cityPills = cityBranchGroups.value.map(group => ({
+        id: group.id,
+        label: group.label,
+        type: 'city',
+       children: group.options ?? []
+    }))
+       return [...base, ...cityPills]
+   }
+    return [...base]
+})
+const getCurrentUserBranches = () => {
+    const currentUser = user.value
+    if (!currentUser) return []
+    
+    // super_admin يرى كل الفروع
+    if (currentUser.roles?.includes('super_admin')) {
+        return officeOptions.value.filter(opt => opt.value !== null)
+    }
+    
+    // admin والمستخدم العادي يرى فقط الفروع التي يعيدها الـ API
+    // الـ API بالفعل يقوم بتصفية المكاتب حسب صلاحية المستخدم
+    return officeOptions.value.filter(opt => opt.value !== null)
+}
+
+
 
 const searchFieldsConfig = computed(() => {
     const fields = [
         { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
         { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
+        { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
+          { id: 'work_phone', label: 'Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
         { id: 'closed', label: 'Converted', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
         { id: 'created_on', label: 'Created On', formKey: 'createdOn', queryKey: 'created_at', type: 'select', options: createdOnOptions },
-        { id: 'work_phone', label: 'Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
-        { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] },
-        { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
+      
+        { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] }
+ 
     ]
-    
+    const currentUser = user.value
+    const isSuperAdmin = currentUser?.roles?.includes('super_admin')
+     const isAdmin = currentUser?.roles?.includes('admin') 
+     
+  
+    if(isSuperAdmin || isAdmin)
+    {
+        
+        fields.push(    { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
+        { id: 'office', label: 'Branch', formKey: 'office', queryKey: 'office_branch', type: 'select', options: officeOptions.value, multiple: true })
+    }
     if (isAdminOrSuperAdmin.value) {
         fields.push({ id: 'team', label: 'Team', formKey: 'team', queryKey: 'team_id', type: 'select', options: [] })
+      
     }
     
     fields.push(
         { id: 'stage', label: 'Stage', formKey: 'stage', queryKey: 'stage_id', type: 'select', options: [] },
+          { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] },
         { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions },
-        { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
-        { id: 'office', label: 'Branch', formKey: 'office', queryKey: 'office_branch', type: 'select', options: officeOptions.value, multiple: true },
-        { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] }
+       
+        { id: 'property_type', label: 'Property Type', formKey: 'propertyType', queryKey: 'property_type_id', type: 'select', options: propertyTypeOptions.value },
+        { id: 'lead_type', label: 'Lead Type', formKey: 'leadType', queryKey: 'lead_type', type: 'select', options: leadTypeOptions },
+        
+        { id: 'property_status', label: 'Property Status', formKey: 'propertyStatus', queryKey: 'property_status', type: 'select', options: propertyStatusOptions },
+         
+        { id: 'budget_from', label: 'Budget From', formKey: 'budgetFrom', queryKey: 'budget_from', type: 'text', placeholder: 'Enter Min Budget' },
+        { id: 'budget_to', label: 'Budget To', formKey: 'budgetTo', queryKey: 'budget_to', type: 'text', placeholder: 'Enter Max Budget' }
     )
     
     return fields
 })
+
 
 const monthLabel = computed(() => calendarMonth.value.toLocaleString('en-US', { month: 'long', year: 'numeric' }))
 const createdOnDisplay = computed(() => {
@@ -787,14 +873,17 @@ const visibleSearchFields = computed(() => {
                 f.formKey === 'source' ? sourceOptions.value :
                 f.formKey === 'createdOn' ? createdOnOptions :
                 f.formKey === 'team' ? computedTeamOptions.value :
+                 f.formKey === 'propertyType' ? propertyTypeOptions.value :
                 (f.options || []),
             placeholder: f.placeholder || (f.type === 'select' ? 'Select' : '')
         }))
 })
 
-const defaultLeadFieldIds = computed(() =>
-    searchFieldsConfig.value.map(f => f.id)
-)
+const defaultLeadFieldIds = computed(() => {
+    return searchFieldsConfig.value
+        .filter(f => !['lead_type', 'property_status', 'budget_from', 'budget_to'].includes(f.id))
+        .map(f => f.id)
+})
 
 function restoreDefaultFields() {
     selectedLeadFieldIds.value = [...defaultLeadFieldIds.value]
@@ -808,6 +897,7 @@ function onFilterApply(payload) {
 
 function hasValue(val) {
     if (Array.isArray(val)) return val.length > 0
+    if (typeof val === 'number') return true
     return val !== null && val !== undefined && val !== ''
 }
 
@@ -844,19 +934,46 @@ function applySearch() {
     
     let officeBranches = form.value.office && form.value.office.length ? form.value.office : undefined
     
+    const currentUser = user.value
+    const isSuperAdmin = currentUser?.roles?.includes('super_admin')
+    const userBranchName = currentUser?.admin_parent_name?.toLowerCase() || ''
+    
     switch (activePill.value) {
         case 'dubai':
-            const dubaiOption = branchSourceOptions.value.find(opt =>
-                opt.text?.toLowerCase().includes('dubai')
-            )
-            branchSource = dubaiOption?.value
+            const dubaiBranches = officeOptions.value.filter(opt => {
+                if (!opt.value) return false
+                const matchesCity = opt.text?.toLowerCase().includes('dubai') || 
+                                   opt.raw?.admin_parent_name?.toLowerCase().includes('dubai')
+                if (!matchesCity) return false
+                
+                // فقط super_admin يرى كل الفروع، admin والعاديين يرون فرعهم فقط
+                if (isSuperAdmin) return true
+                
+                return opt.raw?.admin_parent_name?.toLowerCase() === userBranchName ||
+                       opt.text?.toLowerCase() === userBranchName
+            })
+            
+            if (dubaiBranches.length > 0) {
+                officeBranches = dubaiBranches.map(o => o.value)
+            }
             break
             
         case 'abu-dhabi':
-            const abuDhabiOption = branchSourceOptions.value.find(opt =>
-                opt.text?.toLowerCase().includes('abu dhabi')
-            )
-            branchSource = abuDhabiOption?.value
+            const abuDhabiBranches = officeOptions.value.filter(opt => {
+                if (!opt.value) return false
+                const matchesCity = opt.text?.toLowerCase().includes('abu dhabi') || 
+                                   opt.raw?.admin_parent_name?.toLowerCase().includes('abu dhabi')
+                if (!matchesCity) return false
+                
+                if (isSuperAdmin) return true
+                
+                return opt.raw?.admin_parent_name?.toLowerCase() === userBranchName ||
+                       opt.text?.toLowerCase() === userBranchName
+            })
+            
+            if (abuDhabiBranches.length > 0) {
+                officeBranches = abuDhabiBranches.map(o => o.value)
+            }
             break
             
         case 'my-leads':
@@ -868,7 +985,6 @@ function applySearch() {
             closed = 1 
             break
     }
-    
     if (form.value.createdOn) {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
@@ -1006,7 +1122,13 @@ function applySearch() {
         created_to: createdTo || undefined,     
         created_at: createdAt || undefined,   
         team_id: teamId || undefined,
-        office_branch: officeBranches || undefined
+        office_branch: officeBranches || undefined,
+         lead_type: form.value.leadType || undefined,
+        property_status: form.value.propertyStatus || undefined,
+        budget_from: form.value.budgetFrom ? Number(form.value.budgetFrom) : undefined,
+        budget_to: form.value.budgetTo ? Number(form.value.budgetTo) : undefined,
+        property_type_id: form.value.propertyType || undefined 
+        
     }
     
     Object.keys(query).forEach(k => { 
@@ -1031,6 +1153,8 @@ function applySearch() {
                     field.formKey === 'stage' ? stageOptions.value : 
                     field.formKey === 'source' ? sourceOptions.value :
                     field.formKey === 'team' ? teamOptions.value : 
+                     field.formKey === 'leadType' ? leadTypeOptions :
+                    field.formKey === 'propertyStatus' ? propertyStatusOptions :
                     (field.options || [])
             },
             raw
@@ -1301,7 +1425,12 @@ function resetFormValues() {
         source: '',
         sourceWebsite: '',
         team: '',
-        office: []
+        office: [],
+         leadType: '',
+        propertyStatus: '',
+        budgetFrom: '',
+        budgetTo: '',
+         propertyType: ''
     }
     selectedOffice.value = null
     selectedPillType.value = null
@@ -1458,6 +1587,31 @@ watch(() => form.value.source, (newVal) => {
     }
 })
 
+
+watch(() => form.value.leadType, () => {
+    if (validationErrors?.value?.leadType) {
+        delete validationErrors.value.leadType
+    }
+})
+
+watch(() => form.value.propertyStatus, () => {
+    if (validationErrors?.value?.propertyStatus) {
+        delete validationErrors.value.propertyStatus
+    }
+})
+
+watch(() => form.value.budgetFrom, () => {
+    if (validationErrors?.value?.budgetFrom) {
+        delete validationErrors.value.budgetFrom
+    }
+})
+
+watch(() => form.value.budgetTo, () => {
+    if (validationErrors?.value?.budgetTo) {
+        delete validationErrors.value.budgetTo
+    }
+})
+
 onMounted(async () => {
     updateUserFromStorage() 
     
@@ -1467,7 +1621,8 @@ onMounted(async () => {
         fetchStages(),
         fetchSources(),
         fetchTeamsWithFilter(),
-        fetchOffices()
+        fetchOffices(),
+            fetchPropertyTypes()
     ])
     
     console.log('Initial data loaded')

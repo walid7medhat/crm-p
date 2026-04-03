@@ -145,7 +145,8 @@ try {
       roles: userData.roles,
       permissions: userData.permissions,
       role_name:userData.role_name,
-      is_listing_team:userData.is_listing_team
+      is_listing_team:userData.is_listing_team,
+      admin_parent_name:userData.admin_parent_name
     }));
     
     console.log("✅ User data saved:", userData);

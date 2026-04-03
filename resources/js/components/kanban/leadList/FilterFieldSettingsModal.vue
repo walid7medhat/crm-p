@@ -104,6 +104,40 @@ const emit = defineEmits(['update:modelValue', 'apply'])
 const show = ref(props.modelValue)
 const activeTabs = ref(['leads'])
 
+const leadFields = ref([
+    { id: 'first_name', label: 'First Name', checked: true },
+    { id: 'lead_name', label: 'Lead Name', checked: true },
+    { id: 'closed', label: 'Converted', checked: false },
+    { id: 'created_on', label: 'Created On', checked: true },
+    { id: 'work_phone', label: 'Phone', checked: true },
+    { id: 'responsible_person', label: 'Responsible Person', checked: true },
+    { id: 'source', label: 'Source', checked: true },
+    { id: 'lead_branch_source', label: 'Lead Branch Source', checked: true },
+    { id: 'stage', label: 'Stage', checked: true },
+    { id: 'email', label: 'Email', checked: true },
+    { id: 'bedrooms', label: 'Bedrooms', checked: false },
+    { id: 'office', label: 'Branch', checked: true },
+    { id: 'team', label: 'Team', checked: true },
+    { id: 'property_type', label: 'Property Type', checked: false },
+    { id: 'lead_type', label: 'Lead Type', checked: false },
+    { id: 'property_status', label: 'Property Status', checked: false },
+    { id: 'budget_from', label: 'Budget From', checked: false },
+    { id: 'budget_to', label: 'Budget To', checked: false }
+])
+
+const defaultFieldIds = [
+    'first_name', 'lead_name', 'created_on', 'work_phone', 
+    'responsible_person', 'lead_branch_source', 'office', 'stage', 
+    'email', 'source', 'team'
+]
+
+// دالة استعادة الحقول الافتراضية
+const restoreDefaultFields = () => {
+    leadFields.value.forEach(field => {
+        field.checked = defaultFieldIds.includes(field.id)
+    })
+}
+
 watch(() => props.modelValue, (val) => {
     show.value = val
 })
@@ -120,55 +154,23 @@ watch(show, (val) => {
 const toggleTab = (tab) => {
     const index = activeTabs.value.indexOf(tab)
     if (index > -1) {
-        // Don't allow removing the last active tab if you want at least one to be visible
-        // Or allow it if that's the requirement. Let's allow it for now.
         activeTabs.value.splice(index, 1)
     } else {
         activeTabs.value.push(tab)
     }
 }
 
-const leadFields = ref([
-    { id: 'first_name', label: 'First Name', checked: true },
-    { id: 'lead_name', label: 'Lead Name', checked: true },
-    { id: 'closed', label: 'Closed', checked: false },
-     { id: 'created_on', label: 'Created On',checked:true},
-    { id: 'work_phone', label: 'Work Phone', checked: true },
-    { id: 'responsible_person', label: 'Responsible Person', checked: true },
-    { id: 'source', label: 'Source', checked: true },
-    { id: 'lead_branch_source', label: 'Lead Branch Source', checked: true },
-    { id: 'stage', label: 'Stage', checked: true },
-    { id: 'email', label: 'Email', checked: true },
-    { id: 'bedrooms', label: 'Bedrooms', checked: true },
-])
-
-const activityFields = ref([
-    { id: 'responsible_person', label: 'Responsible Person', checked: true },
-    { id: 'status', label: 'Status', checked: true },
-    { id: 'activity_source', label: 'Activity Source', checked: true },
-    { id: 'deadline', label: 'DeadLine', checked: true },
-    { id: 'activity_type', label: 'Activity Type', checked: true },
-    { id: 'closed', label: 'Closed', checked: true },
-])
-
 const allLeads = computed({
     get: () => leadFields.value.every(f => f.checked),
     set: (val) => leadFields.value.forEach(f => f.checked = val)
 })
 
-const allActivity = computed({
-    get: () => activityFields.value.every(f => f.checked),
-    set: (val) => activityFields.value.forEach(f => f.checked = val)
-})
-
 const applySettings = () => {
     const selectedLeads = leadFields.value.filter(f => f.checked).map(f => f.id)
-    const selectedActivity = activityFields.value.filter(f => f.checked).map(f => f.id)
-    emit('apply', { leads: selectedLeads, activity: selectedActivity })
+    emit('apply', { leads: selectedLeads })
     show.value = false
 }
 </script>
-
 <style scoped>
 /* Hide the theme's custom dot */
 :deep(.form-check-input::before) {

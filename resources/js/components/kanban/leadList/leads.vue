@@ -819,6 +819,11 @@ const executeFetchLeads = async () => {
             ...(q.email && { email: q.email }),
             ...(q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '' && { bedrooms: q.bedrooms }),
             ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id }),
+            ...(q.budget_from != null && q.budget_from !== '' && { budget_from: q.budget_from }),
+            ...(q.budget_to != null && q.budget_to !== '' && { budget_to: q.budget_to }),
+            ...(q.lead_type != null && q.lead_type !== '' && { lead_type: q.lead_type }),
+            ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status }),
+             ...(q.property_type_id != null && q.property_type_id !== '' && { property_type_id: q.property_type_id }),
             // ...(q.office_branch != null && q.office_branch !== '' && { team_id: q.office_branch })
         }
          // Handle office_branch as array for multi-select
@@ -1000,9 +1005,13 @@ async function fetchMoreLeadsFromApi(stageId) {
             ...(q.work_phone && { work_phone: q.work_phone }),
             ...(q.email && { email: q.email }),
             ...(q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '' && { bedrooms: q.bedrooms }),
-            ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id })
+            ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id }),
+            ...(q.property_type_id != null && q.property_type_id !== '' && { property_type_id: q.property_type_id }),
+            ...(q.budget_from != null && q.budget_from !== '' && { budget_from: q.budget_from }),
+            ...(q.budget_to != null && q.budget_to !== '' && { budget_to: q.budget_to }),
+            ...(q.lead_type != null && q.lead_type !== '' && { lead_type: q.lead_type }),
+            ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status })
         }
-        
         const response = await api.get(`/stages/kanban/stage/${stageId}/more-leads`, {
             params
         })
