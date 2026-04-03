@@ -170,7 +170,7 @@ const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
     // Define required fields based on stage order
     const requiredFieldsMap = {
         3: ['salutation'],
-        4: ['salutation', 'property_type_id', 'area_id', 'budget', 'purpose_buying', 'bedrooms', 'status_lead'],
+        4: ['salutation', 'property_type_id', 'area_id', 'budget_from','budget_to','property_status','lead_type', 'purpose_buying', 'bedrooms', 'status_lead'],
         5: ['salutation', 'available_date'],
         7: ['salutation', 'branch'],
         8: ['why_lost_lead'],
@@ -181,7 +181,7 @@ const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
     // For conversion (stage 6), check all required fields
     if (targetStageOrder === 6) {
         const requiredFieldsForConversion = [
-            'salutation', 'property_type_id', 'area_id', 'budget', 
+            'salutation', 'property_type_id', 'area_id', 'budget', 'budget_from','budget_to','property_status','lead_type',
             'lead_source', 'purpose_buying', 'bedrooms', 'status_lead',
             
         ]
@@ -317,7 +317,10 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
         
         // Add fields from modal
         if (additionalData.salutation) payload.salutation = additionalData.salutation
-        if (additionalData.budget) payload.budget = additionalData.budget
+        if (additionalData.budget_from) payload.budget_from = additionalData.budget_from
+        if (additionalData.budget_to) payload.budget_to = additionalData.budget_to
+        if (additionalData.lead_type) payload.lead_type = additionalData.lead_type
+        if (additionalData.property_status) payload.property_status = additionalData.property_status
         if (additionalData.area_id) payload.area_id = additionalData.area_id
         if (additionalData.property_type_id) payload.property_type_id = additionalData.property_type_id
         

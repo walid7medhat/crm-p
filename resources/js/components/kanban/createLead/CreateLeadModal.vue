@@ -314,9 +314,55 @@
                                         </v-select>
                                     </div>
 
+                                    <!-- Lead Type (Sale/Rent) - جديد -->
+                                    <div v-if="shouldShowField('lead_type')" class="col-md-4">
+                                        <label class="form-label-custom">Lead Type <span class="text-danger">*</span></label>
+                                        <v-select 
+                                            v-model="form.lead_type" 
+                                            :options="leadTypeOptions" 
+                                            :reduce="option => option.value"
+                                            label="text"
+                                            placeholder="Select Lead Type"
+                                            class="custom-v-select"
+                                            :class="{ 'is-invalid-select': validationErrors.lead_type }"
+                                        >
+                                            <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
+                                            </template>
+                                        </v-select>
+                                        <div v-if="validationErrors.lead_type" class="invalid-feedback d-block">
+                                            {{ validationErrors.lead_type[0] }}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Property Status (Ready/Off Plan/Both) - جديد -->
+                                    <div v-if="shouldShowField('property_status')" class="col-md-4">
+                                        <label class="form-label-custom">Property Status <span class="text-danger">*</span></label>
+                                        <v-select 
+                                            v-model="form.property_status" 
+                                            :options="propertyStatusOptions" 
+                                            :reduce="option => option.value"
+                                            label="text"
+                                            placeholder="Select Property Status"
+                                            class="custom-v-select"
+                                            :class="{ 'is-invalid-select': validationErrors.property_status }"
+                                        >
+                                            <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
+                                            </template>
+                                        </v-select>
+                                        <div v-if="validationErrors.property_status" class="invalid-feedback d-block">
+                                            {{ validationErrors.property_status[0] }}
+                                        </div>
+                                    </div>
+
                                     <!-- Lead Status (Stages 4, 9, 10) -->
                                     <div v-if="shouldShowField('lead_status') || shouldShowField('lead_status_pool') || shouldShowField('unqualified_status')" class="col-md-4">
-                                        <label class="form-label-custom">Lead Status</label>
+                                        <label class="form-label-custom">Quality Status</label>
                                         <v-select 
                                             v-model="form.status_lead" 
                                             :options="getLeadStatusOptions()" 
@@ -487,6 +533,8 @@ const shouldShowField = (fieldKey) => {
         // Stage 4: Qualified
         'bedrooms': [1,2,3,4,5,6],
         'budget': [1,2,3,4,5,6],
+        'lead_type': [1,2,3,4,5,6],
+        'property_status': [1,2,3,4,5,6],
         'purpose_buying': [1,2,3,4,5,6],
         'lead_source': [1,2,3,4,5,6],
         'area_id': [1,2,3,4,5,6],
@@ -507,6 +555,19 @@ const shouldShowField = (fieldKey) => {
       const stages = fieldVisibility[fieldKey] || []
     return stages.includes(order) && order !== 0  
 }
+
+// Lead Type Options
+const leadTypeOptions = [
+    { value: 'sale', text: 'Sale' },
+    { value: 'rent', text: 'Rent' }
+]
+
+// Property Status Options
+const propertyStatusOptions = [
+    { value: 'ready', text: 'Ready' },
+    { value: 'off_plan', text: 'Off Plan' },
+    { value: 'both', text: 'Both' }
+]
 // Branch Options
 const branchOptions = [
     { value: 'Abu Dhabi', text: 'Abu Dhabi' },
@@ -618,6 +679,8 @@ const form = ref({
     property_type_id: null,
     status_lead: null,
     available_date: null,
+    lead_type:null,
+    property_status:null,
     branch: null,
     lost_reason: null
 })
@@ -747,6 +810,8 @@ watch(() => form.value.stage_id, (newStageId) => {
     if (!shouldShowField('property_type_id')) form.value.property_type_id = null
     if (!shouldShowField('lead_status')) form.value.lead_status = null
     if (!shouldShowField('available_date')) form.value.available_date = null
+    if (!shouldShowField('lead_type')) form.value.lead_type = null
+    if (!shouldShowField('property_status')) form.value.property_status = null
     if (!shouldShowField('branch')) form.value.branch = null
     if (!shouldShowField('lost_reason')) form.value.lost_reason = null
 })
@@ -1086,6 +1151,8 @@ const resetForm = () => {
         property_type_id: null,
           status_lead: null,
         available_date: null,
+        property_status: null,
+        lead_type: null,
         branch: null,
         lost_reason: null
     }

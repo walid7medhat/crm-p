@@ -127,13 +127,14 @@
                 <div v-if="missingFields.length > 0" class="dynamic-form">
     <!-- 🟨 Status & Meta -->
                         <div 
-                            v-if="['status_lead','available_date','branch','why_lost_lead','lost_reason'].some(f => missingFields.includes(f))" 
-                            class="box-shadow"
+                            v-if="['status_lead','lead_type','property_status','available_date','branch','why_lost_lead','lost_reason'].some(f => missingFields.includes(f))" 
+                            class="box-shadow lead_qualification"
                         >
+                             <h5 class="section-title">Lead Qualification </h5>
 
                             <!-- Lead Status -->
                             <div v-if="missingFields.includes('status_lead')" class="form-group mb-3">
-                                <label class="form-label">Lead Status</label>
+                                <label class="form-label">Quality  Status</label>
 
                                 <v-select
                                     v-if="targetStageOrder === 4 || (isConversion && targetStageOrder === 6)"
@@ -199,7 +200,44 @@
                                 </template>
                                 </v-select>
                             </div>
+  <!-- Lead Type (Sale/Rent) -->
+                        <div v-if="missingFields.includes('lead_type')" class="form-group mb-3">
+                            <label class="form-label">Lead Type <span class="text-danger">*</span></label>
+                            <v-select
+                                v-model="formData.lead_type"
+                                :options="leadTypeOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                placeholder="Select Lead Type"
+                                class="custom-v-select searchable-select"
+                                @update:model-value="handleLeadTypeChange"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                        </div>
 
+                        <!-- Property Status (Ready/Off Plan/Both) -->
+                        <div v-if="missingFields.includes('property_status')" class="form-group mb-3">
+                            <label class="form-label">Property Status <span class="text-danger">*</span></label>
+                            <v-select
+                                v-model="formData.property_status"
+                                :options="propertyStatusOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                placeholder="Select Property Status"
+                                class="custom-v-select searchable-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                        </div>
                             <!-- Available Date -->
                             <div v-if="missingFields.includes('available_date')" class="form-group mb-3">
                                 <label class="form-label">Available Date</label>
@@ -269,16 +307,39 @@
                        </div>
                         <!-- 🟦 Basic Info -->
                         <div 
-                            v-if="['budget','area_id','property_type_id','bedrooms','purpose_buying'].some(f => missingFields.includes(f))" 
+                            v-if="['budget_from','budget_to','area_id','property_type_id','bedrooms','purpose_buying'].some(f => missingFields.includes(f))" 
                             class="box-shadow"
                         >
                           <h5 class="section-title">Client Requirement</h5>
                            
 
-                            <div v-if="missingFields.includes('budget')" class="form-group mb-3">
-                                <label class="form-label">Budget (AED)</label>
-                                <input type="number" v-model="formData.budget" placeholder="Enter Budget" class="form-control budget-input">
-                            </div>
+                            <!--<div v-if="missingFields.includes('budget')" class="form-group mb-3">-->
+                            <!--    <label class="form-label">Budget (AED)</label>-->
+                            <!--    <input type="number" v-model="formData.budget" placeholder="Enter Budget" class="form-control budget-input">-->
+                            <!--</div>-->
+                              <!-- Budget From -->
+                                <div v-if="missingFields.includes('budget_from')" class="form-group mb-3">
+                                    <label class="form-label">Budget From (AED)</label>
+                                    <input 
+                                        type="number" 
+                                        v-model="formData.budget_from" 
+                                        placeholder="Enter Min Budget" 
+                                        class="form-control budget-input"
+                                        @input="validateBudgetRange"
+                                    >
+                                </div>
+        
+                                <!-- Budget To -->
+                                <div v-if="missingFields.includes('budget_to')" class="form-group mb-3">
+                                    <label class="form-label">Budget To (AED)</label>
+                                    <input 
+                                        type="number" 
+                                        v-model="formData.budget_to" 
+                                        placeholder="Enter Max Budget" 
+                                        class="form-control budget-input"
+                                        @input="validateBudgetRange"
+                                    >
+                                </div>
 
                             <div v-if="missingFields.includes('area_id')" class="form-group mb-3">
                                 <label class="form-label">Location / Area</label>
@@ -438,6 +499,16 @@ const propertyTypes = ref([])
 const showFields = computed(() => {
     return [3, 4, 5, 7, 8, 9, 10].includes(props.targetStageOrder)
 })
+const leadTypeOptions = [
+    { value: 'sale', text: 'Sale' },
+    { value: 'rent', text: 'Rent' }
+]
+
+const propertyStatusOptions = [
+    { value: 'ready', text: 'Ready' },
+    { value: 'off_plan', text: 'Off Plan' },
+    { value: 'both', text: 'Both' }
+]
 
 const hotWarmLeadOptions = [
     { value: 'cold', text: 'Cold Lead' },
@@ -561,7 +632,10 @@ const formData = ref({
     interaction_result: '',
     interaction_note: '',
     salutation: '',
-    budget: '',
+    budget_from: '',
+    budget_to: '',
+    lead_type: '',
+    property_status: '',
     currency: 'AED',
     area_id: '',
     property_type_id: '',
@@ -599,7 +673,11 @@ const resetForm = () => {
         interaction_result: '',
         interaction_note: '',
         salutation: '',
-        budget: '',
+        // budget: '',
+        budget_from: '',
+        budget_to: '',
+        lead_type: '',
+        property_status: '',
         currency: 'AED',
         area_id: '',
         property_type_id: '',
@@ -616,6 +694,21 @@ const resetForm = () => {
     showReminderDropdown.value = false
     showDateTimePicker.value = false
     isSubmitting.value = false
+}
+
+// Validation for budget range
+const budgetRangeError = ref('')
+
+const validateBudgetRange = () => {
+    const from = parseFloat(formData.value.budget_from)
+    const to = parseFloat(formData.value.budget_to)
+    
+    if (from && to && from > to) {
+        budgetRangeError.value = 'Budget From cannot be greater than Budget To'
+        return false
+    }
+    budgetRangeError.value = ''
+    return true
 }
 
 const handleSubmit = async () => {
@@ -642,10 +735,42 @@ const handleSubmit = async () => {
             $showNotification('Please select salutation', 'warning')
             return
         }
-        if (field === 'budget' && !formData.value.budget) {
-            $showNotification('Please enter budget', 'warning')
+        // if (field === 'budget' && !formData.value.budget) {
+        //     $showNotification('Please enter budget', 'warning')
+        //     return
+        // }
+        
+          // New validations for lead_type and property_status
+        if (field === 'lead_type' && !formData.value.lead_type) {
+            $showNotification('Please select lead type (Sale/Rent)', 'warning')
             return
         }
+        
+        if (field === 'property_status' && !formData.value.property_status) {
+            $showNotification('Please select property status', 'warning')
+            return
+        }
+        
+        if (field === 'budget_from' && !formData.value.budget_from) {
+            $showNotification('Please enter minimum budget', 'warning')
+            return
+        }
+        
+        if (field === 'budget_to' && !formData.value.budget_to) {
+            $showNotification('Please enter maximum budget', 'warning')
+            return
+        }
+        
+        // Validate budget range if both are present
+        if ((field === 'budget_from' || field === 'budget_to') && 
+            formData.value.budget_from && formData.value.budget_to) {
+            if (!validateBudgetRange()) {
+                $showNotification(budgetRangeError.value, 'warning')
+                return
+            }
+        }
+        
+        
         if (field === 'area_id' && !formData.value.area_id) {
             $showNotification('Please select area', 'warning')
             return
@@ -751,7 +876,11 @@ const handleSubmit = async () => {
                 reason: reasonText,
                 interaction_result: formData.value.interaction_result,
                 salutation: formData.value.salutation,
-                budget: formData.value.budget,
+                // budget: formData.value.budget,
+                  budget_from: formData.value.budget_from,
+                budget_to: formData.value.budget_to,
+                lead_type: formData.value.lead_type,
+                property_status: formData.value.property_status,
                 area_id: formData.value.area_id,
                 property_type_id: formData.value.property_type_id,
                 bedrooms: bedroomsValue,
@@ -784,7 +913,11 @@ watch(visible, (newVal) => {
         loadLookupData()
         if (props.leadData) {
             formData.value.salutation = props.leadData.salutation || ''
-            formData.value.budget = props.leadData.budget || ''
+            // formData.value.budget = props.leadData.budget || ''
+              formData.value.budget_from = props.leadData.budget_from || ''
+            formData.value.budget_to = props.leadData.budget_to || ''
+            formData.value.lead_type = props.leadData.lead_type || ''
+            formData.value.property_status = props.leadData.property_status || ''
             formData.value.currency = props.leadData.currency || 'AED'
             formData.value.area_id = props.leadData.area_id || ''
             formData.value.property_type_id = props.leadData.property_type_id || ''
@@ -1048,6 +1181,11 @@ defineExpose({
     gap: 8px 10px;
 }
 
+.dynamic-form .box-shadow.lead_qualification {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px 10px;
+}
 .dynamic-form .box-shadow .form-group {
     margin-bottom: 0 !important;
 }
@@ -1170,7 +1308,10 @@ defineExpose({
     grid-column: span 2;
     font-size:13px !important;
 }
+.dynamic-form .box-shadow.lead_qualification .section-title  {
+    grid-column: span 3;
 
+}
 .comment-block-title {
     font-size: 12px;
     font-weight: 700;

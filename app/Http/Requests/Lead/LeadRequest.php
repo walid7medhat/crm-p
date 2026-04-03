@@ -91,6 +91,8 @@ class LeadRequest extends FormRequest
             'budget' => 'nullable|numeric|min:0|max:999999999.99',
             'budget_from' => 'nullable|numeric|min:0|max:999999999.99',
             'budget_to' => 'nullable|numeric|min:0|max:999999999.99',
+            'lead_type'=>'nullable',
+            'property_status'=>'nullable',
             'currency' => 'nullable',
              
             'area_id' => 'nullable|exists:areas,id',

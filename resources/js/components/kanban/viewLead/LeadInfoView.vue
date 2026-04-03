@@ -123,6 +123,14 @@
                     <label class="form-label-custom">Budget</label>
                     <div class="info-value">{{ formatLeadBudgetRange(lead) }} {{ lead?.currency || 'AED' }}</div>
                 </div>
+                <div class="info-group" v-if="lead?.property_status">
+                    <label class="form-label-custom">Property Status</label>
+                    <div class="info-value">{{ lead?.property_status || '—' }}</div>
+                </div>
+                <div class="info-group" v-if="lead?.lead_type">
+                    <label class="form-label-custom">Lead Type</label>
+                    <div class="info-value">{{ lead?.lead_type || '—' }}</div>
+                </div>
                  <div class="info-group" v-if="lead?.branch != null">
                     <label class="form-label-custom">Shared Branch</label>
                     <div class="info-value">{{ formatWithMapping(lead?.branch, {
@@ -136,7 +144,7 @@
                     <div class="info-value">{{ lead?.available_date != null ? lead.available_date : '—' }}</div>
                 </div>
                    <div class="info-group" v-if="lead?.status_lead != null">
-                    <label class="form-label-custom">Lead Status</label>
+                    <label class="form-label-custom">Quality Status</label>
                     <div class="info-value">{{ formatLeadStatus(lead?.status_lead) }}</div>
                 </div>
                 <div class="info-group" v-if="lead?.source_information">

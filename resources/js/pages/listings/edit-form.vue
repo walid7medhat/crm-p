@@ -2941,7 +2941,9 @@ const handleSubmit = async (action = 'draft') => {
     if (form.value.rented_until) {
       formData.append('rented_until', form.value.rented_until);
     }
-    
+    if (form.value.rentExpiryDate) {
+    formData.append('rent_expiry_date', form.value.rentExpiryDate);
+  }
     // if (form.value.payment_plan ) {
     //   formData.append('payment_plan', form.value.payment_plan);
     // }

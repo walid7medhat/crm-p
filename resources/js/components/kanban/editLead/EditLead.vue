@@ -249,6 +249,7 @@
                 <div v-if="budgetErrorMessage" class="invalid-feedback d-block mt-1">
                     {{ budgetErrorMessage }}
                 </div>
+                
 
                 <!-- Purpose -->
                 <div class="info-group">
@@ -272,29 +273,75 @@
                         {{ validationErrors.purpose_buying[0] }}
                     </div>
                 </div>
+                 <!-- Lead Type (Sale/Rent) - جديد -->
+                    <div class="info-group">
+                        <label class="form-label-custom">Lead Type <span class="text-danger">*</span></label>
+                        <v-select 
+                            v-model="form.lead_type" 
+                            :options="leadTypeOptions" 
+                            :reduce="option => option.value"
+                            label="text"
+                            placeholder="Select Lead Type"
+                            class="custom-v-select"
+                            :class="{ 'is-invalid-select': validationErrors.lead_type }"
+                        >
+                            <template #open-indicator="{ attributes }">
+                                <span v-bind="attributes">
+                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                </span>
+                            </template>
+                        </v-select>
+                        <div v-if="validationErrors.lead_type" class="invalid-feedback d-block">
+                            {{ validationErrors.lead_type[0] }}
+                        </div>
+                    </div>
+                
+                    <!-- Property Status (Ready/Off Plan/Both) - جديد -->
+                    <div class="info-group">
+                        <label class="form-label-custom">Property Status <span class="text-danger">*</span></label>
+                        <v-select 
+                            v-model="form.property_status" 
+                            :options="propertyStatusOptions" 
+                            :reduce="option => option.value"
+                            label="text"
+                            placeholder="Select Property Status"
+                            class="custom-v-select"
+                            :class="{ 'is-invalid-select': validationErrors.property_status }"
+                        >
+                            <template #open-indicator="{ attributes }">
+                                <span v-bind="attributes">
+                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                </span>
+                            </template>
+                        </v-select>
+                        <div v-if="validationErrors.property_status" class="invalid-feedback d-block">
+                            {{ validationErrors.property_status[0] }}
+                        </div>
+                    </div>
+
 
                 <!-- Source (required) -->
-                <div class="info-group">
-                    <label class="form-label-custom">Source <span class="text-danger">*</span></label>
-                    <v-select 
-                        v-model="form.lead_source" 
-                        :options="sourceOptions" 
-                        :reduce="option => option.value"
-                        label="text"
-                        placeholder="Select Source"
-                        class="custom-v-select"
-                        :class="{ 'is-invalid-select': validationErrors.lead_source }"
-                    >
-                        <template #open-indicator="{ attributes }">
-                            <span v-bind="attributes">
-                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                            </span>
-                        </template>
-                    </v-select>
-                    <div v-if="validationErrors.lead_source" class="invalid-feedback d-block">
-                        {{ validationErrors.lead_source[0] }}
-                    </div>
-                </div>
+                <!--<div class="info-group">-->
+                <!--    <label class="form-label-custom">Source <span class="text-danger">*</span></label>-->
+                <!--    <v-select -->
+                <!--        v-model="form.lead_source" -->
+                <!--        :options="sourceOptions" -->
+                <!--        :reduce="option => option.value"-->
+                <!--        label="text"-->
+                <!--        placeholder="Select Source"-->
+                <!--        class="custom-v-select"-->
+                <!--        :class="{ 'is-invalid-select': validationErrors.lead_source }"-->
+                <!--    >-->
+                <!--        <template #open-indicator="{ attributes }">-->
+                <!--            <span v-bind="attributes">-->
+                <!--                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>-->
+                <!--            </span>-->
+                <!--        </template>-->
+                <!--    </v-select>-->
+                <!--    <div v-if="validationErrors.lead_source" class="invalid-feedback d-block">-->
+                <!--        {{ validationErrors.lead_source[0] }}-->
+                <!--    </div>-->
+                <!--</div>-->
 
                 <!-- Location / Area -->
                 <div class="info-group">
@@ -348,27 +395,27 @@
                 </div>
 
                 <!-- Property Type -->
-                <div class="info-group">
-                    <label class="form-label-custom">Property Type</label>
-                    <v-select 
-                        v-model="form.property_type_id"
-                        :options="propertyTypeOptions"
-                        :reduce="option => option.value"
-                        label="text"
-                        placeholder="Select Property Type"
-                        class="custom-v-select"
-                    >
-                        <template #open-indicator="{ attributes }">
-                            <span v-bind="attributes">
-                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                            </span>
-                        </template>
-                    </v-select>
-                </div>
+                  <div class="info-group">
+                        <label class="form-label-custom">Property Type</label>
+                        <v-select 
+                            v-model="form.property_type_id"
+                            :options="propertyTypeOptions"
+                            :reduce="option => option.value"
+                            label="text"
+                            placeholder="Select Property Type"
+                            class="custom-v-select"
+                        >
+                            <template #open-indicator="{ attributes }">
+                                <span v-bind="attributes">
+                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                </span>
+                            </template>
+                        </v-select>
+                    </div>
 
                 <!-- Lead Status (for Qualified stage) -->
                 <div class="info-group" v-if="shouldShowField('status_lead')" >
-                    <label class="form-label-custom">Lead Status</label>
+                    <label class="form-label-custom">Quality Status</label>
                     <v-select 
                         v-model="form.status_lead" 
                         :options="leadStatusOptions" 
@@ -546,6 +593,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['save', 'cancel', 'updated'])
+
 const avatarError = ref(false)
 const users = ref([])
 const searchQuery = ref('')
@@ -577,12 +625,10 @@ const isLoadingAreas = ref(false)
 const isLoadingPropertyTypes = ref(false)
 // Show/hide property details section
 const showPropertyDetails = ref(false)
-// في <script setup>، أضف هذا computed
 const currentStageOrder = computed(() => {
     return props.lead?.stage?.order || 0
 })
 
-// دالة لتحديد ما إذا كان الحقل يجب أن يظهر
 const shouldShowField = (fieldKey) => {
     const order = currentStageOrder.value
     
@@ -620,7 +666,17 @@ const leadStatusOptions = [
     { value: 'unqualified_job_seeker', text: 'Unqualified - Job Seeker' },
     { value: 'unqualified_other', text: 'Unqualified - Other' }
 ]
+const leadTypeOptions = [
+    { value: 'sale', text: 'Sale' },
+    { value: 'rent', text: 'Rent' }
+]
 
+// Property Status Options
+const propertyStatusOptions = [
+    { value: 'ready', text: 'Ready' },
+    { value: 'off_plan', text: 'Off Plan' },
+    { value: 'both', text: 'Both' }
+]
 // Branch Options
 const branchOptions = [
     { value: 'Abu Dhabi', text: 'Abu Dhabi' },
@@ -854,9 +910,10 @@ const fetchPropertyTypes = async () => {
         const res = await api.get('/listings/property-types')
         const data = res.data.data || res.data
 
-        propertyTypeOptions.value = data.map(item => ({
-            id: item.id,
-            name: item.name
+      
+         propertyTypeOptions.value = data.map(item => ({
+            value: item.id,  
+            text: item.name  
         }))
 
     } catch (e) {
@@ -903,7 +960,9 @@ const initializeForm = () => {
         status_lead: props.lead?.status_lead || null,
         available_date: props.lead?.available_date || null,
         branch: props.lead?.branch || null,
-        lost_reason: props.lead?.why_lost_lead || null
+        lost_reason: props.lead?.why_lost_lead || null,
+        lead_type: props.lead?.lead_type || null,
+        property_status: props.lead?.property_status || null,
     }
     selectedPerson.value = props.lead?.responsible_person || null
     syncBudgetDisplayFields()

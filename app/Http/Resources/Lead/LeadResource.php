@@ -111,6 +111,8 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'budget' => $this->budget,
             'budget_from' => $this->budget_from,
             'budget_to' => $this->budget_to,
+            'property_status' => $this->property_status,
+            'lead_type' => $this->lead_type,
             'currency' => $this->currency,
             
             'created_at' => $this->created_at->setTimezone(config('app.timezone')),

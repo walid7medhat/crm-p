@@ -647,6 +647,8 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             'purpose_buying' => 'nullable|string|max:100',
             'bedrooms' => 'nullable',
             'status_lead' => 'nullable|string|max:50|in:cold,warm,hot', // استخدام العمود الموجود
+            'property_status'=>'nullable',
+            'lead_type'=>'nullable',
             
             // Stage 5: Future - عمود جديد
             'available_date' => 'nullable|date',
@@ -736,7 +738,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         $additionalFields = [
             // الحقول الموجودة
             'area_id', 'property_type_id', 'budget', 'budget_from', 'budget_to', 'lead_source', 
-            'purpose_buying', 'bedrooms', 'responsible_person_id',
+            'purpose_buying', 'bedrooms', 'responsible_person_id','property_status','lead_type',
             'salutation',
             'status_lead',      // يستخدم للمراحل 4, 9, 10
             'why_lost_lead',    // يستخدم للمرحلة 8

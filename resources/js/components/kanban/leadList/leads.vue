@@ -2052,7 +2052,10 @@ async function onLeadDragChange(evt, column) {
                 'salutation',
                 'property_type_id',
                 'area_id',
-                'budget',
+                'budget_from',
+                'budget_to',
+                'lead_type',
+                'property_status',
                 'lead_source',
                 'purpose_buying',
                 'bedrooms',
@@ -2124,7 +2127,10 @@ async function onLeadDragChange(evt, column) {
         // باقي الكود للمراحل الأخرى...
         const requiredFieldsMap = {
             3: ['salutation'],
-            4: ['salutation','property_type_id', 'area_id', 'budget', 'purpose_buying', 'bedrooms', 'status_lead'],
+            4: ['salutation','property_type_id', 'area_id','budget_from',
+                'budget_to',
+                'lead_type',
+                'property_status', 'purpose_buying', 'bedrooms', 'status_lead'],
             5: ['salutation','available_date'],
             7: ['salutation','branch'],
             8: ['why_lost_lead'],
@@ -2209,7 +2215,10 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         }
         
         if (additionalData.salutation) payload.salutation = additionalData.salutation
-        if (additionalData.budget) payload.budget = additionalData.budget
+        if (additionalData.budget_from) payload.budget_from = additionalData.budget_from
+        if (additionalData.budget_to) payload.budget_to = additionalData.budget_to
+        if (additionalData.property_status) payload.property_status = additionalData.property_status
+        if (additionalData.lead_type) payload.lead_type = additionalData.lead_type
         if (additionalData.area_id) payload.area_id = additionalData.area_id
         if (additionalData.property_type_id) payload.property_type_id = additionalData.property_type_id
         if (additionalData.bedrooms) payload.bedrooms = additionalData.bedrooms
@@ -2249,7 +2258,10 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
             lead.stage_id = targetStageId
             // تحديث الحقول المحلية
             if (payload.salutation) lead.salutation = payload.salutation
-            if (payload.budget) lead.budget = payload.budget
+            if (payload.budget_from) lead.budget_from = payload.budget_from
+            if (payload.budget_to) lead.budget_to = payload.budget_to
+            if (payload.lead_type) lead.lead_type = payload.lead_type
+            if (payload.property_status) lead.property_status = payload.property_status
             if (payload.area_id) lead.area_id = payload.area_id
             if (payload.property_type_id) lead.property_type_id = payload.property_type_id
             if (payload.bedrooms) lead.bedrooms = payload.bedrooms
