@@ -93,7 +93,12 @@ import CitySettings from './pages/dashboard/city-settings.vue'
 import Email from './pages/email/email.vue'
 import StarredEmail from './pages/email/StarredEmail.vue'
 import EmailViewDetails from './pages/email/VeiwDetails.vue'
+
+
+import  BulkAreaCoordinates from './pages/areas/BulkAreaCoordinates.vue'
 const routes = [
+    { path: '/area-coordinates', component: BulkAreaCoordinates, meta: { requiresAuth: true, requiresAdmin: true } },
+    
   // Kanban Route (super_admin only — see meta.requiresSuperAdmin)
   { path: '/kanban', component: Kanban, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/kanban_deal', component: kanban_deal },

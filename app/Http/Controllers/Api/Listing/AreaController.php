@@ -449,4 +449,84 @@ class AreaController extends Controller
         $string = preg_replace("/[^a-z0-9]/", '', $string);
         return $string;
     }
+    
+    /**
+ * Bulk update coordinates for multiple areas
+ */
+public function bulkUpdateCoordinates(Request $request): JsonResponse
+{
+    try {
+        $request->validate([
+            'areas' => ['required', 'array'],
+            'areas.*.id' => ['required', 'exists:areas,id'],
+            'areas.*.latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'areas.*.longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        ]);
+
+        DB::beginTransaction();
+        
+        $updated = [];
+        $failed = [];
+
+        foreach ($request->areas as $areaData) {
+            try {
+                $area = Area::find($areaData['id']);
+                           
+                if ($area) {
+                    $updateData = [];
+                    
+                    if (array_key_exists('latitude', $areaData)) {
+                        $updateData['latitude'] = $areaData['latitude'] ?: null;
+                    }
+                    if (array_key_exists('longitude', $areaData)) {
+                        $updateData['longitude'] = $areaData['longitude'] ?: null;
+                    }
+                    
+                    if (!empty($updateData)) {
+                        $area->update($updateData);
+                        
+                        $updated[] = [
+                            'id' => $area->id,
+                            'name' => $area->name,
+                            'latitude' => $area->latitude,
+                            'longitude' => $area->longitude
+                        ];
+                        
+                        // Clear cache for this area
+                        $this->clearAreaCache($area->id);
+                    }
+                } else {
+                    $failed[] = [
+                        'id' => $areaData['id'],
+                        'reason' => 'Area not found'
+                    ];
+                }
+            } catch (\Exception $e) {
+                $failed[] = [
+                    'id' => $areaData['id'],
+                    'reason' => $e->getMessage()
+                ];
+            }
+        }
+
+        // Clear general areas cache
+        $this->clearAreasCache();
+
+        DB::commit();
+
+        return ApiResponse::success([
+            'updated' => $updated,
+            'failed' => $failed,
+            'total_updated' => count($updated),
+            'total_failed' => count($failed)
+        ], count($updated) . ' area(s) updated successfully');
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return ApiResponse::error('Validation failed', 422, $e->errors());
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Bulk update coordinates failed: ' . $e->getMessage());
+        return ApiResponse::error('Failed to update coordinates: ' . $e->getMessage());
+    }
+}
 }
