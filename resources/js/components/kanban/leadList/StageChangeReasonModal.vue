@@ -130,7 +130,7 @@
                             v-if="['status_lead','lead_type','property_status','available_date','branch','why_lost_lead','lost_reason'].some(f => missingFields.includes(f))" 
                             class="box-shadow lead_qualification lead-qualification-card"
                         >
-                             <h5 class="section-title lead-qualification-card__title">Lead Qualification</h5>
+                             <h5 class="section-title ">Lead Qualification</h5>
 
                             <div
                                 v-if="missingFields.includes('status_lead') || missingFields.includes('lead_type') || missingFields.includes('property_status')"
@@ -139,8 +139,8 @@
                             <!-- Lead Status -->
                             <div v-if="missingFields.includes('status_lead')" class="form-group mb-0 lead-qual-field">
                                 <template v-if="targetStageOrder === 4 || (isConversion && targetStageOrder === 6)">
-                                    <label class="form-label lead-qual-field__label">Quality Status</label>
-                                    <v-select
+                                    <label class="form-label ">Quality Status</label>
+                                    <v-select 
                                         v-model="formData.lead_status"
                                         :options="hotWarmLeadOptions"
                                         :reduce="opt => opt.value"
@@ -195,8 +195,8 @@
                                 </template>
 
                                 <template v-else>
-                                    <label class="form-label lead-qual-field__label">Lead Status</label>
-                                    <v-select
+                                    <label class="form-label ">Lead Status</label>
+                                    <v-select append-to-body
                                         v-if="targetStageOrder === 9"
                                         v-model="formData.lead_status"
                                         :options="leadPoolStatusOptions"
@@ -212,7 +212,7 @@
                                         </template>
                                     </v-select>
 
-                                    <v-select
+                                    <v-select append-to-body
                                         v-else-if="targetStageOrder === 10"
                                         v-model="formData.lead_status"
                                         :options="unqualifiedStatusOptions"
@@ -228,7 +228,7 @@
                                         </template>
                                     </v-select>
 
-                                    <v-select
+                                    <v-select append-to-body
                                         v-else
                                         v-model="formData.lead_status"
                                         :options="defaultLeadStatusOptions"
@@ -247,8 +247,8 @@
                             </div>
   <!-- Lead Type (Sale/Rent) -->
                         <div v-if="missingFields.includes('lead_type')" class="form-group mb-0 lead-qual-field">
-                            <label class="form-label lead-qual-field__label">Lead Type <span class="text-danger">*</span></label>
-                            <v-select
+                            <label class="form-label ">Lead Type <span class="text-danger">*</span></label>
+                            <v-select append-to-body
                                 v-model="formData.lead_type"
                                 :options="leadTypeOptions"
                                 :reduce="opt => opt.value"
@@ -267,8 +267,8 @@
 
                         <!-- Property Status (Ready/Off Plan/Both) -->
                         <div v-if="missingFields.includes('property_status')" class="form-group mb-0 lead-qual-field">
-                            <label class="form-label lead-qual-field__label">Property Status <span class="text-danger">*</span></label>
-                            <v-select
+                            <label class="form-label ">Property Status <span class="text-danger">*</span></label>
+                            <v-select append-to-body
                                 v-model="formData.property_status"
                                 :options="propertyStatusOptions"
                                 :reduce="opt => opt.value"
@@ -293,7 +293,7 @@
                             <!-- Branch -->
                             <div v-if="missingFields.includes('branch')" class="form-group mb-3">
                                 <label class="form-label">Branch</label>
-                                <v-select
+                                <v-select append-to-body
                                     v-model="formData.branch"
                                     :options="branchOptions"
                                     :reduce="opt => opt.value"
@@ -312,7 +312,7 @@
                             <!-- Why Lost -->
                             <div v-if="missingFields.includes('why_lost_lead') || missingFields.includes('lost_reason')" class="form-group mb-3">
                                 <label class="form-label">Why Lost</label>
-                                <v-select
+                                <v-select append-to-body
                                     v-model="formData.lost_reason"
                                     :options="lostReasonOptions"
                                     :reduce="opt => opt.value"
@@ -335,7 +335,7 @@
                         <h5 class="section-title">Lead Information</h5>
                             <div v-if="missingFields.includes('salutation')" class="form-group mb-3">
                                 <label class="form-label">Salutation</label>
-                                <v-select
+                                <v-select append-to-body
                                     v-model="formData.salutation"
                                     :options="salutationOptions"
                                     :reduce="opt => opt.value"
@@ -389,7 +389,7 @@
 
                             <div v-if="missingFields.includes('area_id')" class="form-group mb-3">
                                 <label class="form-label">Location / Area</label>
-                                <v-select
+                                <v-select append-to-body
                                     v-model="formData.area_id"
                                     :options="areaOptions"
                                     :reduce="opt => opt.value"
@@ -404,10 +404,26 @@
                                 </template>
                                 </v-select>
                             </div>
-
+                             <div v-if="missingFields.includes('bedrooms')" class="form-group mb-3">
+                                <label class="form-label">How Many Bedrooms?</label>
+                                <v-select append-to-body
+                                    v-model="formData.bedrooms"
+                                    :options="bedroomOptions"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    placeholder="Select Bedrooms"
+                                    class="custom-v-select searchable-select"
+                                >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                </v-select>
+                            </div>
                             <div v-if="missingFields.includes('property_type_id')" class="form-group mb-3">
                                 <label class="form-label">Property Type</label>
-                                <v-select
+                                <v-select append-to-body
                                     v-model="formData.property_type_id"
                                     :options="propertyTypeOptions"
                                     :reduce="opt => opt.value"
@@ -423,27 +439,11 @@
                                 </v-select>
                             </div>
 
-                            <div v-if="missingFields.includes('bedrooms')" class="form-group mb-3">
-                                <label class="form-label">How Many Bedrooms?</label>
-                                <v-select
-                                    v-model="formData.bedrooms"
-                                    :options="bedroomOptions"
-                                    :reduce="opt => opt.value"
-                                    label="text"
-                                    placeholder="Select Bedrooms"
-                                    class="custom-v-select searchable-select"
-                                >
-                                <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
-                                </template>
-                                </v-select>
-                            </div>
+                            
 
                             <div v-if="missingFields.includes('purpose_buying')" class="form-group mb-3">
                                 <label class="form-label">Purpose Of Purchase</label>
-                                <v-select
+                                <v-select append-to-body
                                     v-model="formData.purpose_buying"
                                     :options="purposeOptions"
                                     :reduce="opt => opt.value"
@@ -1207,6 +1207,9 @@ defineExpose({
     transition: all 0.2s;
     font-size: 12px;
     border: 1px solid transparent;
+        text-align: center;
+    align-items: center;
+    justify-content: center;
 }
 .modal-footer{
         justify-content: center;
@@ -1278,22 +1281,22 @@ defineExpose({
 }
 
 .dynamic-form .box-shadow.lead_qualification.lead-qualification-card {
-    background: linear-gradient(165deg, #ffffff 0%, #f8fafc 45%, #f1f5f9 100%);
-    border: 1px solid rgb(226 232 240 / 0.95);
-    border-radius: 14px;
-    padding: 14px 14px 12px;
-    box-shadow:
-        0 1px 0 rgb(255 255 255 / 0.95) inset,
-        0 10px 40px -12px rgb(15 23 42 / 0.12),
-        0 2px 8px rgb(15 23 42 / 0.04);
+    /*background: linear-gradient(165deg, #ffffff 0%, #f8fafc 45%, #f1f5f9 100%);*/
+    /*border: 1px solid rgb(226 232 240 / 0.95);*/
+    /*border-radius: 14px;*/
+    /*padding: 14px 14px 12px;*/
+    /*box-shadow:*/
+    /*    0 1px 0 rgb(255 255 255 / 0.95) inset,*/
+    /*    0 10px 40px -12px rgb(15 23 42 / 0.12),*/
+    /*    0 2px 8px rgb(15 23 42 / 0.04);*/
 }
 
-.dynamic-form .box-shadow.lead_qualification.lead-qualification-card .section-title {
-    color: #0f172a;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    margin-bottom: 6px;
-}
+/*.dynamic-form .box-shadow.lead_qualification.lead-qualification-card .section-title {*/
+/*    color: #0f172a;*/
+/*    font-weight: 700;*/
+/*    letter-spacing: 0.02em;*/
+/*    margin-bottom: 6px;*/
+/*}*/
 
 .lead-qualification-card__title {
     display: flex;
@@ -1402,6 +1405,85 @@ defineExpose({
 :deep(.searchable-select .vs__dropdown-option--selected) {
     color: #111827 !important;
     background: #e5e7eb !important;
+}
+/* Custom v-select styles */
+:deep(.custom-v-select) {
+    font-family: 'Montserrat';
+}
+
+:deep(.custom-v-select .vs__dropdown-toggle) {
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    padding: 0 8px;
+}
+
+:deep(.custom-v-select .vs__selected-options) {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    max-width: calc(100% - 30px);
+}
+
+:deep(.custom-v-select .vs__selected) {
+    font-size: 13px;
+    color: #64748B;
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
+    line-height: 40px;
+}
+:deep(.custom-v-select .vs__search) {
+    font-size: 13px;
+    color: #64748B;
+    margin: 0;
+    padding: 0;
+}
+
+:deep(.custom-v-select .vs__search::placeholder) {
+    color: #64748B;
+}
+
+:deep(.custom-v-select .vs__actions) {
+    padding: 0 8px;
+}
+
+:deep(.custom-v-select .vs__open-indicator-icon) {
+    font-size: 15px;
+    color: #cfdbec;
+}
+
+:deep(.custom-v-select svg) {
+    vertical-align: middle !important;
+}
+
+:deep(.custom-v-select .vs__dropdown-menu) {
+    border: 1px solid #E2E8F0;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
+    padding: 0;
+    margin-top: 5px;
+    z-index: 1100;
+}
+
+:deep(.custom-v-select .vs__dropdown-option) {
+    padding: 5px 10px;
+    font-size: 14px;
+    color: #475569;
+    transition: all 0.2s;
+}
+
+:deep(.custom-v-select .vs__dropdown-option--highlight) {
+    background: #FAA300 !important;
+    color: #fff !important;
+}
+
+:deep(.custom-v-select .vs__dropdown-option--selected) {
+    background: #FAA300 !important;
+    color: #fff !important;
 }
 
 .budget-input::placeholder {
@@ -1775,41 +1857,41 @@ defineExpose({
 }
 
 /* Unified trio selects — equal height, brand accent */
-:deep(.lead-qual-select--unified .vs__dropdown-toggle) {
-    min-height: 48px;
-    height: 48px;
-    padding: 0 12px;
-    border-radius: 12px;
-    border: 1px solid #cbd5e1;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-    box-shadow:
-        0 1px 0 rgb(255 255 255 / 0.9) inset,
-        0 2px 8px rgb(15 23 42 / 0.06);
-    transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease;
-}
+/*:deep(.lead-qual-select--unified .vs__dropdown-toggle) {*/
+    /*min-height: 48px;*/
+    /*height: 48px;*/
+    /*padding: 0 12px;*/
+    /*border-radius: 12px;*/
+    /*border: 1px solid #cbd5e1;*/
+    /*background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);*/
+    /*box-shadow:*/
+    /*    0 1px 0 rgb(255 255 255 / 0.9) inset,*/
+    /*    0 2px 8px rgb(15 23 42 / 0.06);*/
+    /*transition:*/
+    /*    border-color 0.2s ease,*/
+    /*    box-shadow 0.2s ease;*/
+/*}*/
 
-:deep(.lead-qual-select--unified .vs__selected-options) {
-    min-height: 44px;
-    align-items: center;
-}
+/*:deep(.lead-qual-select--unified .vs__selected-options) {*/
+/*    min-height: 44px;*/
+/*    align-items: center;*/
+/*}*/
 
-:deep(.lead-qual-select--unified .vs__selected),
-:deep(.lead-qual-select--unified .vs__search) {
-    font-size: 0.78rem;
-    font-weight: 600;
-    margin: 0;
-    padding: 0;
-    color: #0f172a;
-}
+/*:deep(.lead-qual-select--unified .vs__selected),*/
+/*:deep(.lead-qual-select--unified .vs__search) {*/
+/*    font-size: 0.78rem;*/
+/*    font-weight: 600;*/
+/*    margin: 0;*/
+/*    padding: 0;*/
+/*    color: #0f172a;*/
+/*}*/
 
-:deep(.lead-qual-select--unified.vs--open .vs__dropdown-toggle) {
-    border-color: #f59e0b;
-    box-shadow:
-        0 0 0 3px rgb(245 158 11 / 0.22),
-        0 2px 12px rgb(245 158 11 / 0.12);
-}
+/*:deep(.lead-qual-select--unified.vs--open .vs__dropdown-toggle) {*/
+/*    border-color: #f59e0b;*/
+/*    box-shadow:*/
+/*        0 0 0 3px rgb(245 158 11 / 0.22),*/
+/*        0 2px 12px rgb(245 158 11 / 0.12);*/
+/*}*/
 
 :deep(.lead-qual-select--unified .vs__open-indicator-icon) {
     font-size: 15px;
