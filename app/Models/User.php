@@ -288,10 +288,11 @@ function getOfficeAttribute()
             return $this->listing_team == 1 && $canAssignAgent;
         }elseif ($this->hasRole('team_lead')) {
             $manager = $this->getManagerAttribute();
-            return $manager && $manager->listing_team == 1;
+            return $manager && $manager->listing_team == 1 && $canAssignAgent;
         }else{
-            $manager = $this->getManagerAttribute();
-            return $manager && $manager->listing_team == 1 && $canAssignAgent ;
+        //   check if owner
+            // $manager = $this->getManagerAttribute();
+            // return $manager && $manager->listing_team == 1 && $canAssignAgent ;
         }
 
         // Team Lead can always manage
