@@ -438,6 +438,162 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             ];
     }
 
+
+public function getMatchingListings(Request $request)
+{
+    $baseQuery = Listing::with([
+        'propertyType:id,name', 
+        'area:id,name,parent_id',
+        'agent:id,name',
+        'galleryImages',
+    ])->where('is_active', true)
+      ->where('status', '!=', 'draft')
+      ->where('status', '!=', 'converted')
+      ->where('is_archived', false);
+
+    $projectId = $request->project_id;
+    $areaId    = $request->area_id;
+    $typeId    = $request->property_type_id;
+    $bedrooms  = $request->number_of_bedrooms;
+    $minPrice  = $request->min_price;
+    $maxPrice  = $request->max_price;
+
+    // -----------------------------
+    // 🗺️ LOCATION (Priority)
+    // -----------------------------
+    if ($areaId) {
+        $area = Area::find($areaId);
+
+        if ($area) {
+            $childIds = $area->getChildIdsAttribute();
+            $allAreaIds = array_merge([$areaId], $childIds);
+
+            $areaQuery = clone $baseQuery;
+
+            $areaQuery->where(function ($q) use ($allAreaIds) {
+                $q->whereIn('area_id', $allAreaIds)
+                  ->orWhereHas('project', function ($q2) use ($allAreaIds) {
+                      $q2->whereIn('area_id', $allAreaIds);
+                  });
+            });
+
+            // لو مفيش نتائج بالـ area → fallback للـ project
+            if ($areaQuery->exists()) {
+                $baseQuery = $areaQuery;
+            } elseif ($projectId) {
+                $baseQuery->where('project_id', $projectId);
+            }
+        }
+    } elseif ($projectId) {
+        $baseQuery->where('project_id', $projectId);
+    }
+
+    // -----------------------------
+    // 💰 PRICE EXPANSION (Smart)
+    // -----------------------------
+    if ($minPrice && $maxPrice) {
+        $priceRanges = [
+            [$minPrice, $maxPrice],
+            [$minPrice * 0.8, $maxPrice * 1.2],
+            [$minPrice * 0.6, $maxPrice * 1.4],
+        ];
+
+        foreach ($priceRanges as [$min, $max]) {
+            $priceQuery = clone $baseQuery;
+
+            if ($typeId) {
+                $priceQuery->where('property_type_id', $typeId);
+            }
+
+            if ($bedrooms !== null && $bedrooms !== '') {
+                $bed = strtolower($bedrooms) === 'studio' ? 0 : $bedrooms;
+                $priceQuery->where('number_of_bedrooms', $bed);
+            }
+
+            $priceQuery->whereBetween('price', [$min, $max]);
+
+            if ($priceQuery->exists()) {
+                $listings = $priceQuery->orderBy('created_at', 'desc')->limit(24)->get();
+
+                return ApiResponse::success(
+                    ListingGridResource::collection($listings),
+                    'Listings (price expanded)',
+                    200,
+                    null
+                );
+            }
+        }
+    }
+
+    // -----------------------------
+    // 🎯 RELAXATION PIPELINE
+    // -----------------------------
+    $queries = [];
+
+    // 1. Full filters
+    $queries[] = function ($q) use ($typeId, $bedrooms, $minPrice, $maxPrice) {
+        if ($typeId) $q->where('property_type_id', $typeId);
+
+        if ($bedrooms !== null && $bedrooms !== '') {
+            $bed = strtolower($bedrooms) === 'studio' ? 0 : $bedrooms;
+            $q->where('number_of_bedrooms', $bed);
+        }
+
+        if ($minPrice) $q->where('price', '>=', $minPrice);
+        if ($maxPrice) $q->where('price', '<=', $maxPrice);
+    };
+
+    // 2. بدون price
+    $queries[] = function ($q) use ($typeId, $bedrooms) {
+        if ($typeId) $q->where('property_type_id', $typeId);
+
+        if ($bedrooms !== null && $bedrooms !== '') {
+            $bed = strtolower($bedrooms) === 'studio' ? 0 : $bedrooms;
+            $q->where('number_of_bedrooms', $bed);
+        }
+    };
+
+    // 3. بدون bedrooms + price
+    $queries[] = function ($q) use ($typeId) {
+        if ($typeId) $q->where('property_type_id', $typeId);
+    };
+
+    // 4. location فقط
+    $queries[] = function ($q) {
+        // no filters
+    };
+
+    $finalQuery = null;
+
+    foreach ($queries as $callback) {
+        $testQuery = clone $baseQuery;
+        $callback($testQuery);
+
+        if ($testQuery->exists()) {
+            $finalQuery = $testQuery;
+            break;
+        }
+    }
+
+    // fallback أخير (مستحيل تقريبًا يوصل هنا)
+    if (!$finalQuery) {
+        $finalQuery = $baseQuery;
+    }
+
+    // -----------------------------
+    // 📦 FINAL RESULT
+    // -----------------------------
+    $listings = $finalQuery
+        ->orderBy('created_at', 'desc')
+        ->limit(24)
+        ->get();
+    return ApiResponse::success(
+        ListingGridResource::collection($listings),
+        'Smart matching listings retrieved',
+        200,
+        null
+    );
+}
     /**
      * Handle hot deal status change in store and update methods
      */

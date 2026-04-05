@@ -363,6 +363,7 @@ Route::post('/search-alerts',[ListingController::class, 'store_search_alert']);
 Route::prefix('listings')->group(function(){
         Route::post('/areas/coordinates/bulk', [AreaController::class, 'bulkUpdateCoordinates']);
      Route::get('/properties/map', [ListingController::class, 'map']);
+     Route::get('matching',[ListingController::class,'getMatchingListings']);
         // Hot deal approval routes
     Route::get('hot-deal-requests/pending', [HotDealApprovalController::class, 'pendingRequests']);
     Route::post('hot-deal-requests/{requestId}/process', [HotDealApprovalController::class, 'processRequest']);
