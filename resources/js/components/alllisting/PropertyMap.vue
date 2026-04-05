@@ -543,6 +543,16 @@ watch(
     bindCarouselHorizontalWheel()
   },
 )
+watch(
+  () => properties.value,
+  async () => {
+    await nextTick()
+    setTimeout(() => {
+      map?.invalidateSize()
+    }, 300)
+  },
+  { deep: true }
+)
 </script>
 
 <style scoped>
@@ -551,6 +561,7 @@ watch(
   flex-direction: column;
   min-height: calc(100vh - 120px);
   background: transparent;
+
 }
 
 /* Kanban-style: transparent chrome; map sits on dashboard background (see property-map.vue) */
@@ -894,10 +905,11 @@ watch(
 }
 
 .pf-map {
-  height: 100%;
-  min-height: 520px;
+  /*height: 100%;*/
+  height: 520px;
   width: 100%;
   border-radius: 0;
+  
 }
 
 /* Hide Leaflet attribution + any stray footer text */
