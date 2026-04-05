@@ -107,11 +107,7 @@
                 </button>
             </div>
             <template v-if="hasClientRequiredInfo">
-                <div class="info-group" v-if="lead?.bedrooms">
-                    <label class="form-label-custom">Bedrooms</label>
-                    <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
-                </div>
-                <div class="info-group" v-if="lead?.area">
+                 <div class="info-group" v-if="lead?.area">
                     <label class="form-label-custom">Location</label>
                     <div class="info-value">{{ lead?.area || '—' }}</div>
                 </div>
@@ -119,10 +115,16 @@
                     <label class="form-label-custom">Property Type</label>
                     <div class="info-value">{{ lead?.property_type || '—' }}</div>
                 </div>
+              
                 <div class="info-group" v-if="formatLeadBudgetRange(lead)">
                     <label class="form-label-custom">Budget</label>
                     <div class="info-value">{{ formatLeadBudgetRange(lead) }} {{ lead?.currency || 'AED' }}</div>
                 </div>
+                  <div class="info-group" v-if="lead?.bedrooms">
+                    <label class="form-label-custom">Bedrooms</label>
+                    <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
+                </div>
+               
                 <div class="info-group" v-if="lead?.property_status">
                     <label class="form-label-custom">Property Status</label>
                     <div class="info-value">{{ lead?.property_status || '—' }}</div>

@@ -177,29 +177,76 @@
     <div class="info-section"  v-if="!showOnlySection || showOnlySection === 'clientRequirement'">
          <div class="info-section-title mb-2">Client Required Info</div>
         <!-- Additional Fields (same UX as Create) -->
-        
-          <!-- Bedrooms -->
+           <!-- Location / Area -->
                 <div class="info-group">
-                    <label class="form-label-custom">How Many Bedrooms</label>
-                    <v-select 
-                        v-model="form.bedrooms" 
-                        :options="bedroomOptions" 
-                        :reduce="option => option.value"
-                        label="text"
-                        placeholder="Select Bedrooms"
+                    <label class="form-label-custom">Location </label>
+                    <v-select
+                        v-model="form.area_id"
+                        :options="areas"
+                        :reduce="area => area.id"
+                        :disabled="isLoadingAreas"
+                        label="name"
+                        placeholder="Select area"
                         class="custom-v-select"
-                        :class="{ 'is-invalid-select': validationErrors.bedrooms }"
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes">
                                 <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                             </span>
                         </template>
+
+                        <template #option="option">
+                            <div class="location-option">
+                                <i class="ri-map-pin-line location-option-icon"></i>
+                                <div class="location-option-text">
+                                    <span class="location-option-name">
+                                        {{ locationFirstLine(option) }}
+                                    </span>
+                                    <span class="location-option-subtitle">
+                                        {{ locationSecondLine(option) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template #selected-option="option">
+                            <div v-if="option" class="location-selected">
+                                <span class="location-selected-name">
+                                    {{ locationFirstLine(option) }}
+                                </span>
+                                <span class="location-selected-subtitle">
+                                    {{ locationSecondLine(option) }}
+                                </span>
+                            </div>
+                        </template>
+
+                        <template #no-options>
+                            <div class="text-center p-2">
+                                {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
+                            </div>
+                        </template>
                     </v-select>
-                    <div v-if="validationErrors.bedrooms" class="invalid-feedback d-block">
-                        {{ validationErrors.bedrooms[0] }}
-                    </div>
                 </div>
+
+                <!-- Property Type -->
+                  <div class="info-group">
+                        <label class="form-label-custom">Property Type</label>
+                        <v-select 
+                            v-model="form.property_type_id"
+                            :options="propertyTypeOptions"
+                            :reduce="option => option.value"
+                            label="text"
+                            placeholder="Select Property Type"
+                            class="custom-v-select"
+                        >
+                            <template #open-indicator="{ attributes }">
+                                <span v-bind="attributes">
+                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                </span>
+                            </template>
+                        </v-select>
+                    </div>
+       
 
                 <!-- Budget From / To — align with other fields (label + control) -->
                 <div class="row g-3 budget-from-to-row">
@@ -248,6 +295,28 @@
                 </div>
                 <div v-if="budgetErrorMessage" class="invalid-feedback d-block mt-1">
                     {{ budgetErrorMessage }}
+                </div>
+                   <!-- Bedrooms -->
+                <div class="info-group">
+                    <label class="form-label-custom">How Many Bedrooms</label>
+                    <v-select 
+                        v-model="form.bedrooms" 
+                        :options="bedroomOptions" 
+                        :reduce="option => option.value"
+                        label="text"
+                        placeholder="Select Bedrooms"
+                        class="custom-v-select"
+                        :class="{ 'is-invalid-select': validationErrors.bedrooms }"
+                    >
+                        <template #open-indicator="{ attributes }">
+                            <span v-bind="attributes">
+                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                            </span>
+                        </template>
+                    </v-select>
+                    <div v-if="validationErrors.bedrooms" class="invalid-feedback d-block">
+                        {{ validationErrors.bedrooms[0] }}
+                    </div>
                 </div>
                 
 
@@ -343,75 +412,7 @@
                 <!--    </div>-->
                 <!--</div>-->
 
-                <!-- Location / Area -->
-                <div class="info-group">
-                    <label class="form-label-custom">Location / Area</label>
-                    <v-select
-                        v-model="form.area_id"
-                        :options="areas"
-                        :reduce="area => area.id"
-                        :disabled="isLoadingAreas"
-                        label="name"
-                        placeholder="Select area"
-                        class="custom-v-select"
-                    >
-                        <template #open-indicator="{ attributes }">
-                            <span v-bind="attributes">
-                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                            </span>
-                        </template>
-
-                        <template #option="option">
-                            <div class="location-option">
-                                <i class="ri-map-pin-line location-option-icon"></i>
-                                <div class="location-option-text">
-                                    <span class="location-option-name">
-                                        {{ locationFirstLine(option) }}
-                                    </span>
-                                    <span class="location-option-subtitle">
-                                        {{ locationSecondLine(option) }}
-                                    </span>
-                                </div>
-                            </div>
-                        </template>
-
-                        <template #selected-option="option">
-                            <div v-if="option" class="location-selected">
-                                <span class="location-selected-name">
-                                    {{ locationFirstLine(option) }}
-                                </span>
-                                <span class="location-selected-subtitle">
-                                    {{ locationSecondLine(option) }}
-                                </span>
-                            </div>
-                        </template>
-
-                        <template #no-options>
-                            <div class="text-center p-2">
-                                {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
-                            </div>
-                        </template>
-                    </v-select>
-                </div>
-
-                <!-- Property Type -->
-                  <div class="info-group">
-                        <label class="form-label-custom">Property Type</label>
-                        <v-select 
-                            v-model="form.property_type_id"
-                            :options="propertyTypeOptions"
-                            :reduce="option => option.value"
-                            label="text"
-                            placeholder="Select Property Type"
-                            class="custom-v-select"
-                        >
-                            <template #open-indicator="{ attributes }">
-                                <span v-bind="attributes">
-                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                </span>
-                            </template>
-                        </v-select>
-                    </div>
+             
 
                 <!-- Lead Status (for Qualified stage) -->
                 <div class="info-group" v-if="shouldShowField('status_lead')" >
