@@ -293,7 +293,7 @@ function buildApiParams() {
     if (pid) {
         params.project_id = pid
         /** List only units in this project — extra lead filters often match zero rows. */
-        return params
+        // return params
     }
     if (l.area_id) params.area_id = l.area_id
     if (l.property_type_id) params.property_type_id = l.property_type_id
