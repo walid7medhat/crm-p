@@ -1146,7 +1146,10 @@ const completionStatusOptions = ['Completed', 'Under Construction'];
 const furnishedStatusOptions = ['Furnished', 'Unfurnished'];
 const ownershipTypeOptions = ['freehold', 'leasehold'];
 const mortgageStatusOptions = ['Mortgage', 'Non Mortgage'];
-const occupancyStatusOptions = ['Occupied', 'Vacant'];
+const occupancyStatusOptions = [  'Owner Occupied',
+  'Holiday Home',
+  'Rented',
+  'Vacant'];
 const salutationOptions = ['Mr', 'Mrs', 'Ms'];
 const residencyStatusOptions = [
   { value: 'resident', label: 'Resident' },
