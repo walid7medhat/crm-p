@@ -51,7 +51,6 @@
                   
                 </div>
                     <div v-if="lead?.can_delete" class="admin-controls d-flex gap-2">
-                        <!-- زر حذف الكل للتعليقات -->
                         <button 
                             v-if="activeViewTab === 'comments' && canDeleteAll"
                             class="btn-admin-action btn-delete-all"

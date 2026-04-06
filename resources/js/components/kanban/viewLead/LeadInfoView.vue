@@ -12,7 +12,7 @@
                 <label class="form-label-custom">Lead Name</label>
                 <div class="info-value">{{ lead?.lead_name || '—' }}</div>
             </div>
-            <div class="info-group">
+            <div class="info-group" v-if="lead?.salutation">
                 <label class="form-label-custom">Salutation</label>
                 <div class="info-value">{{ lead?.salutation || '—' }}</div>
             </div>
@@ -34,7 +34,7 @@
                     </span>
                 </div>
             </div>
-            <div class="info-group">
+            <div class="info-group" v-if="lead?.email">
                 <label class="form-label-custom">Primary Email</label>
                 <div class="info-value">
                     <span v-if="canView">{{ lead?.email || '—' }}</span>
@@ -44,7 +44,7 @@
                     </span>
                 </div>
             </div>
-            <div class="info-group">
+            <div class="info-group" v-if="lead?.secondary_email">
                 <label class="form-label-custom">Secondary Email</label>
                 <div class="info-value">
                     <span v-if="canView">{{ lead?.secondary_email || '—' }}</span>
@@ -54,7 +54,7 @@
                     </span>
                 </div>
             </div>
-            <div class="info-group">
+            <div class="info-group" v-if="lead?.work_phone_2">
                 <label class="form-label-custom">Secondary Phone</label>
                 <div class="info-value">
                     <span v-if="canView">{{ lead?.work_phone_2 || '—' }}</span>
@@ -111,28 +111,31 @@
                     <label class="form-label-custom">Location</label>
                     <div class="info-value">{{ lead?.area || '—' }}</div>
                 </div>
+                 <div class="info-group" v-if="lead?.property_status">
+                    <label class="form-label-custom">Property Status</label>
+                    <div class="info-value">{{ lead?.property_status || '—' }}</div>
+                </div>
                 <div class="info-group" v-if="lead?.property_type">
                     <label class="form-label-custom">Property Type</label>
                     <div class="info-value">{{ lead?.property_type || '—' }}</div>
                 </div>
-              
-                <div class="info-group" v-if="formatLeadBudgetRange(lead)">
-                    <label class="form-label-custom">Budget</label>
-                    <div class="info-value">{{ formatLeadBudgetRange(lead) }} {{ lead?.currency || 'AED' }}</div>
-                </div>
-                  <div class="info-group" v-if="lead?.bedrooms">
-                    <label class="form-label-custom">Bedrooms</label>
-                    <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
-                </div>
-               
-                <div class="info-group" v-if="lead?.property_status">
-                    <label class="form-label-custom">Property Status</label>
-                    <div class="info-value">{{ lead?.property_status || '—' }}</div>
-                </div>
-                <div class="info-group" v-if="lead?.lead_type">
+                 <div class="info-group" v-if="lead?.lead_type">
                     <label class="form-label-custom">Lead Type</label>
                     <div class="info-value">{{ lead?.lead_type || '—' }}</div>
                 </div>
+                <div class="info-group" v-if="lead?.bedrooms">
+                    <label class="form-label-custom">Bedrooms</label>
+                    <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
+                </div>
+              
+                <div class="info-group" v-if="formatLeadBudgetRange(lead) && lead?.budget_from>0 && lead?.budget_to>0">
+                    <label class="form-label-custom">Budget</label>
+                    <div class="info-value">{{ formatLeadBudgetRange(lead) }} {{ lead?.currency || 'AED' }}</div>
+                </div>
+                 
+               
+               
+               
                  <div class="info-group" v-if="lead?.branch != null">
                     <label class="form-label-custom">Shared Branch</label>
                     <div class="info-value">{{ formatWithMapping(lead?.branch, {
@@ -606,9 +609,10 @@ const hasClientRequiredInfo = computed(() => {
         props.lead?.area ||
         props.lead?.property_type ||
         props.lead?.source_information ||
-        props.lead?.budget != null ||
-        props.lead?.budget_from != null ||
-        props.lead?.budget_to != null ||
+      
+        props.lead?.budget >0 ||
+        props.lead?.budget_from >0 ||
+        props.lead?.budget_to >0 ||
         props.lead?.branch != null ||
         props.lead?.available_date != null ||
         props.lead?.status_lead != null ||

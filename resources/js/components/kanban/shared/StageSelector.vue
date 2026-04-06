@@ -472,14 +472,18 @@ onUnmounted(() => {
     align-items: center;
     min-width: 140px;
     max-width: 170px;
-    padding: 4px 11px;
-    border-radius: 30px;
+    padding: 2px 10px;
+    /*border-radius: 30px;*/
     cursor: pointer;
     transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease;
     position: relative;
     overflow: hidden;
-    border: 1px solid transparent;
+    /*border: 1px solid transparent;*/
     box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.55);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 0 100%);
 }
 
 .stage-pill:not(.active) {

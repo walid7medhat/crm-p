@@ -1,5 +1,5 @@
 <template>
-    <div v-if="lead?.id" class="matching-properties-section info-section">
+    <div v-if="lead?.id && listings.length" class="matching-properties-section info-section">
         <div class="info-section-title">Matching property</div>
 
         <div v-if="resolvingIntegration" class="matching-loading text-muted small py-2">

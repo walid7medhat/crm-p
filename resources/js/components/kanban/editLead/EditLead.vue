@@ -227,7 +227,28 @@
                         </template>
                     </v-select>
                 </div>
-
+                    <!-- Property Status (Ready/Off Plan/Both) - جديد -->
+                    <div class="info-group">
+                        <label class="form-label-custom">Property Status <span class="text-danger">*</span></label>
+                        <v-select 
+                            v-model="form.property_status" 
+                            :options="propertyStatusOptions" 
+                            :reduce="option => option.value"
+                            label="text"
+                            placeholder="Select Property Status"
+                            class="custom-v-select"
+                            :class="{ 'is-invalid-select': validationErrors.property_status }"
+                        >
+                            <template #open-indicator="{ attributes }">
+                                <span v-bind="attributes">
+                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                </span>
+                            </template>
+                        </v-select>
+                        <div v-if="validationErrors.property_status" class="invalid-feedback d-block">
+                            {{ validationErrors.property_status[0] }}
+                        </div>
+                    </div>
                 <!-- Property Type -->
                   <div class="info-group">
                         <label class="form-label-custom">Property Type</label>
@@ -246,8 +267,50 @@
                             </template>
                         </v-select>
                     </div>
-       
-
+         <!-- Lead Type (Sale/Rent) - جديد -->
+                    <div class="info-group">
+                        <label class="form-label-custom">Lead Type <span class="text-danger">*</span></label>
+                        <v-select 
+                            v-model="form.lead_type" 
+                            :options="leadTypeOptions" 
+                            :reduce="option => option.value"
+                            label="text"
+                            placeholder="Select Lead Type"
+                            class="custom-v-select"
+                            :class="{ 'is-invalid-select': validationErrors.lead_type }"
+                        >
+                            <template #open-indicator="{ attributes }">
+                                <span v-bind="attributes">
+                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                </span>
+                            </template>
+                        </v-select>
+                        <div v-if="validationErrors.lead_type" class="invalid-feedback d-block">
+                            {{ validationErrors.lead_type[0] }}
+                        </div>
+                    </div>
+  <!-- Bedrooms -->
+                <div class="info-group">
+                    <label class="form-label-custom">How Many Bedrooms</label>
+                    <v-select 
+                        v-model="form.bedrooms" 
+                        :options="bedroomOptions" 
+                        :reduce="option => option.value"
+                        label="text"
+                        placeholder="Select Bedrooms"
+                        class="custom-v-select"
+                        :class="{ 'is-invalid-select': validationErrors.bedrooms }"
+                    >
+                        <template #open-indicator="{ attributes }">
+                            <span v-bind="attributes">
+                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                            </span>
+                        </template>
+                    </v-select>
+                    <div v-if="validationErrors.bedrooms" class="invalid-feedback d-block">
+                        {{ validationErrors.bedrooms[0] }}
+                    </div>
+                </div>
                 <!-- Budget From / To — align with other fields (label + control) -->
                 <div class="row g-3 budget-from-to-row">
                     <div class="col-md-6">
@@ -296,28 +359,7 @@
                 <div v-if="budgetErrorMessage" class="invalid-feedback d-block mt-1">
                     {{ budgetErrorMessage }}
                 </div>
-                   <!-- Bedrooms -->
-                <div class="info-group">
-                    <label class="form-label-custom">How Many Bedrooms</label>
-                    <v-select 
-                        v-model="form.bedrooms" 
-                        :options="bedroomOptions" 
-                        :reduce="option => option.value"
-                        label="text"
-                        placeholder="Select Bedrooms"
-                        class="custom-v-select"
-                        :class="{ 'is-invalid-select': validationErrors.bedrooms }"
-                    >
-                        <template #open-indicator="{ attributes }">
-                            <span v-bind="attributes">
-                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                            </span>
-                        </template>
-                    </v-select>
-                    <div v-if="validationErrors.bedrooms" class="invalid-feedback d-block">
-                        {{ validationErrors.bedrooms[0] }}
-                    </div>
-                </div>
+                 
                 
 
                 <!-- Purpose -->
@@ -342,51 +384,9 @@
                         {{ validationErrors.purpose_buying[0] }}
                     </div>
                 </div>
-                 <!-- Lead Type (Sale/Rent) - جديد -->
-                    <div class="info-group">
-                        <label class="form-label-custom">Lead Type <span class="text-danger">*</span></label>
-                        <v-select 
-                            v-model="form.lead_type" 
-                            :options="leadTypeOptions" 
-                            :reduce="option => option.value"
-                            label="text"
-                            placeholder="Select Lead Type"
-                            class="custom-v-select"
-                            :class="{ 'is-invalid-select': validationErrors.lead_type }"
-                        >
-                            <template #open-indicator="{ attributes }">
-                                <span v-bind="attributes">
-                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                </span>
-                            </template>
-                        </v-select>
-                        <div v-if="validationErrors.lead_type" class="invalid-feedback d-block">
-                            {{ validationErrors.lead_type[0] }}
-                        </div>
-                    </div>
+               
                 
-                    <!-- Property Status (Ready/Off Plan/Both) - جديد -->
-                    <div class="info-group">
-                        <label class="form-label-custom">Property Status <span class="text-danger">*</span></label>
-                        <v-select 
-                            v-model="form.property_status" 
-                            :options="propertyStatusOptions" 
-                            :reduce="option => option.value"
-                            label="text"
-                            placeholder="Select Property Status"
-                            class="custom-v-select"
-                            :class="{ 'is-invalid-select': validationErrors.property_status }"
-                        >
-                            <template #open-indicator="{ attributes }">
-                                <span v-bind="attributes">
-                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                </span>
-                            </template>
-                        </v-select>
-                        <div v-if="validationErrors.property_status" class="invalid-feedback d-block">
-                            {{ validationErrors.property_status[0] }}
-                        </div>
-                    </div>
+                
 
 
                 <!-- Source (required) -->

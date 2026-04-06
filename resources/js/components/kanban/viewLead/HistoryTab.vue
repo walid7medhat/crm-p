@@ -166,7 +166,7 @@
                                     >
                                         <iconify-icon icon="lucide:user" class="text-neutral-500"></iconify-icon>
                                     </div>
-                                    <span class="created-by-name">{{ entry.createdBy.name }}</span>
+                                    <span class="created-by-name"  v-html="entry.createdBy.name"></span>
                                 </div>
                             </td>
                             <td class="event-type-column">
@@ -572,12 +572,29 @@ const transformHistoryEntry = (entry) => {
             }).join('')
         }
     }
-    
+    let name = ''
+
+        if (user.name) {
+            name = user.name
+        } else {
+            const responsePerson = entry.response_person || ''
+            const source = entry.source || ''
+        
+            if (responsePerson && source) {
+              name = `${responsePerson}<br><small class="text-muted">${source}</small>`
+            } else if (responsePerson) {
+                name = responsePerson
+            } else if (source) {
+                name = source
+            } else {
+                name = '---'
+            }
+        }
     return {
         id: entry.id,
         dateTime: dateTime,
         createdBy: {
-            name: user.name || entry.source,
+            name: name,
             avatar: user.avatar || avatar,
         },
         eventType: eventType,

@@ -29,7 +29,6 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
         if ($assignmentHistory && $assignmentHistory->user) {
             $assignedBy = $assignmentHistory->user;
         } else {
-            // إذا لم يتم العثور على هيستوري إسناد، استخدم addedBy
             $assignedBy = $this->addedBy;
         }
         return [
@@ -108,9 +107,9 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'participants' => LeadParticipantResource::collection($this->whenLoaded('participants')),
             'observers' => LeadObserverResource::collection($this->whenLoaded('observers')),
             
-            'budget' => $this->budget,
-            'budget_from' => $this->budget_from,
-            'budget_to' => $this->budget_to,
+            'budget' =>  (int) $this->budget,
+            'budget_from' => (int)$this->budget_from,
+            'budget_to' => (int) $this->budget_to,
             'property_status' => $this->property_status,
             'lead_type' => $this->lead_type,
             'currency' => $this->currency,

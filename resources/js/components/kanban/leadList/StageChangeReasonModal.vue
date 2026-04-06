@@ -36,7 +36,7 @@
 
                         <div v-if="formData.interaction_result === 'answered'">
                             <label for="interaction-note" class="form-label">
-                                Purpose <span class="text-danger">*</span>
+                                Comment <span class="text-danger">*</span>
                             </label>
                             <textarea
                                 id="interaction-note"
@@ -137,114 +137,138 @@
                                 class="lead-qualification-trio"
                             >
                             <!-- Lead Status -->
-                            <div v-if="missingFields.includes('status_lead')" class="form-group mb-0 lead-qual-field">
-                                <template v-if="targetStageOrder === 4 || (isConversion && targetStageOrder === 6)">
-                                    <label class="form-label ">Quality Status</label>
-                                    <v-select 
-                                        v-model="formData.lead_status"
-                                        :options="hotWarmLeadOptions"
-                                        :reduce="opt => opt.value"
-                                        label="text"
-                                        placeholder="Select quality"
-                                        :searchable="false"
-                                        :clearable="false"
-                                        class="custom-v-select searchable-select lead-qual-select lead-qual-select--quality lead-qual-select--unified"
-                                    >
-                                        <template #selected-option="option">
-                                            <span class="qs-sel">
-                                                <span
-                                                    class="qs-dd-dot qs-dd-dot--sm"
-                                                    :class="{ 'is-filled': true }"
-                                                    :style="{
-                                                        '--qs-ring': qualityMetaForValue(option.value).ringColor,
-                                                        '--qs-fill': qualityMetaForValue(option.value).fillColor,
-                                                    }"
-                                                    aria-hidden="true"
-                                                />
-                                                <span class="qs-sel-label">{{ qualityMetaForValue(option.value).label }}</span>
-                                            </span>
-                                        </template>
-                                        <template #option="option">
-                                            <div class="qs-opt-wrap">
-                                                <div class="qs-dd-row">
+                            <!-- Lead Status -->
+                                <div v-if="missingFields.includes('status_lead')" class="form-group mb-0 lead-qual-field">
+                                    <!-- حالة خاصة للمرحلة 6 (Converted) -->
+                                    <template v-if="targetStageOrder === 6">
+                                        <label class="form-label ">Quality Status</label>
+                                        <v-select 
+                                            v-model="formData.lead_status"
+                                            :options="convertedStatusOptions"
+                                            :reduce="opt => opt.value"
+                                            label="text"
+                                            placeholder="Select status"
+                                            :searchable="false"
+                                            :clearable="false"
+                                            class="custom-v-select searchable-select lead-qual-select--unified"
+                                        >
+                                            <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
+                                            </template>
+                                        </v-select>
+                                    </template>
+                                
+                                    <!-- حالة المرحلة 4 (Quality Status: Hot/Warm/Cold) -->
+                                    <template v-else-if="targetStageOrder === 4">
+                                        <label class="form-label ">Quality Status</label>
+                                        <v-select 
+                                            v-model="formData.lead_status"
+                                            :options="hotWarmLeadOptions"
+                                            :reduce="opt => opt.value"
+                                            label="text"
+                                            placeholder="Select quality"
+                                            :searchable="false"
+                                            :clearable="false"
+                                            class="custom-v-select searchable-select lead-qual-select lead-qual-select--quality lead-qual-select--unified"
+                                        >
+                                            <template #selected-option="option">
+                                                <span class="qs-sel">
                                                     <span
-                                                        class="qs-dd-dot"
-                                                        :class="{ 'is-filled': formData.lead_status === option.value }"
+                                                        class="qs-dd-dot qs-dd-dot--sm"
+                                                        :class="{ 'is-filled': true }"
                                                         :style="{
                                                             '--qs-ring': qualityMetaForValue(option.value).ringColor,
                                                             '--qs-fill': qualityMetaForValue(option.value).fillColor,
                                                         }"
                                                         aria-hidden="true"
                                                     />
-                                                    <span class="qs-dd-text">
-                                                        <span class="qs-dd-title">{{ qualityMetaForValue(option.value).label }}</span>
-                                                    </span>
+                                                    <span class="qs-sel-label">{{ qualityMetaForValue(option.value).label }}</span>
+                                                </span>
+                                            </template>
+                                            <template #option="option">
+                                                <div class="qs-opt-wrap">
+                                                    <div class="qs-dd-row">
+                                                        <span
+                                                            class="qs-dd-dot"
+                                                            :class="{ 'is-filled': formData.lead_status === option.value }"
+                                                            :style="{
+                                                                '--qs-ring': qualityMetaForValue(option.value).ringColor,
+                                                                '--qs-fill': qualityMetaForValue(option.value).fillColor,
+                                                            }"
+                                                            aria-hidden="true"
+                                                        />
+                                                        <span class="qs-dd-text">
+                                                            <span class="qs-dd-title">{{ qualityMetaForValue(option.value).label }}</span>
+                                                        </span>
+                                                    </div>
+                                                    <div class="qs-dd-hover-tip" role="tooltip">
+                                                        <iconify-icon icon="lucide:sparkles" class="qs-dd-hover-tip__icon" />
+                                                        {{ qualityMetaForValue(option.value).tooltip }}
+                                                    </div>
                                                 </div>
-                                                <div class="qs-dd-hover-tip" role="tooltip">
-                                                    <iconify-icon icon="lucide:sparkles" class="qs-dd-hover-tip__icon" />
-                                                    {{ qualityMetaForValue(option.value).tooltip }}
-                                                </div>
-                                            </div>
-                                        </template>
-                                        <template #open-indicator="{ attributes }">
-                                            <span v-bind="attributes">
-                                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                            </span>
-                                        </template>
-                                    </v-select>
-                                </template>
-
-                                <template v-else>
-                                    <label class="form-label ">Lead Status</label>
-                                    <v-select append-to-body
-                                        v-if="targetStageOrder === 9"
-                                        v-model="formData.lead_status"
-                                        :options="leadPoolStatusOptions"
-                                        :reduce="opt => opt.value"
-                                        label="text"
-                                        placeholder="Select Status"
-                                        class="custom-v-select searchable-select lead-qual-select lead-qual-select--unified"
-                                    >
-                                        <template #open-indicator="{ attributes }">
-                                            <span v-bind="attributes">
-                                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                            </span>
-                                        </template>
-                                    </v-select>
-
-                                    <v-select append-to-body
-                                        v-else-if="targetStageOrder === 10"
-                                        v-model="formData.lead_status"
-                                        :options="unqualifiedStatusOptions"
-                                        :reduce="opt => opt.value"
-                                        label="text"
-                                        placeholder="Select Status"
-                                        class="custom-v-select searchable-select lead-qual-select lead-qual-select--unified"
-                                    >
-                                        <template #open-indicator="{ attributes }">
-                                            <span v-bind="attributes">
-                                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                            </span>
-                                        </template>
-                                    </v-select>
-
-                                    <v-select append-to-body
-                                        v-else
-                                        v-model="formData.lead_status"
-                                        :options="defaultLeadStatusOptions"
-                                        :reduce="opt => opt.value"
-                                        label="text"
-                                        placeholder="Not Selected"
-                                        class="custom-v-select searchable-select lead-qual-select lead-qual-select--unified"
-                                    >
-                                        <template #open-indicator="{ attributes }">
-                                            <span v-bind="attributes">
-                                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                            </span>
-                                        </template>
-                                    </v-select>
-                                </template>
-                            </div>
+                                            </template>
+                                            <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
+                                            </template>
+                                        </v-select>
+                                    </template>
+                                
+                                    <!-- باقي المراحل (9، 10، وغيرها) -->
+                                    <template v-else>
+                                        <label class="form-label ">Quality Status</label>
+                                        <v-select append-to-body
+                                            v-if="targetStageOrder === 9"
+                                            v-model="formData.lead_status"
+                                            :options="leadPoolStatusOptions"
+                                            :reduce="opt => opt.value"
+                                            label="text"
+                                            placeholder="Select Status"
+                                            class="custom-v-select searchable-select lead-qual-select lead-qual-select--unified"
+                                        >
+                                            <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
+                                            </template>
+                                        </v-select>
+                                
+                                        <v-select append-to-body
+                                            v-else-if="targetStageOrder === 10"
+                                            v-model="formData.lead_status"
+                                            :options="unqualifiedStatusOptions"
+                                            :reduce="opt => opt.value"
+                                            label="text"
+                                            placeholder="Select Status"
+                                            class="custom-v-select searchable-select lead-qual-select lead-qual-select--unified"
+                                        >
+                                            <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
+                                            </template>
+                                        </v-select>
+                                
+                                        <v-select append-to-body
+                                            v-else
+                                            v-model="formData.lead_status"
+                                            :options="defaultLeadStatusOptions"
+                                            :reduce="opt => opt.value"
+                                            label="text"
+                                            placeholder="Not Selected"
+                                            class="custom-v-select searchable-select lead-qual-select lead-qual-select--unified"
+                                        >
+                                            <template #open-indicator="{ attributes }">
+                                                <span v-bind="attributes">
+                                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                </span>
+                                            </template>
+                                        </v-select>
+                                    </template>
+                                </div>
   <!-- Lead Type (Sale/Rent) -->
                         <div v-if="missingFields.includes('lead_type')" class="form-group mb-0 lead-qual-field">
                             <label class="form-label ">Lead Type <span class="text-danger">*</span></label>
@@ -367,11 +391,11 @@
                                 <div v-if="missingFields.includes('budget_from')" class="form-group mb-3">
                                     <label class="form-label">Budget From (AED)</label>
                                     <input 
-                                        type="number" 
-                                        v-model="formData.budget_from" 
+                                        type="text" 
                                         placeholder="Enter Min Budget" 
                                         class="form-control budget-input"
-                                        @input="validateBudgetRange"
+                                         @input="onBudgetFromInput($event.target.value)"
+                                           :value="budgetFromDisplay"
                                     >
                                 </div>
         
@@ -379,11 +403,12 @@
                                 <div v-if="missingFields.includes('budget_to')" class="form-group mb-3">
                                     <label class="form-label">Budget To (AED)</label>
                                     <input 
-                                        type="number" 
-                                        v-model="formData.budget_to" 
+                                        type="text" 
                                         placeholder="Enter Max Budget" 
                                         class="form-control budget-input"
-                                        @input="validateBudgetRange"
+                                          @input="onBudgetToInput($event.target.value)"
+
+                                            :value="budgetToDisplay"
                                     >
                                 </div>
 
@@ -491,6 +516,7 @@ import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
 import DateTimePicker from '../shared/DateTimePicker.vue'
+import { formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
 
 const props = defineProps({
     modelValue: {
@@ -561,6 +587,9 @@ const hotWarmLeadOptions = [
     { value: 'warm', text: 'Warm Lead' },
     { value: 'hot', text: 'Hot Lead' }
 ]
+const convertedStatusOptions = [
+    { value: 'converted', text: 'Converted' }
+]
 
 /** Section 3: Cold / Warm / Hot radio columns (same values as hotWarmLeadOptions). */
 const qualityTemperatureRadios = [
@@ -628,6 +657,60 @@ const showReminderDropdown = ref(false)
 const showDateTimePicker = ref(false)
 const reminderDate = ref(new Date())
 const reminders = ref([])
+
+const budgetFromDisplay = ref('')
+const budgetToDisplay = ref('')
+
+const onBudgetFromInput = (rawValue) => {
+    if (!rawValue) {
+        formData.value.budget_from = ''
+        budgetFromDisplay.value = ''
+        return
+    }
+    
+    let numericValue = String(rawValue).replace(/[^0-9]/g, '')
+    
+    if (numericValue === '') {
+        formData.value.budget_from = ''
+        budgetFromDisplay.value = ''
+        return
+    }
+    
+    const number = parseInt(numericValue, 10)
+    if (!isNaN(number)) {
+        formData.value.budget_from = number
+        budgetFromDisplay.value = number.toLocaleString('en-US')
+    }
+}
+
+const onBudgetToInput = (rawValue) => {
+    if (!rawValue) {
+        formData.value.budget_to = ''
+        budgetToDisplay.value = ''
+        return
+    }
+    
+    let numericValue = String(rawValue).replace(/[^0-9]/g, '')
+    
+    if (numericValue === '') {
+        formData.value.budget_to = ''
+        budgetToDisplay.value = ''
+        return
+    }
+    
+    const number = parseInt(numericValue, 10)
+    if (!isNaN(number)) {
+        formData.value.budget_to = number
+        budgetToDisplay.value = number.toLocaleString('en-US')
+    }
+}
+
+const syncBudgetDisplayFields = () => {
+    budgetFromDisplay.value = formData.value.budget_from ? 
+        formatBudgetThousands(formData.value.budget_from) : ''
+    budgetToDisplay.value = formData.value.budget_to ? 
+        formatBudgetThousands(formData.value.budget_to) : ''
+}
 
 const formattedReminderDate = computed(() => {
     const date = reminderDate.value ? new Date(reminderDate.value) : new Date()
@@ -725,7 +808,7 @@ const formData = ref({
     bedrooms: '',
     purpose_buying: '',
     lead_source: '',
-    lead_status: '',
+    lead_status: props.targetStageOrder === 6 ? 'converted' : '',
     available_date: '',
     branch: '',
     lost_reason: ''
@@ -772,6 +855,8 @@ const resetForm = () => {
         branch: '',
         lost_reason: ''
     }
+      budgetFromDisplay.value = ''
+    budgetToDisplay.value = ''
     reminderDate.value = new Date()
     reminders.value = []
     showReminderDropdown.value = false
@@ -871,30 +956,30 @@ const handleSubmit = async () => {
             return
         }
         if (field === 'status_lead') {
-            // التحقق حسب المرحلة
-            const targetOrder = props.targetStageOrder
-            
-            if (targetOrder === 4 || (props.isConversion && targetOrder === 6)) {
-                if (!formData.value.lead_status) {
-                    $showNotification('Please select lead status (cold/warm/hot)', 'warning')
-                    return
-                }
-            } else if (targetOrder === 9) {
-                if (!formData.value.lead_status) {
-                    $showNotification('Please select lead pool status', 'warning')
-                    return
-                }
-                // تحويل القيمة للصيغة الصحيحة للباك اند
-                if (formData.value.lead_status === 'no_answer' || formData.value.lead_status === 'canceled') {
-                    // هذه القيم صحيحة
-                }
-            } else if (targetOrder === 10) {
-                if (!formData.value.lead_status) {
-                    $showNotification('Please select unqualified status', 'warning')
-                    return
+                const targetOrder = props.targetStageOrder
+                
+                if (targetOrder === 4) {
+                    if (!formData.value.lead_status) {
+                        $showNotification('Please select lead status (cold/warm/hot)', 'warning')
+                        return
+                    }
+                } else if (targetOrder === 6) {
+                    if (!formData.value.lead_status) {
+                        $showNotification('Please select conversion status', 'warning')
+                        return
+                    }
+                } else if (targetOrder === 9) {
+                    if (!formData.value.lead_status) {
+                        $showNotification('Please select lead pool status', 'warning')
+                        return
+                    }
+                } else if (targetOrder === 10) {
+                    if (!formData.value.lead_status) {
+                        $showNotification('Please select unqualified status', 'warning')
+                        return
+                    }
                 }
             }
-        }
         if (field === 'available_date' && !formData.value.available_date) {
             $showNotification('Please select available date', 'warning')
             return
@@ -996,8 +1081,7 @@ watch(visible, (newVal) => {
         loadLookupData()
         if (props.leadData) {
             formData.value.salutation = props.leadData.salutation || ''
-            // formData.value.budget = props.leadData.budget || ''
-              formData.value.budget_from = props.leadData.budget_from || ''
+            formData.value.budget_from = props.leadData.budget_from || ''
             formData.value.budget_to = props.leadData.budget_to || ''
             formData.value.lead_type = props.leadData.lead_type || ''
             formData.value.property_status = props.leadData.property_status || ''
@@ -1007,11 +1091,19 @@ watch(visible, (newVal) => {
             formData.value.bedrooms = props.leadData.bedrooms || ''
             formData.value.purpose_buying = props.leadData.purpose_buying || ''
             formData.value.lead_source = props.leadData.lead_source || ''
-            formData.value.lead_status = props.leadData.lead_status || ''
+            // للمرحلة 6، اجعل القيمة 'converted' إذا لم تكن موجودة
+            if (props.targetStageOrder === 6) {
+                formData.value.lead_status = props.leadData.lead_status || 'converted'
+            } else {
+                formData.value.lead_status = props.leadData.lead_status || ''
+            }
+            syncBudgetDisplayFields()
+        } else if (props.targetStageOrder === 6) {
+            // إذا لم يوجد lead data وكانت المرحلة 6، اجعل القيمة 'converted'
+            formData.value.lead_status = 'converted'
         }
     }
 })
-
 onMounted(() => {
     document.addEventListener('click', handleClickOutside)
 })

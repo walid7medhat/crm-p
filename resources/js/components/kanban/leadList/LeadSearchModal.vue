@@ -811,7 +811,7 @@ const searchFieldsConfig = computed(() => {
         { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
         { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
         { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
-          { id: 'work_phone', label: 'Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Work Phone' },
+          { id: 'work_phone', label: 'Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Phone' },
         { id: 'closed', label: 'Converted', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
         { id: 'created_on', label: 'Created On', formKey: 'createdOn', queryKey: 'created_at', type: 'select', options: createdOnOptions },
       
@@ -2046,7 +2046,7 @@ onMounted(async () => {
     border: 1px solid #E2E8F0;
     box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
     padding: 0;
-    margin-top: 5px;
+    /*margin-top: 5px;*/
     z-index: 1100;
 }
 
@@ -2098,6 +2098,7 @@ onMounted(async () => {
     }
     .vs__dropdown-menu {
         z-index: 9999 !important;
+        max-height:150px;
     }
     .vs__dropdown-option--highlight {
         background: #FAA300 !important;

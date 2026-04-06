@@ -1,5 +1,5 @@
 <template v-if="entries.length > 0" >
-    <div v-if="entries.length > 0" class="lead-activity-timeline info-card bg-white p-3 radius-12 shadow-sm mt-3">
+    <div v-if="entries.length > 0" class="lead-activity-timeline bg-white p-3 radius-12 shadow-sm mt-3">
         <div class="activity-timeline-header d-flex justify-content-between align-items-center pb-2 mb-3 border-bottom">
             <span class="modal-title">Lead Activity</span>
         </div>
@@ -51,9 +51,10 @@
                                     <img  class="comment-avatar-hover-anchor activity-avatar"
                                             @mouseenter="activeHoverUserId = item.id"
                                             @mouseleave="activeHoverUserId = null"
-                                            v-if="item.user?.avatar"
-                                            :src="item.user.avatar"
-                                            :alt="item.user?.name"
+                                        v-if="item.user?.avatar"
+                                        :src="item.user.avatar"
+                                        
+                                        :alt="item.user?.name"
                                      
                                     />
                                     <div v-else class="activity-avatar activity-avatar-placeholder">

@@ -1,6 +1,6 @@
 <template>
     <!-- Lead Comments List: only show when there are comments -->
-    <div v-if="groupedComments.length > 0" class="info-card bg-white p-3 radius-12 shadow-sm mt-3">
+    <div v-if="groupedComments.length > 0" class=" bg-white p-3 radius-12 shadow-sm mt-3 ">
         <div class="modal-header-custom d-flex justify-content-between align-items-center pb-9 mb-3 border-bottom">
         <div class="d-flex align-items-center gap-2">
             <span class="modal-title">Lead Comments</span>
