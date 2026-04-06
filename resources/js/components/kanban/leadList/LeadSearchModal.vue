@@ -573,8 +573,8 @@ const cityBranchGroups = computed(() => {
         .filter(o => o && o.value != null)
 
     const groups = {
-        dubai: { label: 'Dubai', options: [] },
-        'abu-dhabi': { label: 'Abu Dhabi', options: [] },
+        dubai: { id: 'dubai', label: 'Dubai', options: [] },
+        'abu-dhabi': { id: 'abu-dhabi', label: 'Abu Dhabi', options: [] },
     }
 
     options.forEach((office) => {

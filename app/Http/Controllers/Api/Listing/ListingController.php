@@ -228,6 +228,8 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             return [
                 'id' => $listing->id,
                 'title' => $listing->title ?: $fallbackTitle,
+                /** Raw unit title (empty when API falls back title to project/area). */
+                'listing_title' => $listing->title,
                 'latitude' => $lat,
                 'longitude' => $lng,
                 'coordinate_source' => $resolved['coordinate_source'],
@@ -244,6 +246,10 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
                 'listing_status' => $listing->listing_status,
                 'project_name' => $listing->project_join_title ?? $listing->project?->title,
                 'area_name' => $resolvedName,
+                'number_of_bedrooms' => $listing->number_of_bedrooms,
+                'number_of_bathrooms' => $listing->number_of_bathrooms,
+                'size_sqft' => $listing->size_sqft,
+                'size_sqmt' => $listing->size_sqmt,
                 'hero_image' => $listing->hero_image_path ? asset('storage/' . $listing->hero_image_path) : null,
             ];
         });

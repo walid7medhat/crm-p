@@ -144,5 +144,8 @@ export default {
   width: 100%;
   box-sizing: border-box;
   padding-top: 0 !important;
+  /* Lets routed pages (e.g. property map) use height: 100% / flex to fill below navbar */
+  display: flex;
+  flex-direction: column;
 }
 </style>
