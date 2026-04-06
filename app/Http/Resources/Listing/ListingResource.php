@@ -153,6 +153,8 @@ $allowedAgentIds = [];
                  'showDocuments'=>$showDocuments,
                   'show_offers'=>$user->hasRole('super_admin'),
             ],
+            'canShowOwner' => $user && ($user->hasRole('super_admin') || $this->agent_id == $user->id),
+
             'is_owner' => $this->isOwner($user) || ($canAssignAgent && $user->hasRole('manager') && $user->listing_team == 1),
 
             // Gallery Images

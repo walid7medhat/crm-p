@@ -157,7 +157,7 @@
               </div>
               
               <!-- Unit Number -->
-              <div class="col-md-4">
+              <div class="col-md-4" v-if="canShowOwnerSection">
                 <label class="form-label">Unit Number</label>
                 <input v-model="form.unit_number" type="text" class="form-control" placeholder="Enter unit number" />
               </div>
@@ -754,12 +754,12 @@
         </div>
       </div>
       <!--  Owner Section -->
-      <div class="col-lg-12">
+      <div class="col-lg-12" >
         <div class="card">
-          <div class="card-header">
+          <div class="card-header" v-if="canShowOwnerSection">
             <h6 class="card-title mb-0">Owner Details</h6>
           </div>
-          <div class="card-body">
+          <div class="card-body" v-if="canShowOwnerSection">
             <div class="row align-items-end gy-3">
               <div class="col-md-6 col-sm-8">
                 <label class="form-label">Select Owner</label>
@@ -1065,7 +1065,7 @@ import "vue-select/dist/vue-select.css";
 const route = useRoute();
 const router = useRouter();
 const { proxy } = getCurrentInstance();
-
+const propertyData = ref(null);
 // Mode and Loading
 const isEditMode = ref(true);
 const propertyId = ref(null);
@@ -1116,7 +1116,9 @@ const importedFloorPlansCount = computed(() => {
 
 
 
-
+const canShowOwnerSection = computed(() => {
+  return (propertyData.value && propertyData.value.canShowOwner === true ) || (form.value && form.value.canShowOwner === true);
+});
 
 
 
@@ -1599,7 +1601,8 @@ const fetchPropertyData = async (id) => {
       drive_link: driveLink,
       is_hot_deal:propertyData.is_hot_deal,
       payment_plans: loadedPaymentPlans,
-      payment_plan: paymentPlanString || ""
+      payment_plan: paymentPlanString || "",
+       canShowOwner: propertyData.canShowOwner 
     };
     
     existingFloorPlans.value = propertyData.floor_plans || [];
