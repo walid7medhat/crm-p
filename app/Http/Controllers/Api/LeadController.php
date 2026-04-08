@@ -661,6 +661,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             
             // Stage 9: Lead Pool - استخدام status_lead
             'status_lead_pool' => 'nullable|string|max:100|in:no_answer,canceled',
+            'interaction_result' => 'nullable|string|max:20|in:answered,no_answer',
             
             // Stage 10: Unqualified - استخدام status_lead
             'unqualified_status' => 'nullable',
@@ -741,6 +742,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             'purpose_buying', 'bedrooms', 'responsible_person_id','property_status','lead_type',
             'salutation',
             'status_lead',      // يستخدم للمراحل 4, 9, 10
+            'interaction_result',
             'why_lost_lead',    // يستخدم للمرحلة 8
             'available_date',   // للمرحلة 5
             'branch'            // للمرحلة 7

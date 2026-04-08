@@ -49,8 +49,11 @@
                 <button class="close-btn" @click="show = false">
                     <iconify-icon icon="lucide:x"></iconify-icon>
                 </button>
-                <div class="row g-4">
-                    <template v-for="field in visibleSearchFields" :key="field.id">
+                <div class="search-sections-wrap">
+                    <div v-for="section in visibleSearchSections" :key="`modal_${section.id}`" class="search-section-card">
+                        <div class="search-section-title">{{ section.title }}</div>
+                        <div class="row g-4">
+                    <template v-for="field in section.fields" :key="field.id">
                         <div class="col-md-6 mt-3">
                             <label class="form-label-custom">{{ field.label }}</label>
                             <button
@@ -62,12 +65,58 @@
                                 <span>{{ createdOnDisplay }}</span>
                                 <iconify-icon icon="lucide:calendar-days" />
                             </button>
+                            <div
+                                v-else-if="field.id === 'budget_from'"
+                                ref="budgetTriggerRef"
+                                class="budget-field-wrap"
+                            >
+                                <button
+                                    type="button"
+                                    class="custom-date-trigger"
+                                    @click.stop="toggleBudgetDropdown"
+                                >
+                                    <span>{{ budgetDisplay }}</span>
+                                    <iconify-icon icon="lucide:chevron-down" />
+                                </button>
+                            </div>
                             <b-form-input
-                                v-else-if="field.type === 'text'"
+                                v-else-if="field.type === 'text' && field.id !== 'budget_to'"
                                 v-model="form[field.formKey]"
                                 :placeholder="field.placeholder"
                                 class="custom-input"
                             />
+                            <v-select
+                                v-else-if="field.type === 'select' && field.id === 'location'"
+                                v-model="form.areaId"
+                                :options="areaOptions"
+                                :reduce="area => area.id"
+                                label="name"
+                                placeholder="Select area"
+                                :clearable="hasValue(form.areaId)"
+                                append-to-body
+                                class="custom-v-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                <template #option="option">
+                                    <div class="location-option">
+                                        <i class="ri-map-pin-line location-option-icon"></i>
+                                        <div class="location-option-text">
+                                            <span class="location-option-name">{{ locationFirstLine(option) }}</span>
+                                            <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template #selected-option="option">
+                                    <div v-if="option" class="location-selected">
+                                        <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
+                                        <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
+                                    </div>
+                                </template>
+                            </v-select>
                             <v-select
                                 v-else-if="field.type === 'select' && field.id !== 'office'"
                                 v-model="form[field.formKey]"
@@ -88,13 +137,15 @@
                             <v-select
                                 v-if="field.id === 'source' && form.source === 'website'"
                                 v-model="form.sourceWebsite"
-                                :options="websiteSourceOptions"
+                                :options="websiteSourceOptionsForMulti"
                                 :reduce="opt => opt.value"
                                 label="text"
-                                placeholder="Select Website"
-                                :clearable="hasValue(form.sourceWebsite)"
+                                placeholder="Select websites"
+                                :clearable="form.sourceWebsite && form.sourceWebsite.length > 0"
+                                multiple
+                                filterable
                                 append-to-body
-                                class="custom-v-select mt-2"
+                                class="custom-v-select mt-2 office-multi-select"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -126,6 +177,8 @@
                             </v-select>
                         </div>
                     </template>
+                        </div>
+                    </div>
                 </div>
                 <div class="d-flex align-items-center justify-content-between mt-3 pt-4">
                     <div class="d-flex gap-4">
@@ -182,8 +235,11 @@
                 <button class="close-btn" @click="emit('update:modelValue', false)">
                     <iconify-icon icon="lucide:x"></iconify-icon>
                 </button>
-                <div class="row g-4">
-                    <template v-for="field in visibleSearchFields" :key="field.id">
+                <div class="search-sections-wrap">
+                    <div v-for="section in visibleSearchSections" :key="`dropdown_${section.id}`" class="search-section-card">
+                        <div class="search-section-title">{{ section.title }}</div>
+                        <div class="row g-4">
+                    <template v-for="field in section.fields" :key="field.id">
                         <div class="col-md-6 mt-3">
                             <label class="form-label-custom">{{ field.label }}</label>
                             <button
@@ -195,12 +251,58 @@
                                 <span>{{ createdOnDisplay }}</span>
                                 <iconify-icon icon="lucide:calendar-days" />
                             </button>
+                            <div
+                                v-else-if="field.id === 'budget_from'"
+                                ref="budgetTriggerRef"
+                                class="budget-field-wrap"
+                            >
+                                <button
+                                    type="button"
+                                    class="custom-date-trigger"
+                                    @click.stop="toggleBudgetDropdown"
+                                >
+                                    <span>{{ budgetDisplay }}</span>
+                                    <iconify-icon icon="lucide:chevron-down" />
+                                </button>
+                            </div>
                             <b-form-input
-                                v-else-if="field.type === 'text'"
+                                v-else-if="field.type === 'text' && field.id !== 'budget_to'"
                                 v-model="form[field.formKey]"
                                 :placeholder="field.placeholder"
                                 class="custom-input"
                             />
+                            <v-select
+                                v-else-if="field.type === 'select' && field.id === 'location'"
+                                v-model="form.areaId"
+                                :options="areaOptions"
+                                :reduce="area => area.id"
+                                label="name"
+                                placeholder="Select area"
+                                :clearable="hasValue(form.areaId)"
+                                append-to-body
+                                class="custom-v-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                <template #option="option">
+                                    <div class="location-option">
+                                        <i class="ri-map-pin-line location-option-icon"></i>
+                                        <div class="location-option-text">
+                                            <span class="location-option-name">{{ locationFirstLine(option) }}</span>
+                                            <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template #selected-option="option">
+                                    <div v-if="option" class="location-selected">
+                                        <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
+                                        <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
+                                    </div>
+                                </template>
+                            </v-select>
                             <v-select
                                 v-else-if="field.type === 'select' && field.id !== 'office'"
                                 v-model="form[field.formKey]"
@@ -221,13 +323,15 @@
                             <v-select
                                 v-if="field.id === 'source' && form.source === 'website'"
                                 v-model="form.sourceWebsite"
-                                :options="websiteSourceOptions"
+                                :options="websiteSourceOptionsForMulti"
                                 :reduce="opt => opt.value"
                                 label="text"
-                                placeholder="Select Website"
-                                :clearable="hasValue(form.sourceWebsite)"
+                                placeholder="Select websites"
+                                :clearable="form.sourceWebsite && form.sourceWebsite.length > 0"
+                                multiple
+                                filterable
                                 append-to-body
-                                class="custom-v-select mt-2"
+                                class="custom-v-select mt-2 office-multi-select"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -259,6 +363,8 @@
                             </v-select>
                         </div>
                     </template>
+                        </div>
+                    </div>
                 </div>
                 <div class="d-flex align-items-center justify-content-between mt-3 pt-4">
                     <div class="d-flex gap-4">
@@ -330,10 +436,35 @@
             </div>
         </div>
     </div>
+
+    <Teleport to="body">
+        <div
+            v-if="showBudgetDropdown"
+            ref="budgetDropdownPanelRef"
+            class="budget-dropdown budget-dropdown--portal"
+            :style="budgetDropdownStyle"
+            @click.stop
+        >
+            <label class="budget-input-label">From</label>
+            <b-form-input
+                :model-value="form.budgetFrom"
+                placeholder="0"
+                class="custom-input budget-dropdown-input"
+                @update:model-value="(val) => setBudgetValue('budgetFrom', val)"
+            />
+            <label class="budget-input-label mt-2">To</label>
+            <b-form-input
+                :model-value="form.budgetTo"
+                placeholder="0"
+                class="custom-input budget-dropdown-input"
+                @update:model-value="(val) => setBudgetValue('budgetTo', val)"
+            />
+        </div>
+    </Teleport>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed, nextTick } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import { BModal, BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -354,6 +485,10 @@ const emit = defineEmits(['update:modelValue', 'search'])
 const show = ref(props.modelValue)
 const showFilterSettings = ref(false)
 const showDateModal = ref(false)
+const showBudgetDropdown = ref(false)
+const budgetTriggerRef = ref(null)
+const budgetDropdownPanelRef = ref(null)
+const budgetDropdownStyle = ref({})
 const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'work_phone', 'responsible_person', 'lead_branch_source','office', 'stage', 'email','source','team'])
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
 const teamOptions = ref([{ value: null, text: 'Select Team' }])
@@ -442,7 +577,7 @@ watch(() => props.modelValue, (val) => {
             else syncFormFromQuery(props.currentQuery)
         })
     }
-}, { immediate: true })
+})
 
 const queryToFormKeys = {
     lead_name: 'leadName',
@@ -460,13 +595,43 @@ const queryToFormKeys = {
     search: 'search',
     source: 'source',
     source_website: 'sourceWebsite',
+    interaction_result: 'interactionResult',
     team_id: 'team',
     office_branch: 'office',
     lead_type: 'leadType',
     property_status: 'propertyStatus',
     budget_from: 'budgetFrom',
     budget_to: 'budgetTo',
+    area_id: 'areaId',
      property_type_id: 'propertyType'
+}
+
+function normalizeSourceWebsiteForm(next) {
+    const siteValues = websiteSourceOptions.value.map(o => o.value).filter(v => v != null)
+    if (Array.isArray(next.source) && next.source.length) {
+        next.sourceWebsite = next.source.filter(Boolean)
+        next.source = 'website'
+        return
+    }
+    if (typeof next.source === 'string' && siteValues.includes(next.source)) {
+        next.sourceWebsite = [next.source]
+        next.source = 'website'
+        return
+    }
+    if (next.source === 'allproperties' || next.source === 'oiaproperties') {
+        next.sourceWebsite = next.source ? [next.source] : []
+        next.source = 'website'
+        return
+    }
+    if (next.source === 'website') {
+        if (Array.isArray(next.sourceWebsite)) {
+            next.sourceWebsite = next.sourceWebsite.filter(v => v != null && v !== '')
+        } else if (next.sourceWebsite) {
+            next.sourceWebsite = [next.sourceWebsite]
+        } else {
+            next.sourceWebsite = []
+        }
+    }
 }
 
 function syncFormFromQuery(query) {
@@ -490,13 +655,16 @@ function syncFormFromQuery(query) {
         email: '',
         bedrooms: '',
         leadName: '',
-        sourceWebsite: '',
+        source: '',
+        sourceWebsite: [],
+        interactionResult: '',
         team: '',
         office: [],
         leadType: '',
         propertyStatus: '',
         budgetFrom: '',
         budgetTo: '',
+        areaId: '',
          propertyType: ''
     }
     Object.keys(queryToFormKeys).forEach(qKey => {
@@ -509,10 +677,14 @@ function syncFormFromQuery(query) {
             }
         }
     })
-    if (next.source === 'allproperties' || next.source === 'oiaproperties') {
-        next.sourceWebsite = next.source
+    if ((!next.source || next.source === '') && query.source_website) {
+        const sw = query.source_website
+        next.sourceWebsite = Array.isArray(sw) ? sw.filter(Boolean) : [sw].filter(Boolean)
         next.source = 'website'
     }
+    normalizeSourceWebsiteForm(next)
+    next.budgetFrom = formatBudgetWithCommas(next.budgetFrom)
+    next.budgetTo = formatBudgetWithCommas(next.budgetTo)
     form.value = next
 }
 
@@ -608,6 +780,8 @@ const form = ref({
     bedrooms: '',
     leadName: '',
     source: '',
+    sourceWebsite: [],
+    interactionResult: '',
     createdFrom: '',    
     createdTo: '',  
     team: '',
@@ -616,6 +790,7 @@ const form = ref({
     propertyStatus: '',
     budgetFrom: '',
     budgetTo: '',
+    areaId: '',
      propertyType: ''
 })
 
@@ -694,6 +869,14 @@ const websiteSourceOptions = ref([
     { value: 'Allproperties.ae', text: 'Allproperties.ae' },
     { value: 'Oiaproperties.com', text: 'Oiaproperties.com' }
 ])
+const websiteSourceOptionsForMulti = computed(() =>
+    websiteSourceOptions.value.filter(o => o.value != null)
+)
+const interactionResultOptions = [
+    { value: null, text: 'Select Call Result' },
+    { value: 'answered', text: 'Answered' },
+    { value: 'no_answer', text: 'No Answer' },
+]
 const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 const selectedPreset = ref('')
 const startDate = ref(null)
@@ -732,6 +915,32 @@ const getUserFromStorage = () => {
     }
 }
 const propertyTypeOptions = ref([])
+const areaOptions = ref([])
+const locationFirstLine = (area) => area?.name || 'Unknown Area'
+const locationSecondLine = (area) => {
+    const parent = area?.parent || area?.area_parents_title || area?.parent_name
+    const community = area?.community_name || area?.communityName
+    const city = area?.city_name || area?.cityName
+    if (parent) return parent
+    if (community && city) return `${community}, ${city}`
+    return community || city || ''
+}
+const fetchAreas = async () => {
+    try {
+        const res = await api.get('/listings/areas/?has_listings=true')
+        const data = res.data.data || res.data || []
+        areaOptions.value = data.map(area => ({
+            id: area.id,
+            name: area.name || area.title,
+            parent: area.area_parents_title || area.parent || area.parent_name || '',
+            community_name: area.community_name || area.communityName || '',
+            city_name: area.city_name || area.cityName || '',
+        }))
+    } catch (error) {
+        console.error('Error fetching areas:', error)
+        areaOptions.value = []
+    }
+}
 const fetchPropertyTypes = async () => {
     try {
         const res = await api.get('/listings/property-types')
@@ -805,7 +1014,6 @@ const getCurrentUserBranches = () => {
 }
 
 
-
 const searchFieldsConfig = computed(() => {
     const fields = [
         { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
@@ -837,15 +1045,16 @@ const searchFieldsConfig = computed(() => {
     fields.push(
         { id: 'stage', label: 'Stage', formKey: 'stage', queryKey: 'stage_id', type: 'select', options: [] },
           { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] },
+        { id: 'interaction_result', label: 'Call Result', formKey: 'interactionResult', queryKey: 'interaction_result', type: 'select', options: interactionResultOptions },
         { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions },
        
+        { id: 'location', label: 'Location / Area', formKey: 'areaId', queryKey: 'area_id', type: 'select', options: areaOptions.value },
         { id: 'property_type', label: 'Property Type', formKey: 'propertyType', queryKey: 'property_type_id', type: 'select', options: propertyTypeOptions.value },
         { id: 'lead_type', label: 'Lead Type', formKey: 'leadType', queryKey: 'lead_type', type: 'select', options: leadTypeOptions },
         
         { id: 'property_status', label: 'Property Status', formKey: 'propertyStatus', queryKey: 'property_status', type: 'select', options: propertyStatusOptions },
          
-        { id: 'budget_from', label: 'Budget From', formKey: 'budgetFrom', queryKey: 'budget_from', type: 'text', placeholder: 'Enter Min Budget' },
-        { id: 'budget_to', label: 'Budget To', formKey: 'budgetTo', queryKey: 'budget_to', type: 'text', placeholder: 'Enter Max Budget' }
+        { id: 'budget_from', label: 'Budget (AED)', formKey: 'budgetFrom', queryKey: 'budget_from', type: 'text', placeholder: 'Select budget range' }
     )
     
     return fields
@@ -853,6 +1062,14 @@ const searchFieldsConfig = computed(() => {
 
 
 const monthLabel = computed(() => calendarMonth.value.toLocaleString('en-US', { month: 'long', year: 'numeric' }))
+const budgetDisplay = computed(() => {
+    const from = form.value.budgetFrom || ''
+    const to = form.value.budgetTo || ''
+    if (!from && !to) return 'Select budget range'
+    if (from && to) return `${from} - ${to}`
+    if (from) return `From ${from}`
+    return `To ${to}`
+})
 const createdOnDisplay = computed(() => {
     if (form.value.createdOn === 'custom_date' && form.value.createdFrom && form.value.createdTo) {
         return `${form.value.createdFrom} to ${form.value.createdTo}`
@@ -873,15 +1090,50 @@ const visibleSearchFields = computed(() => {
                 f.formKey === 'source' ? sourceOptions.value :
                 f.formKey === 'createdOn' ? createdOnOptions :
                 f.formKey === 'team' ? computedTeamOptions.value :
+                f.formKey === 'areaId' ? areaOptions.value :
                  f.formKey === 'propertyType' ? propertyTypeOptions.value :
                 (f.options || []),
             placeholder: f.placeholder || (f.type === 'select' ? 'Select' : '')
         }))
 })
 
+const searchFieldSections = [
+    {
+        id: 'lead-info',
+        title: 'Lead Information',
+        fieldIds: ['first_name', 'lead_name', 'work_phone', 'email', 'created_on', 'closed']
+    },
+    {
+        id: 'assignment',
+        title: 'Assignment',
+        fieldIds: ['responsible_person', 'lead_branch_source', 'office', 'team', 'stage', 'source']
+    },
+    {
+        id: 'source-followup',
+        title: 'Source & Follow-up',
+        fieldIds: ['interaction_result']
+    },
+    {
+        id: 'client-requirement',
+        title: 'Client Requirement',
+        fieldIds: ['location', 'property_type', 'lead_type', 'property_status', 'bedrooms', 'budget_from']
+    }
+]
+
+const visibleSearchSections = computed(() =>
+    searchFieldSections
+        .map(section => ({
+            ...section,
+            fields: section.fieldIds
+                .map(id => visibleSearchFields.value.find(field => field.id === id))
+                .filter(Boolean)
+        }))
+        .filter(section => section.fields.length > 0)
+)
+
 const defaultLeadFieldIds = computed(() => {
     return searchFieldsConfig.value
-        .filter(f => !['lead_type', 'property_status', 'budget_from', 'budget_to'].includes(f.id))
+        .filter(f => !['lead_type', 'property_status', 'budget_from'].includes(f.id))
         .map(f => f.id)
 })
 
@@ -901,8 +1153,113 @@ function hasValue(val) {
     return val !== null && val !== undefined && val !== ''
 }
 
+
+function normalizeBudgetString(value) {
+    return String(value ?? '').replace(/[^\d]/g, '')
+}
+
+function formatBudgetWithCommas(value) {
+    const digits = normalizeBudgetString(value)
+    if (!digits) return ''
+    return Number(digits).toLocaleString('en-US')
+}
+
+function parseBudgetNumber(value) {
+    const digits = normalizeBudgetString(value)
+    return digits ? Number(digits) : undefined
+}
+
+function setBudgetValue(key, value) {
+    form.value[key] = formatBudgetWithCommas(value)
+}
+
+function getBudgetTriggerElement() {
+    let el = budgetTriggerRef.value
+    if (Array.isArray(el)) el = el.find(Boolean)
+    if (el && typeof el.getBoundingClientRect === 'function') return el
+    if (el?.$el && typeof el.$el.getBoundingClientRect === 'function') return el.$el
+    return null
+}
+
+function updateBudgetDropdownPosition() {
+    const el = getBudgetTriggerElement()
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    budgetDropdownStyle.value = {
+        position: 'fixed',
+        top: `${Math.round(r.bottom + 6)}px`,
+        left: `${Math.round(r.left)}px`,
+        width: `${Math.max(Math.round(r.width), 220)}px`,
+        zIndex: '10060'
+    }
+}
+
+function removeBudgetDropdownListeners() {
+    window.removeEventListener('scroll', updateBudgetDropdownPosition, true)
+    window.removeEventListener('resize', updateBudgetDropdownPosition)
+}
+
+async function toggleBudgetDropdown() {
+    const next = !showBudgetDropdown.value
+    showBudgetDropdown.value = next
+    if (next) {
+        await nextTick()
+        updateBudgetDropdownPosition()
+        window.addEventListener('scroll', updateBudgetDropdownPosition, true)
+        window.addEventListener('resize', updateBudgetDropdownPosition)
+    } else {
+        removeBudgetDropdownListeners()
+    }
+}
+
+function onDocumentClick(event) {
+    if (!showBudgetDropdown.value) return
+    const t = event.target
+    const triggerEl = getBudgetTriggerElement()
+    if (triggerEl?.contains(t) || budgetDropdownPanelRef.value?.contains(t)) return
+    showBudgetDropdown.value = false
+    removeBudgetDropdownListeners()
+}
+
 function getDisplayValue(field, rawValue) {
     if (rawValue === null || rawValue === undefined || rawValue === '') return null
+    if (field.formKey === 'areaId') {
+        const area = (areaOptions.value || []).find(a => String(a.id) === String(rawValue))
+        if (!area) return String(rawValue)
+        const first = locationFirstLine(area)
+        const second = locationSecondLine(area)
+        if (!second) return first
+        const a = String(first || '').trim().toLowerCase()
+        const b = String(second || '').trim()
+        const bl = b.toLowerCase()
+        if (!a) return b
+        if (bl === a || bl.startsWith(`${a},`) || bl.startsWith(`${a} -`)) {
+            return b
+        }
+        return `${first} - ${b}`
+    }
+    if (field.formKey === 'budgetFrom') {
+        const from = form.value.budgetFrom || ''
+        const to = form.value.budgetTo || ''
+        if (from && to) return `${from} - ${to}`
+        if (from) return `From ${from}`
+        if (to) return `To ${to}`
+        return null
+    }
+    if (field.formKey === 'source' && rawValue === 'website') {
+        const sites = Array.isArray(form.value.sourceWebsite)
+            ? form.value.sourceWebsite.filter(v => v != null && v !== '')
+            : (form.value.sourceWebsite ? [form.value.sourceWebsite] : [])
+        if (sites.length) {
+            const opts = websiteSourceOptions.value
+            const names = sites.map(val => {
+                const opt = opts.find(o => o.value === val)
+                return opt ? opt.text : String(val)
+            })
+            return `Website (${names.join(', ')})`
+        }
+        return 'Website'
+    }
     if (Array.isArray(rawValue)) {
         if (field.type === 'select') {
             const opts = field.options || []
@@ -1103,6 +1460,22 @@ function applySearch() {
         }
     }
 
+    let sourceParam = undefined
+    if (form.value.source === 'website') {
+        const sites = Array.isArray(form.value.sourceWebsite)
+            ? form.value.sourceWebsite.filter(v => v != null && v !== '')
+            : (form.value.sourceWebsite ? [form.value.sourceWebsite] : [])
+        if (sites.length > 1) {
+            sourceParam = sites
+        } else if (sites.length === 1) {
+            sourceParam = sites[0]
+        } else {
+            sourceParam = 'website'
+        }
+    } else if (form.value.source) {
+        sourceParam = form.value.source
+    }
+
     const query = {
         lead_name: form.value.leadName || undefined,
         first_name: form.value.firstName || undefined,
@@ -1114,10 +1487,8 @@ function applySearch() {
         email: form.value.email || undefined,
         bedrooms: form.value.bedrooms ?? undefined,
         search: form.value.search || undefined,
-        source: form.value.source === 'website'
-            ? (form.value.sourceWebsite || 'website')
-            : (form.value.source || undefined),
-        source_website: form.value.source === 'website' ? (form.value.sourceWebsite || undefined) : undefined,
+        source: sourceParam,
+        interaction_result: form.value.interactionResult || undefined,
         created_from: createdFrom || undefined,  
         created_to: createdTo || undefined,     
         created_at: createdAt || undefined,   
@@ -1125,8 +1496,9 @@ function applySearch() {
         office_branch: officeBranches || undefined,
          lead_type: form.value.leadType || undefined,
         property_status: form.value.propertyStatus || undefined,
-        budget_from: form.value.budgetFrom ? Number(form.value.budgetFrom) : undefined,
-        budget_to: form.value.budgetTo ? Number(form.value.budgetTo) : undefined,
+        budget_from: parseBudgetNumber(form.value.budgetFrom),
+        budget_to: parseBudgetNumber(form.value.budgetTo),
+        area_id: form.value.areaId || undefined,
         property_type_id: form.value.propertyType || undefined 
         
     }
@@ -1153,6 +1525,7 @@ function applySearch() {
                     field.formKey === 'stage' ? stageOptions.value : 
                     field.formKey === 'source' ? sourceOptions.value :
                     field.formKey === 'team' ? teamOptions.value : 
+                    field.formKey === 'areaId' ? areaOptions.value : 
                      field.formKey === 'leadType' ? leadTypeOptions :
                     field.formKey === 'propertyStatus' ? propertyStatusOptions :
                     (field.options || [])
@@ -1200,6 +1573,7 @@ async function handleSidebarPillClick(pill) {
         form.value.office = []
         selectedOffice.value = null
         selectedPillType.value = null
+    showBudgetDropdown.value = false
         
         // Clear responsible and team
         form.value.responsible = ''
@@ -1423,17 +1797,21 @@ function resetFormValues() {
         email: '',
         bedrooms: '',
         source: '',
-        sourceWebsite: '',
+        sourceWebsite: [],
+        interactionResult: '',
         team: '',
         office: [],
          leadType: '',
         propertyStatus: '',
         budgetFrom: '',
         budgetTo: '',
+        areaId: '',
          propertyType: ''
     }
     selectedOffice.value = null
     selectedPillType.value = null
+    showBudgetDropdown.value = false
+    removeBudgetDropdownListeners()
 }
 
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
@@ -1583,7 +1961,7 @@ watch(() => form.value.createdOn, (newVal, oldVal) => {
 
 watch(() => form.value.source, (newVal) => {
     if (newVal !== 'website') {
-        form.value.sourceWebsite = ''
+        form.value.sourceWebsite = []
     }
 })
 
@@ -1613,6 +1991,7 @@ watch(() => form.value.budgetTo, () => {
 })
 
 onMounted(async () => {
+    document.addEventListener('click', onDocumentClick)
     updateUserFromStorage() 
     
     await Promise.all([
@@ -1622,10 +2001,16 @@ onMounted(async () => {
         fetchSources(),
         fetchTeamsWithFilter(),
         fetchOffices(),
+        fetchAreas(),
             fetchPropertyTypes()
     ])
     
     console.log('Initial data loaded')
+})
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', onDocumentClick)
+    removeBudgetDropdownListeners()
 })
 </script>
 
@@ -1638,9 +2023,9 @@ onMounted(async () => {
 
 /* Keep all existing styles from your original code */
 .lead-search-dropdown-panel {
-    width: 1140px;
+    width: 1000px;
     max-width: calc(100vw - 32px);
-    min-height: 507px;
+    min-height: 460px;
     border: 1px solid #E2E8F0;
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
@@ -1649,7 +2034,7 @@ onMounted(async () => {
 }
 
 .lead-search-container {
-    min-height: 507px;
+    min-height: 460px;
     background: #fff;
     border-radius: 12px;
     overflow: hidden;
@@ -1658,7 +2043,7 @@ onMounted(async () => {
 .sidebar-pills {
     min-width: 221px;
     background: #F8FAFC;
-    padding: 25px !important;
+    padding: 18px !important;
 }
 
 .pill-btn {
@@ -1764,7 +2149,104 @@ onMounted(async () => {
 }
 
 .form-content-wrapper {
-    padding: 30px 20px !important;
+    padding: 20px 14px !important;
+}
+
+.search-sections-wrap {
+    max-height: 58vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.search-sections-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.search-section-card {
+    background: #fff;
+    border: 1px solid #F1F5F9;
+    border-radius: 14px;
+    padding: 10px 10px 6px;
+    box-shadow: 1px 1px 5px 5px #00000005;
+}
+
+.search-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #01062C;
+    margin-bottom: 2px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #F1F5F9;
+}
+
+@media (max-width: 1199px) {
+    .lead-search-dropdown-panel {
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+    }
+
+    .lead-search-container {
+        min-height: auto;
+    }
+
+    .sidebar-pills {
+        min-width: 190px;
+        padding: 14px !important;
+    }
+}
+
+@media (max-width: 991px) {
+    .lead-search-container {
+        flex-direction: column;
+    }
+
+    .sidebar-pills {
+        width: 100%;
+        min-width: 100%;
+        border-right: none !important;
+        border-bottom: 1px solid #E2E8F0;
+        padding: 12px !important;
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        gap: 8px !important;
+    }
+
+    .form-content-wrapper {
+        padding: 14px 12px !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .lead-search-dropdown-panel {
+        width: calc(100vw - 12px);
+        max-width: calc(100vw - 12px);
+        min-height: auto;
+        border-radius: 10px;
+    }
+
+    .lead-search-container {
+        border-radius: 10px;
+    }
+
+    .search-section-card .row {
+        --bs-gutter-x: 0.75rem;
+        --bs-gutter-y: 0.5rem;
+    }
+
+    .search-section-card .col-md-6 {
+        width: 100%;
+    }
+
+    .close-btn {
+        right: 6px;
+    }
+
+    .btn-reset, .btn-search, .btn-cancel, .btn-apply {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
 }
 
 .close-btn {
@@ -1821,6 +2303,80 @@ onMounted(async () => {
 .custom-date-trigger:hover {
     border-color: #cbd5e1;
 }
+
+
+.budget-field-wrap {
+    position: relative;
+}
+
+/* Teleported to body so modal overflow:hidden does not clip the panel */
+.budget-dropdown--portal {
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
+    padding: 10px;
+}
+
+.budget-input-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.budget-dropdown-input {
+    height: 38px !important;
+}
+
+.location-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.location-option-icon {
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.location-option-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.location-option-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.location-option-subtitle {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.location-selected {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.location-selected-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.location-selected-subtitle {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.2;
+}
+
 
 .lr-modal-backdrop {
     position: fixed;

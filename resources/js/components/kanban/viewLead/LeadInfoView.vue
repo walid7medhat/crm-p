@@ -107,30 +107,41 @@
                 </button>
             </div>
             <template v-if="hasClientRequiredInfo">
-                 <div class="info-group" v-if="lead?.area">
+                <div class="client-requirement-list">
+                 <div class="info-group client-req-location" v-if="lead?.area">
                     <label class="form-label-custom">Location</label>
-                    <div class="info-value">{{ lead?.area || '—' }}</div>
+                    <div class="info-value location-selected-view">
+                        <i class="ri-map-pin-line location-option-icon"></i>
+                        <div class="location-option-text">
+                            <span class="location-option-name">{{ locationFirstLine(lead?.area) }}</span>
+                            <span class="location-option-subtitle">{{ locationSecondLine(lead?.area) }}</span>
+                        </div>
+                    </div>
                 </div>
-                 <div class="info-group" v-if="lead?.property_status">
-                    <label class="form-label-custom">Property Status</label>
-                    <div class="info-value">{{ lead?.property_status || '—' }}</div>
-                </div>
-                <div class="info-group" v-if="lead?.property_type">
+                <div class="info-group client-req-property-type" v-if="lead?.property_type">
                     <label class="form-label-custom">Property Type</label>
                     <div class="info-value">{{ lead?.property_type || '—' }}</div>
                 </div>
-                 <div class="info-group" v-if="lead?.lead_type">
+                 <div class="info-group client-req-lead-type" v-if="lead?.lead_type">
                     <label class="form-label-custom">Lead Type</label>
                     <div class="info-value">{{ lead?.lead_type || '—' }}</div>
                 </div>
-                <div class="info-group" v-if="lead?.bedrooms">
+                 <div class="info-group client-req-property-status" v-if="lead?.property_status">
+                    <label class="form-label-custom">Property Status</label>
+                    <div class="info-value">{{ lead?.property_status || '—' }}</div>
+                </div>
+                <div class="info-group client-req-bedrooms" v-if="lead?.bedrooms">
                     <label class="form-label-custom">Bedrooms</label>
                     <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
                 </div>
               
-                <div class="info-group" v-if="formatLeadBudgetRange(lead) && lead?.budget_from>0 && lead?.budget_to>0">
-                    <label class="form-label-custom">Budget</label>
-                    <div class="info-value">{{ formatLeadBudgetRange(lead) }} {{ lead?.currency || 'AED' }}</div>
+                <div class="info-group client-req-budget" v-if="formatLeadBudgetRange(lead) && lead?.budget_from>0 && lead?.budget_to>0">
+                    <label class="form-label-custom">Budget (AED)</label>
+                    <div class="info-value">{{ formatLeadBudgetRange(lead) }}</div>
+                </div>
+                <div class="info-group client-req-purpose" v-if="lead?.purpose_buying">
+                    <label class="form-label-custom">Purpose Of Purchase</label>
+                    <div class="info-value">{{ lead?.purpose_buying || '—' }}</div>
                 </div>
                  
                
@@ -148,10 +159,6 @@
                     <label class="form-label-custom">Available Date</label>
                     <div class="info-value">{{ lead?.available_date != null ? lead.available_date : '—' }}</div>
                 </div>
-                   <div class="info-group" v-if="lead?.status_lead != null">
-                    <label class="form-label-custom">Quality Status</label>
-                    <div class="info-value">{{ formatLeadStatus(lead?.status_lead) }}</div>
-                </div>
                 <div class="info-group" v-if="lead?.source_information">
                     <label class="form-label-custom">Source Information</label>
                     <div class="info-value">{{ lead?.source_information || '—' }}</div>
@@ -167,6 +174,7 @@
                 <div class="info-group" v-for="(value, key) in clientRequiredMetaFields" :key="`client-${key}`">
                     <label class="form-label-custom">{{ formatQuestion(key) }}</label>
                     <div class="info-value">{{ value }}</div>
+                </div>
                 </div>
             </template>
             <div v-else class="info-empty">
@@ -545,6 +553,21 @@ const formatWithMapping = (value, mapping = {}) => {
     if (!value) return '—'
     return mapping[value] || formatText(value)
 }
+
+const locationFirstLine = (areaValue) => {
+    const name = String(areaValue || '').trim()
+    if (!name) return '—'
+    const idx = name.indexOf(',')
+    return idx > 0 ? name.slice(0, idx).trim() : name
+}
+
+const locationSecondLine = (areaValue) => {
+    const name = String(areaValue || '').trim()
+    if (!name) return 'UAE'
+    const idx = name.indexOf(',')
+    const rest = idx > 0 ? name.slice(idx + 1).trim() : ''
+    return rest || 'UAE'
+}
 // Basic fields for Facebook questions
 const basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone','work_phone_number','phone_number','full name', 'first_name', 'last_name','Date','Time','Page_Name','inbox_url','form_name','form_id','No_Label_name','No_Label_email','No_Label_phone']
 
@@ -621,9 +644,23 @@ const hasClientRequiredInfo = computed(() => {
         Object.keys(clientRequiredMetaFields.value).length > 0
     )
 })
+
 </script>
 
 <style scoped>
+.client-requirement-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 14px;
+}
+
+.client-req-location {
+    grid-column: 1 / -1;
+}
+
+.client-requirement-list .info-group {
+    margin-bottom: 0 !important;
+}
 .lead-info-view .info-group {
     margin-bottom: 1rem;
 }
@@ -691,6 +728,39 @@ const hasClientRequiredInfo = computed(() => {
 
     word-break: break-word;
     overflow-wrap: anywhere;
+}
+
+.location-selected-view {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.location-option-icon {
+    font-size: 16px;
+    color: #64748b;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.location-option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.location-option-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.25;
+}
+
+.location-option-subtitle {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.2;
 }
 
 .lead-info-view .info-value-block {

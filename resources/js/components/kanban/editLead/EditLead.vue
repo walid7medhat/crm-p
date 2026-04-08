@@ -311,48 +311,55 @@
                         {{ validationErrors.bedrooms[0] }}
                     </div>
                 </div>
-                <!-- Budget From / To — align with other fields (label + control) -->
-                <div class="row g-3 budget-from-to-row">
-                    <div class="col-md-6">
-                        <div class="info-group mb-0">
-                            <label class="form-label-custom">Budget From (AED)</label>
-                            <div
-                                class="input-group-custom"
-                                :class="{ 'is-invalid-group': budgetFieldInvalid }"
-                            >
-                                <input
-                                    :value="budgetFromDisplay"
-                                    type="text"
-                                    inputmode="numeric"
-                                    autocomplete="off"
-                                    placeholder="0"
-                                    class="form-control custom-input"
-                                    :class="{ 'is-invalid': !!(validationErrors.budget_from || validationErrors.budget) }"
-                                    @input="onBudgetFromInput($event.target.value)"
-                                />
-                                <div class="currency-pill" aria-label="Currency">AED</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="info-group mb-0">
-                            <label class="form-label-custom">Budget To (AED)</label>
-                            <div
-                                class="input-group-custom"
-                                :class="{ 'is-invalid-group': budgetFieldInvalid }"
-                            >
-                                <input
-                                    :value="budgetToDisplay"
-                                    type="text"
-                                    inputmode="numeric"
-                                    autocomplete="off"
-                                    placeholder="0"
-                                    class="form-control custom-input"
-                                    :class="{ 'is-invalid': !!(validationErrors.budget_to || validationErrors.budget) }"
-                                    @input="onBudgetToInput($event.target.value)"
-                                />
-                                <div class="currency-pill" aria-label="Currency">AED</div>
-                            </div>
+                <!-- Budget -->
+                <div class="info-group mb-0">
+                    <label class="form-label-custom">Budget (AED)</label>
+                    <div
+                        ref="budgetTriggerRef"
+                        class="budget-field-wrap"
+                        :class="{ 'is-invalid-group': budgetFieldInvalid }"
+                    >
+                        <button
+                            type="button"
+                            class="custom-date-trigger"
+                            @click.stop="toggleBudgetDropdown"
+                        >
+                            <span>{{ budgetDisplay }}</span>
+                            <iconify-icon icon="lucide:chevron-down" />
+                        </button>
+                        <div
+                            v-if="showBudgetDropdown"
+                            ref="budgetDropdownPanelRef"
+                            class="budget-dropdown budget-dropdown--inline"
+                            @mousedown.stop
+                            @click.stop
+                        >
+                            <label class="budget-input-label">From</label>
+                            <input
+                                :value="budgetFromDisplay"
+                                type="text"
+                                inputmode="numeric"
+                                autocomplete="off"
+                                placeholder="0"
+                                class="form-control custom-input budget-dropdown-input"
+                                :class="{ 'is-invalid': !!(validationErrors.budget_from || validationErrors.budget) }"
+                                @mousedown.stop
+                                @click.stop
+                                @input="onBudgetFromInput($event.target.value)"
+                            />
+                            <label class="budget-input-label mt-2">To</label>
+                            <input
+                                :value="budgetToDisplay"
+                                type="text"
+                                inputmode="numeric"
+                                autocomplete="off"
+                                placeholder="0"
+                                class="form-control custom-input budget-dropdown-input"
+                                :class="{ 'is-invalid': !!(validationErrors.budget_to || validationErrors.budget) }"
+                                @mousedown.stop
+                                @click.stop
+                                @input="onBudgetToInput($event.target.value)"
+                            />
                         </div>
                     </div>
                 </div>
@@ -569,10 +576,11 @@
         <!--    </div>-->
         <!--</div>-->
     </div>
+
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { BFormInput, BFormTextarea, BDropdown } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -719,6 +727,18 @@ const form = ref({
 
 const budgetFromDisplay = ref('')
 const budgetToDisplay = ref('')
+const showBudgetDropdown = ref(false)
+const budgetTriggerRef = ref(null)
+const budgetDropdownPanelRef = ref(null)
+
+const budgetDisplay = computed(() => {
+    const from = budgetFromDisplay.value || ''
+    const to = budgetToDisplay.value || ''
+    if (!from && !to) return 'Select budget range'
+    if (from && to) return `${from} - ${to}`
+    if (from) return `From ${from}`
+    return `To ${to}`
+})
 
 function onBudgetFromInput(val) {
     const { numeric, display } = parseBudgetThousandsInput(val)
@@ -735,6 +755,29 @@ function onBudgetToInput(val) {
 function syncBudgetDisplayFields() {
     budgetFromDisplay.value = formatBudgetThousands(form.value.budget_from)
     budgetToDisplay.value = formatBudgetThousands(form.value.budget_to)
+}
+
+async function toggleBudgetDropdown() {
+    showBudgetDropdown.value = !showBudgetDropdown.value
+    await nextTick()
+}
+
+function closeBudgetDropdown() {
+    showBudgetDropdown.value = false
+}
+
+function onDocumentClick(event) {
+    if (!showBudgetDropdown.value) return
+    const target = event.target
+    const triggerEl = budgetTriggerRef.value
+    const path = typeof event.composedPath === 'function' ? event.composedPath() : []
+    if (
+        triggerEl?.contains(target) ||
+        budgetDropdownPanelRef.value?.contains(target) ||
+        path.includes(triggerEl) ||
+        path.includes(budgetDropdownPanelRef.value)
+    ) return
+    closeBudgetDropdown()
 }
 
 const stageOptions = ref([
@@ -832,6 +875,7 @@ const removeAdditional = (key) => {
         form.value.budget_to = null
         budgetFromDisplay.value = ''
         budgetToDisplay.value = ''
+        closeBudgetDropdown()
     }
     if (key === 'purpose_buying') form.value.purpose_buying = null
 }
@@ -1113,6 +1157,7 @@ watch(() => form.value.responsible_person_id, () => {
 // Initialize on mount
 onMounted(async () => {
     initializeForm()
+    document.addEventListener('click', onDocumentClick)
     await fetchUsers()
 
     if (props.lead?.area_id || props.lead?.property_type_id) {
@@ -1134,6 +1179,10 @@ onMounted(async () => {
     if (props.lead?.area_id) next.add('area_id')
     if (props.lead?.property_type_id) next.add('property_type_id')
     enabledAdditionalKeys.value = Array.from(next)
+})
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', onDocumentClick)
 })
 
 const handleAvatarError = () => {
@@ -1240,6 +1289,56 @@ defineExpose({
 
 .budget-from-to-row .info-group {
     margin-bottom: 0;
+}
+
+.budget-field-wrap {
+    position: relative;
+    overflow: visible;
+}
+
+.custom-date-trigger {
+    width: 100%;
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #64748B;
+    font-family: 'Montserrat';
+}
+
+.custom-date-trigger:hover {
+    border-color: #cbd5e1;
+}
+
+.budget-dropdown--inline {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 100%;
+    min-width: 220px;
+    z-index: 60;
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
+    padding: 10px;
+}
+
+.budget-input-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.budget-dropdown-input {
+    height: 38px !important;
 }
 
 .info-label {

@@ -21,15 +21,6 @@
           <i class="ri-add-line"></i>
           <span class="d-none d-sm-inline">Create Listing</span>
         </router-link>
-        <router-link
-          v-if="showCreatePropertyButton"
-          to="/notify-me"
-          class="btn btn-primary btn-sm create-property-btn navbar-create-listing d-flex align-items-center gap-1"
-          title="Notify me"
-        >
-          <i class="ri-notification-2-line"></i>
-          <span class="d-none d-sm-inline">Notify me</span>
-        </router-link>
         <NotificationBell 
           ref="notificationBell"
           :sound-enabled="soundEnabled"
@@ -654,7 +645,8 @@ const showBackButton = computed(() => {
 }
 
 .navbar-create-listing {
-  padding: 0.25rem 0.5rem !important;
+  padding: 0.5rem 0.75rem !important;
+  min-height: 40px;
   font-size: 0.75rem !important;
   line-height: 1.2;
 }

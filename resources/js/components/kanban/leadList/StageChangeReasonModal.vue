@@ -73,36 +73,14 @@
 
                                 <div class="reminder-dropdown-wrapper position-relative">
                                     <button
+                                        ref="reminderButtonRef"
                                         type="button"
                                         class="activity-control-btn activity-control-btn-bell d-flex align-items-center gap-2"
-                                        @click.stop="showReminderDropdown = !showReminderDropdown"
+                                        @click.stop="toggleReminderDropdown"
                                     >
                                         <iconify-icon icon="lucide:bell" class="activity-control-icon bell-icon"></iconify-icon>
                                         <span class="activity-control-text">Reminder</span>
                                     </button>
-                                    <div
-                                        v-if="showReminderDropdown"
-                                        class="reminder-dropdown"
-                                        @click.stop
-                                    >
-                                        <div class="reminder-options">
-                                            <div
-                                                class="reminder-option"
-                                                v-for="option in reminderOptions"
-                                                :key="option.value"
-                                                @click="selectReminderOption(option.value)"
-                                            >
-                                                <span class="reminder-option-text">{{ option.label }}</span>
-                                                <div class="reminder-checkbox" :class="{ 'checked': reminders.includes(option.value) }">
-                                                    <iconify-icon
-                                                        v-if="reminders.includes(option.value)"
-                                                        icon="lucide:check"
-                                                        class="check-icon"
-                                                    ></iconify-icon>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -378,41 +356,27 @@
                         <!-- 🟦 Basic Info -->
                         <div 
                             v-if="['budget_from','budget_to','area_id','property_type_id','bedrooms','purpose_buying'].some(f => missingFields.includes(f))" 
-                            class="box-shadow"
+                            class="box-shadow client-req-order"
                         >
                           <h5 class="section-title">Client Requirement</h5>
-                           
+                          <div v-if="missingFields.includes('budget_from') || missingFields.includes('budget_to')" class="form-group mb-3" style="order: 6;">
+                              <label class="form-label">Budget (AED)</label>
+                              <div
+                                  ref="budgetTriggerRef"
+                                  class="budget-field-wrap"
+                              >
+                                  <button
+                                      type="button"
+                                      class="custom-date-trigger"
+                                      @click.stop="toggleBudgetDropdown"
+                                  >
+                                      <span>{{ budgetDisplay }}</span>
+                                      <iconify-icon icon="lucide:chevron-down" />
+                                  </button>
+                              </div>
+                          </div>
 
-                            <!--<div v-if="missingFields.includes('budget')" class="form-group mb-3">-->
-                            <!--    <label class="form-label">Budget (AED)</label>-->
-                            <!--    <input type="number" v-model="formData.budget" placeholder="Enter Budget" class="form-control budget-input">-->
-                            <!--</div>-->
-                              <!-- Budget From -->
-                                <div v-if="missingFields.includes('budget_from')" class="form-group mb-3">
-                                    <label class="form-label">Budget From (AED)</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Enter Min Budget" 
-                                        class="form-control budget-input"
-                                         @input="onBudgetFromInput($event.target.value)"
-                                           :value="budgetFromDisplay"
-                                    >
-                                </div>
-        
-                                <!-- Budget To -->
-                                <div v-if="missingFields.includes('budget_to')" class="form-group mb-3">
-                                    <label class="form-label">Budget To (AED)</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Enter Max Budget" 
-                                        class="form-control budget-input"
-                                          @input="onBudgetToInput($event.target.value)"
-
-                                            :value="budgetToDisplay"
-                                    >
-                                </div>
-
-                            <div v-if="missingFields.includes('area_id')" class="form-group mb-3">
+                            <div v-if="missingFields.includes('area_id')" class="form-group mb-3" style="order: 1;">
                                 <label class="form-label">Location / Area</label>
                                 <v-select append-to-body
                                     v-model="formData.area_id"
@@ -427,9 +391,24 @@
                                         <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                                     </span>
                                 </template>
+                                <template #option="option">
+                                    <div class="location-option">
+                                        <i class="ri-map-pin-line location-option-icon"></i>
+                                        <div class="location-option-text">
+                                            <span class="location-option-name">{{ locationFirstLine(option.text) }}</span>
+                                            <span class="location-option-subtitle">{{ locationSecondLine(option.text) }}</span>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template #selected-option="option">
+                                    <div v-if="option" class="location-selected">
+                                        <span class="location-selected-name">{{ locationFirstLine(option.text) }}</span>
+                                        <span class="location-selected-subtitle">{{ locationSecondLine(option.text) }}</span>
+                                    </div>
+                                </template>
                                 </v-select>
                             </div>
-                             <div v-if="missingFields.includes('bedrooms')" class="form-group mb-3">
+                            <div v-if="missingFields.includes('bedrooms')" class="form-group mb-3" style="order: 5;">
                                 <label class="form-label">How Many Bedrooms?</label>
                                 <v-select append-to-body
                                     v-model="formData.bedrooms"
@@ -446,7 +425,7 @@
                                 </template>
                                 </v-select>
                             </div>
-                            <div v-if="missingFields.includes('property_type_id')" class="form-group mb-3">
+                            <div v-if="missingFields.includes('property_type_id')" class="form-group mb-3" style="order: 2;">
                                 <label class="form-label">Property Type</label>
                                 <v-select append-to-body
                                     v-model="formData.property_type_id"
@@ -466,7 +445,7 @@
 
                             
 
-                            <div v-if="missingFields.includes('purpose_buying')" class="form-group mb-3">
+                            <div v-if="missingFields.includes('purpose_buying')" class="form-group mb-3" style="order: 8;">
                                 <label class="form-label">Purpose Of Purchase</label>
                                 <v-select append-to-body
                                     v-model="formData.purpose_buying"
@@ -499,6 +478,73 @@
             </div>
         </div>
 
+        <Teleport to="body">
+            <div
+                v-if="showReminderDropdown"
+                ref="reminderDropdownPanelRef"
+                class="reminder-dropdown reminder-dropdown--portal"
+                :style="reminderDropdownStyle"
+                @click.stop
+            >
+                <div class="reminder-options">
+                    <div
+                        class="reminder-option"
+                        v-for="option in reminderOptions"
+                        :key="option.value"
+                        @click="selectReminderOption(option.value)"
+                    >
+                        <span class="reminder-option-text">{{ option.label }}</span>
+                        <div class="reminder-checkbox" :class="{ 'checked': reminders.includes(option.value) }">
+                            <iconify-icon
+                                v-if="reminders.includes(option.value)"
+                                icon="lucide:check"
+                                class="check-icon"
+                            ></iconify-icon>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+        <Teleport to="body">
+            <div
+                v-if="showBudgetDropdown"
+                ref="budgetDropdownPanelRef"
+                class="budget-dropdown budget-dropdown--portal"
+                :style="budgetDropdownStyle"
+                @mousedown.stop
+                @click.stop
+            >
+                <template v-if="missingFields.includes('budget_from')">
+                    <label class="budget-input-label">From</label>
+                    <input
+                        v-model="budgetFromDisplay"
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        placeholder="0"
+                        class="form-control budget-input budget-dropdown-input"
+                        @mousedown.stop
+                        @click.stop
+                        @input="onBudgetFromInput"
+                    >
+                </template>
+                <template v-if="missingFields.includes('budget_to')">
+                    <label class="budget-input-label mt-2">To</label>
+                    <input
+                        v-model="budgetToDisplay"
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        placeholder="0"
+                        class="form-control budget-input budget-dropdown-input"
+                        @mousedown.stop
+                        @click.stop
+                        @input="onBudgetToInput"
+                    >
+                </template>
+            </div>
+        </Teleport>
+
         <DateTimePicker
             :show="showDateTimePicker"
             :model-value="reminderDate"
@@ -511,7 +557,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
@@ -657,52 +703,76 @@ const showReminderDropdown = ref(false)
 const showDateTimePicker = ref(false)
 const reminderDate = ref(new Date())
 const reminders = ref([])
+const reminderButtonRef = ref(null)
+const reminderDropdownPanelRef = ref(null)
+const reminderDropdownStyle = ref({})
 
 const budgetFromDisplay = ref('')
 const budgetToDisplay = ref('')
+const showBudgetDropdown = ref(false)
+const budgetTriggerRef = ref(null)
+const budgetDropdownPanelRef = ref(null)
+const budgetDropdownStyle = ref({})
 
-const onBudgetFromInput = (rawValue) => {
-    if (!rawValue) {
-        formData.value.budget_from = ''
-        budgetFromDisplay.value = ''
-        return
-    }
-    
-    let numericValue = String(rawValue).replace(/[^0-9]/g, '')
-    
-    if (numericValue === '') {
-        formData.value.budget_from = ''
-        budgetFromDisplay.value = ''
-        return
-    }
-    
-    const number = parseInt(numericValue, 10)
-    if (!isNaN(number)) {
-        formData.value.budget_from = number
-        budgetFromDisplay.value = number.toLocaleString('en-US')
+const budgetDisplay = computed(() => {
+    const from = budgetFromDisplay.value || ''
+    const to = budgetToDisplay.value || ''
+    if (!from && !to) return 'Select budget range'
+    if (from && to) return `${from} - ${to}`
+    if (from) return `From ${from}`
+    return `To ${to}`
+})
+
+const onBudgetFromInput = () => {
+    const { numeric, display } = parseBudgetThousandsInput(budgetFromDisplay.value)
+    formData.value.budget_from = numeric ?? ''
+    budgetFromDisplay.value = display
+}
+
+const onBudgetToInput = () => {
+    const { numeric, display } = parseBudgetThousandsInput(budgetToDisplay.value)
+    formData.value.budget_to = numeric ?? ''
+    budgetToDisplay.value = display
+}
+
+const handleLeadTypeChange = (value) => {
+    formData.value.lead_type = value || ''
+}
+
+const updateBudgetDropdownPosition = () => {
+    const el = budgetTriggerRef.value?.$el || budgetTriggerRef.value
+    if (!el || typeof el.getBoundingClientRect !== 'function') return
+    const r = el.getBoundingClientRect()
+    budgetDropdownStyle.value = {
+        position: 'fixed',
+        top: `${Math.round(r.bottom + 8)}px`,
+        left: `${Math.round(r.left)}px`,
+        minWidth: `${Math.max(Math.round(r.width), 260)}px`,
+        zIndex: '12060'
     }
 }
 
-const onBudgetToInput = (rawValue) => {
-    if (!rawValue) {
-        formData.value.budget_to = ''
-        budgetToDisplay.value = ''
-        return
+const removeBudgetDropdownListeners = () => {
+    window.removeEventListener('scroll', updateBudgetDropdownPosition, true)
+    window.removeEventListener('resize', updateBudgetDropdownPosition)
+}
+
+const toggleBudgetDropdown = async () => {
+    const next = !showBudgetDropdown.value
+    showBudgetDropdown.value = next
+    if (next) {
+        await nextTick()
+        updateBudgetDropdownPosition()
+        window.addEventListener('scroll', updateBudgetDropdownPosition, true)
+        window.addEventListener('resize', updateBudgetDropdownPosition)
+    } else {
+        removeBudgetDropdownListeners()
     }
-    
-    let numericValue = String(rawValue).replace(/[^0-9]/g, '')
-    
-    if (numericValue === '') {
-        formData.value.budget_to = ''
-        budgetToDisplay.value = ''
-        return
-    }
-    
-    const number = parseInt(numericValue, 10)
-    if (!isNaN(number)) {
-        formData.value.budget_to = number
-        budgetToDisplay.value = number.toLocaleString('en-US')
-    }
+}
+
+const closeBudgetDropdown = () => {
+    showBudgetDropdown.value = false
+    removeBudgetDropdownListeners()
 }
 
 const syncBudgetDisplayFields = () => {
@@ -736,21 +806,61 @@ const selectReminderOption = (value) => {
     }
 }
 
+const updateReminderDropdownPosition = () => {
+    const el = reminderButtonRef.value?.$el || reminderButtonRef.value
+    if (!el || typeof el.getBoundingClientRect !== 'function') return
+    const r = el.getBoundingClientRect()
+    reminderDropdownStyle.value = {
+        position: 'fixed',
+        top: `${Math.round(r.bottom + 8)}px`,
+        left: `${Math.round(r.left)}px`,
+        minWidth: `${Math.max(Math.round(r.width), 260)}px`,
+        zIndex: '12050',
+    }
+}
+
+const removeReminderDropdownListeners = () => {
+    window.removeEventListener('scroll', updateReminderDropdownPosition, true)
+    window.removeEventListener('resize', updateReminderDropdownPosition)
+}
+
+const closeReminderDropdown = () => {
+    showReminderDropdown.value = false
+    removeReminderDropdownListeners()
+}
+
+const toggleReminderDropdown = async () => {
+    const next = !showReminderDropdown.value
+    showReminderDropdown.value = next
+    if (next) {
+        await nextTick()
+        updateReminderDropdownPosition()
+        window.addEventListener('scroll', updateReminderDropdownPosition, true)
+        window.addEventListener('resize', updateReminderDropdownPosition)
+    } else {
+        removeReminderDropdownListeners()
+    }
+}
+
 const handleCustomDateSelected = (date) => {
     reminderDate.value = date
 }
 
 const handleCustomDateApply = (date) => {
     reminderDate.value = date
-    showReminderDropdown.value = false
+    closeReminderDropdown()
 }
 
 const handleCustomDateCancel = () => {}
 
 const handleClickOutside = (event) => {
-    if (!event.target.closest('.reminder-dropdown-wrapper')) {
-        showReminderDropdown.value = false
-    }
+    const t = event.target
+    const trigger = reminderButtonRef.value?.$el || reminderButtonRef.value
+    const budgetTrigger = budgetTriggerRef.value?.$el || budgetTriggerRef.value
+    if (trigger?.contains(t) || reminderDropdownPanelRef.value?.contains(t)) return
+    if (budgetTrigger?.contains(t) || budgetDropdownPanelRef.value?.contains(t)) return
+    closeReminderDropdown()
+    closeBudgetDropdown()
 }
 
 const branchOptions = [
@@ -772,9 +882,11 @@ const salutationOptions = [
 ]
 
 const purposeOptions = [
-    { value: 'Investment', text: 'Investment' },
-    { value: 'Residential', text: 'Residential' },
-    { value: 'Commercial', text: 'Commercial' }
+    { value: 'Live in', text: 'Live in' },
+    { value: 'Short-term investment', text: 'Short-term investment' },
+    { value: 'Long-term investment', text: 'Long-term investment' },
+    { value: 'Holiday home', text: 'Holiday home' },
+    { value: 'rental', text: 'rental' }
 ]
 
 const bedroomOptions = computed(() => {
@@ -782,6 +894,21 @@ const bedroomOptions = computed(() => {
     const nums = Array.from({ length: 9 }, (_, i) => ({ value: i + 1, text: String(i + 1) }))
     return [...base, ...nums]
 })
+
+const locationFirstLine = (value) => {
+    const name = String(value || '').trim()
+    if (!name) return '—'
+    const idx = name.indexOf(',')
+    return idx > 0 ? name.slice(0, idx).trim() : name
+}
+
+const locationSecondLine = (value) => {
+    const name = String(value || '').trim()
+    if (!name) return 'UAE'
+    const idx = name.indexOf(',')
+    const rest = idx > 0 ? name.slice(idx + 1).trim() : ''
+    return rest || 'UAE'
+}
 
 const areaOptions = computed(() => (areas.value || []).map(area => ({
     value: area.id,
@@ -861,6 +988,7 @@ const resetForm = () => {
     reminders.value = []
     showReminderDropdown.value = false
     showDateTimePicker.value = false
+    removeReminderDropdownListeners()
     isSubmitting.value = false
 }
 
@@ -1110,6 +1238,8 @@ onMounted(() => {
 
 onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside)
+    removeReminderDropdownListeners()
+    removeBudgetDropdownListeners()
 })
 
 defineExpose({
@@ -1119,6 +1249,10 @@ defineExpose({
 </script>
 
 <style scoped>
+.client-req-order {
+    display: flex;
+    flex-direction: column;
+}
 
 /* نفس الـ styles الموجود مع إضافة الـ reason-textarea */
 .stage-change-modal-overlay {
@@ -1583,6 +1717,120 @@ defineExpose({
     color: #9ca3af !important;
 }
 
+.budget-field-wrap {
+    position: relative;
+}
+
+.custom-date-trigger {
+    width: 100%;
+    min-height: 42px;
+    border-radius: 10px;
+    border: 1px solid #d7dfeb;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 0.76rem;
+    color: #111827;
+}
+
+.budget-dropdown--inline {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 100%;
+    min-width: 220px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
+    padding: 10px;
+    z-index: 1200;
+}
+
+.budget-dropdown--portal {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
+    padding: 10px;
+}
+
+.budget-input-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.budget-dropdown-input {
+    min-height: 38px !important;
+}
+
+.location-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 3px 0;
+}
+
+.location-option-icon {
+    font-size: 14px;
+    color: #64748b;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.location-option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.location-option-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.25;
+}
+
+.location-option-subtitle {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.2;
+}
+
+.location-selected {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.location-selected-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.location-selected-subtitle {
+    font-size: 11px;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
 /* Smooth, clean scroll for long content */
 .stage-change-modal::-webkit-scrollbar {
     width: 8px;
@@ -1735,6 +1983,11 @@ defineExpose({
     justify-content: center;
 }
 
+.reminder-dropdown-wrapper {
+    position: relative;
+    z-index: 3505;
+}
+
 .reminder-dropdown {
     position: absolute;
     top: calc(100% + 8px);
@@ -1744,7 +1997,11 @@ defineExpose({
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
-    z-index: 25;
+    z-index: 3510;
+}
+
+.reminder-dropdown--portal {
+    z-index: 12050;
 }
 
 .reminder-options {

@@ -6,10 +6,10 @@
             @scroll="updateScrollArrows"
             @dragover.prevent="onContainerDragOver"
         >
-        <!-- Loading state -->
-        <div v-if="loading && columns.length === 0" class="kanban-empty-state kanban-loading">
-            <div class="kanban-empty-spinner"></div>
-            <p class="kanban-empty-title">Loading stages…</p>
+        <!-- Non-blocking loading state -->
+        <div v-if="loading" class="kanban-loading-inline">
+            <div class="kanban-loading-inline-dot"></div>
+            <span>Updating stages...</span>
         </div>
         <!-- Error state -->
         <div v-if="error && columns.length === 0" class="kanban-empty-state kanban-error-state">
@@ -811,7 +811,7 @@ const executeFetchLeads = async () => {
             ...(q.created_at && { created_at: q.created_at }),
             ...(q.created_from && { created_from: q.created_from }),
             ...(q.created_to && { created_to: q.created_to }),
-            ...(q.source && { source: q.source }),
+            ...(q.source != null && q.source !== '' && (!Array.isArray(q.source) || q.source.length > 0) && { source: q.source }),
             ...(q.lead_branch_source && { lead_branch_source: q.lead_branch_source }),
             ...(q.stage_id != null && q.stage_id !== '' && { stage_id: q.stage_id }),
             ...(q.closed !== undefined && q.closed !== null && q.closed !== '' && { closed: q.closed }),
@@ -821,9 +821,12 @@ const executeFetchLeads = async () => {
             ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id }),
             ...(q.budget_from != null && q.budget_from !== '' && { budget_from: q.budget_from }),
             ...(q.budget_to != null && q.budget_to !== '' && { budget_to: q.budget_to }),
+            ...(q.interaction_result != null && q.interaction_result !== '' && { interaction_result: q.interaction_result }),
             ...(q.lead_type != null && q.lead_type !== '' && { lead_type: q.lead_type }),
             ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status }),
              ...(q.property_type_id != null && q.property_type_id !== '' && { property_type_id: q.property_type_id }),
+            ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
+            ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
             // ...(q.office_branch != null && q.office_branch !== '' && { team_id: q.office_branch })
         }
          // Handle office_branch as array for multi-select
@@ -998,7 +1001,7 @@ async function fetchMoreLeadsFromApi(stageId) {
             ...(q.created_at && { created_at: q.created_at }),
             ...(q.created_from && { created_from: q.created_from }),
             ...(q.created_to && { created_to: q.created_to }),
-            ...(q.source && { source: q.source }),
+            ...(q.source != null && q.source !== '' && (!Array.isArray(q.source) || q.source.length > 0) && { source: q.source }),
             ...(q.lead_branch_source && { lead_branch_source: q.lead_branch_source }),
             ...(q.stage_id != null && q.stage_id !== '' && { stage_id: q.stage_id }),
             ...(q.closed !== undefined && q.closed !== null && q.closed !== '' && { closed: q.closed }),
@@ -1009,6 +1012,7 @@ async function fetchMoreLeadsFromApi(stageId) {
             ...(q.property_type_id != null && q.property_type_id !== '' && { property_type_id: q.property_type_id }),
             ...(q.budget_from != null && q.budget_from !== '' && { budget_from: q.budget_from }),
             ...(q.budget_to != null && q.budget_to !== '' && { budget_to: q.budget_to }),
+            ...(q.interaction_result != null && q.interaction_result !== '' && { interaction_result: q.interaction_result }),
             ...(q.lead_type != null && q.lead_type !== '' && { lead_type: q.lead_type }),
             ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status })
         }
@@ -2236,6 +2240,7 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         if (additionalData.available_date) payload.available_date = additionalData.available_date
         if (additionalData.branch) payload.branch = additionalData.branch
         if (additionalData.lost_reason) payload.why_lost_lead = additionalData.lost_reason
+        if (additionalData.interaction_result) payload.interaction_result = additionalData.interaction_result
         
         // معالجة lead_status حسب المرحلة
         if (additionalData.lead_status) {
@@ -2520,6 +2525,33 @@ const $showNotification = (message, type = 'info') => {
 }
 .kanban-empty-btn:hover {
     background: #f8fafc;
+}
+.kanban-loading-inline {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+}
+.kanban-loading-inline-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3b82f6;
+    animation: kanban-pulse 1s ease-in-out infinite;
+}
+@keyframes kanban-pulse {
+    0%, 100% { opacity: 0.35; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1); }
 }
 .kanban-loading .kanban-empty-title {
     color: #64748B;

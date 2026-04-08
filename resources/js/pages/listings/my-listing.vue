@@ -1,70 +1,16 @@
 <template>
   <div class="container-fluid mt-4">
 
-    
-    <!-- Search Bar -->
-    <SearchBar
-      @filters-changed="handleFiltersChanged"
-      :initial-filters="initialFilters"
-    />
-    
-    <!-- Status Toggle Buttons -->
-    <div class="row mb-4 ">
-      <div class="col-12">
-        <div class="status-toggle-buttons">
-          <button 
-            class="status-btn" 
-            :class="{ active: activeStatus === 'all' }"
-            @click="setStatus('all')"
-          >
-            <i class="ri-list-check"></i>
-            All My Listings
-          </button>
-          <button 
-            class="status-btn" 
-            :class="{ active: activeStatus === 'active' }"
-            @click="setStatus('active')"
-          >
-            <i class="ri-checkbox-circle-line"></i>
-            Active
-          </button>
-          <button 
-            class="status-btn" 
-            :class="{ active: activeStatus === 'inactive' }"
-            @click="setStatus('inactive')"
-          >
-            <i class="ri-close-circle-line"></i>
-            Inactive
-          </button>
-           <!-- <button 
-            class="status-btn" 
-            :class="{ active: activeStatus === 'archived' }"
-            @click="setStatus('archived')"
-          >
-            <i class="ri-archive-line"></i>
-            Archived
-          </button> -->
-          <button 
-            class="status-btn" 
-            :class="{ active: activeStatus === 'sold' }"
-            @click="setStatus('sold')"
-          >
-            <i class="ri-checkbox-circle-fill"></i>
-            Sold Out
-          </button>
-          
-          <button 
-            class="status-btn" 
-            :class="{ active: activeStatus === 'draft' }"
-            @click="setStatus('draft')"
-          >
-            <i class="fa fa-pencil-alt"></i>
-
-            Draft
-          </button>
-         
-          
-        </div>
+    <div class="top-search-toolbar mb-3">
+      <div class="top-search-col">
+        <SearchBar
+          @filters-changed="handleFiltersChanged"
+          @status-changed="setStatus"
+          :initial-filters="initialFilters"
+          :result-count="pagination?.total || filteredProperties.length"
+          :show-status-tabs="true"
+          :active-status="activeStatus"
+        />
       </div>
     </div>
     
@@ -798,11 +744,48 @@ const fetchProperties = async (filters = {}, page = 1) => {
 }
 
 /* Status Toggle Buttons */
+.top-search-toolbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.top-search-col {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.top-status-col {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  display: flex;
+  align-items: stretch;
+  margin-top: 6px;
+}
+
 .status-toggle-buttons {
   display: flex;
   gap: 12px;
   padding: 0 16px;
   margin-bottom: 20px;
+}
+
+.status-toggle-buttons-compact {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 0;
+  width: 290px;
+  background: #fff;
+  border: 1px solid #e6ebf3;
+  border-radius: 14px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
 }
 
 .status-btn {
@@ -818,15 +801,33 @@ const fetchProperties = async (filters = {}, page = 1) => {
   gap: 8px;
 }
 
+.status-toggle-buttons-compact .status-btn {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border-width: 1px;
+  border-color: #dbe2ee;
+  background: #f8fafc;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  gap: 4px;
+  line-height: 1;
+  min-height: 34px;
+  letter-spacing: 0.01em;
+  justify-content: center;
+}
+
 .status-btn:hover {
-  border-color: #FAA300;
-  color: #FAA300;
+  border-color: #faa300;
+  color: #faa300;
+  background: #fff9ef;
 }
 
 .status-btn.active {
-  background: #FAA300;
-  border-color: #FAA300;
+  background: linear-gradient(135deg, #faa300 0%, #ffb224 100%);
+  border-color: #f1a10a;
   color: white;
+  box-shadow: 0 4px 10px rgba(250, 163, 0, 0.22);
 }
 
 /* Images Badge Only */
@@ -993,8 +994,22 @@ const fetchProperties = async (filters = {}, page = 1) => {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .top-search-toolbar {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .top-status-col {
+    width: 100%;
+  }
+
   .status-toggle-buttons {
     flex-direction: column;
+  }
+
+  .status-toggle-buttons-compact {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   
   .status-btn {

@@ -113,7 +113,7 @@
                                     @input="showSearchModal = false"
                                 />
                             </div>
-                            <iconify-icon v-if="activeFilter || (activeFilters && activeFilters.length || search)" icon="lucide:x" class="clear-search-icon" @click="clearSearchFilter" style="cursor: pointer;"></iconify-icon>
+                            <iconify-icon v-if="hasAnySearchCriteria" icon="lucide:x" class="clear-search-icon" @click="clearSearchFilter" style="cursor: pointer;"></iconify-icon>
                         </div>
                         <div v-if="showSearchModal" class="lead-search-dropdown-outer">
                             <LeadSearchModal
@@ -429,6 +429,40 @@ const activeFilter = ref(null)
 const activeFilters = ref([])
 const lastQuery = ref(null)
 
+
+const dropLinkedQueryKeys = (query, queryKey) => {
+    if (!query || !queryKey) return
+    delete query[queryKey]
+
+    if (queryKey === 'created_at') {
+        delete query.created_from
+        delete query.created_to
+        return
+    }
+
+    if (queryKey === 'office_branch') {
+        delete query.lead_branch_source
+        return
+    }
+
+    if (queryKey === 'source') {
+        delete query.source_website
+        return
+    }
+
+    if (queryKey === 'budget_from' || queryKey === 'budget_to') {
+        delete query.budget_from
+        delete query.budget_to
+    }
+}
+
+const hasAnySearchCriteria = computed(() => {
+    const hasTextSearch = search.value != null && String(search.value).trim() !== ''
+    const hasPills = Array.isArray(activeFilters.value) && activeFilters.value.length > 0
+    const hasQuery = !!(lastQuery.value && Object.keys(lastQuery.value).length)
+    return hasTextSearch || hasPills || hasQuery
+})
+
 const onLeadSearch = (payload) => {
     if (payload === null || payload?.query === null) {
         activeFilter.value = null
@@ -473,25 +507,17 @@ const moreFiltersCount = computed(() => {
 const removeFilter = (f) => {
     if (!lastQuery.value) return
     const nextQuery = { ...lastQuery.value }
-    delete nextQuery[f.queryKey]
-    
-    if (f.queryKey === 'created_at') {
-        delete nextQuery.created_from
-        delete nextQuery.created_to
-    }else if(f.queryKey === 'office_branch'){
-              delete nextQuery.lead_branch_source
-        }
-    
+    dropLinkedQueryKeys(nextQuery, f.queryKey)
+
     activeFilters.value = activeFilters.value.filter(x => x.id !== f.id)
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null
-    if(!Object.keys(nextQuery).length){
-    activeFilter.value = null
-    activeFilters.value = []
-    lastQuery.value = null
-    search.value = ''
+    if (!Object.keys(nextQuery).length) {
+        activeFilter.value = null
+        activeFilters.value = []
+        lastQuery.value = null
+        search.value = ''
     }
-    
-    
+
     if (leadsRef.value) {
         const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
@@ -506,21 +532,14 @@ const clearMoreFilters = () => {
     const keep = list.slice(0, 2)
     const remove = list.slice(2)
     const nextQuery = lastQuery.value ? { ...lastQuery.value } : {}
-    
-    remove.forEach(f => { 
-        delete nextQuery[f.queryKey]
-        if (f.queryKey === 'created_at') {
-            delete nextQuery.created_from
-            delete nextQuery.created_to
-        }else if(f.queryKey === 'office_branch'){
-              delete nextQuery.lead_branch_source
-        }
+
+    remove.forEach(f => {
+        dropLinkedQueryKeys(nextQuery, f.queryKey)
     })
-    
+
     activeFilters.value = keep
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null
-    console.log(Object.keys(nextQuery).length);
-      if(!Object.keys(nextQuery).length){
+    if (!Object.keys(nextQuery).length) {
         activeFilter.value = null
         activeFilters.value = []
         lastQuery.value = null

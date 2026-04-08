@@ -49,11 +49,24 @@
                         <span class="section-title">Leads</span>
                     </b-form-checkbox>
                 </div>
-                <div class="fields-grid">
-                    <div v-for="field in leadFields" :key="field.id" class="field-item">
-                        <b-form-checkbox v-model="field.checked">
-                            <span class="field-checkbox">{{ field.label }}</span>
-                        </b-form-checkbox>
+                <div class="settings-subsections">
+                    <div
+                        v-for="section in groupedLeadSections"
+                        :key="section.id"
+                        class="settings-subsection"
+                    >
+                        <div class="settings-subsection-head">
+                            <b-form-checkbox :model-value="isSectionChecked(section.id)" @update:model-value="setSectionChecked(section.id, $event)">
+                                <span class="settings-subsection-title">{{ section.title }}</span>
+                            </b-form-checkbox>
+                        </div>
+                        <div class="fields-grid">
+                            <div v-for="field in section.fields" :key="field.id" class="field-item">
+                                <b-form-checkbox v-model="field.checked">
+                                    <span class="field-checkbox">{{ field.label }}</span>
+                                </b-form-checkbox>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -118,12 +131,45 @@ const leadFields = ref([
     { id: 'bedrooms', label: 'Bedrooms', checked: false },
     { id: 'office', label: 'Branch', checked: true },
     { id: 'team', label: 'Team', checked: true },
+    { id: 'location', label: 'Location / Area', checked: false },
+    { id: 'interaction_result', label: 'Call Result', checked: false },
     { id: 'property_type', label: 'Property Type', checked: false },
     { id: 'lead_type', label: 'Lead Type', checked: false },
     { id: 'property_status', label: 'Property Status', checked: false },
-    { id: 'budget_from', label: 'Budget From', checked: false },
-    { id: 'budget_to', label: 'Budget To', checked: false }
+    { id: 'budget_from', label: 'Budget (AED)', checked: false }
 ])
+
+const leadFieldSections = [
+    { id: 'lead-core', title: 'Lead Information', fieldIds: ['first_name', 'lead_name', 'work_phone', 'email', 'created_on', 'closed'] },
+    { id: 'assignment', title: 'Assignment', fieldIds: ['responsible_person', 'lead_branch_source', 'office', 'team', 'stage', 'source'] },
+    { id: 'source', title: 'Source & Follow-up', fieldIds: ['interaction_result'] },
+    { id: 'client-req', title: 'Client Requirement', fieldIds: ['location', 'property_type', 'lead_type', 'property_status', 'bedrooms', 'budget_from'] }
+]
+
+const groupedLeadSections = computed(() =>
+    leadFieldSections
+        .map(section => ({
+            ...section,
+            fields: section.fieldIds
+                .map(id => leadFields.value.find(field => field.id === id))
+                .filter(Boolean)
+        }))
+        .filter(section => section.fields.length > 0)
+)
+
+const isSectionChecked = (sectionId) => {
+    const section = groupedLeadSections.value.find(s => s.id === sectionId)
+    if (!section || !section.fields.length) return false
+    return section.fields.every(field => field.checked)
+}
+
+const setSectionChecked = (sectionId, checked) => {
+    const section = groupedLeadSections.value.find(s => s.id === sectionId)
+    if (!section) return
+    section.fields.forEach(field => {
+        field.checked = !!checked
+    })
+}
 
 const defaultFieldIds = [
     'first_name', 'lead_name', 'created_on', 'work_phone', 
@@ -131,7 +177,6 @@ const defaultFieldIds = [
     'email', 'source', 'team'
 ]
 
-// دالة استعادة الحقول الافتراضية
 const restoreDefaultFields = () => {
     leadFields.value.forEach(field => {
         field.checked = defaultFieldIds.includes(field.id)
@@ -145,8 +190,12 @@ watch(() => props.modelValue, (val) => {
 watch(show, (val) => {
     emit('update:modelValue', val)
     if (val && props.initialSelectedLeadIds && Array.isArray(props.initialSelectedLeadIds)) {
+        const ids = [...props.initialSelectedLeadIds]
+        if (ids.includes('budget_to') && !ids.includes('budget_from')) {
+            ids.push('budget_from')
+        }
         leadFields.value.forEach(f => {
-            f.checked = props.initialSelectedLeadIds.includes(f.id)
+            f.checked = ids.includes(f.id)
         })
     }
 })
@@ -284,6 +333,31 @@ const applySettings = () => {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 16px 24px;
+}
+
+.settings-subsections {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.settings-subsection {
+    border: 1px solid #F1F5F9;
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: #fff;
+}
+
+.settings-subsection-head {
+    border-bottom: 1px solid #F1F5F9;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+}
+
+.settings-subsection-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #01062C;
 }
 
 .field-item {

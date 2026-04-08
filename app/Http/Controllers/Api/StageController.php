@@ -252,9 +252,7 @@ class StageController extends Controller
                 if ($request->filled('created_at')) {
                     $q->whereDate('created_at', $request->created_at);
                 }
-                if ($request->filled('source')) {
-                    $q->where('lead_source', $request->source);
-                }
+                $this->applyLeadSourceFilter($q, $request);
                 if ($request->filled('bedrooms')) {
                     $q->where('bedrooms', $request->bedrooms);
                 }
@@ -341,25 +339,17 @@ class StageController extends Controller
                     $q->where('property_status', $request->property_status);
                 }
                 
-                // Filter by Budget From (minimum budget)
-                if ($request->filled('budget_from')) {
-                    $q->where(function($query) use ($request) {
-                        $query->where('budget_from', '>=', $request->budget_from)
-                              ->orWhere('budget', '>=', $request->budget_from);
-                    });
-                }
-                
-                // Filter by Budget To (maximum budget)
-                if ($request->filled('budget_to')) {
-                    $q->where(function($query) use ($request) {
-                        $query->where('budget_to', '<=', $request->budget_to)
-                              ->orWhere('budget', '<=', $request->budget_to);
-                    });
-                }
+                $this->applyBudgetRangeFilter($q, $request);
                 
                 // Filter by Property Type ID
                 if ($request->filled('property_type_id')) {
                     $q->where('property_type_id', $request->property_type_id);
+                }
+                if ($request->filled('area_id')) {
+                    $q->where('area_id', $request->area_id);
+                }
+                if ($request->filled('interaction_result')) {
+                    $q->where('interaction_result', $request->interaction_result);
                 }
                 if ($request->filled('search')) {
                     $search = $request->search;
@@ -511,9 +501,7 @@ class StageController extends Controller
             if ($request->filled('created_at')) {
                 $leadsQuery->whereDate('created_at', $request->created_at);
             }
-            if ($request->filled('source')) {
-                $leadsQuery->where('lead_source', $request->source);
-            }
+            $this->applyLeadSourceFilter($leadsQuery, $request);
             if ($request->filled('bedrooms')) {
                 $leadsQuery->where('bedrooms', $request->bedrooms);
             }
@@ -595,25 +583,17 @@ class StageController extends Controller
                     $leadsQuery->where('property_status', $request->property_status);
                 }
                 
-                // Filter by Budget From (minimum budget)
-                if ($request->filled('budget_from')) {
-                    $leadsQuery->where(function($query) use ($request) {
-                        $query->where('budget_from', '>=', $request->budget_from)
-                              ->orWhere('budget', '>=', $request->budget_from);
-                    });
-                }
-                
-                // Filter by Budget To (maximum budget)
-                if ($request->filled('budget_to')) {
-                    $leadsQuery->where(function($query) use ($request) {
-                        $query->where('budget_to', '<=', $request->budget_to)
-                              ->orWhere('budget', '<=', $request->budget_to);
-                    });
-                }
+                $this->applyBudgetRangeFilter($leadsQuery, $request);
                 
                 // Filter by Property Type ID
                 if ($request->filled('property_type_id')) {
                     $leadsQuery->where('property_type_id', $request->property_type_id);
+                }
+                if ($request->filled('area_id')) {
+                    $leadsQuery->where('area_id', $request->area_id);
+                }
+                if ($request->filled('interaction_result')) {
+                    $leadsQuery->where('interaction_result', $request->interaction_result);
                 }
                 if ($request->filled('search')) {
                     $search = $request->search;
@@ -946,5 +926,93 @@ public function getOffices()
         } catch (\Exception $e) {
             return ApiResponse::error($e->getMessage());
         }
+    }
+
+    /**
+     * Filter by lead_source: single string, or array for multiple (OR / whereIn).
+     */
+
+
+    /**
+     * Budget filter with range-overlap support for lead cards.
+     */
+    private function applyBudgetRangeFilter($query, Request $request): void
+    {
+        $min = $request->filled('budget_from') ? (float) $request->budget_from : null;
+        $max = $request->filled('budget_to') ? (float) $request->budget_to : null;
+
+        if ($min === null && $max === null) {
+            return;
+        }
+
+        if ($min !== null && $max !== null && $min > $max) {
+            [$min, $max] = [$max, $min];
+        }
+
+        if ($min !== null && $max !== null) {
+            $query->where(function ($q) use ($min, $max) {
+                $q->where(function ($w) use ($min, $max) {
+                    $w->whereNotNull('budget_from')
+                      ->whereNotNull('budget_to')
+                      ->where('budget_from', '<=', $max)
+                      ->where('budget_to', '>=', $min);
+                })
+                ->orWhereBetween('budget', [$min, $max])
+                ->orWhere(function ($w) use ($min, $max) {
+                    $w->whereNotNull('budget_from')
+                      ->whereNull('budget_to')
+                      ->whereBetween('budget_from', [$min, $max]);
+                })
+                ->orWhere(function ($w) use ($min, $max) {
+                    $w->whereNotNull('budget_to')
+                      ->whereNull('budget_from')
+                      ->whereBetween('budget_to', [$min, $max]);
+                });
+            });
+
+            return;
+        }
+
+        if ($min !== null) {
+            $query->where(function ($q) use ($min) {
+                $q->where('budget', '>=', $min)
+                  ->orWhere('budget_from', '>=', $min)
+                  ->orWhere('budget_to', '>=', $min);
+            });
+
+            return;
+        }
+
+        $query->where(function ($q) use ($max) {
+            $q->where('budget', '<=', $max)
+              ->orWhere('budget_from', '<=', $max)
+              ->orWhere('budget_to', '<=', $max);
+        });
+    }
+    private function applyLeadSourceFilter($query, Request $request): void
+    {
+        if (! $request->filled('source')) {
+            return;
+        }
+
+        $src = $request->source;
+
+        if (is_array($src)) {
+            $src = array_values(array_filter($src, fn ($v) => $v !== null && $v !== ''));
+
+            if (count($src) === 0) {
+                return;
+            }
+
+            if (count($src) === 1) {
+                $query->where('lead_source', $src[0]);
+            } else {
+                $query->whereIn('lead_source', $src);
+            }
+
+            return;
+        }
+
+        $query->where('lead_source', $src);
     }
 }

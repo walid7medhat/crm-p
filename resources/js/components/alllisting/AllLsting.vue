@@ -1,22 +1,23 @@
 <template>
   <div class="container-fluid mt-4">
    
-    <!-- Search Bar -->
-    <SearchBar
-      ref="searchBarRef"
-      @filters-changed="handleFiltersChanged"
-      :initial-filters="initialFilters"
-    />
-    <div v-if="isAdmin" class="row mb-4 ">
-      <div class="col-12">
-        <div class="status-toggle-buttons">
+    <div class="top-search-toolbar mb-3">
+      <div class="top-search-col">
+        <SearchBar
+          ref="searchBarRef"
+          @filters-changed="handleFiltersChanged"
+          :initial-filters="initialFilters"
+          :result-count="pagination?.total || properties.length"
+        />
+        <div v-if="isAdmin" class="top-status-col">
+          <div class="status-toggle-buttons status-toggle-buttons-compact">
           <button 
             class="status-btn" 
             :class="{ active: activeStatus === 'all' }"
             @click="setStatus('all')"
           >
             <i class="ri-list-check"></i>
-            All Listings
+            All
           </button>
           <button 
             class="status-btn" 
@@ -59,7 +60,7 @@
 
             Draft
           </button>
-        
+          </div>
         </div>
       </div>
     </div>
@@ -1035,12 +1036,40 @@ export default {
   border-color: #dee2e6;
 }
 /* Status Toggle Buttons */
+.top-search-toolbar {
+  display: block;
+}
+
+.top-search-col {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.top-status-col {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .status-toggle-buttons {
   display: flex;
   gap: 12px;
   padding: 0 16px;
   flex-wrap: wrap;
   margin-bottom: 20px;
+}
+
+.status-toggle-buttons-compact {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 0;
+  width: min(420px, 100%);
+  background: #fff;
+  border: 1px solid #e6ebf3;
+  border-radius: 16px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
 }
 
 .status-btn {
@@ -1057,22 +1086,53 @@ export default {
   flex-shrink: 0;
 }
 
+.status-toggle-buttons-compact .status-btn {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border-width: 1px;
+  border-color: #dbe2ee;
+  background: #f8fafc;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  gap: 4px;
+  line-height: 1;
+  min-height: 34px;
+  letter-spacing: 0.01em;
+  justify-content: center;
+}
+
 .status-btn:hover {
   border-color: #FAA300;
   color: #FAA300;
+  background: #fff9ef;
 }
 
 .status-btn.active {
-  background: #FAA300;
-  border-color: #FAA300;
+  background: linear-gradient(135deg, #faa300 0%, #ffb224 100%);
+  border-color: #f1a10a;
   color: white;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  box-shadow: 0 4px 10px rgba(250, 163, 0, 0.22);
 }
 
 @media (max-width: 768px) {
+  .top-search-toolbar {
+    display: block;
+  }
+
+  .top-status-col {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .status-toggle-buttons {
     flex-direction: column;
+  }
+
+  .status-toggle-buttons-compact {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   
   .status-btn {

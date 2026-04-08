@@ -237,6 +237,22 @@
                 @keydown="preventNumberInvalidKeys"
               />
             </div>
+            
+            <div class="col-md-12">
+              <label class="form-label">Additional Features</label>
+              <div class="listing-feature-grid">
+                <button
+                  v-for="feature in listingFeatureOptions"
+                  :key="feature.key"
+                  type="button"
+                  class="listing-feature-item"
+                  :class="{ 'is-selected': form[feature.key] }"
+                  @click="form[feature.key] = !form[feature.key]"
+                >
+                  <span class="listing-feature-label">{{ feature.label }}</span>
+                </button>
+              </div>
+            </div>
 
             <div class="col-md-12">
               <label class="form-label">Note</label>
@@ -1452,9 +1468,19 @@ const form = ref({
   mortgageAmount: "", rentExpiryDate: "", rentAmount: "",
   mortgageComment: "", projectAreas: [], rented_status: "",      
   rented_until: "", payment_plan: "", payment_plans: [] ,driveLink: "", is_hot_deal: "",
+  maid: false, storage: false, study: false, store: false, laundry: false, driver: false,
     spa_document: null, desk_document: null, other_document: null,
   additionalDocuments: [],
 });
+
+const listingFeatureOptions = [
+  { key: 'maid', label: 'Maid' },
+  { key: 'storage', label: 'Storage' },
+  { key: 'study', label: 'Study' },
+  { key: 'store', label: 'Store' },
+  { key: 'laundry', label: 'Laundry' },
+  { key: 'driver', label: 'Driver' },
+];
 
 const isLoadingUnitNumber = ref(false);
 const unitNumberError = ref("");
@@ -2548,6 +2574,12 @@ const handleSubmit = async (action = 'draft') => {
       'occupancy_status': form.value.occupancyStatus, 'mortgage_amount': form.value.mortgageAmount,
       'rent_expiry_date': form.value.rentExpiryDate, 'rent_amount': form.value.rentAmount,
       'mortgage_comment': form.value.mortgageComment,
+      'maid': form.value.maid ? 1 : 0,
+      'storage': form.value.storage ? 1 : 0,
+      'study': form.value.study ? 1 : 0,
+      'store': form.value.store ? 1 : 0,
+      'laundry': form.value.laundry ? 1 : 0,
+      'driver': form.value.driver ? 1 : 0,
     };
 
     Object.entries(textFields).forEach(([key, value]) => {
@@ -2630,6 +2662,7 @@ const resetForm = () => {
     comment: "", mortgageStatus: "", occupancyStatus: "", mortgageAmount: "",
     rentExpiryDate: "", rentAmount: "", mortgageComment: "", projectAreas: [],
     rented_status: "", rented_until: "", payment_plan: "", payment_plans: []   , driveLink: ""  ,is_hot_deal:"",
+    maid: false, storage: false, study: false, store: false, laundry: false, driver: false,
      spa_document: null, desk_document: null, other_document: null,
     additionalDocuments: [],
   };
@@ -3506,6 +3539,54 @@ body {
   color: #4a5568;
   font-weight: 500;
   white-space: nowrap;
+}
+
+.listing-feature-grid {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-top: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.listing-feature-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  height: 30px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: 96px;
+}
+
+.listing-feature-item:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.listing-feature-item.is-selected {
+  border-color: #f59e0b;
+  background: #fff7e6;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15);
+}
+
+.listing-feature-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #334155;
+  text-align: center;
+  flex: 1;
 }
 
 .divider {

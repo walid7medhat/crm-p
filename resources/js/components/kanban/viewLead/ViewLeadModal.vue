@@ -336,6 +336,7 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
         if (additionalData.available_date) payload.available_date = additionalData.available_date
         if (additionalData.branch) payload.branch = additionalData.branch
         if (additionalData.lost_reason) payload.why_lost_lead = additionalData.lost_reason
+        if (additionalData.interaction_result) payload.interaction_result = additionalData.interaction_result
         
         // Handle lead status based on stage
         if (additionalData.lead_status) {
@@ -677,26 +678,11 @@ const cleanup = () => {
 }
 
 onMounted(() => {
-    console.log('🚀 ViewLeadModal: Component mounted')
-    console.log('   - show.value:', show.value)
-    console.log('   - props.leadId:', props.leadId)
     fetchStageOrders()
-    if (show.value && props.leadId) {
-        console.log('   ✅ Initializing lead data and listeners...')
-        fetchLead()
-        setTimeout(() => {
-            console.log('   ⏰ Timeout completed, initializing listeners...')
-            initializeLeadListener()
-        }, 500)
-    } else {
-        console.log('   ⏭️  Skipping initialization - modal not shown or no leadId')
-    }
 })
 
 onUnmounted(() => {
-    console.log('💀 ViewLeadModal: Component unmounting, cleaning up...')
     cleanup()
-    console.log('✅ ViewLeadModal: Component unmounted')
 })
 
 watch(() => props.modelValue, (val) => {
@@ -704,31 +690,23 @@ watch(() => props.modelValue, (val) => {
 })
 
 watch(show, (val) => {
-    console.log('👀 ViewLeadModal: show watcher triggered')
-    console.log('   - New value:', val)
-    console.log('   - props.leadId:', props.leadId)
-    
     if (val) {
-        console.log('   ✅ Modal opened, initializing...')
         if (props.leadId) {
-            console.log('   📥 Fetching lead data...')
             fetchLead()
-            setTimeout(() => {
-                console.log('   ⏰ Timeout completed, initializing listeners...')
-                initializeLeadListener()
-            }, 500)
-        } else {
-            console.log('   ⚠️  No leadId provided, cannot fetch or listen')
+            initializeLeadListener()
         }
     } else {
-        console.log('   ❌ Modal closed, cleaning up listeners...')
         cleanup()
-                activeTab.value = 'general'
-                
-
+        activeTab.value = 'general'
     }
-    console.log('   📤 Emitting update:modelValue:', val)
     emit('update:modelValue', val)
+})
+
+watch(() => props.leadId, (newLeadId, oldLeadId) => {
+    if (!show.value) return
+    if (!newLeadId || newLeadId === oldLeadId) return
+    fetchLead()
+    initializeLeadListener()
 })
 
 // Watch for lead prop changes to update the stage

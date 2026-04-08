@@ -1,7 +1,7 @@
 <template>
     <div class="row g-4">
         <!-- Left Column: Lead Information -->
-        <div class="col-md-5">
+        <div ref="editSectionAnchorRef" class="col-md-5">
             <div class="info-card bg-white  p-3 radius-12">
                 <!-- View Mode (read-only; do not use ViewLead.vue here – it is a full modal and would cause infinite recursion) -->
                 <LeadInfoView v-if="!isEditMode" :lead="lead" :show-responsible-section="false" :can-edit="lead?.can_edit" :show-edit-icon="true"  @edit-section="handleEditSection" @edit-request="toggleEditMode" />
@@ -21,12 +21,52 @@
 
         <!-- Right Column: Activity & Comments -->
         <div class="col-md-7">
+            <div class="activity-card bg-white p-3 radius-12 shadow-sm">
+              <div v-if="qualityStatusBadge || callResultBadge || leadTypeBadge" class="info-section compact-status-section mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div class="info-section-title lead-section-title-match mb-0">Lead Qualification</div>
+                    </div>
+                    <div class="compact-status-grid">
+                        <div class="compact-status-card">
+                            <div class="compact-status-label">Quality Status</div>
+                            <div class="compact-status-value">
+                                <span
+                                    class="status-badge"
+                                    :class="qualityStatusBadge ? `status-badge--${qualityStatusBadge.tone}` : 'status-badge--neutral'"
+                                >
+                                    {{ qualityStatusBadge?.label || 'Not Set' }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="compact-status-card">
+                            <div class="compact-status-label">Call Result</div>
+                            <div class="compact-status-value">
+                                <span
+                                    class="status-badge"
+                                    :class="callResultBadge ? `status-badge--${callResultBadge.tone}` : 'status-badge--neutral'"
+                                >
+                                    {{ callResultBadge?.label || 'Not Set' }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="compact-status-card">
+                            <div class="compact-status-label">Lead Type</div>
+                            <div class="compact-status-value">
+                                <span
+                                    class="status-badge"
+                                    :class="leadTypeBadge ? `status-badge--${leadTypeBadge.tone}` : 'status-badge--neutral'"
+                                >
+                                    {{ leadTypeBadge?.label || 'Not Set' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                <ResponsiblePersonSection
                     v-if="lead?.id"
                     :lead="lead"
                     @person-updated="handlePersonUpdated"
                 />
-            <div class="activity-card bg-white p-3 radius-12 shadow-sm">
               
               <div class="d-flex justify-content-between align-items-center mb-4">
                   
@@ -141,7 +181,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import EditLead from '../editLead/EditLead.vue'
 import LeadInfoView from './LeadInfoView.vue'
 import LeadCreatedCard from './LeadCreatedCard.vue'
@@ -173,8 +213,24 @@ const activeViewTab = ref('comments')
 const commentListRef = ref(null)
 const activityListRef = ref(null)
 const editLeadRef = ref(null)
+const editSectionAnchorRef = ref(null)
 const commentListKey = ref(0)
 const activityListKey = ref(0)
+
+const scrollEditSectionIntoView = async () => {
+    await nextTick()
+    const modalBody = document.querySelector('#view-lead-modal___BV_modal_body_')
+        || document.querySelector('.view-lead-modal')
+        || document.querySelector('.modal-body-custom')
+
+    if (modalBody && typeof modalBody.scrollTo === 'function') {
+        modalBody.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    if (editSectionAnchorRef.value?.scrollIntoView) {
+        editSectionAnchorRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+}
 
 const showNotification = (message, type = 'success') => {
     if (window.$showNotification) {
@@ -200,6 +256,31 @@ const canDeleteAll = computed(() => {
     const isAdminUser = user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin') 
     
     return isAdminUser
+})
+
+const qualityStatusBadge = computed(() => {
+    const status = String(props.lead?.status_lead || '').toLowerCase()
+    if (!status) return null
+    if (status === 'hot') return { label: 'Hot', tone: 'hot' }
+    if (status === 'warm') return { label: 'Warm', tone: 'warm' }
+    if (status === 'cold') return { label: 'Cold', tone: 'cold' }
+    if (status === 'no_answer') return { label: 'No Answer', tone: 'muted' }
+    return { label: status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), tone: 'neutral' }
+})
+
+const callResultBadge = computed(() => {
+    const status = String(props.lead?.status_lead || '').toLowerCase()
+    if (!status) return null
+    if (status === 'no_answer') return { label: 'No Answer', tone: 'muted' }
+    return { label: 'Answered', tone: 'ok' }
+})
+
+const leadTypeBadge = computed(() => {
+    const leadType = String(props.lead?.lead_type || '').toLowerCase().trim()
+    if (!leadType) return null
+    if (leadType === 'sale') return { label: 'Sale', tone: 'sale' }
+    if (leadType === 'rent') return { label: 'Rent', tone: 'rent' }
+    return { label: leadType.replace(/\b\w/g, c => c.toUpperCase()), tone: 'neutral' }
 })
 const resetEditMode = () => {
     console.log('🔄 GeneralTab: Resetting edit mode to false')
@@ -362,11 +443,13 @@ const toggleEditMode = () => {
     isEditMode.value = true
       editingSection.value = null
     selectedStageId.value = props.stageId || props.lead?.stage?.id || null
+    scrollEditSectionIntoView()
 }
 const handleEditSection = (sectionName) => {
       editingSection.value = sectionName
      selectedStageId.value = props.stageId || props.lead?.stage?.id || null
     isEditMode.value = true
+    scrollEditSectionIntoView()
 }
 
 const handleCancel = () => {
@@ -452,6 +535,75 @@ onMounted(() => {
     color: #64748B;
     cursor: pointer;
     transition: all 0.2s;
+}
+
+.compact-status-section {
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    background: #fff;
+    padding: 6px !important;
+    box-shadow: none !important;
+    position: relative;
+    top: 12px;
+}
+
+.compact-status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.compact-status-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 5px 6px;
+    background: #ffffff;
+    min-height: 46px;
+}
+
+.compact-status-label {
+    font-size: 9px;
+    color: #64748b;
+    margin-bottom: 3px;
+    line-height: 1.1;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 2px 6px;
+    border: 1px solid transparent;
+    line-height: 1.15;
+}
+
+@media (max-width: 768px) {
+    .compact-status-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.status-badge--hot { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+.status-badge--warm { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+.status-badge--cold { color: #0369a1; background: #f0f9ff; border-color: #bae6fd; }
+.status-badge--ok { color: #166534; background: #f0fdf4; border-color: #bbf7d0; }
+.status-badge--sale { color: #7c3aed; background: #f5f3ff; border-color: #ddd6fe; }
+.status-badge--rent { color: #0f766e; background: #f0fdfa; border-color: #99f6e4; }
+.status-badge--muted { color: #475569; background: #f1f5f9; border-color: #cbd5e1; }
+.status-badge--neutral { color: #334155; background: #f8fafc; border-color: #e2e8f0; }
+
+/* Match LeadInfoView section-title typography exactly */
+.lead-section-title-match {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    border-bottom: none !important;
+    line-height: 1.2;
 }
 
 .btn-toggle.active {

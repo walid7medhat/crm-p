@@ -1,228 +1,299 @@
 <template>
-  <div class="">
-    <div class="search-bar">
-      <!-- All search fields in one line (compact) -->
-      <div class="main-search-row main-search-row-single">
-        <!-- Location: wider, placeholder centered, options in 2 lines -->
-        <div class="form-group form-group-inline form-group-location">
-          <label class="form-label form-label-inline form-label-location">Location</label>
-          <v-select
-            v-model="selectedArea"
-            :options="areas"
-            :disabled="isLoadingAreas"
-            label="name"
-            placeholder="Select area"
-            class="custom-select unified-input unified-input-inline location-select"
-            @update:modelValue="handleFilterChange"
-          >
-              <template #open-indicator="{ attributes }">
-                            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
-                         </template>
-            <template #option="option">
-              <div class="location-option">
-                <i class="ri-map-pin-line location-option-icon"></i>
-                <div class="location-option-text">
-                  <span class="location-option-name">{{ locationFirstLine(option) }}</span>
-                  <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
-                </div>
-              </div>
-            </template>
-            <template #selected-option="option">
-              <div v-if="option" class="location-selected">
-                <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
-                <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
-              </div>
-            </template>
-            <template #no-options>
-              <div class="text-center p-2">
-                {{ isLoadingAreas ? 'Loading areas...' : 'No areas found' }}
-              </div>
-            </template>
-          </v-select>
-        </div>
-
-        <!-- Project Status -->
-        <div class="form-group form-group-inline">
-          <label class="form-label form-label-inline form-label-tight">Project Status</label>
-          <v-select
-            v-model="selectedCompletionStatus"
-            :options="completionStatusOptions"
-            placeholder="Select status"
-            class="custom-select unified-input unified-input-inline"
-            @update:modelValue="handleFilterChange"
-          >
-              <template #open-indicator="{ attributes }">
-                    <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
-                 </template>
-          </v-select>
-        </div>
-
-        <!-- Property Type -->
-        <div class="form-group form-group-inline">
-          <label class="form-label form-label-inline form-label-tight">Property Type</label>
-          <v-select
-            v-model="selectedPropertyType"
-            :options="propertyTypes"
-            :disabled="isLoadingPropertyTypes"
-            label="name"
-            placeholder="Any Type"
-            class="custom-select unified-input unified-input-inline"
-            @update:modelValue="handleFilterChange"
-          >
-              <template #open-indicator="{ attributes }">
-                <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
-             </template>
-            <template #no-options>
-              <div class="text-center p-2">
-                {{ isLoadingPropertyTypes ? 'Loading...' : 'No types found' }}
-              </div>
-            </template>
-          </v-select>
-        </div>
-
-        <!-- Bedrooms -->
-        <div class="form-group form-group-inline">
-          <label class="form-label form-label-inline form-label-tight">Bedrooms</label>
-          <v-select
-            v-model="selectedBeds"
-            :options="bedsOptions"
-            placeholder="Any"
-            class="custom-select unified-input unified-input-inline"
-            @update:modelValue="handleFilterChange"
-          >
-              <template #open-indicator="{ attributes }">
-                <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
-             </template>
-          </v-select>
-        </div>
-
-        <!-- Price Range -->
-        <div class="form-group form-group-inline form-group-range">
-          <label class="form-label form-label-inline">Price Range</label>
-          <div class="range-dropdown">
-            <button class="range-dropdown-btn unified-btn unified-btn-inline" @click="togglePriceDropdown">
-              <span class="range-preview range-preview-inline">
-                {{ formatNumber(priceFrom) }} - {{ formatNumber(priceTo) }} AED
-              </span>
-              <i class="ri-arrow-down-s-line dropdown-icon"></i>
-            </button>
-            <div v-if="showPriceDropdown" class="range-dropdown-content compact-dropdown">
-              <div class="range-header">
-                <span>Price (AED)</span>
-                <button class="close-dropdown" @click="showPriceDropdown = false">
-                  <i class="ri-close-line"></i>
-                </button>
-              </div>
-              <div class="range-slider-container">
-                <div class="range-inputs-side">
-                  <div class="input-group-side">
-                    <input type="text" v-model="priceFrom" class="range-input-side" @change="handlePriceChange" placeholder="Min">
-                  </div>
-                  <div class="input-group-side">
-                    <input type="text" v-model="priceTo" class="range-input-side" @change="handlePriceChange" placeholder="Max">
-                  </div>
-                </div>
-                <div class="range-track">
-                  <div class="range-progress" :style="priceProgressStyle"></div>
-                </div>
-                <div class="range-slider">
-                  <input type="range" min="0" max="10000000" step="100000" v-model="priceFrom" class="slider" @input="handlePriceSliderChange" />
-                  <input type="range" min="0" max="10000000" step="100000" v-model="priceTo" class="slider" @input="handlePriceSliderChange" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Size Range -->
-        <div class="form-group form-group-inline form-group-range">
-          <label class="form-label form-label-inline">Size Range</label>
-          <div class="range-dropdown">
-            <button class="range-dropdown-btn unified-btn unified-btn-inline" @click="toggleSizeDropdown">
-              <span class="range-preview range-preview-inline">
-                {{ sizeFrom }} - {{ sizeTo }} sqft
-              </span>
-              <i class="ri-arrow-down-s-line dropdown-icon"></i>
-            </button>
-            <div v-if="showSizeDropdown" class="range-dropdown-content compact-dropdown">
-              <div class="range-header">
-                <span>Size (sqft)</span>
-                <button class="close-dropdown" @click="showSizeDropdown = false">
-                  <i class="ri-close-line"></i>
-                </button>
-              </div>
-              <div class="range-slider-container">
-                <div class="range-inputs-side">
-                  <div class="input-group-side">
-                    <input type="text" v-model="sizeFrom" class="range-input-side" @change="handleSizeChange" placeholder="Min">
-                  </div>
-                  <div class="input-group-side">
-                    <input type="text" v-model="sizeTo" class="range-input-side" @change="handleSizeChange" placeholder="Max">
-                  </div>
-                </div>
-                <div class="range-track">
-                  <div class="range-progress" :style="sizeProgressStyle"></div>
-                </div>
-                <div class="range-slider">
-                  <input type="range" min="0" max="10000" step="100" v-model="sizeFrom" class="slider" @input="handleSizeSliderChange" />
-                  <input type="range" min="0" max="10000" step="100" v-model="sizeTo" class="slider" @input="handleSizeSliderChange" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  <div class="search-container listing-search-transparent">
+    <div class="listing-search-shell">
+      <div class="listing-headline">
+        <h2>{{ dynamicHeadline }}</h2>
+        <span>{{ formattedResultCount }} listed</span>
       </div>
 
-      <!-- Secondary Filters -->
-      <div class="secondary-filters">
-        <!-- Type (dropdown like Sort By) -->
-        <div class="filter-section">
-          <label class="filter-label">Type</label>
-          <v-select
-            v-model="selectedSaleRent"
-            :options="typeOptions"
-            label="label"
-            :reduce="option => option.value"
-            placeholder="All"
-            class="custom-select sort-select unified-select unified-select-secondary"
-            @update:modelValue="handleFilterChange"
-          >
-              <template #open-indicator="{ attributes }">
-                <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
-             </template>
-          </v-select>
+      <div class="listing-main-search">
+        <i class="ri-search-line listing-main-search-icon"></i>
+        <v-select
+          v-model="selectedArea"
+          :options="areas"
+          :disabled="isLoadingAreas"
+          :multiple="true"
+          :close-on-select="false"
+          :clear-search-on-select="false"
+          :append-to-body="false"
+          label="name"
+          placeholder="City, community or building"
+          class="custom-select listing-main-location"
+          @update:modelValue="handleFilterChange"
+        >
+          <template #open-indicator="{ attributes }">
+            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+          </template>
+          <template #option="option">
+            <div class="location-option">
+              <i class="ri-map-pin-line location-option-icon"></i>
+              <div class="location-option-text">
+                <span class="location-option-name">{{ locationFirstLine(option) }}</span>
+                <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
+              </div>
+            </div>
+          </template>
+          <template #selected-option="option">
+            <div v-if="option" class="location-selected">
+              <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
+              <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
+            </div>
+          </template>
+          <template #selected-option-container="{ option, deselect, disabled }">
+            <span
+              v-if="isFirstSelectedArea(option)"
+              class="vs__selected location-chip"
+            >
+              {{ locationFirstLine(option) }}
+              <button
+                v-if="!disabled"
+                class="vs__deselect location-chip-close"
+                type="button"
+                @click.stop="deselect(option)"
+              >
+                <i class="ri-close-line"></i>
+              </button>
+            </span>
+            <span
+              v-else-if="isSecondSelectedArea(option) && remainingSelectedAreasCount > 0"
+              class="vs__selected location-chip"
+            >
+              {{ remainingSelectedAreasCount }} more
+            </span>
+          </template>
+        </v-select>
+      </div>
+
+      <div class="listing-pill-row">
+        <v-select
+          v-model="selectedSaleRent"
+          :options="typeOptions"
+          label="label"
+          :reduce="option => option.value"
+          :searchable="false"
+          :append-to-body="false"
+          placeholder="Rent"
+          class="custom-select listing-pill-select listing-pill-select-sm"
+          @update:modelValue="handleFilterChange"
+        >
+          <template #open-indicator="{ attributes }">
+            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+          </template>
+        </v-select>
+
+        <v-select
+          v-model="selectedPropertyType"
+          :options="propertyTypes"
+          :disabled="isLoadingPropertyTypes"
+          label="name"
+          :searchable="false"
+          :append-to-body="false"
+          placeholder="Property type"
+          class="custom-select listing-pill-select"
+          @update:modelValue="handleFilterChange"
+        >
+          <template #open-indicator="{ attributes }">
+            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+          </template>
+        </v-select>
+
+        <div class="listing-beds-wrap">
+          <button type="button" class="listing-pill-btn" @click.stop="toggleBedsDropdown">
+            <span>{{ selectedBeds ? `${selectedBeds} Beds` : 'Beds & Baths' }}</span>
+            <i class="ri-arrow-down-s-line"></i>
+          </button>
+          <div v-if="showBedsDropdown" class="listing-beds-popover" @click.stop>
+            <div class="listing-pop-label">Bedrooms</div>
+            <div class="listing-chip-grid">
+              <button
+                v-for="bed in bedsOptions"
+                :key="bed"
+                type="button"
+                class="listing-chip-btn"
+                :class="{ active: selectedBeds === bed }"
+                @click="selectBedsOption(bed)"
+              >
+                {{ bed }}
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div class="form-group compact search-btn-group">
-          <button class="btn btn-primary unified-search-btn" @click="applyFilters" :disabled="isLoadingAreas || isLoadingPropertyTypes">
-            <i class="ri-search-line"></i>
-            {{ (isLoadingAreas || isLoadingPropertyTypes) ? 'Loading...' : 'Search' }}
+        <div class="listing-price-wrap">
+          <button type="button" class="listing-pill-btn" @click.stop="togglePriceDropdown">
+            <span>Price</span>
+            <i class="ri-arrow-down-s-line"></i>
+          </button>
+
+          <div v-if="showPriceDropdown" class="listing-price-popover" @click.stop>
+            <div class="listing-pop-grid">
+              <div>
+                <label>Minimum</label>
+                <input
+                  type="text"
+                  :value="formatThousandsDisplay(priceFrom)"
+                  class="range-input-side"
+                  @input="onPriceFromInput"
+                  @blur="handlePriceChange"
+                  placeholder="0"
+                >
+              </div>
+              <div>
+                <label>Maximum</label>
+                <input
+                  type="text"
+                  :value="formatThousandsDisplay(priceTo)"
+                  class="range-input-side"
+                  @input="onPriceToInput"
+                  @blur="handlePriceChange"
+                  placeholder="Any"
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-filter-wrap">
+          <button type="button" class="listing-pill-btn listing-filter-btn" @click.stop="toggleMoreFilters">
+            <span>Filters</span>
+            <i class="ri-equalizer-line"></i>
+          </button>
+          <div v-if="showMoreFilters" class="listing-more-filter-popover" @click.stop>
+            <div class="listing-pop-title">More Filters</div>
+
+            <div class="listing-filter-section">
+              <label class="listing-pop-label">Area (sqft)</label>
+              <div class="listing-pop-grid listing-pop-grid--range">
+                <div>
+                  <label>Minimum</label>
+                  <input
+                    type="text"
+                    :value="formatThousandsDisplay(sizeFrom)"
+                    class="range-input-side"
+                    @input="onSizeFromInput"
+                    @blur="handleSizeChange"
+                    placeholder="0"
+                  >
+                </div>
+                <div>
+                  <label>Maximum</label>
+                  <input
+                    type="text"
+                    :value="formatThousandsDisplay(sizeTo)"
+                    class="range-input-side"
+                    @input="onSizeToInput"
+                    @blur="handleSizeChange"
+                    placeholder="Any"
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="listing-pop-grid listing-pop-grid--two">
+              <div>
+                <label>Project Status</label>
+                <v-select
+                  v-model="selectedCompletionStatus"
+                  :options="completionStatusOptions"
+                  :searchable="false"
+                  :append-to-body="false"
+                  placeholder="Select status"
+                  class="custom-select listing-pop-select"
+                  @update:modelValue="handleFilterChange"
+                />
+              </div>
+              <div>
+                <label>Sort By</label>
+                <v-select
+                  v-model="selectedSort"
+                  :options="sortOptions"
+                  label="label"
+                  :reduce="option => option.value"
+                  :searchable="false"
+                  :append-to-body="false"
+                  placeholder="Most Recent"
+                  class="custom-select listing-pop-select"
+                  @update:modelValue="handleFilterChange"
+                />
+              </div>
+              <div class="listing-pop-field--full">
+                <label>Agent</label>
+                <v-select
+                  v-model="selectedAgent"
+                  :options="agents"
+                  :disabled="isLoadingAgents"
+                  label="name"
+                  :searchable="true"
+                  :append-to-body="false"
+                  placeholder="Select agent"
+                  class="custom-select listing-pop-select"
+                  @update:modelValue="handleFilterChange"
+                />
+              </div>
+            </div>
+
+            <div class="listing-pop-actions">
+              <button type="button" class="btn btn-outline-secondary" @click="resetFilters">Reset</button>
+              <button type="button" class="btn btn-primary" @click="showMoreFilters = false; applyFilters()">Done</button>
+            </div>
+          </div>
+        </div>
+
+        <router-link
+          to="/notify-me"
+          class="listing-icon-circle listing-notify-btn"
+          title="Notify me"
+        >
+          <i class="ri-notification-2-line"></i>
+        </router-link>
+
+        <button class="btn unified-search-btn" @click="applyFilters" :disabled="isLoadingAreas || isLoadingPropertyTypes">
+          <i class="ri-search-line"></i>
+          Search
+        </button>
+        <div v-if="showStatusTabs" class="listing-status-row">
+          <button class="status-btn" :class="{ active: activeStatus === 'all' }" @click="emitStatusChange('all')">
+            <i class="ri-list-check"></i> All
+          </button>
+          <button class="status-btn" :class="{ active: activeStatus === 'active' }" @click="emitStatusChange('active')">
+            <i class="ri-checkbox-circle-line"></i> Active
+          </button>
+          <button class="status-btn" :class="{ active: activeStatus === 'inactive' }" @click="emitStatusChange('inactive')">
+            <i class="ri-close-circle-line"></i> Inactive
+          </button>
+          <button class="status-btn" :class="{ active: activeStatus === 'sold' }" @click="emitStatusChange('sold')">
+            <i class="ri-checkbox-circle-fill"></i> Sold Out
+          </button>
+          <button class="status-btn" :class="{ active: activeStatus === 'draft' }" @click="emitStatusChange('draft')">
+            <i class="fa fa-pencil-alt"></i> Draft
+          </button>
+          <span class="status-sort-separator"></span>
+          <button
+            class="status-btn sort-btn"
+            :class="{ active: selectedSort === 'hot_deal' }"
+            @click="setQuickSort('hot_deal')"
+          >
+            Hot Deal
+          </button>
+          <button
+            class="status-btn sort-btn"
+            :class="{ active: selectedSort === 'price_asc' }"
+            @click="setQuickSort('price_asc')"
+          >
+            Lowest Price
+          </button>
+          <button
+            class="status-btn sort-btn"
+            :class="{ active: selectedSort === 'price_desc' }"
+            @click="setQuickSort('price_desc')"
+          >
+            Highest Price
           </button>
         </div>
-        <!-- Sort By -->
-        <div class="filter-section">
-          <label class="filter-label">Sort By</label>
-          <v-select
-            v-model="selectedSort"
-            :options="sortOptions"
-            label="label"
-            :reduce="option => option.value"
-            placeholder="Most Recent"
-            class="custom-select sort-select unified-select unified-select-secondary"
-            @update:modelValue="handleFilterChange"
-            :modelValue="selectedSort"
-          >
-                <template #open-indicator="{ attributes }">
-                    <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
-                 </template>
-          </v-select>
-        </div>
       </div>
-
     </div>
 
-    <!-- Overlay for dropdowns -->
-    <div v-if="showPriceDropdown || showSizeDropdown" class="dropdown-overlay" @click="closeAllDropdowns"></div>
+    <div v-if="showPriceDropdown || showMoreFilters || showBedsDropdown" class="dropdown-overlay" @click="closeAllDropdowns"></div>
   </div>
 </template>
 
@@ -241,6 +312,18 @@ export default {
     initialFilters: {
       type: Object,
       default: null
+    },
+    resultCount: {
+      type: Number,
+      default: null
+    },
+    showStatusTabs: {
+      type: Boolean,
+      default: false
+    },
+    activeStatus: {
+      type: String,
+      default: "all"
     }
   },
   setup(props, { emit }) {
@@ -249,15 +332,18 @@ export default {
     const areas = ref([]);
       const projects = ref([]);
     const propertyTypes = ref([]);
+    const agents = ref([]);
     const isLoadingAreas = ref(false);
     const isLoadingPropertyTypes = ref(false);
+    const isLoadingAgents = ref(false);
      const isLoadingProjects = ref(false);
       const selectedProject = ref(null); 
       const selectedCompletionStatus = ref(null); 
     const selectedSaleRent = ref("");
     const selectedStatus = ref("All");
-    const selectedArea = ref(null);
+    const selectedArea = ref([]);
     const selectedPropertyType = ref(null);
+    const selectedAgent = ref(null);
     const selectedBeds = ref("");
     const selectedSort = ref("");
 
@@ -268,6 +354,8 @@ export default {
 
     const showPriceDropdown = ref(false);
     const showSizeDropdown = ref(false);
+    const showMoreFilters = ref(false);
+    const showBedsDropdown = ref(false);
 const searchReferenceNumber = ref("");
 
     // Debounce timer
@@ -360,6 +448,22 @@ const sortOptions = [
       }
     };
 
+    const fetchAgents = async () => {
+      try {
+        isLoadingAgents.value = true;
+        const response = await api.get("/listings/agents");
+        const agentsData = response.data.data || response.data;
+        agents.value = agentsData.map(agent => ({
+          id: agent.id,
+          name: agent.name || `${agent.first_name || ''} ${agent.last_name || ''}`.trim() || `Agent ${agent.id}`,
+        }));
+      } catch (error) {
+        console.error("Error fetching agents:", error.response || error);
+      } finally {
+        isLoadingAgents.value = false;
+      }
+    };
+
     // Computed properties
     const priceProgressStyle = computed(() => {
       const min = 0;
@@ -384,9 +488,12 @@ const sortOptions = [
     });
 
     const hasActiveFilters = computed(() => {
+      const hasSelectedAreas = Array.isArray(selectedArea.value)
+        ? selectedArea.value.length > 0
+        : !!selectedArea.value;
       return selectedSaleRent.value !== "All" || 
              selectedStatus.value !== "All" || 
-             selectedArea.value || 
+             hasSelectedAreas || 
              selectedPropertyType.value || 
              selectedBeds.value || 
              priceFrom.value > 0 || 
@@ -395,6 +502,25 @@ const sortOptions = [
              sizeTo.value < 10000 || searchReferenceNumber.value.trim() !== ""
              ||
              selectedCompletionStatus.value !== null;
+    });
+
+    const dynamicHeadline = computed(() => {
+      const hasMode = selectedSaleRent.value && selectedSaleRent.value !== 'All';
+      const selectedAreas = Array.isArray(selectedArea.value) ? selectedArea.value : (selectedArea.value ? [selectedArea.value] : []);
+      const hasLocation = selectedAreas.length > 0;
+      const locationLabel = hasLocation
+        ? (selectedAreas.length === 1
+            ? locationFirstLine(selectedAreas[0])
+            : `${locationFirstLine(selectedAreas[0])} +${selectedAreas.length - 1}`)
+        : 'UAE';
+      if (!hasMode && !hasLocation) return 'Properties in UAE';
+      if (hasMode) return `Properties for ${selectedSaleRent.value.toLowerCase()} in ${locationLabel}`;
+      return `Properties in ${locationLabel}`;
+    });
+
+    const formattedResultCount = computed(() => {
+      const count = props.resultCount ?? 116323;
+      return Number(count || 0).toLocaleString();
     });
 
     // Convert filters to API format
@@ -414,7 +540,9 @@ const sortOptions = [
       }
 
       // Area Filter
-      if (filters.area) {
+      if (Array.isArray(filters.area) && filters.area.length) {
+        apiFilters.area_ids = filters.area.map(a => a?.id).filter(Boolean);
+      } else if (filters.area && filters.area.id) {
         apiFilters.area_id = filters.area.id;
       }
      if (filters.project) {
@@ -423,6 +551,9 @@ const sortOptions = [
       // Property Type Filter
       if (filters.propertyType) {
         apiFilters.property_type_id = filters.propertyType.id;
+      }
+      if (filters.agent) {
+        apiFilters.agent_id = filters.agent.id;
       }
 
       // Bedrooms Filter
@@ -470,6 +601,7 @@ const sortOptions = [
           area: selectedArea.value,
           project: selectedProject.value,
           propertyType: selectedPropertyType.value,
+          agent: selectedAgent.value,
           beds: selectedBeds.value,
           priceFrom: priceFrom.value,
           priceTo: priceTo.value,
@@ -489,6 +621,15 @@ const sortOptions = [
     const handleFilterChange = () => {
        
       performSearch();
+    };
+
+    const emitStatusChange = (status) => {
+      emit('status-changed', status);
+    };
+
+    const setQuickSort = (sortValue) => {
+      selectedSort.value = sortValue;
+      handleFilterChange();
     };
 
     const handleSaleRentChange = (type) => {
@@ -536,6 +677,7 @@ const sortOptions = [
         area: selectedArea.value,
          project: selectedProject.value,
         propertyType: selectedPropertyType.value,
+        agent: selectedAgent.value,
         beds: selectedBeds.value,
         priceFrom: priceFrom.value,
         priceTo: priceTo.value,
@@ -558,9 +700,12 @@ const sortOptions = [
         if (!filters) return;
         selectedSaleRent.value = filters.saleRent ?? "All";
         selectedStatus.value = filters.status ?? "All";
-        selectedArea.value = filters.area || null;
+        selectedArea.value = Array.isArray(filters.area)
+          ? filters.area
+          : (filters.area ? [filters.area] : []);
         selectedProject.value = filters.project || null;
         selectedPropertyType.value = filters.propertyType || null;
+        selectedAgent.value = filters.agent || null;
         selectedBeds.value = filters.beds || "";
         selectedSort.value = filters.sort || "created_at_desc";
         priceFrom.value = filters.priceFrom ?? 0;
@@ -577,9 +722,10 @@ const sortOptions = [
       selectedSaleRent.value = "All";
       selectedStatus.value = "All";
         selectedCompletionStatus.value = null;
-      selectedArea.value = null;
+      selectedArea.value = [];
       selectedProject.value = null;
       selectedPropertyType.value = null;
+      selectedAgent.value = null;
       selectedBeds.value = "";
       selectedSort.value = "created_at_desc";
       priceFrom.value = 0;
@@ -604,17 +750,45 @@ const sortOptions = [
 
     const togglePriceDropdown = () => {
       showPriceDropdown.value = !showPriceDropdown.value;
-      if (showPriceDropdown.value) showSizeDropdown.value = false;
+      if (showPriceDropdown.value) {
+        showMoreFilters.value = false;
+        showSizeDropdown.value = false;
+        showBedsDropdown.value = false;
+      }
+    };
+
+    const toggleBedsDropdown = () => {
+      showBedsDropdown.value = !showBedsDropdown.value;
+      if (showBedsDropdown.value) {
+        showPriceDropdown.value = false;
+        showMoreFilters.value = false;
+        showSizeDropdown.value = false;
+      }
+    };
+
+    const selectBedsOption = (bed) => {
+      selectedBeds.value = selectedBeds.value === bed ? "" : bed;
+      handleFilterChange();
     };
 
     const toggleSizeDropdown = () => {
       showSizeDropdown.value = !showSizeDropdown.value;
-      if (showSizeDropdown.value) showPriceDropdown.value = false;
     };
 
     const closeAllDropdowns = () => {
       showPriceDropdown.value = false;
       showSizeDropdown.value = false;
+      showMoreFilters.value = false;
+      showBedsDropdown.value = false;
+    };
+
+    const toggleMoreFilters = () => {
+      showMoreFilters.value = !showMoreFilters.value;
+      if (showMoreFilters.value) {
+        showPriceDropdown.value = false;
+        showSizeDropdown.value = false;
+        showBedsDropdown.value = false;
+      }
     };
 
     const updatePriceFrom = () => {
@@ -665,6 +839,37 @@ const sortOptions = [
       return num.toLocaleString();
     };
 
+    const parseThousandsInput = (value) => {
+      const digits = String(value ?? '').replace(/[^\d]/g, '');
+      return digits ? parseInt(digits, 10) : 0;
+    };
+
+    const formatThousandsDisplay = (value) => {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed) || parsed <= 0) return '';
+      return parsed.toLocaleString();
+    };
+
+    const onPriceFromInput = (event) => {
+      priceFrom.value = parseThousandsInput(event.target.value);
+      event.target.value = formatThousandsDisplay(priceFrom.value);
+    };
+
+    const onPriceToInput = (event) => {
+      priceTo.value = parseThousandsInput(event.target.value);
+      event.target.value = formatThousandsDisplay(priceTo.value);
+    };
+
+    const onSizeFromInput = (event) => {
+      sizeFrom.value = parseThousandsInput(event.target.value);
+      event.target.value = formatThousandsDisplay(sizeFrom.value);
+    };
+
+    const onSizeToInput = (event) => {
+      sizeTo.value = parseThousandsInput(event.target.value);
+      event.target.value = formatThousandsDisplay(sizeTo.value);
+    };
+
     // Location: first line = first part of name, second line = full remainder (rest + subtitle)
     const locationFirstLine = (option) => {
       if (!option || !option.name) return '';
@@ -681,9 +886,25 @@ const sortOptions = [
       return subtitle;
     };
 
+    const isFirstSelectedArea = (option) => {
+      const selectedAreas = Array.isArray(selectedArea.value) ? selectedArea.value : [];
+      return selectedAreas.length > 0 && selectedAreas[0]?.id === option?.id;
+    };
+
+    const isSecondSelectedArea = (option) => {
+      const selectedAreas = Array.isArray(selectedArea.value) ? selectedArea.value : [];
+      return selectedAreas.length > 1 && selectedAreas[1]?.id === option?.id;
+    };
+
+    const remainingSelectedAreasCount = computed(() => {
+      const selectedAreas = Array.isArray(selectedArea.value) ? selectedArea.value : [];
+      return Math.max(selectedAreas.length - 1, 0);
+    });
+
     onMounted(() => {
       fetchAreas();
       fetchPropertyTypes();
+      fetchAgents();
 fetchProjects()
       document.addEventListener('click', (e) => {
         const searchContainer = document.querySelector('.search-container');
@@ -704,8 +925,10 @@ fetchProjects()
       areas,
       projects,
       propertyTypes,
+      agents,
       isLoadingAreas,
       isLoadingPropertyTypes,
+      isLoadingAgents,
       isLoadingProjects, 
       selectedSaleRent,
       selectedStatus,
@@ -713,6 +936,7 @@ fetchProjects()
       selectedArea,
       selectedProject, 
       selectedPropertyType,
+      selectedAgent,
       selectedBeds,
       selectedSort,
       priceFrom,
@@ -721,6 +945,8 @@ fetchProjects()
       sizeTo,
       showPriceDropdown,
       showSizeDropdown,
+      showMoreFilters,
+      showBedsDropdown,
       
       // Static options
       saleRentOptions,
@@ -734,6 +960,8 @@ fetchProjects()
       priceProgressStyle,
       sizeProgressStyle,
       hasActiveFilters,
+      dynamicHeadline,
+      formattedResultCount,
       
       // Methods
       applyFilters,
@@ -741,8 +969,11 @@ fetchProjects()
       resetPriceRange,
       resetSizeRange,
       togglePriceDropdown,
+      toggleBedsDropdown,
       toggleSizeDropdown,
+      toggleMoreFilters,
       closeAllDropdowns,
+      selectBedsOption,
       updatePriceFrom,
       updatePriceTo,
       updateSizeFrom,
@@ -752,16 +983,26 @@ fetchProjects()
       validateSizeFrom,
       validateSizeTo,
       formatNumber,
+      formatThousandsDisplay,
       handleFilterChange,
+      emitStatusChange,
+      setQuickSort,
       handleSaleRentChange,
       handleStatusChange,
       handlePriceChange,
       handlePriceSliderChange,
       handleSizeChange,
       handleSizeSliderChange,
+      onPriceFromInput,
+      onPriceToInput,
+      onSizeFromInput,
+      onSizeToInput,
       searchReferenceNumber,
       locationFirstLine,
       locationSecondLine,
+      isFirstSelectedArea,
+      isSecondSelectedArea,
+      remainingSelectedAreasCount,
     };
   }
 };
@@ -906,6 +1147,37 @@ fetchProjects()
 .location-selected-subtitle {
   font-size: 0.7rem;
   color: #64748b;
+}
+
+.location-chip {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #cfd7e6 !important;
+  border-radius: 12px !important;
+  background: #f8fafc !important;
+  padding: 3px 8px !important;
+  margin: 2px 6px 2px 0 !important;
+  font-size: 12px !important;
+  color: #334155 !important;
+  line-height: 1.1;
+  height: 28px;
+  box-sizing: border-box;
+}
+
+.location-chip-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
 }
 
 /* Location dropdown options: 2 lines with icon (like image) */
@@ -1542,4 +1814,592 @@ fetchProjects()
   opacity: 1 !important;
   transform: translateY(0) !important;
 }
+
+/* Placement + label visibility fixes */
+.search-container {
+  position: relative;
+  overflow: visible !important;
+}
+
+.listing-more-filter-popover,
+.listing-price-popover {
+  top: calc(100% + 8px) !important;
+  right: 0 !important;
+  left: auto !important;
+}
+
+:deep(.listing-pill-select .vs__selected-options) {
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
+}
+
+:deep(.listing-pill-select .vs__selected),
+:deep(.listing-pill-select .vs__placeholder) {
+  display: inline-block !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+
+/* Screenshot-like all listing search style */
+.listing-search-transparent {
+  background: transparent !important;
+}
+
+.listing-search-shell {
+  background: #fff;
+  border-radius: 30px;
+  padding: 18px 22px 20px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.listing-headline {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.listing-headline h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.listing-headline span {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.listing-main-search {
+  position: relative;
+  margin-bottom: 12px;
+  max-width: 460px;
+}
+
+.listing-main-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  font-size: 16px;
+  color: #94a3b8;
+}
+
+:deep(.listing-main-location .vs__dropdown-toggle) {
+  min-height: 42px !important;
+  border-radius: 999px !important;
+  border: 1px solid #e2e8f0 !important;
+  padding-left: 38px !important;
+  box-shadow: none !important;
+}
+
+:deep(.listing-main-location .vs__placeholder),
+:deep(.listing-main-location .vs__selected),
+:deep(.listing-main-location .vs__search) {
+  font-size: 14px !important;
+  color: #6b7280 !important;
+}
+
+.listing-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+:deep(.listing-pill-select .vs__dropdown-toggle) {
+  min-height: 52px !important;
+  border-radius: 999px !important;
+  border: 1px solid #dbe1eb !important;
+  padding: 2px 18px !important;
+}
+
+:deep(.listing-pill-select .vs__selected),
+:deep(.listing-pill-select .vs__placeholder),
+:deep(.listing-pill-select .vs__search) {
+  font-size: 22px !important;
+}
+
+.listing-pill-select-sm {
+  width: 154px;
+}
+
+.listing-pill-btn {
+  min-height: 52px;
+  border: 1px solid #dbe1eb;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  padding: 0 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+}
+
+.listing-price-wrap {
+  position: relative;
+}
+
+.listing-beds-wrap {
+  position: relative;
+}
+
+.listing-filter-btn {
+  font-weight: 600;
+}
+
+.listing-filter-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.unified-search-btn {
+  min-height: 52px;
+  min-width: 52px;
+  border-radius: 999px;
+  border: none;
+  background: #faa300;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+}
+
+.listing-icon-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid #dbe1eb;
+  background: #fff;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.listing-notify-btn {
+  text-decoration: none;
+}
+
+.listing-map-btn {
+  background: #24135f;
+  color: #fff;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.listing-price-popover,
+.listing-more-filter-popover {
+  position: absolute;
+  z-index: 1200;
+  right: 0;
+  top: calc(100% + 10px);
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.15);
+  padding: 14px;
+}
+
+.listing-beds-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 540px;
+  max-width: min(540px, calc(100vw - 24px));
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.15);
+  padding: 14px;
+  z-index: 1200;
+}
+
+.listing-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.listing-chip-btn {
+  border: 1px solid #dbe2ee;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 10px;
+  text-align: center;
+}
+
+.listing-chip-btn.active {
+  border-color: #7c3aed;
+  color: #5b21b6;
+  background: #f5f3ff;
+}
+
+.listing-price-popover {
+  width: 360px;
+  right: auto;
+  left: 0;
+}
+
+.listing-more-filter-popover {
+  width: min(460px, calc(100vw - 20px));
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.listing-pop-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.listing-filter-section {
+  margin-bottom: 12px;
+}
+
+.listing-section-label {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.listing-pop-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.listing-pop-grid--two {
+  margin-top: 2px;
+}
+
+.listing-pop-grid--range {
+  gap: 10px;
+}
+
+.listing-pop-field--full {
+  grid-column: 1 / -1;
+}
+
+.listing-pop-grid label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #334155;
+}
+
+.listing-more-filter-popover .range-input-side,
+.listing-price-popover .range-input-side,
+:deep(.listing-pop-select .vs__dropdown-toggle) {
+  min-height: 52px !important;
+  border-radius: 14px !important;
+  font-size: 16px !important;
+}
+
+/* More Filters: visible border on each field/select */
+.listing-more-filter-popover .range-input-side {
+  border: 1px solid #d8dfe9 !important;
+  background: #fff !important;
+}
+
+:deep(.listing-pop-select .vs__dropdown-toggle) {
+  border: 1px solid #d8dfe9 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.listing-pop-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 12px;
+}
+
+.listing-pop-actions .btn {
+  flex: 1;
+  min-height: 46px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 991px) {
+  .listing-pop-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .listing-beds-popover {
+    width: min(540px, calc(100vw - 24px));
+  }
+
+  .listing-chip-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Unified compact search bar (my-listing + alllisting parity) */
+.listing-search-shell {
+  max-width: 980px !important;
+  padding: 12px 16px !important;
+  border-radius: 24px !important;
+  position: relative !important;
+  overflow: visible !important;
+  background: #fff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12) !important;
+}
+
+.listing-headline {
+  margin-bottom: 6px !important;
+}
+
+.listing-headline h2 {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.1px;
+}
+
+.listing-headline span {
+  font-size: 12px !important;
+}
+
+:deep(.listing-main-location .vs__dropdown-toggle) {
+  min-height: 44px !important;
+  border-radius: 999px !important;
+  padding-left: 36px !important;
+  border-color: #d5dbe6 !important;
+}
+
+:deep(.listing-main-location .vs__selected),
+:deep(.listing-main-location .vs__search),
+:deep(.listing-main-location .vs__placeholder) {
+  font-size: 14px !important;
+}
+
+.listing-pill-row {
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  margin-bottom: 0 !important;
+  max-width: fit-content;
+}
+
+.listing-status-row {
+  margin-top: 6px;
+  margin-left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.listing-status-row .status-btn {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #dbe2ee;
+  background: #f8fafc;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+  min-height: 32px;
+}
+
+.listing-status-row .status-btn.active {
+  background: linear-gradient(135deg, #faa300 0%, #ffb224 100%);
+  border-color: #f1a10a;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(250, 163, 0, 0.22);
+}
+
+.status-sort-separator {
+  width: 1px;
+  height: 24px;
+  background: #dbe2ee;
+  margin: 0 2px;
+}
+
+.listing-status-row .status-btn.sort-btn {
+  background: #ffffff;
+}
+
+.listing-pill-select {
+  width: 170px !important;
+}
+
+.listing-pill-select-sm {
+  width: 140px !important;
+}
+
+:deep(.listing-pill-select .vs__dropdown-toggle) {
+  min-height: 42px !important;
+  padding: 0 12px !important;
+  border-color: #d7deea !important;
+  background: #fff !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+:deep(.listing-pill-select .vs__selected),
+:deep(.listing-pill-select .vs__search),
+:deep(.listing-pill-select .vs__placeholder) {
+  font-size: 13px !important;
+  color: #334155 !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:deep(.listing-pill-select .vs__selected-options) {
+  align-items: center !important;
+  min-height: 100% !important;
+}
+
+.listing-pill-btn {
+  min-height: 42px !important;
+  font-size: 13px !important;
+  padding: 0 14px !important;
+  border-color: #d7deea !important;
+  border-radius: 12px !important;
+}
+
+.unified-search-btn {
+  min-height: 42px !important;
+  font-size: 13px !important;
+  padding: 0 16px !important;
+  border-radius: 12px !important;
+  background: #faa300 !important;
+  color: #fff !important;
+}
+
+.listing-notify-btn.listing-icon-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 16px;
+}
+
+.listing-more-filter-popover,
+.listing-price-popover {
+  right: 0 !important;
+}
+
+.listing-filter-wrap .listing-more-filter-popover {
+  left: 0 !important;
+  right: auto !important;
+  top: calc(100% + 8px) !important;
+  transform: none !important;
+  margin-top: 0 !important;
+}
+
+:deep(.listing-pill-select .vs__dropdown-menu),
+:deep(.listing-main-location .vs__dropdown-menu),
+:deep(.listing-pop-select .vs__dropdown-menu) {
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  left: 0 !important;
+  right: auto !important;
+  transform: none !important;
+  z-index: 2000 !important;
+  max-height: 360px !important;
+  overflow-y: auto !important;
+  border-radius: 14px !important;
+  border: 1px solid #d4dbe7 !important;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14) !important;
+  padding: 8px 0 !important;
+}
+
+:deep(.listing-pill-select .vs__dropdown-option),
+:deep(.listing-main-location .vs__dropdown-option),
+:deep(.listing-pop-select .vs__dropdown-option) {
+  padding: 12px 16px !important;
+  font-size: 15px !important;
+  line-height: 1.35 !important;
+  white-space: normal !important;
+}
+
+:deep(.listing-pill-select .vs__dropdown-option--highlight),
+:deep(.listing-main-location .vs__dropdown-option--highlight),
+:deep(.listing-pop-select .vs__dropdown-option--highlight) {
+  background: #f5f4ff !important;
+  color: #312e81 !important;
+}
+
+.listing-more-filter-popover .listing-pop-title,
+.listing-price-popover .listing-pop-title {
+  font-size: 16px !important;
+  margin-bottom: 8px !important;
+}
+
+.listing-more-filter-popover .listing-pop-grid label,
+.listing-price-popover .listing-pop-grid label {
+  font-size: 12px !important;
+  margin-bottom: 4px !important;
+}
+
+.listing-more-filter-popover .range-input-side,
+.listing-price-popover .range-input-side,
+:deep(.listing-pop-select .vs__dropdown-toggle) {
+  min-height: 36px !important;
+  font-size: 13px !important;
+}
+
+/* More filters visual tuning (image-like compact card) */
+.listing-more-filter-popover .listing-section-label {
+  font-size: 15px !important;
+  margin-bottom: 7px !important;
+}
+
+.listing-more-filter-popover .listing-pop-grid label {
+  font-size: 12px !important;
+  color: #4b5563 !important;
+  margin-bottom: 5px !important;
+}
+
+.listing-more-filter-popover .listing-pop-label {
+  display: block;
+  font-size: 12px !important;
+  font-weight: 600;
+  color: #4b5563 !important;
+  margin-bottom: 5px !important;
+}
+
+.listing-more-filter-popover .range-input-side,
+:deep(.listing-more-filter-popover .listing-pop-select .vs__dropdown-toggle) {
+  min-height: 44px !important;
+  border-radius: 12px !important;
+  border-color: #d6dde8 !important;
+  font-size: 14px !important;
+}
+
+/* Keep Price popover attached to Price button */
+.listing-price-wrap .listing-price-popover {
+  left: 0 !important;
+  right: auto !important;
+  top: calc(100% + 8px) !important;
+}
+
 </style>

@@ -237,8 +237,8 @@ const getPhoneNumber = (lead) => {
 }
 
 const getPhoneType = (lead) => {
-    if (lead.work_phone) return 'Phone Number'
-    if (lead.work_phone_2) return 'Work Phone'
+    if (lead.work_phone) return null
+    if (lead.work_phone_2) return 'Secondary'
     return lead.phone_type || null
 }
 
