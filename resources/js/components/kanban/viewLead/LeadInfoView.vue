@@ -2179,4 +2179,10 @@ const saveClientRequirement = async () => {
     border-radius: 8px;
     font-size: 13px;
 }
+.client-req-add-btn{
+        padding: 0px;
+    font-size: 17px;
+    border: 1px solid;
+    border-radius: 20px;
+}
 </style>

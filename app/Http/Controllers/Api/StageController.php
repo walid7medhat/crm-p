@@ -368,16 +368,22 @@ class StageController extends Controller
                 
                         $q->where(function ($qq) use ($allAreaIds) {
                             $qq->whereIn('area_id', $allAreaIds)
-                              ->orWhereHas('project', function ($projectQuery) use ($allAreaIds) {
-                                  $projectQuery->whereIn('area_id', $allAreaIds);
-                              });
+                             ;
                         });
                     }
                 }
                 if ($request->filled('interaction_result')) {
                     $q->where('interaction_result', $request->interaction_result);
                 }
-                
+                if ($request->filled('assigned_at')) {
+                    $assignedDate = $request->assigned_at;
+                    $q->whereHas('histories', function($query) use ($assignedDate) {
+                        $query->where('changes->action', 'assigned')
+                            ->orderByDesc('created_at')
+                            ->limit(1)
+                            ->whereDate('created_at', $assignedDate);
+                    });
+                }
                 if ($request->filled('search')) {
                     $search = $request->search;
                     $q->where(function ($s) use ($search) {
@@ -646,14 +652,21 @@ class StageController extends Controller
                 
                         $leadsQuery->where(function ($q) use ($allAreaIds) {
                             $q->whereIn('area_id', $allAreaIds)
-                              ->orWhereHas('project', function ($projectQuery) use ($allAreaIds) {
-                                  $projectQuery->whereIn('area_id', $allAreaIds);
-                              });
+                             ;
                         });
                     }
                 }
                 if ($request->filled('interaction_result')) {
                     $leadsQuery->where('interaction_result', $request->interaction_result);
+                }
+                if ($request->filled('assigned_at')) {
+                    $assignedDate = $request->assigned_at;
+                    $leadsQuery->whereHas('histories', function($query) use ($assignedDate) {
+                        $query->where('changes->action', 'assigned')
+                            ->orderByDesc('created_at')
+                            ->limit(1)
+                            ->whereDate('created_at', $assignedDate);
+                    });
                 }
                 if ($request->filled('search')) {
                     $search = $request->search;
