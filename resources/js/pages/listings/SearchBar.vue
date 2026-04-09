@@ -28,8 +28,7 @@
           </template>
           <template #clear-indicator="{ attributes }">
             <span v-bind="attributes">
-              <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
-            </span>
+               <i class="ri-close-line custom-clear"></i>            </span>
           </template>
           <template #option="option">
             <div class="location-option">
@@ -58,8 +57,7 @@
                 type="button"
                 @click.stop="deselect(option)"
               >
-                <i class="ri-close-line"></i>
-              </button>
+                 <i class="ri-close-line custom-clear"></i>              </button>
             </span>
             <span
               v-else-if="isSecondSelectedArea(option) && remainingSelectedAreasCount > 0"
@@ -90,8 +88,7 @@
             </template>
             <template #clear-indicator="{ attributes }">
             <span v-bind="attributes">
-              <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
-            </span>
+               <i class="ri-close-line custom-clear"></i>            </span>
           </template>
         </v-select>
 
@@ -113,8 +110,7 @@
           </template>
           <template #clear-indicator="{ attributes }">
             <span v-bind="attributes">
-              <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
-            </span>
+               <i class="ri-close-line custom-clear"></i>            </span>
           </template>
         </v-select>
 
@@ -229,8 +225,7 @@
                   </template>
                   <template #clear-indicator="{ attributes }">
                     <span v-bind="attributes">
-                      <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
-                    </span>
+                       <i class="ri-close-line custom-clear"></i>                    </span>
                   </template>
               </v-select>
               </div>
@@ -254,8 +249,7 @@
                 </template>
                 <template #clear-indicator="{ attributes }">
                   <span v-bind="attributes">
-                    <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
-                  </span>
+                     <i class="ri-close-line custom-clear"></i>                  </span>
                 </template>
               </v-select>
               </div>
@@ -279,8 +273,7 @@
                 </template>
                 <template #clear-indicator="{ attributes }">
                     <span v-bind="attributes">
-                      <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
-                    </span>
+                       <i class="ri-close-line custom-clear"></i>                    </span>
                   </template>
               </v-select>
               </div>
@@ -349,8 +342,7 @@
         </template>
         <template #clear-indicator="{ attributes }">
           <span v-bind="attributes">
-            <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
-          </span>
+             <i class="ri-close-line custom-clear"></i>          </span>
         </template>
           </v-select>
         </div>
@@ -2536,5 +2528,8 @@ fetchProjects()
   right: auto !important;
   top: calc(100% + 8px) !important;
 }
-
+:deep(.custom-clear) {
+  font-size: 14px;
+  color: #666;
+}
 </style>
