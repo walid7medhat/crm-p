@@ -1044,7 +1044,7 @@ const clientRequirementEmptyHint = computed(() => {
 
 const displayLeadType = (v) => {
     if (!v) return '—'
-    const m = { sale: 'Sale', rent: 'Rent' }
+    const m = { sale: 'Sale', rent: 'Rent' ,both:'Both'}
     return m[String(v).toLowerCase()] || formatText(v)
 }
 
@@ -1119,6 +1119,7 @@ const clientReqBudgetToDisplay = ref('')
 const clientReqLeadTypeOptions = [
     { value: 'sale', text: 'Sale' },
     { value: 'rent', text: 'Rent' },
+    { value: 'both', text: 'Both' },
 ]
 
 const clientReqPropertyStatusOptions = [
