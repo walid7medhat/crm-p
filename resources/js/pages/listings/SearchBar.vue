@@ -2532,4 +2532,8 @@ fetchProjects()
   font-size: 14px;
   color: #666;
 }
+.listing-chip-grid button{
+  font-weight: 400;
+    font-size: 13px;
+}
 </style>
