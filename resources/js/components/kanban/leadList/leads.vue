@@ -29,7 +29,11 @@
             handle=".column-header"
             :ghost-class="'ghost'" :drag-class="'dragging'">
             <template #item="{ element: column }">
-                <div class="kanban-column radius-12 d-flex flex-column" :style="{ '--column-color': column.color }">
+                <div
+                    class="kanban-column radius-12 d-flex flex-column"
+                    :class="{ 'kanban-column-collapsed': isStageCollapsed(column) }"
+                    :style="{ '--column-color': column.color }"
+                >
                     <div class=" p-0 overflow-visible shadow-none border-0 bg-transparent h-100 d-flex flex-column">
                         <div class="card-body p-0 d-flex flex-column h-100">
                             <!-- Column Header -->
@@ -55,9 +59,20 @@
                                         type="text"
                                     />
                                 </div>
+                                <button
+                                    type="button"
+                                    class="mobile-stage-toggle-btn"
+                                    @click.stop="toggleStageCollapsed(column)"
+                                >
+                                    <iconify-icon
+                                        :icon="isStageCollapsed(column) ? 'lucide:chevron-down' : 'lucide:chevron-up'"
+                                        class="mobile-stage-toggle-icon"
+                                    />
+                                </button>
                             </div>
 
                             <div
+                                v-show="!isStageCollapsed(column)"
                                 class="column-content column-content-scrollable p-8 flex-grow-1 d-flex flex-column"
                                 @scroll="(e) => onColumnScroll(column, e)"
                             >
@@ -69,6 +84,7 @@
                                     :bubble-scroll="true"
                                     :scroll-sensitivity="220"
                                     :scroll-speed="22"
+                                    @scroll.passive="(e) => onStageCarouselScroll(column, e)"
                                     @start="onLeadDragStart"
                                     @end="onLeadDragEnd"
                                     @change="(evt) => onLeadDragChange(evt, column)">
@@ -273,6 +289,17 @@
                                             </div>
                                         </template>
                                 </draggable>
+                                <div
+                                    v-if="showStageCarouselDots(column)"
+                                    class="stage-carousel-dots"
+                                >
+                                    <span
+                                        v-for="dot in getStageCarouselDotCount(column)"
+                                        :key="`${column.status}-dot-${dot}`"
+                                        class="stage-carousel-dot"
+                                        :class="{ 'is-active': dot - 1 === getStageCarouselIndex(column) }"
+                                    />
+                                </div>
                                 
                             </div>
                         </div>
@@ -516,6 +543,9 @@ const isAdminOrSuperAdmin = computed(() => {
 })
 
 const columns = ref([])
+const collapsedStages = ref({})
+const isMobileView = ref(false)
+const stageCarouselIndexMap = ref({})
 const INITIAL_VISIBLE_LEADS_PER_STAGE = 20
 const VISIBLE_LEADS_INCREMENT = 20
 const visibleLeadCounts = ref({})
@@ -538,6 +568,67 @@ const dragPointerX = ref(null)
 let dragAutoScrollRaf = null
 const DRAG_SCROLL_EDGE_THRESHOLD = 220
 const DRAG_SCROLL_MAX_SPEED = 10
+
+function detectMobileView() {
+    isMobileView.value = window.innerWidth <= 768
+}
+
+function buildCollapsedStagesMap() {
+    if (!isMobileView.value || !Array.isArray(columns.value) || !columns.value.length) {
+        collapsedStages.value = {}
+        return
+    }
+
+    const assignedStage = columns.value.find(col => String(col?.title || '').toLowerCase().includes('assigned'))
+    const assignedOrder = Number(assignedStage?.order ?? 1)
+    const nextMap = {}
+
+    columns.value.forEach((col) => {
+        const order = Number(col?.order ?? 0)
+        nextMap[col.status] = order > assignedOrder
+    })
+
+    collapsedStages.value = nextMap
+}
+
+function isStageCollapsed(column) {
+    if (!isMobileView.value) return false
+    return !!collapsedStages.value[column?.status]
+}
+
+function toggleStageCollapsed(column) {
+    if (!isMobileView.value || !column?.status) return
+    collapsedStages.value = {
+        ...collapsedStages.value,
+        [column.status]: !collapsedStages.value[column.status]
+    }
+}
+
+function onStageCarouselScroll(column, event) {
+    if (!isMobileView.value || !column?.status) return
+    const el = event?.target
+    if (!el) return
+    const cardWidth = el.clientWidth || 1
+    const idx = Math.round(el.scrollLeft / cardWidth)
+    stageCarouselIndexMap.value = {
+        ...stageCarouselIndexMap.value,
+        [column.status]: Math.max(0, idx)
+    }
+}
+
+function getStageCarouselIndex(column) {
+    return stageCarouselIndexMap.value[column?.status] || 0
+}
+
+function getStageCarouselDotCount(column) {
+    const total = Array.isArray(column?.leads) ? column.leads.length : 0
+    return total > 0 ? total : 0
+}
+
+function showStageCarouselDots(column) {
+    if (!isMobileView.value) return false
+    return getStageCarouselDotCount(column) > 1 && !isStageCollapsed(column)
+}
 
 function updateScrollArrows() {
     const el = kanbanContainerRef.value
@@ -826,7 +917,9 @@ const executeFetchLeads = async () => {
             ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status }),
              ...(q.property_type_id != null && q.property_type_id !== '' && { property_type_id: q.property_type_id }),
             ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
-            ...(q.assigned_at != null && q.assigned_at !== '' && { area_id: q.assigned_at }),
+            ...(q.assigned_at != null && q.assigned_at !== '' && { assigned_at: q.assigned_at }),
+            ...(q.assigned_from != null && q.assigned_from !== '' && { assigned_from: q.assigned_from }),
+            ...(q.assigned_to != null && q.assigned_to !== '' && { assigned_to: q.assigned_to }),
             ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
             // ...(q.office_branch != null && q.office_branch !== '' && { team_id: q.office_branch })
         }
@@ -1017,6 +1110,8 @@ async function fetchMoreLeadsFromApi(stageId) {
             ...(q.lead_type != null && q.lead_type !== '' && { lead_type: q.lead_type }),
             ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status }),
             ...(q.assigned_at != null && q.assigned_at !== '' && { assigned_at: q.assigned_at }),
+            ...(q.assigned_from != null && q.assigned_from !== '' && { assigned_from: q.assigned_from }),
+            ...(q.assigned_to != null && q.assigned_to !== '' && { assigned_to: q.assigned_to }),
             ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
             ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
             
@@ -1327,7 +1422,24 @@ const formatMaskedQuestion = (questionData) => {
 watch(cardFields, () => {
     console.log('Card fields updated:', cardFields.value)
 }, { deep: true })
+
+watch(columns, () => {
+    buildCollapsedStagesMap()
+    const nextIndexMap = {}
+    columns.value.forEach((col) => {
+        nextIndexMap[col.status] = stageCarouselIndexMap.value[col.status] || 0
+    })
+    stageCarouselIndexMap.value = nextIndexMap
+}, { deep: true })
+
+watch(isMobileView, () => {
+    buildCollapsedStagesMap()
+})
+
 onMounted(async () => {
+    detectMobileView()
+    buildCollapsedStagesMap()
+
     // Try to show cached stages/leads immediately while fresh data loads
     // loadCachedColumns()
 
@@ -1337,8 +1449,10 @@ onMounted(async () => {
          fetchCardSettings() ,
          fetchStageOrders()
     ])
+    buildCollapsedStagesMap()
     nextTick(() => updateScrollArrows())
     window.addEventListener('resize', updateScrollArrows)
+    window.addEventListener('resize', detectMobileView)
     setTimeout(() => {
         initializeLeadUpdates()
     }, 1000)
@@ -1349,6 +1463,7 @@ onUnmounted(() => {
     stopScroll()
     cancelPersonHoverHide()
     window.removeEventListener('resize', updateScrollArrows)
+    window.removeEventListener('resize', detectMobileView)
     cleanup()
 })
 
@@ -3085,6 +3200,172 @@ const $showNotification = (message, type = 'info') => {
     color: rgba(1, 6, 44, 0.45);
     margin-left: 3px;
     font-weight: 600 !important;
+}
+
+.mobile-stage-toggle-btn {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .kanban-outer {
+        height: calc(100vh - 232px);
+    }
+
+    .kanban-container {
+        padding: 8px 10px 16px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        scrollbar-width: none;
+    }
+
+    .kanban-container::-webkit-scrollbar {
+        display: none;
+    }
+
+    .kanban-wrapper,
+    .kanban-wrapper-tight {
+        width: 100%;
+        min-width: 100%;
+        display: flex !important;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .kanban-column {
+        width: 100%;
+        min-width: 100%;
+        max-width: 100%;
+        border-left: none;
+        height: auto;
+    }
+
+    .kanban-column > div,
+    .kanban-column .card-body {
+        height: auto !important;
+    }
+
+    .column-header {
+        min-height: 36px;
+        padding: 6px 10px;
+        border-radius: 14px 14px 0 0;
+        clip-path: none;
+    }
+
+    .header-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #ffffff;
+    }
+
+    .leads-count-badge {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.9);
+        margin-left: 4px;
+    }
+
+    .mobile-stage-toggle-btn {
+        border: none;
+        background: transparent;
+        color: #ffffff;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mobile-stage-toggle-icon {
+        font-size: 16px;
+    }
+
+    .column-content {
+        background: transparent;
+        border-radius: 0;
+        padding: 8px !important;
+        flex: 0 0 auto !important;
+    }
+
+    .kanban-column-collapsed .column-header {
+        border-radius: 12px;
+    }
+
+    .tasks-list {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+        align-items: flex-start;
+    }
+
+    .tasks-list::-webkit-scrollbar {
+        display: none;
+    }
+
+    .kanban-card {
+        border-radius: 12px !important;
+        border: 1px solid #e6e8ec !important;
+        box-shadow: none !important;
+        padding: 10px !important;
+        margin-bottom: 0 !important;
+        min-width: calc(100% - 10px);
+        width: calc(100% - 10px);
+        max-width: calc(100% - 10px);
+        flex: 0 0 calc(100% - 10px);
+        scroll-snap-align: start;
+        height: auto !important;
+        align-self: flex-start;
+    }
+
+    .stage-carousel-dots {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        padding-top: 6px;
+    }
+
+    .stage-carousel-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #cfd4dc;
+        transition: all 0.2s ease;
+    }
+
+    .stage-carousel-dot.is-active {
+        width: 14px;
+        background: #e2a300;
+    }
+
+    .task-title {
+        font-size: 13px;
+        line-height: 1.35;
+        letter-spacing: -0.1px;
+    }
+
+    .info-label {
+        font-size: 10px !important;
+        line-height: 1.25;
+    }
+
+    .info-value {
+        font-size: 12px;
+        line-height: 1.2;
+    }
+
+    .date-info {
+        font-size: 10px;
+        line-height: 1.2;
+    }
+
+    .kanban-nav-zone {
+        display: none;
+    }
 }
 
 </style>

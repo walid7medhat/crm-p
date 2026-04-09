@@ -375,13 +375,22 @@ class StageController extends Controller
                 if ($request->filled('interaction_result')) {
                     $q->where('interaction_result', $request->interaction_result);
                 }
-                if ($request->filled('assigned_at')) {
+                if ($request->filled('assigned_from') || $request->filled('assigned_to') || $request->filled('assigned_at')) {
+                    $assignedFrom = $request->assigned_from;
+                    $assignedTo = $request->assigned_to;
                     $assignedDate = $request->assigned_at;
-                    $q->whereHas('histories', function($query) use ($assignedDate) {
-                        $query->where('changes->action', 'assigned')
-                            ->orderByDesc('created_at')
-                            ->limit(1)
-                            ->whereDate('created_at', $assignedDate);
+                    $q->whereHas('histories', function($query) use ($assignedFrom, $assignedTo, $assignedDate) {
+                        $query->where('changes->action', 'assigned');
+                        if ($assignedDate) {
+                            $query->whereDate('created_at', $assignedDate);
+                        } else {
+                            if ($assignedFrom) {
+                                $query->whereDate('created_at', '>=', $assignedFrom);
+                            }
+                            if ($assignedTo) {
+                                $query->whereDate('created_at', '<=', $assignedTo);
+                            }
+                        }
                     });
                 }
                 if ($request->filled('search')) {
@@ -659,13 +668,22 @@ class StageController extends Controller
                 if ($request->filled('interaction_result')) {
                     $leadsQuery->where('interaction_result', $request->interaction_result);
                 }
-                if ($request->filled('assigned_at')) {
+                if ($request->filled('assigned_from') || $request->filled('assigned_to') || $request->filled('assigned_at')) {
+                    $assignedFrom = $request->assigned_from;
+                    $assignedTo = $request->assigned_to;
                     $assignedDate = $request->assigned_at;
-                    $leadsQuery->whereHas('histories', function($query) use ($assignedDate) {
-                        $query->where('changes->action', 'assigned')
-                            ->orderByDesc('created_at')
-                            ->limit(1)
-                            ->whereDate('created_at', $assignedDate);
+                    $leadsQuery->whereHas('histories', function($query) use ($assignedFrom, $assignedTo, $assignedDate) {
+                        $query->where('changes->action', 'assigned');
+                        if ($assignedDate) {
+                            $query->whereDate('created_at', $assignedDate);
+                        } else {
+                            if ($assignedFrom) {
+                                $query->whereDate('created_at', '>=', $assignedFrom);
+                            }
+                            if ($assignedTo) {
+                                $query->whereDate('created_at', '<=', $assignedTo);
+                            }
+                        }
                     });
                 }
                 if ($request->filled('search')) {

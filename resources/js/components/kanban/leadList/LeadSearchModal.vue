@@ -2046,6 +2046,12 @@ function applyDateRange() {
         form.value[dateKey] = selectedPreset.value
         form.value[fromKey] = ''
         form.value[toKey] = ''
+    } else if (startDate.value && !endDate.value) {
+        // Treat a single picked day as one-day custom range.
+        const oneDay = formatYmd(startDate.value)
+        form.value[dateKey] = 'custom_date'
+        form.value[fromKey] = oneDay
+        form.value[toKey] = oneDay
     } else if (startDate.value && endDate.value) {
         form.value[dateKey] = 'custom_date'
         form.value[fromKey] = formatYmd(startDate.value)

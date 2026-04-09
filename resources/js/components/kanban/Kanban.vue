@@ -103,7 +103,7 @@
                                 :class="{ 'search-input-container-tall': searchInputFocused }"
                                 @click="showSearchModal = true"
                             >
-                                <iconify-icon icon="lucide:plus" class="search-plus-icon" style="cursor: pointer;"></iconify-icon>
+                                <iconify-icon icon="lucide:search" class="search-plus-icon" style="cursor: pointer;"></iconify-icon>
                                 <b-form-input
                                     placeholder="Search"
                                     v-model="search"
@@ -149,11 +149,26 @@
                 </div>
             </template>
         </b-tabs>
+
+        <nav class="kanban-mobile-bottom-nav" aria-label="Mobile CRM navigation">
+            <button
+                v-for="item in mobileSidebarMenu"
+                :key="item.path"
+                type="button"
+                class="kanban-mobile-nav-item"
+                :class="{ 'kanban-mobile-nav-item--active': isMobileMenuItemActive(item.path) }"
+                @click="navigateMobileMenu(item.path)"
+            >
+                <iconify-icon :icon="item.icon" class="kanban-mobile-nav-icon" />
+                <span class="kanban-mobile-nav-label">{{ item.label }}</span>
+            </button>
+        </nav>
     </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Deals from './deals/Deals.vue'
 import Leads from './leadList/leads.vue'
 import Integration from './integration/Integration.vue'
@@ -184,6 +199,8 @@ const SEARCH_DEBOUNCE_MS = 400
 
 const echoListeners = ref([])
 const pollingInterval = ref(null)
+const router = useRouter()
+const route = useRoute()
 
 const tabs = computed(() => {
     const baseTabs = [
@@ -242,6 +259,37 @@ const hasCreateStagePermission = computed(() => {
     
     return user.value.permissions?.includes('stages-create')
 })
+
+const mobileSidebarMenu = computed(() => {
+    const items = [
+        { path: '/', label: 'Home', icon: 'lucide:house' },
+        { path: '/kanban', label: 'CRM', icon: 'lucide:link-2' },
+        { path: '/alllisting', label: 'Listings', icon: 'lucide:list' },
+        { path: '/projects', label: 'Projects', icon: 'lucide:building-2' },
+        { path: '/my-requests', label: 'Requests', icon: 'lucide:clipboard-list' },
+        { path: '/owners', label: 'Owners', icon: 'lucide:users' },
+        { path: '/users', label: 'Agents', icon: 'lucide:user-round' },
+        { path: '/roles', label: 'Roles', icon: 'lucide:shield-check' },
+        { path: '/suggestion', label: 'Suggestion', icon: 'lucide:lightbulb' }
+    ]
+
+    if (isSuperAdmin.value) {
+        items.splice(2, 0, { path: '/lead-reports', label: 'Reports', icon: 'lucide:bar-chart-3' })
+        items.push({ path: '/investment-analysis', label: 'Investment', icon: 'lucide:line-chart' })
+    }
+
+    return items
+})
+
+function navigateMobileMenu(path) {
+    if (!path || route.path === path) return
+    router.push(path)
+}
+
+function isMobileMenuItemActive(path) {
+    if (!path) return false
+    return route.path === path || route.path.startsWith(`${path}/`)
+}
 function applySearchToApi() {
     const base = lastQuery.value && Object.keys(lastQuery.value).length ? { ...lastQuery.value } : {}
     const term = (search.value || '').trim()
@@ -1014,6 +1062,177 @@ const $showNotification = (message, type = 'info') => {
     min-height: 18px;
 }
 
+@media (max-width: 768px) {
+    .kanban-main-wrapper {
+        min-height: calc(100vh - 122px);
+        padding-bottom: 88px;
+        border-radius: 0;
+    }
+
+    :deep(.kanban-tabs-container > .nav-tabs) {
+        height: auto;
+        min-height: 112px;
+        padding: 10px 12px 0;
+        gap: 0;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        background: #ffffff;
+        border-radius: 0 0 16px 16px;
+    }
+
+    :deep(.kanban-tabs-container .nav-item) {
+        height: 44px;
+    }
+
+    :deep(.kanban-tabs-container .nav-link) {
+        padding: 10px 14px 8px !important;
+        color: #868686 !important;
+        font-size: 15px;
+        font-weight: 500;
+        line-height: 1.1;
+    }
+
+    :deep(.kanban-tabs-container .nav-link.active) {
+        color: #1e1e1e !important;
+        font-weight: 600;
+    }
+
+    :deep(.kanban-tabs-container .nav-link .active-indicator) {
+        height: 2px;
+        border-radius: 4px;
+        background: #f0ad1a;
+    }
+
+    .header-actions {
+        order: -1;
+        width: 100%;
+        margin-bottom: 8px;
+        gap: 0 !important;
+    }
+
+    .search-area-column {
+        width: 100%;
+        align-items: stretch;
+    }
+
+    .search-wrapper,
+    .search-wrapper-focused,
+    .search-wrapper-tall,
+    .search-wrapper-expanded {
+        width: 100%;
+        max-width: 100%;
+        min-width: 100%;
+        min-height: 44px;
+        height: 44px;
+        border-radius: 24px;
+        padding: 6px 12px;
+        box-shadow: none;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+    }
+
+    .search-input-container {
+        max-width: 100%;
+        min-width: 0;
+        height: 100%;
+    }
+
+    .search-input {
+        font-size: 20px;
+        font-weight: 400;
+        color: #4b5563 !important;
+    }
+
+    .search-input::placeholder {
+        font-size: 20px;
+        color: #9aa1ab;
+    }
+
+    .search-plus-icon {
+        order: 3;
+        margin-left: 8px;
+        margin-right: 0;
+        color: #d39c0f;
+        font-size: 22px;
+    }
+
+    .btn-create-new,
+    .more-options-wrapper {
+        display: none !important;
+    }
+
+    .lead-search-dropdown-outer {
+        right: 0;
+        left: 0;
+        width: auto;
+        max-width: 100%;
+        margin-top: 4px;
+    }
+
+    .kanban-mobile-bottom-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1200;
+        height: 74px;
+        padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+        background: #020a4a;
+        border-top-left-radius: 24px;
+        border-top-right-radius: 24px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .kanban-mobile-bottom-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .kanban-mobile-nav-item {
+        border: none;
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+        height: 38px;
+        min-width: max-content;
+        padding: 0 10px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        flex: 0 0 auto;
+    }
+
+    .kanban-mobile-nav-icon {
+        font-size: 14px;
+        color: #ffffff;
+    }
+
+    .kanban-mobile-nav-item--active {
+        background: #2b3168;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+
+    .kanban-mobile-nav-label {
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+    }
+}
+
+@media (min-width: 769px) {
+    .kanban-mobile-bottom-nav {
+        display: none;
+    }
+}
+
 /* Dropdown Styles */
 :deep(.action-icon-btn-dropdown) {
     background: transparent !important;
@@ -1040,6 +1259,7 @@ const $showNotification = (message, type = 'info') => {
 :deep(.stage-dropdown-menu) {
     background: rgba(255, 255, 255, 0.95);
     -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.5);
     border-radius: 12px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);

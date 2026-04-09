@@ -20,6 +20,12 @@ export default {
     Icon,
     KanbanData,
   },
+  mounted() {
+    document.body.classList.add('kanban-page-hide-right-menu');
+  },
+  unmounted() {
+    document.body.classList.remove('kanban-page-hide-right-menu');
+  },
 };
 </script>
 
@@ -28,5 +34,25 @@ export default {
 .dashboard-main-body {
     color: rgba(255, 255, 255, 0.95);
     background: transparent;
+}
+
+@media (max-width: 991px) {
+    :global(body.kanban-page-hide-right-menu .navbar-header) {
+        display: none !important;
+    }
+
+    :global(body.kanban-page-hide-right-menu .app-navbar-spacer) {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+    }
+
+    :global(body.kanban-page-hide-right-menu .navbar-header-right) {
+        display: none !important;
+    }
+
+    :global(body.kanban-page-hide-right-menu .sidebar) {
+        display: none !important;
+    }
 }
 </style>
