@@ -475,6 +475,11 @@ const dropLinkedQueryKeys = (query, queryKey) => {
         delete query.created_to
         return
     }
+    if (queryKey === 'assigned_at') {
+                delete query.assigned_from
+                delete query.assigned_to
+                return
+            }
 
     if (queryKey === 'office_branch') {
         delete query.lead_branch_source
