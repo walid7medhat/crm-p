@@ -118,7 +118,68 @@
                                 </template>
                             </v-select>
                             <v-select
-                                v-else-if="field.type === 'select' && field.id !== 'office'"
+                                v-else-if="field.type === 'select' && field.id === 'responsible_person'"
+                                v-model="form.responsible"
+                                :options="personOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                :placeholder="field.placeholder || 'Select Person'"
+                                :clearable="hasValue(form.responsible)"
+                                append-to-body
+                                class="custom-v-select lead-search-rp-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                <template #option="option">
+                                    <div v-if="option.value == null" class="lead-rp-opt-placeholder text-muted">
+                                        Select Person
+                                    </div>
+                                    <div v-else class="lead-rp-opt d-flex align-items-center gap-2">
+                                        <img
+                                            :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR"
+                                            alt=""
+                                            class="lead-rp-opt-avatar"
+                                        />
+                                        <div class="lead-rp-opt-info min-w-0 flex-grow-1">
+                                            <div class="lead-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
+                                                <span class="user-item-name">{{ option.text }}</span>
+                                                <span v-if="option.role_name" class="user-position-badge">{{ option.role_name }}</span>
+                                            </div>
+                                            <div class="user-item-meta-line">
+                                                <span class="meta-value">{{ option.parent_name }}</span>
+                                                <span v-if="option.branch_name" class="meta-divider">|</span>
+                                                <span v-if="option.branch_name" class="meta-value">{{ option.branch_name }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template #selected-option="option">
+                                    <div v-if="!option || option.value == null" class="lead-rp-opt-placeholder text-muted">
+                                        Select Person
+                                    </div>
+                                    <div v-else class="lead-rp-sel d-flex align-items-center gap-2 min-w-0">
+                                        <img
+                                            :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR"
+                                            alt=""
+                                            class="lead-rp-sel-avatar"
+                                        />
+                                        <div class="min-w-0 flex-grow-1">
+                                            <div class="lead-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
+                                            <div
+                                                v-if="option.parent_name || option.branch_name"
+                                                class="lead-rp-sel-meta text-truncate small text-muted"
+                                            >
+                                                {{ [option.parent_name, option.branch_name].filter(Boolean).join(' | ') }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </v-select>
+                            <v-select
+                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person'"
                                 v-model="form[field.formKey]"
                                 :options="field.options"
                                 :reduce="opt => opt.value"
@@ -304,7 +365,68 @@
                                 </template>
                             </v-select>
                             <v-select
-                                v-else-if="field.type === 'select' && field.id !== 'office'"
+                                v-else-if="field.type === 'select' && field.id === 'responsible_person'"
+                                v-model="form.responsible"
+                                :options="personOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                :placeholder="field.placeholder || 'Select Person'"
+                                :clearable="hasValue(form.responsible)"
+                                append-to-body
+                                class="custom-v-select lead-search-rp-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                <template #option="option">
+                                    <div v-if="option.value == null" class="lead-rp-opt-placeholder text-muted">
+                                        Select Person
+                                    </div>
+                                    <div v-else class="lead-rp-opt d-flex align-items-center gap-2">
+                                        <img
+                                            :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR"
+                                            alt=""
+                                            class="lead-rp-opt-avatar"
+                                        />
+                                        <div class="lead-rp-opt-info min-w-0 flex-grow-1">
+                                            <div class="lead-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
+                                                <span class="user-item-name">{{ option.text }}</span>
+                                                <span v-if="option.role_name" class="user-position-badge">{{ option.role_name }}</span>
+                                            </div>
+                                            <div class="user-item-meta-line">
+                                                <span class="meta-value">{{ option.parent_name }}</span>
+                                                <span v-if="option.branch_name" class="meta-divider">|</span>
+                                                <span v-if="option.branch_name" class="meta-value">{{ option.branch_name }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template #selected-option="option">
+                                    <div v-if="!option || option.value == null" class="lead-rp-opt-placeholder text-muted">
+                                        Select Person
+                                    </div>
+                                    <div v-else class="lead-rp-sel d-flex align-items-center gap-2 min-w-0">
+                                        <img
+                                            :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR"
+                                            alt=""
+                                            class="lead-rp-sel-avatar"
+                                        />
+                                        <div class="min-w-0 flex-grow-1">
+                                            <div class="lead-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
+                                            <div
+                                                v-if="option.parent_name || option.branch_name"
+                                                class="lead-rp-sel-meta text-truncate small text-muted"
+                                            >
+                                                {{ [option.parent_name, option.branch_name].filter(Boolean).join(' | ') }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </v-select>
+                            <v-select
+                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person'"
                                 v-model="form[field.formKey]"
                                 :options="field.options"
                                 :reduce="opt => opt.value"
@@ -810,18 +932,25 @@ const responsiblePersons = ref([])
 const branchSourceOptions = ref([{ value: null, text: 'Select Branch Source' }])
 const stageOptions = ref([{ value: null, text: 'Select Stage' }])
 
+const DEFAULT_RESPONSIBLE_AVATAR =
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
+
 const personOptions = computed(() => {
     const opts = [{ value: null, text: 'Select Person' }]
-    
-    let filteredPersons = [...allResponsiblePersons.value]
-    
-    filteredPersons.forEach(p => {
-        opts.push({ 
-            value: p.id, 
+
+    const filteredPersons = [...allResponsiblePersons.value]
+
+    filteredPersons.forEach((p) => {
+        opts.push({
+            value: p.id,
             text: p.name || `User ${p.id}`,
+            avatar: p.avatar,
+            role_name: p.role_name,
+            parent_name: p.parent_name,
+            branch_name: p.branch_name
         })
     })
-    
+
     return opts
 })
 
@@ -2792,6 +2921,112 @@ onBeforeUnmount(() => {
     border-radius: 100px;
     font-size: 14px;
     color: #fff;
+}
+
+/* Responsible person select — same info density as ResponsiblePersonSection modal */
+:deep(.lead-search-rp-select .vs__dropdown-menu) {
+    max-height: min(360px, 55vh) !important;
+}
+
+:deep(.lead-search-rp-select .vs__dropdown-option) {
+    padding: 8px 10px !important;
+    white-space: normal !important;
+}
+
+:deep(.lead-search-rp-select .vs__selected) {
+    line-height: 1.25 !important;
+    white-space: normal !important;
+    min-height: 44px;
+    display: flex !important;
+    align-items: center !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+}
+
+.lead-rp-opt-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid #e2e8f0;
+}
+
+.lead-rp-sel-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid #e2e8f0;
+}
+
+.lead-rp-sel-name {
+    font-size: 13px;
+    color: #1e293b;
+}
+
+.lead-rp-sel-meta {
+    font-size: 11px;
+    margin-top: 1px;
+}
+
+.lead-rp-opt .user-item-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #01062c;
+    text-transform: capitalize;
+}
+
+.lead-rp-opt .user-position-badge {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.lead-rp-opt .user-item-meta-line {
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.lead-rp-opt .meta-value {
+    font-weight: 500;
+    color: #334155;
+}
+
+.lead-rp-opt .meta-divider {
+    color: #cbd5e1;
+}
+
+:deep(.lead-search-rp-select .vs__dropdown-option--highlight .user-item-name),
+:deep(.lead-search-rp-select .vs__dropdown-option--selected .user-item-name) {
+    color: #fff !important;
+}
+
+:deep(.lead-search-rp-select .vs__dropdown-option--highlight .user-item-meta-line),
+:deep(.lead-search-rp-select .vs__dropdown-option--selected .user-item-meta-line) {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+
+:deep(.lead-search-rp-select .vs__dropdown-option--highlight .meta-value),
+:deep(.lead-search-rp-select .vs__dropdown-option--selected .meta-value) {
+    color: rgba(255, 255, 255, 0.95) !important;
+}
+
+:deep(.lead-search-rp-select .vs__dropdown-option--highlight .user-position-badge),
+:deep(.lead-search-rp-select .vs__dropdown-option--selected .user-position-badge) {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.45) !important;
+    color: #fff !important;
 }
 
 </style>

@@ -774,6 +774,7 @@ const selectBathOption = (bath) => {
         propertyType: selectedPropertyType.value,
         agent: selectedAgent.value,
         beds: selectedBeds.value,
+        baths: selectedBaths.value,
         priceFrom: priceFrom.value,
         priceTo: priceTo.value,
         sizeFrom: sizeFrom.value,
@@ -789,6 +790,31 @@ const selectBathOption = (bath) => {
 
     // When coming back with saved filters (e.g. via Back button), restore them
     // Restore form values from URL/parent when coming back (do not emit — parent already fetches)
+    const resolveCompletionForSelect = (cs) => {
+      if (cs == null || cs === '') return null;
+      const val = typeof cs === 'object' && cs !== null && 'value' in cs ? cs.value : cs;
+      const found = completionStatusOptions.find((o) => o.value === val);
+      return found !== undefined ? found : (typeof cs === 'object' ? cs : null);
+    };
+
+    /** vue-select matches option objects by reference; after URL restore we only have { id }. Re-bind to loaded options so the label shows (Villa, etc.). */
+    const syncPropertyTypeAndAgentFromLoadedOptions = () => {
+      const filters = props.initialFilters;
+      if (!filters) return;
+      if (filters.propertyType?.id != null && propertyTypes.value.length) {
+        const found = propertyTypes.value.find(
+          (p) => Number(p.id) === Number(filters.propertyType.id)
+        );
+        if (found) selectedPropertyType.value = found;
+      }
+      if (filters.agent?.id != null && agents.value.length) {
+        const found = agents.value.find(
+          (a) => Number(a.id) === Number(filters.agent.id)
+        );
+        if (found) selectedAgent.value = found;
+      }
+    };
+
     watch(
       () => props.initialFilters,
       (filters) => {
@@ -814,16 +840,22 @@ const selectBathOption = (bath) => {
         selectedPropertyType.value = filters.propertyType || null;
         selectedAgent.value = filters.agent || null;
         selectedBeds.value = filters.beds || "";
+        selectedBaths.value = filters.baths ?? "";
         selectedSort.value = filters.sort || "created_at_desc";
         priceFrom.value = filters.priceFrom ?? 0;
         priceTo.value = filters.priceTo ?? 10000000;
         sizeFrom.value = filters.sizeFrom ?? 0;
         sizeTo.value = filters.sizeTo ?? 10000;
         searchReferenceNumber.value = filters.referenceNumber || "";
-        selectedCompletionStatus.value = filters.completionStatus ?? null;
+        selectedCompletionStatus.value = resolveCompletionForSelect(filters.completionStatus);
+        syncPropertyTypeAndAgentFromLoadedOptions();
       },
       { immediate: true, deep: false }
     );
+
+    watch([propertyTypes, agents], () => {
+      syncPropertyTypeAndAgentFromLoadedOptions();
+    });
 
     const resetFilters = () => {
       selectedSaleRent.value = "All";

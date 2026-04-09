@@ -32,6 +32,18 @@ class AreaController extends Controller
         $resolver = function () use ($request) {
             $query = Area::withCount('child');
 
+            // Used by listing search restore (URL decode) — must not return every area
+            if ($request->filled('ids')) {
+                $rawIds = $request->input('ids');
+                $ids = is_array($rawIds)
+                    ? $rawIds
+                    : array_filter(array_map('intval', explode(',', (string) $rawIds)));
+                $ids = array_values(array_unique($ids));
+                if (! empty($ids)) {
+                    $query->whereIn('id', $ids);
+                }
+            }
+
             if ($request->has('type')) {
                 $query->where('type', $request->type);
             }

@@ -566,6 +566,23 @@ export default {
       });
     };
 
+    /** Query keys owned by listing search — strip before merge so cleared filters don’t linger. */
+    const LISTING_QUERY_KEYS = [
+      'sale_rent', 'area_ids', 'area_id', 'project_id', 'type_id', 'beds', 'baths',
+      'price_from', 'price_to', 'size_from', 'size_to', 'sort', 'ref',
+      'completion_status', 'agent_id', 'agent_name'
+    ];
+
+    const pruneEmptyQueryValues = (obj) => {
+      const out = {};
+      Object.keys(obj).forEach((k) => {
+        const v = obj[k];
+        if (v === undefined || v === null || v === '') return;
+        out[k] = v;
+      });
+      return out;
+    };
+
     const encodeFiltersToQuery = (filters) => {
       return {
         sale_rent: filters.saleRent || undefined,
@@ -588,6 +605,13 @@ export default {
       };
     };
 
+    const replaceRouteWithListingFilters = (filters) => {
+      const base = { ...route.query };
+      LISTING_QUERY_KEYS.forEach((k) => { delete base[k]; });
+      const merged = { ...base, ...encodeFiltersToQuery(filters) };
+      router.replace({ query: pruneEmptyQueryValues(merged) });
+    };
+
 const decodeFiltersFromQuery = async (query) => {
         let areaIds = [];
   if (query.area_ids) {
@@ -603,11 +627,20 @@ const decodeFiltersFromQuery = async (query) => {
         params: { ids: areaIds.join(',') } 
       });
       const areasData = response.data.data || response.data;
-      areasWithNames = areasData.map(area => ({
-        id: area.id,
-        name: area.area_parents_title || area.name || area.title,
-        subtitle: area.region || area.city || area.country || 'UAE'
-      }));
+      const rows = Array.isArray(areasData) ? areasData : [];
+      const byId = new Map(rows.map((area) => [area.id, area]));
+      // Only IDs from the URL (API historically ignored `ids` and returned all areas)
+      areasWithNames = areaIds.map((id) => {
+        const area = byId.get(id);
+        if (!area) {
+          return { id, name: `Area ${id}`, subtitle: '' };
+        }
+        return {
+          id: area.id,
+          name: area.area_parents_title || area.name || area.title,
+          subtitle: area.region || area.city || area.country || 'UAE'
+        };
+      });
     } catch (error) {
       console.error("Error fetching areas:", error);
       // Fallback: استخدام id فقط
@@ -647,13 +680,8 @@ const decodeFiltersFromQuery = async (query) => {
       // Fetch properties with new filters (reset to page 1)
       fetchProperties({}, 1); 
 
-      // Persist filters in URL so Back restores them
-      router.replace({
-        query: {
-          ...route.query,
-          ...encodeFiltersToQuery(filters),
-        },
-      });
+      // Persist filters in URL so browser Back restores the same search state
+      replaceRouteWithListingFilters(filters);
     };
 
     // Convert frontend filters to backend API format
@@ -796,10 +824,16 @@ const decodeFiltersFromQuery = async (query) => {
 
       const hasQuery = Object.keys(route.query).length > 0;
       if (hasQuery) {
-        const filters = decodeFiltersFromQuery(route.query);
-        currentFilters.value = convertFiltersToAPI(filters);
-        initialFilters.value = filters;
-        fetchProperties({}, 1);
+        try {
+          // decodeFiltersFromQuery is async (loads area labels); must await or initialFilters stays a Promise
+          const filters = await decodeFiltersFromQuery(route.query);
+          currentFilters.value = convertFiltersToAPI(filters);
+          initialFilters.value = filters;
+          await fetchProperties({}, 1);
+        } catch (e) {
+          console.error('Failed to restore listing filters from URL:', e);
+          fetchProperties();
+        }
       } else {
         fetchProperties();
       }
