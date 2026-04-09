@@ -2,7 +2,7 @@
     <div class="row g-4">
         <!-- Left Column: Lead Information -->
         <div ref="editSectionAnchorRef" class="col-md-5">
-            <div class="info-card bg-white  p-3 radius-12">
+            <div class="info-card bg-white  radius-12">
                 <!-- View Mode (read-only; do not use ViewLead.vue here – it is a full modal and would cause infinite recursion) -->
                 <LeadInfoView v-if="!isEditMode" :lead="lead" :show-responsible-section="false" :can-edit="lead?.can_edit" :show-edit-icon="true" @edit-section="handleEditSection" @edit-request="toggleEditMode" @lead-updated="handleLeadUpdated" />
 
@@ -27,7 +27,7 @@
                         <div class="info-section-title lead-section-title-match mb-0">Lead Qualification</div>
                     </div>
                     <div class="compact-status-grid">
-                        <div class="compact-status-card">
+                        <div class="compact-status-card" v-if="qualityStatusBadge">
                             <div class="compact-status-label">Quality Status</div>
                             <div class="compact-status-value">
                                 <span
@@ -38,7 +38,7 @@
                                 </span>
                             </div>
                         </div>
-                        <div class="compact-status-card">
+                        <div class="compact-status-card" v-if="callResultBadge">
                             <div class="compact-status-label">Call Result</div>
                             <div class="compact-status-value">
                                 <span
@@ -49,7 +49,7 @@
                                 </span>
                             </div>
                         </div>
-                        <div class="compact-status-card">
+                        <div class="compact-status-card" v-if="leadTypeBadge">
                             <div class="compact-status-label">Lead Type</div>
                             <div class="compact-status-value">
                                 <span
@@ -267,9 +267,26 @@ const selectedRequirementSource = computed(() => {
     if (source === 'primary') return null
     return rows.find((item) => item?._kind !== 'qualification_meta' && item?.id === source) || null
 })
+const selectedWhyLostLead = computed(() => {
+    if (props.lead?.why_lost_lead) {
+        return props.lead.why_lost_lead
+    }
+    return selectedRequirementSource.value?.why_lost_lead ?? null
+})
 
 const selectedStatusLead = computed(() => {
+     const currentStageOrder = props.lead?.stage?.order || props.lead?.stage_order || 0
+    
+    // المرحلة 8 (Lost) - نعرض why_lost_lead
+    if (currentStageOrder === 8) {
+        const reason = String(selectedWhyLostLead.value || '').toLowerCase().trim()
+        return reason;
+    }
+    
     return selectedRequirementSource.value?.status_lead ?? props.lead?.status_lead
+})
+const selectedInteractionResult = computed(() => {
+    return selectedRequirementSource.value?.interaction_result ?? props.lead?.interaction_result
 })
 
 const selectedLeadType = computed(() => {
@@ -283,11 +300,18 @@ const qualityStatusBadge = computed(() => {
     if (status === 'warm') return { label: 'Warm', tone: 'warm' }
     if (status === 'cold') return { label: 'Cold', tone: 'cold' }
     if (status === 'no_answer') return { label: 'No Answer', tone: 'muted' }
+     if (status === 'lost_by_other_company') {
+        return { label: 'Lost by Other Company', tone: 'lost' }
+    }
+    if (status === 'lost_by_our_company') {
+        return { label: 'Lost by Our Company', tone: 'lost' }
+    }
     return { label: status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), tone: 'neutral' }
 })
 
 const callResultBadge = computed(() => {
-    const status = String(selectedStatusLead.value || '').toLowerCase()
+    const status = String(selectedInteractionResult.value || '').toLowerCase()
+    console.log(status);
     if (!status) return null
     if (status === 'no_answer') return { label: 'No Answer', tone: 'muted' }
     return { label: 'Answered', tone: 'ok' }
@@ -613,7 +637,11 @@ onMounted(() => {
 .status-badge--rent { color: #0f766e; background: #f0fdfa; border-color: #99f6e4; }
 .status-badge--muted { color: #475569; background: #f1f5f9; border-color: #cbd5e1; }
 .status-badge--neutral { color: #334155; background: #f8fafc; border-color: #e2e8f0; }
-
+.status-badge--lost { 
+    color: #991b1b; 
+    background: #fef2f2; 
+    border-color: #fecaca; 
+}
 /* Match LeadInfoView section-title typography exactly */
 .lead-section-title-match {
     font-size: 12px !important;
@@ -745,4 +773,5 @@ onMounted(() => {
     background-color: #E0F2FE;
     color: #0369A1;
 }
+
 </style>

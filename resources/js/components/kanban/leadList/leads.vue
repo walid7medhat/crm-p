@@ -826,7 +826,8 @@ const executeFetchLeads = async () => {
             ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status }),
              ...(q.property_type_id != null && q.property_type_id !== '' && { property_type_id: q.property_type_id }),
             ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
-            ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
+            ...(q.assigned_at != null && q.assigned_at !== '' && { area_id: q.assigned_at }),
+            ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
             // ...(q.office_branch != null && q.office_branch !== '' && { team_id: q.office_branch })
         }
          // Handle office_branch as array for multi-select
@@ -1014,7 +1015,11 @@ async function fetchMoreLeadsFromApi(stageId) {
             ...(q.budget_to != null && q.budget_to !== '' && { budget_to: q.budget_to }),
             ...(q.interaction_result != null && q.interaction_result !== '' && { interaction_result: q.interaction_result }),
             ...(q.lead_type != null && q.lead_type !== '' && { lead_type: q.lead_type }),
-            ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status })
+            ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status }),
+            ...(q.assigned_at != null && q.assigned_at !== '' && { assigned_at: q.assigned_at }),
+            ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
+            ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
+            
         }
         const response = await api.get(`/stages/kanban/stage/${stageId}/more-leads`, {
             params
@@ -2019,15 +2024,55 @@ async function onLeadDragChange(evt, column) {
         const sourceStageName = normalizeStageName(sourceColumn?.title)
         const targetStageName = normalizeStageName(column?.title)
         const isAssignToFollowUpOrContacted =
-            sourceStageName.includes('assign') &&
+          (  sourceStageName.includes('assign') || sourceStageName.includes('new lead')) &&
             (targetStageName.includes('followup') || targetStageName.includes('contacted'))
+
+        // [NEW] Logic for moving to Contacted stage from ANY stage
+        const isMovingToContacted = targetStageName.includes('contacted')
+        const isSalutationMissing = !lead.salutation || lead.salutation === ''
 
         console.log('Lead drag change:', { 
             leadId: lead.id, 
             newStageId, 
             newStageOrder,
-            leadData: lead
+            leadData: lead,
+            isMovingToContacted,
+            isSalutationMissing
         })
+
+        // [NEW] Check if moving to Contacted and salutation is missing
+        if (isMovingToContacted && isSalutationMissing) {
+            console.log('Moving to Contacted stage but salutation is missing. Showing modal.')
+            
+            pendingStageChange.value = {
+                leadId: lead.id,
+                targetStageId: newStageId,
+                targetStageName: column.title,
+                targetStageOrder: newStageOrder,
+                originalStageId: lead.stage_id,
+                leadData: { ...lead },
+                isConversion: false,
+                interactionMode: true // or false? Based on your modal, interactionMode shows call results. Set to false to show reason field.
+            }
+            // Specify that 'salutation' is the missing field
+            missingFieldsForLead.value = ['salutation']
+
+            // Revert the drag and drop UI change
+            if (sourceColumn) {
+                const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
+                if (targetColumnIndex !== -1) {
+                    columns.value[targetColumnIndex].leads =
+                        columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
+                }
+                if (!sourceColumn.leads.find(l => l.id === lead.id)) {
+                    sourceColumn.leads.push(lead)
+                }
+            }
+
+            await nextTick()
+            showStageChangeModal.value = true
+            return
+        }
 
         if (isAssignToFollowUpOrContacted) {
             pendingStageChange.value = {
@@ -2060,7 +2105,6 @@ async function onLeadDragChange(evt, column) {
 
         // Check if this is the converted stage (order 6)
         if (newStageOrder === 6) {
-            // قائمة الحقول المطلوبة للتحويل إلى Converted
             const requiredFieldsForConversion = [
                 'salutation',
                 'property_type_id',
@@ -2137,7 +2181,6 @@ async function onLeadDragChange(evt, column) {
             return
         }
 
-        // باقي الكود للمراحل الأخرى...
         const requiredFieldsMap = {
             3: ['salutation'],
             4: ['salutation','property_type_id', 'area_id','budget_from',
@@ -2270,7 +2313,6 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         // Update lead data locally
         if (lead) {
             lead.stage_id = targetStageId
-            // تحديث الحقول المحلية
             if (payload.salutation) lead.salutation = payload.salutation
             if (payload.budget_from) lead.budget_from = payload.budget_from
             if (payload.budget_to) lead.budget_to = payload.budget_to

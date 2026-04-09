@@ -9,6 +9,7 @@ use App\Http\Requests\Stage\StageReorderRequest;
 use App\Http\Resources\Lead\LeadResource;
 use App\Http\Resources\Stage\StageResource;
 use App\Http\Resources\Stage\StageCollection;
+use App\Models\Area;
 use App\Models\Stage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -330,13 +331,25 @@ class StageController extends Controller
                         $q->whereIn('responsible_person_id', $teamMemberIds);
                     }
                 }
-                if ($request->filled('lead_type')) {
-                    $q->where('lead_type', $request->lead_type);
+               if ($request->filled('status_lead')) {
+                    $q->where('status_lead', $request->status_lead);
                 }
                 
-                // Filter by Property Status (ready/off_plan/both)
-                if ($request->filled('property_status')) {
-                    $q->where('property_status', $request->property_status);
+               
+                // Lead Type
+                if ($request->filled('lead_type') && $request->lead_type !='both') {
+                    $q->where(function($q) use ($request) {
+                        $q->where('lead_type', $request->lead_type)
+                        ->orWhere('lead_type', 'both'); 
+                    });
+                }
+
+                // Property Status
+                if ($request->filled('property_status') && $request->property_status !='both') {
+                    $q->where(function($q) use ($request) {
+                        $q->where('property_status', $request->property_status)
+                        ->orWhere('property_status', 'both'); 
+                    });
                 }
                 
                 $this->applyBudgetRangeFilter($q, $request);
@@ -345,12 +358,26 @@ class StageController extends Controller
                 if ($request->filled('property_type_id')) {
                     $q->where('property_type_id', $request->property_type_id);
                 }
-                if ($request->filled('area_id')) {
-                    $q->where('area_id', $request->area_id);
+                 if ($request->has('area_id')) {
+                    $areaId = $request->area_id;
+                    $area = Area::find($areaId);
+                
+                    if ($area) {
+                        $childAreaIds = $area->getChildIdsAttribute();
+                        $allAreaIds = array_merge([$areaId], $childAreaIds);
+                
+                        $q->where(function ($qq) use ($allAreaIds) {
+                            $qq->whereIn('area_id', $allAreaIds)
+                              ->orWhereHas('project', function ($projectQuery) use ($allAreaIds) {
+                                  $projectQuery->whereIn('area_id', $allAreaIds);
+                              });
+                        });
+                    }
                 }
                 if ($request->filled('interaction_result')) {
                     $q->where('interaction_result', $request->interaction_result);
                 }
+                
                 if ($request->filled('search')) {
                     $search = $request->search;
                     $q->where(function ($s) use ($search) {
@@ -363,8 +390,16 @@ class StageController extends Controller
                           ->orWhere('bedrooms', 'like', "%{$search}%")
                           ->orWhere('work_phone_2', 'like', "%{$search}%")
                           ->orWhere('lead_source', 'like', "%{$search}%")
-                          ->orWhere('lead_type', 'like', "%{$search}%")
-                          ->orWhere('property_status', 'like', "%{$search}%")
+                          ->orWhere('status_lead', 'like', "%{$search}%")
+                          ->orWhere(function($q2) use ($search) {
+                                $q2->where('lead_type', 'like', "%{$search}%")
+                                    ->orWhere('lead_type', 'both');
+                            })
+                            ->orWhere(function($q2) use ($search) {
+                                $q2->where('property_status', 'like', "%{$search}%")
+                                    ->orWhere('property_status', 'both');
+                            })
+
                           ->orWhere('budget_from', 'like', "%{$search}%")
                           ->orWhere('budget_to', 'like', "%{$search}%")
                           ->orWhere('source_information', 'like', "%{$search}%")
@@ -574,13 +609,25 @@ class StageController extends Controller
                     $leadsQuery->whereIn('responsible_person_id', $teamMemberIds);
                 }
             }
-           if ($request->filled('lead_type')) {
-                    $leadsQuery->where('lead_type', $request->lead_type);
+               if ($request->filled('status_lead')) {
+                    $leadsQuery->where('status_lead', $request->status_lead);
                 }
                 
-                // Filter by Property Status (ready/off_plan/both)
-                if ($request->filled('property_status')) {
-                    $leadsQuery->where('property_status', $request->property_status);
+               
+                // Lead Type
+                if ($request->filled('lead_type') && $request->lead_type !='both') {
+                    $leadsQuery->where(function($q) use ($request) {
+                        $q->where('lead_type', $request->lead_type)
+                        ->orWhere('lead_type', 'both'); 
+                    });
+                }
+
+                // Property Status
+                if ($request->filled('property_status') && $request->lead_type !='both') {
+                    $leadsQuery->where(function($q) use ($request) {
+                        $q->where('property_status', $request->property_status)
+                        ->orWhere('property_status', 'both'); 
+                    });
                 }
                 
                 $this->applyBudgetRangeFilter($leadsQuery, $request);
@@ -589,8 +636,21 @@ class StageController extends Controller
                 if ($request->filled('property_type_id')) {
                     $leadsQuery->where('property_type_id', $request->property_type_id);
                 }
-                if ($request->filled('area_id')) {
-                    $leadsQuery->where('area_id', $request->area_id);
+                 if ($request->has('area_id')) {
+                    $areaId = $request->area_id;
+                    $area = Area::find($areaId);
+                
+                    if ($area) {
+                        $childAreaIds = $area->getChildIdsAttribute();
+                        $allAreaIds = array_merge([$areaId], $childAreaIds);
+                
+                        $leadsQuery->where(function ($q) use ($allAreaIds) {
+                            $q->whereIn('area_id', $allAreaIds)
+                              ->orWhereHas('project', function ($projectQuery) use ($allAreaIds) {
+                                  $projectQuery->whereIn('area_id', $allAreaIds);
+                              });
+                        });
+                    }
                 }
                 if ($request->filled('interaction_result')) {
                     $leadsQuery->where('interaction_result', $request->interaction_result);
@@ -607,8 +667,16 @@ class StageController extends Controller
                           ->orWhere('bedrooms', 'like', "%{$search}%")
                           ->orWhere('work_phone_2', 'like', "%{$search}%")
                           ->orWhere('lead_source', 'like', "%{$search}%")
-                          ->orWhere('lead_type', 'like', "%{$search}%")
-                          ->orWhere('property_status', 'like', "%{$search}%")
+                          ->orWhere('status_lead', 'like', "%{$search}%")
+                           ->orWhere(function($q2) use ($search) {
+                                $q2->where('lead_type', 'like', "%{$search}%")
+                                    ->orWhere('lead_type', 'both');
+                            })
+                            ->orWhere(function($q2) use ($search) {
+                                $q2->where('property_status', 'like', "%{$search}%")
+                                    ->orWhere('property_status', 'both');
+                            })
+
                           ->orWhere('budget_from', 'like', "%{$search}%")
                           ->orWhere('budget_to', 'like', "%{$search}%")
                           ->orWhere('source_information', 'like', "%{$search}%")

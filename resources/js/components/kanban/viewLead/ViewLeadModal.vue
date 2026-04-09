@@ -62,29 +62,30 @@
                 <HistoryTab v-if="activeTab === 'history' && canViewHistory"  :lead="lead" :is-active="activeTab === 'history'" />
             </div>
         </div>
-           <!-- Stage Change Reason Modal -->
-    <StageChangeReasonModal
-        ref="stageChangeReasonModal"
-        v-model="showStageChangeModal"
-        :leadId="pendingStageChange?.leadId"
-        :targetStageId="pendingStageChange?.targetStageId"
-        :targetStageName="pendingStageChange?.targetStageName"
-        :targetStageOrder="pendingStageChange?.targetStageOrder"
-        :missingFields="missingFieldsForLead"
-        :leadData="pendingStageChange?.leadData"
-        :isConversion="pendingStageChange?.isConversion || false"
-        @submit="handleStageChangeWithReason"
-        @closed="clearPendingStageChange"
-    />
+        
+        <!-- Stage Change Reason Modal -->
+        <StageChangeReasonModal
+            ref="stageChangeReasonModal"
+            v-model="showStageChangeModal"
+            :leadId="pendingStageChange?.leadId"
+            :targetStageId="pendingStageChange?.targetStageId"
+            :targetStageName="pendingStageChange?.targetStageName"
+            :targetStageOrder="pendingStageChange?.targetStageOrder"
+            :missingFields="missingFieldsForLead"
+            :leadData="pendingStageChange?.leadData"
+            :isConversion="pendingStageChange?.isConversion || false"
+            :interactionMode="pendingStageChange?.interactionMode || false"
+            @submit="handleStageChangeWithReason"
+            @closed="clearPendingStageChange"
+        />
     </b-modal>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted,computed } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { BModal, BDropdown } from 'bootstrap-vue-3'
 import StageSelector from '../shared/StageSelector.vue'
 import StageChangeReasonModal from '../leadList/StageChangeReasonModal.vue'
-
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
@@ -96,6 +97,7 @@ const props = defineProps({
         default: null
     }
 })
+
 const lead = ref(null)
 const emit = defineEmits(['update:modelValue', 'stage-updated', 'lead-updated'])
 
@@ -113,6 +115,9 @@ const showStageChangeModal = ref(false)
 const pendingStageChange = ref(null)
 const missingFieldsForLead = ref([])
 const stageOrderMap = ref({})
+const selectedLeadForConversion = ref(null)
+const selectedLeadData = ref(null)
+const convertModalRef = ref(null)
 
 const canViewHistory = computed(() => {
     if (!user.value || !lead.value) return false
@@ -166,33 +171,107 @@ const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
     console.log('🎯 handleStageChangeRequest called:', { stageId, stageName, stageOrder })
     
     const targetStageOrder = stageOrderMap.value[stageId] || stageOrder || 0
-    
-    // Define required fields based on stage order
-    const requiredFieldsMap = {
-        3: ['salutation'],
-        4: ['salutation', 'property_type_id', 'area_id', 'budget_from','budget_to','property_status','lead_type', 'purpose_buying', 'bedrooms', 'status_lead'],
-        5: ['salutation', 'available_date'],
-        7: ['salutation', 'branch'],
-        8: ['why_lost_lead'],
-        9: ['status_lead'],
-        10: ['status_lead']
+
+    const normalizeStageName = (name) =>
+        String(name || '').toLowerCase().replace(/[^a-z]/g, '')
+
+    const sourceStageName = normalizeStageName(lead.value?.stage?.name || lead.value?.stage_name)
+    const targetStageName = normalizeStageName(stageName)
+
+    const isAssignToFollowUpOrContacted =
+        (sourceStageName.includes('assign') || sourceStageName.includes('newlead')) &&
+        (targetStageName.includes('followup') || targetStageName.includes('contacted'))
+
+    const isMovingToContacted = targetStageName.includes('contacted')
+    const isSalutationMissing = !lead.value?.salutation || lead.value?.salutation === '' || lead.value?.salutation === null
+
+    console.log('🔍 Contacted check:', { 
+        isMovingToContacted, 
+        isSalutationMissing,
+        currentSalutation: lead.value?.salutation,
+        sourceStageName,
+        targetStageName
+    })
+
+    // 🔥 Contacted logic (نفس الـ Kanban بالضبط)
+    if (isMovingToContacted && isSalutationMissing) {
+        console.log('📢 Moving to Contacted stage but salutation is missing. Showing modal.')
+        
+        pendingStageChange.value = {
+            leadId: lead.value.id,
+            targetStageId: stageId,
+            targetStageName: stageName,
+            targetStageOrder: targetStageOrder,
+            originalStageId: lead.value.stage_id,
+            leadData: { ...lead.value },
+            isConversion: false,
+            interactionMode: true
+        }
+
+        missingFieldsForLead.value = ['salutation']
+        showStageChangeModal.value = true
+        
+        await nextTick()
+        
+        setTimeout(() => {
+            const textarea = document.querySelector('.stage-change-modal textarea')
+            if (textarea) {
+                textarea.focus()
+                textarea.click()
+            }
+            document.body.classList.remove('modal-open')
+        }, 100)
+        
+        return
     }
-    
-    // For conversion (stage 6), check all required fields
+
+    // 🔥 Assign → Follow up / Contacted (نفس الـ Kanban)
+    if (isAssignToFollowUpOrContacted) {
+        console.log('📢 Assign to FollowUp/Contacted')
+        
+        pendingStageChange.value = {
+            leadId: lead.value.id,
+            targetStageId: stageId,
+            targetStageName: stageName,
+            targetStageOrder: targetStageOrder,
+            originalStageId: lead.value.stage_id,
+            leadData: { ...lead.value },
+            isConversion: false,
+            interactionMode: true
+        }
+
+        missingFieldsForLead.value = []
+        showStageChangeModal.value = true
+        
+        await nextTick()
+        return
+    }
+
+    // 🔥 Conversion (stage order 6)
     if (targetStageOrder === 6) {
         const requiredFieldsForConversion = [
-            'salutation', 'property_type_id', 'area_id', 'budget', 'budget_from','budget_to','property_status','lead_type',
-            'lead_source', 'purpose_buying', 'bedrooms', 'status_lead',
-            
+            'salutation',
+            'property_type_id',
+            'area_id',
+            'budget_from',
+            'budget_to',
+            'lead_type',
+            'property_status',
+            'lead_source',
+            'purpose_buying',
+            'bedrooms',
+            'status_lead'
         ]
-        
+
         const missingFields = requiredFieldsForConversion.filter(field => {
             const value = lead.value[field]
             return !value || value === '' || value === null || value === undefined
         })
-        
+
+        console.log('Conversion - Missing fields:', missingFields)
+
         if (missingFields.length > 0) {
-            console.log('Missing fields for conversion:', missingFields)
+            console.log('Showing modal to complete missing fields for conversion')
             
             pendingStageChange.value = {
                 leadId: lead.value.id,
@@ -203,39 +282,45 @@ const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
                 leadData: { ...lead.value },
                 isConversion: true
             }
-            
+
             missingFieldsForLead.value = missingFields
             showStageChangeModal.value = true
-            setTimeout(() => {
-                const textarea = document.querySelector('.stage-change-modal textarea')
-
-                if (textarea) {
-                    textarea.focus()
-                    
-                    // 💣 دي اللي هتحل المشكلة
-                    textarea.click()
-                }
-
-                // 💣 دي أهم سطر
-                document.body.classList.remove('modal-open')
-            }, 100)
+            
+            await nextTick()
             return
         }
-        
-        // All data complete, proceed with stage change
-        await executeStageChange(stageId, lead.value.stage_id)
+
+        // All data complete, proceed with conversion
+        console.log('All data complete, showing conversion modal')
+        selectedLeadForConversion.value = lead.value.id
+        selectedLeadData.value = lead.value
+
+        await nextTick()
+        if (convertModalRef.value) {
+            convertModalRef.value.show()
+        }
         return
     }
-    
-    // For other stages
+
+    // 🔥 باقي المراحل (3,4,5,7,8,9,10)
+    const requiredFieldsMap = {
+        3: ['salutation'],
+        4: ['salutation','property_type_id','area_id','budget_from','budget_to','lead_type','property_status','purpose_buying','bedrooms','status_lead'],
+        5: ['salutation','available_date'],
+        7: ['salutation','branch'],
+        8: ['why_lost_lead'],
+        9: ['status_lead'],
+        10: ['status_lead']
+    }
+
     const requiredFields = requiredFieldsMap[targetStageOrder] || []
     const leadMissingFields = requiredFields.filter(field => {
         const value = lead.value[field]
         return !value || value === '' || value === null || value === undefined
     })
-    
+
     if (leadMissingFields.length > 0 || [3,4,5,7,8,9,10].includes(targetStageOrder)) {
-        console.log('Missing fields for stage:', targetStageOrder, leadMissingFields)
+        console.log('Showing modal for stage order:', targetStageOrder, 'Missing fields:', leadMissingFields)
         
         pendingStageChange.value = {
             leadId: lead.value.id,
@@ -246,32 +331,22 @@ const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
             leadData: { ...lead.value },
             isConversion: false
         }
-        
+
         missingFieldsForLead.value = leadMissingFields
         showStageChangeModal.value = true
-       setTimeout(() => {
-            const textarea = document.querySelector('.stage-change-modal textarea')
-
-            if (textarea) {
-                textarea.focus()
-                
-                // 💣 دي اللي هتحل المشكلة
-                textarea.click()
-            }
-
-            // 💣 دي أهم سطر
-            document.body.classList.remove('modal-open')
-        }, 100)
+        
+        await nextTick()
         return
     }
-    
-    // No missing fields, proceed with stage change
+
+    // ✅ No missing fields, proceed with stage change
     await executeStageChange(stageId, lead.value.stage_id)
 }
-// Execute stage change API call
+
+// Execute stage change API call (without modal)
 const executeStageChange = async (newStageId, oldStageId) => {
     try {
-        isUserAction.value = true  // Mark that this is a user action
+        isUserAction.value = true
         const response = await api.post(`/leads/${lead.value.id}/change-stage`, {
             stage_id: newStageId
         })
@@ -279,14 +354,12 @@ const executeStageChange = async (newStageId, oldStageId) => {
         if (updatedLeadData) {
             lead.value = { ...lead.value, ...updatedLeadData }
         }
-        // Update the stage selector value
         leadStageId.value = newStageId
         emit('lead-updated', lead.value)
         $showNotification('Stage updated successfully', 'success')
     } catch (error) {
         console.error('❌ Error updating stage:', error)
         $showNotification(error.response?.data?.message || 'Failed to update stage', 'error')
-        // Revert the stage selector
         leadStageId.value = oldStageId
     } finally {
         setTimeout(() => {
@@ -295,9 +368,9 @@ const executeStageChange = async (newStageId, oldStageId) => {
     }
 }
 
-// Handle stage change with reason from modal
+// Handle stage change with reason from modal (نفس الـ Kanban بالضبط)
 const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...additionalData }) => {
-    console.log('handleStageChangeWithReason called:', { leadId, targetStageId, reason, additionalData })
+    console.log('📝 handleStageChangeWithReason called:', { leadId, targetStageId, reason, additionalData })
     
     try {
         const leadData = pendingStageChange.value?.leadData
@@ -315,8 +388,13 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
             reason: reason || null,
         }
         
+        // ✅ إضافة salutation (الأهم)
+        if (additionalData.salutation) {
+            payload.salutation = additionalData.salutation
+            console.log('✅ Adding salutation to payload:', additionalData.salutation)
+        }
+        
         // Add fields from modal
-        if (additionalData.salutation) payload.salutation = additionalData.salutation
         if (additionalData.budget_from) payload.budget_from = additionalData.budget_from
         if (additionalData.budget_to) payload.budget_to = additionalData.budget_to
         if (additionalData.lead_type) payload.lead_type = additionalData.lead_type
@@ -349,16 +427,37 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
             }
         }
 
-        console.log('Sending payload:', payload)
+        console.log('📤 Sending payload to backend:', JSON.stringify(payload, null, 2))
 
         // Send request
         const response = await api.post(`/leads/${leadId}/change-stage`, payload)
         
-        $showNotification(response.data?.message || 'Stage updated successfully', 'success')
+        console.log('✅ Backend response:', response.data)
         
-        // Update local lead data
+        $showNotification(response.data?.message || 'Lead data updated successfully', 'success')
+        
+        // ✅ تحديث الـ lead data محلياً
         if (response.data?.data) {
             lead.value = { ...lead.value, ...response.data.data }
+        } else {
+            if (payload.salutation) lead.value.salutation = payload.salutation
+            if (payload.stage_id) lead.value.stage_id = payload.stage_id
+            if (payload.budget_from) lead.value.budget_from = payload.budget_from
+            if (payload.budget_to) lead.value.budget_to = payload.budget_to
+            if (payload.lead_type) lead.value.lead_type = payload.lead_type
+            if (payload.property_status) lead.value.property_status = payload.property_status
+            if (payload.area_id) lead.value.area_id = payload.area_id
+            if (payload.property_type_id) lead.value.property_type_id = payload.property_type_id
+            if (payload.bedrooms) lead.value.bedrooms = payload.bedrooms
+            if (payload.purpose_buying) lead.value.purpose_buying = payload.purpose_buying
+            if (payload.lead_source) lead.value.lead_source = payload.lead_source
+            if (payload.available_date) lead.value.available_date = payload.available_date
+            if (payload.branch) lead.value.branch = payload.branch
+            if (payload.why_lost_lead) lead.value.why_lost_lead = payload.why_lost_lead
+            
+            if (payload.status_lead) lead.value.status_lead = payload.status_lead
+            if (payload.status_lead_pool) lead.value.status_lead = payload.status_lead_pool
+            if (payload.unqualified_status) lead.value.status_lead = payload.unqualified_status
         }
         
         // Update stage selector
@@ -374,9 +473,27 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
         
         clearPendingStageChange()
         
+        // ✅ إعادة جلب البيانات للتأكد من التحديث
+        await fetchLead()
+        
+        // If this was for conversion (stage 6), open conversion modal
+        if (isConversion && targetStageOrder === 6) {
+            console.log('Opening conversion modal')
+            selectedLeadForConversion.value = leadId
+            selectedLeadData.value = lead.value
+            
+            await nextTick()
+            if (convertModalRef.value) {
+                convertModalRef.value.show()
+            }
+        }
+        
     } catch (error) {
-        console.error('Error:', error)
-        $showNotification(error.response?.data?.message || 'Failed to update stage', 'error')
+        console.error('❌ Error in handleStageChangeWithReason:', error)
+        const errorMessage = error.response?.data?.message || 
+                            error.response?.data?.error || 
+                            'Failed to update lead data'
+        $showNotification(errorMessage, 'error')
         throw error
     }
 }
@@ -385,11 +502,13 @@ const clearPendingStageChange = () => {
     pendingStageChange.value = null
     missingFieldsForLead.value = []
 }
+
 const fetchLead = async () => {
     try {
         const response = await api.get(`/leads/${props.leadId}`)
         lead.value = response.data.data
         console.log('✅ Lead fetched:', lead.value)
+        console.log('📝 Salutation value:', lead.value?.salutation)
     } catch (error) {
         console.error('❌ Error fetching lead:', error)
         $showNotification('Failed to load lead details', 'error')
@@ -405,198 +524,48 @@ const initializeLeadListener = () => {
     
     const user = JSON.parse(localStorage.getItem('user'))
     if (!user || !window.Echo) {
-        console.log('❌ ViewLeadModal: Real-time updates not available - User:', !!user, 'Echo:', !!window.Echo)
+        console.log('❌ ViewLeadModal: Real-time updates not available')
         return
     }
-
-    console.log('🔔 ViewLeadModal: Initializing listeners for lead:', props.leadId)
-    console.log('   - User ID:', user.id)
-    console.log('   - Channel: user.' + user.id)
 
     try {
         const channel = window.Echo.private(`user.${user.id}`)
         
-        // Listen for lead.updated events
-        console.log('📡 ViewLeadModal: Setting up .lead.updated listener...')
         echoListener.value = channel.listen('.lead.updated', (event) => {
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-            console.log('🔔 ViewLeadModal: [UPDATED EVENT] Received .lead.updated event')
-            console.log('   📦 Full Event Object:', JSON.stringify(event, null, 2))
-            console.log('   🆔 Event Lead ID:', event.lead?.data?.id || event.lead?.id || 'N/A')
-            console.log('   🎯 Current Modal Lead ID:', props.leadId)
-            console.log('   📋 Action Type:', event.action_type || 'NOT PROVIDED')
-            console.log('   👤 User Name:', event.user_name || 'NOT PROVIDED')
-            console.log('   👤 User ID:', event.user_id || 'NOT PROVIDED')
-            console.log('   ⏰ Timestamp:', new Date().toISOString())
-            
             const leadData = event.lead?.data || event.lead
-            
-            console.log('   📊 Lead Data Structure:', {
-                hasLeadData: !!leadData,
-                leadId: leadData?.id,
-                leadName: leadData?.lead_name,
-                stageId: leadData?.stage_id,
-                responsiblePersonId: leadData?.responsible_person_id,
-                responsiblePerson: leadData?.responsible_person,
-                hasStage: !!leadData?.stage,
-                allKeys: leadData ? Object.keys(leadData) : []
-            })
-            
-            // Only handle updates for this specific lead
             if (leadData && leadData.id === props.leadId) {
-                console.log('   ✅ MATCH: Event is for current lead, processing update...')
                 handleLeadUpdate(event, 'updated')
-            } else {
-                console.log('   ⏭️  SKIP: Event is not for current lead')
-                if (leadData) {
-                    console.log('      - Event Lead ID:', leadData.id, 'vs Current:', props.leadId)
-                } else {
-                    console.log('      - No lead data found in event')
-                }
             }
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
         })
         
-        // Listen for lead.assigned events
-        console.log('📡 ViewLeadModal: Setting up .lead.assigned listener...')
         echoAssignedListener.value = channel.listen('.lead.assigned', (event) => {
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-            console.log('🔔 ViewLeadModal: [ASSIGNED EVENT] Received .lead.assigned event')
-            console.log('   📦 Full Event Object:', JSON.stringify(event, null, 2))
-            console.log('   🆔 Event Lead ID:', event.lead?.data?.id || event.lead?.id || 'N/A')
-            console.log('   🎯 Current Modal Lead ID:', props.leadId)
-            console.log('   📋 Action Type:', event.action_type || 'NOT PROVIDED')
-            console.log('   👤 User Name:', event.user_name || 'NOT PROVIDED')
-            console.log('   👤 User ID:', event.user_id || 'NOT PROVIDED')
-            console.log('   👤 Assigned To:', event.assigned_to?.name || event.assigned_to_id || 'NOT PROVIDED')
-            console.log('   ⏰ Timestamp:', new Date().toISOString())
-            
             const leadData = event.lead?.data || event.lead
-            
-            console.log('   📊 Lead Data Structure:', {
-                hasLeadData: !!leadData,
-                leadId: leadData?.id,
-                leadName: leadData?.lead_name,
-                stageId: leadData?.stage_id,
-                responsiblePersonId: leadData?.responsible_person_id,
-                responsiblePerson: leadData?.responsible_person,
-                hasStage: !!leadData?.stage,
-                allKeys: leadData ? Object.keys(leadData) : []
-            })
-            
-            // Only handle assignments for this specific lead
             if (leadData && leadData.id === props.leadId) {
-                console.log('   ✅ MATCH: Event is for current lead, processing assignment...')
                 handleLeadUpdate(event, 'assigned')
-            } else {
-                console.log('   ⏭️  SKIP: Event is not for current lead')
-                if (leadData) {
-                    console.log('      - Event Lead ID:', leadData.id, 'vs Current:', props.leadId)
-                } else {
-                    console.log('      - No lead data found in event')
-                }
             }
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
         })
         
-        console.log('✅ ViewLeadModal: Both listeners initialized successfully')
+        console.log('✅ ViewLeadModal: Listeners initialized')
     } catch (error) {
         console.error('❌ ViewLeadModal: Failed to initialize Echo listeners:', error)
-        console.error('   Error Details:', {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-        })
     }
 }
 
 const handleLeadUpdate = (event, eventType = 'unknown') => {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log(`🔄 ViewLeadModal: handleLeadUpdate called [${eventType.toUpperCase()}]`)
-    console.log('   📋 Event Type:', eventType)
-    console.log('   📋 Action Type:', event.action_type || 'NOT PROVIDED')
-    console.log('   📦 Event Structure:', {
-        hasLead: !!event.lead,
-        hasLeadData: !!event.lead?.data,
-        hasActionType: !!event.action_type,
-        hasUserName: !!event.user_name,
-        hasUserId: !!event.user_id,
-        allEventKeys: Object.keys(event)
-    })
-    
     const leadData = event.lead?.data || event.lead
     
-    console.log('   📊 Lead Data Check:', {
-        hasLeadData: !!leadData,
-        leadId: leadData?.id,
-        leadName: leadData?.lead_name
-    })
+    if (!leadData) return
     
-    if (!leadData) {
-        console.log('   ❌ ERROR: No lead data found in event, aborting update')
-        console.log('   📦 Event object:', event)
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-        return
-    }
-    
-    console.log('   📝 Current Lead State (Before Update):', {
-        id: lead.value?.id,
-        name: lead.value?.lead_name,
-        stageId: lead.value?.stage_id,
-        responsiblePersonId: lead.value?.responsible_person_id,
-        responsiblePersonName: lead.value?.responsible_person?.name
-    })
-    
-    console.log('   📝 New Lead Data (From Event):', {
-        id: leadData.id,
-        name: leadData.lead_name,
-        stageId: leadData.stage_id,
-        responsiblePersonId: leadData.responsible_person_id,
-        responsiblePersonName: leadData.responsible_person?.name,
-        allKeys: Object.keys(leadData)
-    })
-    
-    // Update the local lead data
     if (event.action_type === 'deleted') {
-        console.log('   🗑️  ACTION: Lead deleted, closing modal')
-        console.log('   ✅ TRIGGER: show.value = false')
         $showNotification('This lead has been deleted', 'warning')
         show.value = false
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     } else {
-        console.log('   🔄 ACTION: Updating lead data...')
-        
-        const previousLead = { ...lead.value }
         lead.value = { ...lead.value, ...leadData }
         
-        console.log('   ✅ TRIGGER: lead.value updated')
-        console.log('   📊 Changes Detected:', {
-            nameChanged: previousLead?.lead_name !== lead.value?.lead_name,
-            stageChanged: previousLead?.stage_id !== lead.value?.stage_id,
-            responsiblePersonChanged: previousLead?.responsible_person_id !== lead.value?.responsible_person_id,
-            previousStageId: previousLead?.stage_id,
-            newStageId: lead.value?.stage_id,
-            previousResponsiblePersonId: previousLead?.responsible_person_id,
-            newResponsiblePersonId: lead.value?.responsible_person_id
-        })
-        
         if (leadData.stage_id) {
-            const previousStageId = leadStageId.value
             leadStageId.value = leadData.stage_id
-            console.log('   ✅ TRIGGER: leadStageId.value updated')
-            console.log('      - Previous Stage ID:', previousStageId)
-            console.log('      - New Stage ID:', leadStageId.value)
-        } else {
-            console.log('   ⚠️  WARNING: No stage_id in leadData, stage selector not updated')
         }
         
-        console.log('   ✅ TRIGGER: Emitting lead-updated event to parent')
-        console.log('      - Emit Data:', {
-            id: leadData.id,
-            name: leadData.lead_name,
-            stageId: leadData.stage_id,
-            responsiblePersonId: leadData.responsible_person_id
-        })
         emit('lead-updated', leadData)
         
         const userName = event.user_name || 'Someone'
@@ -604,77 +573,37 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
             ? `${userName} assigned this lead` 
             : `${userName} updated this lead`
         
-        console.log('   ✅ TRIGGER: Showing notification')
-        console.log('      - Message:', notificationMessage)
         $showNotification(notificationMessage, 'info')
-        
-        console.log('   📝 Final Lead State (After Update):', {
-            id: lead.value?.id,
-            name: lead.value?.lead_name,
-            stageId: lead.value?.stage_id,
-            leadStageIdValue: leadStageId.value,
-            responsiblePersonId: lead.value?.responsible_person_id,
-            responsiblePersonName: lead.value?.responsible_person?.name
-        })
-        
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     }
 }
 
 const handleLeadUpdateFromTab = (updatedLeadData) => {
     console.log('📝 ViewLeadModal: Received lead update from GeneralTab:', updatedLeadData)
-    
-    // Completely replace the lead data with the latest response from API
-    // This ensures all fields are updated, including nested objects like responsible_person, stage, etc.
     lead.value = updatedLeadData
     
-    // Update stage selector with the latest stage
     if (updatedLeadData.stage_id) {
         leadStageId.value = updatedLeadData.stage_id
     } else if (updatedLeadData.stage?.id) {
         leadStageId.value = updatedLeadData.stage.id
     }
     
-    console.log('✅ ViewLeadModal: Lead data updated successfully')
-    console.log('   - Lead ID:', lead.value.id)
-    console.log('   - Lead Name:', lead.value.lead_name)
-    console.log('   - Stage ID:', leadStageId.value)
-    console.log('   - Responsible Person:', lead.value.responsible_person?.name)
-    
-    // Emit to parent to refresh the kanban board with the latest data
     emit('lead-updated', updatedLeadData)
 }
 
 const cleanup = () => {
-    console.log('🧹 ViewLeadModal: Cleaning up Echo listeners...')
-    
     if (echoListener.value) {
-        console.log('   🗑️  Removing .lead.updated listener')
         if (typeof echoListener.value.stopListening === 'function') {
             echoListener.value.stopListening('.lead.updated')
-            console.log('   ✅ .lead.updated listener stopped')
-        } else {
-            console.log('   ⚠️  stopListening method not available on listener')
         }
         echoListener.value = null
-    } else {
-        console.log('   ℹ️  No .lead.updated listener to clean up')
     }
     
     if (echoAssignedListener.value) {
-        console.log('   🗑️  Removing .lead.assigned listener')
         if (typeof echoAssignedListener.value.stopListening === 'function') {
             echoAssignedListener.value.stopListening('.lead.assigned')
-            console.log('   ✅ .lead.assigned listener stopped')
-        } else {
-            console.log('   ⚠️  stopListening method not available on assigned listener')
         }
         echoAssignedListener.value = null
-    } else {
-        console.log('   ℹ️  No .lead.assigned listener to clean up')
     }
-    
-    console.log('✅ ViewLeadModal: Cleanup completed')
 }
 
 onMounted(() => {
@@ -709,21 +638,18 @@ watch(() => props.leadId, (newLeadId, oldLeadId) => {
     initializeLeadListener()
 })
 
-// Watch for lead prop changes to update the stage
 watch(lead, (newLead) => {
     if (lead.value && lead.value.stage_id) {
         leadStageId.value = lead.value.stage_id
     }
 }, { immediate: true })
 
-// When user clicks a stage in StageSelector, save immediately and show in activity timeline
 watch(leadStageId, async (newStageId, oldStageId) => {
     if (!isUserAction.value && newStageId !== oldStageId) {
         console.log('External stage update detected:', { newStageId, oldStageId })
     }
 }, { immediate: false })
 
-// Notification helper – use global deferred to avoid SweetAlert2 stack overflow
 const $showNotification = (message, type = 'info') => {
     if (window.$showNotification) window.$showNotification(message, type)
     else console.log(`${type}: ${message}`)

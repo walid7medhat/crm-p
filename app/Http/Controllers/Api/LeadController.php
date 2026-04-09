@@ -718,7 +718,6 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         $oldStage = $lead->stage;
         $newStage = Stage::find($request->stage_id);
         
-        // حفظ القيم القديمة
         $old = $lead->getAttributes();
 
         // Check revert condition for stage 3
@@ -749,7 +748,6 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             ];
         }
 
-        // معالجة حالة revert
         if($newStage->order == 2 && !is_null($lead->revert)){
             $lead->update([
                 'revert' => null,
@@ -788,6 +786,8 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             'purpose_buying', 'bedrooms', 'responsible_person_id','property_status','lead_type',
             'salutation',
             'status_lead',      // يستخدم للمراحل 4, 9, 10
+           'status_lead_pool',     // ✅ أضيفي ده
+            'unqualified_status',
             'interaction_result',
             'why_lost_lead',    // يستخدم للمرحلة 8
             'available_date',   // للمرحلة 5
@@ -795,29 +795,27 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         ];
         
         foreach ($additionalFields as $field) {
-            if ($request->has($field) && $request->$field !== null) {
-                // معالجة خاصة للمراحل المختلفة
-                if ($field === 'status_lead') {
-                    // حسب المرحلة نحدد القيمة
+                if ($request->has($field) && $request->$field !== null) {
+
                     $targetStageOrder = $newStage->order;
-                    
-                    if ($targetStageOrder == 4) {
-                        // Qualified: cold, warm, hot
+
+                    if ($field === 'status_lead' && $targetStageOrder == 4) {
                         $updateData['status_lead'] = $request->status_lead;
-                    } elseif ($targetStageOrder == 9) {
-                        // Lead Pool: no_answer, canceled
+
+                    } elseif ($field === 'status_lead_pool' && $targetStageOrder == 9) {
                         $updateData['status_lead'] = $request->status_lead_pool;
-                    } elseif ($targetStageOrder == 10) {
-                        // Unqualified: not_interested, wrong_contact, job_seeker, other
+
+                    } elseif ($field === 'unqualified_status' && $targetStageOrder == 10) {
                         $updateData['status_lead'] = $request->unqualified_status;
+
+                    } elseif ($field === 'why_lost_lead') {
+                        $updateData['why_lost_lead'] = $request->why_lost_lead;
+
+                    } else {
+                        $updateData[$field] = $request->$field;
                     }
-                } elseif ($field === 'why_lost_lead') {
-                    $updateData['why_lost_lead'] = $request->why_lost_lead;
-                } else {
-                    $updateData[$field] = $request->$field;
                 }
             }
-        }
 
         if ($request->has('budget_from') || $request->has('budget_to')) {
             $bt = $request->has('budget_to') ? $request->input('budget_to') : $lead->budget_to;

@@ -621,7 +621,8 @@ const showFields = computed(() => {
 })
 const leadTypeOptions = [
     { value: 'sale', text: 'Sale' },
-    { value: 'rent', text: 'Rent' }
+    { value: 'rent', text: 'Rent' },
+     { value: 'both', text: 'Both' },
 ]
 
 const propertyStatusOptions = [
@@ -1166,7 +1167,8 @@ const handleSubmit = async () => {
                 leadId: props.leadId,
                 targetStageId: props.targetStageId,
                 reason: reasonText,
-                interaction_result: formData.value.interaction_result
+                interaction_result: formData.value.interaction_result,
+                salutation: formData.value.salutation,
             }
             : {
                 leadId: props.leadId,

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('leads', function (Blueprint $table) {
             //
-               $table->enum('lead_type', ['sale', 'rent'])->nullable();
+               $table->enum('lead_type', ['sale', 'rent','both'])->nullable();
             $table->enum('property_status', ['ready', 'off_plan', 'both'])->nullable();
         });
     }

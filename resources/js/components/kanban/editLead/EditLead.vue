@@ -683,7 +683,8 @@ const leadStatusOptions = [
 ]
 const leadTypeOptions = [
     { value: 'sale', text: 'Sale' },
-    { value: 'rent', text: 'Rent' }
+    { value: 'rent', text: 'Rent' },
+     { value: 'both', text: 'Both' },
 ]
 
 // Property Status Options
