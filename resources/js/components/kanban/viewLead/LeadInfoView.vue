@@ -1485,6 +1485,7 @@ const saveClientRequirement = async () => {
     order: 3;
 }
 
+
 .client-req-block-actions .lead-edit-inline-btn {
     margin-left: auto;
 }
@@ -2179,10 +2180,10 @@ const saveClientRequirement = async () => {
     border-radius: 8px;
     font-size: 13px;
 }
-.client-req-add-btn{
+.lead-edit-inline-btn.client-req-add-btn {
         padding: 0px;
-    font-size: 17px;
-    border: 1px solid;
+    font-size: 17px !important;
+    border: 1px solid rgb(250, 163, 0);
     border-radius: 20px;
 }
 </style>
