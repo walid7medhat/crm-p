@@ -181,6 +181,7 @@
                     <span class="info-label">Reference Number</span>
                     <span class="info-value">{{ property.reference_number }}</span>
                   </div>
+                  
                  
                   
                   <div class="info-item" v-if="property.developer?.name">
@@ -211,7 +212,19 @@
                         </div>
                       </div>
                     </div>
-                  
+                   <div class="info-item" v-if="hasAdditionalFeatures">
+                        <span class="info-label">Additional Features</span>
+                        <div class="info-value">
+                          <div class="payment-plans-container">
+                            <span v-for="(feature, index) in additionalFeaturesList" 
+                                  :key="index" 
+                                  class="badge bg-primary me-1 mb-1">
+                              <i class="fas fa-check-circle me-1"></i>
+                              {{ feature }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                   <!--<div class="info-item" v-if="false">-->
                   <!--  <span class="info-label">View</span>-->
                   <!--  <span class="info-value">{{ property.unit_view }}</span>-->
@@ -1782,6 +1795,56 @@ const confirmCancelRequest = async () => {
       return canEditProperty.value || canDeleteProperty.value;
     });
 
+  const additionalFeaturesList = computed(() => {
+    console.log('🔍 Computing features...');
+    console.log('📦 property.value?.additional_features:', property.value?.additional_features);
+    
+    if (!property.value?.additional_features) {
+      console.log('❌ No additional_features found');
+      return [];
+    }
+    
+    const features = [];
+    const data = property.value.additional_features;
+    
+    // Debug
+    console.log('📊 Data type:', typeof data);
+    console.log('📊 Data:', data);
+    
+    if (data.maid === true) {
+      features.push('Maid');
+      console.log('✅ Added Maid');
+    }
+    if (data.storage === true) {
+      features.push('Storage');
+      console.log('✅ Added Storage');
+    }
+    if (data.study === true) {
+      features.push('Study');
+      console.log('✅ Added Study');
+    }
+    if (data.store === true) {
+      features.push('Store');
+      console.log('✅ Added Store');
+    }
+    if (data.laundry === true) {
+      features.push('Laundry');
+      console.log('✅ Added Laundry');
+    }
+    if (data.driver === true) {
+      features.push('Driver');
+      console.log('✅ Added Driver');
+    }
+    
+    console.log('🎯 Final features:', features);
+    return features;
+  });
+
+const hasAdditionalFeatures = computed(() => {
+  const result = additionalFeaturesList.value.length > 0;
+  console.log('🔍 hasAdditionalFeatures:', result, 'length:', additionalFeaturesList.value.length);
+  return result;
+});
     const hasMortgageInfo = computed(() => {
       if (!property.value) return false;
       return property.value.mortgage_status || 
@@ -2710,7 +2773,8 @@ const revertFromConverted = async () => {
           console.log('Area Data:', property.value.area);
           console.log('Area Hierarchy:', property.value.area?.hierarchy);
           console.log('Area Parent:', property.value.area?.parent);
-          
+                console.log('📦 Additional features:', property.value.additional_features);
+
           if (property.value.gallery_images && property.value.gallery_images.length > 0) {
             currentMainImage.value = getImageUrl(property.value.main_image);
           }
@@ -4795,7 +4859,9 @@ const openDriveLink = () => {
   formatPaymentPlan,
   parsePaymentPlans ,
   handleCancelViewingClick ,
-   openDriveLink
+   openDriveLink,
+   hasAdditionalFeatures,
+   additionalFeaturesList
     };
   },
 

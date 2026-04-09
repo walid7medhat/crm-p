@@ -77,6 +77,13 @@ $listingId = $this->route('property');
             'project_floor_plan_ids.*' => 'nullable|exists:floor_plan_images,id',
             
             'floor_plans_source' => 'nullable|array',
+              'additional_features' => 'sometimes|array',
+            'additional_features.maid' => 'sometimes|boolean',
+            'additional_features.storage' => 'sometimes|boolean',
+            'additional_features.study' => 'sometimes|boolean',
+            'additional_features.store' => 'sometimes|boolean',
+            'additional_features.laundry' => 'sometimes|boolean',
+            'additional_features.driver' => 'sometimes|boolean',
         ];
 
         // File upload rules - always nullable for updates

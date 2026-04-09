@@ -748,6 +748,7 @@ public function getMatchingListings(Request $request)
                if ($request->has('floor_plans_source')) {
                     $data['floor_plans_source'] = json_encode($request->floor_plans_source);
                 }
+                
                 // Create listing
                 $listing = Listing::create(array_merge($data, [
                     'added_by' => auth()->id(),

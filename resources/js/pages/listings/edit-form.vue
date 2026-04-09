@@ -236,7 +236,21 @@
                 @keydown="preventNumberInvalidKeys"
                 />
               </div>
-
+             <div class="col-md-12">
+              <label class="form-label">Additional Features</label>
+              <div class="listing-feature-grid">
+                <button
+                  v-for="feature in listingFeatureOptions"
+                  :key="feature.key"
+                  type="button"
+                  class="listing-feature-item"
+                  :class="{ 'is-selected': form[feature.key] }"
+                  @click="form[feature.key] = !form[feature.key]"
+                >
+                  <span class="listing-feature-label">{{ feature.label }}</span>
+                </button>
+              </div>
+            </div>
               <!-- Comment -->
               <div class="col-md-12">
                 <label class="form-label">Note</label>
@@ -1269,7 +1283,14 @@ const hotDealOptions = ['Yes', 'No'];
 const selectedProjectFloorPlan = ref(null);
 const uploadedFloorPlan = ref(null);
 
-
+const listingFeatureOptions = [
+  { key: 'maid', label: 'Maid' },
+  { key: 'storage', label: 'Storage' },
+  { key: 'study', label: 'Study' },
+  { key: 'store', label: 'Store' },
+  { key: 'laundry', label: 'Laundry' },
+  { key: 'driver', label: 'Driver' },
+];
 const form = ref({
   title: "",
   unit_number: "",
@@ -1302,6 +1323,12 @@ const form = ref({
   payment_plans: [],
   payment_plan: "",
    is_hot_deal: "",
+    maid: false,
+  storage: false,
+  study: false,
+  store: false,
+  laundry: false,
+  driver: false,
 });
 
 // Computed Properties
@@ -1604,7 +1631,44 @@ const fetchPropertyData = async (id) => {
       payment_plan: paymentPlanString || "",
        canShowOwner: propertyData.canShowOwner 
     };
-    
+    // 🔧 Fix: Load additional features from API
+if (propertyData.additional_features) {
+  console.log('🎯 Loading additional features:', propertyData.additional_features);
+  
+  form.value.maid = propertyData.additional_features.maid === true || 
+                    propertyData.additional_features.maid === 1 || 
+                    propertyData.additional_features.maid === '1';
+  
+  form.value.storage = propertyData.additional_features.storage === true || 
+                       propertyData.additional_features.storage === 1 || 
+                       propertyData.additional_features.storage === '1';
+  
+  form.value.study = propertyData.additional_features.study === true || 
+                     propertyData.additional_features.study === 1 || 
+                     propertyData.additional_features.study === '1';
+  
+  form.value.store = propertyData.additional_features.store === true || 
+                     propertyData.additional_features.store === 1 || 
+                     propertyData.additional_features.store === '1';
+  
+  form.value.laundry = propertyData.additional_features.laundry === true || 
+                       propertyData.additional_features.laundry === 1 || 
+                       propertyData.additional_features.laundry === '1';
+  
+  form.value.driver = propertyData.additional_features.driver === true || 
+                      propertyData.additional_features.driver === 1 || 
+                      propertyData.additional_features.driver === '1';
+  
+        console.log('✅ Additional features loaded:', {
+          maid: form.value.maid,
+          storage: form.value.storage,
+          study: form.value.study,
+          store: form.value.store,
+          laundry: form.value.laundry,
+          driver: form.value.driver
+        });
+      }
+          
     existingFloorPlans.value = propertyData.floor_plans || [];
     existingGalleryImages.value = propertyData.gallery_images || [];
     existingAdditionalDocuments.value = propertyData.additional_documents || [];
@@ -3002,7 +3066,12 @@ const handleSubmit = async (action = 'draft') => {
       });
     }
     formData.append('is_hot_deal', form.value.is_hot_deal || 'No');
-    
+    formData.append('additional_features[maid]', form.value.maid ? 1 : 0);
+    formData.append('additional_features[storage]', form.value.storage ? 1 : 0);
+    formData.append('additional_features[study]', form.value.study ? 1 : 0);
+    formData.append('additional_features[store]', form.value.store ? 1 : 0);
+    formData.append('additional_features[laundry]', form.value.laundry ? 1 : 0);
+    formData.append('additional_features[driver]', form.value.driver ? 1 : 0);
     const textFields = {
       'unit_number': form.value.unit_number,
       'ownership_type': form.value.ownership_type,
@@ -3891,5 +3960,52 @@ body.swal2-toast-shown  {
     flex: 0 0 100%;
     max-width: 100%;
   }
+}
+.listing-feature-grid {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-top: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.listing-feature-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  height: 30px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: 96px;
+}
+
+.listing-feature-item:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.listing-feature-item.is-selected {
+  border-color: #f59e0b;
+  background: #fff7e6;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15);
+}
+
+.listing-feature-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #334155;
+  text-align: center;
+  flex: 1;
 }
 </style>

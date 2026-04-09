@@ -2541,7 +2541,14 @@ const handleSubmit = async (action = 'draft') => {
     formData.append('area_id', form.value.area.id);
     formData.append('unit_view_id', form.value.unit_view?.id ?? "");
     formData.append('layout_type_id', form.value.layout_type?.id ?? "");
-    
+
+  formData.append('additional_features[maid]', form.value.maid ? 1 : 0);
+  formData.append('additional_features[storage]', form.value.storage ? 1 : 0);
+  formData.append('additional_features[study]', form.value.study ? 1 : 0);
+  formData.append('additional_features[store]', form.value.store ? 1 : 0);
+  formData.append('additional_features[laundry]', form.value.laundry ? 1 : 0);
+  formData.append('additional_features[driver]', form.value.driver ? 1 : 0);
+
     if (form.value.rented_status) formData.append('rented_status', form.value.rented_status);
     if (form.value.rented_until) formData.append('rented_until', form.value.rented_until);
     if (form.value.payment_plan) formData.append('payment_plan', form.value.payment_plan);
@@ -2574,12 +2581,7 @@ const handleSubmit = async (action = 'draft') => {
       'occupancy_status': form.value.occupancyStatus, 'mortgage_amount': form.value.mortgageAmount,
       'rent_expiry_date': form.value.rentExpiryDate, 'rent_amount': form.value.rentAmount,
       'mortgage_comment': form.value.mortgageComment,
-      'maid': form.value.maid ? 1 : 0,
-      'storage': form.value.storage ? 1 : 0,
-      'study': form.value.study ? 1 : 0,
-      'store': form.value.store ? 1 : 0,
-      'laundry': form.value.laundry ? 1 : 0,
-      'driver': form.value.driver ? 1 : 0,
+     
     };
 
     Object.entries(textFields).forEach(([key, value]) => {

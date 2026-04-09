@@ -220,6 +220,14 @@ $allowedAgentIds = [];
             'is_hot_deal'=>$this->is_hot_deal =='Yes' && $this->hot_deal_approved_by && $this->hot_deal_approved_at ? $this->is_hot_deal :'No',
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
+             'additional_features' => [
+                'maid' => (bool) ($this->additional_features['maid'] ?? false),
+                'storage' => (bool) ($this->additional_features['storage'] ?? false),
+                'study' => (bool) ($this->additional_features['study'] ?? false),
+                'store' => (bool) ($this->additional_features['store'] ?? false),
+                'laundry' => (bool) ($this->additional_features['laundry'] ?? false),
+                'driver' => (bool) ($this->additional_features['driver'] ?? false),
+            ],
         ];
     }
 }

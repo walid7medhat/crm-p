@@ -27,8 +27,9 @@ class Listing extends Model
         'assigned_at'=>'datetime',
         'converted_at'=>'datetime',
         //  'rented_until' => 'date',
-          'payment_plan' => 'array',
-             'floor_plans_source' => 'array',
+        'payment_plan' => 'array',
+        'floor_plans_source' => 'array',
+        'additional_features' => 'array',
         
 
     ];
