@@ -215,13 +215,16 @@
                    <div class="info-item" v-if="hasAdditionalFeatures">
                         <span class="info-label">Additional Features</span>
                         <div class="info-value">
-                          <div class="payment-plans-container">
+                          <div class="additional-field">
                             <span v-for="(feature, index) in additionalFeaturesList" 
                                   :key="index" 
-                                  class="badge bg-primary me-1 mb-1">
-                              <i class="fas fa-check-circle me-1"></i>
+                                  class="">
+                            
                               {{ feature }}
+                               <span v-if="index < additionalFeaturesList.length - 1" class="separator">-</span>
                             </span>
+                            
+
                           </div>
                         </div>
                       </div>
@@ -3766,6 +3769,18 @@ const createSlide2 = () => {
       paymentPlanText = String(paymentPlans);
     }
   }
+   // ✅ Get Additional Features
+  const additionalFeatures = property.value?.additional_features || {};
+  const additionalFeaturesList = [];
+  
+  if (additionalFeatures.maid) additionalFeaturesList.push('Maid');
+  if (additionalFeatures.storage) additionalFeaturesList.push('Storage');
+  if (additionalFeatures.study) additionalFeaturesList.push('Study');
+  if (additionalFeatures.store) additionalFeaturesList.push('Store');
+  if (additionalFeatures.laundry) additionalFeaturesList.push('Laundry');
+  if (additionalFeatures.driver) additionalFeaturesList.push('Driver');
+  
+  const additionalFeaturesText = additionalFeaturesList.join(', ');
 
   return `
     <div style="width:${PDF_CONFIG.pageWidth}mm !important; height:${PDF_CONFIG.pageHeight}mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:white !important; position:relative !important; overflow:hidden !important;">
@@ -3811,6 +3826,12 @@ const createSlide2 = () => {
                 <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
                   <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Payment Plans</span>
                   <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${paymentPlanText}</span>
+                </li>
+              ` : ''}
+                 ${additionalFeaturesText ? `
+                <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
+                  <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Additional Features</span>
+                  <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${additionalFeaturesText}</span>
                 </li>
               ` : ''}
             </ul>
@@ -7816,5 +7837,8 @@ ease;
     .approved-info{
         padding: 6px;
     }
+}
+.additional-field span{
+margin: 0 2px;
 }
 </style>
