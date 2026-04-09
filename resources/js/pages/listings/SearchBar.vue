@@ -21,8 +21,15 @@
           class="custom-select listing-main-location"
           @update:modelValue="handleFilterChange"
         >
-          <template #open-indicator="{ attributes }">
-            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+           <template #open-indicator="{ attributes }">
+              <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+              </span>
+          </template>
+          <template #clear-indicator="{ attributes }">
+            <span v-bind="attributes">
+              <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
+            </span>
           </template>
           <template #option="option">
             <div class="location-option">
@@ -76,8 +83,15 @@
           class="custom-select listing-pill-select listing-pill-select-sm"
           @update:modelValue="handleFilterChange"
         >
-          <template #open-indicator="{ attributes }">
-            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+           <template #open-indicator="{ attributes }">
+                <span v-bind="attributes">
+                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+            </template>
+            <template #clear-indicator="{ attributes }">
+            <span v-bind="attributes">
+              <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
+            </span>
           </template>
         </v-select>
 
@@ -92,8 +106,15 @@
           class="custom-select listing-pill-select"
           @update:modelValue="handleFilterChange"
         >
-          <template #open-indicator="{ attributes }">
-            <i v-bind="attributes" class="ri-arrow-down-s-line dropdown-icon"></i>
+           <template #open-indicator="{ attributes }">
+              <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+              </span>
+          </template>
+          <template #clear-indicator="{ attributes }">
+            <span v-bind="attributes">
+              <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
+            </span>
           </template>
         </v-select>
 
@@ -200,7 +221,18 @@
                   placeholder="Select status"
                   class="custom-select listing-pop-select"
                   @update:modelValue="handleFilterChange"
-                />
+                >
+                 <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+                  <template #clear-indicator="{ attributes }">
+                    <span v-bind="attributes">
+                      <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
+                    </span>
+                  </template>
+              </v-select>
               </div>
               <div>
                 <label>Sort By</label>
@@ -214,7 +246,18 @@
                   placeholder="Most Recent"
                   class="custom-select listing-pop-select"
                   @update:modelValue="handleFilterChange"
-                />
+                >
+               <template #open-indicator="{ attributes }">
+                    <span v-bind="attributes">
+                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                    </span>
+                </template>
+                <template #clear-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                    <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+              </v-select>
               </div>
               <div class="listing-pop-field--full">
                 <label>Agent</label>
@@ -228,7 +271,18 @@
                   placeholder="Select agent"
                   class="custom-select listing-pop-select"
                   @update:modelValue="handleFilterChange"
-                />
+                >
+               <template #open-indicator="{ attributes }">
+                    <span v-bind="attributes">
+                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                    </span>
+                </template>
+                <template #clear-indicator="{ attributes }">
+                    <span v-bind="attributes">
+                      <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
+                    </span>
+                  </template>
+              </v-select>
               </div>
             </div>
 
@@ -287,7 +341,18 @@
             placeholder="Price & date sort"
             class="custom-select listing-status-row-sort-select"
             @update:modelValue="setQuickSort"
-          />
+          >
+         <template #open-indicator="{ attributes }">
+            <span v-bind="attributes">
+                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+            </span>
+        </template>
+        <template #clear-indicator="{ attributes }">
+          <span v-bind="attributes">
+            <iconify-icon icon="lucide:x" class="vs__clear-indicator-icon"></iconify-icon>
+          </span>
+        </template>
+          </v-select>
         </div>
       </div>
     </div>
@@ -1811,6 +1876,13 @@ fetchProjects()
   fill: #666 !important;
 }
 
+:deep(.vs__clear-indicator) {
+  stroke: #666;
+  stroke-width: 1;
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+}
 :deep(.vs__deselect) {
   border: none !important;
   box-shadow: none !important;
@@ -1891,7 +1963,7 @@ fetchProjects()
 .listing-main-search {
   position: relative;
   margin-bottom: 12px;
-  max-width: 460px;
+  max-width: 560px;
 }
 
 .listing-main-search-icon {
