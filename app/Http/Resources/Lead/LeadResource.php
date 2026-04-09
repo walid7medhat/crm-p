@@ -65,6 +65,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'interested_in' => $this->interested_in,
             'bedrooms' => $this->bedrooms===0 || $this->bedrooms==='0'?'studio':$this->bedrooms,
             'purpose_buying' => $this->purpose_buying,
+            'extra_client_requirements' => $this->extra_client_requirements ?? [],
             'nationality' => $this->nationality,
             'citizenship_program' => $this->citizenship_program,
             

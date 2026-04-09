@@ -118,20 +118,20 @@ const show = ref(props.modelValue)
 const activeTabs = ref(['leads'])
 
 const leadFields = ref([
-    { id: 'first_name', label: 'First Name', checked: true },
+    { id: 'first_name', label: 'Client Name', checked: true },
     { id: 'lead_name', label: 'Lead Name', checked: true },
-    { id: 'closed', label: 'Converted', checked: false },
     { id: 'created_on', label: 'Created On', checked: true },
+    { id: 'assigned_on', label: 'Assign On', checked: true },
     { id: 'work_phone', label: 'Phone', checked: true },
     { id: 'responsible_person', label: 'Responsible Person', checked: true },
     { id: 'source', label: 'Source', checked: true },
     { id: 'lead_branch_source', label: 'Lead Branch Source', checked: true },
-    { id: 'stage', label: 'Stage', checked: true },
     { id: 'email', label: 'Email', checked: true },
     { id: 'bedrooms', label: 'Bedrooms', checked: false },
     { id: 'office', label: 'Branch', checked: true },
     { id: 'team', label: 'Team', checked: true },
     { id: 'location', label: 'Location / Area', checked: false },
+    { id: 'quality_status', label: 'Quality Status', checked: false },
     { id: 'interaction_result', label: 'Call Result', checked: false },
     { id: 'property_type', label: 'Property Type', checked: false },
     { id: 'lead_type', label: 'Lead Type', checked: false },
@@ -140,10 +140,11 @@ const leadFields = ref([
 ])
 
 const leadFieldSections = [
-    { id: 'lead-core', title: 'Lead Information', fieldIds: ['first_name', 'lead_name', 'work_phone', 'email', 'created_on', 'closed'] },
-    { id: 'assignment', title: 'Assignment', fieldIds: ['responsible_person', 'lead_branch_source', 'office', 'team', 'stage', 'source'] },
-    { id: 'source', title: 'Source & Follow-up', fieldIds: ['interaction_result'] },
-    { id: 'client-req', title: 'Client Requirement', fieldIds: ['location', 'property_type', 'lead_type', 'property_status', 'bedrooms', 'budget_from'] }
+    { id: 'lead-core', title: 'Lead Information', fieldIds: ['first_name', 'lead_name', 'work_phone', 'email', 'created_on', 'assigned_on'] },
+    { id: 'assignment', title: 'Assignment', fieldIds: ['responsible_person', 'office', 'team'] },
+    { id: 'source', title: 'Source', fieldIds: ['source', 'lead_branch_source'] },
+    { id: 'qualification', title: 'Qualification', fieldIds: ['quality_status', 'lead_type', 'property_status', 'interaction_result'] },
+    { id: 'client-req', title: 'Client Requirement', fieldIds: ['location', 'property_type', 'bedrooms', 'budget_from'] }
 ]
 
 const groupedLeadSections = computed(() =>
@@ -172,9 +173,9 @@ const setSectionChecked = (sectionId, checked) => {
 }
 
 const defaultFieldIds = [
-    'first_name', 'lead_name', 'created_on', 'work_phone', 
-    'responsible_person', 'lead_branch_source', 'office', 'stage', 
-    'email', 'source', 'team'
+    'first_name', 'lead_name', 'created_on', 'assigned_on', 'work_phone',
+    'responsible_person', 'office',
+    'email', 'source', 'lead_branch_source', 'team'
 ]
 
 const restoreDefaultFields = () => {

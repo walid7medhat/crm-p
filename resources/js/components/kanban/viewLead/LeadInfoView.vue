@@ -98,87 +98,401 @@
             </div>
         </div>
 
-        <div class="info-section" v-if="hasClientRequiredInfo">
-            <div class="d-flex align-items-center justify-content-between mb-3">
+        <div v-if="showClientRequirementArea" class="client-requirement-wrap">
+            <div class="client-requirement-header-row">
                 <div class="info-section-title mb-0">Client Requirement</div>
-                <!-- emit(edit-request) for all info-->
-                <button v-if="showEditIcon && canEdit" class="lead-edit-inline-btn" @click="emit('edit-section','clientRequirement')">
-                    <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:pencil"></iconify-icon>
-                </button>
+                <div class="client-requirement-header-actions">
+                    <button
+                        v-if="showEditIcon && canEdit"
+                        type="button"
+                        class="lead-edit-inline-btn client-req-add-btn"
+                        title="Add client requirement"
+                        @click="openClientReqModal(null)"
+                    >
+                        <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:plus"></iconify-icon>
+                    </button>
+                </div>
             </div>
-            <template v-if="hasClientRequiredInfo">
-                <div class="client-requirement-list">
-                 <div class="info-group client-req-location" v-if="lead?.area">
-                    <label class="form-label-custom">Location</label>
-                    <div class="info-value location-selected-view">
-                        <i class="ri-map-pin-line location-option-icon"></i>
-                        <div class="location-option-text">
-                            <span class="location-option-name">{{ locationFirstLine(lead?.area) }}</span>
-                            <span class="location-option-subtitle">{{ locationSecondLine(lead?.area) }}</span>
+
+            <div class="client-requirement-panel">
+                <template v-if="hasPrimaryClientBlockContent">
+                    <div class="client-req-block">
+                        <div v-if="showEditIcon && canEdit" class="client-req-block-actions">
+                            <div class="client-req-action-main">
+                                <button
+                                    type="button"
+                                    class="client-qualification-btn"
+                                    :class="{ 'is-active': qualificationSourceId === 'primary' }"
+                                    title="Use this requirement for Lead Qualification"
+                                    @click="selectQualificationSource('primary')"
+                                >
+                                    <iconify-icon icon="lucide:badge-check" />
+                                    <span>{{ qualificationSourceId === 'primary' ? 'Selected for Qualification' : 'Use for Qualification' }}</span>
+                                </button>
+                            </div>
+                            <span class="client-req-created-at">{{ formatUpdatedAtDisplay(lead?.updated_at) }}</span>
+                            <button
+                                type="button"
+                                class="lead-edit-inline-btn"
+                                title="Edit primary requirement"
+                                @click="emit('edit-section', 'clientRequirement')"
+                            >
+                                <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:pencil"></iconify-icon>
+                            </button>
+                        </div>
+                        <div v-if="hasPrimaryClientCoreContent" class="client-requirement-list">
+                            <div class="info-group client-req-location" v-if="lead?.area">
+                                <label class="form-label-custom">Location</label>
+                                <div class="info-value location-selected-view">
+                                    <i class="ri-map-pin-line location-option-icon"></i>
+                                    <div class="location-option-text">
+                                        <span class="location-option-name">{{ locationFirstLine(lead?.area) }}</span>
+                                        <span class="location-option-subtitle">{{ locationSecondLine(lead?.area) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="info-group client-req-property-type" v-if="lead?.property_type">
+                                <label class="form-label-custom">Property Type</label>
+                                <div class="info-value">{{ lead?.property_type || '—' }}</div>
+                            </div>
+                            <div class="info-group client-req-lead-type" v-if="lead?.lead_type">
+                                <label class="form-label-custom">Lead Type</label>
+                                <div class="info-value">{{ displayLeadType(lead?.lead_type) }}</div>
+                            </div>
+                            <div class="info-group client-req-property-status" v-if="lead?.property_status">
+                                <label class="form-label-custom">Property Status</label>
+                                <div class="info-value">{{ displayPropertyStatus(lead?.property_status) }}</div>
+                            </div>
+                            <div class="info-group client-req-bedrooms" v-if="lead?.bedrooms !== null && lead?.bedrooms !== undefined && lead?.bedrooms !== ''">
+                                <label class="form-label-custom">Bedrooms</label>
+                                <div class="info-value">{{ formatBedroomsDisplay(lead?.bedrooms) }}</div>
+                            </div>
+                            <div
+                                class="info-group client-req-budget"
+                                v-if="formatLeadBudgetRange(lead)"
+                            >
+                                <label class="form-label-custom">Budget (AED)</label>
+                                <div class="info-value">{{ formatLeadBudgetRange(lead) }}</div>
+                            </div>
+                            <div class="info-group client-req-purpose" v-if="lead?.purpose_buying">
+                                <label class="form-label-custom">Purpose Of Purchase</label>
+                                <div class="info-value">{{ lead?.purpose_buying || '—' }}</div>
+                            </div>
+                        </div>
+
+                        <div v-if="hasClientTailContent" class="client-requirement-list client-requirement-list--tail">
+                            <div class="info-group" v-if="lead?.branch != null">
+                                <label class="form-label-custom">Shared Branch</label>
+                                <div class="info-value">{{ formatWithMapping(lead?.branch, {
+                                    'Abu Dhabi': 'Abu Dhabi',
+                                    'Dubai': 'Dubai',
+                                    'Sharjah': 'Sharjah'
+                                }) }}</div>
+                            </div>
+                            <div class="info-group" v-if="lead?.available_date != null">
+                                <label class="form-label-custom">Available Date</label>
+                                <div class="info-value">{{ lead?.available_date != null ? lead.available_date : '—' }}</div>
+                            </div>
+                            <div class="info-group" v-if="lead?.source_information">
+                                <label class="form-label-custom">Source Information</label>
+                                <div class="info-value">{{ lead?.source_information || '—' }}</div>
+                            </div>
+                            <div class="info-group" v-if="lead?.unqualified_status">
+                                <label class="form-label-custom">Unqualified Status</label>
+                                <div class="info-value">{{ lead?.unqualified_status || '—' }}</div>
+                            </div>
+                            <div class="info-group" v-if="lead?.why_lost_lead">
+                                <label class="form-label-custom">Lost For</label>
+                                <div class="info-value">{{ formatLostReason(lead?.why_lost_lead) }}</div>
+                            </div>
+                            <div class="info-group" v-for="(value, key) in clientRequiredMetaFields" :key="`client-${key}`">
+                                <label class="form-label-custom">{{ formatQuestion(key) }}</label>
+                                <div class="info-value">{{ value }}</div>
+                            </div>
                         </div>
                     </div>
+                </template>
+
+                <template
+                    v-for="(req, idx) in visibleExtraClientRequirements"
+                    :key="req.id || `extra-${idx}`"
+                >
+                    <div
+                        v-if="showClientReqEditor && editingExtraIndex === idx"
+                        class="info-section client-req-inline-editor"
+                    >
+                        <div class="info-section-title mb-2">{{ clientReqModalTitle }}</div>
+                        <div class="client-req-modal-body">
+                            <div class="info-group">
+                                <label class="form-label-custom">Location</label>
+                                <v-select v-model="clientReqForm.area_id" :options="clientReqAreas" :reduce="(a) => a.id" :disabled="isLoadingClientReqAreas" label="name" placeholder="Select area" class="custom-v-select client-req-vselect location-select" :append-to-body="true">
+                                    <template #option="option">
+                                        <div class="location-option">
+                                            <i class="ri-map-pin-line location-option-icon"></i>
+                                            <div class="location-option-text">
+                                                <span class="location-option-name">{{ locationFirstLineFromOption(option) }}</span>
+                                                <span class="location-option-subtitle">{{ locationSecondLineFromOption(option) }}</span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template #selected-option="option">
+                                        <div v-if="option" class="location-selected">
+                                            <span class="location-selected-name">{{ locationFirstLineFromOption(option) }}</span>
+                                            <span class="location-selected-subtitle">{{ locationSecondLineFromOption(option) }}</span>
+                                        </div>
+                                    </template>
+                                </v-select>
+                            </div>
+                            <div class="info-group">
+                                <label class="form-label-custom">Property Status <span class="text-danger">*</span></label>
+                                <v-select v-model="clientReqForm.property_status" :options="clientReqPropertyStatusOptions" :reduce="(o) => o.value" label="text" placeholder="Select Property Status" class="custom-v-select client-req-vselect" :append-to-body="true" />
+                            </div>
+                            <div class="info-group">
+                                <label class="form-label-custom">Property Type</label>
+                                <v-select v-model="clientReqForm.property_type_id" :options="clientReqPropertyTypeOptions" :reduce="(o) => o.value" label="text" placeholder="Select Property Type" class="custom-v-select client-req-vselect" :append-to-body="true" />
+                            </div>
+                            <div class="info-group">
+                                <label class="form-label-custom">Lead Type <span class="text-danger">*</span></label>
+                                <v-select v-model="clientReqForm.lead_type" :options="clientReqLeadTypeOptions" :reduce="(o) => o.value" label="text" placeholder="Select Lead Type" class="custom-v-select client-req-vselect" :append-to-body="true" />
+                            </div>
+                            <div class="info-group">
+                                <label class="form-label-custom">Bedrooms</label>
+                                <v-select v-model="clientReqForm.bedrooms" :options="clientReqBedroomOptions" :reduce="(o) => o.value" label="text" placeholder="Select Bedrooms" class="custom-v-select client-req-vselect" :append-to-body="true" />
+                            </div>
+                            <div class="info-group">
+                                <label class="form-label-custom">Quality Status</label>
+                                <v-select v-model="clientReqForm.status_lead" :options="clientReqQualityStatusOptions" :reduce="(o) => o.value" label="text" placeholder="Select Quality Status" class="custom-v-select client-req-vselect" :append-to-body="true" />
+                            </div>
+                            <div class="info-group client-req-budget-row">
+                                <label class="form-label-custom">Budget (AED)</label>
+                                <div class="client-req-budget-inputs">
+                                    <input v-model="clientReqBudgetFromDisplay" type="text" inputmode="numeric" placeholder="From" class="form-control custom-input flex-grow-1" @input="onClientReqBudgetFrom" />
+                                    <input v-model="clientReqBudgetToDisplay" type="text" inputmode="numeric" placeholder="To" class="form-control custom-input flex-grow-1" @input="onClientReqBudgetTo" />
+                                </div>
+                            </div>
+                            <div class="info-group info-group--full mb-0">
+                                <label class="form-label-custom">Purpose Of Purchase</label>
+                                <v-select v-model="clientReqForm.purpose_buying" :options="clientReqPurposeOptions" :reduce="(o) => o.value" label="text" placeholder="Select Purpose" class="custom-v-select client-req-vselect" :append-to-body="true" />
+                            </div>
+                            <div v-if="clientReqSaveError" class="alert alert-danger py-2 small mt-2 mb-0">{{ clientReqSaveError }}</div>
+                            <div class="modal-footer-custom mt-3 d-flex justify-content-end gap-2">
+                                <b-button variant="light" :disabled="isSavingClientReq" @click="closeClientReqEditor">Cancel</b-button>
+                                <b-button variant="warning" :disabled="isSavingClientReq" @click="saveClientRequirement">
+                                    <b-spinner v-if="isSavingClientReq" small class="me-1"></b-spinner>
+                                    {{ isSavingClientReq ? 'Saving…' : 'Save' }}
+                                </b-button>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        v-else
+                        class="client-req-block client-req-block--extra"
+                    >
+                        <div v-if="showEditIcon && canEdit" class="client-req-block-actions">
+                            <div class="client-req-action-main">
+                                <button
+                                    type="button"
+                                    class="client-qualification-btn"
+                                    :class="{ 'is-active': qualificationSourceId === req.id }"
+                                    title="Use this requirement for Lead Qualification"
+                                    @click="selectQualificationSource(req.id)"
+                                >
+                                    <iconify-icon icon="lucide:badge-check" />
+                                    <span>{{ qualificationSourceId === req.id ? 'Selected for Qualification' : 'Use for Qualification' }}</span>
+                                </button>
+                            </div>
+                            <span class="client-req-created-at">{{ formatUpdatedAtDisplay(req.updated_at || req.created_at) }}</span>
+                            <button
+                                type="button"
+                                class="lead-edit-inline-btn"
+                                title="Edit this requirement"
+                                @click="openClientReqModal(idx)"
+                            >
+                                <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:pencil"></iconify-icon>
+                            </button>
+                        </div>
+                        <div class="client-requirement-list">
+                            <div class="info-group client-req-location" v-if="req.area_label || req.area_id">
+                                <label class="form-label-custom">Location</label>
+                                <div class="info-value location-selected-view">
+                                    <i class="ri-map-pin-line location-option-icon"></i>
+                                    <div class="location-option-text">
+                                        <span class="location-option-name">{{ locationFirstLine(req.area_label || '—') }}</span>
+                                        <span class="location-option-subtitle">{{ locationSecondLine(req.area_label || '') }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="info-group" v-if="req.property_type_label">
+                                <label class="form-label-custom">Property Type</label>
+                                <div class="info-value">{{ req.property_type_label }}</div>
+                            </div>
+                            <div class="info-group" v-if="req.lead_type">
+                                <label class="form-label-custom">Lead Type</label>
+                                <div class="info-value">{{ displayLeadType(req.lead_type) }}</div>
+                            </div>
+                            <div class="info-group" v-if="req.property_status">
+                                <label class="form-label-custom">Property Status</label>
+                                <div class="info-value">{{ displayPropertyStatus(req.property_status) }}</div>
+                            </div>
+                            <div class="info-group" v-if="req.bedrooms !== null && req.bedrooms !== undefined && req.bedrooms !== ''">
+                                <label class="form-label-custom">Bedrooms</label>
+                                <div class="info-value">{{ formatBedroomsDisplay(req.bedrooms) }}</div>
+                            </div>
+                            <div class="info-group" v-if="formatLeadBudgetRange(req)">
+                                <label class="form-label-custom">Budget (AED)</label>
+                                <div class="info-value">{{ formatLeadBudgetRange(req) }}</div>
+                            </div>
+                            <div class="info-group" v-if="req.purpose_buying">
+                                <label class="form-label-custom">Purpose Of Purchase</label>
+                                <div class="info-value">{{ req.purpose_buying }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <div v-if="clientRequirementEmptyHint" class="info-empty client-req-empty-hint">
+                    No client requirement yet. Use + to add one, or edit the lead for the primary fields.
                 </div>
-                <div class="info-group client-req-property-type" v-if="lead?.property_type">
+            </div>
+        </div>
+
+        <div
+            v-if="showClientReqEditor && editingExtraIndex === null"
+            ref="newClientReqEditorRef"
+            class="info-section client-req-inline-editor"
+        >
+            <div class="info-section-title mb-2">{{ clientReqModalTitle }}</div>
+            <div class="client-req-modal-body">
+                <div class="info-group">
+                    <label class="form-label-custom">Location</label>
+                    <v-select
+                        v-model="clientReqForm.area_id"
+                        :options="clientReqAreas"
+                        :reduce="(a) => a.id"
+                        :disabled="isLoadingClientReqAreas"
+                        label="name"
+                        placeholder="Select area"
+                        class="custom-v-select client-req-vselect location-select"
+                        :append-to-body="true"
+                    >
+                        <template #option="option">
+                            <div class="location-option">
+                                <i class="ri-map-pin-line location-option-icon"></i>
+                                <div class="location-option-text">
+                                    <span class="location-option-name">{{ locationFirstLineFromOption(option) }}</span>
+                                    <span class="location-option-subtitle">{{ locationSecondLineFromOption(option) }}</span>
+                                </div>
+                            </div>
+                        </template>
+                        <template #selected-option="option">
+                            <div v-if="option" class="location-selected">
+                                <span class="location-selected-name">{{ locationFirstLineFromOption(option) }}</span>
+                                <span class="location-selected-subtitle">{{ locationSecondLineFromOption(option) }}</span>
+                            </div>
+                        </template>
+                    </v-select>
+                </div>
+                <div class="info-group">
+                    <label class="form-label-custom">Property Status <span class="text-danger">*</span></label>
+                    <v-select
+                        v-model="clientReqForm.property_status"
+                        :options="clientReqPropertyStatusOptions"
+                        :reduce="(o) => o.value"
+                        label="text"
+                        placeholder="Select Property Status"
+                        class="custom-v-select client-req-vselect"
+                        :append-to-body="true"
+                    />
+                </div>
+                <div class="info-group">
                     <label class="form-label-custom">Property Type</label>
-                    <div class="info-value">{{ lead?.property_type || '—' }}</div>
+                    <v-select
+                        v-model="clientReqForm.property_type_id"
+                        :options="clientReqPropertyTypeOptions"
+                        :reduce="(o) => o.value"
+                        label="text"
+                        placeholder="Select Property Type"
+                        class="custom-v-select client-req-vselect"
+                        :append-to-body="true"
+                    />
                 </div>
-                 <div class="info-group client-req-lead-type" v-if="lead?.lead_type">
-                    <label class="form-label-custom">Lead Type</label>
-                    <div class="info-value">{{ lead?.lead_type || '—' }}</div>
+                <div class="info-group">
+                    <label class="form-label-custom">Lead Type <span class="text-danger">*</span></label>
+                    <v-select
+                        v-model="clientReqForm.lead_type"
+                        :options="clientReqLeadTypeOptions"
+                        :reduce="(o) => o.value"
+                        label="text"
+                        placeholder="Select Lead Type"
+                        class="custom-v-select client-req-vselect"
+                        :append-to-body="true"
+                    />
                 </div>
-                 <div class="info-group client-req-property-status" v-if="lead?.property_status">
-                    <label class="form-label-custom">Property Status</label>
-                    <div class="info-value">{{ lead?.property_status || '—' }}</div>
-                </div>
-                <div class="info-group client-req-bedrooms" v-if="lead?.bedrooms">
+                <div class="info-group">
                     <label class="form-label-custom">Bedrooms</label>
-                    <div class="info-value">{{ lead?.bedrooms || '—' }}</div>
+                    <v-select
+                        v-model="clientReqForm.bedrooms"
+                        :options="clientReqBedroomOptions"
+                        :reduce="(o) => o.value"
+                        label="text"
+                        placeholder="Select Bedrooms"
+                        class="custom-v-select client-req-vselect"
+                        :append-to-body="true"
+                    />
                 </div>
-              
-                <div class="info-group client-req-budget" v-if="formatLeadBudgetRange(lead) && lead?.budget_from>0 && lead?.budget_to>0">
+                <div class="info-group">
+                    <label class="form-label-custom">Quality Status</label>
+                    <v-select
+                        v-model="clientReqForm.status_lead"
+                        :options="clientReqQualityStatusOptions"
+                        :reduce="(o) => o.value"
+                        label="text"
+                        placeholder="Select Quality Status"
+                        class="custom-v-select client-req-vselect"
+                        :append-to-body="true"
+                    />
+                </div>
+                <div class="info-group client-req-budget-row">
                     <label class="form-label-custom">Budget (AED)</label>
-                    <div class="info-value">{{ formatLeadBudgetRange(lead) }}</div>
+                    <div class="client-req-budget-inputs">
+                        <input
+                            v-model="clientReqBudgetFromDisplay"
+                            type="text"
+                            inputmode="numeric"
+                            placeholder="From"
+                            class="form-control custom-input flex-grow-1"
+                            @input="onClientReqBudgetFrom"
+                        />
+                        <input
+                            v-model="clientReqBudgetToDisplay"
+                            type="text"
+                            inputmode="numeric"
+                            placeholder="To"
+                            class="form-control custom-input flex-grow-1"
+                            @input="onClientReqBudgetTo"
+                        />
+                    </div>
                 </div>
-                <div class="info-group client-req-purpose" v-if="lead?.purpose_buying">
+                <div class="info-group info-group--full mb-0">
                     <label class="form-label-custom">Purpose Of Purchase</label>
-                    <div class="info-value">{{ lead?.purpose_buying || '—' }}</div>
+                    <v-select
+                        v-model="clientReqForm.purpose_buying"
+                        :options="clientReqPurposeOptions"
+                        :reduce="(o) => o.value"
+                        label="text"
+                        placeholder="Select Purpose"
+                        class="custom-v-select client-req-vselect"
+                        :append-to-body="true"
+                    />
                 </div>
-                 
-               
-               
-               
-                 <div class="info-group" v-if="lead?.branch != null">
-                    <label class="form-label-custom">Shared Branch</label>
-                    <div class="info-value">{{ formatWithMapping(lead?.branch, {
-                                                'Abu Dhabi': 'Abu Dhabi',
-                                                'Dubai': 'Dubai',
-                                                'Sharjah': 'Sharjah'
-                                            }) }}</div>
+                <div v-if="clientReqSaveError" class="alert alert-danger py-2 small mt-2 mb-0">{{ clientReqSaveError }}</div>
+                <div class="modal-footer-custom mt-3 d-flex justify-content-end gap-2">
+                    <b-button variant="light" :disabled="isSavingClientReq" @click="closeClientReqEditor">Cancel</b-button>
+                    <b-button variant="warning" :disabled="isSavingClientReq" @click="saveClientRequirement">
+                        <b-spinner v-if="isSavingClientReq" small class="me-1"></b-spinner>
+                        {{ isSavingClientReq ? 'Saving…' : 'Save' }}
+                    </b-button>
                 </div>
-                 <div class="info-group" v-if="lead?.available_date != null">
-                    <label class="form-label-custom">Available Date</label>
-                    <div class="info-value">{{ lead?.available_date != null ? lead.available_date : '—' }}</div>
-                </div>
-                <div class="info-group" v-if="lead?.source_information">
-                    <label class="form-label-custom">Source Information</label>
-                    <div class="info-value">{{ lead?.source_information || '—' }}</div>
-                </div>
-                 <div class="info-group" v-if="lead?.unqualified_status">
-                    <label class="form-label-custom">Unqualified Status</label>
-                    <div class="info-value">{{ lead?.unqualified_status || '—' }}</div>
-                </div>
-                 <div class="info-group" v-if="lead?.why_lost_lead">
-                    <label class="form-label-custom">Lost For</label>
-                    <div class="info-value">{{ formatLostReason(lead?.why_lost_lead) }}</div>
-                </div>
-                <div class="info-group" v-for="(value, key) in clientRequiredMetaFields" :key="`client-${key}`">
-                    <label class="form-label-custom">{{ formatQuestion(key) }}</label>
-                    <div class="info-value">{{ value }}</div>
-                </div>
-                </div>
-            </template>
-            <div v-else class="info-empty">
-                No additional information
             </div>
         </div>
 
@@ -361,10 +675,12 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { BButton, BModal, BFormInput, BSpinner } from 'bootstrap-vue-3'
+import vSelect from 'vue-select'
+import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
-import { formatLeadBudgetRange } from '@/utils/budgetInput'
+import { formatLeadBudgetRange, formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
 import MatchingPropertiesSection from './MatchingPropertiesSection.vue'
 
 const props = defineProps({
@@ -383,7 +699,7 @@ const props = defineProps({
     },
 })
 
-const emit = defineEmits(['person-updated', 'edit-request', 'edit-section'])
+const emit = defineEmits(['person-updated', 'edit-request', 'edit-section', 'lead-updated'])
 
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
 
@@ -516,6 +832,14 @@ const formatQuestion = (question) => {
         .replace(/_/g, ' ')
         .replace(/\b\w/g, l => l.toUpperCase())
 }
+
+const formatText = (raw) => {
+    if (raw == null || raw === '') return '—'
+    return String(raw)
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 // دالة لتنسيق lost reason
 const formatLostReason = (reason) => {
     if (!reason) return '—'
@@ -626,28 +950,708 @@ const hasAdditionalQuestions = computed(() => {
     return hasAdditionalFacebookQuestions.value || Object.keys(metaQuestions.value).length > 0
 })
 
-const hasClientRequiredInfo = computed(() => {
+const QUAL_META_ID = '__qualification_meta__'
+const QUAL_META_KIND = 'qualification_meta'
+
+const localExtraClientRequirements = ref([])
+
+watch(
+    () => props.lead?.extra_client_requirements,
+    (raw) => {
+        localExtraClientRequirements.value = Array.isArray(raw) ? [...raw] : []
+    },
+    { immediate: true }
+)
+
+const extraClientRequirementsList = computed(() =>
+    localExtraClientRequirements.value.filter((item) => item?._kind !== QUAL_META_KIND)
+)
+
+const qualificationSourceId = computed(() => {
+    const meta = localExtraClientRequirements.value.find((item) => item?._kind === QUAL_META_KIND)
+    const source = meta?.source || 'primary'
+    if (source === 'primary') return 'primary'
+    const exists = extraClientRequirementsList.value.some((req) => req.id === source)
+    return exists ? source : 'primary'
+})
+
+const hasPrimaryClientCoreContent = computed(() => {
+    const l = props.lead
+    if (!l) return false
+    const hasBudget =
+        formatLeadBudgetRange(l) && Number(l.budget_from) > 0 && Number(l.budget_to) > 0
     return Boolean(
-        props.lead?.bedrooms ||
-        props.lead?.area ||
-        props.lead?.property_type ||
-        props.lead?.source_information ||
-      
-        props.lead?.budget >0 ||
-        props.lead?.budget_from >0 ||
-        props.lead?.budget_to >0 ||
-        props.lead?.branch != null ||
-        props.lead?.available_date != null ||
-        props.lead?.status_lead != null ||
-        props.lead?.unqualified_status != null ||
-        props.lead?.why_lost_lead != null ||
-        Object.keys(clientRequiredMetaFields.value).length > 0
+        l.area ||
+            l.property_type ||
+            l.lead_type ||
+            l.property_status ||
+            (l.bedrooms !== null && l.bedrooms !== undefined && l.bedrooms !== '') ||
+            hasBudget ||
+            l.purpose_buying
     )
 })
+
+const hasClientTailContent = computed(() => {
+    return Boolean(
+        props.lead?.branch != null ||
+            props.lead?.available_date != null ||
+            props.lead?.source_information ||
+            props.lead?.unqualified_status ||
+            props.lead?.why_lost_lead ||
+            Object.keys(clientRequiredMetaFields.value).length > 0
+    )
+})
+
+const hasPrimaryClientBlockContent = computed(() => {
+    return hasPrimaryClientCoreContent.value || hasClientTailContent.value
+})
+
+const hasClientRequiredInfo = computed(() => {
+    return Boolean(
+        extraClientRequirementsList.value.length > 0 ||
+            props.lead?.bedrooms ||
+            props.lead?.area ||
+            props.lead?.property_type ||
+            props.lead?.lead_type ||
+            props.lead?.property_status ||
+            props.lead?.purpose_buying ||
+            props.lead?.source_information ||
+            props.lead?.budget > 0 ||
+            props.lead?.budget_from > 0 ||
+            props.lead?.budget_to > 0 ||
+            props.lead?.branch != null ||
+            props.lead?.available_date != null ||
+            props.lead?.status_lead != null ||
+            props.lead?.unqualified_status != null ||
+            props.lead?.why_lost_lead != null ||
+            Object.keys(clientRequiredMetaFields.value).length > 0
+    )
+})
+
+const showClientRequirementArea = computed(() => {
+    if (props.canEdit && props.showEditIcon) return true
+    return hasClientRequiredInfo.value
+})
+
+const clientRequirementEmptyHint = computed(() => {
+    return (
+        props.canEdit &&
+        props.showEditIcon &&
+        !hasPrimaryClientBlockContent.value &&
+        extraClientRequirementsList.value.length === 0
+    )
+})
+
+const displayLeadType = (v) => {
+    if (!v) return '—'
+    const m = { sale: 'Sale', rent: 'Rent' }
+    return m[String(v).toLowerCase()] || formatText(v)
+}
+
+const displayPropertyStatus = (v) => {
+    if (!v) return '—'
+    const m = { ready: 'Ready', off_plan: 'Off Plan', both: 'Both' }
+    return m[String(v).toLowerCase()] || formatText(v)
+}
+
+const formatBedroomsDisplay = (b) => {
+    if (b === null || b === undefined || b === '') return '—'
+    if (b === 0 || b === '0' || String(b).toLowerCase() === 'studio') return 'Studio'
+    return String(b)
+}
+
+const formatUpdatedAtDisplay = (input) => {
+    if (!input) return 'Updated: —'
+    const d = new Date(input)
+    if (Number.isNaN(d.getTime())) return 'Updated: —'
+    return `Updated: ${d.toLocaleDateString('en-GB')}`
+}
+
+const hasExtraBlockDisplay = (req) => {
+    if (!req) return false
+    const hasBudget = Number(req.budget_from) > 0 || Number(req.budget_to) > 0
+    return Boolean(
+        req.area_label ||
+            req.area_id ||
+            req.property_type_label ||
+            req.property_type_id ||
+            req.lead_type ||
+            req.property_status ||
+            req.status_lead ||
+            (req.bedrooms !== null && req.bedrooms !== undefined && req.bedrooms !== '') ||
+            hasBudget ||
+            req.purpose_buying
+    )
+}
+
+const visibleExtraClientRequirements = computed(() =>
+    extraClientRequirementsList.value.filter((req) => hasExtraBlockDisplay(req))
+)
+
+const locationFirstLineFromOption = (option) => {
+    const name = String(option?.name || '').trim()
+    if (!name) return '—'
+    const idx = name.indexOf(',')
+    return idx > 0 ? name.slice(0, idx).trim() : name
+}
+
+const locationSecondLineFromOption = (option) => {
+    const name = String(option?.name || '').trim()
+    const idx = name.indexOf(',')
+    const rest = idx > 0 ? name.slice(idx + 1).trim() : ''
+    if (rest) return rest
+    return option?.parent || 'UAE'
+}
+
+// ——— Extra client requirement modal ———
+const showClientReqEditor = ref(false)
+const isSavingClientReq = ref(false)
+const clientReqSaveError = ref('')
+const editingExtraIndex = ref(null)
+const newClientReqEditorRef = ref(null)
+const isLoadingClientReqAreas = ref(false)
+const isLoadingClientReqPropertyTypes = ref(false)
+const clientReqAreas = ref([])
+const clientReqPropertyTypeOptions = ref([])
+const clientReqBudgetFromDisplay = ref('')
+const clientReqBudgetToDisplay = ref('')
+
+const clientReqLeadTypeOptions = [
+    { value: 'sale', text: 'Sale' },
+    { value: 'rent', text: 'Rent' },
+]
+
+const clientReqPropertyStatusOptions = [
+    { value: 'ready', text: 'Ready' },
+    { value: 'off_plan', text: 'Off Plan' },
+    { value: 'both', text: 'Both' },
+]
+
+const clientReqBedroomOptions = [
+    { value: '0', text: 'Studio' },
+    { value: 1, text: '1' },
+    { value: 2, text: '2' },
+    { value: 3, text: '3' },
+    { value: 4, text: '4' },
+    { value: 5, text: '5' },
+    { value: 6, text: '6' },
+    { value: 7, text: '7' },
+    { value: 8, text: '8' },
+    { value: 9, text: '9' },
+]
+
+const clientReqQualityStatusOptions = [
+    { value: 'cold', text: 'Cold Lead' },
+    { value: 'warm', text: 'Warm Lead' },
+    { value: 'hot', text: 'Hot Lead' },
+    { value: 'no_answer', text: 'Lead Pool - No Answer' },
+    { value: 'canceled', text: 'Lead Pool - Canceled' },
+    { value: 'unqualified_not_interested', text: 'Unqualified - Not Interested' },
+    { value: 'unqualified_wrong_contact', text: 'Unqualified - Wrong Contact Details' },
+    { value: 'unqualified_job_seeker', text: 'Unqualified - Job Seeker' },
+    { value: 'unqualified_other', text: 'Unqualified - Other' },
+]
+
+const clientReqPurposeOptions = [
+    { value: 'Live in', text: 'Live in' },
+    { value: 'Short-term investment', text: 'Short-term investment' },
+    { value: 'Long-term investment', text: 'Long-term investment' },
+    { value: 'Holiday home', text: 'Holiday home' },
+    { value: 'Rental', text: 'Rental' },
+]
+
+const emptyClientReqForm = () => ({
+    id: null,
+    area_id: null,
+    property_type_id: null,
+    lead_type: null,
+    property_status: null,
+    bedrooms: null,
+    status_lead: null,
+    budget_from: null,
+    budget_to: null,
+    purpose_buying: null,
+})
+
+const clientReqForm = ref(emptyClientReqForm())
+
+const clientReqModalTitle = computed(() =>
+    editingExtraIndex.value === null ? 'Add client requirement' : 'Edit client requirement'
+)
+
+const makeClientReqId = () =>
+    `ecr-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+
+const normalizeRequirementRows = (rows) =>
+    rows.map((row) => ({
+        ...row,
+        id: row?.id || makeClientReqId(),
+    }))
+
+const buildPersistedRequirementList = (rows, sourceId = 'primary') => {
+    const normalized = normalizeRequirementRows(rows)
+    const withFlags = normalized.map((row) => ({
+        ...row,
+        selected_for_qualification: sourceId !== 'primary' && row.id === sourceId,
+    }))
+
+    return [
+        ...withFlags,
+        { id: QUAL_META_ID, _kind: QUAL_META_KIND, source: sourceId },
+    ]
+}
+
+const fetchClientReqLookups = async () => {
+    if (clientReqAreas.value.length === 0) {
+        try {
+            isLoadingClientReqAreas.value = true
+            const response = await api.get('/listings/areas/?has_listings=true')
+            const data = response.data.data || response.data
+            clientReqAreas.value = data.map((area) => ({
+                id: area.id,
+                name: area.name || area.title,
+                parent: area.area_parents_title || null,
+            }))
+        } catch (e) {
+            console.error(e)
+        } finally {
+            isLoadingClientReqAreas.value = false
+        }
+    }
+    if (clientReqPropertyTypeOptions.value.length === 0) {
+        try {
+            isLoadingClientReqPropertyTypes.value = true
+            const res = await api.get('/listings/property-types')
+            const data = res.data.data || res.data
+            clientReqPropertyTypeOptions.value = data.map((item) => ({
+                value: item.id,
+                text: item.name,
+            }))
+        } catch (e) {
+            console.error(e)
+        } finally {
+            isLoadingClientReqPropertyTypes.value = false
+        }
+    }
+}
+
+const syncClientReqBudgetDisplays = () => {
+    clientReqBudgetFromDisplay.value = formatBudgetThousands(clientReqForm.value.budget_from)
+    clientReqBudgetToDisplay.value = formatBudgetThousands(clientReqForm.value.budget_to)
+}
+
+const extractInputValue = (raw) => (raw?.target?.value ?? raw ?? '').toString()
+
+const onClientReqBudgetFrom = (raw) => {
+    const { numeric, display } = parseBudgetThousandsInput(extractInputValue(raw))
+    clientReqForm.value.budget_from = numeric
+    clientReqBudgetFromDisplay.value = display
+}
+
+const onClientReqBudgetTo = (raw) => {
+    const { numeric, display } = parseBudgetThousandsInput(extractInputValue(raw))
+    clientReqForm.value.budget_to = numeric
+    clientReqBudgetToDisplay.value = display
+}
+
+const resetClientReqForm = () => {
+    clientReqForm.value = emptyClientReqForm()
+    clientReqBudgetFromDisplay.value = ''
+    clientReqBudgetToDisplay.value = ''
+    clientReqSaveError.value = ''
+}
+
+const fillClientReqFormFromExtra = (req) => {
+    if (!req) return
+    let beds = req.bedrooms
+    if (beds === 'studio' || beds === 'Studio') beds = '0'
+    clientReqForm.value = {
+        id: req.id || null,
+        area_id: req.area_id ?? null,
+        property_type_id: req.property_type_id ?? null,
+        lead_type: req.lead_type ?? null,
+        property_status: req.property_status ?? null,
+        bedrooms: beds === 0 || beds === '0' ? '0' : beds,
+        status_lead: req.status_lead ?? null,
+        budget_from: req.budget_from ?? null,
+        budget_to: req.budget_to ?? null,
+        purpose_buying: req.purpose_buying ?? null,
+    }
+    syncClientReqBudgetDisplays()
+}
+
+const openClientReqModal = async (idx) => {
+    editingExtraIndex.value = idx
+    resetClientReqForm()
+    await fetchClientReqLookups()
+    if (idx !== null && extraClientRequirementsList.value[idx]) {
+        fillClientReqFormFromExtra(extraClientRequirementsList.value[idx])
+    }
+    showClientReqEditor.value = true
+    if (idx === null) {
+        await nextTick()
+        newClientReqEditorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+}
+
+const closeClientReqEditor = () => {
+    showClientReqEditor.value = false
+    editingExtraIndex.value = null
+    resetClientReqForm()
+}
+
+const buildClientReqPayload = () => {
+    const areaOpt = clientReqAreas.value.find((a) => a.id === clientReqForm.value.area_id)
+    const ptOpt = clientReqPropertyTypeOptions.value.find(
+        (p) => p.value === clientReqForm.value.property_type_id
+    )
+    let area_label = ''
+    if (areaOpt) {
+        const sub = areaOpt.parent || 'UAE'
+        area_label = `${areaOpt.name}, ${sub}`
+    }
+    const id = clientReqForm.value.id || makeClientReqId()
+    return {
+        id,
+        created_at: clientReqForm.value.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        area_id: clientReqForm.value.area_id,
+        area_label,
+        property_type_id: clientReqForm.value.property_type_id,
+        property_type_label: ptOpt?.text || '',
+        lead_type: clientReqForm.value.lead_type,
+        property_status: clientReqForm.value.property_status,
+        bedrooms: clientReqForm.value.bedrooms,
+        status_lead: clientReqForm.value.status_lead,
+        budget_from: clientReqForm.value.budget_from,
+        budget_to: clientReqForm.value.budget_to,
+        purpose_buying: clientReqForm.value.purpose_buying,
+    }
+}
+
+const selectQualificationSource = async (sourceId) => {
+    if (!props.lead?.id) return
+    if (!sourceId) return
+    if (qualificationSourceId.value === sourceId) return
+
+    try {
+        isSavingClientReq.value = true
+        clientReqSaveError.value = ''
+        const persisted = buildPersistedRequirementList(extraClientRequirementsList.value, sourceId)
+
+        const response = await api.put(`/leads/${props.lead.id}/extra-client-requirements`, {
+            extra_client_requirements: persisted,
+        })
+
+        localExtraClientRequirements.value = persisted
+        emit('lead-updated', response.data)
+        if (window.$showNotification) {
+            window.$showNotification('Lead Qualification source updated', 'success')
+        }
+    } catch (err) {
+        console.error(err)
+        clientReqSaveError.value = err.response?.data?.message || err.message || 'Failed to update source'
+        if (window.$showNotification) {
+            window.$showNotification(clientReqSaveError.value, 'error')
+        }
+    } finally {
+        isSavingClientReq.value = false
+    }
+}
+
+const saveClientRequirement = async () => {
+    if (!props.lead?.id) return
+    clientReqSaveError.value = ''
+    isSavingClientReq.value = true
+    try {
+        const next = [...extraClientRequirementsList.value]
+        const payload = buildClientReqPayload()
+        if (!hasExtraBlockDisplay(payload)) {
+            clientReqSaveError.value = 'Please fill at least one field.'
+            isSavingClientReq.value = false
+            return
+        }
+        if (editingExtraIndex.value === null) {
+            next.push(payload)
+        } else {
+            next[editingExtraIndex.value] = payload
+        }
+        const source = qualificationSourceId.value === 'primary' ? 'primary' : qualificationSourceId.value
+        const persisted = buildPersistedRequirementList(next, source)
+        const response = await api.put(`/leads/${props.lead.id}/extra-client-requirements`, {
+            extra_client_requirements: persisted,
+        })
+        localExtraClientRequirements.value = persisted
+        emit('lead-updated', response.data)
+        showClientReqEditor.value = false
+        editingExtraIndex.value = null
+        resetClientReqForm()
+        if (window.$showNotification) {
+            window.$showNotification('Client requirement saved', 'success')
+        }
+    } catch (err) {
+        console.error(err)
+        const apiErrors = err.response?.data?.errors
+        if (apiErrors && typeof apiErrors === 'object') {
+            const first = Object.values(apiErrors)[0]
+            clientReqSaveError.value = Array.isArray(first) ? first[0] : String(first)
+        } else {
+            clientReqSaveError.value =
+                err.response?.data?.message || err.message || 'Failed to save'
+        }
+        if (window.$showNotification) {
+            window.$showNotification(clientReqSaveError.value, 'error')
+        }
+    } finally {
+        isSavingClientReq.value = false
+    }
+}
 
 </script>
 
 <style scoped>
+.client-requirement-wrap {
+    margin-bottom: 18px;
+}
+
+.client-requirement-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 0 2px;
+}
+
+.client-requirement-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.client-requirement-panel {
+    display: grid;
+    gap: 12px;
+    overflow: visible;
+}
+
+.client-req-block {
+    position: relative;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.client-req-block + .client-req-block {
+    margin-top: 0;
+    padding-top: 14px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.client-req-block-actions {
+    position: static;
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 2px;
+    width: 100%;
+}
+
+.client-req-action-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: flex-start;
+    width: auto;
+    order: 1;
+    margin-left: 0;
+}
+
+.client-req-created-at {
+    font-size: 10px;
+    color: #64748b;
+    white-space: nowrap;
+    padding-inline: 2px;
+    order: 2;
+    text-align: left;
+    width: auto;
+    margin-left: 2px;
+}
+
+.lead-edit-inline-btn {
+    order: 3;
+}
+
+.client-req-block-actions .lead-edit-inline-btn {
+    margin-left: auto;
+}
+
+.client-qualification-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    min-height: 24px;
+    max-width: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.client-qualification-btn.is-active {
+    border-color: #16a34a;
+    background: #dcfce7;
+    color: #166534;
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.18);
+}
+
+.client-requirement-list--tail {
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.client-req-empty-hint {
+    text-align: center;
+    padding: 12px 8px;
+}
+
+.client-req-modal-body .info-group {
+    margin-bottom: 15px;
+}
+
+.client-req-modal-body .form-label-custom {
+    display: block;
+    font-size: 12px !important;
+    font-weight: 300 !important;
+    color: #666666 !important;
+    margin-top: 5px !important;
+    margin-bottom: 5px !important;
+    line-height: 10px !important;
+}
+
+.client-req-modal-body .custom-input {
+    height: 42px !important;
+    font-size: 13px !important;
+    color: #000000 !important;
+    border-radius: 10px !important;
+    border: 1px solid #E2E8F0 !important;
+    font-family: 'Montserrat';
+}
+
+.client-req-modal-body .custom-input::placeholder {
+    color: #64748B !important;
+    opacity: 1;
+    font-size: 13px !important;
+    font-family: 'Montserrat';
+}
+
+:deep(.client-req-vselect .vs__dropdown-toggle) {
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    padding: 0 8px;
+}
+
+:deep(.client-req-vselect .vs__selected),
+:deep(.client-req-vselect .vs__search),
+:deep(.client-req-vselect .vs__placeholder) {
+    font-size: 13px;
+    color: #64748B;
+}
+
+:deep(.client-req-vselect .vs__selected) {
+    margin: 0;
+    padding: 0;
+}
+
+:deep(.client-req-vselect .vs__actions) {
+    padding: 0 8px;
+}
+
+:deep(.client-req-vselect .vs__open-indicator-icon) {
+    font-size: 15px;
+    color: #cfdbec;
+}
+
+:deep(.client-req-vselect .vs__dropdown-menu) {
+    border: 1px solid #E2E8F0;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
+    margin-top: 5px;
+    z-index: 1100;
+}
+
+:deep(.client-req-vselect .vs__dropdown-option) {
+    padding: 5px 10px;
+    font-size: 14px;
+    color: #475569;
+}
+
+:deep(.client-req-vselect .vs__dropdown-option--highlight) {
+    background: #FAA300 !important;
+    color: #fff !important;
+}
+
+:deep(.client-req-vselect .vs__dropdown-option--selected) {
+    background: #FAA300;
+    color: #fff;
+}
+
+:deep(.client-req-modal .modal-content) {
+    border-radius: 12px;
+    border: none;
+    box-shadow: none;
+    background: #ffffff;
+}
+
+:deep(.client-req-modal .modal-header) {
+    padding: 12px 16px;
+    border-bottom: 1px solid #E2E8F0;
+    background: #fff;
+}
+
+:deep(.client-req-modal .modal-title) {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+:deep(.client-req-modal .modal-body) {
+    padding: 14px 16px 16px;
+}
+
+.client-req-modal .modal-footer-custom .btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    border-radius: 999px;
+}
+
+.client-req-modal-body {
+    padding: 0;
+}
+
+.client-req-budget-inputs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.client-req-modal .modal-footer-custom {
+    padding-top: 15px;
+    border-top: 1px solid #F1F5F9;
+}
+
 .client-requirement-list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -691,10 +1695,38 @@ const hasClientRequiredInfo = computed(() => {
 .lead-edit-inline-btn {
     border: none;
     background: transparent;
-    padding: 0;
+    padding: 2px 4px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    border-radius: 8px;
+}
+
+.lead-edit-inline-btn .edit-icon-btn {
+    padding: 1px;
+    font-size: 15px;
+}
+
+@media (max-width: 768px) {
+    .client-req-block-actions {
+        justify-content: flex-start;
+        align-items: center;
+    }
+
+    .client-req-created-at {
+        width: auto;
+        margin-top: 0;
+        align-self: auto;
+    }
+
+    .client-req-action-main {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .client-req-budget-inputs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 .lead-edit-inline-btn:hover {

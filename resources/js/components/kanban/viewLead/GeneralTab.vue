@@ -4,7 +4,7 @@
         <div ref="editSectionAnchorRef" class="col-md-5">
             <div class="info-card bg-white  p-3 radius-12">
                 <!-- View Mode (read-only; do not use ViewLead.vue here – it is a full modal and would cause infinite recursion) -->
-                <LeadInfoView v-if="!isEditMode" :lead="lead" :show-responsible-section="false" :can-edit="lead?.can_edit" :show-edit-icon="true"  @edit-section="handleEditSection" @edit-request="toggleEditMode" />
+                <LeadInfoView v-if="!isEditMode" :lead="lead" :show-responsible-section="false" :can-edit="lead?.can_edit" :show-edit-icon="true" @edit-section="handleEditSection" @edit-request="toggleEditMode" @lead-updated="handleLeadUpdated" />
 
                 <!-- Edit Mode (footer Save/Cancel moved to global bottom bar below) -->
                 <EditLead 
@@ -258,8 +258,26 @@ const canDeleteAll = computed(() => {
     return isAdminUser
 })
 
+const selectedRequirementSource = computed(() => {
+    const rows = Array.isArray(props.lead?.extra_client_requirements)
+        ? props.lead.extra_client_requirements
+        : []
+    const meta = rows.find((item) => item?._kind === 'qualification_meta')
+    const source = meta?.source || 'primary'
+    if (source === 'primary') return null
+    return rows.find((item) => item?._kind !== 'qualification_meta' && item?.id === source) || null
+})
+
+const selectedStatusLead = computed(() => {
+    return selectedRequirementSource.value?.status_lead ?? props.lead?.status_lead
+})
+
+const selectedLeadType = computed(() => {
+    return selectedRequirementSource.value?.lead_type ?? props.lead?.lead_type
+})
+
 const qualityStatusBadge = computed(() => {
-    const status = String(props.lead?.status_lead || '').toLowerCase()
+    const status = String(selectedStatusLead.value || '').toLowerCase()
     if (!status) return null
     if (status === 'hot') return { label: 'Hot', tone: 'hot' }
     if (status === 'warm') return { label: 'Warm', tone: 'warm' }
@@ -269,14 +287,14 @@ const qualityStatusBadge = computed(() => {
 })
 
 const callResultBadge = computed(() => {
-    const status = String(props.lead?.status_lead || '').toLowerCase()
+    const status = String(selectedStatusLead.value || '').toLowerCase()
     if (!status) return null
     if (status === 'no_answer') return { label: 'No Answer', tone: 'muted' }
     return { label: 'Answered', tone: 'ok' }
 })
 
 const leadTypeBadge = computed(() => {
-    const leadType = String(props.lead?.lead_type || '').toLowerCase().trim()
+    const leadType = String(selectedLeadType.value || '').toLowerCase().trim()
     if (!leadType) return null
     if (leadType === 'sale') return { label: 'Sale', tone: 'sale' }
     if (leadType === 'rent') return { label: 'Rent', tone: 'rent' }
@@ -539,12 +557,13 @@ onMounted(() => {
 
 .compact-status-section {
     border: 1px solid #E2E8F0;
-    border-radius: 12px;
+    border-radius: 10px;
     background: #fff;
-    padding: 6px !important;
+    padding: 4px !important;
     box-shadow: none !important;
     position: relative;
-    top: 12px;
+    top: 0;
+    margin-bottom: 8px !important;
 }
 
 .compact-status-grid {
@@ -555,8 +574,8 @@ onMounted(() => {
 
 .compact-status-card {
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 5px 6px;
+    border-radius: 7px;
+    padding: 4px 6px;
     background: #ffffff;
     min-height: 46px;
 }

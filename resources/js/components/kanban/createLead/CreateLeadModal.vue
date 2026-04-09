@@ -117,18 +117,6 @@
                                         </div>
                                     </div>
                                      <div class="col">
-                                        <label class="form-label-custom">Secondary Email</label>
-                                        <b-form-input 
-                                            v-model="form.secondary_email" 
-                                            placeholder="Enter Your Secondary Email" 
-                                            class="custom-input"
-                                            :class="{ 'is-invalid': validationErrors.secondary_email }"
-                                        />
-                                        <div v-if="validationErrors.secondary_email" class="invalid-feedback d-block">
-                                            {{ validationErrors.secondary_email[0] }}
-                                        </div>
-                                    </div>
-                                    <div class="col">
                                         <label class="form-label-custom">Secondary Phone</label>
                                         <b-form-input 
                                             v-model="form.work_phone_2" 
@@ -140,12 +128,24 @@
                                             {{ validationErrors.work_phone_2[0] }}
                                         </div>
                                     </div>
+                                    <div class="col">
+                                        <label class="form-label-custom">Secondary Email</label>
+                                        <b-form-input 
+                                            v-model="form.secondary_email" 
+                                            placeholder="Enter Your Secondary Email" 
+                                            class="custom-input"
+                                            :class="{ 'is-invalid': validationErrors.secondary_email }"
+                                        />
+                                        <div v-if="validationErrors.secondary_email" class="invalid-feedback d-block">
+                                            {{ validationErrors.secondary_email[0] }}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                         <!-- Comments -->
                         <div class="col-12">
-                            <label class="form-label-custom">Comments</label>
+                            <label class="form-label-custom">Notes</label>
                             <b-form-textarea 
                                 v-model="form.comment" 
                                 placeholder="Text Here" 
@@ -212,30 +212,36 @@
                                                 @mousedown.stop
                                                 @click.stop
                                             >
-                                                <label class="budget-input-label">From</label>
-                                                <input
-                                                    :value="budgetFromDisplay"
-                                                    type="text"
-                                                    inputmode="numeric"
-                                                    autocomplete="off"
-                                                    placeholder="0"
-                                                    class="form-control custom-input budget-dropdown-input"
-                                                    @mousedown.stop
-                                                    @click.stop
-                                                    @input="onBudgetFromInput($event.target.value)"
-                                                />
-                                                <label class="budget-input-label mt-2">To</label>
-                                                <input
-                                                    :value="budgetToDisplay"
-                                                    type="text"
-                                                    inputmode="numeric"
-                                                    autocomplete="off"
-                                                    placeholder="0"
-                                                    class="form-control custom-input budget-dropdown-input"
-                                                    @mousedown.stop
-                                                    @click.stop
-                                                    @input="onBudgetToInput($event.target.value)"
-                                                />
+                                                <div class="budget-from-to-row">
+                                                    <div class="budget-col">
+                                                        <label class="budget-input-label">From</label>
+                                                        <input
+                                                            :value="budgetFromDisplay"
+                                                            type="text"
+                                                            inputmode="numeric"
+                                                            autocomplete="off"
+                                                            placeholder="0"
+                                                            class="form-control custom-input budget-dropdown-input"
+                                                            @mousedown.stop
+                                                            @click.stop
+                                                            @input="onBudgetFromInput($event.target.value)"
+                                                        />
+                                                    </div>
+                                                    <div class="budget-col">
+                                                        <label class="budget-input-label">To</label>
+                                                        <input
+                                                            :value="budgetToDisplay"
+                                                            type="text"
+                                                            inputmode="numeric"
+                                                            autocomplete="off"
+                                                            placeholder="0"
+                                                            class="form-control custom-input budget-dropdown-input"
+                                                            @mousedown.stop
+                                                            @click.stop
+                                                            @input="onBudgetToInput($event.target.value)"
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -901,17 +907,11 @@ const selectorOptions = [
 ]
 
 const purposeOptions = [
-    // { value: null, text: 'Select Purpose' }
-  { value: "Self Use", text: "Self Use" },
-  { value: "Investment", text: "Investment" },
-  { value: "Rental Income", text: "Rental Income" },
-  { value: "Future Residence", text: "Future Residence" },
-  { value: "Business Use", text: "Business Use" },
-  { value: "Commercial Investment", text: "Commercial Investment" },
-  { value: "Holiday / Weekend Home", text: "Holiday / Weekend Home" },
-  { value: "Land Banking", text: "Land Banking" },
-  { value: "Resale", text: "Resale" },
-  { value: "Portfolio Expansion", text: "Portfolio Expansion" }
+    { value: 'Live in', text: 'Live in' },
+    { value: 'Short-term investment', text: 'Short-term investment' },
+    { value: 'Long-term investment', text: 'Long-term investment' },
+    { value: 'Holiday home', text: 'Holiday home' },
+    { value: 'Rental', text: 'Rental' },
 ]
 
 const bedroomOptions = [
@@ -1605,6 +1605,16 @@ const $showNotification = (message, type = 'info') => {
     border-radius: 10px;
     box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
     padding: 10px;
+}
+
+.budget-from-to-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.budget-col {
+    min-width: 0;
 }
 
 .budget-input-label {

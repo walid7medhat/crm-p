@@ -514,34 +514,36 @@
                 @mousedown.stop
                 @click.stop
             >
-                <template v-if="missingFields.includes('budget_from')">
-                    <label class="budget-input-label">From</label>
-                    <input
-                        v-model="budgetFromDisplay"
-                        type="text"
-                        inputmode="numeric"
-                        autocomplete="off"
-                        placeholder="0"
-                        class="form-control budget-input budget-dropdown-input"
-                        @mousedown.stop
-                        @click.stop
-                        @input="onBudgetFromInput"
-                    >
-                </template>
-                <template v-if="missingFields.includes('budget_to')">
-                    <label class="budget-input-label mt-2">To</label>
-                    <input
-                        v-model="budgetToDisplay"
-                        type="text"
-                        inputmode="numeric"
-                        autocomplete="off"
-                        placeholder="0"
-                        class="form-control budget-input budget-dropdown-input"
-                        @mousedown.stop
-                        @click.stop
-                        @input="onBudgetToInput"
-                    >
-                </template>
+                <div class="budget-from-to-row">
+                    <div v-if="missingFields.includes('budget_from')" class="budget-col">
+                        <label class="budget-input-label">From</label>
+                        <input
+                            v-model="budgetFromDisplay"
+                            type="text"
+                            inputmode="numeric"
+                            autocomplete="off"
+                            placeholder="0"
+                            class="form-control budget-input budget-dropdown-input"
+                            @mousedown.stop
+                            @click.stop
+                            @input="onBudgetFromInput"
+                        >
+                    </div>
+                    <div v-if="missingFields.includes('budget_to')" class="budget-col">
+                        <label class="budget-input-label">To</label>
+                        <input
+                            v-model="budgetToDisplay"
+                            type="text"
+                            inputmode="numeric"
+                            autocomplete="off"
+                            placeholder="0"
+                            class="form-control budget-input budget-dropdown-input"
+                            @mousedown.stop
+                            @click.stop
+                            @input="onBudgetToInput"
+                        >
+                    </div>
+                </div>
             </div>
         </Teleport>
 
@@ -886,7 +888,7 @@ const purposeOptions = [
     { value: 'Short-term investment', text: 'Short-term investment' },
     { value: 'Long-term investment', text: 'Long-term investment' },
     { value: 'Holiday home', text: 'Holiday home' },
-    { value: 'rental', text: 'rental' }
+    { value: 'Rental', text: 'Rental' },
 ]
 
 const bedroomOptions = computed(() => {
@@ -1755,6 +1757,16 @@ defineExpose({
     border-radius: 10px;
     box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
     padding: 10px;
+}
+
+.budget-from-to-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.budget-col {
+    min-width: 0;
 }
 
 .budget-input-label {

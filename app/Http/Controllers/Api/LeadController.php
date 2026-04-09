@@ -31,7 +31,7 @@ class LeadController extends Controller
     {
         $this->middleware('permission:leads-list', ['only' => ['index', 'show']]);
         $this->middleware('permission:leads-create', ['only' => ['store']]);
-        $this->middleware('permission:leads-edit', ['only' => ['update', 'changeStage', 'assignResponsiblePerson']]);
+        $this->middleware('permission:leads-edit', ['only' => ['update', 'changeStage', 'assignResponsiblePerson', 'updateExtraClientRequirements']]);
         $this->middleware('permission:leads-delete', ['only' => ['destroy']]);
     }
 
@@ -504,6 +504,52 @@ class LeadController extends Controller
         return ApiResponse::error('Failed to assign responsible person: ' . $e->getMessage());
     }
 }
+
+    /**
+     * Persist additional client requirement blocks (separate from primary lead columns).
+     */
+    public function updateExtraClientRequirements(Request $request, Lead $lead): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user->canViewLead($lead)) {
+                return ApiResponse::error('You are not authorized to update this lead', 403);
+            }
+
+            $request->validate([
+                'extra_client_requirements' => 'nullable|array',
+                'extra_client_requirements.*' => 'array',
+            ]);
+
+            $lead->update([
+                'extra_client_requirements' => $request->input('extra_client_requirements'),
+            ]);
+
+            $fresh = $lead->fresh()->load([
+                'responsiblePerson',
+                'propertyType',
+                'area',
+                'integration:id,project_id',
+            ]);
+
+            broadcast(new LeadUpdated($fresh, 'updated'));
+
+            LeadHistoryHelper::log($fresh->id, [
+                'action' => 'updated',
+                'fields' => ['extra_client_requirements' => ['saved' => true]],
+            ]);
+
+            return ApiResponse::success(
+                new LeadResource($fresh),
+                'Client requirements updated'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to update client requirements: ' . $e->getMessage());
+        }
+    }
 
     /**
      * Get Available Responsible Persons for Assignment

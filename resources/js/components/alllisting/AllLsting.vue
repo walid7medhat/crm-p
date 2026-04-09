@@ -6,62 +6,12 @@
         <SearchBar
           ref="searchBarRef"
           @filters-changed="handleFiltersChanged"
+          @status-changed="setStatus"
           :initial-filters="initialFilters"
           :result-count="pagination?.total || properties.length"
+          :show-status-tabs="isAdmin"
+          :active-status="activeStatus"
         />
-        <div v-if="isAdmin" class="top-status-col">
-          <div class="status-toggle-buttons status-toggle-buttons-compact">
-          <button 
-            class="status-btn" 
-            :class="{ active: activeStatus === 'all' }"
-            @click="setStatus('all')"
-          >
-            <i class="ri-list-check"></i>
-            All
-          </button>
-          <button 
-            class="status-btn" 
-            :class="{ active: activeStatus === 'active' }"
-            @click="setStatus('active')"
-          >
-            <i class="ri-checkbox-circle-line"></i>
-            Active
-          </button>
-          <button 
-            class="status-btn" 
-            :class="{ active: activeStatus === 'inactive' }"
-            @click="setStatus('inactive')"
-          >
-            <i class="ri-close-circle-line"></i>
-            Inactive
-          </button>
-          <!-- <button 
-            class="status-btn" 
-            :class="{ active: activeStatus === 'archived' }"
-            @click="setStatus('archived')"
-          >
-            <i class="ri-archive-line"></i>
-            Archived
-          </button> -->
-          <button 
-            class="status-btn" 
-            :class="{ active: activeStatus === 'sold' }"
-            @click="setStatus('sold')"
-          >
-            <i class="ri-checkbox-circle-fill"></i>
-            Sold Out
-          </button>
-          <button 
-            class="status-btn" 
-            :class="{ active: activeStatus === 'draft' }"
-            @click="setStatus('draft')"
-          >
-           <i class="fa fa-pencil-alt"></i>
-
-            Draft
-          </button>
-          </div>
-        </div>
       </div>
     </div>
     <!-- Properties Grid -->
@@ -1035,7 +985,7 @@ export default {
   background-color: #fff;
   border-color: #dee2e6;
 }
-/* Status Toggle Buttons */
+/* Toolbar layout; status + Hot Deal row come from ListingsSearchBar (scoped there). */
 .top-search-toolbar {
   display: block;
 }
@@ -1043,112 +993,6 @@ export default {
 .top-search-col {
   flex: 1 1 auto;
   min-width: 0;
-}
-
-.top-status-col {
-  margin-top: 10px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.status-toggle-buttons {
-  display: flex;
-  gap: 12px;
-  padding: 0 16px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-
-.status-toggle-buttons-compact {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(120px, 1fr));
-  gap: 8px;
-  padding: 8px;
-  margin-bottom: 0;
-  width: min(420px, 100%);
-  background: #fff;
-  border: 1px solid #e6ebf3;
-  border-radius: 16px;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
-}
-
-.status-btn {
-  padding: 10px 20px;
-  border: 2px solid #e9ecef;
-  background: white;
-  border-radius: 12px;
-  color: #6c757d;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.status-toggle-buttons-compact .status-btn {
-  padding: 8px 10px;
-  border-radius: 10px;
-  border-width: 1px;
-  border-color: #dbe2ee;
-  background: #f8fafc;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #475569;
-  gap: 4px;
-  line-height: 1;
-  min-height: 34px;
-  letter-spacing: 0.01em;
-  justify-content: center;
-}
-
-.status-btn:hover {
-  border-color: #FAA300;
-  color: #FAA300;
-  background: #fff9ef;
-}
-
-.status-btn.active {
-  background: linear-gradient(135deg, #faa300 0%, #ffb224 100%);
-  border-color: #f1a10a;
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(250, 163, 0, 0.22);
-}
-
-@media (max-width: 768px) {
-  .top-search-toolbar {
-    display: block;
-  }
-
-  .top-status-col {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .status-toggle-buttons {
-    flex-direction: column;
-  }
-
-  .status-toggle-buttons-compact {
-    width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  
-  .status-btn {
-    justify-content: center;
-  }
-}
-
-@media (max-width: 1200px) {
-  .status-toggle-buttons {
-    gap: 8px;
-  }
-  
-  .status-btn {
-    padding: 8px 16px;
-    font-size: 0.9rem;
-  }
 }
 .status-badges {
   position: absolute;

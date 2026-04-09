@@ -90,6 +90,33 @@
                 {{ validationErrors.email[0] }}
             </div>
         </div>
+        <div class="info-group">
+             <label class="form-label-custom d-flex align-items-center justify-content-between">
+                <span>Secondary Phone</span>
+        
+                <div class="form-check m-0">
+                    <input 
+                        type="checkbox" 
+                        class="form-check-input"
+                        v-model="useSecondaryPhone"
+                        :disabled="!form.work_phone_2"
+                            @change="swapPhones"
+
+                    >
+                    <label class="form-check-label small mt-1">Use as primary</label>
+                </div>
+            </label>
+            <b-form-input 
+                v-model="form.work_phone_2" 
+                placeholder="Enter Phone Number" 
+                class="custom-input"
+                :class="{ 'is-invalid': validationErrors.work_phone_2 }"
+                    :disabled="!canEditPhoneEmail"
+            />
+            <div v-if="validationErrors.work_phone_2" class="invalid-feedback d-block">
+                {{ validationErrors.work_phone_2[0] }}
+            </div>
+        </div>
         <div class="col">
             <label class="form-label-custom d-flex align-items-center justify-content-between">
                 <span>Secondary Email</span>
@@ -116,33 +143,6 @@
             />
             <div v-if="validationErrors.secondary_email" class="invalid-feedback d-block">
                 {{ validationErrors.secondary_email[0] }}
-            </div>
-        </div>
-        <div class="info-group">
-             <label class="form-label-custom d-flex align-items-center justify-content-between">
-                <span>Secondary Phone</span>
-        
-                <div class="form-check m-0">
-                    <input 
-                        type="checkbox" 
-                        class="form-check-input"
-                        v-model="useSecondaryPhone"
-                        :disabled="!form.work_phone_2"
-                            @change="swapPhones"
-
-                    >
-                    <label class="form-check-label small mt-1">Use as primary</label>
-                </div>
-            </label>
-            <b-form-input 
-                v-model="form.work_phone_2" 
-                placeholder="Enter Phone Number" 
-                class="custom-input"
-                :class="{ 'is-invalid': validationErrors.work_phone_2 }"
-                    :disabled="!canEditPhoneEmail"
-            />
-            <div v-if="validationErrors.work_phone_2" class="invalid-feedback d-block">
-                {{ validationErrors.work_phone_2[0] }}
             </div>
         </div>
 
@@ -334,32 +334,38 @@
                             @mousedown.stop
                             @click.stop
                         >
-                            <label class="budget-input-label">From</label>
-                            <input
-                                :value="budgetFromDisplay"
-                                type="text"
-                                inputmode="numeric"
-                                autocomplete="off"
-                                placeholder="0"
-                                class="form-control custom-input budget-dropdown-input"
-                                :class="{ 'is-invalid': !!(validationErrors.budget_from || validationErrors.budget) }"
-                                @mousedown.stop
-                                @click.stop
-                                @input="onBudgetFromInput($event.target.value)"
-                            />
-                            <label class="budget-input-label mt-2">To</label>
-                            <input
-                                :value="budgetToDisplay"
-                                type="text"
-                                inputmode="numeric"
-                                autocomplete="off"
-                                placeholder="0"
-                                class="form-control custom-input budget-dropdown-input"
-                                :class="{ 'is-invalid': !!(validationErrors.budget_to || validationErrors.budget) }"
-                                @mousedown.stop
-                                @click.stop
-                                @input="onBudgetToInput($event.target.value)"
-                            />
+                            <div class="budget-from-to-row">
+                                <div class="budget-col">
+                                    <label class="budget-input-label">From</label>
+                                    <input
+                                        :value="budgetFromDisplay"
+                                        type="text"
+                                        inputmode="numeric"
+                                        autocomplete="off"
+                                        placeholder="0"
+                                        class="form-control custom-input budget-dropdown-input"
+                                        :class="{ 'is-invalid': !!(validationErrors.budget_from || validationErrors.budget) }"
+                                        @mousedown.stop
+                                        @click.stop
+                                        @input="onBudgetFromInput($event.target.value)"
+                                    />
+                                </div>
+                                <div class="budget-col">
+                                    <label class="budget-input-label">To</label>
+                                    <input
+                                        :value="budgetToDisplay"
+                                        type="text"
+                                        inputmode="numeric"
+                                        autocomplete="off"
+                                        placeholder="0"
+                                        class="form-control custom-input budget-dropdown-input"
+                                        :class="{ 'is-invalid': !!(validationErrors.budget_to || validationErrors.budget) }"
+                                        @mousedown.stop
+                                        @click.stop
+                                        @input="onBudgetToInput($event.target.value)"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -812,16 +818,11 @@ const bedroomOptions = [
 ]
 
 const purposeOptions = [
-    { value: "Self Use", text: "Self Use" },
-    { value: "Investment", text: "Investment" },
-    { value: "Rental Income", text: "Rental Income" },
-    { value: "Future Residence", text: "Future Residence" },
-    { value: "Business Use", text: "Business Use" },
-    { value: "Commercial Investment", text: "Commercial Investment" },
-    { value: "Holiday / Weekend Home", text: "Holiday / Weekend Home" },
-    { value: "Land Banking", text: "Land Banking" },
-    { value: "Resale", text: "Resale" },
-    { value: "Portfolio Expansion", text: "Portfolio Expansion" }
+    { value: 'Live in', text: 'Live in' },
+    { value: 'Short-term investment', text: 'Short-term investment' },
+    { value: 'Long-term investment', text: 'Long-term investment' },
+    { value: 'Holiday home', text: 'Holiday home' },
+    { value: 'Rental', text: 'Rental' },
 ]
 
 const sourceOptions = ref([
@@ -1327,6 +1328,16 @@ defineExpose({
     border-radius: 10px;
     box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
     padding: 10px;
+}
+
+.budget-from-to-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.budget-col {
+    min-width: 0;
 }
 
 .budget-input-label {

@@ -269,26 +269,25 @@
           </button>
           <span class="status-sort-separator"></span>
           <button
-            class="status-btn sort-btn"
+            type="button"
+            class="status-btn hot-deal-btn"
             :class="{ active: selectedSort === 'hot_deal' }"
             @click="setQuickSort('hot_deal')"
           >
+            <i class="ri-fire-line" aria-hidden="true"></i>
             Hot Deal
           </button>
-          <button
-            class="status-btn sort-btn"
-            :class="{ active: selectedSort === 'price_asc' }"
-            @click="setQuickSort('price_asc')"
-          >
-            Lowest Price
-          </button>
-          <button
-            class="status-btn sort-btn"
-            :class="{ active: selectedSort === 'price_desc' }"
-            @click="setQuickSort('price_desc')"
-          >
-            Highest Price
-          </button>
+          <v-select
+            :modelValue="quickSortForDropdown"
+            :options="quickSortSelectOptions"
+            label="label"
+            :reduce="(option) => option.value"
+            :searchable="false"
+            :append-to-body="false"
+            placeholder="Price & date sort"
+            class="custom-select listing-status-row-sort-select"
+            @update:modelValue="setQuickSort"
+          />
         </div>
       </div>
     </div>
@@ -383,6 +382,13 @@ const sortOptions = [
   { label: "Price: Low to High", value: "price_asc" },
   { label: "Price: High to Low", value: "price_desc" }
 ];
+
+    /** Status row: dropdown for price/date only (Hot Deal stays a separate button). */
+    const quickSortSelectOptions = [
+      { label: "Latest Listings", value: "created_at_desc" },
+      { label: "Price: Low to High", value: "price_asc" },
+      { label: "Price: High to Low", value: "price_desc" }
+    ];
     // Fetch areas from API
      const fetchProjects = async () => {
       try {
@@ -631,6 +637,12 @@ const sortOptions = [
       selectedSort.value = sortValue;
       handleFilterChange();
     };
+
+    /** When Hot Deal is selected, dropdown shows placeholder (no price/date value). */
+    const quickSortForDropdown = computed(() => {
+      const priceDateSorts = new Set(["created_at_desc", "price_asc", "price_desc"]);
+      return priceDateSorts.has(selectedSort.value) ? selectedSort.value : null;
+    });
 
     const handleSaleRentChange = (type) => {
       selectedSaleRent.value = type;
@@ -955,6 +967,8 @@ fetchProjects()
        completionStatusOptions,
       bedsOptions,
       sortOptions,
+      quickSortSelectOptions,
+      quickSortForDropdown,
       
       // Computed
       priceProgressStyle,
@@ -2241,8 +2255,57 @@ fetchProjects()
   margin: 0 2px;
 }
 
-.listing-status-row .status-btn.sort-btn {
-  background: #ffffff;
+/* Hot Deal: distinct “fire” accent vs orange status tabs */
+.listing-status-row .status-btn.hot-deal-btn {
+  border: 1px solid #fdba74;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+  color: #9a3412;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.listing-status-row .status-btn.hot-deal-btn i {
+  font-size: 14px;
+  color: #ea580c;
+}
+
+.listing-status-row .status-btn.hot-deal-btn.active {
+  background: linear-gradient(135deg, #c2410c 0%, #ea580c 45%, #f97316 100%);
+  border-color: #9a3412;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.38);
+}
+
+.listing-status-row .status-btn.hot-deal-btn.active i {
+  color: #fff;
+}
+
+.listing-status-row-sort-select {
+  flex: 0 0 auto;
+  min-width: 168px;
+  max-width: 200px;
+}
+
+:deep(.listing-status-row-sort-select .vs__dropdown-toggle) {
+  min-height: 32px !important;
+  padding: 2px 8px 2px 10px !important;
+  border-radius: 999px !important;
+  border: 1px solid #dbe2ee !important;
+  background: #fff !important;
+}
+
+:deep(.listing-status-row-sort-select .vs__selected),
+:deep(.listing-status-row-sort-select .vs__search),
+:deep(.listing-status-row-sort-select .vs__placeholder) {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  margin: 0 !important;
+}
+
+:deep(.listing-status-row-sort-select .vs__actions) {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 .listing-pill-select {

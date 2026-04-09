@@ -57,12 +57,12 @@
                         <div class="col-md-6 mt-3">
                             <label class="form-label-custom">{{ field.label }}</label>
                             <button
-                                v-if="field.id === 'created_on'"
+                                v-if="field.id === 'created_on' || field.id === 'assigned_on'"
                                 type="button"
                                 class="custom-date-trigger"
-                                @click="openDatePicker"
+                                @click="openDatePicker(field.id)"
                             >
-                                <span>{{ createdOnDisplay }}</span>
+                                <span>{{ field.id === 'assigned_on' ? assignedOnDisplay : createdOnDisplay }}</span>
                                 <iconify-icon icon="lucide:calendar-days" />
                             </button>
                             <div
@@ -243,12 +243,12 @@
                         <div class="col-md-6 mt-3">
                             <label class="form-label-custom">{{ field.label }}</label>
                             <button
-                                v-if="field.id === 'created_on'"
+                                v-if="field.id === 'created_on' || field.id === 'assigned_on'"
                                 type="button"
                                 class="custom-date-trigger"
-                                @click="openDatePicker"
+                                @click="openDatePicker(field.id)"
                             >
-                                <span>{{ createdOnDisplay }}</span>
+                                <span>{{ field.id === 'assigned_on' ? assignedOnDisplay : createdOnDisplay }}</span>
                                 <iconify-icon icon="lucide:calendar-days" />
                             </button>
                             <div
@@ -445,20 +445,26 @@
             :style="budgetDropdownStyle"
             @click.stop
         >
-            <label class="budget-input-label">From</label>
-            <b-form-input
-                :model-value="form.budgetFrom"
-                placeholder="0"
-                class="custom-input budget-dropdown-input"
-                @update:model-value="(val) => setBudgetValue('budgetFrom', val)"
-            />
-            <label class="budget-input-label mt-2">To</label>
-            <b-form-input
-                :model-value="form.budgetTo"
-                placeholder="0"
-                class="custom-input budget-dropdown-input"
-                @update:model-value="(val) => setBudgetValue('budgetTo', val)"
-            />
+            <div class="budget-from-to-row">
+                <div class="budget-col">
+                    <label class="budget-input-label">From</label>
+                    <b-form-input
+                        :model-value="form.budgetFrom"
+                        placeholder="0"
+                        class="custom-input budget-dropdown-input"
+                        @update:model-value="(val) => setBudgetValue('budgetFrom', val)"
+                    />
+                </div>
+                <div class="budget-col">
+                    <label class="budget-input-label">To</label>
+                    <b-form-input
+                        :model-value="form.budgetTo"
+                        placeholder="0"
+                        class="custom-input budget-dropdown-input"
+                        @update:model-value="(val) => setBudgetValue('budgetTo', val)"
+                    />
+                </div>
+            </div>
         </div>
     </Teleport>
 </template>
@@ -489,7 +495,7 @@ const showBudgetDropdown = ref(false)
 const budgetTriggerRef = ref(null)
 const budgetDropdownPanelRef = ref(null)
 const budgetDropdownStyle = ref({})
-const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'work_phone', 'responsible_person', 'lead_branch_source','office', 'stage', 'email','source','team'])
+const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'assigned_on', 'work_phone', 'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 'team'])
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
 const teamOptions = ref([{ value: null, text: 'Select Team' }])
 const officeOptions = ref([{ value: null, text: 'Select Office' }])
@@ -586,16 +592,18 @@ const queryToFormKeys = {
     created_at: 'createdOn',
     created_from: 'createdFrom',    
     created_to: 'createdTo',
+    assigned_at: 'assignedOn',
+    assigned_from: 'assignedFrom',
+    assigned_to: 'assignedTo',
     lead_branch_source: 'branchSource',
-    closed: 'Converted',
     work_phone: 'workPhone',
-    stage_id: 'stage',
     email: 'email',
     bedrooms: 'bedrooms',
     search: 'search',
     source: 'source',
     source_website: 'sourceWebsite',
     interaction_result: 'interactionResult',
+    status_lead: 'qualityStatus',
     team_id: 'team',
     office_branch: 'office',
     lead_type: 'leadType',
@@ -647,17 +655,19 @@ function syncFormFromQuery(query) {
         createdOn: '',
         createdFrom: '',   
         createdTo: '', 
+        assignedOn: '',
+        assignedFrom: '',
+        assignedTo: '',
         stageChangedBy: '',
         branchSource: '',
-        closed: '',
         workPhone: '',
-        stage: '',
         email: '',
         bedrooms: '',
         leadName: '',
         source: '',
         sourceWebsite: [],
         interactionResult: '',
+        qualityStatus: '',
         team: '',
         office: [],
         leadType: '',
@@ -771,17 +781,19 @@ const form = ref({
     firstName: '',
     responsible: '',
     createdOn: '',
+    assignedOn: '',
     stageChangedBy: '',
+    assignedFrom: '',
+    assignedTo: '',
     branchSource: '',
-    closed: '',
     workPhone: '',
-    stage: '',
     email: '',
     bedrooms: '',
     leadName: '',
     source: '',
     sourceWebsite: [],
     interactionResult: '',
+    qualityStatus: '',
     createdFrom: '',    
     createdTo: '',  
     team: '',
@@ -877,8 +889,15 @@ const interactionResultOptions = [
     { value: 'answered', text: 'Answered' },
     { value: 'no_answer', text: 'No Answer' },
 ]
+const qualityStatusOptions = [
+    { value: null, text: 'Select Quality Status' },
+    { value: 'cold', text: 'Cold Lead' },
+    { value: 'warm', text: 'Warm Lead' },
+    { value: 'hot', text: 'Hot Lead' },
+]
 const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 const selectedPreset = ref('')
+const activeDateField = ref('created_on')
 const startDate = ref(null)
 const endDate = ref(null)
 const calendarMonth = ref(new Date())
@@ -982,7 +1001,6 @@ const isAdminOrSuperAdmin = computed(() => {
 })
 const sidebarPills = computed(() => {
     const base = [
-        { id: 'closed-leads', label: 'Converted Leads', type: 'default' },
         { id: 'leads-in-progress', label: 'Leads In Progress', type: 'default' },
         { id: 'my-leads', label: 'My Leads', type: 'default' },
     ]
@@ -1016,12 +1034,12 @@ const getCurrentUserBranches = () => {
 
 const searchFieldsConfig = computed(() => {
     const fields = [
-        { id: 'first_name', label: 'First Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter First Name' },
+        { id: 'first_name', label: 'Client Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter client name' },
         { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
         { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
           { id: 'work_phone', label: 'Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Phone' },
-        { id: 'closed', label: 'Converted', formKey: 'closed', queryKey: 'closed', type: 'select', options: yesNoOptions },
         { id: 'created_on', label: 'Created On', formKey: 'createdOn', queryKey: 'created_at', type: 'select', options: createdOnOptions },
+        { id: 'assigned_on', label: 'Assign On', formKey: 'assignedOn', queryKey: 'assigned_at', type: 'select', options: createdOnOptions },
       
         { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] }
  
@@ -1043,9 +1061,9 @@ const searchFieldsConfig = computed(() => {
     }
     
     fields.push(
-        { id: 'stage', label: 'Stage', formKey: 'stage', queryKey: 'stage_id', type: 'select', options: [] },
-          { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] },
+        { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] },
         { id: 'interaction_result', label: 'Call Result', formKey: 'interactionResult', queryKey: 'interaction_result', type: 'select', options: interactionResultOptions },
+        { id: 'quality_status', label: 'Quality Status', formKey: 'qualityStatus', queryKey: 'status_lead', type: 'select', options: qualityStatusOptions },
         { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions },
        
         { id: 'location', label: 'Location / Area', formKey: 'areaId', queryKey: 'area_id', type: 'select', options: areaOptions.value },
@@ -1077,6 +1095,13 @@ const createdOnDisplay = computed(() => {
     const preset = createdOnOptions.find(opt => opt.value === form.value.createdOn)
     return preset?.text || 'Select Date'
 })
+const assignedOnDisplay = computed(() => {
+    if (form.value.assignedOn === 'custom_date' && form.value.assignedFrom && form.value.assignedTo) {
+        return `${form.value.assignedFrom} to ${form.value.assignedTo}`
+    }
+    const preset = createdOnOptions.find(opt => opt.value === form.value.assignedOn)
+    return preset?.text || 'Select Date'
+})
 
 const visibleSearchFields = computed(() => {
     return searchFieldsConfig.value
@@ -1086,9 +1111,9 @@ const visibleSearchFields = computed(() => {
             options:
                 f.formKey === 'responsible' ? personOptions.value :
                 f.formKey === 'branchSource' ? branchSourceOptions.value :
-                f.formKey === 'stage' ? stageOptions.value :
                 f.formKey === 'source' ? sourceOptions.value :
                 f.formKey === 'createdOn' ? createdOnOptions :
+                f.formKey === 'assignedOn' ? createdOnOptions :
                 f.formKey === 'team' ? computedTeamOptions.value :
                 f.formKey === 'areaId' ? areaOptions.value :
                  f.formKey === 'propertyType' ? propertyTypeOptions.value :
@@ -1101,22 +1126,27 @@ const searchFieldSections = [
     {
         id: 'lead-info',
         title: 'Lead Information',
-        fieldIds: ['first_name', 'lead_name', 'work_phone', 'email', 'created_on', 'closed']
+        fieldIds: ['first_name', 'lead_name', 'work_phone', 'email', 'created_on', 'assigned_on']
     },
     {
         id: 'assignment',
         title: 'Assignment',
-        fieldIds: ['responsible_person', 'lead_branch_source', 'office', 'team', 'stage', 'source']
+        fieldIds: ['responsible_person', 'office', 'team']
     },
     {
-        id: 'source-followup',
-        title: 'Source & Follow-up',
-        fieldIds: ['interaction_result']
+        id: 'source',
+        title: 'Lead Source',
+        fieldIds: ['source', 'lead_branch_source']
+    },
+    {
+        id: 'qualification',
+        title: 'Qualification',
+        fieldIds: ['quality_status', 'lead_type', 'property_status', 'interaction_result']
     },
     {
         id: 'client-requirement',
         title: 'Client Requirement',
-        fieldIds: ['location', 'property_type', 'lead_type', 'property_status', 'bedrooms', 'budget_from']
+        fieldIds: ['location', 'property_type', 'bedrooms', 'budget_from']
     }
 ]
 
@@ -1133,7 +1163,7 @@ const visibleSearchSections = computed(() =>
 
 const defaultLeadFieldIds = computed(() => {
     return searchFieldsConfig.value
-        .filter(f => !['lead_type', 'property_status', 'budget_from'].includes(f.id))
+        .filter(f => !['quality_status', 'lead_type', 'property_status', 'budget_from', 'interaction_result'].includes(f.id))
         .map(f => f.id)
 })
 
@@ -1272,7 +1302,9 @@ function getDisplayValue(field, rawValue) {
         return rawValue.join(', ')
     }
     if (field.type === 'select') {
-        const opts = field.formKey === 'responsible' ? personOptions.value : (field.formKey === 'branchSource' ? branchSourceOptions.value : (field.formKey === 'stage' ? stageOptions.value : (field.options || [])))
+        const opts = field.formKey === 'responsible'
+            ? personOptions.value
+            : (field.formKey === 'branchSource' ? branchSourceOptions.value : (field.options || []))
         const opt = opts.find(o => o.value === rawValue)
         return opt ? opt.text : String(rawValue)
     }
@@ -1286,7 +1318,6 @@ function applySearch() {
     let branchSource = form.value.branchSource || undefined
     let queryOfficeBranch = undefined
     let responsiblePersonId = form.value.responsible ?? undefined
-    let closed = form.value.closed ?? undefined
     let teamId = form.value.team ?? undefined
     
     let officeBranches = form.value.office && form.value.office.length ? form.value.office : undefined
@@ -1338,9 +1369,6 @@ function applySearch() {
             responsiblePersonId = user.id
             break
             
-        case 'closed-leads':
-            closed = 1 
-            break
     }
     if (form.value.createdOn) {
         const today = new Date()
@@ -1460,6 +1488,86 @@ function applySearch() {
         }
     }
 
+    let assignedFrom = undefined
+    let assignedTo = undefined
+    let assignedAt = undefined
+    if (form.value.assignedOn) {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        switch (form.value.assignedOn) {
+            case 'today':
+                assignedAt = today.toISOString().split('T')[0]
+                break
+            case 'yesterday': {
+                const yesterday = new Date(today)
+                yesterday.setDate(yesterday.getDate() - 1)
+                assignedAt = yesterday.toISOString().split('T')[0]
+                break
+            }
+            case 'this_week': {
+                const startOfWeek = new Date(today)
+                startOfWeek.setDate(today.getDate() - today.getDay())
+                const endOfWeek = new Date(startOfWeek)
+                endOfWeek.setDate(startOfWeek.getDate() + 6)
+                assignedFrom = startOfWeek.toISOString().split('T')[0]
+                assignedTo = endOfWeek.toISOString().split('T')[0]
+                break
+            }
+            case 'this_month':
+                assignedFrom = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
+                assignedTo = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+                break
+            case 'last_7_days': {
+                assignedTo = today.toISOString().split('T')[0]
+                const d = new Date(today)
+                d.setDate(d.getDate() - 7)
+                assignedFrom = d.toISOString().split('T')[0]
+                break
+            }
+            case 'last_30_days': {
+                assignedTo = today.toISOString().split('T')[0]
+                const d = new Date(today)
+                d.setDate(d.getDate() - 30)
+                assignedFrom = d.toISOString().split('T')[0]
+                break
+            }
+            case 'last_60_days': {
+                assignedTo = today.toISOString().split('T')[0]
+                const d = new Date(today)
+                d.setDate(d.getDate() - 60)
+                assignedFrom = d.toISOString().split('T')[0]
+                break
+            }
+            case 'last_90_days': {
+                assignedTo = today.toISOString().split('T')[0]
+                const d = new Date(today)
+                d.setDate(d.getDate() - 90)
+                assignedFrom = d.toISOString().split('T')[0]
+                break
+            }
+            case 'last_week': {
+                const lastWeek = new Date(today)
+                lastWeek.setDate(lastWeek.getDate() - 7)
+                const startOfLastWeek = new Date(lastWeek)
+                startOfLastWeek.setDate(lastWeek.getDate() - lastWeek.getDay())
+                const endOfLastWeek = new Date(startOfLastWeek)
+                endOfLastWeek.setDate(startOfLastWeek.getDate() + 6)
+                assignedFrom = startOfLastWeek.toISOString().split('T')[0]
+                assignedTo = endOfLastWeek.toISOString().split('T')[0]
+                break
+            }
+            case 'last_month':
+                assignedFrom = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().split('T')[0]
+                assignedTo = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split('T')[0]
+                break
+            case 'custom_date':
+                assignedFrom = form.value.assignedFrom || undefined
+                assignedTo = form.value.assignedTo || undefined
+                assignedAt = undefined
+                break
+        }
+    }
+
     let sourceParam = undefined
     if (form.value.source === 'website') {
         const sites = Array.isArray(form.value.sourceWebsite)
@@ -1481,17 +1589,19 @@ function applySearch() {
         first_name: form.value.firstName || undefined,
         responsible_person_id: responsiblePersonId,
         lead_branch_source: branchSource,
-        closed: closed,
         work_phone: form.value.workPhone || undefined,
-        stage_id: form.value.stage ?? undefined,
         email: form.value.email || undefined,
         bedrooms: form.value.bedrooms ?? undefined,
         search: form.value.search || undefined,
         source: sourceParam,
         interaction_result: form.value.interactionResult || undefined,
+        status_lead: form.value.qualityStatus || undefined,
         created_from: createdFrom || undefined,  
         created_to: createdTo || undefined,     
         created_at: createdAt || undefined,   
+        assigned_from: assignedFrom || undefined,
+        assigned_to: assignedTo || undefined,
+        assigned_at: assignedAt || undefined,
         team_id: teamId || undefined,
         office_branch: officeBranches || undefined,
          lead_type: form.value.leadType || undefined,
@@ -1522,10 +1632,10 @@ function applySearch() {
                 options: 
                     field.formKey === 'responsible' ? personOptions.value : 
                     field.formKey === 'branchSource' ? branchSourceOptions.value : 
-                    field.formKey === 'stage' ? stageOptions.value : 
                     field.formKey === 'source' ? sourceOptions.value :
                     field.formKey === 'team' ? teamOptions.value : 
                     field.formKey === 'areaId' ? areaOptions.value : 
+                    field.formKey === 'qualityStatus' ? qualityStatusOptions :
                      field.formKey === 'leadType' ? leadTypeOptions :
                     field.formKey === 'propertyStatus' ? propertyStatusOptions :
                     (field.options || [])
@@ -1785,20 +1895,22 @@ function resetFormValues() {
         firstName: '',
         responsible: '',
         createdOn: '',
+        assignedOn: '',
         createdFrom: '',     
         createdTo: '',  
+        assignedFrom: '',
+        assignedTo: '',
         created_from: '',     
         created_to: '',  
         stageChangedBy: '',
         branchSource: '',
-        closed: '',
         workPhone: '',
-        stage: '',
         email: '',
         bedrooms: '',
         source: '',
         sourceWebsite: [],
         interactionResult: '',
+        qualityStatus: '',
         team: '',
         office: [],
          leadType: '',
@@ -1845,14 +1957,20 @@ const calendarCells = computed(() => {
     return cells
 })
 
-function openDatePicker() {
-    if (form.value.createdOn && form.value.createdOn !== 'custom_date') {
-        selectedPreset.value = form.value.createdOn
-        selectPresetRange(form.value.createdOn)
-    } else if (form.value.createdOn === 'custom_date' && form.value.createdFrom && form.value.createdTo) {
+function openDatePicker(fieldId = 'created_on') {
+    activeDateField.value = fieldId
+    const isAssigned = fieldId === 'assigned_on'
+    const dateKey = isAssigned ? 'assignedOn' : 'createdOn'
+    const fromKey = isAssigned ? 'assignedFrom' : 'createdFrom'
+    const toKey = isAssigned ? 'assignedTo' : 'createdTo'
+
+    if (form.value[dateKey] && form.value[dateKey] !== 'custom_date') {
+        selectedPreset.value = form.value[dateKey]
+        selectPresetRange(form.value[dateKey])
+    } else if (form.value[dateKey] === 'custom_date' && form.value[fromKey] && form.value[toKey]) {
         selectedPreset.value = 'custom_date'
-        startDate.value = startOfDay(new Date(form.value.createdFrom))
-        endDate.value = startOfDay(new Date(form.value.createdTo))
+        startDate.value = startOfDay(new Date(form.value[fromKey]))
+        endDate.value = startOfDay(new Date(form.value[toKey]))
         calendarMonth.value = new Date(startDate.value.getFullYear(), startDate.value.getMonth(), 1)
     }
     showDateModal.value = true
@@ -1918,14 +2036,19 @@ function changeMonth(delta) {
 }
 
 function applyDateRange() {
+    const isAssigned = activeDateField.value === 'assigned_on'
+    const dateKey = isAssigned ? 'assignedOn' : 'createdOn'
+    const fromKey = isAssigned ? 'assignedFrom' : 'createdFrom'
+    const toKey = isAssigned ? 'assignedTo' : 'createdTo'
+
     if (selectedPreset.value && selectedPreset.value !== 'custom_date') {
-        form.value.createdOn = selectedPreset.value
-        form.value.createdFrom = ''
-        form.value.createdTo = ''
+        form.value[dateKey] = selectedPreset.value
+        form.value[fromKey] = ''
+        form.value[toKey] = ''
     } else if (startDate.value && endDate.value) {
-        form.value.createdOn = 'custom_date'
-        form.value.createdFrom = formatYmd(startDate.value)
-        form.value.createdTo = formatYmd(endDate.value)
+        form.value[dateKey] = 'custom_date'
+        form.value[fromKey] = formatYmd(startDate.value)
+        form.value[toKey] = formatYmd(endDate.value)
     }
     showDateModal.value = false
     applySearch()
@@ -1956,6 +2079,13 @@ watch(() => form.value.createdOn, (newVal, oldVal) => {
     if (oldVal === 'custom_date' && newVal !== 'custom_date') {
         form.value.createdFrom = ''
         form.value.createdTo = ''
+    }
+})
+
+watch(() => form.value.assignedOn, (newVal, oldVal) => {
+    if (oldVal === 'custom_date' && newVal !== 'custom_date') {
+        form.value.assignedFrom = ''
+        form.value.assignedTo = ''
     }
 })
 
@@ -2176,9 +2306,9 @@ onBeforeUnmount(() => {
     font-size: 13px;
     font-weight: 600;
     color: #01062C;
-    margin-bottom: 2px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #F1F5F9;
+    margin-bottom: 10px;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
 @media (max-width: 1199px) {
@@ -2316,6 +2446,16 @@ onBeforeUnmount(() => {
     border-radius: 10px;
     box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
     padding: 10px;
+}
+
+.budget-from-to-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.budget-col {
+    min-width: 0;
 }
 
 .budget-input-label {
