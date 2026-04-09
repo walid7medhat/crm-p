@@ -681,7 +681,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             'reason' => 'nullable|string|max:255',
             
             // Stage 3: Follow Up
-            'salutation' => 'nullable|string|max:50|in:Mr.,Ms.,Mrs.,Dr.',
+            'salutation' => 'nullable|string|max:50',
             
             // Stage 4: Qualified - استخدام status_lead
             'area_id' => 'nullable|exists:areas,id',
