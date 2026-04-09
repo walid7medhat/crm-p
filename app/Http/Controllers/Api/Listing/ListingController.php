@@ -328,7 +328,37 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
                         });
                     }
                 }
-
+  if ($request->has('area_ids')) {
+        $areaIds = $request->area_ids;
+        
+        // تأكد من أنها مصفوفة
+        if (!is_array($areaIds)) {
+            $areaIds = explode(',', $areaIds);
+        }
+        
+        $areaIds = array_filter($areaIds); // إزالة القيم الفارغة
+        
+        if (!empty($areaIds)) {
+            $allAreaIds = [];
+            foreach ($areaIds as $areaId) {
+                $area = Area::find($areaId);
+                if ($area) {
+                    $childAreaIds = $area->getChildIdsAttribute();
+                    $allAreaIds = array_merge($allAreaIds, [$areaId], $childAreaIds);
+                } else {
+                    $allAreaIds[] = $areaId;
+                }
+            }
+            $allAreaIds = array_unique($allAreaIds);
+            
+            $query->where(function ($q) use ($allAreaIds) {
+                $q->whereIn('area_id', $allAreaIds)
+                  ->orWhereHas('project', function ($projectQuery) use ($allAreaIds) {
+                      $projectQuery->whereIn('area_id', $allAreaIds);
+                  });
+            });
+        }
+    } 
         if($request->has('is_archived')) {
             $query->where('is_archived', $request->boolean('is_archived'));
         }
@@ -399,7 +429,19 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             if ($request->has('number_of_bedrooms')) {
                 $bedrooms = $request->number_of_bedrooms;
                 $bedrooms == 'Studio'  || 'studio' ? 0 : $bedrooms;
-                $query->where('number_of_bedrooms',$bedrooms );
+                if($bedrooms == 10){
+                        $query->where('number_of_bedrooms','>=',$bedrooms );
+                }else{
+                    $query->where('number_of_bedrooms',$bedrooms );
+                }
+            }
+            if ($request->has('number_of_bathrooms')) {
+                $bathrooms = $request->number_of_bathrooms;
+                if($bathrooms == 6){
+                        $query->where('number_of_bathrooms','>=',$bathrooms );
+                }else{
+                    $query->where('number_of_bathrooms',$bathrooms );
+                }
             }
 
             if ($request->has('min_price')) {
@@ -459,6 +501,7 @@ public function getMatchingListings(Request $request)
 
     $projectId = $request->project_id;
     $areaId    = $request->area_id;
+    
     $typeId    = $request->property_type_id;
     $bedrooms  = $request->number_of_bedrooms;
     $minPrice  = $request->min_price;

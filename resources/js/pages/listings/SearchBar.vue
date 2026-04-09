@@ -28,7 +28,8 @@
           </template>
           <template #clear-indicator="{ attributes }">
             <span v-bind="attributes">
-               <i class="ri-close-line custom-clear"></i>            </span>
+               <i class="ri-close-line custom-clear"></i>       
+             </span>
           </template>
           <template #option="option">
             <div class="location-option">
@@ -45,27 +46,20 @@
               <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
             </div>
           </template>
-          <template #selected-option-container="{ option, deselect, disabled }">
-            <span
-              v-if="isFirstSelectedArea(option)"
-              class="vs__selected location-chip"
+        <template #selected-option-container="{ option, deselect, disabled }">
+          <span class="vs__selected location-chip">
+            {{ locationFirstLine(option) }}
+
+            <button
+              v-if="!disabled"
+              class="vs__deselect location-chip-close"
+              type="button"
+              @click.stop="deselect(option)"
             >
-              {{ locationFirstLine(option) }}
-              <button
-                v-if="!disabled"
-                class="vs__deselect location-chip-close"
-                type="button"
-                @click.stop="deselect(option)"
-              >
-                 <i class="ri-close-line custom-clear"></i>              </button>
-            </span>
-            <span
-              v-else-if="isSecondSelectedArea(option) && remainingSelectedAreasCount > 0"
-              class="vs__selected location-chip"
-            >
-              {{ remainingSelectedAreasCount }} more
-            </span>
-          </template>
+              <i class="ri-close-line custom-clear"></i>
+            </button>
+          </span>
+        </template>
         </v-select>
       </div>
 
@@ -116,7 +110,13 @@
 
         <div class="listing-beds-wrap">
           <button type="button" class="listing-pill-btn" @click.stop="toggleBedsDropdown">
-            <span>{{ selectedBeds ? `${selectedBeds} Beds` : 'Beds & Baths' }}</span>
+           <span>
+                {{
+                  selectedBeds || selectedBaths
+                    ? `${selectedBeds || ''} Beds / ${selectedBaths || ''} Baths`
+                    : 'Beds & Baths'
+                }}
+              </span>
             <i class="ri-arrow-down-s-line"></i>
           </button>
           <div v-if="showBedsDropdown" class="listing-beds-popover" @click.stop>
@@ -133,6 +133,19 @@
                 {{ bed }}
               </button>
             </div>
+            <div class="listing-pop-label mt-2">Bathrooms</div>
+              <div class="listing-chip-grid">
+                <button
+                  v-for="bath in bathsOptions"
+                  :key="bath"
+                  type="button"
+                  class="listing-chip-btn"
+                  :class="{ active: selectedBaths === bath }"
+                  @click="selectBathOption(bath)"
+                >
+                  {{ bath }}
+                </button>
+              </div>
           </div>
         </div>
 
@@ -416,12 +429,14 @@ const searchReferenceNumber = ref("");
 
     // Debounce timer
     const searchTimer = ref(null);
+const allAreas = ref([]);
 
     // Static options
     const saleRentOptions = ["All", "Sale", "Rent"];
     const statusOptions = ["All", "Ready", "Offplan"];
     const bedsOptions = ["Studio", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
-    
+    const selectedBaths = ref("");
+const bathsOptions = ["1", "2", "3", "4", "5", "6+"];
      const completionStatusOptions = [
       { label: "All", value: null },
       { label: "Completed", value: "Completed" },
@@ -468,26 +483,29 @@ const sortOptions = [
       }
     };
     const fetchAreas = async () => {
-      try {
-        isLoadingAreas.value = true;
-        const response = await api.get("/listings/areas/?has_listings=true");
-        
-        const areasData = response.data.data || response.data;
-        
-        areas.value = areasData.map(area => ({
-          id: area.id,
-          name: area.area_parents_title || area.name || area.title,
-          subtitle: area.region || area.city || area.country || 'UAE'
-        }));
-        
-        console.log("✅ Areas loaded:", areas.value.length);
-        
-      } catch (error) {
-        console.error("❌ Error fetching areas:", error.response || error);
-      } finally {
-        isLoadingAreas.value = false;
-      }
-    };
+  try {
+    isLoadingAreas.value = true;
+    const response = await api.get("/listings/areas/?has_listings=true");
+    
+    const areasData = response.data.data || response.data;
+    
+    const mappedAreas = areasData.map(area => ({
+      id: area.id,
+      name: area.area_parents_title || area.name || area.title,
+      subtitle: area.region || area.city || area.country || 'UAE'
+    }));
+    
+    areas.value = mappedAreas;
+    allAreas.value = mappedAreas; // حفظ نسخة كاملة
+    
+    console.log("✅ Areas loaded:", areas.value.length);
+    
+  } catch (error) {
+    console.error("❌ Error fetching areas:", error.response || error);
+  } finally {
+    isLoadingAreas.value = false;
+  }
+};
 
     // Fetch property types from API
     const fetchPropertyTypes = async () => {
@@ -510,7 +528,10 @@ const sortOptions = [
         isLoadingPropertyTypes.value = false;
       }
     };
-
+const selectBathOption = (bath) => {
+  selectedBaths.value = selectedBaths.value === bath ? "" : bath;
+  handleFilterChange();
+};
     const fetchAgents = async () => {
       try {
         isLoadingAgents.value = true;
@@ -558,7 +579,8 @@ const sortOptions = [
              selectedStatus.value !== "All" || 
              hasSelectedAreas || 
              selectedPropertyType.value || 
-             selectedBeds.value || 
+             selectedBeds.value ||
+             selectedBaths.value || 
              priceFrom.value > 0 || 
              priceTo.value < 10000000 || 
              sizeFrom.value > 0 || 
@@ -627,6 +649,9 @@ const sortOptions = [
           apiFilters.number_of_bedrooms = parseInt(filters.beds);
         }
       }
+      if (filters.baths) {
+          apiFilters.number_of_bathrooms = parseInt(filters.baths);
+        }
 
       // Price Range Filter
       if (filters.priceFrom > 0 || filters.priceTo < 10000000) {
@@ -671,7 +696,8 @@ const sortOptions = [
           sizeFrom: sizeFrom.value,
           sizeTo: sizeTo.value,
           sort: selectedSort.value,
-           referenceNumber: searchReferenceNumber.value
+           referenceNumber: searchReferenceNumber.value,
+           baths: selectedBaths.value,
         };
         
         console.log("🔍 Auto-search with filters:", filters);
@@ -769,9 +795,21 @@ const sortOptions = [
         if (!filters) return;
         selectedSaleRent.value = filters.saleRent ?? "All";
         selectedStatus.value = filters.status ?? "All";
-        selectedArea.value = Array.isArray(filters.area)
-          ? filters.area
-          : (filters.area ? [filters.area] : []);
+      
+          let areasWithNames = [];
+        if (filters.area && filters.area.length > 0) {
+          if (allAreas.value.length > 0) {
+            // البحث عن المناطق في القائمة المحملة
+            areasWithNames = filters.area.map(area => {
+              const foundArea = allAreas.value.find(a => a.id === area.id);
+              return foundArea || { id: area.id, name: `Area ${area.id}`, subtitle: '' };
+            });
+          } else {
+            // إذا لم تكن المناطق محملة بعد، استخدم البيانات الموجودة أو انتظر التحميل
+            areasWithNames = filters.area;
+          }
+        }
+            selectedArea.value = areasWithNames;
         selectedProject.value = filters.project || null;
         selectedPropertyType.value = filters.propertyType || null;
         selectedAgent.value = filters.agent || null;
@@ -1007,6 +1045,7 @@ fetchProjects()
       selectedPropertyType,
       selectedAgent,
       selectedBeds,
+      selectedBaths,
       selectedSort,
       priceFrom,
       priceTo,
@@ -1023,6 +1062,7 @@ fetchProjects()
       statusOptions,
        completionStatusOptions,
       bedsOptions,
+      bathsOptions,
       sortOptions,
       quickSortSelectOptions,
       quickSortForDropdown,
@@ -1045,6 +1085,7 @@ fetchProjects()
       toggleMoreFilters,
       closeAllDropdowns,
       selectBedsOption,
+      selectBathOption,
       updatePriceFrom,
       updatePriceTo,
       updateSizeFrom,
@@ -1955,7 +1996,7 @@ fetchProjects()
 .listing-main-search {
   position: relative;
   margin-bottom: 12px;
-  max-width: 560px;
+  max-width: 710px;
 }
 
 .listing-main-search-icon {
@@ -2019,7 +2060,9 @@ fetchProjects()
   gap: 10px;
   font-size: 22px;
 }
-
+ .listing-pill-btn i{
+  color: rgb(207, 219, 236);
+ }
 .listing-price-wrap {
   position: relative;
 }
@@ -2125,8 +2168,8 @@ fetchProjects()
 }
 
 .listing-chip-btn.active {
-  border-color: #7c3aed;
-  color: #5b21b6;
+    border-color: #01062c;
+    color: #01062c;
   background: #f5f3ff;
 }
 
@@ -2215,9 +2258,9 @@ fetchProjects()
 
 .listing-pop-actions .btn {
   flex: 1;
-  min-height: 46px;
+  min-height: 30px;
   border-radius: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 @media (max-width: 991px) {
@@ -2252,7 +2295,7 @@ fetchProjects()
 
 .listing-headline h2 {
   font-size: 18px !important;
-  font-weight: 700 !important;
+  font-weight: 500 !important;
   letter-spacing: -0.1px;
 }
 
@@ -2530,10 +2573,169 @@ fetchProjects()
 }
 :deep(.custom-clear) {
   font-size: 14px;
-  color: #666;
+  color: rgb(207, 219, 236);
 }
 .listing-chip-grid button{
   font-weight: 400;
     font-size: 13px;
+}
+
+
+.vs__open-indicator-icon {
+  width: 16px !important;
+  height: 16px !important;
+  color: rgb(207, 219, 236) !important;
+  display: block !important;
+}
+
+:deep(.custom-clear) {
+  font-size: 16px !important;
+  color: rgb(207, 219, 236) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+}
+
+:deep(.custom-clear:hover) {
+  color: #ef4444 !important;
+}
+
+/* ضبط حاوية الأزرار لتكون الأيقونات في المنتصف */
+:deep(.vs__actions) {
+  display: flex !important;
+  align-items: center !important;
+  gap: 1px !important;
+  padding: 0px !important;
+}
+
+:deep(.vs__clear),
+:deep(.vs__open-indicator) {
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 !important;
+}
+
+/* إزالة الخلفية والحدود الافتراضية لزر الإغلاق */
+:deep(.vs__clear) {
+  background: transparent !important;
+  border: none !important;
+  opacity: 1 !important;
+}
+
+/* تعديل أيقونة السهم داخل الـ open-indicator */
+:deep(.vs__open-indicator) {
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* توحيد حجم أيقونة الإغلاق في الـ location-chip */
+.location-chip-close .custom-clear {
+  font-size: 12px !important;
+}
+
+
+:deep(.vs__deselect svg),
+:deep(.vs__deselect .vs__deselect-icon),
+:deep(.vs__clear svg),
+:deep(.vs__clear-indicator) {
+  display: none !important;
+}
+
+:deep(.vs__deselect) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 0 0 6px !important;
+  width: 18px !important;
+  height: 18px !important;
+  cursor: pointer !important;
+  border-radius: 50% !important;
+  transition: all 0.2s ease !important;
+}
+
+:deep(.vs__deselect):hover {
+  background: #fee2e2 !important;
+}
+
+:deep(.vs__deselect)::before {
+  content: "✕" !important;
+  font-size: 11px !important;
+  font-weight: bold !important;
+  color: rgb(207, 219, 236) !important;
+  font-family: monospace !important;
+  line-height: 1 !important;
+}
+
+:deep(.vs__deselect):hover::before {
+  color: #ef4444 !important;
+}
+
+.location-chip-close {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 0 0 6px !important;
+  width: 18px !important;
+  height: 18px !important;
+  cursor: pointer !important;
+  border-radius: 50% !important;
+  transition: all 0.2s ease !important;
+}
+
+.location-chip-close:hover {
+  background: #fee2e2 !important;
+}
+
+.location-chip-close .custom-clear {
+  display: none !important;
+}
+
+.location-chip-close::before {
+  content: "✕" !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  color: rgb(207, 219, 236) !important;
+  font-family: monospace !important;
+}
+
+.location-chip-close:hover::before {
+  color: #ef4444 !important;
+}
+
+:deep(.vs__clear) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  border-radius: 50% !important;
+}
+
+:deep(.vs__clear):hover {
+  background: #fee2e2 !important;
+}
+
+:deep(.vs__clear)::before {
+  content: "✕" !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: rgb(207, 219, 236) !important;
+  font-family: monospace !important;
+}
+
+:deep(.vs__clear):hover::before {
+  color: #ef4444 !important;
 }
 </style>

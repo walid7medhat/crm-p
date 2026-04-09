@@ -439,6 +439,13 @@ const fetchProperties = async (filters = {}, page = 1) => {
         delete params[key];
       }
     });
+     if (params.area_ids && !Array.isArray(params.area_ids)) {
+      if (typeof params.area_ids === 'string') {
+        params.area_ids = params.area_ids.split(',').map(id => Number(id));
+      } else {
+        params.area_ids = [params.area_ids];
+      }
+    }
 
     console.log("📤 Fetching properties with params:", params);
 
@@ -484,10 +491,14 @@ const fetchProperties = async (filters = {}, page = 1) => {
     const encodeFiltersToQuery = (filters) => {
       return {
         sale_rent: filters.saleRent || undefined,
-        area_id: filters.area?.id || undefined,
+        // area_id: filters.area?.id || undefined,
+            area_ids: filters.area && filters.area.length > 0 
+      ? filters.area.map(a => a.id).join(',')  
+      : undefined,
         project_id: filters.project?.id || undefined,
         type_id: filters.propertyType?.id || undefined,
         beds: filters.beds || undefined,
+        baths: filters.baths || undefined,
         price_from: filters.priceFrom,
         price_to: filters.priceTo,
         size_from: filters.sizeFrom,
@@ -498,13 +509,40 @@ const fetchProperties = async (filters = {}, page = 1) => {
       };
     };
 
-    const decodeFiltersFromQuery = (query) => {
+  const decodeFiltersFromQuery = async (query) => {
+        let areaIds = [];
+  if (query.area_ids) {
+    areaIds = query.area_ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+  } else if (query.area_id) {
+    areaIds = [parseInt(query.area_id)];
+  }
+  
+  let areasWithNames = [];
+  if (areaIds.length > 0) {
+    try {
+      const response = await api.get("/listings/areas", { 
+        params: { ids: areaIds.join(',') } 
+      });
+      const areasData = response.data.data || response.data;
+      areasWithNames = areasData.map(area => ({
+        id: area.id,
+        name: area.area_parents_title || area.name || area.title,
+        subtitle: area.region || area.city || area.country || 'UAE'
+      }));
+    } catch (error) {
+      console.error("Error fetching areas:", error);
+      // Fallback: استخدام id فقط
+      areasWithNames = areaIds.map(id => ({ id, name: '', subtitle: '' }));
+    }
+  }
       return {
         saleRent: query.sale_rent || 'All',
-        area: query.area_id ? { id: Number(query.area_id) } : null,
+        // area: query.area_id ? { id: Number(query.area_id) } : null,
+             area: areasWithNames,
         project: query.project_id ? { id: Number(query.project_id) } : null,
         propertyType: query.type_id ? { id: Number(query.type_id) } : null,
         beds: query.beds || '',
+        baths: query.baths || '',
         priceFrom: query.price_from ? Number(query.price_from) : 0,
         priceTo: query.price_to ? Number(query.price_to) : 10000000,
         sizeFrom: query.size_from ? Number(query.size_from) : 0,
@@ -514,6 +552,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
         completionStatus: query.completion_status
           ? { label: query.completion_status, value: query.completion_status }
           : null,
+        agent: query.agent_id ? { id: Number(query.agent_id) } : null,
       };
     };
 
@@ -548,9 +587,10 @@ const fetchProperties = async (filters = {}, page = 1) => {
       }
 
       // Area Filter
-      if (filters.area) {
-        apiFilters.area_id = filters.area.id;
+       if (filters.area && filters.area.length > 0) {
+        apiFilters.area_ids = filters.area.map(a => a.id);
       }
+      
 
       // Property Type Filter
       if (filters.propertyType) {
@@ -570,6 +610,10 @@ const fetchProperties = async (filters = {}, page = 1) => {
           apiFilters.number_of_bedrooms = parseInt(filters.beds);
         }
       }
+       if (filters.baths) {
+          apiFilters.number_of_bathrooms = parseInt(filters.baths);
+        }
+      
  if (filters.completionStatus && filters.completionStatus.value) {
     apiFilters.completion_status = filters.completionStatus.value;
   }

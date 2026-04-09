@@ -917,7 +917,7 @@ const purposeOptions = [
 
 const bedroomOptions = [
     // { value: null, text: 'Select Bedrooms' },
-    { value: 'studio', text: 'Studio' },
+    { value:0, text: 'Studio' },
     { value: 1, text: '1' },
     { value: 2, text: '2' },
     { value: 3, text: '3' },
