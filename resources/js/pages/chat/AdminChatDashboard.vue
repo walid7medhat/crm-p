@@ -572,6 +572,24 @@ onMounted(() => {
     align-items: flex-start;
   }
 }
+
+@media (max-width: 768px) {
+  .action-buttons {
+    gap: 4px;
+  }
+
+  .action-buttons .btn {
+    padding: 3px 8px;
+    font-size: 0.68rem;
+    line-height: 1.1;
+    border-radius: 8px;
+  }
+
+  .action-buttons .btn i {
+    font-size: 0.75rem;
+    margin-right: 2px;
+  }
+}
 .chat-admin-modal-overlay {
   position: fixed;
   inset: 0;

@@ -386,17 +386,57 @@
   </aside>
 
   <nav v-else class="mobile-sidebar-dock" aria-label="Mobile menu">
-    <router-link
-      v-for="item in mobileDockItems"
-      :key="item.path"
-      :to="item.path"
-      class="mobile-sidebar-dock__item"
-      :class="{ 'is-active': isDockActive(item.path) }"
-    >
-      <iconify-icon :icon="item.icon" class="mobile-sidebar-dock__icon" />
-      <span class="mobile-sidebar-dock__label">{{ item.label }}</span>
-    </router-link>
+    <template v-for="item in mobileDockItems" :key="item.key || item.path">
+      <button
+        v-if="item.children"
+        type="button"
+        class="mobile-sidebar-dock__item mobile-sidebar-dock__btn"
+        :class="{ 'is-active': isDockGroupActive(item) || activeMobileDockGroup?.key === item.key, 'is-chat': item.path === '/admin/chat' }"
+        @click="openMobileDockGroup(item)"
+      >
+        <iconify-icon :icon="item.icon" class="mobile-sidebar-dock__icon" />
+        <span class="mobile-sidebar-dock__label">{{ item.label }}</span>
+      </button>
+      <router-link
+        v-else
+        :to="item.path"
+        class="mobile-sidebar-dock__item"
+        :class="{ 'is-active': isDockActive(item.path), 'is-chat': item.path === '/admin/chat' }"
+      >
+        <iconify-icon :icon="item.icon" class="mobile-sidebar-dock__icon" />
+        <span class="mobile-sidebar-dock__label">{{ item.label }}</span>
+      </router-link>
+    </template>
   </nav>
+
+  <Teleport to="body">
+    <div
+      v-if="showMobileDockSheet && activeMobileDockGroup"
+      class="mobile-dock-sheet-overlay"
+      @click.self="closeMobileDockGroup"
+    >
+      <div class="mobile-dock-sheet">
+        <div class="mobile-dock-sheet__head">
+          <button type="button" class="mobile-dock-sheet__close" @click="closeMobileDockGroup" aria-label="Close">
+            <iconify-icon icon="lucide:x" />
+          </button>
+        </div>
+        <div class="mobile-dock-sheet__list" :class="{ 'mobile-dock-sheet__list--inline-two': (activeMobileDockGroup?.children?.length || 0) === 2 }">
+          <router-link
+            v-for="child in activeMobileDockGroup.children"
+            :key="child.path"
+            :to="child.path"
+            class="mobile-dock-sheet__item"
+            :class="{ 'is-active': isDockActive(child.path) }"
+            @click="closeMobileDockGroup"
+          >
+            <span>{{ child.label }}</span>
+            <span v-if="child.count > 0" class="mobile-dock-sheet__count">{{ child.count }}</span>
+          </router-link>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -729,14 +769,65 @@ const isRolesActive = computed(() =>
 
 function syncViewport() {
   isMobileViewport.value = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+  if (!isMobileViewport.value) {
+    closeMobileDockGroup();
+  }
 }
 
+const showMobileDockSheet = ref(false);
+const activeMobileDockGroup = ref(null);
+
 const mobileDockItems = computed(() => {
+  const groups = [];
+
+  const preferredListingChildren = filteredTableItems.value
+    .filter((it) => it.path === '/alllisting' || it.path === '/property-form')
+    .map((it) => ({
+      path: it.path,
+      label: it.label,
+      count: it.count || 0
+    }));
+
+  const fallbackListingChildren = filteredTableItems.value
+    .filter((it) => it.path !== '/notify-me')
+    .map((it) => ({
+      path: it.path,
+      label: it.label,
+      count: it.count || 0
+    }));
+
+  const listingChildren = (preferredListingChildren.length ? preferredListingChildren : fallbackListingChildren).slice(0, 2);
+
+  if (listingChildren.length) {
+    groups.push({
+      key: 'group-listings',
+      label: 'Listings',
+      icon: 'lucide:building-2',
+      children: listingChildren,
+    });
+  }
+
+  if (filteredRequestsItems.value.length) {
+    groups.push({
+      key: 'group-requests',
+      label: 'Requests',
+      icon: 'lucide:clipboard-list',
+      children: filteredRequestsItems.value.map((it) => ({ path: it.path, label: it.label, count: it.count || 0 })),
+    });
+  }
+
+  if (filteredProjectsItems.value.length) {
+    groups.push({
+      key: 'group-projects',
+      label: 'Projects',
+      icon: 'lucide:building',
+      children: filteredProjectsItems.value.map((it) => ({ path: it.path, label: it.label })),
+    });
+  }
+
   const items = [
     { path: '/', label: 'Home', icon: 'solar:home-smile-angle-outline' },
-    { path: '/alllisting', label: 'Listings', icon: 'lucide:building-2' },
-    { path: '/projects', label: 'Projects', icon: 'lucide:building' },
-    { path: '/my-requests', label: 'Requests', icon: 'lucide:clipboard-list' },
+    ...groups,
   ];
 
   if (isAdmin.value) {
@@ -759,8 +850,9 @@ const mobileDockItems = computed(() => {
 
   const seen = new Set();
   return items.filter((item) => {
-    if (seen.has(item.path)) return false;
-    seen.add(item.path);
+    const uniqueKey = item.key || item.path;
+    if (seen.has(uniqueKey)) return false;
+    seen.add(uniqueKey);
     return true;
   });
 });
@@ -769,6 +861,22 @@ function isDockActive(path) {
   if (path === '/') return route.path === '/';
   return route.path === path || route.path.startsWith(path + '/');
 }
+
+function isDockGroupActive(group) {
+  if (!group?.children?.length) return false;
+  return group.children.some((child) => isDockActive(child.path));
+}
+
+function openMobileDockGroup(group) {
+  activeMobileDockGroup.value = group;
+  showMobileDockSheet.value = true;
+}
+
+function closeMobileDockGroup() {
+  showMobileDockSheet.value = false;
+  activeMobileDockGroup.value = null;
+}
+
 
 // Methods
 const toggleDropdown = (name) => {
@@ -826,6 +934,7 @@ function afterLeave(el) {
 
 // Watch for route changes
 watch(() => route.path, (newPath) => {
+  closeMobileDockGroup();
   const menus = {
     table: filteredTableItems.value,
     requests: filteredRequestsItems.value,
@@ -949,20 +1058,20 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .mobile-sidebar-dock {
     position: fixed;
-    left: 10px;
-    right: 10px;
-    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    left: 8px;
+    right: 8px;
+    bottom: calc(2px + env(safe-area-inset-bottom, 0px));
     z-index: 1200;
-    height: 58px;
+    height: 54px;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 10px;
+    padding: 5px 8px;
     border-radius: 18px;
     background: #01062c;
     box-shadow: 0 10px 30px rgba(2, 6, 23, 0.28);
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: visible;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -972,8 +1081,8 @@ onUnmounted(() => {
 
   .mobile-sidebar-dock__item {
     flex: 0 0 auto;
-    min-width: 56px;
-    height: 46px;
+    min-width: 52px;
+    height: 42px;
     border-radius: 12px;
     color: rgba(255, 255, 255, 0.9);
     text-decoration: none;
@@ -981,7 +1090,7 @@ onUnmounted(() => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 2px;
     padding: 4px 8px;
   }
 
@@ -991,15 +1100,155 @@ onUnmounted(() => {
   }
 
   .mobile-sidebar-dock__icon {
-    font-size: 17px;
+    font-size: 14px;
     line-height: 1;
   }
 
   .mobile-sidebar-dock__label {
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 600;
     line-height: 1;
     white-space: nowrap;
+  }
+
+  .mobile-sidebar-dock__item.is-chat .mobile-sidebar-dock__icon {
+    font-size: 10px;
+  }
+
+  .mobile-sidebar-dock__btn {
+    border: none;
+    background: transparent;
+  }
+
+  .mobile-sidebar-dock__group {
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  .mobile-dock-inline-submenu {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    z-index: 1205;
+    white-space: nowrap;
+  }
+
+  .mobile-dock-inline-submenu__item {
+    text-decoration: none;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+
+  .mobile-dock-inline-submenu__item.is-active {
+    color: #f5b749;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .mobile-dock-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    background: rgba(15, 23, 42, 0.42);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .mobile-dock-sheet {
+    width: 100%;
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    padding: 8px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.18);
+    max-height: min(44vh, 360px);
+    overflow: auto;
+  }
+
+
+  .mobile-dock-sheet__head {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-bottom: 4px;
+  }
+
+  .mobile-dock-sheet__close {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-dock-sheet__list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .mobile-dock-sheet__list--inline-two {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+
+  .mobile-dock-sheet__item {
+    text-decoration: none;
+    color: #0f172a;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 7px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .mobile-dock-sheet__list--inline-two .mobile-dock-sheet__item {
+    flex: 1 1 0;
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+
+  .mobile-dock-sheet__item.is-active {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.22);
+  }
+
+  .mobile-dock-sheet__count {
+    min-width: 22px;
+    text-align: center;
+    font-size: 9px;
+    font-weight: 700;
+    background: #fff;
+    border: 1px solid #dbe1ea;
+    border-radius: 999px;
+    padding: 2px 6px;
+    color: #334155;
   }
 }
 @media (min-width: 1200px) {

@@ -61,6 +61,22 @@
           </span>
         </template>
         </v-select>
+        <button
+          v-if="isMobileViewport"
+          type="button"
+          class="mobile-filter-trigger"
+          aria-label="Open filters"
+          @click="showMobileFilterSheet = true"
+        >
+          <i class="ri-equalizer-line"></i>
+          <span v-if="mobileActiveFilterCount > 0" class="mobile-filter-badge">{{ mobileActiveFilterCount }}</span>
+        </button>
+      </div>
+
+      <div v-if="isMobileViewport" class="mobile-quick-chips">
+        <button type="button" class="mobile-quick-chip" :class="{ active: selectedSaleRent === 'Sale' }" @click="selectedSaleRent = 'Sale'; handleFilterChange()">For Sale</button>
+        <button type="button" class="mobile-quick-chip" :class="{ active: selectedCompletionStatus?.value === 'Completed' }" @click="selectedCompletionStatus = completionStatusOptions[1]; handleFilterChange()">Ready</button>
+        <button type="button" class="mobile-quick-chip" :class="{ active: selectedSort === 'hot_deal' }" @click="setQuickSort('hot_deal')">Hot Deal</button>
       </div>
 
       <div class="listing-pill-row">
@@ -363,6 +379,136 @@
     </div>
 
     <div v-if="showPriceDropdown || showMoreFilters || showBedsDropdown" class="dropdown-overlay" @click="closeAllDropdowns"></div>
+
+    <div v-if="isMobileViewport && showMobileFilterSheet" class="mobile-filter-sheet-overlay" @click.self="showMobileFilterSheet = false">
+      <div class="mobile-filter-sheet" @click.stop>
+        <div class="mobile-filter-sheet-head">
+          <button type="button" class="mobile-filter-clear" @click="resetFilters">Clear All</button>
+          <button type="button" class="mobile-filter-close" @click="showMobileFilterSheet = false" aria-label="Close">
+            <i class="ri-close-line"></i>
+          </button>
+        </div>
+
+        <div class="mobile-filter-accordion">
+          <details open>
+            <summary>Listing Type</summary>
+            <v-select
+              v-model="selectedSaleRent"
+              :options="typeOptions"
+              label="label"
+              :reduce="option => option.value"
+              :searchable="false"
+              :append-to-body="false"
+              placeholder="All"
+              class="custom-select listing-pop-select"
+              @update:modelValue="handleFilterChange"
+            />
+          </details>
+
+          <details open>
+            <summary>Property Type</summary>
+            <v-select
+              v-model="selectedPropertyType"
+              :options="propertyTypes"
+              :disabled="isLoadingPropertyTypes"
+              label="name"
+              :append-to-body="false"
+              placeholder="Property type"
+              class="custom-select listing-pop-select"
+              @update:modelValue="handleFilterChange"
+            />
+          </details>
+
+          <details>
+            <summary>Beds & Baths</summary>
+            <div class="listing-pop-label">Bedrooms</div>
+            <div class="listing-chip-grid">
+              <button
+                v-for="bed in bedsOptions"
+                :key="'m-bed-' + bed"
+                type="button"
+                class="listing-chip-btn"
+                :class="{ active: selectedBeds === bed }"
+                @click="selectBedsOption(bed)"
+              >{{ bed }}</button>
+            </div>
+            <div class="listing-pop-label mt-2">Bathrooms</div>
+            <div class="listing-chip-grid">
+              <button
+                v-for="bath in bathsOptions"
+                :key="'m-bath-' + bath"
+                type="button"
+                class="listing-chip-btn"
+                :class="{ active: selectedBaths === bath }"
+                @click="selectBathOption(bath)"
+              >{{ bath }}</button>
+            </div>
+          </details>
+
+          <details>
+            <summary>Price Range</summary>
+            <div class="listing-pop-grid">
+              <div>
+                <label>Minimum</label>
+                <input type="text" :value="formatThousandsDisplay(priceFrom)" class="range-input-side" @input="onPriceFromInput" @blur="handlePriceChange" placeholder="0" />
+              </div>
+              <div>
+                <label>Maximum</label>
+                <input type="text" :value="formatThousandsDisplay(priceTo)" class="range-input-side" @input="onPriceToInput" @blur="handlePriceChange" placeholder="Any" />
+              </div>
+            </div>
+          </details>
+
+          <details>
+            <summary>Area (sqft)</summary>
+            <div class="listing-pop-grid">
+              <div>
+                <label>Minimum</label>
+                <input type="text" :value="formatThousandsDisplay(sizeFrom)" class="range-input-side" @input="onSizeFromInput" @blur="handleSizeChange" placeholder="0" />
+              </div>
+              <div>
+                <label>Maximum</label>
+                <input type="text" :value="formatThousandsDisplay(sizeTo)" class="range-input-side" @input="onSizeToInput" @blur="handleSizeChange" placeholder="Any" />
+              </div>
+            </div>
+          </details>
+
+          <details v-if="!isMyListingPage">
+            <summary>Agent</summary>
+            <v-select
+              v-model="selectedAgent"
+              :options="agents"
+              :disabled="isLoadingAgents"
+              label="name"
+              :searchable="true"
+              :append-to-body="false"
+              placeholder="Select agent"
+              class="custom-select listing-pop-select"
+              @update:modelValue="handleFilterChange"
+            />
+          </details>
+
+          <details>
+            <summary>Sorting</summary>
+            <v-select
+              v-model="selectedSort"
+              :options="sortOptions"
+              label="label"
+              :reduce="option => option.value"
+              :searchable="false"
+              :append-to-body="false"
+              placeholder="Latest Listings"
+              class="custom-select listing-pop-select"
+              @update:modelValue="handleFilterChange"
+            />
+          </details>
+        </div>
+
+        <div class="mobile-filter-sticky-actions">
+          <button type="button" class="btn btn-primary w-100" @click="applyMobileFilters">Apply Filters</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -425,6 +571,9 @@ export default {
     const showSizeDropdown = ref(false);
     const showMoreFilters = ref(false);
     const showBedsDropdown = ref(false);
+    const showMobileFilterSheet = ref(false);
+    const isMobileViewport = ref(false);
+    let resizeHandler = null;
 const searchReferenceNumber = ref("");
 
     // Debounce timer
@@ -595,6 +744,17 @@ const selectBathOption = (bath) => {
              sizeTo.value < 10000 || searchReferenceNumber.value.trim() !== ""
              ||
              selectedCompletionStatus.value !== null;
+    });
+    const mobileActiveFilterCount = computed(() => {
+      let n = 0;
+      if (selectedSaleRent.value && selectedSaleRent.value !== "All") n++;
+      if (selectedPropertyType.value) n++;
+      if (selectedBeds.value) n++;
+      if (selectedBaths.value) n++;
+      if (priceFrom.value > 0 || priceTo.value < 10000000) n++;
+      if (selectedCompletionStatus.value !== null) n++;
+      if (selectedSort.value && selectedSort.value !== "created_at_desc") n++;
+      return n;
     });
 
     const dynamicHeadline = computed(() => {
@@ -794,6 +954,10 @@ const selectBathOption = (bath) => {
       
       console.log("🔍 Manual search with filters:", filters);
       emit('filters-changed', filters);
+    };
+    const applyMobileFilters = () => {
+      applyFilters();
+      showMobileFilterSheet.value = false;
     };
 
     // When coming back with saved filters (e.g. via Back button), restore them
@@ -1049,6 +1213,9 @@ const selectBathOption = (bath) => {
     });
 
     onMounted(() => {
+      resizeHandler = () => { isMobileViewport.value = window.innerWidth <= 768; };
+      resizeHandler();
+      window.addEventListener('resize', resizeHandler);
       fetchAreas();
       fetchPropertyTypes();
       fetchAgents();
@@ -1062,6 +1229,7 @@ fetchProjects()
     });
 
     onUnmounted(() => {
+      if (resizeHandler) window.removeEventListener('resize', resizeHandler);
       if (searchTimer.value) {
         clearTimeout(searchTimer.value);
       }
@@ -1095,6 +1263,8 @@ fetchProjects()
       showSizeDropdown,
       showMoreFilters,
       showBedsDropdown,
+      showMobileFilterSheet,
+      isMobileViewport,
       
       // Static options
       saleRentOptions,
@@ -1111,11 +1281,13 @@ fetchProjects()
       priceProgressStyle,
       sizeProgressStyle,
       hasActiveFilters,
+      mobileActiveFilterCount,
       dynamicHeadline,
       formattedResultCount,
       
       // Methods
       applyFilters,
+      applyMobileFilters,
       resetFilters,
       resetPriceRange,
       resetSizeRange,
@@ -1628,6 +1800,7 @@ fetchProjects()
   position: absolute;
   width: 100%;
   pointer-events: none;
+  appearance: none;
   -webkit-appearance: none;
   height: 16px;
   background: transparent;
@@ -2777,5 +2950,235 @@ fetchProjects()
 
 :deep(.vs__clear):hover::before {
   color: #ef4444 !important;
+}
+
+/* Mobile-first simplified search/filter UX */
+@media (max-width: 768px) {
+  .listing-headline {
+    display: none;
+  }
+
+  .listing-main-search {
+    position: relative;
+    width: 100%;
+  }
+
+  .listing-main-search .listing-main-location {
+    width: 100%;
+    padding-right: 48px;
+  }
+
+  .mobile-filter-trigger {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #334155;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-filter-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #f59e0b;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+  }
+
+  .listing-pill-row,
+  .listing-status-row,
+  .listing-notify-btn,
+  .unified-search-btn {
+    display: none !important;
+  }
+
+  .mobile-quick-chips {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-quick-chips::-webkit-scrollbar { display: none; }
+
+  .mobile-quick-chip {
+    border: 1px solid #dbe3ef;
+    background: #fff;
+    color: #334155;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .mobile-quick-chip.active {
+    border-color: #f59e0b;
+    color: #b45309;
+    background: #fff7ed;
+  }
+
+  .mobile-filter-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 2000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .mobile-filter-sheet {
+    width: 100%;
+    max-height: 90dvh;
+    overflow: auto;
+    background: #fff;
+    border-radius: 18px 18px 0 0;
+    padding: 12px 12px calc(62px + env(safe-area-inset-bottom, 0px));
+    position: relative;
+  }
+  .mobile-filter-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .mobile-filter-clear {
+    border: none;
+    background: transparent;
+    color: #334155;
+    font-weight: 500;
+    font-size: 12px;
+    padding: 4px 0;
+  }
+  .mobile-filter-close {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .mobile-filter-close i {
+    font-size: 14px;
+    line-height: 1;
+  }
+  .mobile-filter-accordion details {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px;
+    margin-bottom: 8px;
+    background: #f8fafc;
+  }
+  .mobile-filter-accordion summary {
+    font-size: 12px;
+    font-weight: 500;
+    color: #0f172a;
+    margin-bottom: 6px;
+    cursor: pointer;
+    list-style: none;
+  }
+  .mobile-filter-accordion summary::-webkit-details-marker { display: none; }
+  .mobile-filter-sheet .listing-pop-label {
+    font-size: 9px !important;
+    font-weight: 500;
+  }
+  .mobile-filter-sheet .listing-chip-btn {
+    font-size: 10px !important;
+    min-height: 24px;
+    padding: 4px 8px;
+  }
+  .mobile-filter-sheet :deep(.vs__open-indicator-icon) {
+    font-size: 9px !important;
+    font-weight: 400 !important;
+    color: #66666680 !important;
+  }
+  .mobile-filter-sheet :deep(.vs__open-indicator) {
+    transform: scale(0.7);
+    transform-origin: center;
+    fill: #66666680 !important;
+  }
+  .mobile-filter-sheet :deep(.vs__open-indicator svg) {
+    fill: #66666680 !important;
+  }
+  .mobile-filter-sheet :deep(.vs__dropdown-toggle) {
+    min-height: 34px;
+  }
+  .mobile-filter-sheet :deep(.vs__selected),
+  .mobile-filter-sheet :deep(.vs__search),
+  .mobile-filter-sheet :deep(.vs__search::placeholder) {
+    font-size: 11px !important;
+    font-weight: 400 !important;
+  }
+  .mobile-filter-sheet :deep(.vs__selected-options) {
+    padding-left: 8px;
+  }
+  .mobile-filter-sheet :deep(.vs__search) {
+    padding-left: 8px !important;
+  }
+  .mobile-filter-sheet :deep(.vs__dropdown-menu) {
+    z-index: 4005 !important;
+    font-size: 11px !important;
+  }
+  .mobile-filter-sheet :deep(.vs__dropdown-option) {
+    font-size: 11px !important;
+    font-weight: 400 !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+  .mobile-filter-sheet .listing-pop-grid label {
+    font-size: 10px !important;
+    font-weight: 500;
+  }
+  .mobile-filter-sheet .listing-pop-grid .range-input-side {
+    font-size: 11px !important;
+    min-height: 32px;
+  }
+  .mobile-filter-sheet .listing-pop-grid .range-input-side::placeholder {
+    font-size: 10px !important;
+  }
+  .mobile-filter-sheet :deep(.vs--open) {
+    position: relative;
+    z-index: 4006;
+  }
+  .mobile-status-chip-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .mobile-filter-sticky-actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 4010;
+    background: #fff;
+    border-top: 1px solid #eef2f7;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  .mobile-filter-sticky-actions .btn {
+    min-height: 36px;
+    font-size: 12px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
 }
 </style>

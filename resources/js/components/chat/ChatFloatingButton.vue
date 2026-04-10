@@ -237,6 +237,18 @@ watch(() => props.chatOpen, (isOpen) => {
 .chat-floating-btn i {
   font-size: 26px;
 }
+
+@media (max-width: 768px) {
+  .chat-floating-btn {
+    bottom: 52px;
+    width: 46px;
+    height: 47px;
+  }
+
+  .chat-floating-btn i {
+    font-size: 18px;
+  }
+}
 .chat-floating-badge {
   position: absolute;
   top: -4px;

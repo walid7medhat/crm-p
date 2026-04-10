@@ -678,15 +678,22 @@ function qualityMetaForValue(value) {
 }
 
 const leadPoolStatusOptions = [
-    { value: 'no_answer', text: 'Lead Pool - No Answer' },
-    { value: 'canceled', text: 'Lead Pool - Canceled' }
+    { value: 'no_answer', text: 'No Answer' },
+    { value: 'contacted', text: 'Contacted' },
+    { value: 'wrong_person', text: 'Wrong Person' }
 ]
 
 const unqualifiedStatusOptions = [
-    { value: 'unqualified_not_interested', text: 'Unqualified - Not Interested' },
-    { value: 'unqualified_wrong_contact', text: 'Unqualified - Wrong Contact Details' },
-    { value: 'unqualified_job_seeker', text: 'Unqualified - Job Seeker' },
-    { value: 'unqualified_other', text: 'Unqualified - Other' }
+    { value: 'not_interested', text: 'Not Interested' },
+    { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+    { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
+    { value: 'job_seeker', text: 'Job Seeker' },
+    { value: 'broker', text: 'Broker' },
+    { value: 'registered_by_mistake', text: 'Registered by Mistake' },
+    { value: 'spam_leads', text: 'Spam Leads' },
+    { value: 'already_assigned_to_another_agent', text: 'Already Assigned to Another Agent' },
+    { value: 'client_was_just_searching_online', text: 'Client Was Just Searching Online' },
+    { value: 'number_does_not_exist', text: 'Number Does Not Exist' }
 ]
 
 const defaultLeadStatusOptions = [
@@ -873,8 +880,11 @@ const branchOptions = [
 ]
 
 const lostReasonOptions = [
-    { value: 'lost_by_other_company', text: 'Lost by Other Company' },
-    { value: 'lost_by_our_company', text: 'Lost by Our Company' }
+    { value: 'bought_direct_from_developer', text: 'Bought Direct from Developer' },
+    { value: 'bought_from_competitor_company', text: 'Bought from Competitor Company' },
+    { value: 'bought_from_another_agent_oia_properties', text: 'Bought from Another Agent — Oia  Properties' },
+    { value: 'changed_decision', text: 'Changed Decision' },
+    { value: 'clients_budget_is_too_low', text: "Client's Budget Is Too Low" }
 ]
 
 const salutationOptions = [
@@ -2340,7 +2350,7 @@ defineExpose({
     font-weight: 600;
 }
 
-:deep(.lead-qual-select--enhanced .vs__dropdown-option--highlight) {
+:deep(.ead-qual-select--enhanced .vs__dropdown-option--highlight) {
     background: #fffbeb !important;
     color: #0f172a !important;
 }
