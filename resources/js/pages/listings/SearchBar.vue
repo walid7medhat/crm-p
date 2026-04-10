@@ -348,7 +348,8 @@
             type="button"
             class="status-btn hot-deal-btn"
             :class="{ active: selectedSort === 'hot_deal' }"
-            @click="setQuickSort('hot_deal')"
+              @click="toggleHotDeal()"
+
           >
             <i class="ri-fire-line" aria-hidden="true"></i>
             Hot Deal
@@ -930,6 +931,14 @@ const isTeamLeadManager = computed(() => {
       selectedSort.value = selectedSort.value === 'hot_deal' ? 'created_at_desc' : 'hot_deal';
       handleFilterChange();
     };
+    const toggleHotDeal = () => {
+      if (selectedSort.value === 'hot_deal') {
+        selectedSort.value = 'created_at_desc';
+      } else {
+        selectedSort.value = 'hot_deal';
+      }
+      handleFilterChange();
+    };
 
     /** When Hot Deal is selected, dropdown shows placeholder (no price/date value). */
     const quickSortForDropdown = computed(() => {
@@ -1354,6 +1363,7 @@ fetchProjects()
       handleFilterChange,
       emitStatusChange,
       setQuickSort,
+      toggleHotDeal,
       toggleMobileQuickSale,
       toggleMobileQuickReady,
       toggleMobileQuickHotDeal,
