@@ -17,7 +17,7 @@
           :clear-search-on-select="false"
           :append-to-body="false"
           label="name"
-          placeholder="City Community or Building or Project Area"
+          placeholder="City, Community, Building, or Project Area"
           class="custom-select listing-main-location"
           @update:modelValue="handleFilterChange"
         >
