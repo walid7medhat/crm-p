@@ -74,9 +74,9 @@
       </div>
 
       <div v-if="isMobileViewport" class="mobile-quick-chips">
-        <button type="button" class="mobile-quick-chip" :class="{ active: selectedSaleRent === 'Sale' }" @click="selectedSaleRent = 'Sale'; handleFilterChange()">For Sale</button>
-        <button type="button" class="mobile-quick-chip" :class="{ active: selectedCompletionStatus?.value === 'Completed' }" @click="selectedCompletionStatus = completionStatusOptions[1]; handleFilterChange()">Ready</button>
-        <button type="button" class="mobile-quick-chip" :class="{ active: selectedSort === 'hot_deal' }" @click="setQuickSort('hot_deal')">Hot Deal</button>
+        <button type="button" class="mobile-quick-chip" :class="{ active: selectedSaleRent === 'Sale' }" @click="toggleMobileQuickSale()">For Sale</button>
+        <button type="button" class="mobile-quick-chip" :class="{ active: selectedCompletionStatus?.value === 'Completed' }" @click="toggleMobileQuickReady()">Ready</button>
+        <button type="button" class="mobile-quick-chip" :class="{ active: selectedSort === 'hot_deal' }" @click="toggleMobileQuickHotDeal()">Hot Deal</button>
       </div>
 
       <div class="listing-pill-row">
@@ -917,6 +917,19 @@ const isTeamLeadManager = computed(() => {
       selectedSort.value = sortValue;
       handleFilterChange();
     };
+    const toggleMobileQuickSale = () => {
+      selectedSaleRent.value = selectedSaleRent.value === 'Sale' ? 'All' : 'Sale';
+      handleFilterChange();
+    };
+    const toggleMobileQuickReady = () => {
+      selectedCompletionStatus.value =
+        selectedCompletionStatus.value?.value === 'Completed' ? null : completionStatusOptions[1];
+      handleFilterChange();
+    };
+    const toggleMobileQuickHotDeal = () => {
+      selectedSort.value = selectedSort.value === 'hot_deal' ? 'created_at_desc' : 'hot_deal';
+      handleFilterChange();
+    };
 
     /** When Hot Deal is selected, dropdown shows placeholder (no price/date value). */
     const quickSortForDropdown = computed(() => {
@@ -1341,6 +1354,9 @@ fetchProjects()
       handleFilterChange,
       emitStatusChange,
       setQuickSort,
+      toggleMobileQuickSale,
+      toggleMobileQuickReady,
+      toggleMobileQuickHotDeal,
       handleSaleRentChange,
       handleStatusChange,
       handlePriceChange,
