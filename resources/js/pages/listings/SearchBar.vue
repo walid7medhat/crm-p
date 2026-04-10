@@ -2632,7 +2632,20 @@ fetchProjects()
 }
 
 /* Hot Deal: distinct “fire” accent vs orange status tabs */
-.listing-status-row .status-btn.hot-deal-btn {
+/*.listing-status-row .status-btn.hot-deal-btn {*/
+/*  border: 1px solid #fdba74;*/
+/*  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);*/
+/*  color: #9a3412;*/
+/*  font-weight: 700;*/
+/*  letter-spacing: 0.02em;*/
+/*}*/
+
+/*.listing-status-row .status-btn.hot-deal-btn i {*/
+/*  font-size: 14px;*/
+/*  color: #ea580c;*/
+/*}*/
+
+.listing-status-row .status-btn.hot-deal-btn.active {
   border: 1px solid #fdba74;
   background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
   color: #9a3412;
@@ -2640,20 +2653,9 @@ fetchProjects()
   letter-spacing: 0.02em;
 }
 
-.listing-status-row .status-btn.hot-deal-btn i {
-  font-size: 14px;
-  color: #ea580c;
-}
-
-.listing-status-row .status-btn.hot-deal-btn.active {
-  background: linear-gradient(135deg, #c2410c 0%, #ea580c 45%, #f97316 100%);
-  border-color: #9a3412;
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.38);
-}
-
 .listing-status-row .status-btn.hot-deal-btn.active i {
-  color: #fff;
+  color: #ea580c;
+  font-size: 14px
 }
 
 .listing-status-row-sort-select {
