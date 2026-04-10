@@ -1899,6 +1899,11 @@ public function getAgents(Request $request)
                     $q->where('name', $request->role);
                 });
             }
+            if($request->has('listings')){
+                $user=auth()->user();
+                $allowedAgentIds = $user->getAllSubordinatesIds();
+                $agents=$agents->whereIn('id',$allowedAgentIds);
+            }
             $agents=$agents ->get();
         return response()->json([
             'status' => true,

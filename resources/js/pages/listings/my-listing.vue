@@ -239,7 +239,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed,watch,nextTick  } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import SearchBar from "./SearchBar.vue";
 import api from "@/plugins/axios";
@@ -272,6 +272,8 @@ export default {
   const bedIcon = '/assets/icons/bedroom-icon.svg';
   const bathIcon = '/assets/icons/bathroom-icon.svg';
   const sqftIcon = '/assets/icons/area-size.svg';
+      const searchBarRef = ref(null);
+
     // Default images array for fallback
     const defaultImages = [property1, property2, property3, property4];
 
@@ -496,6 +498,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
       ? filters.area.map(a => a.id).join(',')  
       : undefined,
         project_id: filters.project?.id || undefined,
+        agent_id:filters.agent?.id || undefined,
         type_id: filters.propertyType?.id || undefined,
         beds: filters.beds || undefined,
         baths: filters.baths || undefined,
@@ -602,6 +605,11 @@ const fetchProperties = async (filters = {}, page = 1) => {
         if (filters.project) {
         apiFilters.project_id = filters.project.id;
       }
+        if (filters.agent && filters.agent.id) {
+          apiFilters.agent_id = filters.agent.id;
+        }
+
+
       // Bedrooms Filter
       if (filters.beds) {
         if (filters.beds === 'Studio') {
@@ -697,7 +705,71 @@ const fetchProperties = async (filters = {}, page = 1) => {
       if (agent.first_name) return agent.first_name;
       return 'Unknown Agent';
     };
+     const applyAgentFilterFromQuery = async (agentId, agentName) => {
+      await nextTick(); 
+      
+      if (!searchBarRef.value) {
+        console.log('⏳ Waiting for SearchBar to load...');
+        setTimeout(() => applyAgentFilterFromQuery(agentId, agentName), 500);
+        return;
+      }
+      
+      try {
+        const searchBar = searchBarRef.value;
+            const agents = searchBar.agents || [];
+        const foundAgent = agents.find(a => a.id == agentId);
+        
+        if (foundAgent) {
+          console.log('✅ Found agent in list:', foundAgent.name);
+          
+          searchBar.selectedAgent = foundAgent;
+          
+          setTimeout(() => {
+            searchBar.applyFilters();
+          }, 300);
+        } else {
+          console.log('⚠️ Agent not found in list, creating custom filter');
+          
+          const customAgent = {
+            id: parseInt(agentId),
+            name: agentName || `Agent ${agentId}`
+          };
+          
+          searchBar.selectedAgent = customAgent;
+          
+          setTimeout(() => {
+            searchBar.applyFilters();
+          }, 300);
+        }
+      } catch (error) {
+        console.error('❌ Error applying agent filter:', error);
+      }
+    };
 
+   const handleAgentFromQuery = (query) => {
+  if (!query.agent_id) return;
+
+  const agentId = parseInt(query.agent_id);
+
+  currentFilters.value = {
+    ...currentFilters.value,
+    agent: { id: agentId }
+  };
+
+  const apiFilters = convertFiltersToAPI(currentFilters.value);
+
+  fetchProperties(apiFilters, 1);
+};
+    watch(() => route.query, (newQuery) => {
+      if (newQuery.agent_id) {
+        console.log('🎯 Agent filter detected in URL:', newQuery);
+        
+        
+        setTimeout(() => {
+          handleAgentFromQuery(newQuery);
+        }, 1500);
+      }
+    }, { immediate: true });
     // Fetch initial properties on component mount
     onMounted(() => {
       const hasQuery = Object.keys(route.query).length > 0;
@@ -738,7 +810,8 @@ const fetchProperties = async (filters = {}, page = 1) => {
       getAreaUnit,
       getAgentName,
       handleImageLoad,
-      handleImageError
+      handleImageError,
+      searchBarRef
     };
   }
 };

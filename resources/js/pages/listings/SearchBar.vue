@@ -17,7 +17,7 @@
           :clear-search-on-select="false"
           :append-to-body="false"
           label="name"
-          placeholder="City, community or building"
+          placeholder="City Community or Building or Project Area"
           class="custom-select listing-main-location"
           @update:modelValue="handleFilterChange"
         >
@@ -282,7 +282,7 @@
                 </template>
               </v-select>
               </div>
-              <div class="listing-pop-field--full"   v-if="!isMyListingPage">
+              <div class="listing-pop-field--full"   v-if="!isMyListingPage || (isMyListingPage && isTeamLeadManager)">
                 <label>Agent</label>
                 <v-select
                   v-model="selectedAgent"
@@ -653,7 +653,7 @@ const sortOptions = [
     }));
     
     areas.value = mappedAreas;
-    allAreas.value = mappedAreas; // حفظ نسخة كاملة
+    allAreas.value = mappedAreas; //
     
     console.log("✅ Areas loaded:", areas.value.length);
     
@@ -689,10 +689,39 @@ const selectBathOption = (bath) => {
   selectedBaths.value = selectedBaths.value === bath ? "" : bath;
   handleFilterChange();
 };
+const getUserFromStorage = () => {
+    try {
+        const userData = localStorage.getItem('user')
+        return userData ? JSON.parse(userData) : null
+    } catch (error) {
+        console.error('Error getting user from storage:', error)
+        return null
+    }
+}
+const user = ref(getUserFromStorage())
+
+// Check if user is admin or super_admin (same pattern as header/index.vue)
+const isTeamLeadManager = computed(() => {
+    if (!user.value) return false
+    
+    const isAdminUser = user.value.roles?.includes('manager') || 
+                       user.value.roles?.includes('team_lead')
+    
+    return isAdminUser
+})
+
+
+
     const fetchAgents = async () => {
       try {
         isLoadingAgents.value = true;
-        const response = await api.get("/listings/agents");
+        
+          let response; 
+        if (isTeamLeadManager && isMyListingPage.value) {
+          response = await api.get("/listings/agents/?listings=true");
+        } else {
+          response = await api.get("/listings/agents");
+        }
         const agentsData = response.data.data || response.data;
         agents.value = agentsData.map(agent => ({
           id: agent.id,
@@ -1277,6 +1306,7 @@ fetchProjects()
       quickSortSelectOptions,
       quickSortForDropdown,
       isMyListingPage,
+      isTeamLeadManager,
       // Computed
       priceProgressStyle,
       sizeProgressStyle,
