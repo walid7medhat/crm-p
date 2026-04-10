@@ -1161,7 +1161,7 @@ onUnmounted(() => {
   .mobile-dock-sheet-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1300;
+    z-index: 2200;
     background: rgba(15, 23, 42, 0.42);
     display: flex;
     align-items: flex-end;
@@ -1196,6 +1196,8 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    z-index: 2202;
   }
 
   .mobile-dock-sheet__list {

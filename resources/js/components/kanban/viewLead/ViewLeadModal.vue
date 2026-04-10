@@ -10,6 +10,7 @@
         :z-index="1040"
         :no-enforce-focus="true"
         :trap-focus="false"
+        dialog-class="kanban-mobile-fullscreen-modal"
     >
         <div v-if="show" class="view-lead-modal-content p-3">
             <!-- Header -->
@@ -898,5 +899,35 @@ const $showNotification = (message, type = 'info') => {
 textarea, input, select {
     pointer-events: auto !important;
     user-select: text !important;
+}
+
+@media (max-width: 768px) {
+    :deep(.kanban-mobile-fullscreen-modal) {
+        margin: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        height: 100dvh !important;
+    }
+    :deep(.kanban-mobile-fullscreen-modal .modal-content) {
+        height: 100dvh !important;
+        border-radius: 0 !important;
+    }
+    :deep(.kanban-mobile-fullscreen-modal .modal-body) {
+        height: 100dvh !important;
+        padding: 0 !important;
+    }
+    .view-lead-modal-content {
+        height: 100dvh;
+        border-radius: 0 !important;
+        padding: 8px !important;
+        display: flex;
+        flex-direction: column;
+    }
+    .modal-body-custom {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 10px !important;
+    }
 }
 </style>

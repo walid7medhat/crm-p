@@ -7,6 +7,7 @@
         size="xl"
         centered
         body-class="p-0"
+        dialog-class="kanban-mobile-fullscreen-modal"
     >
         <div class="create-lead-modal-content p-3">
             <!-- Header with Close Button -->
@@ -2147,6 +2148,47 @@ const $showNotification = (message, type = 'info') => {
   min-height: 30px !important;
   padding: 2px 8px !important;
   font-size: 0.65rem !important;
+}
+
+@media (max-width: 768px) {
+  .step-content .row {
+    padding: 0 !important;
+  }
+  .kanban-mobile-fullscreen-modal {
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100dvh !important;
+  }
+  .kanban-mobile-fullscreen-modal .modal-content {
+    height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+  .kanban-mobile-fullscreen-modal .modal-body {
+    height: 100dvh !important;
+    padding: 0 !important;
+  }
+  .create-lead-modal-content {
+    height: 100dvh;
+    border-radius: 0 !important;
+    padding: 8px 0 0 0 !important;
+    display: flex;
+    flex-direction: column;
+  }
+  .form-scroll-area {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .contact-details-card .d-flex {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .contact-details-card .col {
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
 }
 </style>
 

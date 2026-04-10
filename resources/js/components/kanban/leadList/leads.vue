@@ -82,16 +82,6 @@
                                         type="text"
                                     />
                                 </div>
-                                <div v-if="kanbanIsMobile" class="column-header__actions">
-                                    <button
-                                        type="button"
-                                        class="column-header__icon-btn"
-                                        aria-label="Add lead"
-                                        @click.stop="onMobileColumnAddLead"
-                                    >
-                                        <iconify-icon icon="lucide:plus" />
-                                    </button>
-                                </div>
                             </div>
 
                             <div
@@ -379,14 +369,14 @@
     <Teleport to="body">
         <div
             v-if="kanbanIsMobile && showMobileQuickSheet"
-            class="mobile-kanban-overlay"
+            class="mobile-kanban-overlay mobile-kanban-overlay--quick"
             @click.self="closeMobileQuickSheet"
         >
             <div class="mobile-kanban-sheet mobile-kanban-sheet--quick" @click.stop>
                 <button type="button" class="mobile-kanban-sheet__close" aria-label="Close" @click="closeMobileQuickSheet">
                     <iconify-icon icon="lucide:x" />
                 </button>
-                <p class="mobile-kanban-sheet__hint">Stage change to</p>
+                <p class="mobile-kanban-sheet__hint">Quick Actions</p>
                 <div class="mobile-kanban-stage-pair">
                     <span
                         class="mobile-kanban-pill mobile-kanban-pill--from"
@@ -406,9 +396,36 @@
                         Select Stage
                     </button>
                 </div>
-                <button type="button" class="mobile-kanban-link-btn" @click="openViewLeadFromMobileSheet">
-                    View lead details
-                </button>
+                <div class="mobile-kanban-quick-actions">
+                    <button
+                        type="button"
+                        class="mobile-kanban-quick-btn mobile-kanban-quick-btn--assign"
+                        @click="openMobilePickStageFromQuick"
+                    >
+                        Assign
+                    </button>
+                    <button
+                        type="button"
+                        class="mobile-kanban-quick-btn mobile-kanban-quick-btn--view"
+                        @click="openViewLeadFromMobileSheet"
+                    >
+                        View
+                    </button>
+                    <button
+                        type="button"
+                        class="mobile-kanban-quick-btn mobile-kanban-quick-btn--stage"
+                        @click="openMobilePickStageFromQuick"
+                    >
+                        Select Stage
+                    </button>
+                    <button
+                        type="button"
+                        class="mobile-kanban-quick-btn mobile-kanban-quick-btn--cancel"
+                        @click="closeMobileQuickSheet"
+                    >
+                        Close
+                    </button>
+                </div>
             </div>
         </div>
     </Teleport>
@@ -3701,12 +3718,16 @@ const $showNotification = (message, type = 'info') => {
 .mobile-kanban-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1080;
+    z-index: 100100;
     background: rgba(15, 23, 42, 0.45);
     display: flex;
     align-items: flex-end;
     justify-content: center;
     padding: 0;
+}
+
+.mobile-kanban-overlay--quick {
+    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
 }
 
 .mobile-kanban-overlay--tall .mobile-kanban-sheet {
@@ -3808,7 +3829,7 @@ const $showNotification = (message, type = 'info') => {
 
 .mobile-kanban-link-btn {
     width: 100%;
-    padding: 12px;
+    padding: 10px 12px;
     border: none;
     background: #f8fafc;
     border-radius: 12px;
@@ -3816,6 +3837,46 @@ const $showNotification = (message, type = 'info') => {
     font-weight: 600;
     color: #2563eb;
     cursor: pointer;
+}
+
+.mobile-kanban-quick-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.mobile-kanban-quick-btn {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    min-height: 38px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #fff;
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.mobile-kanban-quick-btn--assign,
+.mobile-kanban-quick-btn--stage {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.mobile-kanban-quick-btn--view {
+    border-color: #bae6fd;
+    background: #f0f9ff;
+    color: #0c4a6e;
+}
+
+.mobile-kanban-quick-btn--cancel {
+    border-color: #e2e8f0;
+    background: #ffffff;
+    color: #475569;
 }
 
 .mobile-kanban-sheet__head {
