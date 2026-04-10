@@ -1353,4 +1353,10 @@ const showBackButton = computed(() => {
 .profile-panel-leave-to .profile-panel {
   transform: translateX(100%);
 }
+
+@media (max-width: 768px) {
+  .sidebar-mobile-toggle {
+    display: none !important;
+  }
+}
 </style>

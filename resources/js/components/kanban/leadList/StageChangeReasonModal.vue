@@ -1856,9 +1856,25 @@ defineExpose({
 }
 
 @media (max-width: 768px) {
+    .stage-change-modal-overlay {
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0;
+        background-color: rgba(15, 23, 42, 0.45);
+    }
+
     .stage-change-modal,
     .stage-change-modal.modal-wide {
-        max-width: 96vw;
+        width: 100%;
+        max-width: none;
+        max-height: min(92dvh, 900px);
+        border-radius: 22px 22px 0 0;
+        margin: 0;
+        align-self: flex-end;
+    }
+
+    .stage-change-modal .modal-header {
+        border-radius: 22px 22px 0 0;
     }
 
     .dynamic-form .box-shadow {

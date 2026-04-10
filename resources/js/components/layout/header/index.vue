@@ -1,5 +1,6 @@
 <template>
   <aside
+    v-if="!isMobileViewport"
     class="sidebar"
     :class="{ 'sidebar-open': isMobileOpen, active: isSidebarActive }"
     @mouseenter="sidebarHover = true"
@@ -51,7 +52,7 @@
             </router-link>
           </li>
           <li  v-if="isSuperAdmin" >
-            <router-link to="/lead-reports":class="{ 'active-page': isActive('/lead-reports') }">
+            <router-link to="/lead-reports" :class="{ 'active-page': isActive('/lead-reports') }">
               <iconify-icon icon="lucide:bar-chart-2" class="menu-icon" />
               <span>Lead Reports</span>
             </router-link>
@@ -383,10 +384,23 @@
       </ul>
     </div>
   </aside>
+
+  <nav v-else class="mobile-sidebar-dock" aria-label="Mobile menu">
+    <router-link
+      v-for="item in mobileDockItems"
+      :key="item.path"
+      :to="item.path"
+      class="mobile-sidebar-dock__item"
+      :class="{ 'is-active': isDockActive(item.path) }"
+    >
+      <iconify-icon :icon="item.icon" class="mobile-sidebar-dock__icon" />
+      <span class="mobile-sidebar-dock__label">{{ item.label }}</span>
+    </router-link>
+  </nav>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, getCurrentInstance, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, getCurrentInstance, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/plugins/axios';
 import { useSidebar } from '@/composables/useSidebar.js';
@@ -407,6 +421,7 @@ const roleIcon=ref('/assets/icons/role-icon.svg');
 const route = useRoute();
 const activeDropdown = ref(null);
 const countsLoading = ref(false);
+const isMobileViewport = ref(false);
 const { proxy } = getCurrentInstance();
 const { isSidebarActive, toggleSidebarDesktop } = useSidebar();
 
@@ -712,6 +727,49 @@ const isRolesActive = computed(() =>
   filteredRolesItems.value.some(item => isActive(item.path))
 );
 
+function syncViewport() {
+  isMobileViewport.value = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+}
+
+const mobileDockItems = computed(() => {
+  const items = [
+    { path: '/', label: 'Home', icon: 'solar:home-smile-angle-outline' },
+    { path: '/alllisting', label: 'Listings', icon: 'lucide:building-2' },
+    { path: '/projects', label: 'Projects', icon: 'lucide:building' },
+    { path: '/my-requests', label: 'Requests', icon: 'lucide:clipboard-list' },
+  ];
+
+  if (isAdmin.value) {
+    items.splice(1, 0, { path: '/kanban', label: 'CRM', icon: 'lucide:handshake' });
+  }
+  if (isSuperAdmin.value) {
+    items.push({ path: '/lead-reports', label: 'Reports', icon: 'lucide:bar-chart-3' });
+  }
+  if (filteredOwnersItems.value.length) items.push({ path: filteredOwnersItems.value[0].path, label: 'Owners', icon: 'lucide:users' });
+  if (filteredDevelopersItems.value.length) items.push({ path: filteredDevelopersItems.value[0].path, label: 'Developers', icon: 'lucide:code' });
+  if (filteredPropertyTypesItems.value.length) items.push({ path: filteredPropertyTypesItems.value[0].path, label: 'Types', icon: 'lucide:grid-2x2' });
+  if (filteredFeaturesItems.value.length) items.push({ path: filteredFeaturesItems.value[0].path, label: 'Features', icon: 'lucide:layers' });
+  if (filteredUnitViewsItems.value.length) items.push({ path: filteredUnitViewsItems.value[0].path, label: 'Views', icon: 'lucide:eye' });
+  if (filteredLayoutTypesItems.value.length) items.push({ path: filteredLayoutTypesItems.value[0].path, label: 'Layouts', icon: 'lucide:layout-template' });
+  if (filteredAreasItems.value.length) items.push({ path: filteredAreasItems.value[0].path, label: 'Areas', icon: 'lucide:map-pin' });
+  if (filteredUsersItems.value.length) items.push({ path: filteredUsersItems.value[0].path, label: 'Agents', icon: 'lucide:user-round' });
+  if (filteredRolesItems.value.length) items.push({ path: filteredRolesItems.value[0].path, label: 'Roles', icon: 'lucide:shield-check' });
+  if (isCustomAdmin.value) items.push({ path: '/admin/chat', label: 'Chats', icon: 'ri-chat-3-line' });
+  items.push({ path: '/suggestion', label: 'Ideas', icon: 'lucide:lightbulb' });
+
+  const seen = new Set();
+  return items.filter((item) => {
+    if (seen.has(item.path)) return false;
+    seen.add(item.path);
+    return true;
+  });
+});
+
+function isDockActive(path) {
+  if (path === '/') return route.path === '/';
+  return route.path === path || route.path.startsWith(path + '/');
+}
+
 // Methods
 const toggleDropdown = (name) => {
   activeDropdown.value = activeDropdown.value === name ? null : name;
@@ -793,6 +851,8 @@ watch(() => route.path, (newPath) => {
 });
 
 onMounted(() => {
+  syncViewport();
+  window.addEventListener('resize', syncViewport);
   const savedDropdown = localStorage.getItem('activeDropdown');
   if (savedDropdown) {
     activeDropdown.value = savedDropdown;
@@ -822,6 +882,10 @@ onMounted(() => {
   fetchAllCounts();
 
   setInterval(fetchAllCounts, 60000);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', syncViewport);
 });
 
 </script>
@@ -879,6 +943,63 @@ onMounted(() => {
     -webkit-backdrop-filter: blur(16px) !important;;
             z-index: 100 !important;
 
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-sidebar-dock {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    z-index: 1200;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 18px;
+    background: #01062c;
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.28);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-sidebar-dock::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-sidebar-dock__item {
+    flex: 0 0 auto;
+    min-width: 56px;
+    height: 46px;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 4px 8px;
+  }
+
+  .mobile-sidebar-dock__item.is-active {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f5b749;
+  }
+
+  .mobile-sidebar-dock__icon {
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .mobile-sidebar-dock__label {
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
   }
 }
 @media (min-width: 1200px) {

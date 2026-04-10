@@ -1,5 +1,22 @@
 <template>
-    <div class="kanban-outer">
+    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile }">
+        <!-- Mobile: pipeline filter (matches design — Current Stage) -->
+        <div
+            v-if="kanbanIsMobile"
+            class="mobile-current-stage-bar"
+            role="button"
+            tabindex="0"
+            @click="openMobileListFilterSheet"
+            @keydown.enter.prevent="openMobileListFilterSheet"
+        >
+            <span class="mobile-current-stage-bar__icon" aria-hidden="true">
+                <iconify-icon icon="lucide:git-branch" />
+            </span>
+            <div class="mobile-current-stage-bar__text">
+                <span class="mobile-current-stage-bar__label">Current Stage</span>
+                <span class="mobile-current-stage-bar__value">{{ mobileListFilterLabel }}</span>
+            </div>
+        </div>
         <div
             ref="kanbanContainerRef"
             class="kanban-container"
@@ -27,18 +44,24 @@
         <!-- Draggable Columns -->
         <draggable v-else v-model="columns" item-key="status" class="kanban-wrapper kanban-wrapper-tight d-flex h-100" :group="'columns'"
             handle=".column-header"
+            :disabled="kanbanIsMobile"
             :ghost-class="'ghost'" :drag-class="'dragging'">
             <template #item="{ element: column }">
                 <div
-                    class="kanban-column radius-12 d-flex flex-column"
-                    :class="{ 'kanban-column-collapsed': isStageCollapsed(column) }"
+                    v-show="isColumnVisibleOnMobile(column)"
+                    class="kanban-column radius-12 flex-column"
                     :style="{ '--column-color': column.color }"
                 >
                     <div class=" p-0 overflow-visible shadow-none border-0 bg-transparent h-100 d-flex flex-column">
                         <div class="card-body p-0 d-flex flex-column h-100">
                             <!-- Column Header -->
-                            <div class="column-header d-flex align-items-center justify-content-between cursor-move flex-shrink-0" :style="{ backgroundColor: column.color }">
-                                <div class="d-flex align-items-center gap-2">
+                            <div
+                                class="column-header d-flex align-items-center justify-content-between flex-shrink-0"
+                                :class="{ 'column-header--mobile': kanbanIsMobile, 'cursor-move': !kanbanIsMobile }"
+                                :style="{ backgroundColor: column.color }"
+                            >
+                                <div class="d-flex align-items-center gap-2 column-header__title-block">
+                                    <span v-if="kanbanIsMobile" class="column-header__dot" aria-hidden="true" />
                                     <div v-if="editingStageId !== column.status" class="header-title-wrapper" @click="startEditingStage(column)">
                                         <p class="header-title">{{ column.title }}</p>
                                          <small class="leads-count-badge" v-if="column.leads.length>0 && stagePagination[column.status] && stagePagination[column.status].total > column.leads.length ">
@@ -59,41 +82,50 @@
                                         type="text"
                                     />
                                 </div>
-                                <button
-                                    type="button"
-                                    class="mobile-stage-toggle-btn"
-                                    @click.stop="toggleStageCollapsed(column)"
-                                >
-                                    <iconify-icon
-                                        :icon="isStageCollapsed(column) ? 'lucide:chevron-down' : 'lucide:chevron-up'"
-                                        class="mobile-stage-toggle-icon"
-                                    />
-                                </button>
+                                <div v-if="kanbanIsMobile" class="column-header__actions">
+                                    <button
+                                        type="button"
+                                        class="column-header__icon-btn"
+                                        aria-label="Add lead"
+                                        @click.stop="onMobileColumnAddLead"
+                                    >
+                                        <iconify-icon icon="lucide:plus" />
+                                    </button>
+                                </div>
                             </div>
 
                             <div
-                                v-show="!isStageCollapsed(column)"
                                 class="column-content column-content-scrollable p-8 flex-grow-1 d-flex flex-column"
                                 @scroll="(e) => onColumnScroll(column, e)"
                             >
                                 <!-- Tasks -->
-                                <draggable v-model="column.leads" :group="'tasks'" item-key="id"
-                                    class="tasks-list flex-grow-1" :ghost-class="'ghost'"
+                                <draggable
+                                    v-model="column.leads"
+                                    :group="'tasks'"
+                                    item-key="id"
+                                    class="tasks-list flex-grow-1"
+                                    :ghost-class="'ghost'"
                                     :drag-class="'dragging'"
+                                    :disabled="kanbanIsMobile"
+                                    :force-fallback="kanbanIsMobile"
                                     :scroll="true"
                                     :bubble-scroll="true"
                                     :scroll-sensitivity="220"
                                     :scroll-speed="22"
-                                    @scroll.passive="(e) => onStageCarouselScroll(column, e)"
                                     @start="onLeadDragStart"
                                     @end="onLeadDragEnd"
-                                    @change="(evt) => onLeadDragChange(evt, column)">
+                                    @change="(evt) => onLeadDragChange(evt, column)"
+                                >
                                     <template #item="{ element: task, index }">
                                             <div
                                                 :key="task.id"
                                                 class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
-                                              
-                                                @click="viewLead(task)"
+                                                :class="{ 'kanban-card--mobile': kanbanIsMobile }"
+                                                v-show="!kanbanIsMobile || mobileListFilterStageId !== MOBILE_FILTER_ALL || index === getMobileCardIndex(column)"
+                                                @touchstart="onMobileCardTouchStart(column, $event)"
+                                                @touchmove="onMobileCardTouchMove(column, $event)"
+                                                @touchend="onMobileCardTouchEnd(column, $event)"
+                                                @click="onLeadCardClick(task, column)"
                                             >
                                                 <!-- Task Header - Lead Name  -->
                                                 <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
@@ -290,15 +322,20 @@
                                         </template>
                                 </draggable>
                                 <div
-                                    v-if="showStageCarouselDots(column)"
-                                    class="stage-carousel-dots"
+                                    v-if="kanbanIsMobile && mobileListFilterStageId === MOBILE_FILTER_ALL && column.leads.length > 1"
+                                    class="mobile-stage-carousel-controls"
                                 >
-                                    <span
-                                        v-for="dot in getStageCarouselDotCount(column)"
-                                        :key="`${column.status}-dot-${dot}`"
-                                        class="stage-carousel-dot"
-                                        :class="{ 'is-active': dot - 1 === getStageCarouselIndex(column) }"
-                                    />
+                                    <div class="mobile-stage-carousel-dots">
+                                        <button
+                                            v-for="(leadItem, dotIndex) in column.leads"
+                                            :key="`dot-${column.status}-${leadItem.id}`"
+                                            type="button"
+                                            class="mobile-stage-carousel-dot"
+                                            :class="{ 'is-active': dotIndex === getMobileCardIndex(column) }"
+                                            :aria-label="`Go to card ${dotIndex + 1}`"
+                                            @click.stop="setMobileCardIndex(column, dotIndex)"
+                                        />
+                                    </div>
                                 </div>
                                 
                             </div>
@@ -337,6 +374,174 @@
             </div>
         </template>
     </div>
+
+    <!-- Mobile: stage change + pick stage (bottom sheets) -->
+    <Teleport to="body">
+        <div
+            v-if="kanbanIsMobile && showMobileQuickSheet"
+            class="mobile-kanban-overlay"
+            @click.self="closeMobileQuickSheet"
+        >
+            <div class="mobile-kanban-sheet mobile-kanban-sheet--quick" @click.stop>
+                <button type="button" class="mobile-kanban-sheet__close" aria-label="Close" @click="closeMobileQuickSheet">
+                    <iconify-icon icon="lucide:x" />
+                </button>
+                <p class="mobile-kanban-sheet__hint">Stage change to</p>
+                <div class="mobile-kanban-stage-pair">
+                    <span
+                        class="mobile-kanban-pill mobile-kanban-pill--from"
+                        :style="{ backgroundColor: mobileQuickSourceColumn?.color || '#4dbdc2' }"
+                    >
+                        {{ mobileQuickSourceColumn?.title || '—' }}
+                    </span>
+                    <span class="mobile-kanban-stage-pair__sep" aria-hidden="true">
+                        <iconify-icon icon="lucide:chevrons-right" />
+                    </span>
+                    <button
+                        type="button"
+                        class="mobile-kanban-pill mobile-kanban-pill--pick"
+                        @click="openMobilePickStageFromQuick"
+                    >
+                        <iconify-icon icon="lucide:plus" class="me-1" />
+                        Select Stage
+                    </button>
+                </div>
+                <button type="button" class="mobile-kanban-link-btn" @click="openViewLeadFromMobileSheet">
+                    View lead details
+                </button>
+            </div>
+        </div>
+    </Teleport>
+
+    <Teleport to="body">
+        <div
+            v-if="kanbanIsMobile && showMobilePickStageSheet"
+            class="mobile-kanban-overlay mobile-kanban-overlay--tall"
+            @click.self="closeMobilePickStageSheet"
+        >
+            <div class="mobile-kanban-sheet mobile-kanban-sheet--pick" @click.stop>
+                <div class="mobile-kanban-sheet__head">
+                    <h2 class="mobile-kanban-sheet__title">Select Stage</h2>
+                    <button type="button" class="mobile-kanban-sheet__close" aria-label="Close" @click="closeMobilePickStageSheet">
+                        <iconify-icon icon="lucide:x" />
+                    </button>
+                </div>
+                <div class="mobile-kanban-stage-list">
+                    <label
+                        v-for="col in columns"
+                        :key="'pick-' + col.status"
+                        class="mobile-kanban-stage-row"
+                    >
+                        <input
+                            v-model="mobilePickStageId"
+                            type="radio"
+                            class="mobile-kanban-stage-row__radio"
+                            :value="col.status"
+                        />
+                        <span
+                            class="mobile-kanban-stage-row__pill"
+                            :style="{ backgroundColor: col.color }"
+                        >
+                            <span class="mobile-kanban-stage-row__pill-dot" aria-hidden="true" />
+                            <span class="mobile-kanban-stage-row__pill-text">{{ col.title }} ({{ stageCountForColumn(col) }})</span>
+                        </span>
+                    </label>
+                </div>
+                <div v-if="mobileQuickSourceColumn && mobilePickStageColumn" class="mobile-kanban-preview-box">
+                    <p class="mobile-kanban-preview-box__label">Stage change to</p>
+                    <div class="mobile-kanban-stage-pair mobile-kanban-stage-pair--compact">
+                        <span
+                            class="mobile-kanban-pill mobile-kanban-pill--from"
+                            :style="{ backgroundColor: mobileQuickSourceColumn.color }"
+                        >
+                            {{ mobileQuickSourceColumn.title }}
+                        </span>
+                        <span class="mobile-kanban-stage-pair__sep" aria-hidden="true">
+                            <iconify-icon icon="lucide:chevrons-right" />
+                        </span>
+                        <span
+                            class="mobile-kanban-pill mobile-kanban-pill--from"
+                            :style="{ backgroundColor: mobilePickStageColumn.color }"
+                        >
+                            {{ mobilePickStageColumn.title }}
+                        </span>
+                    </div>
+                </div>
+                <div class="mobile-kanban-sheet__footer">
+                    <button type="button" class="mobile-kanban-btn mobile-kanban-btn--muted" @click="closeMobilePickStageSheet">
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        class="mobile-kanban-btn mobile-kanban-btn--dark"
+                        :disabled="!mobilePickStageId || mobilePickStageId === mobileQuickLead?.stage_id"
+                        @click="confirmMobilePickStage"
+                    >
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <Teleport to="body">
+        <div
+            v-if="kanbanIsMobile && showMobileListFilterSheet"
+            class="mobile-kanban-overlay mobile-kanban-overlay--tall"
+            @click.self="closeMobileListFilterSheet"
+        >
+            <div class="mobile-kanban-sheet mobile-kanban-sheet--pick" @click.stop>
+                <div class="mobile-kanban-sheet__head">
+                    <h6 class="mobile-kanban-sheet__title">Current Stage</h6>
+                    <button type="button" class="mobile-kanban-sheet__close" aria-label="Close" @click="closeMobileListFilterSheet">
+                        <iconify-icon icon="lucide:x" />
+                    </button>
+                </div>
+                <div class="mobile-kanban-stage-list">
+                    <label class="mobile-kanban-stage-row">
+                        <input
+                            v-model="mobileListFilterStageId"
+                            name="mobile-stage-filter"
+                            type="radio"
+                            class="mobile-kanban-stage-row__radio"
+                            :value="MOBILE_FILTER_ALL"
+                            @change="selectMobileListFilter(MOBILE_FILTER_ALL)"
+                        />
+                        <span class="mobile-kanban-stage-row__pill mobile-kanban-stage-row__pill--all">
+                            <span class="mobile-kanban-stage-row__pill-dot" aria-hidden="true" />
+                            <span class="mobile-kanban-stage-row__pill-text">All Stages ({{ totalLeadsCount }})</span>
+                        </span>
+                    </label>
+                    <label
+                        v-for="col in columns"
+                        :key="'filter-' + col.status"
+                        class="mobile-kanban-stage-row"
+                    >
+                        <input
+                            v-model="mobileListFilterStageId"
+                            name="mobile-stage-filter"
+                            type="radio"
+                            class="mobile-kanban-stage-row__radio"
+                            :value="String(col.status)"
+                            @change="selectMobileListFilter(col.status)"
+                        />
+                        <span
+                            class="mobile-kanban-stage-row__pill"
+                            :style="{ backgroundColor: col.color }"
+                        >
+                            <span class="mobile-kanban-stage-row__pill-dot" aria-hidden="true" />
+                            <span class="mobile-kanban-stage-row__pill-text">{{ col.title }} ({{ stageCountForColumn(col) }})</span>
+                        </span>
+                    </label>
+                </div>
+                <div class="mobile-kanban-sheet__footer">
+                    <button type="button" class="mobile-kanban-btn mobile-kanban-btn--dark w-100" @click="closeMobileListFilterSheet">
+                        Done
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 
     <!-- View Lead Modal -->
     <ViewLeadModal
@@ -487,7 +692,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, inject } from 'vue'
 import draggable from 'vuedraggable'
 import avatar1 from '@/assets/images/users/user1.png'
 import leadsIcon from '@/assets/images/kanban/leads-icon.png'
@@ -529,6 +734,25 @@ const getUserFromStorage = () => {
 
 const user = ref(getUserFromStorage())
 
+const kanbanIsMobile = inject('kanbanIsMobile', ref(false))
+const kanbanOpenCreateLead = inject('kanbanOpenCreateLead', null)
+
+/** Mobile list filter: show all stacked stages or focus one column */
+const MOBILE_FILTER_ALL = 'all'
+const mobileListFilterStageId = ref(MOBILE_FILTER_ALL)
+const showMobileQuickSheet = ref(false)
+const showMobilePickStageSheet = ref(false)
+const showMobileListFilterSheet = ref(false)
+const mobileQuickLead = ref(null)
+const mobileQuickSourceColumn = ref(null)
+const mobilePickStageId = ref(null)
+const mobileStageCardIndex = ref({})
+const mobileTouchStartX = ref({})
+const mobileTouchStartY = ref({})
+const mobileTouchLastX = ref({})
+const mobileTouchLastY = ref({})
+const mobileSwipeMoved = ref({})
+
 // Applied search params (from search modal, not from URL)
 const appliedSearchParams = ref(null)
 
@@ -543,9 +767,36 @@ const isAdminOrSuperAdmin = computed(() => {
 })
 
 const columns = ref([])
-const collapsedStages = ref({})
-const isMobileView = ref(false)
-const stageCarouselIndexMap = ref({})
+
+function stageCountForColumn(col) {
+    if (stagePagination.value[col.status]?.total != null) {
+        return stagePagination.value[col.status].total
+    }
+    return col.leads?.length ?? 0
+}
+
+const totalLeadsCount = computed(() => {
+    let sum = 0
+    for (const col of columns.value) {
+        const t = stagePagination.value[col.status]?.total
+        sum += typeof t === 'number' ? t : (col.leads?.length || 0)
+    }
+    return sum
+})
+
+const mobileListFilterLabel = computed(() => {
+    if (mobileListFilterStageId.value === MOBILE_FILTER_ALL) {
+        return `All Stages (${totalLeadsCount.value})`
+    }
+    const col = columns.value.find(c => String(c.status) === String(mobileListFilterStageId.value))
+    return col ? `${col.title} (${stageCountForColumn(col)})` : 'All Stages'
+})
+
+const mobilePickStageColumn = computed(() => {
+    if (mobilePickStageId.value == null) return null
+    return columns.value.find(c => c.status === mobilePickStageId.value) || null
+})
+
 const INITIAL_VISIBLE_LEADS_PER_STAGE = 20
 const VISIBLE_LEADS_INCREMENT = 20
 const visibleLeadCounts = ref({})
@@ -568,67 +819,6 @@ const dragPointerX = ref(null)
 let dragAutoScrollRaf = null
 const DRAG_SCROLL_EDGE_THRESHOLD = 220
 const DRAG_SCROLL_MAX_SPEED = 10
-
-function detectMobileView() {
-    isMobileView.value = window.innerWidth <= 768
-}
-
-function buildCollapsedStagesMap() {
-    if (!isMobileView.value || !Array.isArray(columns.value) || !columns.value.length) {
-        collapsedStages.value = {}
-        return
-    }
-
-    const assignedStage = columns.value.find(col => String(col?.title || '').toLowerCase().includes('assigned'))
-    const assignedOrder = Number(assignedStage?.order ?? 1)
-    const nextMap = {}
-
-    columns.value.forEach((col) => {
-        const order = Number(col?.order ?? 0)
-        nextMap[col.status] = order > assignedOrder
-    })
-
-    collapsedStages.value = nextMap
-}
-
-function isStageCollapsed(column) {
-    if (!isMobileView.value) return false
-    return !!collapsedStages.value[column?.status]
-}
-
-function toggleStageCollapsed(column) {
-    if (!isMobileView.value || !column?.status) return
-    collapsedStages.value = {
-        ...collapsedStages.value,
-        [column.status]: !collapsedStages.value[column.status]
-    }
-}
-
-function onStageCarouselScroll(column, event) {
-    if (!isMobileView.value || !column?.status) return
-    const el = event?.target
-    if (!el) return
-    const cardWidth = el.clientWidth || 1
-    const idx = Math.round(el.scrollLeft / cardWidth)
-    stageCarouselIndexMap.value = {
-        ...stageCarouselIndexMap.value,
-        [column.status]: Math.max(0, idx)
-    }
-}
-
-function getStageCarouselIndex(column) {
-    return stageCarouselIndexMap.value[column?.status] || 0
-}
-
-function getStageCarouselDotCount(column) {
-    const total = Array.isArray(column?.leads) ? column.leads.length : 0
-    return total > 0 ? total : 0
-}
-
-function showStageCarouselDots(column) {
-    if (!isMobileView.value) return false
-    return getStageCarouselDotCount(column) > 1 && !isStageCollapsed(column)
-}
 
 function updateScrollArrows() {
     const el = kanbanContainerRef.value
@@ -917,9 +1107,7 @@ const executeFetchLeads = async () => {
             ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status }),
              ...(q.property_type_id != null && q.property_type_id !== '' && { property_type_id: q.property_type_id }),
             ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
-            ...(q.assigned_at != null && q.assigned_at !== '' && { assigned_at: q.assigned_at }),
-            ...(q.assigned_from != null && q.assigned_from !== '' && { assigned_from: q.assigned_from }),
-            ...(q.assigned_to != null && q.assigned_to !== '' && { assigned_to: q.assigned_to }),
+            ...(q.assigned_at != null && q.assigned_at !== '' && { area_id: q.assigned_at }),
             ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
             // ...(q.office_branch != null && q.office_branch !== '' && { team_id: q.office_branch })
         }
@@ -1110,8 +1298,6 @@ async function fetchMoreLeadsFromApi(stageId) {
             ...(q.lead_type != null && q.lead_type !== '' && { lead_type: q.lead_type }),
             ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status }),
             ...(q.assigned_at != null && q.assigned_at !== '' && { assigned_at: q.assigned_at }),
-            ...(q.assigned_from != null && q.assigned_from !== '' && { assigned_from: q.assigned_from }),
-            ...(q.assigned_to != null && q.assigned_to !== '' && { assigned_to: q.assigned_to }),
             ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
             ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
             
@@ -1233,6 +1419,12 @@ function handleLeadConverted(deal) {
 
 watch(() => columns.value?.length, () => {
     nextTick(() => updateScrollArrows())
+    columns.value.forEach((column) => {
+        const key = String(column.status)
+        const max = Math.max((column.leads?.length || 1) - 1, 0)
+        const current = mobileStageCardIndex.value[key] ?? 0
+        mobileStageCardIndex.value[key] = Math.min(current, max)
+    })
 })
 const enabledFields = computed(() => {
     return cardFields.value
@@ -1422,24 +1614,7 @@ const formatMaskedQuestion = (questionData) => {
 watch(cardFields, () => {
     console.log('Card fields updated:', cardFields.value)
 }, { deep: true })
-
-watch(columns, () => {
-    buildCollapsedStagesMap()
-    const nextIndexMap = {}
-    columns.value.forEach((col) => {
-        nextIndexMap[col.status] = stageCarouselIndexMap.value[col.status] || 0
-    })
-    stageCarouselIndexMap.value = nextIndexMap
-}, { deep: true })
-
-watch(isMobileView, () => {
-    buildCollapsedStagesMap()
-})
-
 onMounted(async () => {
-    detectMobileView()
-    buildCollapsedStagesMap()
-
     // Try to show cached stages/leads immediately while fresh data loads
     // loadCachedColumns()
 
@@ -1449,10 +1624,8 @@ onMounted(async () => {
          fetchCardSettings() ,
          fetchStageOrders()
     ])
-    buildCollapsedStagesMap()
     nextTick(() => updateScrollArrows())
     window.addEventListener('resize', updateScrollArrows)
-    window.addEventListener('resize', detectMobileView)
     setTimeout(() => {
         initializeLeadUpdates()
     }, 1000)
@@ -1463,7 +1636,6 @@ onUnmounted(() => {
     stopScroll()
     cancelPersonHoverHide()
     window.removeEventListener('resize', updateScrollArrows)
-    window.removeEventListener('resize', detectMobileView)
     cleanup()
 })
 
@@ -1949,9 +2121,167 @@ function formatDate(dateString) {
     return `${formattedDate}  |  ${formattedTime}`
 }
 
+function getMobileCardIndex(column) {
+    const key = String(column.status)
+    const current = mobileStageCardIndex.value[key] ?? 0
+    const max = Math.max((column.leads?.length || 1) - 1, 0)
+    if (current > max) {
+        mobileStageCardIndex.value[key] = max
+        return max
+    }
+    if (current < 0) {
+        mobileStageCardIndex.value[key] = 0
+        return 0
+    }
+    return current
+}
+
+function setMobileCardIndex(column, index) {
+    const key = String(column.status)
+    const max = Math.max((column.leads?.length || 1) - 1, 0)
+    mobileStageCardIndex.value[key] = Math.min(Math.max(index, 0), max)
+}
+
+function nextMobileCard(column) {
+    const max = Math.max((column.leads?.length || 1) - 1, 0)
+    const next = Math.min(getMobileCardIndex(column) + 1, max)
+    setMobileCardIndex(column, next)
+}
+
+function prevMobileCard(column) {
+    const prev = Math.max(getMobileCardIndex(column) - 1, 0)
+    setMobileCardIndex(column, prev)
+}
+
+function onMobileCardTouchStart(column, event) {
+    if (!kanbanIsMobile.value) return
+    const key = String(column.status)
+    const touch = event.changedTouches?.[0]
+    const x = touch?.clientX ?? 0
+    const y = touch?.clientY ?? 0
+    mobileTouchStartX.value[key] = x
+    mobileTouchStartY.value[key] = y
+    mobileTouchLastX.value[key] = x
+    mobileTouchLastY.value[key] = y
+    mobileSwipeMoved.value[key] = false
+}
+
+function onMobileCardTouchMove(column, event) {
+    if (!kanbanIsMobile.value) return
+    const key = String(column.status)
+    const touch = event.changedTouches?.[0]
+    if (!touch) return
+    mobileTouchLastX.value[key] = touch.clientX
+    mobileTouchLastY.value[key] = touch.clientY
+}
+
+function onMobileCardTouchEnd(column, event) {
+    if (!kanbanIsMobile.value) return
+    const key = String(column.status)
+    const startX = mobileTouchStartX.value[key] ?? 0
+    const startY = mobileTouchStartY.value[key] ?? 0
+    const endX = event.changedTouches?.[0]?.clientX ?? mobileTouchLastX.value[key] ?? startX
+    const endY = event.changedTouches?.[0]?.clientY ?? mobileTouchLastY.value[key] ?? startY
+    const deltaX = endX - startX
+    const deltaY = endY - startY
+    const SWIPE_THRESHOLD_X = 18
+    const SWIPE_DOMINANCE_RATIO = 1.2
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD_X) return
+    // Ignore mostly-vertical gestures so scrolling still feels natural.
+    if (Math.abs(deltaX) < Math.abs(deltaY) * SWIPE_DOMINANCE_RATIO) return
+    mobileSwipeMoved.value[key] = true
+    if (deltaX < 0) {
+        nextMobileCard(column)
+    } else {
+        prevMobileCard(column)
+    }
+}
+
 function viewLead(task) {
     selectedLead.value = task?.id
     showViewModal.value = true
+}
+
+function isColumnVisibleOnMobile(column) {
+    if (!kanbanIsMobile.value) return true
+    if (mobileListFilterStageId.value === MOBILE_FILTER_ALL) return true
+    return String(column.status) === String(mobileListFilterStageId.value)
+}
+
+function onLeadCardClick(task, column) {
+    if (kanbanIsMobile.value && mobileSwipeMoved.value[String(column.status)]) {
+        mobileSwipeMoved.value[String(column.status)] = false
+        return
+    }
+    if (kanbanIsMobile.value) {
+        mobileQuickLead.value = task
+        mobileQuickSourceColumn.value = column
+        showMobileQuickSheet.value = true
+        return
+    }
+    viewLead(task)
+}
+
+function closeMobileQuickSheet() {
+    showMobileQuickSheet.value = false
+    mobileQuickLead.value = null
+    mobileQuickSourceColumn.value = null
+}
+
+function openMobilePickStageFromQuick() {
+    mobilePickStageId.value = mobileQuickLead.value?.stage_id ?? mobileQuickSourceColumn.value?.status ?? null
+    showMobilePickStageSheet.value = true
+}
+
+function closeMobilePickStageSheet() {
+    showMobilePickStageSheet.value = false
+}
+
+function openMobileListFilterSheet() {
+    showMobileListFilterSheet.value = true
+}
+
+function closeMobileListFilterSheet() {
+    showMobileListFilterSheet.value = false
+}
+
+function selectMobileListFilter(stageId) {
+    mobileListFilterStageId.value = stageId === MOBILE_FILTER_ALL ? MOBILE_FILTER_ALL : String(stageId)
+    closeMobileListFilterSheet()
+}
+
+
+function onMobileColumnAddLead() {
+    if (typeof kanbanOpenCreateLead === 'function') {
+        kanbanOpenCreateLead()
+    }
+}
+
+function openViewLeadFromMobileSheet() {
+    const id = mobileQuickLead.value?.id
+    if (id) {
+        selectedLead.value = id
+        showViewModal.value = true
+    }
+    closeMobileQuickSheet()
+}
+
+async function confirmMobilePickStage() {
+    const lead = mobileQuickLead.value
+    const targetCol = mobilePickStageColumn.value
+    if (!lead || !targetCol) return
+    if (lead.stage_id === targetCol.status) {
+        closeMobilePickStageSheet()
+        return
+    }
+    closeMobilePickStageSheet()
+    showMobileQuickSheet.value = false
+    const leadCopy = lead
+    mobileQuickLead.value = null
+    mobileQuickSourceColumn.value = null
+    mobilePickStageId.value = null
+    await nextTick()
+    await applyProgrammaticStageChange(leadCopy, targetCol)
 }
 
 
@@ -2348,13 +2678,33 @@ async function onLeadDragChange(evt, column) {
         await moveLeadWithStageChange(lead, newStageId)
     }
 }
+
+async function applyProgrammaticStageChange(lead, targetColumn) {
+    const newStageId = targetColumn.status
+    if (lead.stage_id === newStageId) return
+    const sourceCol = columns.value.find(c => c.status === lead.stage_id)
+    if (!sourceCol) return
+    const idx = sourceCol.leads.findIndex(l => l.id === lead.id)
+    if (idx === -1) return
+    const [moved] = sourceCol.leads.splice(idx, 1)
+    targetColumn.leads.push(moved)
+    await nextTick()
+    await onLeadDragChange({ added: { element: moved } }, targetColumn)
+}
+
 async function moveLeadWithStageChange(lead, newStageId) {
     try {
         await api.post(`/leads/${lead.id}/change-stage`, {
             stage_id: newStageId
         })
-          lead.stage_id = newStageId
-        // Don't refetch - real-time updates will handle the UI update
+        lead.stage_id = newStageId
+        columns.value.forEach((col) => {
+            col.leads = col.leads.filter((l) => l.id !== lead.id)
+        })
+        const targetCol = columns.value.find((c) => c.status === newStageId)
+        if (targetCol && !targetCol.leads.some((l) => l.id === lead.id)) {
+            targetCol.leads.push(lead)
+        }
     } catch (error) {
         // Revert the UI change if API fails - only refetch if not already fetching
         if (!isFetching.value) {
@@ -2763,6 +3113,8 @@ const $showNotification = (message, type = 'info') => {
     min-width: 247px;
     width: 247px;
     max-width: 247px;
+    display: flex;
+    flex-direction: column;
     background-color: transparent;
     border-radius: 12px;
     border: none;
@@ -3202,170 +3554,418 @@ const $showNotification = (message, type = 'info') => {
     font-weight: 600 !important;
 }
 
-.mobile-stage-toggle-btn {
+/* —— Mobile Kanban (injected kanbanIsMobile) —— */
+.kanban-outer--mobile {
+    height: auto;
+    min-height: calc(100dvh - 220px);
+    padding-bottom: 96px;
+}
+
+.kanban-outer--mobile .kanban-nav-zone {
     display: none;
 }
 
-@media (max-width: 768px) {
-    .kanban-outer {
-        height: calc(100vh - 232px);
-    }
+.kanban-outer--mobile .kanban-container {
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: auto;
+    min-height: 50vh;
+    padding: 8px 10px 24px;
+    -webkit-overflow-scrolling: touch;
+}
 
-    .kanban-container {
-        padding: 8px 10px 16px;
-        overflow-x: hidden;
-        overflow-y: auto;
-        scrollbar-width: none;
-    }
+.kanban-outer--mobile .kanban-wrapper {
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    gap: 14px;
+}
 
-    .kanban-container::-webkit-scrollbar {
-        display: none;
-    }
+.kanban-outer--mobile .kanban-column {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    border-left: none;
+    height: auto;
+    max-height: none;
+}
 
-    .kanban-wrapper,
-    .kanban-wrapper-tight {
-        width: 100%;
-        min-width: 100%;
-        display: flex !important;
-        flex-direction: column;
-        gap: 12px;
-    }
+.kanban-outer--mobile .column-content-scrollable {
+    max-height: min(70vh, 520px);
+}
 
-    .kanban-column {
-        width: 100%;
-        min-width: 100%;
-        max-width: 100%;
-        border-left: none;
-        height: auto;
-    }
+.kanban-outer--mobile .column-header--mobile {
+    min-height: 34px;
+    padding: 4px 8px;
+    clip-path: none;
+    border-radius: 14px 14px 0 0;
+}
 
-    .kanban-column > div,
-    .kanban-column .card-body {
-        height: auto !important;
-    }
+.kanban-outer--mobile .column-header__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fff;
+    flex-shrink: 0;
+}
 
-    .column-header {
-        min-height: 36px;
-        padding: 6px 10px;
-        border-radius: 14px 14px 0 0;
-        clip-path: none;
-    }
+.kanban-outer--mobile .column-header--mobile .header-title,
+.kanban-outer--mobile .column-header--mobile .leads-count-badge {
+    color: #000 !important;
+    font-weight: 700 !important;
+}
 
-    .header-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #ffffff;
-    }
+.kanban-outer--mobile .column-header--mobile .header-title-input {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.5);
+}
 
-    .leads-count-badge {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.9);
-        margin-left: 4px;
-    }
+.kanban-outer--mobile .column-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
 
-    .mobile-stage-toggle-btn {
-        border: none;
-        background: transparent;
-        color: #ffffff;
-        width: 24px;
-        height: 24px;
-        padding: 0;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
+.kanban-outer--mobile .column-header__icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
 
-    .mobile-stage-toggle-icon {
-        font-size: 16px;
-    }
+.kanban-outer--mobile .kanban-card--mobile {
+    border-radius: 14px !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+    touch-action: pan-y;
+    -webkit-user-select: none;
+    user-select: none;
+}
 
-    .column-content {
-        background: transparent;
-        border-radius: 0;
-        padding: 8px !important;
-        flex: 0 0 auto !important;
-    }
+.mobile-current-stage-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 10px 8px;
+    padding: 7px 10px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+    cursor: pointer;
+    user-select: none;
+}
 
-    .kanban-column-collapsed .column-header {
-        border-radius: 12px;
-    }
+.mobile-current-stage-bar__icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    font-size: 14px;
+}
 
-    .tasks-list {
-        display: flex;
-        flex-direction: row;
-        gap: 10px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scroll-snap-type: x mandatory;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 4px;
-        align-items: flex-start;
-    }
+.mobile-current-stage-bar__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
 
-    .tasks-list::-webkit-scrollbar {
-        display: none;
-    }
+.mobile-current-stage-bar__label {
+    font-size: 8px;
+    color: #64748b;
+    font-weight: 600;
+    line-height: 1.1;
+}
 
-    .kanban-card {
-        border-radius: 12px !important;
-        border: 1px solid #e6e8ec !important;
-        box-shadow: none !important;
-        padding: 10px !important;
-        margin-bottom: 0 !important;
-        min-width: calc(100% - 10px);
-        width: calc(100% - 10px);
-        max-width: calc(100% - 10px);
-        flex: 0 0 calc(100% - 10px);
-        scroll-snap-align: start;
-        height: auto !important;
-        align-self: flex-start;
-    }
+.mobile-current-stage-bar__value {
+    font-size: 11px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
-    .stage-carousel-dots {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-        padding-top: 6px;
-    }
+.mobile-kanban-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1080;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+}
 
-    .stage-carousel-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 999px;
-        background: #cfd4dc;
-        transition: all 0.2s ease;
-    }
+.mobile-kanban-overlay--tall .mobile-kanban-sheet {
+    max-height: min(88dvh, 760px);
+}
 
-    .stage-carousel-dot.is-active {
-        width: 14px;
-        background: #e2a300;
-    }
+.mobile-kanban-sheet {
+    width: 100%;
+    background: #fff;
+    border-radius: 22px 22px 0 0;
+    padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -8px 40px rgba(15, 23, 42, 0.12);
+    animation: mobile-sheet-up 0.22s ease-out;
+}
 
-    .task-title {
-        font-size: 13px;
-        line-height: 1.35;
-        letter-spacing: -0.1px;
+@keyframes mobile-sheet-up {
+    from {
+        transform: translateY(100%);
+        opacity: 0.85;
     }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
 
-    .info-label {
-        font-size: 10px !important;
-        line-height: 1.25;
-    }
+.mobile-kanban-sheet--quick {
+    max-height: 42vh;
+}
 
-    .info-value {
-        font-size: 12px;
-        line-height: 1.2;
-    }
+.mobile-kanban-sheet__close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
 
-    .date-info {
-        font-size: 10px;
-        line-height: 1.2;
-    }
+.mobile-kanban-sheet--quick {
+    position: relative;
+    padding-top: 40px;
+}
 
-    .kanban-nav-zone {
-        display: none;
-    }
+.mobile-kanban-sheet__hint {
+    font-size: 13px;
+    color: #94a3b8;
+    margin: 0 0 14px;
+    font-weight: 600;
+}
+
+.mobile-kanban-stage-pair {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.mobile-kanban-stage-pair--compact {
+    margin-bottom: 0;
+}
+
+.mobile-kanban-stage-pair__sep {
+    color: #94a3b8;
+    display: flex;
+    font-size: 18px;
+}
+
+.mobile-kanban-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    border: none;
+    max-width: 42%;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.mobile-kanban-pill--pick {
+    background: #fff;
+    border: 2px solid #f59e0b;
+    color: #0f172a;
+    cursor: pointer;
+}
+
+.mobile-kanban-link-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    background: #f8fafc;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2563eb;
+    cursor: pointer;
+}
+
+.mobile-kanban-sheet__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-right: 40px;
+}
+
+.mobile-kanban-sheet__title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #64748b;
+    margin: 0;
+}
+
+.mobile-kanban-stage-list {
+    max-height: min(48vh, 400px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.mobile-kanban-stage-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.mobile-kanban-stage-row__radio {
+    width: 20px;
+    height: 20px;
+    accent-color: #f59e0b;
+    flex-shrink: 0;
+}
+
+.mobile-kanban-stage-row__pill {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.mobile-kanban-stage-row__pill--all {
+    background: linear-gradient(90deg, #e2e8f0, #cbd5e1);
+}
+
+.mobile-kanban-stage-row__pill-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-kanban-stage-row__pill-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mobile-kanban-preview-box {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.mobile-kanban-preview-box__label {
+    font-size: 11px;
+    color: #94a3b8;
+    margin: 0 0 8px;
+    font-weight: 600;
+}
+
+.mobile-kanban-sheet__footer {
+    display: flex;
+    gap: 10px;
+}
+
+.mobile-kanban-btn {
+    flex: 1;
+    padding: 14px 16px;
+    border: none;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mobile-kanban-btn--muted {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.mobile-kanban-btn--dark {
+    background: #0f172a;
+    color: #fff;
+}
+
+.mobile-kanban-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.kanban-outer--mobile .mobile-stage-carousel-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-top: 6px;
+    margin-bottom: 2px;
+}
+
+.kanban-outer--mobile .mobile-stage-carousel-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 1;
+}
+
+.kanban-outer--mobile .mobile-stage-carousel-dot {
+    width: 8px;
+    height: 8px;
+    border: none;
+    border-radius: 50%;
+    background: #d1d5db;
+    cursor: pointer;
+    padding: 0;
+}
+
+.kanban-outer--mobile .mobile-stage-carousel-dot.is-active {
+    width: 20px;
+    border-radius: 999px;
+    background: #f59e0b;
 }
 
 </style>

@@ -148,4 +148,10 @@ export default {
   display: flex;
   flex-direction: column;
 }
+
+@media (max-width: 768px) {
+  #app main.dashboard-main > .dashboard-main-router {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+}
 </style>
