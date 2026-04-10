@@ -266,7 +266,7 @@
                 </template>
               </v-select>
               </div>
-              <div class="listing-pop-field--full">
+              <div class="listing-pop-field--full"   v-if="!isMyListingPage">
                 <label>Agent</label>
                 <v-select
                   v-model="selectedAgent"
@@ -311,23 +311,23 @@
           <i class="ri-search-line"></i>
           Search
         </button>
-        <div v-if="showStatusTabs" class="listing-status-row">
-          <button class="status-btn" :class="{ active: activeStatus === 'all' }" @click="emitStatusChange('all')">
+        <div  class="listing-status-row">
+          <button class="status-btn" v-if="showStatusTabs" :class="{ active: activeStatus === 'all' }" @click="emitStatusChange('all')">
             <i class="ri-list-check"></i> All
           </button>
-          <button class="status-btn" :class="{ active: activeStatus === 'active' }" @click="emitStatusChange('active')">
+          <button class="status-btn" v-if="showStatusTabs" :class="{ active: activeStatus === 'active' }" @click="emitStatusChange('active')">
             <i class="ri-checkbox-circle-line"></i> Active
           </button>
-          <button class="status-btn" :class="{ active: activeStatus === 'inactive' }" @click="emitStatusChange('inactive')">
+          <button class="status-btn" v-if="showStatusTabs" :class="{ active: activeStatus === 'inactive' }" @click="emitStatusChange('inactive')">
             <i class="ri-close-circle-line"></i> Inactive
           </button>
-          <button class="status-btn" :class="{ active: activeStatus === 'sold' }" @click="emitStatusChange('sold')">
+          <button class="status-btn"  v-if="showStatusTabs" :class="{ active: activeStatus === 'sold' }" @click="emitStatusChange('sold')">
             <i class="ri-checkbox-circle-fill"></i> Sold Out
           </button>
-          <button class="status-btn" :class="{ active: activeStatus === 'draft' }" @click="emitStatusChange('draft')">
+          <button class="status-btn" v-if="showStatusTabs" :class="{ active: activeStatus === 'draft' }" @click="emitStatusChange('draft')">
             <i class="fa fa-pencil-alt"></i> Draft
           </button>
-          <span class="status-sort-separator"></span>
+          <span class="status-sort-separator" v-if="showStatusTabs"></span>
           <button
             type="button"
             class="status-btn hot-deal-btn"
@@ -371,7 +371,7 @@ import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import { ref, onMounted, computed, getCurrentInstance, onUnmounted, watch } from 'vue';
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
-
+import { useRoute } from 'vue-router';
 import api from '@/plugins/axios';
 
 export default {
@@ -430,6 +430,14 @@ const searchReferenceNumber = ref("");
     // Debounce timer
     const searchTimer = ref(null);
 const allAreas = ref([]);
+
+
+const route = useRoute();
+
+const isMyListingPage = computed(() => {
+  return route.path === '/my-listing';
+});
+
 
     // Static options
     const saleRentOptions = ["All", "Sale", "Rent"];
@@ -1098,7 +1106,7 @@ fetchProjects()
       sortOptions,
       quickSortSelectOptions,
       quickSortForDropdown,
-      
+      isMyListingPage,
       // Computed
       priceProgressStyle,
       sizeProgressStyle,
