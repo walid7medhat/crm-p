@@ -331,12 +331,11 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
   if ($request->has('area_ids')) {
         $areaIds = $request->area_ids;
         
-        // تأكد من أنها مصفوفة
         if (!is_array($areaIds)) {
             $areaIds = explode(',', $areaIds);
         }
         
-        $areaIds = array_filter($areaIds); // إزالة القيم الفارغة
+        $areaIds = array_filter($areaIds); 
         
         if (!empty($areaIds)) {
             $allAreaIds = [];
@@ -464,7 +463,14 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
                 case 'size_asc': $query->orderBy('size_sqft', 'asc'); break;
                 case 'size_desc': $query->orderBy('size_sqft', 'desc'); break;
                 case 'off_plan': $query->orderBy('completion_status', 'asc'); break;
-                 case 'hot_deal': $query->orderBy('is_hot_deal', 'asc'); break;
+                case 'hot_deal': 
+                        $query->orderByRaw("
+                            (is_hot_deal = 'Yes' 
+                            AND hot_deal_approved_by IS NOT NULL 
+                            AND hot_deal_approved_at IS NOT NULL) DESC
+                        ")
+                        ->orderBy('created_at', 'desc');
+                        break;
                  case 'created_at_asc':
                     $query->orderBy('created_at', 'asc');
                     break;
