@@ -45,6 +45,7 @@ use App\Http\Controllers\Api\CityInvestmentSettingsController;
 use App\Http\Controllers\Api\AbuDhabiBenchmarkController;
 use App\Http\Controllers\Api\AdminEmailController;
 use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\LeadImportController;
 Route::get('/test-email', function () {
     try {
         // Test basic email
@@ -193,7 +194,7 @@ Route::middleware('jwt.auth')->group(function () {
     // === Lead Conversion API ===
     Route::post('/leads/convert/to-deal', [LeadConversionController::class, 'convert']);
     Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);
-    
+    Route::post('/leads/import', [LeadImportController::class, 'import']);
     // === Deals API ===
     Route::prefix('deals')->group(function () {
         Route::get('/', [DealController::class, 'index']);

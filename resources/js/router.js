@@ -95,8 +95,12 @@ import StarredEmail from './pages/email/StarredEmail.vue'
 import EmailViewDetails from './pages/email/VeiwDetails.vue'
 
 
+import ImportPitrix from './components/kanban/leadList/ImportPitrix.vue'
+
+
 import  BulkAreaCoordinates from './pages/areas/BulkAreaCoordinates.vue'
 const routes = [
+    { path: '/import-pitrix', component: ImportPitrix, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/area-coordinates', component: BulkAreaCoordinates, meta: { requiresAuth: true, requiresAdmin: true } },
     
   // Kanban Route (super_admin only — see meta.requiresSuperAdmin)
