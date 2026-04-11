@@ -1177,7 +1177,10 @@ const searchFieldsConfig = computed(() => {
     const currentUser = user.value
     const isSuperAdmin = currentUser?.roles?.includes('super_admin')
      const isAdmin = currentUser?.roles?.includes('admin') 
-     
+    if (isAdminOrSuperAdmin.value) {
+        fields.push({ id: 'team', label: 'Team', formKey: 'team', queryKey: 'team_id', type: 'select', options: [] })
+      
+    } 
   
     if(isSuperAdmin || isAdmin)
     {
@@ -1185,10 +1188,7 @@ const searchFieldsConfig = computed(() => {
         fields.push(    { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
         { id: 'office', label: 'Branch', formKey: 'office', queryKey: 'office_branch', type: 'select', options: officeOptions.value, multiple: true })
     }
-    if (isAdminOrSuperAdmin.value) {
-        fields.push({ id: 'team', label: 'Team', formKey: 'team', queryKey: 'team_id', type: 'select', options: [] })
-      
-    }
+    
     
     fields.push(
         { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] },
@@ -1261,7 +1261,7 @@ const searchFieldSections = [
     {
         id: 'assignment',
         title: 'Assignment',
-        fieldIds: ['responsible_person', 'office', 'team']
+        fieldIds: ['responsible_person', 'team' , 'office']
     },
     {
         id: 'source',
@@ -1464,7 +1464,6 @@ function applySearch() {
                                    opt.raw?.admin_parent_name?.toLowerCase().includes('dubai')
                 if (!matchesCity) return false
                 
-                // فقط super_admin يرى كل الفروع، admin والعاديين يرون فرعهم فقط
                 if (isSuperAdmin) return true
                 
                 return opt.raw?.admin_parent_name?.toLowerCase() === userBranchName ||
@@ -1500,6 +1499,7 @@ function applySearch() {
             break
             
     }
+    
     if (form.value.createdOn) {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
@@ -1521,14 +1521,18 @@ function applySearch() {
                 createdAt = tomorrow.toISOString().split('T')[0]
                 break
                 
-            case 'this_week':
+            case 'this_week': {
+                // حساب بداية الأسبوع (الاثنين)
+                let dayOfWeek = today.getDay() // 0 = الأحد, 1 = الاثنين, ..., 6 = السبت
+                const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
                 const startOfWeek = new Date(today)
-                startOfWeek.setDate(today.getDate() - today.getDay())
+                startOfWeek.setDate(today.getDate() - daysFromMonday)
                 const endOfWeek = new Date(startOfWeek)
                 endOfWeek.setDate(startOfWeek.getDate() + 6)
                 createdFrom = startOfWeek.toISOString().split('T')[0]
                 createdTo = endOfWeek.toISOString().split('T')[0]
                 break
+            }
                 
             case 'this_month':
                 createdFrom = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
@@ -1569,32 +1573,39 @@ function applySearch() {
                 createdFrom = last90Days.toISOString().split('T')[0]
                 break
                 
-            case 'last_week':
-                const lastWeek = new Date(today)
-                lastWeek.setDate(lastWeek.getDate() - 7)
-                const startOfLastWeek = new Date(lastWeek)
-                startOfLastWeek.setDate(lastWeek.getDate() - lastWeek.getDay())
-                const endOfLastWeek = new Date(startOfLastWeek)
-                endOfLastWeek.setDate(startOfLastWeek.getDate() + 6)
+            case 'last_week': {
+                // الأسبوع الماضي: من الاثنين إلى الأحد
+                let dayOfWeek = today.getDay()
+                const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+                // نهاية الأسبوع الماضي (الأحد)
+                const endOfLastWeek = new Date(today)
+                endOfLastWeek.setDate(today.getDate() - daysFromMonday - 1)
+                // بداية الأسبوع الماضي (الاثنين)
+                const startOfLastWeek = new Date(endOfLastWeek)
+                startOfLastWeek.setDate(endOfLastWeek.getDate() - 6)
                 createdFrom = startOfLastWeek.toISOString().split('T')[0]
                 createdTo = endOfLastWeek.toISOString().split('T')[0]
                 break
+            }
                 
             case 'last_month':
                 createdFrom = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().split('T')[0]
                 createdTo = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split('T')[0]
                 break
                 
-            case 'next_week':
-                const nextWeek = new Date(today)
-                nextWeek.setDate(nextWeek.getDate() + 7)
-                const startOfNextWeek = new Date(nextWeek)
-                startOfNextWeek.setDate(nextWeek.getDate() - nextWeek.getDay())
+            case 'next_week': {
+                // الأسبوع القادم: من الاثنين إلى الأحد
+                let dayOfWeek = today.getDay()
+                const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+                // بداية الأسبوع القادم (الاثنين)
+                const startOfNextWeek = new Date(today)
+                startOfNextWeek.setDate(today.getDate() - daysFromMonday + 7)
                 const endOfNextWeek = new Date(startOfNextWeek)
                 endOfNextWeek.setDate(startOfNextWeek.getDate() + 6)
                 createdFrom = startOfNextWeek.toISOString().split('T')[0]
                 createdTo = endOfNextWeek.toISOString().split('T')[0]
                 break
+            }
                 
             case 'next_month':
                 createdFrom = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString().split('T')[0]
@@ -1635,8 +1646,11 @@ function applySearch() {
                 break
             }
             case 'this_week': {
+                // حساب بداية الأسبوع (الاثنين)
+                let dayOfWeek = today.getDay()
+                const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
                 const startOfWeek = new Date(today)
-                startOfWeek.setDate(today.getDate() - today.getDay())
+                startOfWeek.setDate(today.getDate() - daysFromMonday)
                 const endOfWeek = new Date(startOfWeek)
                 endOfWeek.setDate(startOfWeek.getDate() + 6)
                 assignedFrom = startOfWeek.toISOString().split('T')[0]
@@ -1676,12 +1690,15 @@ function applySearch() {
                 break
             }
             case 'last_week': {
-                const lastWeek = new Date(today)
-                lastWeek.setDate(lastWeek.getDate() - 7)
-                const startOfLastWeek = new Date(lastWeek)
-                startOfLastWeek.setDate(lastWeek.getDate() - lastWeek.getDay())
-                const endOfLastWeek = new Date(startOfLastWeek)
-                endOfLastWeek.setDate(startOfLastWeek.getDate() + 6)
+                // الأسبوع الماضي: من الاثنين إلى الأحد
+                let dayOfWeek = today.getDay()
+                const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+                // نهاية الأسبوع الماضي (الأحد)
+                const endOfLastWeek = new Date(today)
+                endOfLastWeek.setDate(today.getDate() - daysFromMonday - 1)
+                // بداية الأسبوع الماضي (الاثنين)
+                const startOfLastWeek = new Date(endOfLastWeek)
+                startOfLastWeek.setDate(endOfLastWeek.getDate() - 6)
                 assignedFrom = startOfLastWeek.toISOString().split('T')[0]
                 assignedTo = endOfLastWeek.toISOString().split('T')[0]
                 break
@@ -1734,13 +1751,12 @@ function applySearch() {
         assigned_at: assignedAt || undefined,
         team_id: teamId || undefined,
         office_branch: officeBranches || undefined,
-         lead_type: form.value.leadType || undefined,
+        lead_type: form.value.leadType || undefined,
         property_status: form.value.propertyStatus || undefined,
         budget_from: parseBudgetNumber(form.value.budgetFrom),
         budget_to: parseBudgetNumber(form.value.budgetTo),
         area_id: form.value.areaId || undefined,
         property_type_id: form.value.propertyType || undefined 
-        
     }
     
     Object.keys(query).forEach(k => { 
@@ -1766,7 +1782,7 @@ function applySearch() {
                     field.formKey === 'team' ? teamOptions.value : 
                     field.formKey === 'areaId' ? areaOptions.value : 
                     field.formKey === 'qualityStatus' ? qualityStatusOptions :
-                     field.formKey === 'leadType' ? leadTypeOptions :
+                    field.formKey === 'leadType' ? leadTypeOptions :
                     field.formKey === 'propertyStatus' ? propertyStatusOptions :
                     (field.options || [])
             },
@@ -1789,7 +1805,6 @@ function applySearch() {
     emit('search', { query, activePill: pillData, activeFilters })
     show.value = false
 }
-
 
 async function handleSidebarPillClick(pill) {
     console.log('Sidebar pill clicked:', pill)
@@ -2111,6 +2126,7 @@ function selectPresetRange(preset) {
     const today = new Date()
     const y = today.getFullYear()
     const m = today.getMonth()
+    const weekDays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 
     if (preset === 'custom_date') return
     if (preset === 'today') {
@@ -2121,13 +2137,26 @@ function selectPresetRange(preset) {
         startDate.value = startOfDay(d)
         endDate.value = startOfDay(d)
     } else if (preset === 'this_week') {
-        const s = new Date(y, m, today.getDate() - today.getDay())
-        const e = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6)
+        // حساب بداية الأسبوع (الاثنين)
+        let dayOfWeek = today.getDay() // 0 = الأحد, 1 = الاثنين, ..., 6 = السبت
+        // تحويل الأحد (0) إلى 7
+        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+        const s = new Date(today)
+        s.setDate(today.getDate() - daysFromMonday)
+        const e = new Date(s)
+        e.setDate(s.getDate() + 6)
         startDate.value = startOfDay(s)
         endDate.value = startOfDay(e)
     } else if (preset === 'last_week') {
-        const end = new Date(y, m, today.getDate() - today.getDay() - 1)
-        const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - 6)
+        // الأسبوع الماضي: من الاثنين إلى الأحد
+        let dayOfWeek = today.getDay()
+        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+        // نهاية الأسبوع الماضي (الأحد)
+        const end = new Date(today)
+        end.setDate(today.getDate() - daysFromMonday - 1)
+        // بداية الأسبوع الماضي (الاثنين)
+        const start = new Date(end)
+        start.setDate(end.getDate() - 6)
         startDate.value = startOfDay(start)
         endDate.value = startOfDay(end)
     } else if (preset === 'this_month') {
@@ -2142,7 +2171,6 @@ function selectPresetRange(preset) {
     }
     calendarMonth.value = new Date(startDate.value.getFullYear(), startDate.value.getMonth(), 1)
 }
-
 function pickDate(date) {
     if (!startDate.value || (startDate.value && endDate.value)) {
         startDate.value = startOfDay(date)

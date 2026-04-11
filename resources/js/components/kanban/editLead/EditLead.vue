@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="info-section"  v-if="!showOnlySection || showOnlySection === 'leadInfo'">
+        <div class="info-section section-highlight"  v-if="!showOnlySection || showOnlySection === 'leadInfo'">
              <div class="info-section-title mb-2">Lead Information</div>
         <div class="info-group edit">
             <label class="form-label-custom">Lead Name</label>
@@ -160,7 +160,7 @@
         <!--    </div>-->
         <!--</div>-->
     </div>
-     <div class="info-section"  v-if="!showOnlySection || showOnlySection === 'leadInfo'">
+     <div class="info-section section-highlight"  v-if="!showOnlySection || showOnlySection === 'leadInfo'">
             <div class="info-group mb-3">
                 <label class="form-label-custom">More Information</label>
                 <b-form-textarea 
@@ -174,7 +174,7 @@
                 </div>
             </div>
         </div>
-    <div class="info-section"  v-if="!showOnlySection || showOnlySection === 'clientRequirement'">
+    <div class="info-section section-highlight"  v-if="!showOnlySection || showOnlySection === 'clientRequirement'">
          <div class="info-section-title mb-2">Client Required Info</div>
         <!-- Additional Fields (same UX as Create) -->
            <!-- Location / Area -->
@@ -2167,5 +2167,81 @@ defineExpose({
   min-height: 30px !important;
   padding: 2px 8px !important;
   font-size: 0.65rem !important;
+}
+:deep(.custom-v-select .vs__open-indicator-icon) {
+    font-size: 12px;
+    color: #64748b52;
+}
+.custom-date-trigger svg,.custom-date-trigger i ,.form-label-custom svg ,.form-label-custom i{
+    color: #64748b52 !important;
+}
+/* تصغير علامة الإغلاق (X) في v-select */
+:deep(.custom-v-select .vs__clear) {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+:deep(.custom-v-select .vs__clear svg) {
+    width: 12px !important;
+    height: 12px !important;
+     fill: #64748b52;
+}
+
+/* للـ client-req-vselect نفس الشيء */
+:deep(.client-req-vselect .vs__clear) {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+:deep(.client-req-vselect .vs__clear svg) {
+    width: 12px !important;
+    height: 12px !important;
+}
+
+.vs__clear {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+}
+
+.vs__clear svg {
+    width: 12px !important;
+    height: 12px !important;
+}
+
+
+/* تأثير الـ highlight */
+.section-highlight {
+    animation: highlight-pulse 0.5s ease-in-out 3;
+    border: 2px solid #FAA300 !important;
+    background: linear-gradient(90deg, #FFF8E7, #FFFFFF) !important;
+    box-shadow: 0 0 0 2px rgba(250, 163, 0, 0.2) !important;
+    transition: all 0.3s ease;
+}
+
+@keyframes highlight-pulse {
+    0% {
+        border-color: #FAA300;
+        box-shadow: 0 0 0 0 rgba(250, 163, 0, 0.4);
+    }
+    50% {
+        border-color: #FFD700;
+        box-shadow: 0 0 0 4px rgba(250, 163, 0, 0.2);
+    }
+    100% {
+        border-color: #FAA300;
+        box-shadow: 0 0 0 0 rgba(250, 163, 0, 0);
+    }
 }
 </style>

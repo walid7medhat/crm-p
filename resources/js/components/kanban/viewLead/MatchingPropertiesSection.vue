@@ -133,6 +133,53 @@ const canScrollNext = ref(false)
 const activeDot = ref(0)
 const dotCount = ref(1)
 
+// ==================== Priority Requirement Logic ====================
+const QUAL_META_ID = '__qualification_meta__'
+const QUAL_META_KIND = 'qualification_meta'
+
+const getExtraClientRequirements = (task) => {
+    if (!task?.extra_client_requirements) return []
+    return task.extra_client_requirements.filter(item => item?._kind !== QUAL_META_KIND)
+}
+
+const getQualificationSourceId = (task) => {
+    if (!task) return 'primary'
+    const extraReqs = task?.extra_client_requirements || []
+    const meta = extraReqs.find(item => item?._kind === QUAL_META_KIND)
+    const source = meta?.source || 'primary'
+    if (source === 'primary') return 'primary'
+    const exists = getExtraClientRequirements(task).some(req => req.id === source)
+    return exists ? source : 'primary'
+}
+
+const getPriorityRequirement = (task) => {
+    if (!task) return null
+    const sourceId = getQualificationSourceId(task)
+    
+    if (sourceId === 'primary') {
+        return {
+            area_id: task.area_id,
+            area_label: task.area,
+            property_type_id: task.property_type_id,
+            property_type_label: task.property_type,
+            lead_type: task.lead_type,
+            property_status: task.property_status,
+            bedrooms: task.bedrooms,
+            budget_from: task.budget_from,
+            budget_to: task.budget_to,
+            purpose_buying: task.purpose_buying,
+            status_lead: task.status_lead,
+            isPrimary: true
+        }
+    }
+    
+    const extraReqs = getExtraClientRequirements(task)
+    const priorityReq = extraReqs.find(req => req.id === sourceId)
+    return priorityReq || null
+}
+
+// ==================== Helper Functions ====================
+
 function getCardScrollStep() {
     const el = matchingScrollEl.value
     if (!el) return 280
@@ -205,7 +252,6 @@ const props = defineProps({
 const listings = ref([])
 const loading = ref(false)
 const error = ref('')
-/** Filled via GET /leads/{id}/integration-project when the lead payload has no project id yet. */
 const resolvedProjectId = ref(null)
 const resolvingIntegration = ref(false)
 
@@ -232,47 +278,50 @@ const integrationMissingProject = computed(() => {
     return effectiveProjectId.value == null
 })
 
+// ✅ استخدام الـ priority requirement للتحقق من وجود معايير بحث
 const hasSearchCriteria = computed(() => {
     const l = props.lead
     if (!l) return false
     if (resolvingIntegration.value) return false
     if (effectiveProjectId.value != null) return true
-    /** Integration lead: must have a project id before searching. */
     if (l.integration_id) return false
+    
+    const priorityReq = getPriorityRequirement(l)
+    if (!priorityReq) return false
+    
     return !!(
-        l.area_id ||
-        l.property_type_id ||
-        (l.bedrooms != null && l.bedrooms !== '') ||
-        l.budget_from != null ||
-        l.budget_to != null ||
-        (l.budget != null && l.budget !== '')
+        priorityReq.area_id ||
+        priorityReq.property_type_id ||
+        (priorityReq.bedrooms != null && priorityReq.bedrooms !== '') ||
+        priorityReq.budget_from != null ||
+        priorityReq.budget_to != null
     )
 })
 
+// ✅ استخدام الـ priority requirement لرابط "المزيد"
 const moreQuery = computed(() => {
     const l = props.lead
     const q = {}
     const pid = effectiveProjectId.value
-    /**
-     * Requirement: when we have a scoped project_id, "More" must show ALL properties for that project.
-     * Do not add lead-specific filters (area/beds/budget) or we may hide valid units.
-     */
+    
     if (pid) {
         q.project_id = String(pid)
         return q
     }
-
-    // Fallback (no project id): keep lead filters for a best-effort search.
-    if (l?.area_id) q.area_id = String(l.area_id)
-    if (l?.property_type_id) q.type_id = String(l.property_type_id)
-    if (l?.bedrooms != null && l.bedrooms !== '') {
-        const b = String(l.bedrooms).toLowerCase() === 'studio' ? 'Studio' : String(l.bedrooms)
-        q.beds = b
+    
+    const priorityReq = getPriorityRequirement(l)
+    if (priorityReq) {
+        if (priorityReq.area_id) q.area_id = String(priorityReq.area_id)
+        if (priorityReq.property_type_id) q.type_id = String(priorityReq.property_type_id)
+        if (priorityReq.bedrooms != null && priorityReq.bedrooms !== '') {
+            const b = String(priorityReq.bedrooms).toLowerCase() === 'studio' ? 'Studio' : String(priorityReq.bedrooms)
+            q.beds = b
+        }
+        const minP = priorityReq.budget_from
+        const maxP = priorityReq.budget_to
+        if (minP != null && minP !== '') q.price_from = String(minP)
+        if (maxP != null && maxP !== '') q.price_to = String(maxP)
     }
-    const minP = l?.budget_from ?? l?.budget
-    const maxP = l?.budget_to ?? l?.budget
-    if (minP != null && minP !== '') q.price_from = String(minP)
-    if (maxP != null && maxP !== '') q.price_to = String(maxP)
     return q
 })
 
@@ -281,23 +330,26 @@ const moreRoute = computed(() => ({
     query: moreQuery.value
 }))
 
+// ✅ بناء معاملات API باستخدام الـ priority requirement
 function buildApiParams() {
-    const l = props.lead
+    const priorityReq = getPriorityRequirement(props.lead)
+    const l = priorityReq || props.lead
+    
     const params = {
         per_page: 24,
         page: 1,
         sort: 'created_at_desc'
     }
-    if (!l) return params
+    
     const pid = effectiveProjectId.value
     if (pid) {
         params.project_id = pid
-        /** List only units in this project — extra lead filters often match zero rows. */
-        // return params
     }
-    if (l.area_id) params.area_id = l.area_id
-    if (l.property_type_id) params.property_type_id = l.property_type_id
-    if (l.bedrooms != null && l.bedrooms !== '') {
+    
+    if (l?.area_id) params.area_id = l.area_id
+    if (l?.property_type_id) params.property_type_id = l.property_type_id
+    
+    if (l?.bedrooms != null && l.bedrooms !== '') {
         const raw = l.bedrooms
         if (String(raw).toLowerCase() === 'studio') {
             params.number_of_bedrooms = 0
@@ -306,10 +358,13 @@ function buildApiParams() {
             if (!Number.isNaN(n)) params.number_of_bedrooms = n
         }
     }
-    const minP = l.budget_from ?? l.budget
-    const maxP = l.budget_to ?? l.budget
+    
+    const minP = l?.budget_from ?? l?.budget
+    const maxP = l?.budget_to ?? l?.budget
+    
     if (minP != null && minP !== '') params.min_price = minP
     if (maxP != null && maxP !== '') params.max_price = maxP
+    
     return params
 }
 
@@ -381,7 +436,7 @@ watch(
         props.lead?.integration_id
     ],
     () => fetchMatches(),
-    { immediate: true }
+    { immediate: true, deep: true }
 )
 
 watch(listings, () => bindScrollResize(), { deep: true })
@@ -420,7 +475,6 @@ function onImgError(e) {
     e.target.style.display = 'none'
 }
 </script>
-
 <style scoped>
 /* Same card shell + title as LeadInfoView .info-section (scoped there; duplicated here for this child). */
 .matching-properties-section.info-section {

@@ -220,13 +220,18 @@
                 >
                     <div
                         v-if="showClientReqEditor && editingExtraIndex === idx"
-                        class="info-section client-req-inline-editor"
+                        class="info-section client-req-inline-editor section-highlight"
                     >
                         <div class="info-section-title mb-2">{{ clientReqModalTitle }}</div>
                         <div class="client-req-modal-body">
                             <div class="info-group">
                                 <label class="form-label-custom">Location</label>
                                 <v-select v-model="clientReqForm.area_id" :options="clientReqAreas" :reduce="(a) => a.id" :disabled="isLoadingClientReqAreas" label="name" placeholder="Select area" class="custom-v-select client-req-vselect location-select" :append-to-body="true">
+                                     <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
                                     <template #option="option">
                                         <div class="location-option">
                                             <i class="ri-map-pin-line location-option-icon"></i>
@@ -246,23 +251,53 @@
                             </div>
                             <div class="info-group"  v-if="clientReqForm.lead_type?.toLowerCase() !== 'rent'">
                                 <label class="form-label-custom" >Property Status <span class="text-danger">*</span></label>
-                                <v-select v-model="clientReqForm.property_status" :options="clientReqPropertyStatusOptions" :reduce="(o) => o.value" label="text" placeholder="Select Property Status" class="custom-v-select client-req-vselect" :append-to-body="true" />
+                                <v-select v-model="clientReqForm.property_status" :options="clientReqPropertyStatusOptions" :reduce="(o) => o.value" label="text" placeholder="Select Property Status" class="custom-v-select client-req-vselect" :append-to-body="true" >
+                                     <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
+                                </v-select>
                             </div>
                             <div class="info-group">
                                 <label class="form-label-custom">Property Type</label>
-                                <v-select v-model="clientReqForm.property_type_id" :options="clientReqPropertyTypeOptions" :reduce="(o) => o.value" label="text" placeholder="Select Property Type" class="custom-v-select client-req-vselect" :append-to-body="true" />
+                                <v-select v-model="clientReqForm.property_type_id" :options="clientReqPropertyTypeOptions" :reduce="(o) => o.value" label="text" placeholder="Select Property Type" class="custom-v-select client-req-vselect" :append-to-body="true" >
+                                     <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
+                                </v-select>
                             </div>
                             <div class="info-group">
                                 <label class="form-label-custom">Lead Type <span class="text-danger">*</span></label>
-                                <v-select v-model="clientReqForm.lead_type" :options="clientReqLeadTypeOptions" :reduce="(o) => o.value" label="text" placeholder="Select Lead Type" class="custom-v-select client-req-vselect" :append-to-body="true" />
+                                <v-select v-model="clientReqForm.lead_type" :options="clientReqLeadTypeOptions" :reduce="(o) => o.value" label="text" placeholder="Select Lead Type" class="custom-v-select client-req-vselect" :append-to-body="true" >
+                                     <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
+                                </v-select>
                             </div>
                             <div class="info-group"  v-if="!isPlotsOrLandByTypeId(clientReqForm.property_type_id)">
                                 <label class="form-label-custom">Bedrooms</label>
-                                <v-select v-model="clientReqForm.bedrooms" :options="clientReqBedroomOptions" :reduce="(o) => o.value" label="text" placeholder="Select Bedrooms" class="custom-v-select client-req-vselect" :append-to-body="true" />
+                                <v-select v-model="clientReqForm.bedrooms" :options="clientReqBedroomOptions" :reduce="(o) => o.value" label="text" placeholder="Select Bedrooms" class="custom-v-select client-req-vselect" :append-to-body="true" >
+                                     <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
+                                </v-select>
                             </div>
                             <div class="info-group">
                                 <label class="form-label-custom">Quality Status</label>
-                                <v-select v-model="clientReqForm.status_lead" :options="clientReqQualityStatusOptions" :reduce="(o) => o.value" label="text" placeholder="Select Quality Status" class="custom-v-select client-req-vselect" :append-to-body="true" />
+                                <v-select v-model="clientReqForm.status_lead" :options="clientReqQualityStatusOptions" :reduce="(o) => o.value" label="text" placeholder="Select Quality Status" class="custom-v-select client-req-vselect" :append-to-body="true" >
+                                     <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
+                                </v-select>
                             </div>
                             <div class="info-group client-req-budget-row">
                                 <label class="form-label-custom">Budget (AED)</label>
@@ -273,7 +308,13 @@
                             </div>
                             <div class="info-group info-group--full mb-0"  v-if="clientReqForm.lead_type?.toLowerCase() !== 'rent'">
                                 <label class="form-label-custom">Purpose Of Purchase</label>
-                                <v-select v-model="clientReqForm.purpose_buying" :options="clientReqPurposeOptions" :reduce="(o) => o.value" label="text" placeholder="Select Purpose" class="custom-v-select client-req-vselect" :append-to-body="true" />
+                                <v-select v-model="clientReqForm.purpose_buying" :options="clientReqPurposeOptions" :reduce="(o) => o.value" label="text" placeholder="Select Purpose" class="custom-v-select client-req-vselect" :append-to-body="true" >
+                                     <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
+                                </v-select>
                             </div>
                             <div v-if="clientReqSaveError" class="alert alert-danger py-2 small mt-2 mb-0">{{ clientReqSaveError }}</div>
                             <div class="modal-footer-custom mt-3 d-flex justify-content-end gap-2">
@@ -360,7 +401,7 @@
         <div
             v-if="showClientReqEditor && editingExtraIndex === null"
             ref="newClientReqEditorRef"
-            class="info-section client-req-inline-editor"
+            class="info-section client-req-inline-editor section-highlight"
         >
             <div class="info-section-title mb-2">{{ clientReqModalTitle }}</div>
             <div class="client-req-modal-body">
@@ -376,6 +417,11 @@
                         class="custom-v-select client-req-vselect location-select"
                         :append-to-body="true"
                     >
+                         <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
                         <template #option="option">
                             <div class="location-option">
                                 <i class="ri-map-pin-line location-option-icon"></i>
@@ -403,7 +449,13 @@
                         placeholder="Select Property Status"
                         class="custom-v-select client-req-vselect"
                         :append-to-body="true"
-                    />
+                    >
+                         <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
+                    </v-select>
                 </div>
                 <div class="info-group">
                     <label class="form-label-custom">Property Type</label>
@@ -415,7 +467,13 @@
                         placeholder="Select Property Type"
                         class="custom-v-select client-req-vselect"
                         :append-to-body="true"
-                    />
+                    >
+                          <template #open-indicator="{ attributes }">
+                              <span v-bind="attributes">
+                                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                              </span>
+                          </template>
+                    </v-select>
                 </div>
                 <div class="info-group">
                     <label class="form-label-custom">Lead Type <span class="text-danger">*</span></label>
@@ -427,7 +485,13 @@
                         placeholder="Select Lead Type"
                         class="custom-v-select client-req-vselect"
                         :append-to-body="true"
-                    />
+                    >
+                         <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
+                    </v-select>
                 </div>
                 <div class="info-group" v-if="!isCurrentReqPlotsOrLand">
                     <label class="form-label-custom">Bedrooms</label>
@@ -439,7 +503,13 @@
                         placeholder="Select Bedrooms"
                         class="custom-v-select client-req-vselect"
                         :append-to-body="true"
-                    />
+                    >
+                         <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
+                    </v-select>
                 </div>
                 <div class="info-group">
                     <label class="form-label-custom">Quality Status</label>
@@ -451,7 +521,13 @@
                         placeholder="Select Quality Status"
                         class="custom-v-select client-req-vselect"
                         :append-to-body="true"
-                    />
+                    >
+                         <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
+                    </v-select>
                 </div>
                 <div class="info-group client-req-budget-row">
                     <label class="form-label-custom">Budget (AED)</label>
@@ -484,7 +560,13 @@
                         placeholder="Select Purpose"
                         class="custom-v-select client-req-vselect"
                         :append-to-body="true"
-                    />
+                    >
+                         <template #open-indicator="{ attributes }">
+                                          <span v-bind="attributes">
+                                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                          </span>
+                                      </template>
+                    </v-select>
                 </div>
                 <div v-if="clientReqSaveError" class="alert alert-danger py-2 small mt-2 mb-0">{{ clientReqSaveError }}</div>
                 <div class="modal-footer-custom mt-3 d-flex justify-content-end gap-2">
@@ -2404,4 +2486,82 @@ const saveClientRequirement = async () => {
     border: 1px solid rgb(250, 163, 0);
     border-radius: 20px;
 }
+:deep(.custom-v-select .vs__open-indicator-icon) {
+    font-size: 12px;
+    color: #64748b52;
+}
+.custom-date-trigger svg,.custom-date-trigger i ,.form-label-custom svg ,.form-label-custom i{
+    color: #64748b52 !important;
+}
+/* تصغير علامة الإغلاق (X) في v-select */
+:deep(.custom-v-select .vs__clear) {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+:deep(.custom-v-select .vs__clear svg) {
+    width: 12px !important;
+    height: 12px !important;
+       fill: #64748b52;
+}
+
+/* للـ client-req-vselect نفس الشيء */
+:deep(.client-req-vselect .vs__clear) {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+:deep(.client-req-vselect .vs__clear svg) {
+    width: 12px !important;
+    height: 12px !important;
+}
+
+.vs__clear {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+}
+
+.vs__clear svg {
+    width: 12px !important;
+    height: 12px !important;
+}
+
+
+/* تأثير الـ highlight */
+.section-highlight {
+    animation: highlight-pulse 0.5s ease-in-out 3;
+    border: 2px solid #FAA300 !important;
+    background: linear-gradient(90deg, #FFF8E7, #FFFFFF) !important;
+    box-shadow: 0 0 0 2px rgba(250, 163, 0, 0.2) !important;
+    transition: all 0.3s ease;
+}
+
+@keyframes highlight-pulse {
+    0% {
+        border-color: #FAA300;
+        box-shadow: 0 0 0 0 rgba(250, 163, 0, 0.4);
+    }
+    50% {
+        border-color: #FFD700;
+        box-shadow: 0 0 0 4px rgba(250, 163, 0, 0.2);
+    }
+    100% {
+        border-color: #FAA300;
+        box-shadow: 0 0 0 0 rgba(250, 163, 0, 0);
+    }
+}
+
+
 </style>

@@ -172,7 +172,7 @@
                                   
 
                                     <!-- Bedrooms (Stage 4) -->
-                                    <div v-if="shouldShowField('bedrooms')" class="col-md-4" style="order: 5;">
+                                    <div v-if="shouldShowField('bedrooms') && !isPlotsOrLand" class="col-md-4" style="order: 5;">
                                         <label class="form-label-custom">How Many Bedrooms</label>
                                         <v-select 
                                             v-model="form.bedrooms" 
@@ -248,7 +248,7 @@
                                     </div>
 
                                     <!-- Purpose (Stage 4) -->
-                                    <div v-if="shouldShowField('purpose_buying')" class="col-md-4" style="order: 8;">
+                                    <div v-if="shouldShowField('purpose_buying') && !isRentOnly" class="col-md-4" style="order: 8;">
                                         <label class="form-label-custom">Purpose Of Purchase</label>
                                         <v-select 
                                             v-model="form.purpose_buying" 
@@ -267,7 +267,7 @@
                                     </div>
 
                                     <!-- Source (Stage 4) -->
-                                    <div v-if="shouldShowField('lead_source')" class="col-md-4" style="order: 20;">
+                                    <div class="col-md-4" style="order: 20;">
                                         <label class="form-label-custom">Source <span class="text-danger">*</span></label>
                                         <v-select 
                                             v-model="form.lead_source" 
@@ -364,7 +364,7 @@
                                     </div>
                                     
                                     <!-- Property Status (Ready/Off Plan/Both) - جديد -->
-                                    <div v-if="shouldShowField('property_status')" class="col-md-4" style="order: 4;">
+                                    <div v-if="shouldShowField('property_status') && !isRentOnly" class="col-md-4" style="order: 4;">
                                         <label class="form-label-custom">Property Status <span class="text-danger">*</span></label>
                                         <v-select 
                                             v-model="form.property_status" 
@@ -607,7 +607,35 @@ const lostReasonOptions = [
     { value: 'lost_by_other_company', text: 'Lost by Other Company' },
     { value: 'lost_by_our_company', text: 'Lost by Our Company' }
 ]
+// ==================== الشروط حسب نوع الـ Lead ====================
 
+// التحقق من نوع العقار (Plots or Land) - بناءً على property_type_id المختار
+const isPlotsOrLand = computed(() => {
+    const propertyTypeId = form.value.property_type_id
+    if (!propertyTypeId) return false
+    
+    const selectedType = propertyTypeOptions.value.find(opt => opt.value === propertyTypeId)
+    if (!selectedType) return false
+    
+    const typeName = selectedType.text.toLowerCase()
+    return typeName.includes('plot') || typeName.includes('land') || typeName.includes('plots') || typeName.includes('lands')
+})
+
+// التحقق من نوع الـ lead (Rent only)
+const isRentOnly = computed(() => {
+    return form.value.lead_type?.toLowerCase() === 'rent'
+})
+
+// دالة للتحقق من الميزانية
+const validateBudgetRange = () => {
+    const from = parseFloat(form.value.budget_from)
+    const to = parseFloat(form.value.budget_to)
+    
+    if (from && to && from > to) {
+        return 'Budget From cannot be greater than Budget To'
+    }
+    return null
+}
 // دالة للحصول على اسم المرحلة
 const getStageName = () => {
     const stage = stages.value.find(s => s.id === form.value.stage_id)
@@ -625,15 +653,22 @@ const getLeadStatusOptions = () => {
         ]
     } else if (order === 9) {
         return [
-            { value: 'no_answer', text: 'Lead Pool - No Answer' },
-            { value: 'canceled', text: 'Lead Pool - Canceled' }
+            { value: 'no_answer', text: 'No Answer' },
+            { value: 'contacted', text: 'Contacted' },
+            { value: 'wrong_person', text: 'Wrong Person' }
         ]
     } else if (order === 10) {
         return [
-            { value: 'unqualified_not_interested', text: 'Unqualified - Not Interested' },
-            { value: 'unqualified_wrong_contact', text: 'Unqualified - Wrong Contact Details' },
-            { value: 'unqualified_job_seeker', text: 'Unqualified - Job Seeker' },
-            { value: 'unqualified_other', text: 'Unqualified - Other' }
+            { value: 'not_interested', text: 'Not Interested' },
+            { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+            { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
+            { value: 'job_seeker', text: 'Job Seeker' },
+            { value: 'broker', text: 'Broker' },
+            { value: 'registered_by_mistake', text: 'Registered by Mistake' },
+            { value: 'spam_leads', text: 'Spam Leads' },
+            { value: 'already_assigned_to_another_agent', text: 'Already Assigned to Another Agent' },
+            { value: 'client_was_just_searching_online', text: 'Client Was Just Searching Online' },
+            { value: 'number_does_not_exist', text: 'Number Does Not Exist' }
         ]
     }
     return []
@@ -1180,7 +1215,27 @@ watch(() => form.value.lost_reason, () => {
         clearErrorMessageIfNeeded()
     }
 })
+// مراقبة تغيير lead type
+watch(() => form.value.lead_type, (newVal) => {
+    if (newVal?.toLowerCase() === 'rent') {
+        // إذا كان Rent، امسح property_status و purpose_buying
+        form.value.property_status = null
+        form.value.purpose_buying = null
+    }
+})
 
+// مراقبة تغيير property type
+watch(() => form.value.property_type_id, (newVal) => {
+    if (!newVal) return
+    const selectedType = propertyTypeOptions.value.find(opt => opt.value === newVal)
+    if (selectedType) {
+        const typeName = selectedType.text.toLowerCase()
+        if (typeName.includes('plot') || typeName.includes('land') || typeName.includes('plots') || typeName.includes('lands')) {
+            // إذا كان Plots/Land، امسح bedrooms
+            form.value.bedrooms = null
+        }
+    }
+})
 const resetForm = () => {
     const defaultUser = users.value.find((user) => Number(user.id) === Number(loggedInUserId)) || null
     form.value = {
@@ -1223,7 +1278,12 @@ const submitForm = async () => {
         isSubmitting.value = true
         errorMessage.value = ''
         validationErrors.value = {}
-        
+         const budgetError = validateBudgetRange()
+        if (budgetError) {
+            validationErrors.value.budget = [budgetError]
+            $showNotification(budgetError, 'warning')
+            return
+        }
         const payload = {
             ...form.value,
             responsible_person_id: form.value.responsible_person_id,
