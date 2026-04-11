@@ -1606,6 +1606,18 @@ const hasDynamicFieldValue = (task, key) => {
             (task?.added_by != null && task?.added_by !== '')
         )
     }
+    // For bedrooms: show root task.bedrooms only when we are not hiding bedrooms because the *priority* requirement is plot/land.
+    if (key === 'bedrooms') {
+        if (shouldHideBedroomsDueToPlotPriority(task)) {
+            return false
+        }
+        const value = task?.bedrooms
+        if (value == null) return false
+        if (typeof value === 'string') return value.trim().length > 0
+        if (Array.isArray(value)) return value.length > 0
+        if (typeof value === 'object') return Object.keys(value).length > 0
+        return true
+    }
     const value = task?.[key]
     if (value == null) return false
     if (typeof value === 'string') return value.trim().length > 0
@@ -1630,7 +1642,45 @@ const getDynamicFieldDisplay = (task, key) => {
 // ==================== Priority Requirement Logic ====================
 const QUAL_META_ID = '__qualification_meta__'
 const QUAL_META_KIND = 'qualification_meta'
-const PLOT_TYPE_IDS = [24,31,35,36]
+const PLOT_TYPE_IDS = [24, 31, 35, 36]
+
+/** Build a single searchable label for plot/land detection (API shapes vary). */
+const getRequirementPropertyTypeText = (req) => {
+    if (!req || typeof req !== 'object') return ''
+    const parts = []
+    const push = (v) => {
+        if (v == null) return
+        if (typeof v === 'string' && v.trim()) parts.push(v.trim())
+        else if (typeof v === 'number') parts.push(String(v))
+    }
+    push(req.property_type_label)
+    push(req.property_type_name)
+    if (typeof req.property_type === 'string') push(req.property_type)
+    else if (req.property_type && typeof req.property_type === 'object') {
+        push(req.property_type.name)
+        push(req.property_type.label)
+        push(req.property_type.text)
+        push(req.property_type.title)
+    }
+    return parts.join(' ').trim()
+}
+
+/**
+ * Bedrooms are not applicable for land / plot types (incl. Residential Plot, Commercial Plot(s)).
+ */
+const isNoBedroomPropertyType = (req) => {
+    const combined = getRequirementPropertyTypeText(req).toLowerCase()
+    if (!combined) {
+        const typeId = req?.property_type_id
+        if (typeId != null && PLOT_TYPE_IDS.includes(Number(typeId))) return true
+        return false
+    }
+    if (/\bland\b/.test(combined)) return true
+    if (/\bplots?\b/.test(combined)) return true
+    if (/residential\s+plot/.test(combined)) return true
+    if (/commercial\s+plots?/.test(combined)) return true
+    return false
+}
 // دالة للحصول على الـ extra requirements من الـ lead
 const getExtraClientRequirements = (task) => {
     if (!task?.extra_client_requirements) return []
@@ -1641,38 +1691,48 @@ const getExtraClientRequirements = (task) => {
 const getQualificationSourceId = (task) => {
     const extraReqs = task?.extra_client_requirements || []
     const meta = extraReqs.find(item => item?._kind === QUAL_META_KIND)
-    const source = meta?.source || 'primary'
+    const source = meta?.source ?? 'primary'
     if (source === 'primary') return 'primary'
-    const exists = getExtraClientRequirements(task).some(req => req.id === source)
+    const extras = getExtraClientRequirements(task)
+    const exists = extras.some((req) => String(req?.id) === String(source))
     return exists ? source : 'primary'
 }
 
 const getPriorityRequirement = (task) => {
     const sourceId = getQualificationSourceId(task)
-    console.log('=== getPriorityRequirement ===')
-    console.log('Source ID:', sourceId)
-    
+
     // إذا كان المصدر ليس 'primary'، جلب من extra requirements
     if (sourceId !== 'primary') {
         const extraReqs = getExtraClientRequirements(task)
-        console.log('Extra Requirements:', extraReqs)
-        const priorityReq = extraReqs.find(req => req.id === sourceId)
-        console.log('Found Priority Req:', priorityReq)
-        
+        const priorityReq = extraReqs.find((req) => String(req?.id) === String(sourceId))
+
         if (priorityReq) {
-            // إضافة خاصية isPlotsOrLand
-            priorityReq.isPlotsOrLand = isPlotOrLand(priorityReq)
+            priorityReq.isPlotsOrLand = isNoBedroomPropertyType(priorityReq)
             return priorityReq
         }
     }
-    
+
     // Fallback إلى primary
-    console.log('Using Primary Requirement')
+    const primaryPtLabel =
+        typeof task.property_type === 'string'
+            ? task.property_type
+            : task.property_type?.name ||
+              task.property_type?.label ||
+              task.property_type?.text ||
+              task.property_type_name ||
+              task.property_type_label ||
+              ''
+    const primaryReqShape = {
+        property_type_id: task.property_type_id,
+        property_type_label: primaryPtLabel,
+        property_type: task.property_type,
+        property_type_name: task.property_type_name,
+    }
     return {
         area_id: task.area_id,
         area_label: task.area,
         property_type_id: task.property_type_id,
-        property_type_label: task.property_type,
+        property_type_label: primaryPtLabel,
         lead_type: task.lead_type,
         property_status: task.property_status,
         bedrooms: task.bedrooms,
@@ -1681,36 +1741,35 @@ const getPriorityRequirement = (task) => {
         purpose_buying: task.purpose_buying,
         status_lead: task.status_lead,
         isPrimary: true,
-        isPlotsOrLand: isPlotOrLand({ property_type_id: task.property_type_id, property_type_label: task.property_type })
+        isPlotsOrLand: isNoBedroomPropertyType(primaryReqShape),
     }
 }
 const getPriorityBedrooms = (task) => {
     const req = getPriorityRequirement(task)
-    console.log('=== getPriorityBedrooms ===')
-    console.log('Priority Req:', req)
-    
+
     if (!req) {
-        console.log('No priority requirement found')
         return null
     }
-    
-    const isPlot =req.isPlotsOrLand
-    console.log('Is Plot or Land:', isPlot)
-    
-    if (isPlot) {
-         console.log('rask id:', task.id)
-          console.log('rask bedrooms:', task.bedrooms)
-        console.log('Requirement is Plots/Land, returning null')
+
+    const hideBedrooms = req.isPlotsOrLand || isNoBedroomPropertyType(req)
+
+    if (hideBedrooms) {
         return null
     }
-   
-    console.log('Bedrooms value:', req.bedrooms)
+
     return req.bedrooms ?? null
 }
 // دالة للتحقق مما إذا كان يجب إظهار الـ bedrooms
 const shouldShowPriorityBedrooms = (task) => {
     const bedrooms = getPriorityBedrooms(task)
     return bedrooms && bedrooms !== '' && bedrooms !== null
+}
+
+/** Hide bedroom line on the card when the resolved priority requirement is plot/land (incl. residential/commercial plots). */
+const shouldHideBedroomsDueToPlotPriority = (task) => {
+    const req = getPriorityRequirement(task)
+    if (!req) return false
+    return !!(req.isPlotsOrLand || isNoBedroomPropertyType(req))
 }
 
 // دالة للحصول على الـ property type من الـ priority requirement
@@ -1764,27 +1823,8 @@ const getPriorityBudget = (task) => {
     if (to) return `To ${to}`
     return null
 }
-const isPlotOrLand = (req) => {
-    // التحقق من extra requirement (property_type_label)
-    const typeLabel = req?.property_type_label?.toLowerCase() || ''
-    if (typeLabel.includes('plot') || typeLabel.includes('land')) {
-        return true
-    }
-    
-    // التحقق من primary (property_type)
-    const type = req?.property_type?.toLowerCase() || ''
-    if (type.includes('plot') || type.includes('land')) {
-        return true
-    }
-    
-    // التحقق من property_type_id
-    const typeId = req?.property_type_id
-    if (typeId && PLOT_TYPE_IDS.includes(Number(typeId))) {
-        return true
-    }
-    
-    return false
-}
+/** @deprecated use isNoBedroomPropertyType — kept name for any external refs */
+const isPlotOrLand = (req) => isNoBedroomPropertyType(req)
 const formatMaskedEmail = (email) => {
     const raw = String(email || '').trim()
     if (!raw) return ''
