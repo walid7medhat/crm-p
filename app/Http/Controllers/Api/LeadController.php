@@ -706,7 +706,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             'why_lost_lead' => 'nullable|string|max:255|in:lost_by_other_company,lost_by_our_company',
             
             // Stage 9: Lead Pool - استخدام status_lead
-            'status_lead_pool' => 'nullable|string|max:100|in:no_answer,canceled',
+            'status_lead_pool' => 'nullable|string|max:100|in:no_answer,canceled,wrong_person,contacted',
             'interaction_result' => 'nullable|string|max:20|in:answered,no_answer',
             
             // Stage 10: Unqualified - استخدام status_lead
@@ -735,7 +735,6 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         $changes = [];
         $fields = [];
         
-        // التحقق من تغيير المسؤول
         if (!empty($request->responsible_person_id) && $request->responsible_person_id != $lead->responsible_person_id) {
             $oldPerson = User::find($lead->responsible_person_id);
             $newPerson = User::find($request->responsible_person_id);

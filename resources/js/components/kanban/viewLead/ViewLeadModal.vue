@@ -79,7 +79,15 @@
             @submit="handleStageChangeWithReason"
             @closed="clearPendingStageChange"
         />
+       
     </b-modal>
+     <ConvertLeadModal
+        ref="convertModalRef"
+        :leadId="selectedLeadForConversion"
+        :leadData="selectedLeadData"
+        @converted="handleLeadConverted"
+        @closed="selectedLeadForConversion = null"
+    />
 </template>
 
 <script setup>
@@ -87,6 +95,8 @@ import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { BModal, BDropdown } from 'bootstrap-vue-3'
 import StageSelector from '../shared/StageSelector.vue'
 import StageChangeReasonModal from '../leadList/StageChangeReasonModal.vue'
+import ConvertLeadModal from '../leadList/ConvertLeadModal.vue'
+
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
@@ -298,12 +308,12 @@ const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
 
         await nextTick()
         if (convertModalRef.value) {
+            
             convertModalRef.value.show()
         }
         return
     }
 
-    // 🔥 باقي المراحل (3,4,5,7,8,9,10)
     const requiredFieldsMap = {
         3: ['salutation'],
         4: ['salutation','property_type_id','area_id','budget_from','budget_to','lead_type','property_status','purpose_buying','bedrooms','status_lead'],
@@ -313,14 +323,22 @@ const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
         9: ['status_lead'],
         10: ['status_lead']
     }
-
+    const alwaysRequiredFieldsMap = {
+        9: ['status_lead'],
+        10: ['status_lead']
+    }
     const requiredFields = requiredFieldsMap[targetStageOrder] || []
-    const leadMissingFields = requiredFields.filter(field => {
-        const value = lead.value[field]
-        return !value || value === '' || value === null || value === undefined
-    })
-
-    if (leadMissingFields.length > 0 || [3,4,5,7,8,9,10].includes(targetStageOrder)) {
+    const alwaysFields = alwaysRequiredFieldsMap[targetStageOrder] || []
+    
+    const leadMissingFields = requiredFields.filter(f => !lead[f])
+    
+    const fieldsToShow = [...new Set([...leadMissingFields, ...alwaysFields])]
+    if (targetStageOrder === 9 || targetStageOrder === 10) {
+        if (!fieldsToShow.includes('status_lead')) {
+            fieldsToShow.push('status_lead')
+        }
+    }
+    if (fieldsToShow.length > 0 || [3,4,5,7,8,9,10].includes(targetStageOrder)) {
         console.log('Showing modal for stage order:', targetStageOrder, 'Missing fields:', leadMissingFields)
         
         pendingStageChange.value = {
@@ -333,7 +351,7 @@ const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
             isConversion: false
         }
 
-        missingFieldsForLead.value = leadMissingFields
+        missingFieldsForLead.value = fieldsToShow
         showStageChangeModal.value = true
         
         await nextTick()
@@ -929,5 +947,12 @@ textarea, input, select {
         overflow-y: auto;
         padding: 10px !important;
     }
+}
+.modal {
+    z-index: 2000 !important;
+}
+
+.modal-backdrop {
+    z-index: 1999 !important;
 }
 </style>

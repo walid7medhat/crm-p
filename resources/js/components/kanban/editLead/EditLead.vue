@@ -227,8 +227,30 @@
                         </template>
                     </v-select>
                 </div>
-                    <!-- Property Status (Ready/Off Plan/Both) - جديد -->
+                <!-- Lead Type (Sale/Rent) -  -->
                     <div class="info-group">
+                        <label class="form-label-custom">Lead Type <span class="text-danger">*</span></label>
+                        <v-select 
+                            v-model="form.lead_type" 
+                            :options="leadTypeOptions" 
+                            :reduce="option => option.value"
+                            label="text"
+                            placeholder="Select Lead Type"
+                            class="custom-v-select"
+                            :class="{ 'is-invalid-select': validationErrors.lead_type }"
+                        >
+                            <template #open-indicator="{ attributes }">
+                                <span v-bind="attributes">
+                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                </span>
+                            </template>
+                        </v-select>
+                        <div v-if="validationErrors.lead_type" class="invalid-feedback d-block">
+                            {{ validationErrors.lead_type[0] }}
+                        </div>
+                    </div>
+                    <!-- Property Status (Ready/Off Plan/Both) -  -->
+                    <div class="info-group"  v-if="!isRentOnly">
                         <label class="form-label-custom">Property Status <span class="text-danger">*</span></label>
                         <v-select 
                             v-model="form.property_status" 
@@ -267,30 +289,9 @@
                             </template>
                         </v-select>
                     </div>
-         <!-- Lead Type (Sale/Rent) - جديد -->
-                    <div class="info-group">
-                        <label class="form-label-custom">Lead Type <span class="text-danger">*</span></label>
-                        <v-select 
-                            v-model="form.lead_type" 
-                            :options="leadTypeOptions" 
-                            :reduce="option => option.value"
-                            label="text"
-                            placeholder="Select Lead Type"
-                            class="custom-v-select"
-                            :class="{ 'is-invalid-select': validationErrors.lead_type }"
-                        >
-                            <template #open-indicator="{ attributes }">
-                                <span v-bind="attributes">
-                                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                </span>
-                            </template>
-                        </v-select>
-                        <div v-if="validationErrors.lead_type" class="invalid-feedback d-block">
-                            {{ validationErrors.lead_type[0] }}
-                        </div>
-                    </div>
+         
   <!-- Bedrooms -->
-                <div class="info-group">
+                <div class="info-group"  v-if="!isPlotsOrLand">
                     <label class="form-label-custom">How Many Bedrooms</label>
                     <v-select 
                         v-model="form.bedrooms" 
@@ -376,7 +377,7 @@
                 
 
                 <!-- Purpose -->
-                <div class="info-group">
+                <div class="info-group"  v-if="!isRentOnly">
                     <label class="form-label-custom">Purpose Of Purchase</label>
                     <v-select 
                         v-model="form.purpose_buying" 
@@ -669,18 +670,50 @@ const shouldShowField = (fieldKey) => {
     const stages = fieldVisibility[fieldKey] || []
     return stages.includes(order)
 }
-// Lead Status Options
-const leadStatusOptions = [
-    { value: 'cold', text: 'Cold Lead' },
-    { value: 'warm', text: 'Warm Lead' },
-    { value: 'hot', text: 'Hot Lead' },
-    { value: 'no_answer', text: 'Lead Pool - No Answer' },
-    { value: 'canceled', text: 'Lead Pool - Canceled' },
-    { value: 'unqualified_not_interested', text: 'Unqualified - Not Interested' },
-    { value: 'unqualified_wrong_contact', text: 'Unqualified - Wrong Contact Details' },
-    { value: 'unqualified_job_seeker', text: 'Unqualified - Job Seeker' },
-    { value: 'unqualified_other', text: 'Unqualified - Other' }
-]
+
+const leadStatusOptions = computed(() => {
+    const stageOrder = currentStageOrder.value
+    
+    // Stage 4: Qualified - Hot/Warm/Cold فقط
+    if (stageOrder === 4) {
+        return [
+            { value: 'cold', text: 'Cold Lead' },
+            { value: 'warm', text: 'Warm Lead' },
+            { value: 'hot', text: 'Hot Lead' }
+        ]
+    }
+    
+    // Stage 9: Lead Pool
+    if (stageOrder === 9) {
+        return [
+            { value: 'no_answer', text: 'No Answer' },
+            { value: 'contacted', text: 'Contacted' },
+            { value: 'wrong_person', text: 'Wrong Person' }
+        ]
+    }
+    
+    // Stage 10: Unqualified
+    if (stageOrder === 10) {
+        return [
+            { value: 'not_interested', text: 'Not Interested' },
+            { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+            { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
+            { value: 'job_seeker', text: 'Job Seeker' },
+            { value: 'broker', text: 'Broker' },
+            { value: 'registered_by_mistake', text: 'Registered by Mistake' },
+            { value: 'spam_leads', text: 'Spam Leads' },
+            { value: 'already_assigned_to_another_agent', text: 'Already Assigned to Another Agent' },
+            { value: 'client_was_just_searching_online', text: 'Client Was Just Searching Online' },
+            { value: 'number_does_not_exist', text: 'Number Does Not Exist' }
+        ]
+    }
+    
+    return [
+        { value: 'cold', text: 'Cold' },
+        { value: 'warm', text: 'Warm' },
+        { value: 'hot', text: 'Hot' }
+    ]
+})
 const leadTypeOptions = [
     { value: 'sale', text: 'Sale' },
     { value: 'rent', text: 'Rent' },
@@ -705,6 +738,21 @@ const lostReasonOptions = [
     { value: 'lost_by_other_company', text: 'Lost by Other Company' },
     { value: 'lost_by_our_company', text: 'Lost by Our Company' }
 ]
+
+const isPlotsOrLand = computed(() => {
+    const propertyTypeId = form.value.property_type_id;
+    if (!propertyTypeId) return false;
+    
+    const selectedType = propertyTypeOptions.value.find(opt => opt.value === propertyTypeId);
+    if (!selectedType) return false;
+    
+    const typeName = selectedType.text.toLowerCase();
+    return typeName.includes('plot') || typeName.includes('land') || typeName.includes('plots') || typeName.includes('lands');
+})
+
+const isRentOnly = computed(() => {
+    return form.value.lead_type === 'rent';
+})
 const form = ref({
     lead_name: '',
     stage_id: null,
@@ -822,8 +870,8 @@ const purposeOptions = [
     { value: 'Live in', text: 'Live in' },
     { value: 'Short-term investment', text: 'Short-term investment' },
     { value: 'Long-term investment', text: 'Long-term investment' },
-    { value: 'Holiday home', text: 'Holiday home' },
-    { value: 'Rental', text: 'Rental' },
+    // { value: 'Holiday home', text: 'Holiday home' },
+    // { value: 'Rental', text: 'Rental' },
 ]
 
 const sourceOptions = ref([
@@ -1194,13 +1242,28 @@ const handleAvatarError = () => {
 const handleCancel = () => {
     emit('cancel')
 }
-
+const validateBudget = () => {
+    const from = form.value.budget_from ? parseFloat(form.value.budget_from) : null
+    const to = form.value.budget_to ? parseFloat(form.value.budget_to) : null
+    
+    if (from !== null && to !== null && from > to) {
+        return 'Budget From cannot be greater than Budget To'
+    }
+    return null
+}
 const handleSave = async () => {
     try {
         isSubmitting.value = true
         errorMessage.value = ''
         validationErrors.value = {}
-        
+          const budgetError = validateBudget()
+        if (budgetError) {
+            validationErrors.value.budget = [budgetError]
+            if (window.$showNotification) {
+                window.$showNotification(budgetError, 'warning')
+            }
+            return
+        }
         const payload = {
             ...form.value,
             responsible_person_id: form.value.responsible_person_id,

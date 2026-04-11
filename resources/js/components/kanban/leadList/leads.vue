@@ -135,7 +135,6 @@
                                                 </div>
                                                 
                                                  <div class="task-info">
-                                                        <!-- عرض الفيلدات حسب الإعدادات والترتيب -->
                                                         <template v-for="field in enabledFieldsForColumn(column, task)" :key="field.key">
                                                             <!-- Created at (timestamp) — API: created_at -->
                                                             <div
@@ -173,7 +172,7 @@
                                                             </div>
                                                               
                                                             <!-- Work Phone -->
-                                                            <div v-else-if="field.key === 'work_phone' && task.work_phone" class="info-item mb-8">
+                                                            <div v-else-if="field.key === 'work_phone' && task?.work_phone" class="info-item mb-8">
                                                                 <div class="info-label text-secondary-light text-xs">Phone</div>
                                                                 <div class="info-value">{{ task.work_phone.slice(0,8) + '....' }}</div>
                                                             </div>
@@ -185,16 +184,40 @@
                                                             </div>
                                                             
                                                             <!-- Bedrooms -->
-                                                            <div v-else-if="field.key === 'bedrooms' && task.bedrooms" class="info-item mb-8">
-                                                                <div class="info-label text-secondary-light text-xs">Bedrooms</div>
-                                                                <div class="info-value">{{ task.bedrooms }}</div>
-                                                            </div>
-                                                            
-                                                            <!-- Budget -->
-                                                            <div v-else-if="field.key === 'budget' && formatLeadBudgetRange(task)" class="info-item mb-8">
-                                                                <div class="info-label text-secondary-light text-xs">Budget</div>
-                                                                <div class="info-value">{{ formatLeadBudgetRange(task) }} {{ task.currency || '' }}</div>
-                                                            </div>
+                                                                <div v-else-if="field.key === 'bedrooms' && shouldShowPriorityBedrooms(task)" class="info-item mb-8">
+                                                                    <div class="info-label text-secondary-light text-xs">Bedrooms</div>
+                                                                    <div class="info-value">{{ getPriorityBedrooms(task) }}</div>
+                                                                </div>
+                                                                
+                                                                <!-- Property Type - من الـ priority requirement -->
+                                                                <div v-else-if="field.key === 'property_type' && getPriorityPropertyType(task)" class="info-item mb-8">
+                                                                    <div class="info-label text-secondary-light text-xs">Property Type</div>
+                                                                    <div class="info-value">{{ getPriorityPropertyType(task) }}</div>
+                                                                </div>
+                                                                
+                                                                <!-- Lead Type - من الـ priority requirement -->
+                                                                <div v-else-if="field.key === 'lead_type' && getPriorityLeadType(task)" class="info-item mb-8">
+                                                                    <div class="info-label text-secondary-light text-xs">Lead Type</div>
+                                                                    <div class="info-value">{{ displayLeadType(getPriorityLeadType(task)) }}</div>
+                                                                </div>
+                                                                
+                                                                <!-- Property Status - من الـ priority requirement -->
+                                                                <div v-else-if="field.key === 'property_status' && getPriorityPropertyStatus(task)" class="info-item mb-8">
+                                                                    <div class="info-label text-secondary-light text-xs">Property Status</div>
+                                                                    <div class="info-value">{{ displayPropertyStatus(getPriorityPropertyStatus(task)) }}</div>
+                                                                </div>
+                                                                
+                                                                <!-- Purpose Of Purchase - من الـ priority requirement -->
+                                                                <div v-else-if="field.key === 'purpose_buying' && getPriorityPurposeBuying(task)" class="info-item mb-8">
+                                                                    <div class="info-label text-secondary-light text-xs">Purpose</div>
+                                                                    <div class="info-value">{{ getPriorityPurposeBuying(task) }}</div>
+                                                                </div>
+                                                                
+                                                                <!-- Budget - من الـ priority requirement -->
+                                                                <div v-else-if="field.key === 'budget' && getPriorityBudget(task)" class="info-item mb-8">
+                                                                    <div class="info-label text-secondary-light text-xs">Budget</div>
+                                                                    <div class="info-value">{{ getPriorityBudget(task) }} AED</div>
+                                                                </div>
                                                             
                                                             <!-- WhatsApp -->
                                                             <div v-else-if="field.key === 'whatsapp_number' && task.whatsapp_number" class="info-item mb-8">
@@ -1604,6 +1627,164 @@ const getDynamicFieldDisplay = (task, key) => {
     return String(value)
 }
 
+// ==================== Priority Requirement Logic ====================
+const QUAL_META_ID = '__qualification_meta__'
+const QUAL_META_KIND = 'qualification_meta'
+const PLOT_TYPE_IDS = [24,31,35,36]
+// دالة للحصول على الـ extra requirements من الـ lead
+const getExtraClientRequirements = (task) => {
+    if (!task?.extra_client_requirements) return []
+    return task.extra_client_requirements.filter(item => item?._kind !== QUAL_META_KIND)
+}
+
+// دالة للحصول على مصدر الـ qualification (الـ priority requirement)
+const getQualificationSourceId = (task) => {
+    const extraReqs = task?.extra_client_requirements || []
+    const meta = extraReqs.find(item => item?._kind === QUAL_META_KIND)
+    const source = meta?.source || 'primary'
+    if (source === 'primary') return 'primary'
+    const exists = getExtraClientRequirements(task).some(req => req.id === source)
+    return exists ? source : 'primary'
+}
+
+const getPriorityRequirement = (task) => {
+    const sourceId = getQualificationSourceId(task)
+    console.log('=== getPriorityRequirement ===')
+    console.log('Source ID:', sourceId)
+    
+    // إذا كان المصدر ليس 'primary'، جلب من extra requirements
+    if (sourceId !== 'primary') {
+        const extraReqs = getExtraClientRequirements(task)
+        console.log('Extra Requirements:', extraReqs)
+        const priorityReq = extraReqs.find(req => req.id === sourceId)
+        console.log('Found Priority Req:', priorityReq)
+        
+        if (priorityReq) {
+            // إضافة خاصية isPlotsOrLand
+            priorityReq.isPlotsOrLand = isPlotOrLand(priorityReq)
+            return priorityReq
+        }
+    }
+    
+    // Fallback إلى primary
+    console.log('Using Primary Requirement')
+    return {
+        area_id: task.area_id,
+        area_label: task.area,
+        property_type_id: task.property_type_id,
+        property_type_label: task.property_type,
+        lead_type: task.lead_type,
+        property_status: task.property_status,
+        bedrooms: task.bedrooms,
+        budget_from: task.budget_from,
+        budget_to: task.budget_to,
+        purpose_buying: task.purpose_buying,
+        status_lead: task.status_lead,
+        isPrimary: true,
+        isPlotsOrLand: isPlotOrLand({ property_type_id: task.property_type_id, property_type_label: task.property_type })
+    }
+}
+const getPriorityBedrooms = (task) => {
+    const req = getPriorityRequirement(task)
+    console.log('=== getPriorityBedrooms ===')
+    console.log('Priority Req:', req)
+    
+    if (!req) {
+        console.log('No priority requirement found')
+        return null
+    }
+    
+    const isPlot =req.isPlotsOrLand
+    console.log('Is Plot or Land:', isPlot)
+    
+    if (isPlot) {
+         console.log('rask id:', task.id)
+          console.log('rask bedrooms:', task.bedrooms)
+        console.log('Requirement is Plots/Land, returning null')
+        return null
+    }
+   
+    console.log('Bedrooms value:', req.bedrooms)
+    return req.bedrooms ?? null
+}
+// دالة للتحقق مما إذا كان يجب إظهار الـ bedrooms
+const shouldShowPriorityBedrooms = (task) => {
+    const bedrooms = getPriorityBedrooms(task)
+    return bedrooms && bedrooms !== '' && bedrooms !== null
+}
+
+// دالة للحصول على الـ property type من الـ priority requirement
+const getPriorityPropertyType = (task) => {
+    const priorityReq = getPriorityRequirement(task)
+    if (!priorityReq) return null
+    return priorityReq.property_type_label || null
+}
+
+// دالة للحصول على الـ lead type من الـ priority requirement
+const getPriorityLeadType = (task) => {
+    const priorityReq = getPriorityRequirement(task)
+    if (!priorityReq) return null
+    return priorityReq.lead_type || null
+}
+
+// دالة للحصول على الـ property status من الـ priority requirement
+const getPriorityPropertyStatus = (task) => {
+    const priorityReq = getPriorityRequirement(task)
+    if (!priorityReq) return null
+    
+    // إذا كان lead type = rent، لا نعرض property status
+    if (priorityReq.lead_type?.toLowerCase() === 'rent') {
+        return null
+    }
+    return priorityReq.property_status || null
+}
+
+// دالة للحصول على الـ purpose of purchase من الـ priority requirement
+const getPriorityPurposeBuying = (task) => {
+    const priorityReq = getPriorityRequirement(task)
+    if (!priorityReq) return null
+    
+    // إذا كان lead type = rent، لا نعرض purpose of purchase
+    if (priorityReq.lead_type?.toLowerCase() === 'rent') {
+        return null
+    }
+    return priorityReq.purpose_buying || null
+}
+
+// دالة للحصول على الـ budget من الـ priority requirement
+const getPriorityBudget = (task) => {
+    const priorityReq = getPriorityRequirement(task)
+    if (!priorityReq) return null
+    
+    const from = priorityReq.budget_from
+    const to = priorityReq.budget_to
+    
+    if (from && to) return `${from} - ${to}`
+    if (from) return `From ${from}`
+    if (to) return `To ${to}`
+    return null
+}
+const isPlotOrLand = (req) => {
+    // التحقق من extra requirement (property_type_label)
+    const typeLabel = req?.property_type_label?.toLowerCase() || ''
+    if (typeLabel.includes('plot') || typeLabel.includes('land')) {
+        return true
+    }
+    
+    // التحقق من primary (property_type)
+    const type = req?.property_type?.toLowerCase() || ''
+    if (type.includes('plot') || type.includes('land')) {
+        return true
+    }
+    
+    // التحقق من property_type_id
+    const typeId = req?.property_type_id
+    if (typeId && PLOT_TYPE_IDS.includes(Number(typeId))) {
+        return true
+    }
+    
+    return false
+}
 const formatMaskedEmail = (email) => {
     const raw = String(email || '').trim()
     if (!raw) return ''
@@ -1746,13 +1927,11 @@ const handleAssignedLead = (lead, changes) => {
     const oldPersonId = changes?.old_person_id ?? null
     const newPersonId = lead.responsible_person_id
 
-    // لو أنا الشخص القديم → امسح
     if (oldPersonId && oldPersonId === currentUserId && oldPersonId != newPersonId) {
         removeLeadFromColumns(lead.id)
         return
     }
       console.log(newPersonId == currentUserId);
-    // لو أنا الشخص الجديد → أضف أو حدّث
     if (newPersonId == currentUserId) {
         handleUpdatedLead(lead, 'assigned')
         return
@@ -2440,11 +2619,9 @@ const missingFieldsForLead = ref([])
 
 
 // When loading stages, also store the order mapping
-// When loading stages, also store the order mapping
 const fetchStageOrders = async () => {
     try {
         const response = await api.get('/stages')
-        // تأكد من أن البيانات موجودة بشكل صحيح
         let stages = []
         
         if (response.data && response.data.data) {
@@ -2582,7 +2759,6 @@ async function onLeadDragChange(evt, column) {
               
             ]
             
-            // التحقق من الحقول المفقودة
             const missingFields = requiredFieldsForConversion.filter(field => {
                 const value = lead[field]
                 return !value || value === '' || value === null || value === undefined
@@ -2590,7 +2766,6 @@ async function onLeadDragChange(evt, column) {
             
             console.log('Conversion - Missing fields:', missingFields)
             
-            // إذا كان هناك حقول مفقودة، أظهر الموديل لإكمالها
             if (missingFields.length > 0) {
                 console.log('Showing modal to complete missing fields for conversion')
                 
@@ -2656,10 +2831,23 @@ async function onLeadDragChange(evt, column) {
             10: ['status_lead']
         }
         
+        const alwaysRequiredFieldsMap = {
+            9: ['status_lead'],
+            10: ['status_lead']
+        }
+        
         const requiredFields = requiredFieldsMap[newStageOrder] || []
+        const alwaysFields = alwaysRequiredFieldsMap[newStageOrder] || []
+        
         const leadMissingFields = requiredFields.filter(f => !lead[f])
         
-        if (leadMissingFields.length > 0 || [3,4,5,7,8,9,10].includes(newStageOrder)) {
+        const fieldsToShow = [...new Set([...leadMissingFields, ...alwaysFields])]
+        if (newStageOrder === 9 || newStageOrder === 10) {
+                if (!fieldsToShow.includes('status_lead')) {
+                    fieldsToShow.push('status_lead')
+                }
+            }
+        if (fieldsToShow.length > 0 || [3,4,5,7,8,9,10].includes(newStageOrder)) {
             console.log('Showing modal for stage order:', newStageOrder, 'Missing fields:', leadMissingFields)
             
             pendingStageChange.value = {
@@ -2672,7 +2860,7 @@ async function onLeadDragChange(evt, column) {
                 isConversion: false
             }
             
-            missingFieldsForLead.value = leadMissingFields
+            missingFieldsForLead.value = fieldsToShow
             
             const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
             if (sourceColumn) {
@@ -2767,17 +2955,13 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         if (additionalData.lost_reason) payload.why_lost_lead = additionalData.lost_reason
         if (additionalData.interaction_result) payload.interaction_result = additionalData.interaction_result
         
-        // معالجة lead_status حسب المرحلة
         if (additionalData.lead_status) {
-            // المرحلة 4 (Qualified) - status_lead
             if (targetStageOrder === 4 || (isConversion && targetStageOrder === 6)) {
                 payload.status_lead = additionalData.lead_status
             }
-            // المرحلة 9 (Lead Pool) - status_lead_pool
             else if (targetStageOrder === 9) {
                 payload.status_lead_pool = additionalData.lead_status
             }
-            // المرحلة 10 (Unqualified) - unqualified_status
             else if (targetStageOrder === 10) {
                 payload.unqualified_status = additionalData.lead_status
             }
@@ -2809,7 +2993,6 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
             if (payload.branch) lead.branch = payload.branch
             if (payload.why_lost_lead) lead.why_lost_lead = payload.why_lost_lead
             
-            // تحديث status_lead حسب المرحلة
             if (payload.status_lead) lead.status_lead = payload.status_lead
             if (payload.status_lead_pool) lead.status_lead = payload.status_lead_pool
             if (payload.unqualified_status) lead.status_lead = payload.unqualified_status

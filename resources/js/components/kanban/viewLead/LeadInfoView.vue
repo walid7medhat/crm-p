@@ -24,10 +24,10 @@
                 <label class="form-label-custom">Last Name</label>
                 <div class="info-value">{{ lead?.last_name || '—' }}</div>
             </div>
-            <div class="info-group">
+            <div class="info-group" v-if="lead.work_phone">
                 <label class="form-label-custom">Primary Phone</label>
                 <div class="info-value">
-                    <span v-if="canView">{{ lead?.work_phone || '—' }}</span>
+                    <span v-if="canView"><a :href="'tel:' + lead.work_phone">{{ lead?.work_phone || '—' }} </a></span>
                     <span v-else>
                         {{ lead?.work_phone?.slice(0,3) || '' }}
                         <span class="blurred-stars">{{ maskValue(lead?.work_phone?.slice(3)) }}</span>
@@ -44,6 +44,16 @@
                     </span>
                 </div>
             </div>
+            <div class="info-group" v-if="lead?.work_phone_2">
+                <label class="form-label-custom">Secondary Phone</label>
+                <div class="info-value">
+                    <span v-if="canView"><a :href="'tel:' + lead.work_phone_2">{{ lead?.work_phone_2 || '—' }}</a></span>
+                    <span v-else>
+                        {{ lead?.work_phone_2?.slice(0,3) || '' }}
+                        <span class="blurred-stars">{{ maskValue(lead?.work_phone_2?.slice(3)) }}</span>
+                    </span>
+                </div>
+            </div>
             <div class="info-group" v-if="lead?.secondary_email">
                 <label class="form-label-custom">Secondary Email</label>
                 <div class="info-value">
@@ -54,16 +64,7 @@
                     </span>
                 </div>
             </div>
-            <div class="info-group" v-if="lead?.work_phone_2">
-                <label class="form-label-custom">Secondary Phone</label>
-                <div class="info-value">
-                    <span v-if="canView">{{ lead?.work_phone_2 || '—' }}</span>
-                    <span v-else>
-                        {{ lead?.work_phone_2?.slice(0,3) || '' }}
-                        <span class="blurred-stars">{{ maskValue(lead?.work_phone_2?.slice(3)) }}</span>
-                    </span>
-                </div>
-            </div>
+            
         </div>
 
         <div class="info-section" v-if="hasAdditionalQuestions">
@@ -127,7 +128,7 @@
                                     @click="selectQualificationSource('primary')"
                                 >
                                     <iconify-icon icon="lucide:badge-check" />
-                                    <span>{{ qualificationSourceId === 'primary' ? 'Selected for Qualification' : 'Use for Qualification' }}</span>
+                                    <span>{{ qualificationSourceId === 'primary' ? 'Selected priority' : 'Set as priority' }}</span>
                                 </button>
                             </div>
                             <span class="client-req-created-at">{{ formatUpdatedAtDisplay(lead?.updated_at) }}</span>
@@ -159,11 +160,11 @@
                                 <label class="form-label-custom">Lead Type</label>
                                 <div class="info-value">{{ displayLeadType(lead?.lead_type) }}</div>
                             </div>
-                            <div class="info-group client-req-property-status" v-if="lead?.property_status">
+                            <div class="info-group client-req-property-status" v-if="lead?.property_status && !isRentOnly">
                                 <label class="form-label-custom">Property Status</label>
                                 <div class="info-value">{{ displayPropertyStatus(lead?.property_status) }}</div>
                             </div>
-                            <div class="info-group client-req-bedrooms" v-if="lead?.bedrooms !== null && lead?.bedrooms !== undefined && lead?.bedrooms !== ''">
+                            <div class="info-group client-req-bedrooms" v-if="lead?.bedrooms !== null && lead?.bedrooms !== undefined && lead?.bedrooms !== '' && !isPlotsOrLand">
                                 <label class="form-label-custom">Bedrooms</label>
                                 <div class="info-value">{{ formatBedroomsDisplay(lead?.bedrooms) }}</div>
                             </div>
@@ -174,7 +175,7 @@
                                 <label class="form-label-custom">Budget (AED)</label>
                                 <div class="info-value">{{ formatLeadBudgetRange(lead) }}</div>
                             </div>
-                            <div class="info-group client-req-purpose" v-if="lead?.purpose_buying">
+                            <div class="info-group client-req-purpose" v-if="lead?.purpose_buying && !isRentOnly">
                                 <label class="form-label-custom">Purpose Of Purchase</label>
                                 <div class="info-value">{{ lead?.purpose_buying || '—' }}</div>
                             </div>
@@ -243,8 +244,8 @@
                                     </template>
                                 </v-select>
                             </div>
-                            <div class="info-group">
-                                <label class="form-label-custom">Property Status <span class="text-danger">*</span></label>
+                            <div class="info-group"  v-if="clientReqForm.lead_type?.toLowerCase() !== 'rent'">
+                                <label class="form-label-custom" >Property Status <span class="text-danger">*</span></label>
                                 <v-select v-model="clientReqForm.property_status" :options="clientReqPropertyStatusOptions" :reduce="(o) => o.value" label="text" placeholder="Select Property Status" class="custom-v-select client-req-vselect" :append-to-body="true" />
                             </div>
                             <div class="info-group">
@@ -255,7 +256,7 @@
                                 <label class="form-label-custom">Lead Type <span class="text-danger">*</span></label>
                                 <v-select v-model="clientReqForm.lead_type" :options="clientReqLeadTypeOptions" :reduce="(o) => o.value" label="text" placeholder="Select Lead Type" class="custom-v-select client-req-vselect" :append-to-body="true" />
                             </div>
-                            <div class="info-group">
+                            <div class="info-group"  v-if="!isPlotsOrLandByTypeId(clientReqForm.property_type_id)">
                                 <label class="form-label-custom">Bedrooms</label>
                                 <v-select v-model="clientReqForm.bedrooms" :options="clientReqBedroomOptions" :reduce="(o) => o.value" label="text" placeholder="Select Bedrooms" class="custom-v-select client-req-vselect" :append-to-body="true" />
                             </div>
@@ -270,7 +271,7 @@
                                     <input v-model="clientReqBudgetToDisplay" type="text" inputmode="numeric" placeholder="To" class="form-control custom-input flex-grow-1" @input="onClientReqBudgetTo" />
                                 </div>
                             </div>
-                            <div class="info-group info-group--full mb-0">
+                            <div class="info-group info-group--full mb-0"  v-if="clientReqForm.lead_type?.toLowerCase() !== 'rent'">
                                 <label class="form-label-custom">Purpose Of Purchase</label>
                                 <v-select v-model="clientReqForm.purpose_buying" :options="clientReqPurposeOptions" :reduce="(o) => o.value" label="text" placeholder="Select Purpose" class="custom-v-select client-req-vselect" :append-to-body="true" />
                             </div>
@@ -298,7 +299,7 @@
                                     @click="selectQualificationSource(req.id)"
                                 >
                                     <iconify-icon icon="lucide:badge-check" />
-                                    <span>{{ qualificationSourceId === req.id ? 'Selected for Qualification' : 'Use for Qualification' }}</span>
+                                    <span>{{ qualificationSourceId === req.id ? 'Selected priority' : 'Set as priority'}}</span>
                                 </button>
                             </div>
                             <span class="client-req-created-at">{{ formatUpdatedAtDisplay(req.updated_at || req.created_at) }}</span>
@@ -322,7 +323,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="info-group" v-if="req.property_type_label">
+                            <div class="info-group" v-if="req.property_type_label" >
                                 <label class="form-label-custom">Property Type</label>
                                 <div class="info-value">{{ req.property_type_label }}</div>
                             </div>
@@ -330,11 +331,11 @@
                                 <label class="form-label-custom">Lead Type</label>
                                 <div class="info-value">{{ displayLeadType(req.lead_type) }}</div>
                             </div>
-                            <div class="info-group" v-if="req.property_status">
+                            <div class="info-group" v-if="req.property_status && !isReqRentOnly(req)">
                                 <label class="form-label-custom">Property Status</label>
                                 <div class="info-value">{{ displayPropertyStatus(req.property_status) }}</div>
                             </div>
-                            <div class="info-group" v-if="req.bedrooms !== null && req.bedrooms !== undefined && req.bedrooms !== ''">
+                            <div class="info-group" v-if="req.bedrooms !== null && req.bedrooms !== undefined && req.bedrooms !== '' && !isReqPlotsOrLand(req)">
                                 <label class="form-label-custom">Bedrooms</label>
                                 <div class="info-value">{{ formatBedroomsDisplay(req.bedrooms) }}</div>
                             </div>
@@ -342,7 +343,7 @@
                                 <label class="form-label-custom">Budget (AED)</label>
                                 <div class="info-value">{{ formatLeadBudgetRange(req) }}</div>
                             </div>
-                            <div class="info-group" v-if="req.purpose_buying">
+                            <div class="info-group" v-if="req.purpose_buying && !isReqRentOnly(req)">
                                 <label class="form-label-custom">Purpose Of Purchase</label>
                                 <div class="info-value">{{ req.purpose_buying }}</div>
                             </div>
@@ -392,7 +393,7 @@
                         </template>
                     </v-select>
                 </div>
-                <div class="info-group">
+                <div class="info-group" v-if="!isCurrentReqRentOnly">
                     <label class="form-label-custom">Property Status <span class="text-danger">*</span></label>
                     <v-select
                         v-model="clientReqForm.property_status"
@@ -428,7 +429,7 @@
                         :append-to-body="true"
                     />
                 </div>
-                <div class="info-group">
+                <div class="info-group" v-if="!isCurrentReqPlotsOrLand">
                     <label class="form-label-custom">Bedrooms</label>
                     <v-select
                         v-model="clientReqForm.bedrooms"
@@ -473,7 +474,7 @@
                         />
                     </div>
                 </div>
-                <div class="info-group info-group--full mb-0">
+                <div class="info-group info-group--full mb-0" v-if="!isCurrentReqRentOnly">
                     <label class="form-label-custom">Purpose Of Purchase</label>
                     <v-select
                         v-model="clientReqForm.purpose_buying"
@@ -849,27 +850,88 @@ const formatLostReason = (reason) => {
     }
     return mapping[reason] || formatText(reason)
 }
+// ==================== Budget Validation ====================
+const budgetRangeError = ref('')
 
-// دالة لتنسيق lead status حسب النوع
-const formatLeadStatus = (status, type = 'qualified') => {
+const validateBudgetRange = () => {
+    const from = parseFloat(clientReqForm.value.budget_from)
+    const to = parseFloat(clientReqForm.value.budget_to)
+    
+    if (from && to && from > to) {
+        budgetRangeError.value = 'Budget From cannot be greater than Budget To'
+        return false
+    }
+    budgetRangeError.value = ''
+    return true
+}
+
+
+// دالة لتنسيق lead status حسب المرحلة
+const formatLeadStatus = (status, stageOrder = null) => {
     if (!status) return '—'
     
-    const mapping = {
-        // Qualified
+    // إذا تم تمرير رقم المرحلة، نستخدم mapping مناسب
+    const order = stageOrder !== null ? stageOrder : currentStageOrder.value
+    
+    // Stage 4: Qualified - Hot/Warm/Cold فقط
+    if (order === 4) {
+        const qualifiedMapping = {
+            'cold': 'Cold Lead',
+            'warm': 'Warm Lead',
+            'hot': 'Hot Lead'
+        }
+        return qualifiedMapping[status] || formatText(status)
+    }
+    
+    // Stage 9: Lead Pool
+    if (order === 9) {
+        const leadPoolMapping = {
+            'no_answer': 'No Answer',
+            'contacted': 'Contacted',
+            'wrong_person': 'Wrong Person'
+        }
+        return leadPoolMapping[status] || formatText(status)
+    }
+    
+    // Stage 10: Unqualified
+    if (order === 10) {
+        const unqualifiedMapping = {
+            'not_interested': 'Not Interested',
+            'wrong_contact_details': 'Wrong Contact Details',
+            'no_answer_multiple_calls': 'No Answer — Multiple Calls',
+            'job_seeker': 'Job Seeker',
+            'broker': 'Broker',
+            'registered_by_mistake': 'Registered by Mistake',
+            'spam_leads': 'Spam Leads',
+            'already_assigned_to_another_agent': 'Already Assigned to Another Agent',
+            'client_was_just_searching_online': 'Client Was Just Searching Online',
+            'number_does_not_exist': 'Number Does Not Exist'
+        }
+        return unqualifiedMapping[status] || formatText(status)
+    }
+    
+    // Default mapping لبقية المراحل
+    const defaultMapping = {
         'cold': 'Cold Lead',
         'warm': 'Warm Lead',
         'hot': 'Hot Lead',
-        // Lead Pool
-        'no_answer': 'Lead Pool - No Answer',
-        'canceled': 'Lead Pool - Canceled',
-        // Unqualified
-        'unqualified_not_interested': 'Unqualified - Not Interested',
-        'unqualified_wrong_contact': 'Unqualified - Wrong Contact Details',
-        'unqualified_job_seeker': 'Unqualified - Job Seeker',
-        'unqualified_other': 'Unqualified - Other'
+        'no_answer': 'No Answer',
+        'contacted': 'Contacted',
+        'wrong_person': 'Wrong Person',
+        'canceled': 'Canceled',
+        'not_interested': 'Not Interested',
+        'wrong_contact_details': 'Wrong Contact Details',
+        'no_answer_multiple_calls': 'No Answer — Multiple Calls',
+        'job_seeker': 'Job Seeker',
+        'broker': 'Broker',
+        'registered_by_mistake': 'Registered by Mistake',
+        'spam_leads': 'Spam Leads',
+        'already_assigned_to_another_agent': 'Already Assigned to Another Agent',
+        'client_was_just_searching_online': 'Client Was Just Searching Online',
+        'number_does_not_exist': 'Number Does Not Exist'
     }
     
-    return mapping[status] || formatText(status)
+    return defaultMapping[status] || formatText(status)
 }
 
 // دالة عامة مع إمكانية إضافة mapping مخصص
@@ -949,7 +1011,97 @@ const clientRequiredMetaFields = computed(() => {
 const hasAdditionalQuestions = computed(() => {
     return hasAdditionalFacebookQuestions.value || Object.keys(metaQuestions.value).length > 0
 })
+const isPlotsOrLand = computed(() => {
+    const propertyType = props.lead?.property_type?.toLowerCase() || ''
+    const propertyTypeName = props.lead?.property_type_name?.toLowerCase() || ''
+    const propertyTypeLabel = props.lead?.property_type_label?.toLowerCase() || ''
+    
+    if (propertyType.includes('plot') || propertyType.includes('land') ||
+        propertyTypeName.includes('plot') || propertyTypeName.includes('land') ||
+        propertyTypeLabel.includes('plot') || propertyTypeLabel.includes('land')) {
+        return true
+    }
+    return false
+})
 
+const isRentOnly = computed(() => {
+    return props.lead?.lead_type?.toLowerCase() === 'rent'
+})
+
+const isReqPlotsOrLand = (req) => {
+    const propertyType = req?.property_type_label?.toLowerCase() || ''
+    return propertyType.includes('plot') || propertyType.includes('land')
+}
+
+const isReqRentOnly = (req) => {
+    return req?.lead_type?.toLowerCase() === 'rent'
+}
+const isCurrentReqRentOnly = computed(() => {
+    if (editingExtraIndex.value !== null && extraClientRequirementsList.value[editingExtraIndex.value]) {
+        const req = extraClientRequirementsList.value[editingExtraIndex.value]
+        return req?.lead_type?.toLowerCase() === 'rent'
+    }
+    return clientReqForm.value.lead_type?.toLowerCase() === 'rent'
+})
+
+const isCurrentReqPlotsOrLand = computed(() => {
+    if (editingExtraIndex.value !== null && extraClientRequirementsList.value[editingExtraIndex.value]) {
+        const req = extraClientRequirementsList.value[editingExtraIndex.value]
+        const propertyType = req?.property_type_label?.toLowerCase() || ''
+        return propertyType.includes('plot') || propertyType.includes('land')
+    }
+    const propertyTypeId = clientReqForm.value.property_type_id
+    if (!propertyTypeId) return false
+    
+    const selectedType = clientReqPropertyTypeOptions.value.find(opt => opt.value === propertyTypeId)
+    if (!selectedType) return false
+    
+    const typeName = selectedType.text.toLowerCase()
+    return typeName.includes('plot') || typeName.includes('land')
+})
+const isPlotsOrLandByTypeId = (propertyTypeId) => {
+    if (!propertyTypeId) return false
+    const selectedType = clientReqPropertyTypeOptions.value.find(opt => opt.value === propertyTypeId)
+    if (!selectedType) return false
+    const typeName = selectedType.text.toLowerCase()
+    return typeName.includes('plot') || typeName.includes('land')
+}
+const handleLeadTypeChange = () => {
+    if (clientReqForm.value.lead_type?.toLowerCase() === 'rent') {
+        clientReqForm.value.property_status = null
+        clientReqForm.value.purpose_buying = null
+    }
+}
+
+const handlePropertyTypeChange = () => {
+    const propertyTypeId = clientReqForm.value.property_type_id
+    if (!propertyTypeId) return
+    
+    const selectedType = clientReqPropertyTypeOptions.value.find(opt => opt.value === propertyTypeId)
+    if (!selectedType) return
+    
+    const typeName = selectedType.text.toLowerCase()
+    if (typeName.includes('plot') || typeName.includes('land')) {
+        clientReqForm.value.bedrooms = null
+    }
+}
+const applyConditionsToCurrentReq = () => {
+    if (clientReqForm.value.lead_type?.toLowerCase() === 'rent') {
+        clientReqForm.value.property_status = null
+        clientReqForm.value.purpose_buying = null
+    }
+    
+    const propertyTypeId = clientReqForm.value.property_type_id
+    if (propertyTypeId) {
+        const selectedType = clientReqPropertyTypeOptions.value.find(opt => opt.value === propertyTypeId)
+        if (selectedType) {
+            const typeName = selectedType.text.toLowerCase()
+            if (typeName.includes('plot') || typeName.includes('land')) {
+                clientReqForm.value.bedrooms = null
+            }
+        }
+    }
+}
 const QUAL_META_ID = '__qualification_meta__'
 const QUAL_META_KIND = 'qualification_meta'
 
@@ -1141,24 +1293,61 @@ const clientReqBedroomOptions = [
     { value: 9, text: '9' },
 ]
 
-const clientReqQualityStatusOptions = [
-    { value: 'cold', text: 'Cold Lead' },
-    { value: 'warm', text: 'Warm Lead' },
-    { value: 'hot', text: 'Hot Lead' },
-    { value: 'no_answer', text: 'Lead Pool - No Answer' },
-    { value: 'canceled', text: 'Lead Pool - Canceled' },
-    { value: 'unqualified_not_interested', text: 'Unqualified - Not Interested' },
-    { value: 'unqualified_wrong_contact', text: 'Unqualified - Wrong Contact Details' },
-    { value: 'unqualified_job_seeker', text: 'Unqualified - Job Seeker' },
-    { value: 'unqualified_other', text: 'Unqualified - Other' },
-]
+// ==================== Quality Status Options based on Stage ====================
+const currentStageOrder = computed(() => {
+    return props.lead?.stage?.order || 0
+})
 
+const clientReqQualityStatusOptions = computed(() => {
+    const stageOrder = currentStageOrder.value
+    
+    // Stage 4: Qualified - Hot/Warm/Cold فقط
+    if (stageOrder === 4) {
+        return [
+            { value: 'cold', text: 'Cold Lead' },
+            { value: 'warm', text: 'Warm Lead' },
+            { value: 'hot', text: 'Hot Lead' }
+        ]
+    }
+    
+    // Stage 9: Lead Pool
+    if (stageOrder === 9) {
+        return [
+            { value: 'no_answer', text: 'No Answer' },
+            { value: 'contacted', text: 'Contacted' },
+            { value: 'wrong_person', text: 'Wrong Person' }
+        ]
+    }
+    
+    // Stage 10: Unqualified
+    if (stageOrder === 10) {
+        return [
+            { value: 'not_interested', text: 'Not Interested' },
+            { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+            { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
+            { value: 'job_seeker', text: 'Job Seeker' },
+            { value: 'broker', text: 'Broker' },
+            { value: 'registered_by_mistake', text: 'Registered by Mistake' },
+            { value: 'spam_leads', text: 'Spam Leads' },
+            { value: 'already_assigned_to_another_agent', text: 'Already Assigned to Another Agent' },
+            { value: 'client_was_just_searching_online', text: 'Client Was Just Searching Online' },
+            { value: 'number_does_not_exist', text: 'Number Does Not Exist' }
+        ]
+    }
+    
+    // Default لبقية المراحل (3,5,6,7,8)
+    return [
+        { value: 'cold', text: 'Cold' },
+        { value: 'warm', text: 'Warm' },
+        { value: 'hot', text: 'Hot' }
+    ]
+})
 const clientReqPurposeOptions = [
     { value: 'Live in', text: 'Live in' },
     { value: 'Short-term investment', text: 'Short-term investment' },
     { value: 'Long-term investment', text: 'Long-term investment' },
-    { value: 'Holiday home', text: 'Holiday home' },
-    { value: 'Rental', text: 'Rental' },
+    // { value: 'Holiday home', text: 'Holiday home' },
+    // { value: 'Rental', text: 'Rental' },
 ]
 
 const emptyClientReqForm = () => ({
@@ -1247,12 +1436,14 @@ const onClientReqBudgetFrom = (raw) => {
     const { numeric, display } = parseBudgetThousandsInput(extractInputValue(raw))
     clientReqForm.value.budget_from = numeric
     clientReqBudgetFromDisplay.value = display
+    validateBudgetRange() // إضافة التحقق
 }
 
 const onClientReqBudgetTo = (raw) => {
     const { numeric, display } = parseBudgetThousandsInput(extractInputValue(raw))
     clientReqForm.value.budget_to = numeric
     clientReqBudgetToDisplay.value = display
+    validateBudgetRange() // إضافة التحقق
 }
 
 const resetClientReqForm = () => {
@@ -1261,7 +1452,23 @@ const resetClientReqForm = () => {
     clientReqBudgetToDisplay.value = ''
     clientReqSaveError.value = ''
 }
+watch(() => clientReqForm.value.lead_type, (newVal) => {
+    if (newVal?.toLowerCase() === 'rent') {
+        clientReqForm.value.property_status = null
+        clientReqForm.value.purpose_buying = null
+    }
+})
 
+watch(() => clientReqForm.value.property_type_id, (newVal) => {
+    if (!newVal) return
+    const selectedType = clientReqPropertyTypeOptions.value.find(opt => opt.value === newVal)
+    if (selectedType) {
+        const typeName = selectedType.text.toLowerCase()
+        if (typeName.includes('plot') || typeName.includes('land')) {
+            clientReqForm.value.bedrooms = null
+        }
+    }
+})
 const fillClientReqFormFromExtra = (req) => {
     if (!req) return
     let beds = req.bedrooms
@@ -1278,6 +1485,8 @@ const fillClientReqFormFromExtra = (req) => {
         budget_to: req.budget_to ?? null,
         purpose_buying: req.purpose_buying ?? null,
     }
+        applyConditionsToCurrentReq()
+
     syncClientReqBudgetDisplays()
 }
 
@@ -1363,6 +1572,14 @@ const selectQualificationSource = async (sourceId) => {
 const saveClientRequirement = async () => {
     if (!props.lead?.id) return
     clientReqSaveError.value = ''
+     if (!validateBudgetRange()) {
+        clientReqSaveError.value = budgetRangeError.value
+        if (window.$showNotification) {
+            window.$showNotification(budgetRangeError.value, 'warning')
+        }
+        return
+    }
+    
     isSavingClientReq.value = true
     try {
         const next = [...extraClientRequirementsList.value]

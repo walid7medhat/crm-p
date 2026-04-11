@@ -5,7 +5,9 @@
         <div class="stage-change-modal" :class="{ 'modal-wide': missingFields.length > 0 || interactionMode }">
             <div class="modal-header">
                 <h5 class="modal-title">{{ isConversion ? 'Complete Lead Information' : `Move Lead to ${targetStageName}` }}</h5>
-                <button type="button" class="btn-close" @click="closeModal"></button>
+                <button class="close-btn-custom" @click="closeModal">
+                    <iconify-icon icon="lucide:x" width="20" height="20"></iconify-icon>
+                </button>
             </div>
             
             <div class="modal-body">
@@ -268,7 +270,7 @@
                         </div>
 
                         <!-- Property Status (Ready/Off Plan/Both) -->
-                        <div v-if="missingFields.includes('property_status')" class="form-group mb-0 lead-qual-field">
+                        <div v-if="missingFields.includes('property_status')  && !isRentOnly" class="form-group mb-0 lead-qual-field">
                             <label class="form-label ">Property Status <span class="text-danger">*</span></label>
                             <v-select append-to-body
                                 v-model="formData.property_status"
@@ -331,7 +333,7 @@
                             </div>
                         </div>
                         <div 
-                            v-if="['salutation'].some(f => missingFields.includes(f))" 
+                            v-if="['salutation'].some(f => missingFields.includes(f)) && !(interactionMode && formData.interaction_result === 'no_answer')" 
                             class="box-shadow"
                         >
                         <h5 class="section-title">Lead Information</h5>
@@ -408,7 +410,7 @@
                                 </template>
                                 </v-select>
                             </div>
-                            <div v-if="missingFields.includes('bedrooms')" class="form-group mb-3" style="order: 5;">
+                            <div v-if="missingFields.includes('bedrooms') && !isPlotsOrLand" class="form-group mb-3" style="order: 5;">
                                 <label class="form-label">How Many Bedrooms?</label>
                                 <v-select append-to-body
                                     v-model="formData.bedrooms"
@@ -445,7 +447,7 @@
 
                             
 
-                            <div v-if="missingFields.includes('purpose_buying')" class="form-group mb-3" style="order: 8;">
+                            <div v-if="missingFields.includes('purpose_buying')  && !isRentOnly" class="form-group mb-3" style="order: 8;">
                                 <label class="form-label">Purpose Of Purchase</label>
                                 <v-select append-to-body
                                     v-model="formData.purpose_buying"
@@ -717,6 +719,24 @@ const reminderButtonRef = ref(null)
 const reminderDropdownPanelRef = ref(null)
 const reminderDropdownStyle = ref({})
 
+
+// Add this computed property with your other computed properties
+const isPlotsOrLand = computed(() => {
+    const propertyTypeId = formData.value.property_type_id;
+    if (!propertyTypeId) return false;
+    
+    const selectedType = propertyTypeOptions.value.find(opt => opt.value === propertyTypeId);
+    if (!selectedType) return false;
+    
+    const typeName = selectedType.text.toLowerCase();
+    console.log(typeName);
+    return typeName.includes('plots') || typeName.includes('land');
+});
+// Add this computed property
+const isRentOnly = computed(() => {
+    return formData.value.lead_type === 'rent';
+});
+
 const budgetFromDisplay = ref('')
 const budgetToDisplay = ref('')
 const showBudgetDropdown = ref(false)
@@ -898,8 +918,8 @@ const purposeOptions = [
     { value: 'Live in', text: 'Live in' },
     { value: 'Short-term investment', text: 'Short-term investment' },
     { value: 'Long-term investment', text: 'Long-term investment' },
-    { value: 'Holiday home', text: 'Holiday home' },
-    { value: 'Rental', text: 'Rental' },
+    // { value: 'Holiday home', text: 'Holiday home' },
+    // { value: 'Rental', text: 'Rental' },
 ]
 
 const bedroomOptions = computed(() => {
@@ -1038,97 +1058,116 @@ const handleSubmit = async () => {
         }
     }
     
+    const isNoAnswerMode = props.interactionMode && formData.value.interaction_result === 'no_answer'
+    const isPlotsOrLand = checkIsPlotsOrLand() 
+    const isRentOnly = formData.value.lead_type === 'rent'
+    
     // Validate based on stage and missing fields
     for (const field of props.missingFields) {
-        if (field === 'salutation' && !formData.value.salutation) {
+        
+        // 1. Salutation - يتم تجاهله في وضع no_answer
+        if (field === 'salutation' && !formData.value.salutation && !isNoAnswerMode) {
             $showNotification('Please select salutation', 'warning')
             return
         }
-        // if (field === 'budget' && !formData.value.budget) {
-        //     $showNotification('Please enter budget', 'warning')
-        //     return
-        // }
         
-          // New validations for lead_type and property_status
-        if (field === 'lead_type' && !formData.value.lead_type) {
+        // 2. Lead Type - يتم تجاهله في وضع no_answer
+        if (field === 'lead_type' && !formData.value.lead_type && !isNoAnswerMode) {
             $showNotification('Please select lead type (Sale/Rent)', 'warning')
             return
         }
         
-        if (field === 'property_status' && !formData.value.property_status) {
+        // 3. Property Status - يتم إخفاؤه إذا كان lead type = rent أو في وضع no_answer
+        if (field === 'property_status' && !formData.value.property_status && !isNoAnswerMode && !isRentOnly) {
             $showNotification('Please select property status', 'warning')
             return
         }
         
-        if (field === 'budget_from' && !formData.value.budget_from) {
+        // 4. Budget From
+        if (field === 'budget_from' && !formData.value.budget_from && !isNoAnswerMode) {
             $showNotification('Please enter minimum budget', 'warning')
             return
         }
         
-        if (field === 'budget_to' && !formData.value.budget_to) {
+        // 5. Budget To
+        if (field === 'budget_to' && !formData.value.budget_to && !isNoAnswerMode) {
             $showNotification('Please enter maximum budget', 'warning')
             return
         }
         
-        // Validate budget range if both are present
+        // 6. Validate budget range if both are present
         if ((field === 'budget_from' || field === 'budget_to') && 
-            formData.value.budget_from && formData.value.budget_to) {
+            formData.value.budget_from && formData.value.budget_to && !isNoAnswerMode) {
             if (!validateBudgetRange()) {
                 $showNotification(budgetRangeError.value, 'warning')
                 return
             }
         }
         
-        
-        if (field === 'area_id' && !formData.value.area_id) {
+        // 7. Area ID
+        if (field === 'area_id' && !formData.value.area_id && !isNoAnswerMode) {
             $showNotification('Please select area', 'warning')
             return
         }
-        if (field === 'property_type_id' && !formData.value.property_type_id) {
+        
+        // 8. Property Type ID
+        if (field === 'property_type_id' && !formData.value.property_type_id && !isNoAnswerMode) {
             $showNotification('Please select property type', 'warning')
             return
         }
-        if (field === 'bedrooms' && !formData.value.bedrooms) {
+        
+        // 9. Bedrooms - يتم إخفاؤه إذا كان property type = plots/land
+        if (field === 'bedrooms' && !formData.value.bedrooms && !isNoAnswerMode && !isPlotsOrLand) {
             $showNotification('Please select bedrooms', 'warning')
             return
         }
-        if (field === 'purpose_buying' && !formData.value.purpose_buying) {
+        
+        // 10. Purpose Buying - يتم إخفاؤه إذا كان lead type = rent
+        if (field === 'purpose_buying' && !formData.value.purpose_buying && !isNoAnswerMode && !isRentOnly) {
             $showNotification('Please select purpose', 'warning')
             return
         }
-        if (field === 'status_lead') {
-                const targetOrder = props.targetStageOrder
-                
-                if (targetOrder === 4) {
-                    if (!formData.value.lead_status) {
-                        $showNotification('Please select lead status (cold/warm/hot)', 'warning')
-                        return
-                    }
-                } else if (targetOrder === 6) {
-                    if (!formData.value.lead_status) {
-                        $showNotification('Please select conversion status', 'warning')
-                        return
-                    }
-                } else if (targetOrder === 9) {
-                    if (!formData.value.lead_status) {
-                        $showNotification('Please select lead pool status', 'warning')
-                        return
-                    }
-                } else if (targetOrder === 10) {
-                    if (!formData.value.lead_status) {
-                        $showNotification('Please select unqualified status', 'warning')
-                        return
-                    }
+        
+        // 11. Status Lead
+        if (field === 'status_lead' && !isNoAnswerMode) {
+            const targetOrder = props.targetStageOrder
+            
+            if (targetOrder === 4) {
+                if (!formData.value.lead_status) {
+                    $showNotification('Please select lead status (cold/warm/hot)', 'warning')
+                    return
+                }
+            } else if (targetOrder === 6) {
+                if (!formData.value.lead_status) {
+                    $showNotification('Please select conversion status', 'warning')
+                    return
+                }
+            } else if (targetOrder === 9) {
+                if (!formData.value.lead_status) {
+                    $showNotification('Please select lead pool status', 'warning')
+                    return
+                }
+            } else if (targetOrder === 10) {
+                if (!formData.value.lead_status) {
+                    $showNotification('Please select unqualified status', 'warning')
+                    return
                 }
             }
+        }
+        
+        // 12. Available Date
         if (field === 'available_date' && !formData.value.available_date) {
             $showNotification('Please select available date', 'warning')
             return
         }
+        
+        // 13. Branch
         if (field === 'branch' && !formData.value.branch) {
             $showNotification('Please select branch', 'warning')
             return
         }
+        
+        // 14. Lost Reason
         if ((field === 'why_lost_lead' || field === 'lost_reason') && !formData.value.lost_reason) {
             $showNotification('Please select lost reason', 'warning')
             return
@@ -1136,10 +1175,11 @@ const handleSubmit = async () => {
     }
     
     isSubmitting.value = true
-         let bedroomsValue = formData.value.bedrooms
-        if (bedroomsValue === 'Studio' || bedroomsValue === 'studio') {
-            bedroomsValue = 0
-        }
+    let bedroomsValue = formData.value.bedrooms
+    if (bedroomsValue === 'Studio' || bedroomsValue === 'studio') {
+        bedroomsValue = 0
+    }
+    
     try {
         const createLeadComment = async (text) => {
             const formData = new FormData()
@@ -1178,7 +1218,18 @@ const handleSubmit = async () => {
                 targetStageId: props.targetStageId,
                 reason: reasonText,
                 interaction_result: formData.value.interaction_result,
-                salutation: formData.value.salutation,
+                ...(formData.value.interaction_result !== 'no_answer' && {
+                    salutation: formData.value.salutation,
+                    budget_from: formData.value.budget_from,
+                    budget_to: formData.value.budget_to,
+                    lead_type: formData.value.lead_type,
+                    property_status: formData.value.property_status,
+                    area_id: formData.value.area_id,
+                    property_type_id: formData.value.property_type_id,
+                    bedrooms: bedroomsValue,
+                    purpose_buying: formData.value.purpose_buying,
+                    lead_status: formData.value.lead_status,
+                })
             }
             : {
                 leadId: props.leadId,
@@ -1186,17 +1237,22 @@ const handleSubmit = async () => {
                 reason: reasonText,
                 interaction_result: formData.value.interaction_result,
                 salutation: formData.value.salutation,
-                // budget: formData.value.budget,
-                  budget_from: formData.value.budget_from,
+                budget_from: formData.value.budget_from,
                 budget_to: formData.value.budget_to,
                 lead_type: formData.value.lead_type,
-                property_status: formData.value.property_status,
+                ...(formData.value.lead_type !== 'rent' && {
+                    property_status: formData.value.property_status,
+                }),
                 area_id: formData.value.area_id,
                 property_type_id: formData.value.property_type_id,
-                bedrooms: bedroomsValue,
-                purpose_buying: formData.value.purpose_buying,
+                ...(!checkIsPlotsOrLand() && {
+                    bedrooms: bedroomsValue,
+                }),
+                ...(formData.value.lead_type !== 'rent' && {
+                    purpose_buying: formData.value.purpose_buying,
+                }),
                 lead_source: formData.value.lead_source,
-                lead_status: formData.value.lead_status, // سيرسل حسب المرحلة
+                lead_status: formData.value.lead_status,
                 available_date: formData.value.available_date,
                 branch: formData.value.branch,
                 lost_reason: formData.value.lost_reason
@@ -1213,9 +1269,21 @@ const handleSubmit = async () => {
         closeModal()
     } catch (error) {
         console.error('Error submitting:', error)
+        $showNotification('An error occurred while submitting', 'error')
     } finally {
         isSubmitting.value = false
     }
+}
+
+const checkIsPlotsOrLand = () => {
+    const propertyTypeId = formData.value.property_type_id;
+    if (!propertyTypeId) return false;
+    
+    const selectedType = propertyTypeOptions.value.find(opt => opt.value === propertyTypeId);
+    if (!selectedType) return false;
+    
+    const typeName = selectedType.text.toLowerCase();
+    return typeName.includes('plot') || typeName.includes('land') || typeName.includes('plots') || typeName.includes('lands');
 }
 
 watch(visible, (newVal) => {
@@ -2360,7 +2428,10 @@ defineExpose({
     color: #0f172a !important;
     box-shadow: inset 3px 0 0 0 #f59e0b;
 }
-
+.close-btn-custom {
+    /*font-size: 20px;*/
+    color: #000;
+}
 </style>
 <style>
     .vs__search, .vs__search:focus{

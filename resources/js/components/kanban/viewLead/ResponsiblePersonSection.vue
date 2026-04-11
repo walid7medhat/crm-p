@@ -423,6 +423,9 @@ const updateResponsiblePerson = async () => {
     color: #334155;
     font-weight: 600;
 }
+.person-search-input::placeholder {
+    font-size: 10px !important;
+}
 </style>
 
 <style>
@@ -431,6 +434,9 @@ const updateResponsiblePerson = async () => {
     font-size: 17px !important;
     line-height: 1.2 !important;
     margin: 0 !important;
+}
+.person-search-input::placeholder {
+    font-size: 10px !important;
 }
 
 </style>

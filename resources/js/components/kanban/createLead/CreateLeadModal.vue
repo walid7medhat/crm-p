@@ -912,8 +912,8 @@ const purposeOptions = [
     { value: 'Live in', text: 'Live in' },
     { value: 'Short-term investment', text: 'Short-term investment' },
     { value: 'Long-term investment', text: 'Long-term investment' },
-    { value: 'Holiday home', text: 'Holiday home' },
-    { value: 'Rental', text: 'Rental' },
+    // { value: 'Holiday home', text: 'Holiday home' },
+    // { value: 'Rental', text: 'Rental' },
 ]
 
 const bedroomOptions = [
