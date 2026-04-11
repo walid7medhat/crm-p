@@ -6,13 +6,20 @@ use App\Models\Lead;
 use App\Models\Stage;
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
+use PhpOffice\PhpSpreadsheet\Cell\Cell;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use Maatwebsite\Excel\DefaultValueBinder;
 
-class LeadsImport implements ToCollection, WithHeadingRow, WithChunkReading
+class LeadsImport extends DefaultValueBinder implements
+    ToCollection,
+    WithHeadingRow,
+    WithChunkReading,
+    WithCustomValueBinder
 {
     private $stages;
     private $users;
@@ -20,7 +27,7 @@ class LeadsImport implements ToCollection, WithHeadingRow, WithChunkReading
     private $end;
     private $currentRow = 0;
 
-    private $errors = []; // ⭐ مهم
+    private $errors = [];
 
     public function __construct($start = 1, $end = 100000)
     {
@@ -36,6 +43,13 @@ class LeadsImport implements ToCollection, WithHeadingRow, WithChunkReading
         return 500;
     }
 
+    // 🔥 أهم جزء: إجبار كل القيم تكون STRING
+    public function bindValue(Cell $cell, $value)
+    {
+        $cell->setValueExplicit($value, DataType::TYPE_STRING);
+        return true;
+    }
+
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {
@@ -44,35 +58,25 @@ class LeadsImport implements ToCollection, WithHeadingRow, WithChunkReading
 
             try {
 
-                // range filter
                 if ($this->currentRow < $this->start) continue;
                 if ($this->currentRow > $this->end) return;
 
                 $data = $this->normalize($row->toArray());
 
-                // skip empty rows
-                if (empty($data['lead_name']) && empty($data['email']) && empty($data['work_phone'])) {
+                if (empty($data['lead_name'])) {
                     continue;
                 }
 
-                // resolve
                 $stage  = $this->resolveStage($data['stage'] ?? null);
                 $userId = $this->resolveUser($data['responsible'] ?? null);
 
-                // phones
-                $phone = $data['mobile']
-                    ?? $data['work_phone']
-                    ?? $data['work_phone_2']
-                    ?? $data['whatsapp_number']
-                    ?? null;
+                $phone = $data['work_phone'] ?? null;
 
-                // emails
                 $email = $data['work_e_mail']
                     ?? $data['home_e_mail']
                     ?? $data['other_e_mail']
                     ?? null;
 
-                // ❗ مهم: حماية من NULL first_name
                 $firstName = $data['first_name']
                     ?? $data['name']
                     ?? null;
@@ -85,10 +89,11 @@ class LeadsImport implements ToCollection, WithHeadingRow, WithChunkReading
                     throw new \Exception("Missing first_name / lead_name empty");
                 }
 
-                // create
+                $addedBy = $this->resolveUser($data['created_by'] ?? null);
+
                 Lead::create([
                     'email' => $email,
-                    'added_by' => auth()->id() ?? 1,
+                    'added_by' => $addedBy ?? 1,
 
                     'lead_name' => $data['lead_name'] ?? 'Imported Lead',
                     'lead_number' => $data['id'] ?? null,
@@ -104,8 +109,11 @@ class LeadsImport implements ToCollection, WithHeadingRow, WithChunkReading
                     'date_of_birth' => $this->parseDate($data['date_of_birth'] ?? null),
 
                     'whatsapp_number' => $data['whatsapp_number'] ?? null,
-                    'work_phone' => $phone,
-                    'work_phone_2' => $data['work_phone_2'] ?? null,
+                    'work_phone' =>  $data['work_phone']
+                        ?? null,
+                    'work_phone_2' => $data['work_phone_2']
+                        ?? $data['other_phone_number']
+                        ?? null,
 
                     'secondary_email' => $data['home_e_mail'] ?? null,
 
@@ -122,7 +130,8 @@ class LeadsImport implements ToCollection, WithHeadingRow, WithChunkReading
 
                     'nationality' => $data['nationality'] ?? null,
 
-                    'lead_source' => $data['lead_source'] ?? 'Excel Import',
+                    'lead_source' => $data['source'] ?? 'Excel Import',
+                    'source_information' => $data['source_information'] ?? null,
 
                     'responsible_person_id' => $userId,
                     'initial_responsible_person_id' => $userId,
@@ -135,7 +144,6 @@ class LeadsImport implements ToCollection, WithHeadingRow, WithChunkReading
 
             } catch (\Exception $e) {
 
-                // ⭐ هنا بيتسجل الصف اللي فيه مشكلة
                 $this->errors[] = [
                     'row' => $this->currentRow,
                     'error' => $e->getMessage(),
@@ -147,7 +155,6 @@ class LeadsImport implements ToCollection, WithHeadingRow, WithChunkReading
         }
     }
 
-    // ⭐ ترجع الأخطاء
     public function getErrors()
     {
         return $this->errors;
@@ -158,7 +165,6 @@ class LeadsImport implements ToCollection, WithHeadingRow, WithChunkReading
         $normalized = [];
 
         foreach ($data as $key => $value) {
-
             $key = strtolower((string) $key);
             $key = str_replace([' ', '-', '?', '.', '/'], '_', $key);
 
@@ -185,8 +191,16 @@ class LeadsImport implements ToCollection, WithHeadingRow, WithChunkReading
     {
         if (!$name) return auth()->id() ?? 1;
 
+        $name = strtolower($name);
+
         foreach ($this->users as $user) {
-            if (str_contains(strtolower($user->name), strtolower($name))) {
+
+            $userName = strtolower($user->name);
+
+            if (
+                str_contains($name, $userName) ||
+                str_contains($userName, $name)
+            ) {
                 return $user->id;
             }
         }
