@@ -366,7 +366,7 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             $query->where('status', 'converted');
         }
 
-        if($request->has('status')) {
+        if($request->has('status') && $request->status != 'All') {
             $query->where('status', $request->status);
         }
             if($request->has('completion_status')) {
@@ -420,14 +420,14 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             ];
 
             foreach ($basicFilters as $filter) {
-                if ($request->filled($filter)) {
+                if ($request->filled($filter) && $request->$filter != 'All') {
                     $query->where($filter, $request->$filter);
                 }
             }
 
             if ($request->has('number_of_bedrooms')) {
                 $bedrooms = $request->number_of_bedrooms;
-                $bedrooms == 'Studio'  || 'studio' ? 0 : $bedrooms;
+                $bedrooms == 'Stبudio'  || 'studio' ? 0 : $bedrooms;
                 if($bedrooms == 10){
                         $query->where('number_of_bedrooms','>=',$bedrooms );
                 }else{

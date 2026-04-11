@@ -398,21 +398,22 @@ export default {
       return rangeWithDots;
     });
 
-    // Fetch properties from API
   // Fetch properties from API
-const fetchProperties = async (filters = {}, page = 1) => {
-  try {
-    isLoading.value = true;
-    
-    // Build query parameters
-    const params = {
-      ...filters,
-      page: page,
-      per_page: 12,
-      my_listings: true
-    };
-
-    switch (activeStatus.value) {
+    const fetchProperties = async (filters = {}, page = 1) => {
+      try {
+        isLoading.value = true;
+        
+        if (Object.keys(filters).length > 0) {
+          currentFilters.value = { ...currentFilters.value, ...filters };
+        }
+        
+        const params = {
+          ...currentFilters.value,
+          page: page,
+          per_page: 12,
+           my_listings: true
+        };
+  switch (activeStatus.value) {
       case 'archived':
         params.is_archived = true;
         break;
@@ -435,61 +436,75 @@ const fetchProperties = async (filters = {}, page = 1) => {
         break;
     }
 
-    // Remove empty filters
-    Object.keys(params).forEach(key => {
-      if (params[key] === null || params[key] === undefined || params[key] === '') {
-        delete params[key];
-      }
-    });
-     if (params.area_ids && !Array.isArray(params.area_ids)) {
+        // Remove empty filters
+        Object.keys(params).forEach(key => {
+          if (params[key] === null || params[key] === undefined || params[key] === '' || params[key] === 0) {
+            delete params[key];
+          }
+        });
+ if (params.area_ids && !Array.isArray(params.area_ids)) {
       if (typeof params.area_ids === 'string') {
         params.area_ids = params.area_ids.split(',').map(id => Number(id));
       } else {
         params.area_ids = [params.area_ids];
       }
     }
+        console.log("📤 Final API request params:", params);
+        console.log("🔍 Current active status:", activeStatus.value);
+        console.log("💾 Current saved filters:", currentFilters.value);
 
-    console.log("📤 Fetching properties with params:", params);
+        const response = await api.get("/listings/properties", { params });
+        
+        // Handle API response
+        const responseData = response.data.data;
+        const responseMeta = response.data.meta;
+        
+        if (Array.isArray(responseData)) {
+          properties.value = responseData;
+          pagination.value = responseMeta || {
+            current_page: 1,
+            last_page: 1,
+            per_page: 12,
+            total: responseData.length
+          };
+        } else {
+          properties.value = [];
+          pagination.value = null;
+          console.warn("⚠️ Unexpected API response structure:", responseData);
+        }
 
-    const response = await api.get("/listings/properties", { params });
-    
-    // Handle API response
-    const responseData = response.data.data;
-    const responseMeta = response.data.meta;
-    
-    if (Array.isArray(responseData)) {
-      properties.value = responseData;
-      pagination.value = responseMeta || {
-        current_page: 1,
-        last_page: 1,
-        per_page: 12,
-        total: responseData.length
-      };
-    } else {
-      properties.value = [];
-      pagination.value = null;
-      console.warn("⚠️ Unexpected API response structure:", responseData);
-    }
-
-    console.log("✅ Properties loaded:", properties.value.length);
-    console.log("📄 Pagination info:", pagination.value);
-    
-  } catch (error) {
-    console.error("❌ Error fetching properties:", error.response || error);
-    properties.value = [];
-    pagination.value = null;
-  } finally {
-    isLoading.value = false;
-  }
-};
-
+        console.log("✅ Properties loaded:", properties.value.length);
+        
+      } catch (error) {
+        console.error("❌ Error fetching properties:", error.response || error);
+        properties.value = [];
+        pagination.value = null;
+      } finally {
+        isLoading.value = false;
+      }
+    };
     // Change page
     const changePage = (page) => {
       if (page < 1 || page > pagination.value.last_page || page === '...') return;
         const apiFilters = convertFiltersToAPI(currentFilters.value); 
      fetchProperties(apiFilters, page);
     };
+  /** Query keys owned by listing search — strip before merge so cleared filters don’t linger. */
+    const LISTING_QUERY_KEYS = [
+      'sale_rent', 'area_ids', 'area_id', 'project_id', 'type_id', 'beds', 'baths',
+      'price_from', 'price_to', 'size_from', 'size_to', 'sort', 'ref',
+      'completion_status', 'agent_id', 'agent_name'
+    ];
 
+    const pruneEmptyQueryValues = (obj) => {
+      const out = {};
+      Object.keys(obj).forEach((k) => {
+        const v = obj[k];
+        if (v === undefined || v === null || v === '') return;
+        out[k] = v;
+      });
+      return out;
+    };
     const encodeFiltersToQuery = (filters) => {
       return {
         sale_rent: filters.saleRent || undefined,
@@ -511,8 +526,14 @@ const fetchProperties = async (filters = {}, page = 1) => {
         completion_status: filters.completionStatus?.value || undefined,
       };
     };
+  const replaceRouteWithListingFilters = (filters) => {
+      const base = { ...route.query };
+      LISTING_QUERY_KEYS.forEach((k) => { delete base[k]; });
+      const merged = { ...base, ...encodeFiltersToQuery(filters) };
+      router.replace({ query: pruneEmptyQueryValues(merged) });
+    };
 
-  const decodeFiltersFromQuery = async (query) => {
+const decodeFiltersFromQuery = async (query) => {
         let areaIds = [];
   if (query.area_ids) {
     areaIds = query.area_ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
@@ -527,11 +548,20 @@ const fetchProperties = async (filters = {}, page = 1) => {
         params: { ids: areaIds.join(',') } 
       });
       const areasData = response.data.data || response.data;
-      areasWithNames = areasData.map(area => ({
-        id: area.id,
-        name: area.area_parents_title || area.name || area.title,
-        subtitle: area.region || area.city || area.country || 'UAE'
-      }));
+      const rows = Array.isArray(areasData) ? areasData : [];
+      const byId = new Map(rows.map((area) => [area.id, area]));
+      // Only IDs from the URL (API historically ignored `ids` and returned all areas)
+      areasWithNames = areaIds.map((id) => {
+        const area = byId.get(id);
+        if (!area) {
+          return { id, name: `Area ${id}`, subtitle: '' };
+        }
+        return {
+          id: area.id,
+          name: area.area_parents_title || area.name || area.title,
+          subtitle: area.region || area.city || area.country || 'UAE'
+        };
+      });
     } catch (error) {
       console.error("Error fetching areas:", error);
       // Fallback: استخدام id فقط
@@ -571,13 +601,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
       // Fetch properties with new filters (reset to page 1)
       fetchProperties(apiFilters, 1);
 
-      // Persist filters in URL so Back restores them
-      router.replace({
-        query: {
-          ...route.query,
-          ...encodeFiltersToQuery(filters),
-        },
-      });
+      replaceRouteWithListingFilters(filters);
     };
 
     // Convert frontend filters to backend API format
@@ -590,28 +614,32 @@ const fetchProperties = async (filters = {}, page = 1) => {
       }
 
       // Area Filter
+      // if (filters.area && filters.area.id) {
+      //   apiFilters.area_id = filters.area.id;
+      // }
        if (filters.area && filters.area.length > 0) {
-        apiFilters.area_ids = filters.area.map(a => a.id);
-      }
-      
-
-      // Property Type Filter
-      if (filters.propertyType) {
-        apiFilters.property_type_id = filters.propertyType.id;
-      }
-     if (filters.referenceNumber && filters.referenceNumber.trim() !== "") {
-        apiFilters.reference_number = filters.referenceNumber.trim();
-      }
-        if (filters.project) {
-        apiFilters.project_id = filters.project.id;
-      }
-        if (filters.agent && filters.agent.id) {
-          apiFilters.agent_id = filters.agent.id;
+          apiFilters.area_ids = filters.area.map(a => a.id);
         }
 
+     if (filters.completionStatus && filters.completionStatus.value) {
+        apiFilters.completion_status = filters.completionStatus.value;
+      }
+      // Property Type Filter
+      if (filters.propertyType && filters.propertyType.id) {
+        apiFilters.property_type_id = filters.propertyType.id;
+      }
+      
+      if (filters.referenceNumber && filters.referenceNumber.trim() !== "") {
+        apiFilters.reference_number = filters.referenceNumber.trim();
+      }
+      
+      // Agent Filter
+      if (filters.agent && filters.agent.id) {
+        apiFilters.agent_id = filters.agent.id;
+      }
 
       // Bedrooms Filter
-      if (filters.beds) {
+      if (filters.beds && filters.beds !== 'All') {
         if (filters.beds === 'Studio') {
           apiFilters.number_of_bedrooms = 'Studio';
         } else {
@@ -621,27 +649,33 @@ const fetchProperties = async (filters = {}, page = 1) => {
        if (filters.baths) {
           apiFilters.number_of_bathrooms = parseInt(filters.baths);
         }
-      
- if (filters.completionStatus && filters.completionStatus.value) {
-    apiFilters.completion_status = filters.completionStatus.value;
-  }
+
       // Price Range Filter
       if (filters.priceFrom > 0 || filters.priceTo < 10000000) {
-        apiFilters.min_price = filters.priceFrom;
-        apiFilters.max_price = filters.priceTo;
+        apiFilters.min_price = filters.priceFrom > 0 ? filters.priceFrom : undefined;
+        apiFilters.max_price = filters.priceTo < 10000000 ? filters.priceTo : undefined;
       }
-
+      if (filters.project && filters.project.id) {
+        apiFilters.project_id = filters.project.id;
+      }
       // Size Range Filter
       if (filters.sizeFrom > 0 || filters.sizeTo < 10000) {
-        apiFilters.min_size = filters.sizeFrom;
-        apiFilters.max_size = filters.sizeTo;
+        apiFilters.min_size = filters.sizeFrom > 0 ? filters.sizeFrom : undefined;
+        apiFilters.max_size = filters.sizeTo < 10000 ? filters.sizeTo : undefined;
       }
 
       // Sort
-      if (filters.sort) {
+      if (filters.sort && filters.sort !== 'Most Recent') {
         apiFilters.sort = mapSortToBackend(filters.sort);
       }
 
+      Object.keys(apiFilters).forEach(key => {
+        if (apiFilters[key] === undefined || apiFilters[key] === null || apiFilters[key] === '') {
+          delete apiFilters[key];
+        }
+      });
+
+      console.log("🔍 Converted API filters:", apiFilters);
       return apiFilters;
     };
 
@@ -747,19 +781,19 @@ const fetchProperties = async (filters = {}, page = 1) => {
     };
 
    const handleAgentFromQuery = (query) => {
-  if (!query.agent_id) return;
+      if (!query.agent_id) return;
 
-  const agentId = parseInt(query.agent_id);
+      const agentId = parseInt(query.agent_id);
 
-  currentFilters.value = {
-    ...currentFilters.value,
-    agent: { id: agentId }
-  };
+      currentFilters.value = {
+        ...currentFilters.value,
+        agent: { id: agentId }
+      };
 
-  const apiFilters = convertFiltersToAPI(currentFilters.value);
+      const apiFilters = convertFiltersToAPI(currentFilters.value);
 
-  fetchProperties(apiFilters, 1);
-};
+      fetchProperties(apiFilters, 1);
+    };
     watch(() => route.query, (newQuery) => {
       if (newQuery.agent_id) {
         console.log('🎯 Agent filter detected in URL:', newQuery);
@@ -771,14 +805,19 @@ const fetchProperties = async (filters = {}, page = 1) => {
       }
     }, { immediate: true });
     // Fetch initial properties on component mount
-    onMounted(() => {
+     onMounted(async () => {
       const hasQuery = Object.keys(route.query).length > 0;
       if (hasQuery) {
-        const filters = decodeFiltersFromQuery(route.query);
-        currentFilters.value = filters;
-        initialFilters.value = filters;
-        const apiFilters = convertFiltersToAPI(filters);
-        fetchProperties(apiFilters, 1);
+         try {
+          // decodeFiltersFromQuery is async (loads area labels); must await or initialFilters stays a Promise
+          const filters = await decodeFiltersFromQuery(route.query);
+          currentFilters.value = convertFiltersToAPI(filters);
+          initialFilters.value = filters;
+          await fetchProperties({}, 1);
+        } catch (e) {
+          console.error('Failed to restore listing filters from URL:', e);
+          fetchProperties();
+        }
       } else {
         fetchProperties();
       }
