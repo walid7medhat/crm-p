@@ -43,12 +43,7 @@ class LeadsImport extends DefaultValueBinder implements
         return 500;
     }
 
-    // 🔥 أهم جزء: إجبار كل القيم تكون STRING
-    public function bindValue(Cell $cell, $value)
-    {
-        $cell->setValueExplicit($value, DataType::TYPE_STRING);
-        return true;
-    }
+   
 
     public function collection(Collection $rows)
     {
@@ -160,13 +155,21 @@ class LeadsImport extends DefaultValueBinder implements
         return $this->errors;
     }
 
-    private function normalize($data)
+        private function normalize($data)
     {
         $normalized = [];
 
         foreach ($data as $key => $value) {
+
             $key = strtolower((string) $key);
-            $key = str_replace([' ', '-', '?', '.', '/'], '_', $key);
+
+            $key = str_replace(
+                [' ', '-', '?', '.', '/'],
+                '_',
+                $key
+            );
+
+            $key = trim($key);
 
             $normalized[$key] = $value;
         }
