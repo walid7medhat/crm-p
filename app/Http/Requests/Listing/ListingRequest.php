@@ -38,7 +38,7 @@ $listingId = $this->route('property');
                 ->where(function ($query) {
                     return $query
                         ->where('listing_status', request()->listing_status)
-                        ->where('project_id', request()->project_id);
+                        ->where('area_id', request()->area_id);
                 })
                 ->ignore($listingId),
             ],

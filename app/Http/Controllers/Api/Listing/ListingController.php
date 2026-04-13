@@ -1973,11 +1973,12 @@ public function validateUnitNumber(Request $request)
             Rule::unique('listings', 'unit_number')
                 ->where(function ($query) use ($request) {
                     $query->where('listing_status', $request->listing_status)
-                          ->where('project_id', $request->project_id);
+                          ->where('area_id', $request->area_id);
                 })
         ],
         'listing_status' => 'required|in:Sale,Rent',
-        'project_id' => 'required|exists:projects,id'
+        'project_id' => 'required|exists:projects,id',
+        'area_id' => 'required|exists:areas,id'
     ]);
 
     if ($validator->fails()) {
