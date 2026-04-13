@@ -708,19 +708,19 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .close-btn {
-    position: absolute;
-    top: 16px;
-    left: 0;
-    transform: translateX(-56%);
-    width: 44px;
-    height: 44px;
+      position: absolute;
+    top: 13px;
+    left: -11px;
+    transform: translate(-56%);
+    width: 50px;
+    height: 30px;
     border-radius: 999px;
-    background: #3a9fe6;
+    background: #01062c;
     color: #d9e7f5;
-    font-size: 13px;
+    font-size: 20px;
     padding: 0;
     box-shadow: none;
-    z-index: 20;
+    z-index: -1;
 }
 
 .close-btn iconify-icon {
@@ -996,5 +996,82 @@ textarea, input, select {
 
 .modal-backdrop {
     z-index: 1999 !important;
+}
+
+:deep(.view-lead-modal) {
+    padding: 0 !important;
+    height: 85vh;
+    max-height: 85vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* تعديل الـ modal-content */
+:deep(.modal-content) {
+    height: 85vh;
+    max-height: 85vh;
+    border-radius: 16px;
+}
+
+/* المحتوى الداخلي */
+.view-lead-modal-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #fff;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* الأجزاء الثابتة */
+.modal-header-custom,
+.stage-selector-wrapper,
+.tabs-container {
+    flex-shrink: 0;
+}
+
+/* الجزء القابل للسكرول */
+.modal-body-custom {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* شريط التمرير */
+.modal-body-custom::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body-custom::-webkit-scrollbar-track {
+    background: #F1F5F9;
+    border-radius: 10px;
+}
+
+.modal-body-custom::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 10px;
+}
+
+.modal-body-custom::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+}
+
+/* للشاشات الصغيرة */
+@media (max-width: 768px) {
+    :deep(.view-lead-modal),
+    :deep(.modal-content) {
+        height: 100dvh;
+        max-height: 100dvh;
+        border-radius: 0;
+    }
+}
+</style>
+<style>
+    .view-lead-modal {
+    padding: 0 !important;
+    height: 85vh;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
 }
 </style>

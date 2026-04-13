@@ -64,10 +64,14 @@
               placeholder="Email"
               v-model="email"
               required
+                  @input="validateEmailDomain"
             />
             <div v-if="errors.email" class="invalid-feedback d-block">
               {{ errors.email[0] }}
             </div>
+              <small class="text-muted" v-if="!errors.email && email && !email.endsWith('@oiaproperties.com')">
+                Email must be from @oiaproperties.com domain
+              </small>
           </div>
 
           
@@ -394,59 +398,67 @@ export default {
       this.router.push('/sign-in');
     },
 
-    validateForm() {
-      this.clearErrors();
-      let isValid = true;
+     validateEmailDomain() {
+    if (this.email && !this.email.endsWith('@oiaproperties.com')) {
+      this.errors.email = ['Email must be from @oiaproperties.com domain'];
+      return false;
+    } else if (this.errors.email && this.email.endsWith('@oiaproperties.com')) {
+      delete this.errors.email;
+    }
+    return true;
+  },
+  
+  validateForm() {
+    this.clearErrors();
+    let isValid = true;
 
-      // Frontend validation
-      if (!this.name?.trim()) {
-        this.errors.name = ['Name is required'];
-        this.$showNotification('Name is required', 'warning');
-        isValid = false;
-      }
+    // Name validation
+    if (!this.name?.trim()) {
+      this.errors.name = ['Name is required'];
+      this.$showNotification('Name is required', 'warning');
+      isValid = false;
+    }
 
-    //   if (!this.last_name?.trim()) {
-    //     this.errors.last_name = ['Last name is required'];
-    //     if (isValid) {
-    //       this.$showNotification('Last name is required', 'warning');
-    //     }
-    //     isValid = false;
-    //   }
+    // Email validation with domain check
+    if (!this.email) {
+      this.errors.email = ['Email is required'];
+      this.$showNotification('Email is required', 'warning');
+      isValid = false;
+    } else if (!this.email.endsWith('@oiaproperties.com')) {
+      this.errors.email = ['Email must be from @oiaproperties.com domain'];
+      this.$showNotification('Email must be from @oiaproperties.com domain', 'warning');
+      isValid = false;
+    } else if (!this.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      this.errors.email = ['Please enter a valid email address'];
+      this.$showNotification('Please enter a valid email address', 'warning');
+      isValid = false;
+    }
 
-      if (this.password.length < 8) {
-        this.errors.password = ['Password must be at least 8 characters'];
-        this.$showNotification('Password must be at least 8 characters', 'warning');
-        isValid = false;
-      }
-      
-      // if (!this.manager_id) {
-      //   this.managerError = 'Please select your manager';
-      //   this.$showNotification('Please select your manager', 'warning');
-      //   isValid = false;
-      // } else {
-      //   const managerExists = this.parents.managers.some(manager => 
-      //     Number(manager.id) === Number(this.manager_id)
-      //   );
-        
-      //   if (!managerExists) {
-      //     this.managerError = 'Selected manager is not valid';
-      //     this.$showNotification('Selected manager is not valid', 'warning');
-      //     isValid = false;
-      //   }
-      // }
+    // Password validation
+    if (this.password.length < 8) {
+      this.errors.password = ['Password must be at least 8 characters'];
+      this.$showNotification('Password must be at least 8 characters', 'warning');
+      isValid = false;
+    }
 
-      return isValid;
-    },
+    return isValid;
+  },
 
     async register() {
       this.loading = true;
       
-      // التحقق من صحة النموذج أولاً
-      if (!this.validateForm()) {
-        this.loading = false;
-        return;
-      }
-
+       if (this.email && !this.email.endsWith('@oiaproperties.com')) {
+            this.$showNotification('Email must be from @oiaproperties.com domain', 'warning');
+            this.errors.email = ['Email must be from @oiaproperties.com domain'];
+            this.loading = false;
+            return;
+          }
+          
+          // التحقق من صحة النموذج أولاً
+          if (!this.validateForm()) {
+            this.loading = false;
+            return;
+          }
       try {
         // تحويل القيم إلى الأرقام قبل الإرسال
         const payload = {

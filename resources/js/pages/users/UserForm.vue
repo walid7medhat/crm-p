@@ -77,6 +77,13 @@
                                         <div class="invalid-feedback" v-if="errors.email">
                                             {{ errors.email[0] }}
                                         </div>
+                                         <div class="invalid-feedback" v-else-if="userForm.email && !isEmailValid">
+                                            {{ emailErrorMessage }}
+                                        </div>
+                                        <small class="text-muted" v-if="userForm.email && isEmailValid && !errors.email">
+                                            ✓ Valid company email
+                                        </small>
+                                      
                                     </div>
                                 </div>
 
@@ -239,7 +246,17 @@ export default {
         const roles = ref([]);
         const availableManagers = ref([]);
         const selectedRolePermissions = ref([]);
-
+        const validateEmailDomain = (email) => {
+            if (!email) return true;
+            return email.endsWith('@oiaproperties.com');
+        };
+        
+        const getEmailValidationMessage = (email) => {
+            if (!email) return '';
+            if (!email.includes('@')) return 'Please enter a valid email address';
+            if (!email.endsWith('@oiaproperties.com')) return 'Email must be from @oiaproperties.com domain';
+            return '';
+        };
         // User Form Data - Updated to match backend
         const userForm = ref({
             name: "",
@@ -436,7 +453,9 @@ watch(roles, (newRoles) => {
                         last_login_at: userData.last_login_at || null
                     };
 
-                   
+                   if (userForm.value.email && !validateEmailDomain(userForm.value.email)) {
+                        showNotification("⚠️ Warning: This user has an email not from @oiaproperties.com domain", "warning");
+                    }
 
                     // Set avatar preview if exists
                     if (userData.avatar) {
@@ -457,6 +476,14 @@ watch(roles, (newRoles) => {
                 loading.value = false;
             }
         };
+        const isEmailValid = computed(() => {
+            if (!userForm.value.email) return true;
+            return validateEmailDomain(userForm.value.email);
+        });
+        
+        const emailErrorMessage = computed(() => {
+            return getEmailValidationMessage(userForm.value.email);
+        });
         const selectedRole = computed({
             get: () => {
                 if (!userForm.value.role_id) return null;
@@ -482,6 +509,15 @@ watch(roles, (newRoles) => {
                     loading.value = false;
                     return;
                 }
+        
+                // Email domain validation
+                if (!validateEmailDomain(userForm.value.email)) {
+                    errors.value.email = ['Email must be from @oiaproperties.com domain'];
+                    showNotification("❌ Email must be from @oiaproperties.com domain", "error");
+                    loading.value = false;
+                    return;
+                }
+
 
                 const formData = new FormData();
 
@@ -580,6 +616,13 @@ watch(roles, (newRoles) => {
                 minute: '2-digit'
             });
         };
+        const validateEmailOnBlur = () => {
+            if (userForm.value.email && !validateEmailDomain(userForm.value.email)) {
+                errors.value.email = ['Email must be from @oiaproperties.com domain'];
+            } else if (errors.value.email) {
+                delete errors.value.email;
+            }
+        };
 
         // Helper function for notifications
         const showNotification = (message, type = 'info') => {
@@ -642,7 +685,11 @@ watch(roles, (newRoles) => {
             handleRoleChange,
             submitForm,
             formatDate,
-            selectedRole
+            selectedRole,
+            isEmailValid,
+            emailErrorMessage,
+            validateEmailOnBlur,
+            validateEmailDomain
         };
     }
 };
@@ -713,5 +760,17 @@ watch(roles, (newRoles) => {
     align-items: center;
     justify-content: center;
     z-index: 10;
+}
+.text-warning {
+    color: #ffc107;
+}
+
+.form-control.is-valid {
+    border-color: #198754;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    padding-right: calc(1.5em + 0.75rem);
 }
 </style>
