@@ -124,13 +124,15 @@
                         </div>
                         <div v-if="showSearchModal" class="lead-search-dropdown-outer">
                             <LeadSearchModal
-                                v-model="showSearchModal"
-                                :as-dropdown="true"
-                                :initial-active-pill="activeFilter?.id"
-                                :has-active-filters="(activeFilters && activeFilters.length) > 0"
-                                :current-query="lastQuery"
-                                @search="onLeadSearch"
-                            />
+                                    v-if="showSearchModal"
+                                    :key="`search-modal-${modalKey}`"
+                                    v-model="showSearchModal"
+                                    :as-dropdown="true"
+                                    :initial-active-pill="activeFilter?.id"
+                                    :has-active-filters="(activeFilters && activeFilters.length) > 0"
+                                    :current-query="lastQuery"
+                                    @search="onLeadSearch"
+                                />
                         </div>
                     </div>
                     
@@ -197,6 +199,23 @@ const SEARCH_DEBOUNCE_MS = 400
 
 const echoListeners = ref([])
 const pollingInterval = ref(null)
+
+
+
+const modalKey = ref(0)
+
+// أضف هذه الدالة
+const forceModalRerender = () => {
+    modalKey.value++
+}
+
+// راقب فتح الموديل لإعادة التصيير
+watch(showSearchModal, (val) => {
+    if (val) {
+        forceModalRerender()
+    }
+})
+
 
 const tabs = computed(() => {
     const baseTabs = [

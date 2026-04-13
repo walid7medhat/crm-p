@@ -30,16 +30,6 @@
                         <iconify-icon icon="lucide:check" width="10"></iconify-icon>
                     </span>
                 </button>
-                <!--<button -->
-                <!--    class="tab-btn" -->
-                <!--    :class="{ active: activeTabs.includes('activity') }"-->
-                <!--    @click="toggleTab('activity')">-->
-                <!---->
-                <!--    Activity-->
-                <!--    <span v-if="activeTabs.includes('activity')" class="check-badge">-->
-                <!--        <iconify-icon icon="lucide:check" width="10"></iconify-icon>-->
-                <!--    </span>-->
-                <!--</button>-->
             </div>
 
             <!-- Leads Section -->
@@ -71,25 +61,9 @@
                 </div>
             </div>
 
-            <!-- Activity Section -->
-            <div v-show="activeTabs.includes('activity')" class="settings-section activity-section mb-4">
-                <div class="section-header mb-3 border-bottom">
-                    <b-form-checkbox v-model="allActivity" class="main-checkbox">
-                        <span class="section-title">Activity</span>
-                    </b-form-checkbox>
-                </div>
-                <div class="fields-grid">
-                    <div v-for="field in activityFields" :key="field.id" class="field-item">
-                        <b-form-checkbox v-model="field.checked">
-                            <span class="field-checkbox">{{ field.label }}</span>
-                        </b-form-checkbox>
-                    </div>
-                </div>
-            </div>
-
             <!-- Footer Actions -->
             <div class="d-flex align-items-center justify-content-between mt-4">
-                <a href="#" class="text-muted text-decoration-none fs-14" @click.prevent>Default Fields</a>
+                <a href="#" class="text-muted text-decoration-none fs-14" @click.prevent="resetToDefaultFields">Default Fields</a>
                 <div class="d-flex gap-2">
                     <button class="btn btn-cancel rounded-pill" @click="show = false">Cancel</button>
                     <button class="btn btn-apply rounded-pill" @click="applySettings">Apply</button>
@@ -100,12 +74,11 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { BModal, BFormCheckbox } from 'bootstrap-vue-3'
 
 const props = defineProps({
     modelValue: Boolean,
-    /** When provided, lead field checkboxes are synced to this list when modal opens */
     initialSelectedLeadIds: {
         type: Array,
         default: undefined
@@ -117,7 +90,8 @@ const emit = defineEmits(['update:modelValue', 'apply'])
 const show = ref(props.modelValue)
 const activeTabs = ref(['leads'])
 
-const leadFields = ref([
+// تعريف الحقول مع قيم افتراضية
+const getDefaultLeadFields = () => [
     { id: 'first_name', label: 'Client Name', checked: true },
     { id: 'lead_name', label: 'Lead Name', checked: true },
     { id: 'created_on', label: 'Created On', checked: true },
@@ -131,38 +105,26 @@ const leadFields = ref([
     { id: 'office', label: 'Branch', checked: true },
     { id: 'team', label: 'Team', checked: true },
     { id: 'location', label: 'Location / Area', checked: false },
-    { id: 'quality_status', label: 'Quality Status', checked: false },
-    { id: 'interaction_result', label: 'Call Result', checked: false },
+    { id: 'quality_status', label: 'Quality Status', checked: true },
     { id: 'property_type', label: 'Property Type', checked: false },
     { id: 'lead_type', label: 'Lead Type', checked: false },
     { id: 'property_status', label: 'Property Status', checked: false },
     { id: 'budget_from', label: 'Budget (AED)', checked: false },
-      { id: 'stage', label: 'Stage', checked: false  },
-{ id: 'purpose_purchase', label: 'Purpose of Purchase', checked: false },
-])
+    { id: 'purpose_purchase', label: 'Purpose of Purchase', checked: false },
+    { id: 'stage', label: 'Stage', checked: true },
+    { id: 'interaction_result', label: 'Call Result', checked: true }
+]
+
+const leadFields = ref(getDefaultLeadFields())
 
 const leadFieldSections = [
     { id: 'lead-core', title: 'Lead Information', fieldIds: ['first_name', 'lead_name', 'work_phone', 'email', 'created_on', 'assigned_on'] },
     { id: 'assignment', title: 'Assignment', fieldIds: ['responsible_person', 'office', 'team'] },
     { id: 'source', title: 'Source', fieldIds: ['source', 'lead_branch_source'] },
-    { id: 'qualification', title: 'Qualification', fieldIds: ['stage','quality_status', 'lead_type', 'property_status'] },
-    { id: 'client-req', title: 'Client Requirement', fieldIds: ['location', 'property_type', 'bedrooms', 'budget_from','purpose_purchase'] }
+    { id: 'qualification', title: 'Qualification', fieldIds: ['quality_status', 'lead_type', 'property_status', 'stage', 'interaction_result'] },
+    { id: 'client-req', title: 'Client Requirement', fieldIds: ['location', 'property_type', 'bedrooms', 'budget_from', 'purpose_purchase'] }
 ]
 
-watch(() => {
-    const qualityField = leadFields.value.find(f => f.id === 'quality_status')
-    return qualityField?.checked
-}, (isChecked) => {
-    const stageField = leadFields.value.find(f => f.id === 'stage')
-    const interactionField = leadFields.value.find(f => f.id === 'interaction_result')
-    
-    if (stageField) {
-        stageField.checked = isChecked  
-    }
-    if (interactionField) {
-        interactionField.checked = isChecked  
-    }
-})
 const groupedLeadSections = computed(() =>
     leadFieldSections
         .map(section => ({
@@ -190,32 +152,92 @@ const setSectionChecked = (sectionId, checked) => {
 
 const defaultFieldIds = [
     'first_name', 'lead_name', 'created_on', 'assigned_on', 'work_phone',
-    'responsible_person', 'office',
-    'email', 'source', 'lead_branch_source', 'team'
+    'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 
+    'team', 'stage', 'quality_status', 'interaction_result'
 ]
 
-const restoreDefaultFields = () => {
-    leadFields.value.forEach(field => {
-        field.checked = defaultFieldIds.includes(field.id)
-    })
+// ✅ دالة لاستعادة الحقول من localStorage
+const restoreFieldsFromStorage = () => {
+    try {
+        const savedFields = localStorage.getItem('selectedLeadFields')
+        if (savedFields) {
+            const savedIds = JSON.parse(savedFields)
+            if (Array.isArray(savedIds) && savedIds.length) {
+                leadFields.value = leadFields.value.map(field => ({
+                    ...field,
+                    checked: savedIds.includes(field.id)
+                }))
+                console.log('Restored fields from localStorage:', savedIds)
+                return true
+            }
+        }
+        return false
+    } catch (error) {
+        console.error('Error restoring fields from storage:', error)
+        return false
+    }
 }
 
-watch(() => props.modelValue, (val) => {
-    show.value = val
+// ✅ دالة لتحميل الحقول الأولية
+const loadInitialFields = () => {
+    // أولاً: حاول استعادة من localStorage
+    const hasSavedFields = restoreFieldsFromStorage()
+    
+    // ثانياً: إذا لم توجد حقول محفوظة واستخدمنا initialSelectedLeadIds
+    if (!hasSavedFields && props.initialSelectedLeadIds && Array.isArray(props.initialSelectedLeadIds)) {
+        const ids = [...props.initialSelectedLeadIds]
+        leadFields.value = leadFields.value.map(field => ({
+            ...field,
+            checked: ids.includes(field.id)
+        }))
+        console.log('Loaded from initialSelectedLeadIds:', ids)
+    }
+}
+
+const getAllFieldIds = computed(() => {
+    return leadFields.value.map(f => f.id)
 })
 
-watch(show, (val) => {
-    emit('update:modelValue', val)
-    if (val && props.initialSelectedLeadIds && Array.isArray(props.initialSelectedLeadIds)) {
-        const ids = [...props.initialSelectedLeadIds]
-        if (ids.includes('budget_to') && !ids.includes('budget_from')) {
-            ids.push('budget_from')
+const saveFieldsToLocalStorage = () => {
+    const selectedLeads = leadFields.value.filter(f => f.checked).map(f => f.id)
+    console.log('Saving to localStorage:', selectedLeads)
+    localStorage.setItem('selectedLeadFields', JSON.stringify(selectedLeads))
+    return selectedLeads
+}
+
+const applySettings = () => {
+    const selectedLeads = saveFieldsToLocalStorage()
+    emit('apply', { leads: selectedLeads })
+    show.value = false
+}
+
+const resetToDefaultFields = () => {
+    const defaultIds = [...defaultFieldIds]
+    leadFields.value = leadFields.value.map(field => ({
+        ...field,
+        checked: defaultIds.includes(field.id)
+    }))
+    localStorage.setItem('selectedLeadFields', JSON.stringify(defaultIds))
+    emit('apply', { leads: defaultIds })
+}
+
+const loadFromLocalStorage = () => {
+    try {
+        const savedFields = localStorage.getItem('selectedLeadFields')
+        if (savedFields) {
+            const parsed = JSON.parse(savedFields)
+            if (Array.isArray(parsed) && parsed.length) {
+                leadFields.value = leadFields.value.map(field => ({
+                    ...field,
+                    checked: parsed.includes(field.id)
+                }))
+                console.log('Loaded from localStorage in settings modal:', parsed)
+            }
         }
-        leadFields.value.forEach(f => {
-            f.checked = ids.includes(f.id)
-        })
+    } catch (error) {
+        console.error('Error loading from localStorage:', error)
     }
-})
+}
 
 const toggleTab = (tab) => {
     const index = activeTabs.value.indexOf(tab)
@@ -231,12 +253,24 @@ const allLeads = computed({
     set: (val) => leadFields.value.forEach(f => f.checked = val)
 })
 
-const applySettings = () => {
-    const selectedLeads = leadFields.value.filter(f => f.checked).map(f => f.id)
-    emit('apply', { leads: selectedLeads })
-    show.value = false
-}
+// مراقبة فتح الموديل
+watch(() => props.modelValue, (val) => {
+    show.value = val
+    if (val) {
+        loadFromLocalStorage()
+    }
+})
+
+watch(show, (val) => {
+    emit('update:modelValue', val)
+})
+
+// تحميل أولي للمكون
+onMounted(() => {
+    loadInitialFields()
+})
 </script>
+
 <style scoped>
 /* Hide the theme's custom dot */
 :deep(.form-check-input::before) {
@@ -335,7 +369,6 @@ const applySettings = () => {
     border-radius: 16px;
     padding: 24px;
     box-shadow: 1px 1px 5px 5px #00000005;
-
 }
 
 .section-title {

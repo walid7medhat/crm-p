@@ -184,11 +184,7 @@
                         <div v-if="hasClientTailContent" class="client-requirement-list client-requirement-list--tail">
                             <div class="info-group" v-if="lead?.branch != null">
                                 <label class="form-label-custom">Shared Branch</label>
-                                <div class="info-value">{{ formatWithMapping(lead?.branch, {
-                                    'Abu Dhabi': 'Abu Dhabi',
-                                    'Dubai': 'Dubai',
-                                    'Sharjah': 'Sharjah'
-                                }) }}</div>
+                                <div class="info-value">{{ lead?.branch }}</div>
                             </div>
                             <div class="info-group" v-if="lead?.available_date != null">
                                 <label class="form-label-custom">Available Date</label>

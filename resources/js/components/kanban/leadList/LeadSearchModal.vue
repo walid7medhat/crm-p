@@ -594,7 +594,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { BModal, BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -607,7 +607,8 @@ const props = defineProps({
     initialActivePill: { type: String, default: undefined },
     hasActiveFilters: { type: Boolean, default: true },
     currentQuery: { type: Object, default: null },
-    showTeamFilter: { type: Boolean, default: false }
+    showTeamFilter: { type: Boolean, default: false },
+        key: { type: Number, default: 0 }
 })
 
 const emit = defineEmits(['update:modelValue', 'search'])
@@ -627,6 +628,19 @@ const allResponsiblePersons = ref([])
 const allTeams = ref([])
 const selectedOffice = ref(null)
 const selectedPillType = ref(null)
+const validationErrors = ref({})
+
+watch(() => props.key, () => {
+    console.log('Modal key changed, reloading saved fields')
+    if (show.value) {
+        restoreSavedFields()
+        nextTick(() => {
+            // فرض إعادة حساب visibleSearchSections
+            const sections = visibleSearchSections.value
+            console.log('Sections after key change:', sections.length)
+        })
+    }
+})
 
 const normalizeOfficeId = (value) => {
     if (value === null || value === undefined || value === '') return null
@@ -805,13 +819,23 @@ function syncFormFromQuery(query) {
     Object.keys(queryToFormKeys).forEach(qKey => {
         const formKey = queryToFormKeys[qKey]
         if (query[qKey] !== undefined && query[qKey] !== '') {
-            if (formKey === 'office' && query[qKey]) {
+             if (formKey === 'office' && query[qKey]) {
                 next[formKey] = normalizeOfficeSelection(query[qKey])
-            } else {
+            } 
+            // أضف هذا الشرط لمعالجة qualityStatus
+            else if (qKey === 'status_lead') {
+                next.qualityStatus = mapApiStatusToFormValue(query[qKey], next.stageId)
+            }
+            else {
                 next[formKey] = query[qKey]
             }
         }
     })
+        if (query.status_lead !== undefined && query.status_lead !== '') {
+        next.qualityStatus = mapApiStatusToFormValue(query.status_lead, next.stageId)
+    }
+    
+  
     if ((!next.source || next.source === '') && query.source_website) {
         const sw = query.source_website
         next.sourceWebsite = Array.isArray(sw) ? sw.filter(Boolean) : [sw].filter(Boolean)
@@ -850,6 +874,33 @@ watch(() => props.hasActiveFilters, (val) => {
 watch(() => props.currentQuery, (query) => {
     if (show.value && props.hasActiveFilters) syncFormFromQuery(query)
 }, { deep: true })
+
+const displaySavedFieldValues = () => {
+    console.log('Currently selected fields:', selectedLeadFieldIds.value)
+    console.log('Form values:', form.value)
+    
+    // عرض القيم في console للتأكد
+    selectedLeadFieldIds.value.forEach(fieldId => {
+        const field = searchFieldsConfig.value.find(f => f.id === fieldId)
+        if (field && form.value[field.formKey]) {
+            console.log(`${field.label}:`, form.value[field.formKey])
+        }
+    })
+}
+
+// استدعائها عند فتح الموديل
+watch(() => props.modelValue, (val) => {
+    show.value = val
+    if (val) {
+        restoreSavedFields()
+        displaySavedFieldValues() // لعرض القيم في console
+        if (!props.hasActiveFilters) {
+            resetFormValues()
+        } else {
+            syncFormFromQuery(props.currentQuery)
+        }
+    }
+})
 
 const normalizeCityText = (value) => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim()
 
@@ -1029,6 +1080,41 @@ function getSelectedStageOrder(stageId) {
     const selected = stageOptions.value.find(s => Number(s.value) === Number(stageId))
     return Number(selected?.order || 0)
 }
+// أضف هذه الدالة المساعدة بعد تعريف qualityStatusOptions
+function mapApiStatusToFormValue(apiValue, stageId) {
+    if (!apiValue) return ''
+    
+    const stageOrder = getSelectedStageOrder(stageId)
+    let options = []
+    
+    if (stageOrder === 4) {
+        options = ['cold', 'warm', 'hot']
+    } else if (stageOrder === 8) {
+        options = ['lost_by_other_company', 'lost_by_our_company']
+    } else if (stageOrder === 9) {
+        options = ['no_answer', 'contacted', 'wrong_person']
+    } else if (stageOrder === 10) {
+        options = [
+            'not_interested', 'wrong_contact_details', 'no_answer_multiple_calls',
+            'job_seeker', 'broker', 'registered_by_mistake', 'spam_leads',
+            'already_assigned_to_another_agent', 'client_was_just_searching_online',
+            'number_does_not_exist'
+        ]
+    }
+    
+    // إذا كانت القيمة نصية موجودة في الخيارات، أرجعها كما هي
+    if (options.includes(apiValue)) return apiValue
+    
+    // خريطة التحويل من رقم إلى نص (حسب الحاجة)
+    const numericToTextMap = {
+        1: 'cold',
+        2: 'warm',
+        3: 'hot',
+        // أضف المزيد حسب ما يرسله الـ API
+    }
+    
+    return numericToTextMap[apiValue] || apiValue
+}
 // Quality Status Options based on selected stage (from database)
 const qualityStatusOptions = computed(() => {
     const selectedStageId = form.value.stageId
@@ -1091,7 +1177,7 @@ const showInteractionResult = computed(() => {
     if (!selectedStageId) return false
     const stageOrder = getSelectedStageOrder(selectedStageId)
     // يظهر لـ Stage 2 (Contacted)
-    return stageOrder === 2 
+    return stageOrder === 2  || stageOrder === 3
 })
 
 const interactionResultOptions = [
@@ -1311,11 +1397,29 @@ const assignedOnDisplay = computed(() => {
     return preset?.text || 'Select Date'
 })
 
+
+
+// أضف هذا بعد تعريف selectedLeadFieldIds
+const selectedLeadFieldIdsSet = computed(() => new Set(selectedLeadFieldIds.value))
+
+// عدّل visibleSearchFields لاستخدام Set
 const visibleSearchFields = computed(() => {
+    const stageOrder = getSelectedStageOrder(form.value.stageId)
+    const selectedSet = selectedLeadFieldIdsSet.value
+
     return searchFieldsConfig.value
-         .filter(f => {
-            if (!selectedLeadFieldIds.value.includes(f.id)) return false
-            if (f.id === 'interaction_result' && !showInteractionResult.value) return false
+        .filter(f => {
+            // استخدم Set للتحقق السريع
+            if (!selectedSet.has(f.id)) return false
+            
+            if (f.id === 'quality_status' && (stageOrder === 2 || stageOrder === 3)) {
+                return false
+            }
+            
+            if (f.id === 'interaction_result' && !(stageOrder === 2 || stageOrder === 3)) {
+                return false
+            }
+            
             return true
         })
         .map(f => ({
@@ -1332,12 +1436,23 @@ const visibleSearchFields = computed(() => {
                 f.formKey === 'purposePurchase' ? purposeOptions :
                 f.formKey === 'interactionResult' ? interactionResultOptions :
                 f.formKey === 'qualityStatus' ? qualityStatusOptions.value :
-                
                 (f.options || []),
             placeholder: f.placeholder || (f.type === 'select' ? 'Select' : '')
         }))
 })
-
+const visibleSearchSections = computed(() => {
+    // إضافة console.log للتأكد من التحديث
+    console.log('Recalculating visibleSearchSections with selected fields:', selectedLeadFieldIds.value)
+    
+    return searchFieldSections
+        .map(section => ({
+            ...section,
+            fields: section.fieldIds
+                .map(id => visibleSearchFields.value.find(field => field.id === id))
+                .filter(Boolean)
+        }))
+        .filter(section => section.fields.length > 0)
+})
 const searchFieldSections = [
     {
         id: 'lead-info',
@@ -1367,30 +1482,38 @@ const searchFieldSections = [
 
 ]
 
-const visibleSearchSections = computed(() =>
-    searchFieldSections
-        .map(section => ({
-            ...section,
-            fields: section.fieldIds
-                .map(id => visibleSearchFields.value.find(field => field.id === id))
-                .filter(Boolean)
-        }))
-        .filter(section => section.fields.length > 0)
-)
 
-const defaultLeadFieldIds = computed(() => {
-    return searchFieldsConfig.value
-        .filter(f => !['quality_status', 'lead_type', 'property_status', 'budget_from', 'interaction_result'].includes(f.id))
-        .map(f => f.id)
-})
 
-function restoreDefaultFields() {
-    selectedLeadFieldIds.value = [...defaultLeadFieldIds.value]
-}
+
+// أضف هذا بعد تعريف selectedLeadFieldIds
+watch(selectedLeadFieldIds, (newVal, oldVal) => {
+    console.log('selectedLeadFieldIds changed in LeadSearchModal:', {
+        oldLength: oldVal?.length,
+        newLength: newVal?.length,
+        newValues: newVal
+    })
+    
+    // فرض إعادة حساب visibleSearchSections
+    nextTick(() => {
+        const sections = visibleSearchSections.value
+        console.log('Visible sections recalculated:', sections.length)
+        sections.forEach(section => {
+            console.log(`Section ${section.title}: ${section.fields.length} fields`)
+        })
+    })
+}, { deep: true })
 
 function onFilterApply(payload) {
     if (payload && Array.isArray(payload.leads)) {
-        selectedLeadFieldIds.value = payload.leads.length ? payload.leads : [...defaultLeadFieldIds]
+        // ✅ استخدم getAllFieldIds بدلاً من defaultLeadFieldIds
+        const fieldsToSave = payload.leads.length ? payload.leads : [...getAllFieldIds.value]
+        selectedLeadFieldIds.value = fieldsToSave
+        
+        localStorage.setItem('selectedLeadFields', JSON.stringify(fieldsToSave))
+        console.log('Saved fields to localStorage:', fieldsToSave)
+        
+        const saved = localStorage.getItem('selectedLeadFields')
+        console.log('Verification - saved fields:', saved)
     }
 }
 
@@ -1829,8 +1952,9 @@ function applySearch() {
         search: form.value.search || undefined,
         source: sourceParam,
         interaction_result: form.value.interactionResult || undefined,
-        status_lead: (getSelectedStageOrder(form.value.stageId) === 8) ? undefined : (form.value.qualityStatus || undefined),
+        status_lead: form.value.qualityStatus || undefined,
         why_lost_lead: (getSelectedStageOrder(form.value.stageId) === 8) ? (form.value.qualityStatus || undefined) : undefined,
+
         created_from: createdFrom || undefined,  
         created_to: createdTo || undefined,     
         created_at: createdAt || undefined,   
@@ -1861,6 +1985,8 @@ function applySearch() {
     
     visibleFields.forEach(field => {
         const raw = form.value[field.formKey]
+       if (field.id === 'stage') return
+
         if (!hasValue(raw)) return
         
         const displayValue = getDisplayValue(
@@ -1872,7 +1998,7 @@ function applySearch() {
                     field.formKey === 'source' ? sourceOptions.value :
                     field.formKey === 'team' ? teamOptions.value : 
                     field.formKey === 'areaId' ? areaOptions.value : 
-                    field.formKey === 'qualityStatus' ? qualityStatusOptions :
+                    field.formKey === 'qualityStatus' ? qualityStatusOptions.value :
                     field.formKey === 'leadType' ? leadTypeOptions :
                     field.formKey === 'propertyStatus' ? propertyStatusOptions :
                     (field.options || [])
@@ -2017,9 +2143,19 @@ async function fetchStages() {
         const raw = res.data?.data
         const data = Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : [])
         if (data.length) {
+            // ✅ تصفية أول اتنين Stage (بناءً على order)
+            const filteredStages = data.filter(s => {
+                const order = Number(s.order || 0)
+                return order !== 1 && order !== 2
+            })
+            
             stageOptions.value = [
                 { value: null, text: 'Select Stage' },
-                ...data.map(s => ({ value: s.id, text: s.name, order: Number(s.order || 0) }))
+                ...filteredStages.map(s => ({ 
+                    value: s.id, 
+                    text: s.name, 
+                    order: Number(s.order || 0) 
+                }))
             ]
         }
     } catch (_) {}
@@ -2354,42 +2490,6 @@ watch(() => form.value.source, (newVal) => {
     }
 })
 
-// Watch for quality_status changes to auto-select stage
-watch(() => form.value.qualityStatus, (newVal) => {
-    if (!newVal) return
-    
-    // Quality Status mapping to Stage
-    const qualityToStageMap = {
-        // Stage 4: Qualified (Hot/Warm/Cold)
-        'cold': 4,
-        'warm': 4,
-        'hot': 4,
-        
-        // Stage 9: Lead Pool
-        'no_answer': 9,
-        'contacted': 9,
-        'wrong_person': 9,
-        
-        // Stage 10: Unqualified
-        'not_interested': 10,
-        'wrong_contact_details': 10,
-        'no_answer_multiple_calls': 10,
-        'job_seeker': 10,
-        'broker': 10,
-        'registered_by_mistake': 10,
-        'spam_leads': 10,
-        'already_assigned_to_another_agent': 10,
-        'client_was_just_searching_online': 10,
-        'number_does_not_exist': 10
-    }
-    
-    const stageId = qualityToStageMap[newVal]
-    if (stageId) {
-        form.value.stageId = stageId
-        console.log(`Auto-selected stage ${stageId} based on quality status: ${newVal}`)
-    }
-})
-
 // Watch for stage changes to update quality_status options and interaction_result visibility
 watch(() => form.value.stageId, (newVal) => {
     const stageOrder = getSelectedStageOrder(newVal)
@@ -2455,7 +2555,95 @@ watch(() => form.value.budgetTo, () => {
     }
 })
 
+watch(() => props.modelValue, (val) => {
+    show.value = val
+    if (val) {
+        console.log('Modal opening with initialActivePill:', props.initialActivePill)
+        if (props.initialActivePill) {
+            activePill.value = props.initialActivePill
+            console.log('Setting activePill to:', props.initialActivePill)
+        }
+        
+        restoreSavedFields()
+        
+        if (!props.hasActiveFilters) {
+            resetFormValues()
+        } else {
+            syncFormFromQuery(props.currentQuery)
+        }
+    }
+})
+
+// تأكد من أن restoreSavedFields هي async
+const restoreSavedFields = async () => {
+    try {
+        const savedFields = localStorage.getItem('selectedLeadFields')
+        console.log('Raw savedFields from localStorage:', savedFields)
+        
+        if (savedFields) {
+            const parsed = JSON.parse(savedFields)
+            console.log('Parsed saved fields:', parsed)
+            
+            if (Array.isArray(parsed) && parsed.length) {
+                const allFieldIds = getAllFieldIds.value
+                console.log('All available field IDs:', allFieldIds)
+                
+                const validFields = parsed.filter(id => allFieldIds.includes(id))
+                console.log('Valid fields after filtering:', validFields)
+                
+                if (validFields.length === 0) {
+                    console.warn('No valid fields found, using all fields')
+                    selectedLeadFieldIds.value = [...allFieldIds]
+                } else {
+                    selectedLeadFieldIds.value = validFields
+                }
+            } else {
+                selectedLeadFieldIds.value = [...getAllFieldIds.value]
+            }
+        } else {
+            selectedLeadFieldIds.value = [...getAllFieldIds.value]
+        }
+        
+        console.log('Final selectedLeadFieldIds after restore:', selectedLeadFieldIds.value)
+        
+        // انتظر حتى يتم تحديث Vue
+        await nextTick()
+        
+        // فرض تحديث visibleSearchSections
+        const sections = visibleSearchSections.value
+        console.log('Sections after restore:', sections.map(s => ({
+            title: s.title,
+            fieldCount: s.fields.length,
+            fieldIds: s.fields.map(f => f.id)
+        })))
+        
+    } catch (error) {
+        console.error('Error restoring saved fields:', error)
+        selectedLeadFieldIds.value = [...getAllFieldIds.value]
+    }
+}
+
+const defaultLeadFieldIds = computed(() => {
+    // قائمة الحقول الافتراضية تشمل كل الحقول الأساسية
+    return searchFieldsConfig.value
+        .filter(f => !['quality_status', 'lead_type', 'property_status', 'budget_from', 'interaction_result'].includes(f.id))
+        .map(f => f.id)
+})
+
+const getAllFieldIds = computed(() => {
+    return searchFieldsConfig.value.map(f => f.id)
+})
+
+function restoreDefaultFields() {
+    selectedLeadFieldIds.value = [...getAllFieldIds.value] // هذا يشمل كل الحقول بما فيها bedrooms و location
+    // selectedLeadFieldIds.value = [...defaultLeadFieldIds.value]
+    
+    localStorage.setItem('selectedLeadFields', JSON.stringify(selectedLeadFieldIds.value))
+    console.log('Reset to default fields:', selectedLeadFieldIds.value)
+}
+
 onMounted(async () => {
+    console.log('LeadSearchModal mounted, key:', props.key)
     document.addEventListener('click', onDocumentClick)
     updateUserFromStorage() 
     
@@ -2467,10 +2655,13 @@ onMounted(async () => {
         fetchTeamsWithFilter(),
         fetchOffices(),
         fetchAreas(),
-            fetchPropertyTypes()
+        fetchPropertyTypes()
     ])
     
-    console.log('Initial data loaded')
+    // تحميل الحقول المحفوظة عند التحميل
+    await restoreSavedFields()
+    
+    console.log('Initial data loaded, selected fields:', selectedLeadFieldIds.value)
 })
 
 onBeforeUnmount(() => {
