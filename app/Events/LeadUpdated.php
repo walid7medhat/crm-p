@@ -2,8 +2,10 @@
 
 namespace App\Events;
 
+use App\Http\Resources\Mobile\MobileLeadCardResource;
 use App\Models\Lead;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -69,7 +71,24 @@ class LeadUpdated implements ShouldBroadcast
             'changes'     => $this->changes,
             'message'     => $this->getMessage(),
             'timestamp'   => now()->toISOString(),
+            /** Semantic type for mobile / Echo clients (Pusher event name stays `lead.updated` for BC). */
+            'canonical_event' => $this->resolveCanonicalEvent(),
+            /** Flat card DTO — avoids deep nesting on mobile. */
+            'lead_mobile' => (new MobileLeadCardResource($this->lead))->resolve(new Request()),
         ];
+    }
+
+    /**
+     * Maps legacy action_type to stable lifecycle names (REST-style).
+     */
+    private function resolveCanonicalEvent(): string
+    {
+        return match ($this->actionType) {
+            'created' => 'lead.created',
+            'deleted' => 'lead.deleted',
+            'stage_changed', 'revert' => 'lead.moved',
+            default => 'lead.updated',
+        };
     }
 
    

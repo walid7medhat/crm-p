@@ -3,8 +3,9 @@ import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
 import tailwindcss from 'tailwindcss';
 import { resolve } from 'path';
+import { viteProjectMapPlugin } from './scripts/dev/vite-plugin-project-map.mjs';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
     base: '/',
     plugins: [
         laravel({
@@ -16,6 +17,7 @@ export default defineConfig({
             refresh: false,
         }),
         vue(),
+        ...(command === 'serve' ? [viteProjectMapPlugin()] : []),
     ],
     resolve: {
         alias: {
@@ -41,4 +43,4 @@ export default defineConfig({
             },
         },
     },
-});
+}));

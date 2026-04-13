@@ -3,11 +3,17 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite --host 0.0.0.0 --port 5173"
+        "dev": "vite --host 0.0.0.0 --port 5173",
+        "map:build": "node scripts/dev/build-project-map.mjs"
     },
     "devDependencies": {
+        "@vue-flow/background": "^1.3.2",
+        "@vue-flow/controls": "^1.1.3",
+        "@vue-flow/core": "^1.48.2",
+        "@vue-flow/minimap": "^1.5.4",
         "autoprefixer": "^10.4.21",
         "axios": "^1.13.1",
+        "chokidar": "^4.0.3",
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^1.2.0",
         "postcss": "^8.5.6",

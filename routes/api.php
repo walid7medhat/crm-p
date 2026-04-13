@@ -46,6 +46,8 @@ use App\Http\Controllers\Api\AbuDhabiBenchmarkController;
 use App\Http\Controllers\Api\AdminEmailController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\LeadImportController;
+use App\Http\Controllers\Api\Mobile\MobileKanbanController;
+use App\Http\Controllers\Api\Mobile\MobileLeadMoveController;
 Route::get('/test-email', function () {
     try {
         // Test basic email
@@ -361,6 +363,12 @@ Route::prefix('leads')->group(function(){
     Route::get('integrations/meta/form-fields/{form_id}',[IntegrationController::class,'getFormFields']);
     
 Route::post('/search-alerts',[ListingController::class, 'store_search_alert']);
+
+    /** Mobile Kanban API — versioned, additive; does not replace existing routes. */
+    Route::prefix('v1/mobile')->group(function () {
+        Route::get('/kanban', [MobileKanbanController::class, 'show']);
+        Route::post('/leads/{lead}/move', [MobileLeadMoveController::class, 'store']);
+    });
 
 Route::prefix('listings')->group(function(){
         Route::post('/areas/coordinates/bulk', [AreaController::class, 'bulkUpdateCoordinates']);

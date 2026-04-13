@@ -13,6 +13,7 @@
           :options="areas"
           :disabled="isLoadingAreas"
           :multiple="true"
+          :clearable="false"
           :close-on-select="false"
           :clear-search-on-select="false"
           :append-to-body="false"
@@ -26,13 +27,8 @@
                   <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
               </span>
           </template>
-          <template #clear-indicator="{ attributes }">
-            <span v-bind="attributes">
-               <i class="ri-close-line custom-clear"></i>       
-             </span>
-          </template>
           <template #option="option">
-            <div class="location-option">
+            <div class="location-option" :class="{ selected: isAreaSelected(option) }">
               <i class="ri-map-pin-line location-option-icon"></i>
               <div class="location-option-text">
                 <span class="location-option-name">{{ locationFirstLine(option) }}</span>
@@ -80,88 +76,128 @@
       </div>
 
       <div class="listing-pill-row">
-        <v-select
-          v-model="selectedSaleRent"
-          :options="typeOptions"
-          label="label"
-          :reduce="option => option.value"
-          :searchable="false"
-          :append-to-body="false"
-          placeholder="Rent"
-          class="custom-select listing-pill-select listing-pill-select-sm"
-          @update:modelValue="handleFilterChange"
-        >
-           <template #open-indicator="{ attributes }">
-                <span v-bind="attributes">
-                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                </span>
-            </template>
-            <template #clear-indicator="{ attributes }">
-            <span v-bind="attributes">
-               <i class="ri-close-line custom-clear"></i>            </span>
-          </template>
-        </v-select>
+        <div class="listing-sale-rent-wrap">
+          <button
+            type="button"
+            class="listing-pill-btn listing-sale-rent-btn"
+            @click.stop="toggleSaleRentDropdown"
+          >
+            <span>{{ saleRentButtonLabel }}</span>
+            <i class="ri-arrow-down-s-line"></i>
+          </button>
+          <div v-if="showSaleRentDropdown" class="listing-sale-rent-popover" @click.stop>
+            <div class="listing-pop-title-sm">Purpose</div>
+            <div class="listing-tab-switch listing-tab-switch-purpose">
+              <button
+                type="button"
+                class="listing-tab-btn"
+                :class="{ active: selectedSaleRent === 'Sale' }"
+                @click="selectSaleRentOption('Sale')"
+              >
+                Buy
+              </button>
+              <button
+                type="button"
+                class="listing-tab-btn"
+                :class="{ active: selectedSaleRent === 'Rent' }"
+                @click="selectSaleRentOption('Rent')"
+              >
+                Rent
+              </button>
+            </div>
+            <div class="listing-pop-actions listing-pop-actions--dual">
+              <button type="button" class="btn btn-outline-secondary" @click="resetSaleRentSelection">Reset</button>
+              <button type="button" class="btn btn-primary" @click="applySaleRentSelection">Done</button>
+            </div>
+          </div>
+        </div>
 
-        <v-select
-          v-model="selectedPropertyType"
-          :options="propertyTypes"
-          :disabled="isLoadingPropertyTypes"
-          label="name"
-          :searchable="false"
-          :append-to-body="false"
-          placeholder="Property type"
-          class="custom-select listing-pill-select"
-          @update:modelValue="handleFilterChange"
-        >
-           <template #open-indicator="{ attributes }">
-              <span v-bind="attributes">
-                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-              </span>
-          </template>
-          <template #clear-indicator="{ attributes }">
-            <span v-bind="attributes">
-               <i class="ri-close-line custom-clear"></i>            </span>
-          </template>
-        </v-select>
+        <div class="listing-property-type-wrap">
+          <button
+            type="button"
+            class="listing-pill-btn listing-property-type-btn"
+            :disabled="isLoadingPropertyTypes"
+            @click.stop="togglePropertyTypeDropdown"
+          >
+            <span>{{ propertyTypeButtonLabel }}</span>
+            <i class="ri-arrow-down-s-line"></i>
+          </button>
+          <div v-if="showPropertyTypeDropdown" class="listing-property-type-popover" @click.stop>
+            <div class="listing-pop-title-sm">Property Type</div>
+            <div class="listing-tab-switch">
+              <button
+                type="button"
+                class="listing-tab-btn"
+                :class="{ active: propertyTypeTab === 'residential' }"
+                @click="propertyTypeTab = 'residential'"
+              >
+                Residential
+              </button>
+              <button
+                type="button"
+                class="listing-tab-btn"
+                :class="{ active: propertyTypeTab === 'commercial' }"
+                @click="propertyTypeTab = 'commercial'"
+              >
+                Commercial
+              </button>
+            </div>
+            <div class="listing-property-grid">
+              <button
+                v-for="type in visiblePropertyTypes"
+                :key="type.id"
+                type="button"
+                class="listing-property-pill"
+                :class="{ active: isPropertyTypeSelected(type) }"
+                @click="togglePropertyTypeOption(type)"
+              >
+                {{ type.name }}
+              </button>
+            </div>
+            <div class="listing-pop-actions listing-pop-actions--dual">
+              <button type="button" class="btn btn-outline-secondary" @click="resetPropertyTypeSelection">Reset</button>
+              <button type="button" class="btn btn-primary" @click="applyPropertyTypeSelection">Done</button>
+            </div>
+          </div>
+        </div>
 
         <div class="listing-beds-wrap">
           <button type="button" class="listing-pill-btn" @click.stop="toggleBedsDropdown">
-           <span>
-                {{
-                  selectedBeds || selectedBaths
-                    ? `${selectedBeds || ''} Beds / ${selectedBaths || ''} Baths`
-                    : 'Beds & Baths'
-                }}
-              </span>
+            <span>{{ bedsBathsButtonLabel }}</span>
             <i class="ri-arrow-down-s-line"></i>
           </button>
           <div v-if="showBedsDropdown" class="listing-beds-popover" @click.stop>
-            <div class="listing-pop-label">Bedrooms</div>
+            <div class="listing-pop-title-sm">Beds & Baths</div>
+            <div class="listing-pop-label">Beds</div>
             <div class="listing-chip-grid">
               <button
                 v-for="bed in bedsOptions"
                 :key="bed"
                 type="button"
                 class="listing-chip-btn"
-                :class="{ active: selectedBeds === bed }"
+                :class="{ active: selectedBeds.includes(bed) }"
                 @click="selectBedsOption(bed)"
               >
                 {{ bed }}
               </button>
             </div>
-            <div class="listing-pop-label mt-2">Bathrooms</div>
+            <div class="listing-pop-label mt-2">Baths</div>
               <div class="listing-chip-grid">
                 <button
                   v-for="bath in bathsOptions"
                   :key="bath"
                   type="button"
                   class="listing-chip-btn"
-                  :class="{ active: selectedBaths === bath }"
+                  :class="{ active: selectedBaths.includes(bath) }"
                   @click="selectBathOption(bath)"
                 >
                   {{ bath }}
                 </button>
               </div>
+            <div class="listing-pop-actions listing-pop-actions--dual mt-3">
+              <button type="button" class="btn btn-outline-secondary" @click="resetBedsBaths">Reset</button>
+              <button type="button" class="btn btn-primary" @click="applyBedsBaths">Done</button>
+            </div>
           </div>
         </div>
 
@@ -258,30 +294,6 @@
                   </template>
               </v-select>
               </div>
-              <div>
-                <label>Sort By</label>
-                <v-select
-                  v-model="selectedSort"
-                  :options="sortOptions"
-                  label="label"
-                  :reduce="option => option.value"
-                  :searchable="false"
-                  :append-to-body="false"
-                  placeholder="Most Recent"
-                  class="custom-select listing-pop-select"
-                  @update:modelValue="handleFilterChange"
-                >
-               <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
-                </template>
-                <template #clear-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                     <i class="ri-close-line custom-clear"></i>                  </span>
-                </template>
-              </v-select>
-              </div>
               <div class="listing-pop-field--full"   v-if="!isMyListingPage || (isMyListingPage && isTeamLeadManager)">
                 <label>Agent</label>
                 <v-select
@@ -315,6 +327,29 @@
           </div>
         </div>
 
+        <div class="listing-sort-wrap">
+          <button type="button" class="listing-icon-circle listing-sort-btn" title="Sort by" @click.stop="toggleSortDropdown">
+            <i class="ri-sort-desc"></i>
+          </button>
+          <div v-if="showSortDropdown" class="listing-sort-popover" @click.stop>
+            <div class="listing-pop-title-sm">Sort By</div>
+            <button
+              v-for="option in sortOptions"
+              :key="`sort-${option.value}`"
+              type="button"
+              class="listing-sort-option"
+              :class="{ active: sortDraft === option.value }"
+              @click="selectSortOption(option.value)"
+            >
+              {{ option.label }}
+            </button>
+            <div class="listing-pop-actions listing-pop-actions--dual mt-2">
+              <button type="button" class="btn btn-outline-secondary" @click="resetSortSelection">Reset</button>
+              <button type="button" class="btn btn-primary" @click="applySortSelection">Done</button>
+            </div>
+          </div>
+        </div>
+
         <router-link
           to="/notify-me"
           class="listing-icon-circle listing-notify-btn"
@@ -344,42 +379,11 @@
             <i class="fa fa-pencil-alt"></i> Draft
           </button>
           <span class="status-sort-separator" v-if="showStatusTabs"></span>
-          <button
-            type="button"
-            class="status-btn hot-deal-btn"
-            :class="{ active: selectedSort === 'hot_deal' }"
-              @click="toggleHotDeal()"
-
-          >
-            <i class="ri-fire-line" aria-hidden="true"></i>
-            Hot Deal
-          </button>
-          <v-select
-            :modelValue="quickSortForDropdown"
-            :options="quickSortSelectOptions"
-            label="label"
-            :reduce="(option) => option.value"
-            :searchable="false"
-            :append-to-body="false"
-            placeholder="Price & date sort"
-            class="custom-select listing-status-row-sort-select"
-            @update:modelValue="setQuickSort"
-          >
-         <template #open-indicator="{ attributes }">
-            <span v-bind="attributes">
-                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-            </span>
-        </template>
-        <template #clear-indicator="{ attributes }">
-          <span v-bind="attributes">
-             <i class="ri-close-line custom-clear"></i>          </span>
-        </template>
-          </v-select>
         </div>
       </div>
     </div>
 
-    <div v-if="showPriceDropdown || showMoreFilters || showBedsDropdown" class="dropdown-overlay" @click="closeAllDropdowns"></div>
+    <div v-if="showPriceDropdown || showMoreFilters || showBedsDropdown || showPropertyTypeDropdown || showSortDropdown || showSaleRentDropdown" class="dropdown-overlay" @click="closeAllDropdowns"></div>
 
     <div v-if="isMobileViewport && showMobileFilterSheet" class="mobile-filter-sheet-overlay" @click.self="showMobileFilterSheet = false">
       <div class="mobile-filter-sheet" @click.stop>
@@ -408,16 +412,22 @@
 
           <details open>
             <summary>Property Type</summary>
-            <v-select
-              v-model="selectedPropertyType"
-              :options="propertyTypes"
-              :disabled="isLoadingPropertyTypes"
-              label="name"
-              :append-to-body="false"
-              placeholder="Property type"
-              class="custom-select listing-pop-select"
-              @update:modelValue="handleFilterChange"
-            />
+            <div class="listing-tab-switch listing-tab-switch-mobile">
+              <button type="button" class="listing-tab-btn" :class="{ active: propertyTypeTab === 'residential' }" @click="propertyTypeTab = 'residential'">Residential</button>
+              <button type="button" class="listing-tab-btn" :class="{ active: propertyTypeTab === 'commercial' }" @click="propertyTypeTab = 'commercial'">Commercial</button>
+            </div>
+            <div class="listing-property-grid listing-property-grid-mobile">
+              <button
+                v-for="type in visiblePropertyTypes"
+                :key="'m-type-' + type.id"
+                type="button"
+                class="listing-property-pill"
+                :class="{ active: isPropertyTypeSelected(type) }"
+                @click="togglePropertyTypeOption(type)"
+              >
+                {{ type.name }}
+              </button>
+            </div>
           </details>
 
           <details>
@@ -429,7 +439,7 @@
                 :key="'m-bed-' + bed"
                 type="button"
                 class="listing-chip-btn"
-                :class="{ active: selectedBeds === bed }"
+                :class="{ active: selectedBeds.includes(bed) }"
                 @click="selectBedsOption(bed)"
               >{{ bed }}</button>
             </div>
@@ -440,7 +450,7 @@
                 :key="'m-bath-' + bath"
                 type="button"
                 class="listing-chip-btn"
-                :class="{ active: selectedBaths === bath }"
+                :class="{ active: selectedBaths.includes(bath) }"
                 @click="selectBathOption(bath)"
               >{{ bath }}</button>
             </div>
@@ -555,12 +565,13 @@ export default {
      const isLoadingProjects = ref(false);
       const selectedProject = ref(null); 
       const selectedCompletionStatus = ref(null); 
-    const selectedSaleRent = ref("");
+    const selectedSaleRent = ref("All");
     const selectedStatus = ref("All");
     const selectedArea = ref([]);
     const selectedPropertyType = ref(null);
+    const selectedPropertyTypes = ref([]);
     const selectedAgent = ref(null);
-    const selectedBeds = ref("");
+    const selectedBeds = ref([]);
     const selectedSort = ref("");
 
     const priceFrom = ref(0);
@@ -572,6 +583,10 @@ export default {
     const showSizeDropdown = ref(false);
     const showMoreFilters = ref(false);
     const showBedsDropdown = ref(false);
+    const showPropertyTypeDropdown = ref(false);
+    const showSortDropdown = ref(false);
+    const sortDraft = ref("created_at_desc");
+    const showSaleRentDropdown = ref(false);
     const showMobileFilterSheet = ref(false);
     const isMobileViewport = ref(false);
     let resizeHandler = null;
@@ -592,9 +607,10 @@ const isMyListingPage = computed(() => {
     // Static options
     const saleRentOptions = ["All", "Sale", "Rent"];
     const statusOptions = ["All", "Ready", "Offplan"];
-    const bedsOptions = ["Studio", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
-    const selectedBaths = ref("");
+    const bedsOptions = ["Studio", "1", "2", "3", "4", "5", "6", "7", "8+"];
+    const selectedBaths = ref([]);
 const bathsOptions = ["1", "2", "3", "4", "5", "6+"];
+    const propertyTypeTab = ref("residential");
      const completionStatusOptions = [
       { label: "All", value: null },
       { label: "Completed", value: "Completed" },
@@ -608,14 +624,14 @@ const typeOptions = [
 
 const sortOptions = [
   { label: "Hot Deal", value: "hot_deal" },
-  { label: "Latest Listings", value: "created_at_desc" },
+  { label: "Most Recent", value: "created_at_desc" },
   { label: "Price: Low to High", value: "price_asc" },
   { label: "Price: High to Low", value: "price_desc" }
 ];
 
     /** Status row: dropdown for price/date only (Hot Deal stays a separate button). */
     const quickSortSelectOptions = [
-      { label: "Latest Listings", value: "created_at_desc" },
+      { label: "Most Recent", value: "created_at_desc" },
       { label: "Price: Low to High", value: "price_asc" },
       { label: "Price: High to Low", value: "price_desc" }
     ];
@@ -665,6 +681,12 @@ const sortOptions = [
   }
 };
 
+    const inferPropertyCategory = (name) => {
+      const value = String(name || "").toLowerCase();
+      const commercialKeywords = ["office", "shop", "retail", "warehouse", "labour", "hotel", "factory", "showroom", "commercial"];
+      return commercialKeywords.some((kw) => value.includes(kw)) ? "commercial" : "residential";
+    };
+
     // Fetch property types from API
     const fetchPropertyTypes = async () => {
       try {
@@ -673,10 +695,14 @@ const sortOptions = [
         
         const propertyTypesData = response.data.data || response.data;
         
-        propertyTypes.value = propertyTypesData.map(type => ({
-          id: type.id,
-          name: type.name || type.type_name || type.title
-        }));
+        propertyTypes.value = propertyTypesData.map(type => {
+          const name = type.name || type.type_name || type.title;
+          return {
+            id: type.id,
+            name,
+            category: inferPropertyCategory(name)
+          };
+        });
         
         console.log("✅ Property types loaded:", propertyTypes.value.length);
         
@@ -686,10 +712,158 @@ const sortOptions = [
         isLoadingPropertyTypes.value = false;
       }
     };
-const selectBathOption = (bath) => {
-  selectedBaths.value = selectedBaths.value === bath ? "" : bath;
-  handleFilterChange();
-};
+    const propertyTypesByTab = computed(() => {
+      return {
+        residential: propertyTypes.value.filter((item) => item.category !== "commercial"),
+        commercial: propertyTypes.value.filter((item) => item.category === "commercial"),
+      };
+    });
+
+    const visiblePropertyTypes = computed(() => {
+      return propertyTypesByTab.value[propertyTypeTab.value] || [];
+    });
+
+    const isPropertyTypeSelected = (type) => {
+      return selectedPropertyTypes.value.some((item) => Number(item.id) === Number(type.id));
+    };
+
+    const togglePropertyTypeOption = (type) => {
+      const idx = selectedPropertyTypes.value.findIndex((item) => Number(item.id) === Number(type.id));
+      if (idx >= 0) {
+        selectedPropertyTypes.value.splice(idx, 1);
+      } else {
+        selectedPropertyTypes.value.push(type);
+      }
+      selectedPropertyType.value = selectedPropertyTypes.value[0] || null;
+    };
+
+    const propertyTypeButtonLabel = computed(() => {
+      if (!selectedPropertyTypes.value.length) return "Residential";
+      if (selectedPropertyTypes.value.length === 1) return selectedPropertyTypes.value[0].name;
+      return `${selectedPropertyTypes.value.length} Property Types`;
+    });
+
+    const bedsBathsButtonLabel = computed(() => {
+      const bedsCount = selectedBeds.value.length;
+      const bathsCount = selectedBaths.value.length;
+      if (!bedsCount && !bathsCount) return "Beds & Baths";
+      if (bedsCount && bathsCount) return `${bedsCount} Beds, ${bathsCount} Baths`;
+      if (bedsCount) return `${bedsCount} Beds`;
+      return `${bathsCount} Baths`;
+    });
+
+    const quickSortLabel = computed(() => {
+      const row = quickSortSelectOptions.find((item) => item.value === selectedSort.value);
+      return row?.label || "Most Recent";
+    });
+
+    const saleRentButtonLabel = computed(() => {
+      if (selectedSaleRent.value === "Sale") return "Buy";
+      if (selectedSaleRent.value === "Rent") return "Rent";
+      return "Buy";
+    });
+
+    const toggleSaleRentDropdown = () => {
+      showSaleRentDropdown.value = !showSaleRentDropdown.value;
+      if (showSaleRentDropdown.value) {
+        showSortDropdown.value = false;
+        showPropertyTypeDropdown.value = false;
+        showBedsDropdown.value = false;
+        showPriceDropdown.value = false;
+        showMoreFilters.value = false;
+      }
+    };
+
+    const selectSaleRentOption = (value) => {
+      selectedSaleRent.value = value;
+    };
+
+    const resetSaleRentSelection = () => {
+      selectedSaleRent.value = "All";
+      handleFilterChange();
+    };
+
+    const applySaleRentSelection = () => {
+      showSaleRentDropdown.value = false;
+      handleFilterChange();
+    };
+
+    const toggleSortDropdown = () => {
+      showSortDropdown.value = !showSortDropdown.value;
+      if (showSortDropdown.value) {
+        sortDraft.value = selectedSort.value || "created_at_desc";
+        showSaleRentDropdown.value = false;
+        showPropertyTypeDropdown.value = false;
+        showBedsDropdown.value = false;
+        showPriceDropdown.value = false;
+        showMoreFilters.value = false;
+      }
+    };
+
+    const selectSortOption = (value) => {
+      sortDraft.value = value;
+    };
+
+    const resetSortSelection = () => {
+      sortDraft.value = "created_at_desc";
+    };
+
+    const applySortSelection = () => {
+      selectedSort.value = sortDraft.value || "created_at_desc";
+      showSortDropdown.value = false;
+      handleFilterChange();
+    };
+
+    const togglePropertyTypeDropdown = () => {
+      showPropertyTypeDropdown.value = !showPropertyTypeDropdown.value;
+      if (showPropertyTypeDropdown.value) {
+        showSaleRentDropdown.value = false;
+        showSortDropdown.value = false;
+        showBedsDropdown.value = false;
+        showPriceDropdown.value = false;
+        showMoreFilters.value = false;
+      }
+    };
+
+    const applyPropertyTypeSelection = () => {
+      showPropertyTypeDropdown.value = false;
+      handleFilterChange();
+    };
+
+    const resetPropertyTypeSelection = () => {
+      selectedPropertyTypes.value = [];
+      selectedPropertyType.value = null;
+      handleFilterChange();
+    };
+
+    const selectBedsOption = (bed) => {
+      const idx = selectedBeds.value.indexOf(bed);
+      if (idx >= 0) {
+        selectedBeds.value.splice(idx, 1);
+      } else {
+        selectedBeds.value.push(bed);
+      }
+    };
+
+    const selectBathOption = (bath) => {
+      const idx = selectedBaths.value.indexOf(bath);
+      if (idx >= 0) {
+        selectedBaths.value.splice(idx, 1);
+      } else {
+        selectedBaths.value.push(bath);
+      }
+    };
+
+    const applyBedsBaths = () => {
+      showBedsDropdown.value = false;
+      handleFilterChange();
+    };
+
+    const resetBedsBaths = () => {
+      selectedBeds.value = [];
+      selectedBaths.value = [];
+      handleFilterChange();
+    };
 const getUserFromStorage = () => {
     try {
         const userData = localStorage.getItem('user')
@@ -699,6 +873,7 @@ const getUserFromStorage = () => {
         return null
     }
 }
+
 const user = ref(getUserFromStorage())
 
 // Check if user is admin or super_admin (same pattern as header/index.vue)
@@ -765,9 +940,9 @@ const isTeamLeadManager = computed(() => {
       return selectedSaleRent.value !== "All" || 
              selectedStatus.value !== "All" || 
              hasSelectedAreas || 
-             selectedPropertyType.value || 
-             selectedBeds.value ||
-             selectedBaths.value || 
+             selectedPropertyTypes.value.length > 0 || 
+             selectedBeds.value.length > 0 ||
+             selectedBaths.value.length > 0 || 
              priceFrom.value > 0 || 
              priceTo.value < 10000000 || 
              sizeFrom.value > 0 || 
@@ -778,9 +953,9 @@ const isTeamLeadManager = computed(() => {
     const mobileActiveFilterCount = computed(() => {
       let n = 0;
       if (selectedSaleRent.value && selectedSaleRent.value !== "All") n++;
-      if (selectedPropertyType.value) n++;
-      if (selectedBeds.value) n++;
-      if (selectedBaths.value) n++;
+      if (selectedPropertyTypes.value.length) n++;
+      if (selectedBeds.value.length) n++;
+      if (selectedBaths.value.length) n++;
       if (priceFrom.value > 0 || priceTo.value < 10000000) n++;
       if (selectedCompletionStatus.value !== null) n++;
       if (selectedSort.value && selectedSort.value !== "created_at_desc") n++;
@@ -832,7 +1007,10 @@ const isTeamLeadManager = computed(() => {
         apiFilters.project_id = filters.project.id;
       }
       // Property Type Filter
-      if (filters.propertyType) {
+      if (Array.isArray(filters.propertyTypes) && filters.propertyTypes.length) {
+        apiFilters.property_type_ids = filters.propertyTypes.map((item) => item?.id).filter(Boolean);
+        apiFilters.property_type_id = apiFilters.property_type_ids[0];
+      } else if (filters.propertyType) {
         apiFilters.property_type_id = filters.propertyType.id;
       }
       if (filters.agent) {
@@ -840,16 +1018,21 @@ const isTeamLeadManager = computed(() => {
       }
 
       // Bedrooms Filter
-      if (filters.beds) {
-        if (filters.beds == 'Studio') {
+      const bedList = Array.isArray(filters.bedsList) ? filters.bedsList : (filters.beds ? [filters.beds] : []);
+      if (bedList.length) {
+        const firstBed = bedList[0];
+        if (firstBed === 'Studio') {
           apiFilters.number_of_bedrooms = 'Studio';
         } else {
-          apiFilters.number_of_bedrooms = parseInt(filters.beds);
+          apiFilters.number_of_bedrooms = parseInt(firstBed);
         }
+        apiFilters.number_of_bedrooms_in = bedList;
       }
-      if (filters.baths) {
-          apiFilters.number_of_bathrooms = parseInt(filters.baths);
-        }
+      const bathList = Array.isArray(filters.bathsList) ? filters.bathsList : (filters.baths ? [filters.baths] : []);
+      if (bathList.length) {
+        apiFilters.number_of_bathrooms = parseInt(bathList[0]);
+        apiFilters.number_of_bathrooms_in = bathList;
+      }
 
       // Price Range Filter
       if (filters.priceFrom > 0 || filters.priceTo < 10000000) {
@@ -886,16 +1069,19 @@ const isTeamLeadManager = computed(() => {
           status: selectedStatus.value,
           area: selectedArea.value,
           project: selectedProject.value,
-          propertyType: selectedPropertyType.value,
+          propertyType: selectedPropertyTypes.value[0] || null,
+          propertyTypes: selectedPropertyTypes.value,
           agent: selectedAgent.value,
-          beds: selectedBeds.value,
+          beds: selectedBeds.value[0] || "",
+          bedsList: selectedBeds.value,
           priceFrom: priceFrom.value,
           priceTo: priceTo.value,
           sizeFrom: sizeFrom.value,
           sizeTo: sizeTo.value,
           sort: selectedSort.value,
            referenceNumber: searchReferenceNumber.value,
-           baths: selectedBaths.value,
+           baths: selectedBaths.value[0] || "",
+           bathsList: selectedBaths.value,
         };
         
         console.log("🔍 Auto-search with filters:", filters);
@@ -990,10 +1176,13 @@ const isTeamLeadManager = computed(() => {
         status: selectedStatus.value,
         area: selectedArea.value,
          project: selectedProject.value,
-        propertyType: selectedPropertyType.value,
+        propertyType: selectedPropertyTypes.value[0] || null,
+        propertyTypes: selectedPropertyTypes.value,
         agent: selectedAgent.value,
-        beds: selectedBeds.value,
-        baths: selectedBaths.value,
+        beds: selectedBeds.value[0] || "",
+        bedsList: selectedBeds.value,
+        baths: selectedBaths.value[0] || "",
+        bathsList: selectedBaths.value,
         priceFrom: priceFrom.value,
         priceTo: priceTo.value,
         sizeFrom: sizeFrom.value,
@@ -1024,11 +1213,15 @@ const isTeamLeadManager = computed(() => {
     const syncPropertyTypeAndAgentFromLoadedOptions = () => {
       const filters = props.initialFilters;
       if (!filters) return;
-      if (filters.propertyType?.id != null && propertyTypes.value.length) {
-        const found = propertyTypes.value.find(
-          (p) => Number(p.id) === Number(filters.propertyType.id)
-        );
-        if (found) selectedPropertyType.value = found;
+      const sourceList = Array.isArray(filters.propertyTypes) && filters.propertyTypes.length
+        ? filters.propertyTypes
+        : (filters.propertyType ? [filters.propertyType] : []);
+      if (sourceList.length && propertyTypes.value.length) {
+        const picked = sourceList
+          .map((f) => propertyTypes.value.find((p) => Number(p.id) === Number(f?.id)))
+          .filter(Boolean);
+        selectedPropertyTypes.value = picked;
+        selectedPropertyType.value = picked[0] || null;
       }
       if (filters.agent?.id != null && agents.value.length) {
         const found = agents.value.find(
@@ -1060,10 +1253,13 @@ const isTeamLeadManager = computed(() => {
         }
             selectedArea.value = areasWithNames;
         selectedProject.value = filters.project || null;
-        selectedPropertyType.value = filters.propertyType || null;
+        selectedPropertyTypes.value = Array.isArray(filters.propertyTypes)
+          ? filters.propertyTypes
+          : (filters.propertyType ? [filters.propertyType] : []);
+        selectedPropertyType.value = selectedPropertyTypes.value[0] || null;
         selectedAgent.value = filters.agent || null;
-        selectedBeds.value = filters.beds || "";
-        selectedBaths.value = filters.baths ?? "";
+        selectedBeds.value = Array.isArray(filters.bedsList) ? filters.bedsList : (filters.beds ? [filters.beds] : []);
+        selectedBaths.value = Array.isArray(filters.bathsList) ? filters.bathsList : (filters.baths ? [filters.baths] : []);
         selectedSort.value = filters.sort || "created_at_desc";
         priceFrom.value = filters.priceFrom ?? 0;
         priceTo.value = filters.priceTo ?? 10000000;
@@ -1087,8 +1283,10 @@ const isTeamLeadManager = computed(() => {
       selectedArea.value = [];
       selectedProject.value = null;
       selectedPropertyType.value = null;
+      selectedPropertyTypes.value = [];
       selectedAgent.value = null;
-      selectedBeds.value = "";
+      selectedBeds.value = [];
+      selectedBaths.value = [];
       selectedSort.value = "created_at_desc";
       priceFrom.value = 0;
       priceTo.value = 5000000;
@@ -1113,24 +1311,25 @@ const isTeamLeadManager = computed(() => {
     const togglePriceDropdown = () => {
       showPriceDropdown.value = !showPriceDropdown.value;
       if (showPriceDropdown.value) {
+        showSaleRentDropdown.value = false;
         showMoreFilters.value = false;
         showSizeDropdown.value = false;
         showBedsDropdown.value = false;
+        showPropertyTypeDropdown.value = false;
+        showSortDropdown.value = false;
       }
     };
 
     const toggleBedsDropdown = () => {
       showBedsDropdown.value = !showBedsDropdown.value;
       if (showBedsDropdown.value) {
+        showSaleRentDropdown.value = false;
         showPriceDropdown.value = false;
         showMoreFilters.value = false;
         showSizeDropdown.value = false;
+        showPropertyTypeDropdown.value = false;
+        showSortDropdown.value = false;
       }
-    };
-
-    const selectBedsOption = (bed) => {
-      selectedBeds.value = selectedBeds.value === bed ? "" : bed;
-      handleFilterChange();
     };
 
     const toggleSizeDropdown = () => {
@@ -1142,14 +1341,20 @@ const isTeamLeadManager = computed(() => {
       showSizeDropdown.value = false;
       showMoreFilters.value = false;
       showBedsDropdown.value = false;
+      showPropertyTypeDropdown.value = false;
+      showSortDropdown.value = false;
+      showSaleRentDropdown.value = false;
     };
 
     const toggleMoreFilters = () => {
       showMoreFilters.value = !showMoreFilters.value;
       if (showMoreFilters.value) {
+        showSaleRentDropdown.value = false;
         showPriceDropdown.value = false;
         showSizeDropdown.value = false;
         showBedsDropdown.value = false;
+        showPropertyTypeDropdown.value = false;
+        showSortDropdown.value = false;
       }
     };
 
@@ -1248,6 +1453,11 @@ const isTeamLeadManager = computed(() => {
       return subtitle;
     };
 
+    const isAreaSelected = (option) => {
+      const selectedAreas = Array.isArray(selectedArea.value) ? selectedArea.value : [];
+      return selectedAreas.some((item) => Number(item?.id) === Number(option?.id));
+    };
+
     const isFirstSelectedArea = (option) => {
       const selectedAreas = Array.isArray(selectedArea.value) ? selectedArea.value : [];
       return selectedAreas.length > 0 && selectedAreas[0]?.id === option?.id;
@@ -1302,6 +1512,7 @@ fetchProjects()
       selectedArea,
       selectedProject, 
       selectedPropertyType,
+      selectedPropertyTypes,
       selectedAgent,
       selectedBeds,
       selectedBaths,
@@ -1314,8 +1525,13 @@ fetchProjects()
       showSizeDropdown,
       showMoreFilters,
       showBedsDropdown,
+      showPropertyTypeDropdown,
+      showSortDropdown,
+      sortDraft,
+      showSaleRentDropdown,
       showMobileFilterSheet,
       isMobileViewport,
+      propertyTypeTab,
       
       // Static options
       saleRentOptions,
@@ -1327,8 +1543,13 @@ fetchProjects()
       sortOptions,
       quickSortSelectOptions,
       quickSortForDropdown,
+      quickSortLabel,
+      saleRentButtonLabel,
       isMyListingPage,
       isTeamLeadManager,
+      visiblePropertyTypes,
+      propertyTypeButtonLabel,
+      bedsBathsButtonLabel,
       // Computed
       priceProgressStyle,
       sizeProgressStyle,
@@ -1345,11 +1566,26 @@ fetchProjects()
       resetSizeRange,
       togglePriceDropdown,
       toggleBedsDropdown,
+      togglePropertyTypeDropdown,
+      toggleSortDropdown,
+      selectSortOption,
+      resetSortSelection,
+      applySortSelection,
+      toggleSaleRentDropdown,
       toggleSizeDropdown,
       toggleMoreFilters,
       closeAllDropdowns,
+      isPropertyTypeSelected,
+      togglePropertyTypeOption,
+      applyPropertyTypeSelection,
+      resetPropertyTypeSelection,
+      selectSaleRentOption,
+      applySaleRentSelection,
+      resetSaleRentSelection,
       selectBedsOption,
       selectBathOption,
+      applyBedsBaths,
+      resetBedsBaths,
       updatePriceFrom,
       updatePriceTo,
       updateSizeFrom,
@@ -1377,6 +1613,7 @@ fetchProjects()
       onPriceToInput,
       onSizeFromInput,
       onSizeToInput,
+      isAreaSelected,
       searchReferenceNumber,
       locationFirstLine,
       locationSecondLine,
@@ -2293,6 +2530,68 @@ fetchProjects()
   color: #6b7280 !important;
 }
 
+/* Match Bayut-like selected location chip style */
+:deep(.listing-main-location .vs__selected-options) {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+
+:deep(.listing-main-location .vs__selected-options::-webkit-scrollbar) {
+  display: none !important;
+}
+
+:deep(.listing-main-location .vs__search) {
+  min-width: 180px !important;
+  padding-left: 2px !important;
+}
+
+/* Location input: never show default clear X (chip remove stays available). */
+:deep(.listing-main-location .vs__clear) {
+  display: none !important;
+}
+
+.location-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 30px !important;
+  border: 1.5px solid #7a70c3 !important;
+  border-radius: 999px !important;
+  background: #f9f8ff !important;
+  color: #4c438c !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 0 10px 0 12px !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+}
+
+.location-chip-close {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+}
+
+.location-chip-close::before {
+  content: "✕" !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  color: #6b639f !important;
+  font-family: Arial, sans-serif !important;
+}
+
+.location-chip-close:hover {
+  background: #efeaff !important;
+}
+
 .listing-pill-row {
   display: flex;
   align-items: center;
@@ -2437,9 +2736,9 @@ fetchProjects()
 }
 
 .listing-chip-btn.active {
-    border-color: #01062c;
-    color: #01062c;
-  background: #f5f3ff;
+    border-color: #faa300;
+    color: #b45309;
+  background: #fff7ed;
 }
 
 .listing-price-popover {
@@ -2785,8 +3084,8 @@ fetchProjects()
 :deep(.listing-pill-select .vs__dropdown-option--highlight),
 :deep(.listing-main-location .vs__dropdown-option--highlight),
 :deep(.listing-pop-select .vs__dropdown-option--highlight) {
-  background: #f5f4ff !important;
-  color: #312e81 !important;
+  background: #fff7ed !important;
+  color: #b45309 !important;
 }
 
 .listing-more-filter-popover .listing-pop-title,
@@ -3008,6 +3307,244 @@ fetchProjects()
 
 :deep(.vs__clear):hover::before {
   color: #ef4444 !important;
+}
+
+/* Bayut-like compact controls for desktop filters */
+.listing-pill-row,
+.listing-pill-row button,
+.listing-pill-row :deep(.vs__selected),
+.listing-pill-row :deep(.vs__search),
+.listing-pill-row :deep(.vs__placeholder) {
+  font-family: "Inter", "Segoe UI", Tahoma, Arial, sans-serif !important;
+}
+
+.listing-pill-row :deep(.vs__selected),
+.listing-pill-row :deep(.vs__search),
+.listing-pill-row :deep(.vs__placeholder),
+.listing-pill-btn {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #1f2937 !important;
+}
+
+.listing-sale-rent-wrap,
+.listing-property-type-wrap,
+.listing-sort-wrap {
+  position: relative;
+}
+
+.listing-sale-rent-btn,
+.listing-property-type-btn {
+  min-width: 160px;
+  justify-content: space-between;
+}
+
+.listing-sale-rent-btn span,
+.listing-property-type-btn span,
+.listing-pill-btn span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.listing-pop-title-sm {
+  font-size: 13px;
+  color: #111827;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.listing-property-type-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(640px, calc(100vw - 20px));
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 12px;
+  z-index: 1300;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+}
+
+.listing-sale-rent-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(420px, calc(100vw - 20px));
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 12px;
+  z-index: 1300;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+}
+
+.listing-tab-switch-purpose {
+  border: 1px solid #dbe2ee;
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.listing-tab-switch-purpose .listing-tab-btn {
+  border: none;
+  border-radius: 8px;
+  color: #1f2937;
+  font-size: 16px;
+  padding: 10px 8px;
+}
+
+.listing-tab-switch-purpose .listing-tab-btn.active {
+  border-bottom: none;
+  background: #fff4e6;
+  color: #d97706;
+}
+
+.listing-tab-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 10px;
+}
+
+.listing-tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 6px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.listing-tab-btn.active {
+  color: #d97706;
+  border-bottom-color: #faa300;
+}
+
+.listing-property-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.listing-property-pill {
+  min-height: 42px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1;
+  padding: 0 10px;
+}
+
+.listing-property-pill.active {
+  border-color: #faa300;
+  color: #b45309;
+  background: #fff7ed;
+}
+
+.listing-pop-actions--dual .btn {
+  min-height: 40px !important;
+  border-radius: 12px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  line-height: 1 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.listing-beds-popover {
+  width: min(580px, calc(100vw - 20px));
+}
+
+.listing-chip-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.listing-chip-btn {
+  min-height: 42px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.listing-sort-btn i {
+  font-size: 16px;
+}
+
+.listing-sort-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 230px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px;
+  z-index: 1300;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+}
+
+.listing-sort-option {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.listing-sort-option:last-child {
+  margin-bottom: 0;
+}
+
+.listing-sort-option.active {
+  border-color: #faa300;
+  background: #fff7ed;
+  color: #b45309;
+}
+
+.status-sort-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #dbe2ee;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #4b5563;
+  background: #fff;
+}
+
+.location-option.selected {
+  background: #fff7ed;
+  border-radius: 10px;
+}
+
+.location-option.selected .location-option-name {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.listing-tab-switch-mobile {
+  margin-top: 8px;
+}
+
+.listing-property-grid-mobile {
+  margin-top: 10px;
 }
 
 /* Mobile-first simplified search/filter UX */
@@ -3238,5 +3775,41 @@ fetchProjects()
     padding-top: 6px;
     padding-bottom: 6px;
   }
+}
+
+/* Final override: selected location chip exactly like reference */
+:deep(.listing-main-location .vs__selected-options) {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+}
+
+.listing-main-location .location-chip {
+  border: 1.5px solid #faa300 !important;
+  background: #fff7ed !important;
+  color: #b45309 !important;
+  border-radius: 999px !important;
+  min-height: 31px !important;
+  padding: 0 10px 0 12px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+}
+
+.listing-main-location .location-chip-close {
+  width: 16px !important;
+  height: 16px !important;
+  margin-left: 2px !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+}
+
+.listing-main-location .location-chip-close::before {
+  content: "✕" !important;
+  font-size: 11px !important;
+  font-family: Arial, sans-serif !important;
+  font-weight: 400 !important;
+  color: #c16c09 !important;
 }
 </style>

@@ -99,7 +99,8 @@ import ImportPitrix from './components/kanban/leadList/ImportPitrix.vue'
 
 
 import  BulkAreaCoordinates from './pages/areas/BulkAreaCoordinates.vue'
-const routes = [
+
+const baseRoutes = [
     { path: '/import-pitrix', component: ImportPitrix, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/area-coordinates', component: BulkAreaCoordinates, meta: { requiresAuth: true, requiresAdmin: true } },
     
@@ -223,6 +224,23 @@ const routes = [
 }
 ]
 
+const routes = import.meta.env.PROD
+  ? baseRoutes
+  : [
+      ...baseRoutes,
+      {
+        path: '/__dev__/project-map',
+        name: 'dev-project-map',
+        component: () => import('./pages/dev/ProjectMapPage.vue'),
+        meta: {
+          layout: false,
+          requiresAuth: true,
+          requiresSuperAdmin: true,
+          devToolsOnly: true,
+        },
+      },
+    ]
+
 const isTokenValid = () => {
   const token = localStorage.getItem('token')
   
@@ -305,6 +323,13 @@ router.beforeEach((to, from, next) => {
   const isValidToken = isTokenValid()
 
   console.log(`Navigation to: ${to.path}, Token valid: ${isValidToken}`)
+
+  if (to.path.startsWith('/__dev__/')) {
+    if (import.meta.env.PROD) {
+      next('/')
+      return
+    }
+  }
 
   if (token && !isValidToken) {
     console.log('Token exists but is invalid, logging out...')
