@@ -486,9 +486,18 @@ const fetchProperties = async (filters = {}, page = 1) => {
       return {
         sale_rent: filters.saleRent || undefined,
         area_id: filters.area?.id || undefined,
+        area_ids: Array.isArray(filters.area) && filters.area.length
+          ? filters.area.map((a) => a?.id).filter(Boolean).join(',')
+          : undefined,
         project_id: filters.project?.id || undefined,
         type_id: filters.propertyType?.id || undefined,
+        type_ids: Array.isArray(filters.propertyTypes) && filters.propertyTypes.length
+          ? filters.propertyTypes.map((p) => p?.id).filter(Boolean).join(',')
+          : undefined,
         beds: filters.beds || undefined,
+        beds_list: Array.isArray(filters.bedsList) && filters.bedsList.length ? filters.bedsList.join(',') : undefined,
+        baths: filters.baths || undefined,
+        baths_list: Array.isArray(filters.bathsList) && filters.bathsList.length ? filters.bathsList.join(',') : undefined,
         price_from: filters.priceFrom,
         price_to: filters.priceTo,
         size_from: filters.sizeFrom,
@@ -500,12 +509,26 @@ const fetchProperties = async (filters = {}, page = 1) => {
     };
 
     const decodeFiltersFromQuery = (query) => {
+      const areaIds = query.area_ids
+        ? query.area_ids.split(',').map((id) => Number(id)).filter((id) => !Number.isNaN(id))
+        : (query.area_id ? [Number(query.area_id)] : []);
+      const areas = areaIds.map((id) => ({ id }));
+      const typeIds = query.type_ids
+        ? query.type_ids.split(',').map((id) => Number(id)).filter((id) => !Number.isNaN(id))
+        : (query.type_id ? [Number(query.type_id)] : []);
+      const propertyTypes = typeIds.map((id) => ({ id }));
+      const bedsList = query.beds_list ? query.beds_list.split(',').filter(Boolean) : (query.beds ? [query.beds] : []);
+      const bathsList = query.baths_list ? query.baths_list.split(',').filter(Boolean) : (query.baths ? [query.baths] : []);
       return {
         saleRent: query.sale_rent || 'All',
-        area: query.area_id ? { id: Number(query.area_id) } : null,
+        area: areas.length ? areas : null,
         project: query.project_id ? { id: Number(query.project_id) } : null,
-        propertyType: query.type_id ? { id: Number(query.type_id) } : null,
-        beds: query.beds || '',
+        propertyType: propertyTypes[0] || null,
+        propertyTypes,
+        beds: bedsList[0] || '',
+        bedsList,
+        baths: bathsList[0] || '',
+        bathsList,
         priceFrom: query.price_from ? Number(query.price_from) : 0,
         priceTo: query.price_to ? Number(query.price_to) : 10000000,
         sizeFrom: query.size_from ? Number(query.size_from) : 0,
@@ -549,12 +572,18 @@ const fetchProperties = async (filters = {}, page = 1) => {
       }
 
       // Area Filter
-      if (filters.area) {
+      if (Array.isArray(filters.area) && filters.area.length) {
+        apiFilters.area_ids = filters.area.map((a) => a?.id).filter(Boolean);
+      } else if (filters.area) {
         apiFilters.area_id = filters.area.id;
       }
 
       // Property Type Filter
-      if (filters.propertyType) {
+      if (Array.isArray(filters.propertyTypes) && filters.propertyTypes.length) {
+        const typeIds = filters.propertyTypes.map((p) => p?.id).filter(Boolean);
+        apiFilters.property_type_ids = typeIds;
+        apiFilters.property_type_id = typeIds[0];
+      } else if (filters.propertyType) {
         apiFilters.property_type_id = filters.propertyType.id;
       }
      if (filters.referenceNumber && filters.referenceNumber.trim() !== "") {
@@ -564,12 +593,16 @@ const fetchProperties = async (filters = {}, page = 1) => {
         apiFilters.project_id = filters.project.id;
       }
       // Bedrooms Filter
-      if (filters.beds) {
-        if (filters.beds === 'Studio') {
-          apiFilters.number_of_bedrooms = 'Studio';
-        } else {
-          apiFilters.number_of_bedrooms = parseInt(filters.beds);
-        }
+      const bedsList = Array.isArray(filters.bedsList) ? filters.bedsList : (filters.beds ? [filters.beds] : []);
+      if (bedsList.length) {
+        const firstBed = bedsList[0];
+        apiFilters.number_of_bedrooms = firstBed === 'Studio' ? 'Studio' : parseInt(firstBed);
+        apiFilters.number_of_bedrooms_in = bedsList;
+      }
+      const bathsList = Array.isArray(filters.bathsList) ? filters.bathsList : (filters.baths ? [filters.baths] : []);
+      if (bathsList.length) {
+        apiFilters.number_of_bathrooms = parseInt(bathsList[0]);
+        apiFilters.number_of_bathrooms_in = bathsList;
       }
  if (filters.completionStatus && filters.completionStatus.value) {
     apiFilters.completion_status = filters.completionStatus.value;

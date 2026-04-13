@@ -67,6 +67,15 @@
           <i class="ri-equalizer-line"></i>
           <span v-if="mobileActiveFilterCount > 0" class="mobile-filter-badge">{{ mobileActiveFilterCount }}</span>
         </button>
+        <button
+          v-if="isMobileViewport"
+          type="button"
+          class="mobile-sort-trigger"
+          aria-label="Open sorting"
+          @click="openMobileSortSheet"
+        >
+          <i class="ri-sort-desc"></i>
+        </button>
       </div>
 
       <div v-if="isMobileViewport" class="mobile-quick-chips">
@@ -396,7 +405,10 @@
 
         <div class="mobile-filter-accordion">
           <details open>
-            <summary>Listing Type</summary>
+            <summary>
+              <span>Listing Type</span>
+              <small>{{ mobileSaleRentLabel }}</small>
+            </summary>
             <v-select
               v-model="selectedSaleRent"
               :options="typeOptions"
@@ -411,7 +423,10 @@
           </details>
 
           <details open>
-            <summary>Property Type</summary>
+            <summary>
+              <span>Property Type</span>
+              <small>{{ mobilePropertyTypeLabel }}</small>
+            </summary>
             <div class="listing-tab-switch listing-tab-switch-mobile">
               <button type="button" class="listing-tab-btn" :class="{ active: propertyTypeTab === 'residential' }" @click="propertyTypeTab = 'residential'">Residential</button>
               <button type="button" class="listing-tab-btn" :class="{ active: propertyTypeTab === 'commercial' }" @click="propertyTypeTab = 'commercial'">Commercial</button>
@@ -431,7 +446,10 @@
           </details>
 
           <details>
-            <summary>Beds & Baths</summary>
+            <summary>
+              <span>Beds & Baths</span>
+              <small>{{ mobileBedsBathsLabel }}</small>
+            </summary>
             <div class="listing-pop-label">Bedrooms</div>
             <div class="listing-chip-grid">
               <button
@@ -457,7 +475,10 @@
           </details>
 
           <details>
-            <summary>Price Range</summary>
+            <summary>
+              <span>Price Range</span>
+              <small>{{ mobilePriceLabel }}</small>
+            </summary>
             <div class="listing-pop-grid">
               <div>
                 <label>Minimum</label>
@@ -471,7 +492,10 @@
           </details>
 
           <details>
-            <summary>Area (sqft)</summary>
+            <summary>
+              <span>Area (sqft)</span>
+              <small>{{ mobileSizeLabel }}</small>
+            </summary>
             <div class="listing-pop-grid">
               <div>
                 <label>Minimum</label>
@@ -485,7 +509,10 @@
           </details>
 
           <details v-if="!isMyListingPage">
-            <summary>Agent</summary>
+            <summary>
+              <span>Agent</span>
+              <small>{{ mobileAgentLabel }}</small>
+            </summary>
             <v-select
               v-model="selectedAgent"
               :options="agents"
@@ -499,24 +526,36 @@
             />
           </details>
 
-          <details>
-            <summary>Sorting</summary>
-            <v-select
-              v-model="selectedSort"
-              :options="sortOptions"
-              label="label"
-              :reduce="option => option.value"
-              :searchable="false"
-              :append-to-body="false"
-              placeholder="Latest Listings"
-              class="custom-select listing-pop-select"
-              @update:modelValue="handleFilterChange"
-            />
-          </details>
         </div>
 
         <div class="mobile-filter-sticky-actions">
           <button type="button" class="btn btn-primary w-100" @click="applyMobileFilters">Apply Filters</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="isMobileViewport && showMobileSortSheet" class="mobile-filter-sheet-overlay" @click.self="showMobileSortSheet = false">
+      <div class="mobile-sort-sheet" @click.stop>
+        <div class="mobile-filter-sheet-head">
+          <button type="button" class="mobile-filter-clear" @click="resetMobileSort">Reset</button>
+          <button type="button" class="mobile-filter-close" @click="showMobileSortSheet = false" aria-label="Close">
+            <i class="ri-close-line"></i>
+          </button>
+        </div>
+        <div class="mobile-sort-list">
+          <button
+            v-for="option in sortOptions"
+            :key="'m-sort-' + option.value"
+            type="button"
+            class="mobile-sort-option"
+            :class="{ active: mobileSortDraft === option.value }"
+            @click="mobileSortDraft = option.value"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+        <div class="mobile-filter-sticky-actions">
+          <button type="button" class="btn btn-primary w-100" @click="applyMobileSort">Done</button>
         </div>
       </div>
     </div>
@@ -587,6 +626,8 @@ export default {
     const showSortDropdown = ref(false);
     const sortDraft = ref("created_at_desc");
     const showSaleRentDropdown = ref(false);
+    const showMobileSortSheet = ref(false);
+    const mobileSortDraft = ref("created_at_desc");
     const showMobileFilterSheet = ref(false);
     const isMobileViewport = ref(false);
     let resizeHandler = null;
@@ -756,6 +797,35 @@ const sortOptions = [
       const row = quickSortSelectOptions.find((item) => item.value === selectedSort.value);
       return row?.label || "Most Recent";
     });
+    const mobileSaleRentLabel = computed(() => {
+      if (!selectedSaleRent.value || selectedSaleRent.value === "All") return "Any";
+      return selectedSaleRent.value;
+    });
+    const mobilePropertyTypeLabel = computed(() => {
+      const count = selectedPropertyTypes.value.length;
+      if (!count) return "Any";
+      return count === 1 ? selectedPropertyTypes.value[0]?.name || "1 selected" : `${count} selected`;
+    });
+    const mobileBedsBathsLabel = computed(() => {
+      const b = selectedBeds.value.length;
+      const ba = selectedBaths.value.length;
+      if (!b && !ba) return "Any";
+      if (b && ba) return `${b} beds, ${ba} baths`;
+      return b ? `${b} beds` : `${ba} baths`;
+    });
+    const mobilePriceLabel = computed(() => {
+      if ((priceFrom.value || 0) <= 0 && (priceTo.value || 10000000) >= 10000000) return "Any";
+      return `${formatThousandsDisplay(priceFrom.value) || 0} - ${formatThousandsDisplay(priceTo.value) || "Any"}`;
+    });
+    const mobileSizeLabel = computed(() => {
+      if ((sizeFrom.value || 0) <= 0 && (sizeTo.value || 10000) >= 10000) return "Any";
+      return `${formatThousandsDisplay(sizeFrom.value) || 0} - ${formatThousandsDisplay(sizeTo.value) || "Any"}`;
+    });
+    const mobileAgentLabel = computed(() => selectedAgent.value?.name || "Any");
+    const mobileSortLabel = computed(() => {
+      const row = sortOptions.find((item) => item.value === selectedSort.value);
+      return row?.label || "Most Recent";
+    });
 
     const saleRentButtonLabel = computed(() => {
       if (selectedSaleRent.value === "Sale") return "Buy";
@@ -811,6 +881,19 @@ const sortOptions = [
     const applySortSelection = () => {
       selectedSort.value = sortDraft.value || "created_at_desc";
       showSortDropdown.value = false;
+      handleFilterChange();
+    };
+    const openMobileSortSheet = () => {
+      mobileSortDraft.value = selectedSort.value || "created_at_desc";
+      showMobileSortSheet.value = true;
+      showMobileFilterSheet.value = false;
+    };
+    const resetMobileSort = () => {
+      mobileSortDraft.value = "created_at_desc";
+    };
+    const applyMobileSort = () => {
+      selectedSort.value = mobileSortDraft.value || "created_at_desc";
+      showMobileSortSheet.value = false;
       handleFilterChange();
     };
 
@@ -1529,6 +1612,8 @@ fetchProjects()
       showSortDropdown,
       sortDraft,
       showSaleRentDropdown,
+      showMobileSortSheet,
+      mobileSortDraft,
       showMobileFilterSheet,
       isMobileViewport,
       propertyTypeTab,
@@ -1544,6 +1629,13 @@ fetchProjects()
       quickSortSelectOptions,
       quickSortForDropdown,
       quickSortLabel,
+      mobileSaleRentLabel,
+      mobilePropertyTypeLabel,
+      mobileBedsBathsLabel,
+      mobilePriceLabel,
+      mobileSizeLabel,
+      mobileAgentLabel,
+      mobileSortLabel,
       saleRentButtonLabel,
       isMyListingPage,
       isTeamLeadManager,
@@ -1571,6 +1663,9 @@ fetchProjects()
       selectSortOption,
       resetSortSelection,
       applySortSelection,
+      openMobileSortSheet,
+      resetMobileSort,
+      applyMobileSort,
       toggleSaleRentDropdown,
       toggleSizeDropdown,
       toggleMoreFilters,
@@ -3335,7 +3430,8 @@ fetchProjects()
 
 .listing-sale-rent-btn,
 .listing-property-type-btn {
-  min-width: 160px;
+  min-width: 132px;
+  max-width: 148px;
   justify-content: space-between;
 }
 
@@ -3345,6 +3441,10 @@ fetchProjects()
   display: inline-flex;
   align-items: center;
   line-height: 1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .listing-pop-title-sm {
@@ -3358,7 +3458,7 @@ fetchProjects()
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  width: min(640px, calc(100vw - 20px));
+  width: min(460px, calc(100vw - 20px));
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 14px;
@@ -3579,6 +3679,22 @@ fetchProjects()
     justify-content: center;
   }
 
+  .mobile-sort-trigger {
+    position: absolute;
+    right: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #334155;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .mobile-filter-badge {
     position: absolute;
     top: -6px;
@@ -3639,18 +3755,50 @@ fetchProjects()
   }
   .mobile-filter-sheet {
     width: 100%;
-    max-height: 90dvh;
+    max-height: 91dvh;
     overflow: auto;
     background: #fff;
     border-radius: 18px 18px 0 0;
-    padding: 12px 12px calc(62px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 10px calc(60px + env(safe-area-inset-bottom, 0px));
     position: relative;
+  }
+  .mobile-sort-sheet {
+    width: 100%;
+    max-height: 62dvh;
+    overflow: auto;
+    background: #fff;
+    border-radius: 18px 18px 0 0;
+    padding: 10px 10px calc(60px + env(safe-area-inset-bottom, 0px));
+    position: relative;
+  }
+  .mobile-sort-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .mobile-sort-option {
+    width: 100%;
+    border: 1px solid #e6eaf1;
+    background: #fff;
+    color: #0f172a;
+    border-radius: 10px;
+    min-height: 34px;
+    text-align: left;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .mobile-sort-option.active {
+    border-color: #faa300;
+    color: #b45309;
+    background: #fff7ed;
   }
   .mobile-filter-sheet-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    padding: 0 2px;
   }
   .mobile-filter-clear {
     border: none;
@@ -3676,19 +3824,34 @@ fetchProjects()
     line-height: 1;
   }
   .mobile-filter-accordion details {
-    border: 1px solid #e2e8f0;
+    border: 1px solid #e7ebf2;
     border-radius: 12px;
-    padding: 8px;
-    margin-bottom: 8px;
-    background: #f8fafc;
+    padding: 8px 9px;
+    margin-bottom: 7px;
+    background: #fbfcff;
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
   }
   .mobile-filter-accordion summary {
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 11.5px;
+    font-weight: 600;
     color: #0f172a;
     margin-bottom: 6px;
     cursor: pointer;
     list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    line-height: 1.2;
+  }
+  .mobile-filter-accordion summary small {
+    font-size: 10px;
+    font-weight: 500;
+    color: #6b7280;
+    max-width: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .mobile-filter-accordion summary::-webkit-details-marker { display: none; }
   .mobile-filter-sheet .listing-pop-label {
@@ -3697,8 +3860,9 @@ fetchProjects()
   }
   .mobile-filter-sheet .listing-chip-btn {
     font-size: 10px !important;
-    min-height: 24px;
+    min-height: 26px;
     padding: 4px 8px;
+    border-radius: 999px;
   }
   .mobile-filter-sheet :deep(.vs__open-indicator-icon) {
     font-size: 9px !important;
@@ -3714,7 +3878,9 @@ fetchProjects()
     fill: #66666680 !important;
   }
   .mobile-filter-sheet :deep(.vs__dropdown-toggle) {
-    min-height: 34px;
+    min-height: 32px;
+    border-radius: 10px !important;
+    border-color: #e4e8f0 !important;
   }
   .mobile-filter-sheet :deep(.vs__selected),
   .mobile-filter-sheet :deep(.vs__search),
@@ -3726,7 +3892,7 @@ fetchProjects()
     padding-left: 8px;
   }
   .mobile-filter-sheet :deep(.vs__search) {
-    padding-left: 8px !important;
+    padding-left: 6px !important;
   }
   .mobile-filter-sheet :deep(.vs__dropdown-menu) {
     z-index: 4005 !important;
@@ -3744,7 +3910,8 @@ fetchProjects()
   }
   .mobile-filter-sheet .listing-pop-grid .range-input-side {
     font-size: 11px !important;
-    min-height: 32px;
+    min-height: 31px;
+    border-radius: 9px !important;
   }
   .mobile-filter-sheet .listing-pop-grid .range-input-side::placeholder {
     font-size: 10px !important;
@@ -3767,13 +3934,29 @@ fetchProjects()
     z-index: 4010;
     background: #fff;
     border-top: 1px solid #eef2f7;
-    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+    padding: 7px 10px calc(8px + env(safe-area-inset-bottom, 0px));
   }
   .mobile-filter-sticky-actions .btn {
-    min-height: 36px;
-    font-size: 12px;
-    padding-top: 6px;
-    padding-bottom: 6px;
+    min-height: 34px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border-radius: 10px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .mobile-filter-sheet .listing-property-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .mobile-filter-sheet .listing-property-pill {
+    min-height: 34px;
+    font-size: 11px;
+    padding: 0 8px;
+  }
+  .mobile-filter-sheet .listing-chip-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 7px;
   }
 }
 
@@ -3811,5 +3994,23 @@ fetchProjects()
   font-family: Arial, sans-serif !important;
   font-weight: 400 !important;
   color: #c16c09 !important;
+}
+
+/* Location dropdown row: remove inner bordered card/box. */
+:deep(.listing-main-location .vs__dropdown-option .location-option) {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 4px 0 !important;
+}
+
+:deep(.listing-main-location .vs__dropdown-option--highlight .location-option) {
+  background: transparent !important;
+}
+
+.listing-main-location .location-option.selected {
+  border-radius: 0 !important;
+  background: transparent !important;
 }
 </style>

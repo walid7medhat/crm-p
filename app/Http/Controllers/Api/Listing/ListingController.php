@@ -424,6 +424,18 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
                     $query->where($filter, $request->$filter);
                 }
             }
+            if ($request->filled('property_type_ids')) {
+                $typeIds = $request->property_type_ids;
+                if (is_string($typeIds)) {
+                    $typeIds = explode(',', $typeIds);
+                }
+                if (is_array($typeIds)) {
+                    $typeIds = array_values(array_filter(array_map('intval', $typeIds)));
+                    if (!empty($typeIds)) {
+                        $query->whereIn('property_type_id', $typeIds);
+                    }
+                }
+            }
 
             if ($request->has('number_of_bedrooms')) {
                 $bedrooms = $request->number_of_bedrooms;
@@ -440,6 +452,62 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
                         $query->where('number_of_bathrooms','>=',$bathrooms );
                 }else{
                     $query->where('number_of_bathrooms',$bathrooms );
+                }
+            }
+            if ($request->filled('number_of_bedrooms_in')) {
+                $beds = $request->number_of_bedrooms_in;
+                if (is_string($beds)) {
+                    $beds = explode(',', $beds);
+                }
+                if (is_array($beds)) {
+                    $beds = array_values(array_filter($beds, fn($v) => $v !== null && $v !== ''));
+                    if (!empty($beds)) {
+                        $query->where(function ($q) use ($beds) {
+                            foreach ($beds as $bed) {
+                                $value = strtolower(trim((string) $bed));
+                                if ($value === 'studio') {
+                                    $q->orWhere('number_of_bedrooms', 0);
+                                    continue;
+                                }
+                                if (str_ends_with($value, '+')) {
+                                    $base = (int) rtrim($value, '+');
+                                    if ($base > 0) {
+                                        $q->orWhere('number_of_bedrooms', '>=', $base);
+                                    }
+                                    continue;
+                                }
+                                if (is_numeric($value)) {
+                                    $q->orWhere('number_of_bedrooms', (int) $value);
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+            if ($request->filled('number_of_bathrooms_in')) {
+                $baths = $request->number_of_bathrooms_in;
+                if (is_string($baths)) {
+                    $baths = explode(',', $baths);
+                }
+                if (is_array($baths)) {
+                    $baths = array_values(array_filter($baths, fn($v) => $v !== null && $v !== ''));
+                    if (!empty($baths)) {
+                        $query->where(function ($q) use ($baths) {
+                            foreach ($baths as $bath) {
+                                $value = strtolower(trim((string) $bath));
+                                if (str_ends_with($value, '+')) {
+                                    $base = (int) rtrim($value, '+');
+                                    if ($base > 0) {
+                                        $q->orWhere('number_of_bathrooms', '>=', $base);
+                                    }
+                                    continue;
+                                }
+                                if (is_numeric($value)) {
+                                    $q->orWhere('number_of_bathrooms', (int) $value);
+                                }
+                            }
+                        });
+                    }
                 }
             }
 
