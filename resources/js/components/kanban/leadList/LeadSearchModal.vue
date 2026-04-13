@@ -728,6 +728,7 @@ const queryToFormKeys = {
     source_website: 'sourceWebsite',
     interaction_result: 'interactionResult',
     status_lead: 'qualityStatus',
+    why_lost_lead: 'qualityStatus',
     team_id: 'team',
     office_branch: 'office',
     lead_type: 'leadType',
@@ -1022,19 +1023,19 @@ const websiteSourceOptions = ref([
 const websiteSourceOptionsForMulti = computed(() =>
     websiteSourceOptions.value.filter(o => o.value != null)
 )
+
+function getSelectedStageOrder(stageId) {
+    if (!stageId) return 0
+    const selected = stageOptions.value.find(s => Number(s.value) === Number(stageId))
+    return Number(selected?.order || 0)
+}
 // Quality Status Options based on selected stage (from database)
 const qualityStatusOptions = computed(() => {
     const selectedStageId = form.value.stageId
-    console.log('qualityStatusOptions - selectedStageId:', selectedStageId)
-    
     if (!selectedStageId) {
-        console.log('No stage selected, returning default options')
         return [{ value: null, text: 'Select Quality Status' }]
     }
-    
-    const selectedStage = stageOptions.value.find(s => s.value === selectedStageId)
-    const stageOrder = selectedStage?.order || 0
-    console.log('Stage order:', stageOrder)
+    const stageOrder = getSelectedStageOrder(selectedStageId)
     
     // Stage 4 (order 4): Qualified
     if (stageOrder === 4) {
@@ -1073,17 +1074,22 @@ const qualityStatusOptions = computed(() => {
         ]
     }
     
-    console.log('No matching stage order, returning default')
+    // Stage 8 (order 8): Lost
+    if (stageOrder === 8) {
+        return [
+            { value: null, text: 'Select Why Lost' },
+            { value: 'lost_by_other_company', text: 'Lost by Other Company' },
+            { value: 'lost_by_our_company', text: 'Lost by Our Company' }
+        ]
+    }
+
     return [{ value: null, text: 'Select Quality Status' }]
 })
 
 const showInteractionResult = computed(() => {
     const selectedStageId = form.value.stageId
     if (!selectedStageId) return false
-    
-    const selectedStage = stageOptions.value.find(s => s.value === selectedStageId)
-    const stageOrder = selectedStage?.order || 0
-    
+    const stageOrder = getSelectedStageOrder(selectedStageId)
     // يظهر لـ Stage 2 (Contacted)
     return stageOrder === 2 
 })
@@ -1823,7 +1829,8 @@ function applySearch() {
         search: form.value.search || undefined,
         source: sourceParam,
         interaction_result: form.value.interactionResult || undefined,
-        status_lead: form.value.qualityStatus || undefined,
+        status_lead: (getSelectedStageOrder(form.value.stageId) === 8) ? undefined : (form.value.qualityStatus || undefined),
+        why_lost_lead: (getSelectedStageOrder(form.value.stageId) === 8) ? (form.value.qualityStatus || undefined) : undefined,
         created_from: createdFrom || undefined,  
         created_to: createdTo || undefined,     
         created_at: createdAt || undefined,   
@@ -2012,7 +2019,7 @@ async function fetchStages() {
         if (data.length) {
             stageOptions.value = [
                 { value: null, text: 'Select Stage' },
-                ...data.map(s => ({ value: s.id, text: s.name }))
+                ...data.map(s => ({ value: s.id, text: s.name, order: Number(s.order || 0) }))
             ]
         }
     } catch (_) {}
@@ -2385,8 +2392,7 @@ watch(() => form.value.qualityStatus, (newVal) => {
 
 // Watch for stage changes to update quality_status options and interaction_result visibility
 watch(() => form.value.stageId, (newVal) => {
-    const selectedStage = stageOptions.value.find(s => s.value === newVal)
-    const stageOrder = selectedStage?.order || 0
+    const stageOrder = getSelectedStageOrder(newVal)
     
     // Clear quality_status if it doesn't match the new stage
     if (form.value.qualityStatus) {
@@ -2395,6 +2401,8 @@ watch(() => form.value.stageId, (newVal) => {
         
         if (stageOrder === 4) {
             isValidForStage = ['cold', 'warm', 'hot'].includes(currentQuality)
+        } else if (stageOrder === 8) {
+            isValidForStage = ['lost_by_other_company', 'lost_by_our_company'].includes(currentQuality)
         } else if (stageOrder === 9) {
             isValidForStage = ['no_answer', 'contacted', 'wrong_person'].includes(currentQuality)
         } else if (stageOrder === 10) {
@@ -2416,10 +2424,8 @@ watch(() => form.value.stageId, (newVal) => {
         form.value.interactionResult = ''
     }
     if (newVal) {
-        console.log('Stage ID changed to:', newVal)
         // Force re-render of qualityStatusOptions by triggering a computed refresh
         nextTick(() => {
-            // This will trigger visibleSearchFields to recompute
             const temp = [...selectedLeadFieldIds.value]
             selectedLeadFieldIds.value = temp
         })

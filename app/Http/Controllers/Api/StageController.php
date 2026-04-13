@@ -334,6 +334,9 @@ class StageController extends Controller
                if ($request->filled('status_lead')) {
                     $q->where('status_lead', $request->status_lead);
                 }
+               if ($request->filled('why_lost_lead')) {
+                    $q->where('why_lost_lead', $request->why_lost_lead);
+                }
                 
                
                 // Lead Type
@@ -630,6 +633,9 @@ class StageController extends Controller
             }
                if ($request->filled('status_lead')) {
                     $leadsQuery->where('status_lead', $request->status_lead);
+                }
+               if ($request->filled('why_lost_lead')) {
+                    $leadsQuery->where('why_lost_lead', $request->why_lost_lead);
                 }
                 
                

@@ -779,7 +779,7 @@ const sortOptions = [
     };
 
     const propertyTypeButtonLabel = computed(() => {
-      if (!selectedPropertyTypes.value.length) return "Residential";
+      if (!selectedPropertyTypes.value.length) return "Property Type";
       if (selectedPropertyTypes.value.length === 1) return selectedPropertyTypes.value[0].name;
       return `${selectedPropertyTypes.value.length} Property Types`;
     });
@@ -830,7 +830,7 @@ const sortOptions = [
     const saleRentButtonLabel = computed(() => {
       if (selectedSaleRent.value === "Sale") return "Buy";
       if (selectedSaleRent.value === "Rent") return "Rent";
-      return "Buy";
+      return "Purpose";
     });
 
     const toggleSaleRentDropdown = () => {

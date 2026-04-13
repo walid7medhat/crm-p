@@ -582,7 +582,9 @@ const fetchProperties = async (filters = {}, page = 1) => {
       if (Array.isArray(filters.propertyTypes) && filters.propertyTypes.length) {
         const typeIds = filters.propertyTypes.map((p) => p?.id).filter(Boolean);
         apiFilters.property_type_ids = typeIds;
-        apiFilters.property_type_id = typeIds[0];
+        if (typeIds.length === 1) {
+          apiFilters.property_type_id = typeIds[0];
+        }
       } else if (filters.propertyType) {
         apiFilters.property_type_id = filters.propertyType.id;
       }
@@ -595,14 +597,18 @@ const fetchProperties = async (filters = {}, page = 1) => {
       // Bedrooms Filter
       const bedsList = Array.isArray(filters.bedsList) ? filters.bedsList : (filters.beds ? [filters.beds] : []);
       if (bedsList.length) {
-        const firstBed = bedsList[0];
-        apiFilters.number_of_bedrooms = firstBed === 'Studio' ? 'Studio' : parseInt(firstBed);
         apiFilters.number_of_bedrooms_in = bedsList;
+        if (bedsList.length === 1) {
+          const firstBed = bedsList[0];
+          apiFilters.number_of_bedrooms = firstBed === 'Studio' ? 'Studio' : parseInt(firstBed);
+        }
       }
       const bathsList = Array.isArray(filters.bathsList) ? filters.bathsList : (filters.baths ? [filters.baths] : []);
       if (bathsList.length) {
-        apiFilters.number_of_bathrooms = parseInt(bathsList[0]);
         apiFilters.number_of_bathrooms_in = bathsList;
+        if (bathsList.length === 1) {
+          apiFilters.number_of_bathrooms = parseInt(bathsList[0]);
+        }
       }
  if (filters.completionStatus && filters.completionStatus.value) {
     apiFilters.completion_status = filters.completionStatus.value;

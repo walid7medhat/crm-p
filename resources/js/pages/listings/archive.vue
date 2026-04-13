@@ -367,19 +367,35 @@ export default {
         apiFilters.listing_status = filters.saleRent.toLowerCase();
       }
 
-      if (filters.area) {
+      if (Array.isArray(filters.area) && filters.area.length) {
+        apiFilters.area_ids = filters.area.map((a) => a?.id).filter(Boolean);
+      } else if (filters.area) {
         apiFilters.area_id = filters.area.id;
       }
 
-      if (filters.propertyType) {
+      if (Array.isArray(filters.propertyTypes) && filters.propertyTypes.length) {
+        const ids = filters.propertyTypes.map((p) => p?.id).filter(Boolean);
+        apiFilters.property_type_ids = ids;
+        if (ids.length === 1) {
+          apiFilters.property_type_id = ids[0];
+        }
+      } else if (filters.propertyType) {
         apiFilters.property_type_id = filters.propertyType.id;
       }
 
-      if (filters.beds) {
-        if (filters.beds === 'Studio') {
-          apiFilters.number_of_bedrooms = 0;
-        } else {
-          apiFilters.number_of_bedrooms = parseInt(filters.beds);
+      const bedsList = Array.isArray(filters.bedsList) ? filters.bedsList : (filters.beds ? [filters.beds] : []);
+      if (bedsList.length) {
+        apiFilters.number_of_bedrooms_in = bedsList;
+        if (bedsList.length === 1) {
+          const firstBed = bedsList[0];
+          apiFilters.number_of_bedrooms = firstBed === 'Studio' ? 0 : parseInt(firstBed);
+        }
+      }
+      const bathsList = Array.isArray(filters.bathsList) ? filters.bathsList : (filters.baths ? [filters.baths] : []);
+      if (bathsList.length) {
+        apiFilters.number_of_bathrooms_in = bathsList;
+        if (bathsList.length === 1) {
+          apiFilters.number_of_bathrooms = parseInt(bathsList[0]);
         }
       }
 

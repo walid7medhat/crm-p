@@ -164,7 +164,15 @@ function convertFiltersToAPI(filters) {
     apiFilters.project_id = filters.project.id
   }
 
-  if (filters.propertyType?.id) {
+  if (Array.isArray(filters.propertyTypes) && filters.propertyTypes.length) {
+    const ids = filters.propertyTypes.map((p) => p?.id).filter(Boolean)
+    if (ids.length) {
+      apiFilters.property_type_ids = ids
+      if (ids.length === 1) {
+        apiFilters.property_type_id = ids[0]
+      }
+    }
+  } else if (filters.propertyType?.id) {
     apiFilters.property_type_id = filters.propertyType.id
   }
 
@@ -176,11 +184,21 @@ function convertFiltersToAPI(filters) {
     apiFilters.completion_status = filters.completionStatus.value
   }
 
-  if (filters.beds && filters.beds !== 'All') {
-    apiFilters.number_of_bedrooms =
-      filters.beds === 'Studio'
-        ? 'Studio'
-        : parseInt(filters.beds)
+  const bedsList = Array.isArray(filters.bedsList) ? filters.bedsList : (filters.beds ? [filters.beds] : [])
+  if (bedsList.length) {
+    apiFilters.number_of_bedrooms_in = bedsList
+    if (bedsList.length === 1) {
+      const firstBed = bedsList[0]
+      apiFilters.number_of_bedrooms = firstBed === 'Studio' ? 'Studio' : parseInt(firstBed)
+    }
+  }
+
+  const bathsList = Array.isArray(filters.bathsList) ? filters.bathsList : (filters.baths ? [filters.baths] : [])
+  if (bathsList.length) {
+    apiFilters.number_of_bathrooms_in = bathsList
+    if (bathsList.length === 1) {
+      apiFilters.number_of_bathrooms = parseInt(bathsList[0])
+    }
   }
 
   if (filters.priceFrom > 0) {
