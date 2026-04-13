@@ -1149,6 +1149,7 @@ const executeFetchLeads = async () => {
             ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
             ...(q.assigned_at != null && q.assigned_at !== '' && { area_id: q.assigned_at }),
             ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
+            ...(q.purpose_buying != null && q.purpose_buying !== '' && { purpose_buying: q.purpose_buying }),
             // ...(q.office_branch != null && q.office_branch !== '' && { team_id: q.office_branch })
         }
          // Handle office_branch as array for multi-select
@@ -1339,6 +1340,7 @@ async function fetchMoreLeadsFromApi(stageId) {
             ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status }),
             ...(q.assigned_at != null && q.assigned_at !== '' && { assigned_at: q.assigned_at }),
             ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
+            ...(q.purpose_buying != null && q.purpose_buying !== '' && { purpose_buying: q.purpose_buying }),
             ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
             
         }

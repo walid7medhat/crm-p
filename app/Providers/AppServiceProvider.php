@@ -4,6 +4,10 @@ namespace App\Providers;
 
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Mail\Events\MessageSent;
+use Illuminate\Mail\Events\MessageFailed;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +24,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+    //       Event::listen(MessageSending::class, function ($event) {
+    //     \Log::info('📤 Sending Email', [
+    //         'to' => $event->message->getTo(),
+    //         'subject' => $event->message->getSubject(),
+    //     ]);
+    // });
+
+    Event::listen(MessageFailed::class, function ($event) {
+        \Log::error('❌ Mail Failed', [
+            'to' => $event->message->getTo(),
+            'subject' => $event->message->getSubject(),
+            'error' => $event->exception->getMessage(),
+        ]);
+    });
         ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
             $base = config('app.frontend_url', config('app.url'));
             $email = urlencode($notifiable->getEmailForPasswordReset());

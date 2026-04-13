@@ -282,7 +282,7 @@
 
             <div class="listing-pop-grid listing-pop-grid--two">
               <div>
-                <label>Project Status</label>
+                <label>Property Status</label>
                 <v-select
                   v-model="selectedCompletionStatus"
                   :options="completionStatusOptions"

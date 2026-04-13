@@ -375,6 +375,9 @@ class StageController extends Controller
                 if ($request->filled('interaction_result')) {
                     $q->where('interaction_result', $request->interaction_result);
                 }
+                if ($request->filled('purpose_buying')) {
+                    $q->where('purpose_buying', $request->purpose_buying);
+                }
                 if ($request->filled('assigned_from') || $request->filled('assigned_to') || $request->filled('assigned_at')) {
                     $assignedFrom = $request->assigned_from;
                     $assignedTo = $request->assigned_to;
@@ -418,6 +421,7 @@ class StageController extends Controller
                           ->orWhere('budget_from', 'like', "%{$search}%")
                           ->orWhere('budget_to', 'like', "%{$search}%")
                           ->orWhere('source_information', 'like', "%{$search}%")
+                           ->orWhere('purpose_buying', 'like', "%{$search}%")
                           ->orWhere('budget', 'like', "%{$search}%")
                           ->orWhereHas('responsiblePerson', function ($r) use ($search) {
                               $r->where('name', 'like', "%{$search}%");
@@ -668,6 +672,9 @@ class StageController extends Controller
                 if ($request->filled('interaction_result')) {
                     $leadsQuery->where('interaction_result', $request->interaction_result);
                 }
+                if ($request->filled('purpose_buying')) {
+                    $leadsQuery->where('purpose_buying', $request->purpose_buying);
+                }
                 if ($request->filled('assigned_from') || $request->filled('assigned_to') || $request->filled('assigned_at')) {
                     $assignedFrom = $request->assigned_from;
                     $assignedTo = $request->assigned_to;
@@ -712,6 +719,7 @@ class StageController extends Controller
                           ->orWhere('budget_to', 'like', "%{$search}%")
                           ->orWhere('source_information', 'like', "%{$search}%")
                           ->orWhere('budget', 'like', "%{$search}%")
+                          ->orWhere('purpose_buying', 'like', "%{$search}%")
                           ->orWhereHas('responsiblePerson', function ($r) use ($search) {
                               $r->where('name', 'like', "%{$search}%");
                           })

@@ -136,17 +136,33 @@ const leadFields = ref([
     { id: 'property_type', label: 'Property Type', checked: false },
     { id: 'lead_type', label: 'Lead Type', checked: false },
     { id: 'property_status', label: 'Property Status', checked: false },
-    { id: 'budget_from', label: 'Budget (AED)', checked: false }
+    { id: 'budget_from', label: 'Budget (AED)', checked: false },
+      { id: 'stage', label: 'Stage', checked: false  },
+{ id: 'purpose_purchase', label: 'Purpose of Purchase', checked: false },
 ])
 
 const leadFieldSections = [
     { id: 'lead-core', title: 'Lead Information', fieldIds: ['first_name', 'lead_name', 'work_phone', 'email', 'created_on', 'assigned_on'] },
     { id: 'assignment', title: 'Assignment', fieldIds: ['responsible_person', 'office', 'team'] },
     { id: 'source', title: 'Source', fieldIds: ['source', 'lead_branch_source'] },
-    { id: 'qualification', title: 'Qualification', fieldIds: ['quality_status', 'lead_type', 'property_status', 'interaction_result'] },
-    { id: 'client-req', title: 'Client Requirement', fieldIds: ['location', 'property_type', 'bedrooms', 'budget_from'] }
+    { id: 'qualification', title: 'Qualification', fieldIds: ['stage','quality_status', 'lead_type', 'property_status'] },
+    { id: 'client-req', title: 'Client Requirement', fieldIds: ['location', 'property_type', 'bedrooms', 'budget_from','purpose_purchase'] }
 ]
 
+watch(() => {
+    const qualityField = leadFields.value.find(f => f.id === 'quality_status')
+    return qualityField?.checked
+}, (isChecked) => {
+    const stageField = leadFields.value.find(f => f.id === 'stage')
+    const interactionField = leadFields.value.find(f => f.id === 'interaction_result')
+    
+    if (stageField) {
+        stageField.checked = isChecked  
+    }
+    if (interactionField) {
+        interactionField.checked = isChecked  
+    }
+})
 const groupedLeadSections = computed(() =>
     leadFieldSections
         .map(section => ({

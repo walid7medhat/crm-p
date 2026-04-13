@@ -4,6 +4,64 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Api\IntegrationController;
 
+
+
+
+
+use Illuminate\Support\Facades\Http;
+use App\Models\User;
+use Illuminate\Support\Str;
+
+
+
+
+
+Route::get('/sync-biometric', function () {
+
+    $response = Http::withBasicAuth('admin', 'admin1234')
+        ->timeout(60)
+        ->get('http://oiahead.fortidyndns.com:8085/iclock/api/transactions/');
+
+    if (!$response->successful()) {
+        return 'API error';
+    }
+
+    $data = $response->json()['data'] ?? [];
+
+    // 🧠 نجيب اليوزر مرة واحدة بس (مهم جدًا)
+    $users = User::whereNull('biometric_code')->get();
+
+    foreach ($data as $item) {
+
+        if (empty($item['emp_code'])) continue;
+
+        $apiName = trim(($item['first_name'] ?? '') . ' ' . ($item['last_name'] ?? ''));
+
+        if (empty($apiName)) continue;
+
+        $apiName = Str::lower(preg_replace('/\s+/', '', $apiName));
+
+        foreach ($users as $user) {
+
+            $userName = Str::lower(preg_replace('/\s+/', '', $user->name));
+
+            // 🔥 matching بسيط وآمن
+            if (
+                str_contains($apiName, $userName) ||
+                str_contains($userName, $apiName)
+            ) {
+                $user->update([
+                    'biometric_code' => $item['emp_code']
+                ]);
+
+                break;
+            }
+        }
+    }
+
+    return 'Done';
+});
+
 // استخدم web middleware فقط
 Broadcast::routes(['middleware' => ['auth:api']]);
 

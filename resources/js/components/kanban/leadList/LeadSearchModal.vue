@@ -483,6 +483,8 @@
                                     </span>
                                 </template>
                             </v-select>
+                            
+                            
                         </div>
                     </template>
                         </div>
@@ -617,7 +619,7 @@ const showBudgetDropdown = ref(false)
 const budgetTriggerRef = ref(null)
 const budgetDropdownPanelRef = ref(null)
 const budgetDropdownStyle = ref({})
-const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'assigned_on', 'work_phone', 'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 'team'])
+const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'assigned_on', 'work_phone', 'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 'team','stage','quality_status', 'interaction_result'])
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
 const teamOptions = ref([{ value: null, text: 'Select Team' }])
 const officeOptions = ref([{ value: null, text: 'Select Office' }])
@@ -925,7 +927,8 @@ const form = ref({
     budgetFrom: '',
     budgetTo: '',
     areaId: '',
-     propertyType: ''
+     propertyType: '',
+     purposePurchase: '', 
 })
 
 const responsiblePersons = ref([])
@@ -999,7 +1002,13 @@ const createdOnOptions = [
     { value: 'last_month', text: 'Last Month' },
     { value: 'custom_date', text: 'Custom Date' }
 ]
-
+// Purpose of Purchase Options
+const purposeOptions = [
+    { value: null, text: 'Select Purpose' },
+    { value: 'Live in', text: 'Live in' },
+    { value: 'Short-term investment', text: 'Short-term investment' },
+    { value: 'Long-term investment', text: 'Long-term investment' }
+]
 const sourceOptions = ref([
     { value: null, text: 'Select Source' },
     { value: 'Lead Form', text: 'Meta' },
@@ -1013,17 +1022,78 @@ const websiteSourceOptions = ref([
 const websiteSourceOptionsForMulti = computed(() =>
     websiteSourceOptions.value.filter(o => o.value != null)
 )
+// Quality Status Options based on selected stage (from database)
+const qualityStatusOptions = computed(() => {
+    const selectedStageId = form.value.stageId
+    console.log('qualityStatusOptions - selectedStageId:', selectedStageId)
+    
+    if (!selectedStageId) {
+        console.log('No stage selected, returning default options')
+        return [{ value: null, text: 'Select Quality Status' }]
+    }
+    
+    const selectedStage = stageOptions.value.find(s => s.value === selectedStageId)
+    const stageOrder = selectedStage?.order || 0
+    console.log('Stage order:', stageOrder)
+    
+    // Stage 4 (order 4): Qualified
+    if (stageOrder === 4) {
+        return [
+            { value: null, text: 'Select Quality Status' },
+            { value: 'cold', text: 'Cold Lead' },
+            { value: 'warm', text: 'Warm Lead' },
+            { value: 'hot', text: 'Hot Lead' }
+        ]
+    }
+    
+    // Stage 9 (order 9): Lead Pool
+    if (stageOrder === 9) {
+        return [
+            { value: null, text: 'Select Quality Status' },
+            { value: 'no_answer', text: 'No Answer' },
+            { value: 'contacted', text: 'Contacted' },
+            { value: 'wrong_person', text: 'Wrong Person' }
+        ]
+    }
+    
+    // Stage 10 (order 10): Unqualified
+    if (stageOrder === 10) {
+        return [
+            { value: null, text: 'Select Quality Status' },
+            { value: 'not_interested', text: 'Not Interested' },
+            { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+            { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
+            { value: 'job_seeker', text: 'Job Seeker' },
+            { value: 'broker', text: 'Broker' },
+            { value: 'registered_by_mistake', text: 'Registered by Mistake' },
+            { value: 'spam_leads', text: 'Spam Leads' },
+            { value: 'already_assigned_to_another_agent', text: 'Already Assigned to Another Agent' },
+            { value: 'client_was_just_searching_online', text: 'Client Was Just Searching Online' },
+            { value: 'number_does_not_exist', text: 'Number Does Not Exist' }
+        ]
+    }
+    
+    console.log('No matching stage order, returning default')
+    return [{ value: null, text: 'Select Quality Status' }]
+})
+
+const showInteractionResult = computed(() => {
+    const selectedStageId = form.value.stageId
+    if (!selectedStageId) return false
+    
+    const selectedStage = stageOptions.value.find(s => s.value === selectedStageId)
+    const stageOrder = selectedStage?.order || 0
+    
+    // يظهر لـ Stage 2 (Contacted)
+    return stageOrder === 2 
+})
+
 const interactionResultOptions = [
     { value: null, text: 'Select Call Result' },
     { value: 'answered', text: 'Answered' },
     { value: 'no_answer', text: 'No Answer' },
 ]
-const qualityStatusOptions = [
-    { value: null, text: 'Select Quality Status' },
-    { value: 'cold', text: 'Cold Lead' },
-    { value: 'warm', text: 'Warm Lead' },
-    { value: 'hot', text: 'Hot Lead' },
-]
+
 const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 const selectedPreset = ref('')
 const activeDateField = ref('created_on')
@@ -1192,6 +1262,8 @@ const searchFieldsConfig = computed(() => {
     
     fields.push(
         { id: 'source', label: 'Source', formKey: 'source', queryKey: 'source', type: 'select', options: [] },
+        { id: 'stage', label: 'Stage', formKey: 'stageId', queryKey: 'stage_id', type: 'select', options: stageOptions.value },
+        { id: 'purpose_purchase', label: 'Purpose of Purchase', formKey: 'purposePurchase', queryKey: 'purpose_buying', type: 'select', options: purposeOptions },
         { id: 'interaction_result', label: 'Call Result', formKey: 'interactionResult', queryKey: 'interaction_result', type: 'select', options: interactionResultOptions },
         { id: 'quality_status', label: 'Quality Status', formKey: 'qualityStatus', queryKey: 'status_lead', type: 'select', options: qualityStatusOptions },
         { id: 'bedrooms', label: 'Bedrooms', formKey: 'bedrooms', queryKey: 'bedrooms', type: 'select', options: bedroomsOptions },
@@ -1235,7 +1307,11 @@ const assignedOnDisplay = computed(() => {
 
 const visibleSearchFields = computed(() => {
     return searchFieldsConfig.value
-        .filter(f => selectedLeadFieldIds.value.includes(f.id))
+         .filter(f => {
+            if (!selectedLeadFieldIds.value.includes(f.id)) return false
+            if (f.id === 'interaction_result' && !showInteractionResult.value) return false
+            return true
+        })
         .map(f => ({
             ...f,
             options:
@@ -1246,7 +1322,11 @@ const visibleSearchFields = computed(() => {
                 f.formKey === 'assignedOn' ? createdOnOptions :
                 f.formKey === 'team' ? computedTeamOptions.value :
                 f.formKey === 'areaId' ? areaOptions.value :
-                 f.formKey === 'propertyType' ? propertyTypeOptions.value :
+                f.formKey === 'propertyType' ? propertyTypeOptions.value :
+                f.formKey === 'purposePurchase' ? purposeOptions :
+                f.formKey === 'interactionResult' ? interactionResultOptions :
+                f.formKey === 'qualityStatus' ? qualityStatusOptions.value :
+                
                 (f.options || []),
             placeholder: f.placeholder || (f.type === 'select' ? 'Select' : '')
         }))
@@ -1271,13 +1351,14 @@ const searchFieldSections = [
     {
         id: 'qualification',
         title: 'Qualification',
-        fieldIds: ['quality_status', 'lead_type', 'property_status', 'interaction_result']
+        fieldIds: ['stage','quality_status', 'lead_type', 'property_status', 'interaction_result']
     },
     {
         id: 'client-requirement',
         title: 'Client Requirement',
-        fieldIds: ['location', 'property_type', 'bedrooms', 'budget_from']
-    }
+        fieldIds: ['location', 'property_type', 'bedrooms', 'budget_from','purpose_purchase']
+    },
+
 ]
 
 const visibleSearchSections = computed(() =>
@@ -1756,7 +1837,10 @@ function applySearch() {
         budget_from: parseBudgetNumber(form.value.budgetFrom),
         budget_to: parseBudgetNumber(form.value.budgetTo),
         area_id: form.value.areaId || undefined,
-        property_type_id: form.value.propertyType || undefined 
+        property_type_id: form.value.propertyType || undefined ,
+        purpose_buying: form.value.purposePurchase || undefined,
+     
+        
     }
     
     Object.keys(query).forEach(k => { 
@@ -2063,7 +2147,11 @@ function resetFormValues() {
         budgetFrom: '',
         budgetTo: '',
         areaId: '',
-         propertyType: ''
+         propertyType: '',
+           stageId: '',
+        purposePurchase: '',
+        interactionResult: '',
+        qualityStatus: '',
     }
     selectedOffice.value = null
     selectedPillType.value = null
@@ -2259,7 +2347,84 @@ watch(() => form.value.source, (newVal) => {
     }
 })
 
+// Watch for quality_status changes to auto-select stage
+watch(() => form.value.qualityStatus, (newVal) => {
+    if (!newVal) return
+    
+    // Quality Status mapping to Stage
+    const qualityToStageMap = {
+        // Stage 4: Qualified (Hot/Warm/Cold)
+        'cold': 4,
+        'warm': 4,
+        'hot': 4,
+        
+        // Stage 9: Lead Pool
+        'no_answer': 9,
+        'contacted': 9,
+        'wrong_person': 9,
+        
+        // Stage 10: Unqualified
+        'not_interested': 10,
+        'wrong_contact_details': 10,
+        'no_answer_multiple_calls': 10,
+        'job_seeker': 10,
+        'broker': 10,
+        'registered_by_mistake': 10,
+        'spam_leads': 10,
+        'already_assigned_to_another_agent': 10,
+        'client_was_just_searching_online': 10,
+        'number_does_not_exist': 10
+    }
+    
+    const stageId = qualityToStageMap[newVal]
+    if (stageId) {
+        form.value.stageId = stageId
+        console.log(`Auto-selected stage ${stageId} based on quality status: ${newVal}`)
+    }
+})
 
+// Watch for stage changes to update quality_status options and interaction_result visibility
+watch(() => form.value.stageId, (newVal) => {
+    const selectedStage = stageOptions.value.find(s => s.value === newVal)
+    const stageOrder = selectedStage?.order || 0
+    
+    // Clear quality_status if it doesn't match the new stage
+    if (form.value.qualityStatus) {
+        const currentQuality = form.value.qualityStatus
+        let isValidForStage = false
+        
+        if (stageOrder === 4) {
+            isValidForStage = ['cold', 'warm', 'hot'].includes(currentQuality)
+        } else if (stageOrder === 9) {
+            isValidForStage = ['no_answer', 'contacted', 'wrong_person'].includes(currentQuality)
+        } else if (stageOrder === 10) {
+            isValidForStage = [
+                'not_interested', 'wrong_contact_details', 'no_answer_multiple_calls',
+                'job_seeker', 'broker', 'registered_by_mistake', 'spam_leads',
+                'already_assigned_to_another_agent', 'client_was_just_searching_online',
+                'number_does_not_exist'
+            ].includes(currentQuality)
+        }
+        
+        if (!isValidForStage) {
+            form.value.qualityStatus = ''
+        }
+    }
+    
+    // Clear interaction_result if stage is not 2
+    if (stageOrder !== 2) {
+        form.value.interactionResult = ''
+    }
+    if (newVal) {
+        console.log('Stage ID changed to:', newVal)
+        // Force re-render of qualityStatusOptions by triggering a computed refresh
+        nextTick(() => {
+            // This will trigger visibleSearchFields to recompute
+            const temp = [...selectedLeadFieldIds.value]
+            selectedLeadFieldIds.value = temp
+        })
+    }
+})
 watch(() => form.value.leadType, () => {
     if (validationErrors?.value?.leadType) {
         delete validationErrors.value.leadType
