@@ -615,6 +615,7 @@ const emit = defineEmits(['update:modelValue', 'search'])
 
 const show = ref(props.modelValue)
 const showFilterSettings = ref(false)
+const FIELD_STORAGE_KEY = 'selectedLeadFields'
 const showDateModal = ref(false)
 const showBudgetDropdown = ref(false)
 const budgetTriggerRef = ref(null)
@@ -1505,15 +1506,17 @@ watch(selectedLeadFieldIds, (newVal, oldVal) => {
 
 function onFilterApply(payload) {
     if (payload && Array.isArray(payload.leads)) {
-        // ✅ استخدم getAllFieldIds بدلاً من defaultLeadFieldIds
         const fieldsToSave = payload.leads.length ? payload.leads : [...getAllFieldIds.value]
         selectedLeadFieldIds.value = fieldsToSave
         
-        localStorage.setItem('selectedLeadFields', JSON.stringify(fieldsToSave))
+        localStorage.setItem(FIELD_STORAGE_KEY, JSON.stringify(fieldsToSave))
         console.log('Saved fields to localStorage:', fieldsToSave)
         
-        const saved = localStorage.getItem('selectedLeadFields')
+        const saved = localStorage.getItem(FIELD_STORAGE_KEY)
         console.log('Verification - saved fields:', saved)
+        if (window.$showNotification) {
+            window.$showNotification('Fields saved successfully', 'success')
+        }
     }
 }
 
@@ -2577,7 +2580,7 @@ watch(() => props.modelValue, (val) => {
 // تأكد من أن restoreSavedFields هي async
 const restoreSavedFields = async () => {
     try {
-        const savedFields = localStorage.getItem('selectedLeadFields')
+        const savedFields = localStorage.getItem(FIELD_STORAGE_KEY)
         console.log('Raw savedFields from localStorage:', savedFields)
         
         if (savedFields) {
@@ -2635,11 +2638,13 @@ const getAllFieldIds = computed(() => {
 })
 
 function restoreDefaultFields() {
-    selectedLeadFieldIds.value = [...getAllFieldIds.value] // هذا يشمل كل الحقول بما فيها bedrooms و location
-    // selectedLeadFieldIds.value = [...defaultLeadFieldIds.value]
+    selectedLeadFieldIds.value = [...defaultLeadFieldIds.value]
     
-    localStorage.setItem('selectedLeadFields', JSON.stringify(selectedLeadFieldIds.value))
+    localStorage.setItem(FIELD_STORAGE_KEY, JSON.stringify(selectedLeadFieldIds.value))
     console.log('Reset to default fields:', selectedLeadFieldIds.value)
+    if (window.$showNotification) {
+        window.$showNotification('Default fields restored', 'success')
+    }
 }
 
 onMounted(async () => {

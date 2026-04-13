@@ -682,8 +682,9 @@ const $showNotification = (message, type = 'info') => {
 .view-lead-modal-content {
     background: #fff;
     border-radius: 16px;
-    overflow: hidden;
+    overflow: visible;
     font-family: 'Montserrat', sans-serif;
+    position: relative;
 }
 
 .modal-header-custom {
@@ -707,8 +708,24 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .close-btn {
-    font-size: 20px;
-    color: #000;
+    position: absolute;
+    top: 16px;
+    left: 0;
+    transform: translateX(-56%);
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    background: #3a9fe6;
+    color: #d9e7f5;
+    font-size: 13px;
+    padding: 0;
+    box-shadow: none;
+    z-index: 20;
+}
+
+.close-btn iconify-icon {
+    width: 16px;
+    height: 16px;
 }
 
 .custom-dropdown-pill :deep(.btn) {
@@ -919,7 +936,32 @@ textarea, input, select {
     user-select: text !important;
 }
 
+:deep(.kanban-mobile-fullscreen-modal .modal-content),
+:deep(.kanban-mobile-fullscreen-modal .modal-body),
+.modal-body-custom {
+    overflow-x: hidden !important;
+}
+
+:deep(.kanban-mobile-fullscreen-modal .modal-content) {
+    overflow: visible !important;
+}
+
 @media (max-width: 768px) {
+    .close-btn {
+        position: static;
+        transform: none;
+        width: 32px;
+        height: 32px;
+        left: auto;
+        top: auto;
+        box-shadow: none;
+    }
+
+    .close-btn iconify-icon {
+        width: 12px;
+        height: 12px;
+    }
+
     :deep(.kanban-mobile-fullscreen-modal) {
         margin: 0 !important;
         max-width: 100% !important;

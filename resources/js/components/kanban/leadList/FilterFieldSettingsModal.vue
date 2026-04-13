@@ -86,6 +86,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue', 'apply'])
+const STORAGE_KEY = 'selectedLeadFields'
 
 const show = ref(props.modelValue)
 const activeTabs = ref(['leads'])
@@ -201,7 +202,7 @@ const getAllFieldIds = computed(() => {
 const saveFieldsToLocalStorage = () => {
     const selectedLeads = leadFields.value.filter(f => f.checked).map(f => f.id)
     console.log('Saving to localStorage:', selectedLeads)
-    localStorage.setItem('selectedLeadFields', JSON.stringify(selectedLeads))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedLeads))
     return selectedLeads
 }
 
@@ -217,13 +218,13 @@ const resetToDefaultFields = () => {
         ...field,
         checked: defaultIds.includes(field.id)
     }))
-    localStorage.setItem('selectedLeadFields', JSON.stringify(defaultIds))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultIds))
     emit('apply', { leads: defaultIds })
 }
 
 const loadFromLocalStorage = () => {
     try {
-        const savedFields = localStorage.getItem('selectedLeadFields')
+        const savedFields = localStorage.getItem(STORAGE_KEY)
         if (savedFields) {
             const parsed = JSON.parse(savedFields)
             if (Array.isArray(parsed) && parsed.length) {
@@ -232,7 +233,15 @@ const loadFromLocalStorage = () => {
                     checked: parsed.includes(field.id)
                 }))
                 console.log('Loaded from localStorage in settings modal:', parsed)
+                return
             }
+        }
+        if (Array.isArray(props.initialSelectedLeadIds) && props.initialSelectedLeadIds.length) {
+            const selectedSet = new Set(props.initialSelectedLeadIds)
+            leadFields.value = leadFields.value.map(field => ({
+                ...field,
+                checked: selectedSet.has(field.id)
+            }))
         }
     } catch (error) {
         console.error('Error loading from localStorage:', error)
@@ -260,6 +269,15 @@ watch(() => props.modelValue, (val) => {
         loadFromLocalStorage()
     }
 })
+
+watch(() => props.initialSelectedLeadIds, (ids) => {
+    if (!show.value || !Array.isArray(ids)) return
+    const selectedSet = new Set(ids)
+    leadFields.value = leadFields.value.map(field => ({
+        ...field,
+        checked: selectedSet.has(field.id)
+    }))
+}, { deep: true })
 
 watch(show, (val) => {
     emit('update:modelValue', val)
