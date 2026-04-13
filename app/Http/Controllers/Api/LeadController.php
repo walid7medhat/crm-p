@@ -735,6 +735,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         $changes = [];
         $fields = [];
         
+        // التحقق من تغيير المسؤول
         if (!empty($request->responsible_person_id) && $request->responsible_person_id != $lead->responsible_person_id) {
             $oldPerson = User::find($lead->responsible_person_id);
             $newPerson = User::find($request->responsible_person_id);
@@ -823,7 +824,11 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             $updateData['budget_to'] = $bt;
             $updateData['budget'] = ($bt !== null && $bt !== '') ? $bt : (($bf !== null && $bf !== '') ? $bf : null);
         }
-
+        if ($newStage->order == 4) {
+            if ($lead->interaction_result === 'no_answer' || !$lead->interaction_result) {
+                $updateData['interaction_result'] = 'answered';
+            }
+        }
         // تحديث الـ Lead
         $lead->update($updateData);
 
