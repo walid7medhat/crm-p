@@ -1,5 +1,5 @@
 // resources/js/config/api.js
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api';
+const API_BASE_URL = 'https://listings.oiaproperties.com/api';
 
 export const API_ENDPOINTS = {
   // Auth
@@ -46,7 +46,8 @@ export const API_ENDPOINTS = {
      TEAM_HIERARCHY: `${API_BASE_URL}/team/hierarchy`,
     USERS_WITH_CHILDREN: `${API_BASE_URL}/users/with-children`,
     USER_STATUS: (id) => `${API_BASE_URL}/users/${id}/status`,
-    
+    USER_BIOMETRIC: (id) => `${API_BASE_URL}/users/${id}/biometric-code`,
+
     
      // features
   FEATURES: `${API_BASE_URL}/listings/features`,
@@ -56,7 +57,6 @@ export const API_ENDPOINTS = {
   PROJECT_BY_ID: (id) => `${API_BASE_URL}/listings/projects/${id}`,
     PROJECT_DEVELOPERS: `${API_BASE_URL}/listings/developers`,
   PROJECT_FEATURES: (id) => `${API_BASE_URL}/listings/features`,
-
 
 };
 

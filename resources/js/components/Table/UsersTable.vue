@@ -77,6 +77,7 @@
                                     </span>
                                 </th>
                                 <th scope="col">Email</th>
+                                <th scope="col"  v-if="$hasPermission('users-code')">Biometric Code</th>
                                 <th scope="col">Role</th>
                                 <th scope="col">Manager</th>
                                 <th scope="col">Active/Inactive</th>
@@ -125,6 +126,23 @@
                                     </div>
                                 </td>
                                 <td>{{user.email}}</td>
+                                <td  v-if="$hasPermission('users-code')">
+                                <!-- لو عنده permission -->
+                                <input 
+                                    v-if="$hasPermission('users-code')"
+                                    type="text"
+                                    class="form-control form-control-sm"
+                                    v-model="user.biometric_code"
+                                    @blur="updateBiometricCode(user)"
+                                    placeholder="Enter code"
+                                    style="max-width: 120px;"
+                                />
+                            
+                                <!-- لو معندوش permission -->
+                                <span v-else>
+                                    {{ user.biometric_code || '-' }}
+                                </span>
+                            </td>
                                 <td>
                                     <span class="">{{ user.role_name.replace(/_/g, ' ') }}</span>
                                 </td>
@@ -408,6 +426,39 @@ export default {
         this.fetchUsers();
     },
     methods: {
+        async updateBiometricCode(user) {
+            try {
+                const token = localStorage.getItem('token');
+        
+                const response = await fetch(API_ENDPOINTS.USER_BIOMETRIC(user.id), {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        biometric_code: user.biometric_code
+                    })
+                });
+        
+                const result = await response.json();
+        
+                if (!response.ok) {
+                    if (result.errors && result.errors.biometric_code) {
+                        throw new Error(result.errors.biometric_code[0]);
+                    }
+                    throw new Error(result.message || 'Failed to update biometric code');
+                }
+        
+                this.showNotification(`Biometric code updated for ${user.name}`, 'success');
+        
+            } catch (error) {
+                console.error('Error updating biometric code:', error);
+        
+                this.showNotification(error.message, 'error');
+            }
+        },
         hasAnyUserPermission() {
             return this.$hasPermission('users-list') || 
                    this.$hasPermission('users-edit') || 

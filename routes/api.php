@@ -140,6 +140,7 @@ Route::prefix('auth')->group(function () {
     Route::post('forgot-password', [PasswordResetController::class, 'forgotPassword']);
     Route::post('reset-password', [PasswordResetController::class, 'resetPassword']);
     Route::get('users/role/{role}', [UserController::class, 'getByRole']);
+ ;
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
     Route::middleware(['jwt.auth'])->group(function () {
@@ -268,6 +269,7 @@ Route::middleware(['jwt.auth'])->group(function () {
      // User routes
     Route::get('/users', [UserController::class, 'index']);
     Route::post('/users', [UserController::class, 'store']);
+    Route::put('users/{id}/biometric-code',[UserController::class,'updateBiometricCode']);
     Route::get('/users/{user}/permissions', [UserController::class, 'permissions']);
     Route::get('/users/{user}', [UserController::class, 'show']);
     Route::put('/users/{user}/status', [UserController::class, 'updateStatus']);

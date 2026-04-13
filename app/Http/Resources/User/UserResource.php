@@ -46,7 +46,8 @@ class UserResource extends JsonResource
             'parent' => new UserResource($this->whenLoaded('parent')),
             'children' => UserResource::collection($this->whenLoaded('children')),
             'addedBy' => new UserResource($this->whenLoaded('addedBy')),
-            'is_listing_team'=>($this->is_listing_team ) || (auth()->check() &&(auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin')))
+            'is_listing_team'=>($this->is_listing_team ) || (auth()->check() &&(auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin'))),
+            'biometric_code'=>$this->biometric_code
         ];
     }
 }

@@ -16,6 +16,8 @@ use Spatie\Permission\Models\Role;
 use App\Notifications\UserStatusUpdated;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\AccountActivatedMail;
+use Illuminate\Validation\Rule;
+
 class UserController extends Controller
 {
     public function __construct()
@@ -802,5 +804,31 @@ public function show(User $user): JsonResponse
             'message' => 'Failed to retrieve users: ' . $e->getMessage()
         ], 500);
     }
+}
+
+public function updateBiometricCode(Request $request, $id)
+{
+    $request->validate([
+        'biometric_code' => [
+            'nullable',
+            'string',
+            'max:50',
+            Rule::unique('users', 'biometric_code')->ignore($id),
+        ]
+    ]);
+
+    $user = User::findOrFail($id);
+
+    if (!auth()->user()->can('users-code')) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    $user->biometric_code = $request->biometric_code;
+    $user->save();
+
+    return response()->json([
+        'message' => 'Biometric code updated',
+        'data' => $user
+    ]);
 }
 }
