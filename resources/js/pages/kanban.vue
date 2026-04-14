@@ -29,4 +29,10 @@ export default {
     color: rgba(255, 255, 255, 0.95);
     background: transparent;
 }
+
+@media (max-width: 768px) {
+    :deep(.breadcrumb) {
+        display: none !important;
+    }
+}
 </style>

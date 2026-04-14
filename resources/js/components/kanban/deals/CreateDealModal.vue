@@ -1251,6 +1251,18 @@ onMounted(() => {
   font-size: 13px;
 }
 
+/* Keep all placeholders smaller and consistent */
+:deep(.deal-form-container .custom-input::placeholder),
+:deep(.deal-form-container input::placeholder),
+:deep(.deal-form-container textarea::placeholder),
+:deep(.deal-form-container .form-control::placeholder),
+:deep(.deal-form-container .custom-v-select .vs__search::placeholder),
+:deep(.deal-form-container .custom-v-select-inline .vs__search::placeholder) {
+  font-size: 11px !important;
+  color: #9ca3af !important;
+  opacity: 1;
+}
+
 :deep(.deal-form-container .custom-v-select-inline .vs__dropdown-toggle) {
   height: 42px !important;
   min-height: 42px;

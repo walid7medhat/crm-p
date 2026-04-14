@@ -708,19 +708,22 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .close-btn {
-      position: absolute;
-    top: 13px;
-    left: -11px;
-    transform: translate(-56%);
-    width: 50px;
-    height: 30px;
+    position: static;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
     border-radius: 999px;
-    background: #01062c;
-    color: #d9e7f5;
-    font-size: 20px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    color: #0f172a;
+    font-size: 18px;
     padding: 0;
     box-shadow: none;
-    z-index: -1;
+    z-index: 10;
 }
 
 .close-btn iconify-icon {
@@ -950,11 +953,16 @@ textarea, input, select {
     .close-btn {
         position: static;
         transform: none;
-        width: 32px;
-        height: 32px;
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        min-height: 40px;
         left: auto;
         top: auto;
         box-shadow: none;
+        border-radius: 999px;
+        border: 1px solid #e5e7eb;
+        background: #f8fafc;
     }
 
     .close-btn iconify-icon {
@@ -979,14 +987,38 @@ textarea, input, select {
     .view-lead-modal-content {
         height: 100dvh;
         border-radius: 0 !important;
-        padding: 8px !important;
+        padding: 10px !important;
         display: flex;
         flex-direction: column;
+        background: #f8fbff;
     }
     .modal-body-custom {
         flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
+        padding: 8px 4px 90px !important;
+    }
+    .modal-header-custom,
+    .stage-selector-wrapper,
+    .tabs-container {
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #eef2f7;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+    :deep(.stage-selector-wrapper .stage-text) {
+        font-size: 11px !important;
+    }
+    .tabs-container {
+        margin-top: 8px;
+    }
+    .details-content,
+    .timeline-content,
+    .history-content {
+        border-radius: 14px;
+        border: 1px solid #eef2f7;
+        background: #fff;
         padding: 10px !important;
     }
 }
@@ -1067,11 +1099,18 @@ textarea, input, select {
 }
 </style>
 <style>
-    .view-lead-modal {
+.view-lead-modal {
     padding: 0 !important;
     height: 85vh;
-    max-height: 85vh;
+    max-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+@media (max-width: 768px) {
+    .view-lead-modal {
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+    }
 }
 </style>

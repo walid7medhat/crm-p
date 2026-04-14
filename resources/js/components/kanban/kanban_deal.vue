@@ -41,7 +41,7 @@
     <AddStageModal v-model="showAddStageModal"   :stage-type="currentStageType"
         :deal-type="currentDealType"
         @stage-created="handleStageCreated" />
-    <div class="kanban-main-wrapper" :class="{ 'deal-figma-ui': activeTab === 'deals' }">
+    <div class="kanban-main-wrapper" :class="{ 'deal-figma-ui': activeTab === 'deals', 'kanban-shell--mobile': kanbanIsMobile }">
         <b-tabs 
             v-model="activeTabIndex"
             class="kanban-tabs-container"
@@ -207,6 +207,10 @@ function updateKanbanMobileBreakpoint() {
 }
 
 provide('kanbanIsMobile', kanbanIsMobile)
+provide('kanbanOpenCreateLead', () => {
+    activeTab.value = 'leads'
+    showCreateModal.value = true
+})
 
 const echoListeners = ref([])
 const pollingInterval = ref(null)
@@ -257,7 +261,7 @@ const activeTabName = computed(() => {
 })
 
 const searchInputPlaceholder = computed(() => {
-    if (activeTab.value === 'deals') return '+ Filter and search'
+    if (activeTab.value === 'deals') return 'Search deals'
     return '+ Search'
 })
 // Get user from storage (same pattern as header/index.vue)
@@ -293,6 +297,14 @@ function applySearchToApi() {
     const base = lastQuery.value && Object.keys(lastQuery.value).length ? { ...lastQuery.value } : {}
     const term = (search.value || '').trim()
     const query = term ? { ...base, search: term } : base
+    if (activeTab.value === 'deals') {
+        if (!dealsRef.value) return
+        const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+        if (dealsComponent && typeof dealsComponent.fetchDeals === 'function') {
+            dealsComponent.fetchDeals(true, Object.keys(query).length ? query : null)
+        }
+        return
+    }
     if (!leadsRef.value) return
     const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
     if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
@@ -375,6 +387,7 @@ const initializeStageUpdates = () => {
     }
 }
 const openSearchModal = () => {
+    if (activeTab.value !== 'leads') return
     showSearchModal.value = true
     searchInputFocused.value = true
     // Focus on input after modal opens
@@ -615,6 +628,15 @@ const clearSearchFilter = () => {
     search.value = ''
         showSearchModal.value = false
 
+    if (activeTab.value === 'deals') {
+        if (dealsRef.value) {
+            const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+            if (dealsComponent && typeof dealsComponent.fetchDeals === 'function') {
+                dealsComponent.fetchDeals(true, null)
+            }
+        }
+        return
+    }
     onLeadSearch(null)
 }
 
@@ -625,7 +647,7 @@ function onSearchFocus() {
         searchBlurTimeout = null
     }
     searchInputFocused.value = true
-    showSearchModal.value = true
+    showSearchModal.value = activeTab.value === 'leads'
 }
 function onSearchBlur() {
     searchBlurTimeout = setTimeout(() => {
@@ -1125,5 +1147,70 @@ const $showNotification = (message, type = 'info') => {
     color: #666666;
     vertical-align: middle !important;
     margin-right: 10px;
+}
+
+/* Mobile shell (active route: kanban_deal.vue) */
+.kanban-shell--mobile.kanban-main-wrapper {
+    min-height: calc(100dvh - 56px);
+    border-radius: 0;
+    margin: 0 -4px;
+}
+
+.kanban-shell--mobile :deep(.kanban-tabs-container > .nav-tabs) {
+    flex-wrap: wrap;
+    padding: 8px 8px 0;
+    gap: 8px;
+}
+
+.kanban-shell--mobile :deep(.header-actions) {
+    width: 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start !important;
+    margin-left: 0 !important;
+    margin-top: 0;
+    padding: 0 4px 8px;
+    gap: 8px !important;
+}
+
+.kanban-shell--mobile .search-area-column {
+    display: flex !important;
+    flex: 1 1 auto;
+    width: 100%;
+    align-items: stretch !important;
+}
+
+.kanban-shell--mobile .search-wrapper {
+    width: 100%;
+    max-width: none !important;
+    min-width: 0 !important;
+    border-radius: 20px !important;
+    min-height: 44px;
+    padding: 7px 12px;
+    border: 1px solid #e8edf5 !important;
+    box-shadow: none !important;
+}
+
+.kanban-shell--mobile .search-input-container {
+    max-width: none !important;
+    min-width: 0 !important;
+}
+
+.kanban-shell--mobile .search-plus-icon {
+    display: none !important;
+}
+
+.kanban-shell--mobile .search-input {
+    font-size: 14px !important;
+    font-weight: 500;
+}
+
+.kanban-shell--mobile .search-input::placeholder {
+    color: #94a3b8 !important;
+    font-size: 14px !important;
+}
+
+.kanban-shell--mobile .btn-create-new,
+.kanban-shell--mobile .more-options-wrapper {
+    display: none !important;
 }
 </style>

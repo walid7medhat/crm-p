@@ -219,7 +219,7 @@ watch(showSearchModal, (val) => {
 
 const tabs = computed(() => {
     const baseTabs = [
-        // { id: 'deals', name: 'Deals', hasChevron: false },
+        { id: 'deals', name: 'Deals', hasChevron: false },
         { id: 'leads', name: 'Leads', hasChevron: false },
         // { id: 'inventory', name: 'Inventory', hasChevron: true },
         // { id: 'costumers', name: 'Costumers', hasChevron: true },
@@ -1077,6 +1077,7 @@ const $showNotification = (message, type = 'info') => {
 :deep(.stage-dropdown-menu) {
     background: rgba(255, 255, 255, 0.95);
     -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.5);
     border-radius: 12px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -1122,31 +1123,59 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .kanban-shell--mobile :deep(.header-actions) {
-    width: auto;
+    width: 100%;
     flex-wrap: nowrap;
-    justify-content: flex-end !important;
-    margin-left: auto !important;
+    justify-content: flex-start !important;
+    margin-left: 0 !important;
     margin-top: 0;
-    padding: 0;
+    padding: 0 4px 8px;
     gap: 8px !important;
 }
 
+.kanban-shell--mobile :deep(.stage-selector-wrapper .stage-text) {
+    font-size: 11px !important;
+}
+
 .kanban-shell--mobile .search-area-column {
-    display: none !important;
+    display: flex !important;
+    flex: 1 1 auto;
+    width: 100%;
+    align-items: stretch !important;
 }
 
 .kanban-shell--mobile .search-wrapper {
     width: 100%;
     max-width: none !important;
     min-width: 0 !important;
-    border-radius: 14px !important;
+    border-radius: 20px !important;
     min-height: 44px;
-    padding: 6px 12px;
+    padding: 7px 12px;
+    border: 1px solid #e8edf5 !important;
+    box-shadow: none !important;
 }
 
 .kanban-shell--mobile .search-input-container {
     max-width: none !important;
     min-width: 0 !important;
+}
+
+.kanban-shell--mobile .search-plus-icon {
+    display: none !important;
+}
+
+.kanban-shell--mobile .search-input {
+    font-size: 14px !important;
+    font-weight: 500;
+}
+
+.kanban-shell--mobile .search-input::placeholder {
+    color: #94a3b8 !important;
+    font-size: 14px !important;
+}
+
+.kanban-shell--mobile .btn-create-new--icon,
+.kanban-shell--mobile .more-options-wrapper {
+    display: none !important;
 }
 
 .kanban-shell--mobile .lead-search-dropdown-outer {

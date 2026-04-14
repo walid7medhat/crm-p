@@ -506,4 +506,17 @@ onUnmounted(() => {
     color: #01062C;
     font-weight: 400;
 }
+
+@media (max-width: 768px) {
+    .stage-pill {
+        min-width: 104px;
+        max-width: 138px;
+        padding: 1px 8px;
+    }
+
+    .stage-text {
+        font-size: 11px;
+        font-weight: 500;
+    }
+}
 </style>

@@ -17,6 +17,16 @@
                 <span class="mobile-current-stage-bar__value">{{ mobileListFilterLabel }}</span>
             </div>
         </div>
+
+        <button
+            v-if="kanbanIsMobile"
+            type="button"
+            class="mobile-create-new-fixed"
+            @click="onMobileColumnAddLead"
+        >
+            <span class="mobile-create-new-fixed__plus">+</span>
+            <span class="mobile-create-new-fixed__text">New Listing</span>
+        </button>
         <div
             ref="kanbanContainerRef"
             class="kanban-container"
@@ -2482,9 +2492,7 @@ function onLeadCardClick(task, column) {
         return
     }
     if (kanbanIsMobile.value) {
-        mobileQuickLead.value = task
-        mobileQuickSourceColumn.value = column
-        showMobileQuickSheet.value = true
+        viewLead(task)
         return
     }
     viewLead(task)
@@ -3925,24 +3933,25 @@ const $showNotification = (message, type = 'info') => {
     align-items: center;
     gap: 8px;
     margin: 8px 10px 8px;
-    padding: 7px 10px;
+    padding: 10px 12px;
     background: #fff;
-    border-radius: 14px;
+    border-radius: 12px;
+    border: 1px solid #eef2f7;
     box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
     cursor: pointer;
     user-select: none;
 }
 
 .mobile-current-stage-bar__icon {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: #f1f5f9;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #475569;
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .mobile-current-stage-bar__text {
@@ -3954,17 +3963,17 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .mobile-current-stage-bar__label {
-    font-size: 8px;
+    font-size: 13px;
     color: #64748b;
-    font-weight: 600;
+    font-weight: 500;
     line-height: 1.1;
 }
 
 .mobile-current-stage-bar__value {
-    font-size: 11px;
+    font-size: 16px;
     font-weight: 700;
     color: #0f172a;
-    line-height: 1.1;
+    line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -4143,9 +4152,9 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .mobile-kanban-sheet__title {
-    font-size: 16px;
+    font-size: 24px;
     font-weight: 700;
-    color: #64748b;
+    color: #0f172a;
     margin: 0;
 }
 
@@ -4178,10 +4187,10 @@ const $showNotification = (message, type = 'info') => {
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 44px;
+    min-height: 46px;
     padding: 8px 12px;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
     color: #0f172a;
 }
@@ -4231,7 +4240,7 @@ const $showNotification = (message, type = 'info') => {
     padding: 14px 16px;
     border: none;
     border-radius: 999px;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     cursor: pointer;
 }
@@ -4282,6 +4291,47 @@ const $showNotification = (message, type = 'info') => {
     width: 20px;
     border-radius: 999px;
     background: #f59e0b;
+}
+
+.mobile-create-new-fixed {
+    position: fixed;
+    left: 50%;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 10020;
+    height: 46px;
+    min-width: 164px;
+    padding: 0 20px 0 12px;
+    border: 1px solid #eef2f7;
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(2, 6, 23, 0.12);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.mobile-create-new-fixed__plus {
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    background: #fff;
+    border: 2px solid #f59e0b;
+    color: #f59e0b;
+    font-size: 18px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.mobile-create-new-fixed__text {
+    color: #0f172a;
+    font-size: 16px;
+    line-height: 1;
+    font-weight: 600;
 }
 
 </style>

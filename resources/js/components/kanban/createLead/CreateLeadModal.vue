@@ -2211,8 +2211,11 @@ const $showNotification = (message, type = 'info') => {
 }
 
 @media (max-width: 768px) {
-  .step-content .row {
+  .step-content .row,
+  .create-lead-modal-content .step-content .row {
     padding: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
   .kanban-mobile-fullscreen-modal {
     margin: 0 !important;
@@ -2231,14 +2234,126 @@ const $showNotification = (message, type = 'info') => {
   .create-lead-modal-content {
     height: 100dvh;
     border-radius: 0 !important;
-    padding: 8px 0 0 0 !important;
+    padding: 10px 0 0 !important;
     display: flex;
     flex-direction: column;
+    background: #f8fbff;
+  }
+  :deep(.header-modal-wrapper) {
+    margin: 0 !important;
+    padding: 4px 2px 12px !important;
+  }
+  :deep(.header-close-btn-top) {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+    margin-bottom: 0 !important;
+  }
+  :deep(.header-modal-title) {
+    font-size: 17px !important;
+    font-weight: 700 !important;
   }
   .form-scroll-area {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  }
+  .modal-header-custom {
+    background: #fff;
+    border-radius: 14px;
+    padding: 10px 14px !important;
+    margin-bottom: 10px;
+  }
+  .stage-selector-wrapper {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #eef2f7;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+  }
+  :deep(.stage-selector-wrapper .stage-text) {
+    font-size: 11px !important;
+  }
+  .form-card,
+  .contact-details-card,
+  .additional-fields-card {
+    border-radius: 14px !important;
+    border: 1px solid #eef2f7 !important;
+    box-shadow: 0 2px 8px rgba(2, 6, 23, 0.04) !important;
+    padding: 12px !important;
+    margin-bottom: 10px;
+  }
+  .section-title {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+  }
+  .form-label-custom {
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    margin-bottom: 6px !important;
+    color: #0f172a !important;
+  }
+  .step-content .row > [class*="col-"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+  .custom-input,
+  .custom-textarea,
+  .custom-date-trigger,
+  .input-group-custom,
+  .budget-field-wrap {
+    width: 100% !important;
+  }
+  :deep(.custom-v-select),
+  :deep(.custom-v-select-inline),
+  :deep(.custom-v-select .vs__dropdown-toggle),
+  :deep(.custom-v-select-inline .vs__dropdown-toggle) {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .custom-input,
+  .custom-textarea,
+  .custom-date-trigger,
+  :deep(.custom-v-select .vs__dropdown-toggle) {
+    height: 46px !important;
+    min-height: 46px !important;
+    border-radius: 12px !important;
+    font-size: 14px !important;
+  }
+  .custom-input::placeholder,
+  .custom-textarea::placeholder,
+  :deep(.custom-v-select .vs__search::placeholder) {
+    font-size: 14px !important;
+    color: #9aa6b2 !important;
+  }
+  :deep(.custom-v-select .vs__selected),
+  :deep(.custom-v-select .vs__search) {
+    font-size: 14px !important;
+    line-height: 1.2 !important;
+  }
+  .modal-footer-custom {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 1px solid #edf2f7;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 6;
+  }
+  .btn-clear,
+  .btn-next-step {
+    height: 44px !important;
+    min-width: 122px;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   .contact-details-card .d-flex {
     flex-direction: column !important;

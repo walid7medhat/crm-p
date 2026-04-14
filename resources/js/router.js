@@ -107,6 +107,16 @@ const baseRoutes = [
   // Kanban Route (super_admin only — see meta.requiresSuperAdmin)
   { path: '/kanban', component: Kanban, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/kanban_deal', component: kanban_deal },
+  {
+    path: '/project-map',
+    name: 'project-map',
+    component: () => import('./pages/dev/ProjectMapPage.vue'),
+    meta: {
+      layout: false,
+      requiresAuth: true,
+      requiresSuperAdmin: true,
+    },
+  },
     { path: '/settings/kanban', component: kanban_settings },
     { path: '/settings/lead-scoring', component: lead_scoring_settings, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/lead-scoring', redirect: '/settings/lead-scoring' },
@@ -326,7 +336,7 @@ router.beforeEach((to, from, next) => {
 
   if (to.path.startsWith('/__dev__/')) {
     if (import.meta.env.PROD) {
-      next('/')
+      next('/project-map')
       return
     }
   }

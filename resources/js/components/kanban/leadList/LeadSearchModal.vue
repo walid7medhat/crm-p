@@ -241,7 +241,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="d-flex align-items-center justify-content-between mt-3 pt-4">
+                <div class="search-modal-footer d-flex align-items-center justify-content-between mt-3 pt-4">
                     <div class="d-flex gap-4">
                         <a href="#" class="footer-link text-decoration-underline" @click.prevent="showFilterSettings = true">Add Field</a>
                         <a href="#" class="footer-link text-secondary" @click.prevent="restoreDefaultFields">Restore default fields</a>
@@ -490,7 +490,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="d-flex align-items-center justify-content-between mt-3 pt-4">
+                <div class="search-modal-footer d-flex align-items-center justify-content-between mt-3 pt-4">
                     <div class="d-flex gap-4">
                         <a href="#" class="footer-link text-decoration-underline" @click.prevent="showFilterSettings = true">Add Field</a>
                         <a href="#" class="footer-link text-secondary" @click.prevent="restoreDefaultFields">Restore default fields</a>
@@ -2703,22 +2703,24 @@ onBeforeUnmount(() => {
 
 .sidebar-pills {
     min-width: 221px;
-    background: #F8FAFC;
-    padding: 18px !important;
+    background: #f8fafc;
+    padding: 16px 14px !important;
 }
 
 .pill-btn {
     border: none;
     background: #fff;
     border-radius: 100px;
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 500;
     color: #475569;
-    padding: 1px 10px;
+    min-height: 30px;
+    padding: 0 12px;
     text-align: center;
     transition: all 0.2s;
     border: 1px solid #E2E8F0;
     width: fit-content;
-    text-wrap: nowrap;
+    white-space: nowrap;
     display: inline-flex;
     align-items: center;
     justify-content: space-between;
@@ -2811,18 +2813,31 @@ onBeforeUnmount(() => {
 
 .form-content-wrapper {
     padding: 20px 14px !important;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .search-sections-wrap {
     max-height: 58vh;
     overflow-y: auto;
     padding-right: 4px;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .search-sections-wrap {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+.search-modal-footer {
+    flex-shrink: 0;
+    border-top: 1px solid #eef2f7;
+    padding-top: 12px !important;
+    margin-top: 12px !important;
+    background: #fff;
 }
 
 .search-section-card {
@@ -2908,6 +2923,13 @@ onBeforeUnmount(() => {
         padding: 8px 16px;
         font-size: 13px;
     }
+
+    .search-modal-footer {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    }
 }
 
 .close-btn {
@@ -2924,39 +2946,39 @@ onBeforeUnmount(() => {
 
 .form-label-custom {
     display: block;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     color: #000000;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
 }
 
 .custom-input {
-    height: 42px !important;
-    border-radius: 10px !important;
+    height: 40px !important;
+    border-radius: 9px !important;
     border: 1px solid #E2E8F0 !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     color: #64748B !important;
     font-family: 'Montserrat';
 }
 
 .custom-input::placeholder {
-    color: #64748B !important;
+    color: #94a3b8 !important;
     opacity: 1;
-    font-size: 13px !important;
+    font-size: 12px !important;
     font-family: 'Montserrat';
 }
 
 .custom-date-trigger {
     width: 100%;
-    height: 42px;
-    border-radius: 10px;
+    height: 40px;
+    border-radius: 9px;
     border: 1px solid #E2E8F0;
     background: #fff;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 12px;
-    font-size: 13px;
+    font-size: 12px;
     color: #64748B;
     font-family: 'Montserrat';
 }
@@ -3190,8 +3212,8 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-v-select .vs__dropdown-toggle) {
-    height: 42px;
-    border-radius: 10px;
+    height: 40px;
+    border-radius: 9px;
     border: 1px solid #E2E8F0;
     background: #fff;
     padding: 0 8px;
@@ -3204,7 +3226,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-v-select .vs__selected) {
-    font-size: 13px;
+    font-size: 12px;
     color: #64748B;
     margin: 0;
     padding: 0;
@@ -3213,7 +3235,7 @@ onBeforeUnmount(() => {
     text-overflow: ellipsis;
     display: block;
     max-width: 100%;
-    line-height: 40px;
+    line-height: 38px;
 }
 
 /* Branch multi-select: show all selected options clearly */
@@ -3246,14 +3268,15 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-v-select .vs__search) {
-    font-size: 13px;
+    font-size: 12px;
     color: #64748B;
     margin: 0;
     padding: 0;
 }
 
 :deep(.custom-v-select .vs__search::placeholder) {
-    color: #64748B;
+    color: #94a3b8;
+    font-size: 12px;
 }
 
 :deep(.custom-v-select .vs__actions) {
@@ -3261,7 +3284,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-v-select .vs__open-indicator-icon) {
-    font-size: 15px;
+    font-size: 13px;
     color: #cfdbec;
 }
 
@@ -3279,7 +3302,7 @@ onBeforeUnmount(() => {
 
 :deep(.custom-v-select .vs__dropdown-option) {
     padding: 5px 10px;
-    font-size: 14px;
+    font-size: 12px;
     color: #475569;
     transition: all 0.2s;
 }

@@ -447,7 +447,15 @@ function stopScroll() {
 }
 
 // Fetch deals from API
-async function fetchDeals(immediate = false) {
+const runtimeFilters = ref({})
+
+async function fetchDeals(immediate = false, externalFilters = null) {
+  if (externalFilters && typeof externalFilters === 'object') {
+    runtimeFilters.value = { ...externalFilters }
+  } else if (externalFilters === null) {
+    runtimeFilters.value = {}
+  }
+
   // Prevent concurrent requests
   if (isFetching.value) return
   
@@ -485,7 +493,8 @@ async function executeFetchDeals() {
     const response = await axios.get('/deals/grouped-by-stage', { 
       params: {
         deal_type: activeTypeTab.value,
-        ...props.filters
+        ...props.filters,
+        ...runtimeFilters.value
       }
     })
     
