@@ -321,23 +321,24 @@ const bedroomOptions = [{ value: null, text: 'Select Bedroom' }, { value: '1', t
 </script>
 
 <style scoped>
-.section-title { font-size: 13px; font-weight: 600; color: #01062C; font-family: 'Montserrat'; }
+.section-title { font-size: 16px; font-weight: 600; color: var(--deal-navy-deep, #01062c); font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); letter-spacing: -0.02em; }
 .form-card { background: #fff; border: 1px solid #F3F3F3; box-shadow: 1px 1px 5px rgba(0,0,0,0.03); }
 .radius-12 { border-radius: 12px; }
-.form-label-custom { font-size: 13px; font-weight: 500; color: #000; margin-bottom: 6px; display: block; font-family: 'Montserrat'; }
-.custom-input { height: 42px !important; border-radius: 10px !important; border: 1px solid #E2E8F0 !important; font-size: 13px !important; font-family: 'Montserrat'; }
-.input-group-custom { display: flex; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; }
-.input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 10px 0 0 10px !important; }
+.form-label-custom { font-size: 12px; font-weight: 500; color: var(--deal-text-muted, #64748b); margin-bottom: 6px; display: block; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.custom-input { height: 44px !important; min-height: 44px; border-radius: var(--deal-input-r, 10px) !important; border: 1px solid #E2E8F0 !important; font-size: 14px !important; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.input-group-custom { display: flex; border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; }
+.input-group-custom .custom-input { border: none !important; flex: 1; border-radius: var(--deal-input-r, 10px) 0 0 var(--deal-input-r, 10px) !important; }
 :deep(.custom-v-select-inline) { min-width: 120px; }
-:deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 42px; border: none; border-left: 1px solid #E2E8F0; border-radius: 0 10px 10px 0; }
+:deep(.custom-v-select .vs__dropdown-toggle) { height: 44px !important; min-height: 44px !important; border-radius: var(--deal-input-r, 10px); border: 1px solid #E2E8F0; font-size: 14px; }
+:deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 44px !important; min-height: 44px !important; border: none; border-left: 1px solid #E2E8F0; border-radius: 0 var(--deal-input-r, 10px) var(--deal-input-r, 10px) 0; }
 .doc-tabs { gap: 8px; }
 .doc-tab { padding: 6px 14px; border-radius: 100px; border: 1px solid #E2E8F0; background: #fff; font-size: 12px; color: #64748B; cursor: pointer; }
 .doc-tab.active { background: #0F172A; color: #fff; border-color: #0F172A; }
 .upload-zone { border-style: dashed !important; border-color: #E2E8F0 !important; background: #F8FAFC; }
 .upload-icon { font-size: 32px; color: #94A3B8; }
-.upload-text { font-size: 13px; color: #475569; margin: 0; }
+.upload-text { font-size: 14px; color: #475569; margin: 0; }
 .tag-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #E2E8F0; border-radius: 100px; font-size: 12px; }
 .tag-remove { cursor: pointer; font-size: 14px; }
-.btn-tag-search { background: transparent; border: none; color: #3B82F6; font-size: 13px; cursor: pointer; }
-.add-custom-field-link { font-size: 13px; color: #3B82F6; text-decoration: underline; }
+.btn-tag-search { background: transparent; border: none; color: var(--deal-navy, #0f172a); font-size: 14px; font-weight: 500; cursor: pointer; }
+.add-custom-field-link { font-size: 14px; color: var(--deal-navy, #0f172a); font-weight: 500; text-decoration: underline; }
 </style>

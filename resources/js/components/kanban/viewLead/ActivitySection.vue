@@ -9,7 +9,7 @@
             <textarea 
                 class="form-control border-0 p-0 text-sm shadow-none custom-textarea"
                 :class="{ 'is-invalid': validationErrors.title }"
-                placeholder="Type activity title" 
+                placeholder="Type @ to mention someone" 
                 rows="4"
                 v-model="activityText"
             ></textarea>
@@ -417,7 +417,7 @@ onUnmounted(() => {
     color: #64748B !important;
     opacity: 1;
     font-size: 13px !important;
-    font-family: 'Montserrat';
+    font-family: var(--deal-font, 'Montserrat', sans-serif);
 }
 
 /* Activity/Comment Box Styles */

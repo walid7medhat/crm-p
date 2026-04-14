@@ -11,23 +11,21 @@
     @hidden="resetForm"
     @shown="onModalShown"
   >
-    <div class="create-deal-modal-content create-deal-modal-padding">
+    <div class="create-deal-modal-content create-deal-modal-padding deal-figma-ui">
       <!-- Header: extra padding so text doesn't start at edge -->
       <div class="modal-header-deal d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div class="d-flex align-items-center gap-3 flex-grow-1 header-left-with-padding">
           <span class="modal-title">Create New Deal</span>
-          <!-- Clickable tabs: Primary / Secondary / Rental -->
-          <div class="deals-type-tabs-inline d-flex gap-2">
-            <button
-              v-for="tab in dealTypeTabs"
-              :key="tab.id"
-              type="button"
-              class="deals-type-tab-btn"
-              :class="{ active: dealType === tab.id }"
-              @click="selectDealType(tab.id)"
+          <div class="deals-type-select-wrap">
+            <select
+              v-model="dealType"
+              class="deals-type-select"
+              @change="selectDealType(dealType)"
             >
-              {{ tab.name }}
-            </button>
+              <option v-for="tab in dealTypeTabs" :key="tab.id" :value="tab.id">
+                {{ tab.name }}
+              </option>
+            </select>
           </div>
         </div>
         <button type="button" class="close-btn" @click="close">
@@ -46,25 +44,31 @@
         </div>
       </div>
      
-        <!-- Deal progress / stages (changes by deal type) -->
-      <div class="deal-progress-wrapper py-3">
+      <!-- Deal progress / stages (same pill system as View Deal: navy active, colored dot only) -->
+      <div class="deal-progress-wrapper py-2 px-1">
+        <div class="deal-progress-label">Pipeline</div>
         <div class="deal-progress-bar">
           <template v-for="(stage, index) in currentStages" :key="stage.id">
-            <div
-                    class="deal-stage-pill"
-                    :class="{ active: selectedStageId === stage.id }"
-                    :style="{
-                      backgroundColor: selectedStageId === stage.id ? (stage.color || '#DBEAFE') : 'transparent',
-                      borderColor: selectedStageId === stage.id ? (stage.color || '#3B82F6') : '#E2E8F0'
-                    }"
-                    @click="selectedStageId = stage.id"
+            <button
+              type="button"
+              class="deal-stage-pill"
+              :class="{ active: selectedStageId === stage.id }"
+              @click="selectedStageId = stage.id"
             >
               <div class="stage-circle">
-                <div class="stage-dot" :style="{ backgroundColor: stage.color }"></div>
+                <div
+                  class="stage-dot"
+                  :style="{ backgroundColor: stage.color || '#3b82f6' }"
+                />
               </div>
               <span class="stage-text">{{ stage.name }}</span>
-            </div>
-            <iconify-icon v-if="index < currentStages.length - 1" icon="lucide:chevron-right" class="stage-arrow"></iconify-icon>
+            </button>
+            <iconify-icon
+              v-if="index < currentStages.length - 1"
+              icon="lucide:chevron-right"
+              class="stage-arrow"
+              aria-hidden="true"
+            />
           </template>
         </div>
       </div>
@@ -99,15 +103,18 @@
 
       <!-- Footer -->
        <div class="modal-footer-custom">
-        <div class="d-flex align-items-center justify-content-end gap-3">
+        <div class="d-flex align-items-center justify-content-center gap-3">
           <button class="btn-clear" @click="resetForm" :disabled="isSubmitting">Clear</button>
           <button class="btn-next-step" @click="validateAndSubmit" :disabled="isSubmitting">
             <span v-if="isSubmitting">
               <b-spinner small></b-spinner> Creating...
             </span>
-            <span v-else>
-              {{ leadId ? 'Convert Lead to Deal' : 'Create Deal' }}
-              <iconify-icon icon="lucide:chevron-right" class="ms-1" />
+            <span v-else class="d-inline-flex align-items-center gap-1">
+              <template v-if="leadId">
+                Convert Lead to Deal
+                <iconify-icon icon="lucide:chevron-right" class="ms-1" aria-hidden="true" />
+              </template>
+              <template v-else>Save</template>
             </span>
           </button>
         </div>
@@ -167,25 +174,21 @@ function selectDealType(id) {
 
 // Get stages for current deal type
 const currentStages = computed(() => {
-  console.log('All stages:', stages.value)
-  
   if (!stages.value || stages.value.length === 0) {
     return []
   }
-  
+
   const filtered = stages.value.filter(stage => {
     const stageType = stage.stage_type || 'deal'
     const stageDealType = stage.deal_type || dealType.value
     return stageType === 'deal' && stageDealType === dealType.value
   })
-  
-  console.log('Filtered stages:', filtered)
+
   return filtered.sort((a, b) => (a.order || 0) - (b.order || 0))
 })
 
 // Watch for deal type changes
-watch(dealType, async (newVal, oldVal) => {
-  console.log('Deal type changed from', oldVal, 'to', newVal)
+watch(dealType, async () => {
   selectedStageId.value = null
   validationErrors.value = []
   showFieldErrors.value = false
@@ -196,14 +199,12 @@ watch(dealType, async (newVal, oldVal) => {
 // Watch for changes in the dealType prop from parent
 watch(() => props.dealType, (newVal) => {
   if (newVal && newVal !== dealType.value) {
-    console.log('Prop dealType changed to', newVal)
     dealType.value = newVal
   }
 })
 
 // Watch for modal visibility
 watch(() => props.modelValue, async (val) => {
-  console.log('Modal visibility changed to', val)
   show.value = val
   if (val) {
     validationErrors.value = []
@@ -225,13 +226,10 @@ watch(show, (val) => {
 })
 
 // عندما يظهر المودال
-function onModalShown() {
-  console.log('Modal shown, current stages:', currentStages.value)
-}
+function onModalShown() {}
 
 // Load all initial data
 async function loadInitialData() {
-  console.log('Loading initial data...')
   try {
     await Promise.all([
       fetchUsers(),
@@ -250,8 +248,6 @@ async function fetchUsers() {
   usersLoading.value = true
   try {
     const response = await api.get('/available-responsible-persons')
-    console.log('Users response:', response.data)
-    
     const responseData = response.data
     if (responseData?.data) {
       users.value = Array.isArray(responseData.data) ? responseData.data : []
@@ -261,7 +257,6 @@ async function fetchUsers() {
       users.value = []
     }
     
-    console.log('Processed users:', users.value)
   } catch (error) {
     console.error('Error fetching users:', error)
     users.value = []
@@ -296,15 +291,12 @@ async function fetchSources() {
 async function fetchStages() {
   stagesLoading.value = true
   try {
-    console.log('Fetching stages for deal type:', dealType.value)
     const response = await api.get('/stages', {
       params: {
         stage_type: 'deal',
         deal_type: dealType.value
       }
     })
-    
-    console.log('Stages API response:', response.data)
     
     const responseData = response.data
     
@@ -326,7 +318,6 @@ async function fetchStages() {
     
     if (filteredStages.length > 0 && !selectedStageId.value) {
       selectedStageId.value = filteredStages[0].id
-      console.log('Auto-selected stage:', selectedStageId.value)
     }
   } catch (error) {
     console.error('Error fetching stages:', error)
@@ -396,8 +387,6 @@ async function searchAreas(search = '', parentId = null) {
     
     const response = await api.get('/listings/areas', { params })
     
-    console.log('Areas API response:', response.data)
-    
     // معالجة البيانات
     const responseData = response.data
     let areasData = []
@@ -431,8 +420,6 @@ async function searchProjects(search = '') {
     }
     
     const response = await api.get('/listings/projects', { params })
-    
-    console.log('Projects API response:', response.data)
     
     let projectsData = []
     const responseData = response.data
@@ -857,10 +844,13 @@ async function submitForm() {
         confirmButtonText: 'OK'
       })
     } else {
+      const backendDetail = error.response?.data?.error
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: error.response?.data?.message || 'Failed to create deal',
+        text: backendDetail
+          ? `${error.response?.data?.message || 'Failed to create deal'}: ${backendDetail}`
+          : (error.response?.data?.message || 'Failed to create deal'),
         confirmButtonText: 'OK'
       })
     }
@@ -963,20 +953,30 @@ function close() {
 }
 
 onMounted(() => {
-  console.log('CreateDealModal mounted')
   resetFormData()
   loadInitialData()
 })
 </script>
 
+<style>
+#create-deal-modal .modal-content {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12) !important;
+}
+</style>
+
 <style scoped>
 /* Modal wider – no tight width constraint */
 :deep(.create-deal-modal-wrap .modal-dialog) {
-  max-width: 98vw;
-  width: 98vw;
+  max-width: min(1200px, 95vw) !important;
+  width: min(1200px, 95vw) !important;
+  max-height: var(--deal-modal-max-h, 92vh) !important;
+  margin: 2vh auto !important;
 }
 :deep(.create-deal-modal-body) {
-  max-height: 85vh;
+  max-height: var(--deal-modal-max-h, 92vh);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1002,15 +1002,19 @@ onMounted(() => {
 .create-deal-modal-content {
   background: #fff;
   border-radius: 12px;
-  font-family: 'Montserrat', sans-serif;
-  font-size: 15px;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
 }
 .create-deal-modal-padding {
-  padding: 1.25rem 2.5rem 1.25rem 2.5rem;
+  padding: 1rem 1.75rem 1rem 1.75rem;
 }
 
 .modal-header-deal {
-  padding: 0.5rem 0;
+  padding: 0.35rem 0 0.55rem;
   border-bottom: 1px solid #F4F4F4;
 }
 
@@ -1020,43 +1024,30 @@ onMounted(() => {
 
 .modal-title {
   font-weight: 600;
-  font-size: 18px;
-  color: #01062C;
-  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--deal-navy-deep, #01062c);
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
 /* Deal type: clickable tabs (Primary / Secondary / Rental) */
-.deals-type-tabs-inline {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.deals-type-tab-btn {
-  height: 32px;
-  min-height: 32px;
-  padding: 0 14px;
-  border-radius: 100px;
-  border: none;
-  font-size: 13px;
-  font-weight: 500;
-  color: #64748B;
-  background: #F1F5F9;
-  cursor: pointer;
-  transition: all 0.2s;
+.deals-type-select-wrap {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.deals-type-tab-btn:hover {
-  color: #1E293B;
-  background: #E2E8F0;
-}
-
-.deals-type-tab-btn.active {
-  background: #0F172A;
-  color: #fff;
+.deals-type-select {
+  height: 30px;
+  min-height: 30px;
+  padding: 0 28px 0 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  outline: none;
 }
 
 .close-btn {
@@ -1077,10 +1068,15 @@ onMounted(() => {
   color: #1E293B;
 }
 
+.deal-progress-label {
+  display: none;
+}
+
 .deal-progress-wrapper {
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 0.5rem 0;
+  padding: 0.45rem 0 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .deal-progress-wrapper::-webkit-scrollbar {
@@ -1097,43 +1093,61 @@ onMounted(() => {
 .deal-stage-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 32px;
-  min-height: 32px;
-  padding: 0 12px;
+  gap: 6px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 10px;
   border-radius: 100px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #e5e7eb;
+  background: #fff;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
   white-space: nowrap;
   box-sizing: border-box;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+}
+
+.deal-stage-pill:hover {
+  border-color: #cbd5e1;
 }
 
 .deal-stage-pill .stage-circle {
-  width: 14px;
-  height: 14px;
-  min-width: 14px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
   border-radius: 50%;
-  background: #fff;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.deal-stage-pill.active .stage-circle {
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.65);
+}
+
 .deal-stage-pill .stage-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
 }
 
+.deal-stage-pill.active {
+  border-color: #299de9;
+  background: linear-gradient(90deg, #2ea7ef 0%, #2d92dc 100%);
+  box-shadow: 0 2px 6px rgba(41, 157, 233, 0.32);
+}
+
 .deal-stage-pill .stage-text {
-  font-size: 13px;
-  color: #64748B;
-  font-weight: 400;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .deal-stage-pill.active .stage-text {
-  color: #01062C;
+  color: #fff !important;
   font-weight: 600;
 }
 
@@ -1144,11 +1158,10 @@ onMounted(() => {
 }
 
 .form-scroll-area {
-  max-height: 70vh;
-  overflow-y: auto;
-  padding: 0;
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  padding: 0;
 }
 
 .step-content {
@@ -1157,32 +1170,42 @@ onMounted(() => {
 
 .modal-footer-custom {
   border-top: 1px solid #F4F4F4;
-  padding: 20px;
+  padding: 14px 20px;
 }
 
 .btn-clear {
   background: #F4F4F4;
   border: none;
-  padding: 12px 28px;
+  width: 110px;
+  height: 40px;
+  padding: 0;
   border-radius: 100px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   color: #01062C;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .btn-next-step {
   background: #01062C;
   border: none;
-  padding: 12px 24px;
+  width: 110px;
+  height: 40px;
+  padding: 0;
   border-radius: 100px;
-  font-size: 15px;
+  font-size: 14px;
   color: #fff;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: background 0.2s;
+  line-height: 1;
 }
 
 .btn-next-step:hover:not(:disabled) {
@@ -1191,71 +1214,102 @@ onMounted(() => {
 
 /* Form inside: match image – section titles, labels, inputs same style */
 :deep(.deal-form-container .section-title) {
-  font-size: 16px !important;
-  font-weight: 600;
+  font-size: 13px !important;
+  font-weight: 500;
   color: #01062C;
-  margin-bottom: 12px;
-  font-family: 'Montserrat', sans-serif;
+  margin-bottom: 8px;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
 :deep(.deal-form-container .form-label-custom) {
-  font-size: 13px !important;
+  font-size: 12px !important;
   font-weight: 500;
-  color: #334155;
+  color: var(--deal-text-muted, #64748b);
   margin-bottom: 6px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
 :deep(.deal-form-container .custom-input) {
-  height: 44px !important;
-  min-height: 44px;
-  font-size: 14px !important;
-  border-radius: 10px;
+  height: 42px !important;
+  min-height: 42px;
+  font-size: 13px !important;
+  border-radius: 8px;
   border: 1px solid #E2E8F0;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
 :deep(.deal-form-container .custom-v-select .vs__dropdown-toggle) {
-  height: 44px !important;
-  min-height: 44px;
-  border-radius: 10px;
+  height: 42px !important;
+  min-height: 42px;
+  border-radius: 8px;
   border: 1px solid #E2E8F0;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 :deep(.deal-form-container .custom-v-select .vs__selected),
 :deep(.deal-form-container .custom-v-select .vs__search) {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 :deep(.deal-form-container .custom-v-select-inline .vs__dropdown-toggle) {
-  height: 44px !important;
-  min-height: 44px;
-  font-size: 14px;
+  height: 42px !important;
+  min-height: 42px;
+  font-size: 13px;
 }
 
 :deep(.deal-form-container .form-card) {
-  padding: 1.25rem !important;
+  padding: 0.9rem 1rem !important;
+  border-radius: 8px;
 }
 
 :deep(.deal-form-container .form-section) {
-  margin-top: 20px;
+  margin-top: 12px;
 }
 
-/* Document type tabs: active blue like image */
+/* Document type tabs: active primary (Figma navy) */
 :deep(.deal-form-container .doc-tab) {
   height: 32px;
   min-height: 32px;
-  padding: 0 14px;
-  font-size: 13px;
+  padding: 0 12px;
+  font-size: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 999px;
+}
+
+:deep(.deal-form-container .document-upload-container .upload-zone) {
+  border-radius: 8px !important;
+  padding: 10px 14px !important;
+}
+
+:deep(.deal-form-container .document-upload-container .file-item) {
+  border-radius: 8px !important;
+}
+
+:deep(.deal-form-container .responsible-person-card) {
+  border-radius: 8px !important;
+}
+
+:deep(.deal-form-container .responsible-person-card .section-title) {
+  font-size: 13px !important;
+}
+
+:deep(.deal-form-container .btn-change-person) {
+  height: 34px !important;
+  padding: 0 16px !important;
+  font-size: 12px !important;
+}
+
+:deep(.deal-form-container .department-pill) {
+  height: 34px !important;
+  padding: 0 14px !important;
+  font-size: 12px !important;
 }
 
 :deep(.deal-form-container .doc-tab.active) {
-  background: #2196F3;
+  background: #0f172a;
   color: #fff;
-  border-color: #2196F3;
+  border-color: #0f172a;
 }
 </style>

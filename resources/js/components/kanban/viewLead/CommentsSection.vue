@@ -636,7 +636,7 @@ const handleCancelFileModal = () => {
     color: #64748B !important;
     opacity: 1;
     font-size: 13px !important;
-    font-family: 'Montserrat';
+    font-family: var(--deal-font, 'Montserrat', sans-serif);
 }
 
 /* Activity/Comment Box Styles */

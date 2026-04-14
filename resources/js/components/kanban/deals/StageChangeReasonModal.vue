@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <div v-if="show" class="stage-reason-modal-overlay" @click.self="closeModal">
-      <div class="stage-reason-modal">
+      <div class="stage-reason-modal deal-figma-ui">
         <div class="modal-header">
           <h6 class="modal-title">Reason for Stage Change</h6>
           <button type="button" class="btn-close" @click="closeModal" aria-label="Close"></button>
@@ -132,12 +132,14 @@ async function submitReason() {
 
 .stage-reason-modal {
   background: white;
-  border-radius: 12px;
+  border-radius: 10px;
   width: 500px;
   max-width: 90%;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  font-size: 14px;
 }
 
 .modal-header {
@@ -149,10 +151,12 @@ async function submitReason() {
 }
 
 .modal-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  color: #1E293B;
+  color: var(--deal-navy-deep, #01062c);
   margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
 }
 
 .btn-close {
@@ -181,9 +185,9 @@ async function submitReason() {
 }
 
 .form-label {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
-  color: #1E293B;
+  color: var(--deal-text-muted, #64748b);
   margin-bottom: 8px;
   display: block;
 }
@@ -196,14 +200,14 @@ async function submitReason() {
   color: #1E293B;
   background-color: #fff;
   border: 1px solid #E2E8F0;
-  border-radius: 8px;
+  border-radius: var(--deal-input-r, 10px);
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
 .form-control:focus {
-  border-color: #3B82F6;
+  border-color: var(--deal-navy, #0f172a);
   outline: 0;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.12);
 }
 
 .form-control.is-invalid {
@@ -221,19 +225,20 @@ async function submitReason() {
 }
 
 .btn {
-  padding: 8px 16px;
+  padding: 10px 20px;
   font-size: 14px;
   font-weight: 500;
-  border-radius: 8px;
+  border-radius: 999px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
 .btn-light {
-  background-color: #F1F5F9;
-  border-color: #E2E8F0;
-  color: #1E293B;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
 }
 
 .btn-light:hover {
@@ -241,12 +246,12 @@ async function submitReason() {
 }
 
 .btn-primary {
-  background-color: #3B82F6;
+  background-color: var(--deal-navy, #0f172a);
   color: white;
 }
 
 .btn-primary:hover {
-  background-color: #2563EB;
+  background-color: #020617;
 }
 
 .btn-primary:disabled {

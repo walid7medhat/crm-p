@@ -1,5 +1,5 @@
 <template>
-  <div class="document-upload-container">
+  <div class="document-upload-container deal-figma-ui">
     <!-- Document Type Tabs with Required Indicator -->
     <div class="doc-tabs d-flex gap-2 mb-3 flex-wrap">
       <button 
@@ -24,16 +24,20 @@
     <!-- Upload Area (show if max files not reached for required types) -->
     <div 
       v-if="canUploadMoreForType(selectedType)"
-      class="upload-zone border rounded p-4 text-center"
+      class="upload-zone border rounded"
       @dragenter.prevent
       @dragover.prevent
       @drop.prevent="handleDrop"
       @click="triggerFileInput"
     >
-      <iconify-icon icon="lucide:cloud-upload" class="upload-icon"></iconify-icon>
-      <p class="upload-text mb-2">Drag and drop your files here</p>
-      <p class="upload-hint text-muted small mb-2">JPEG, PNG and PDF formats, up to 50MB</p>
-      <button type="button" class="btn btn-outline-secondary btn-sm" @click.stop="triggerFileInput">
+      <div class="upload-left">
+        <iconify-icon icon="lucide:file-text" class="upload-icon"></iconify-icon>
+        <div class="upload-copy">
+          <p class="upload-text mb-1">Drag and drop your files</p>
+          <p class="upload-hint text-muted small mb-0">JPEG, PNG and PDF formats, up to 50MB</p>
+        </div>
+      </div>
+      <button type="button" class="btn-upload-file" @click.stop="triggerFileInput">
         Select File
       </button>
       <input 
@@ -49,42 +53,27 @@
     <!-- Uploaded Files List -->
     <div v-if="groupedFiles.length > 0" class="uploaded-files-list mt-3">
       <div v-for="group in groupedFiles" :key="group.type" class="file-group mb-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex justify-content-between align-items-center mb-2 d-none">
           <h6 class="file-group-title mb-0">{{ getTypeName(group.type) }}</h6>
           <span v-if="isTypeRequired(group.type)" class="text-danger small">
             Required
           </span>
         </div>
-        <div v-for="(file, index) in group.files" :key="file.id" class="file-item d-flex align-items-center justify-content-between p-2 border rounded mb-2">
-          <div class="d-flex align-items-center gap-2">
-            <iconify-icon 
-              :icon="getFileIcon(file.type)" 
-              class="file-icon"
-            />
-            <span class="file-name">{{ file.name }}</span>
-            <span class="file-size text-muted small">({{ formatFileSize(file.size) }})</span>
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <iconify-icon 
-              v-if="file.status === 'uploading'"
-              icon="lucide:loader-2" 
-              class="spinner"
-            />
-            <iconify-icon 
-              v-else-if="file.status === 'success'"
-              icon="lucide:check-circle" 
-              class="text-success"
-            />
-            <iconify-icon 
-              v-else-if="file.status === 'error'"
-              icon="lucide:alert-circle" 
-              class="text-danger"
-            />
+        <div class="file-grid">
+          <div v-for="file in group.files" :key="file.id" class="file-item border rounded mb-2">
             <iconify-icon 
               icon="lucide:x" 
               class="remove-icon" 
               @click="removeFile(group.type, file.id)"
             />
+            <div class="file-item-content">
+              <iconify-icon 
+                :icon="getFileIcon(file.type)" 
+                class="file-icon"
+              />
+              <span class="file-name">{{ file.name }}</span>
+              <span class="file-size text-muted small">{{ formatFileSize(file.size) }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -260,21 +249,55 @@ defineExpose({
 
 
 <style scoped>
-.doc-tab.required {
+/* Match create / edit deal forms: pill tabs, navy active */
+.doc-tab {
+  height: 30px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 100px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.doc-tab:hover {
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.doc-tab.active {
+  background: #02014f;
+  color: #fff;
+  border-color: #02014f;
+}
+
+.doc-tab.required:not(.active) {
   border-left: 3px solid #ef4444;
 }
 
-.doc-tab.has-files {
-  background-color: #e8f5e9;
-  border-color: #4caf50;
+.doc-tab.has-files:not(.active) {
+  background: #fff;
+  border-color: #e2e8f0;
+  color: #64748b;
 }
 
 .file-count-badge {
-  background: #0F172A;
+  background: #FAA300;
   color: white;
-  border-radius: 12px;
-  padding: 2px 6px;
-  font-size: 10px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 0;
 }
 
 .file-group-title {
@@ -289,59 +312,139 @@ defineExpose({
 }
 
 .upload-zone {
-  border: 2px dashed #E2E8F0;
-  background: #F8FAFC;
+  border: 1px dashed #E2E8F0;
+  background: #fff;
   cursor: pointer;
   transition: all 0.2s;
+  border-radius: 8px;
+  min-height: 74px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: relative;
+}
+
+.upload-zone::before {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border: 1px dashed #eef2f7;
+  border-radius: 8px;
+  pointer-events: none;
 }
 
 .upload-zone:hover {
-  border-color: #0F172A;
-  background: #F1F5F9;
+  border-color: #d5dce5;
+  background: #fbfdff;
+}
+
+.upload-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .upload-icon {
-  font-size: 32px;
-  color: #64748B;
-  margin-bottom: 8px;
+  font-size: 22px;
+  color: #a3adb8;
+  margin-bottom: 0;
 }
 
 .upload-text {
-  font-size: 14px;
-  color: #1E293B;
+  font-size: 12px;
+  color: #1f2937;
+  font-weight: 500;
 }
 
 .upload-hint {
+  font-size: 11px;
+  color: #9ca3af !important;
+}
+
+.btn-upload-file {
+  height: 36px;
+  min-width: 100px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #4b5563;
   font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-upload-file:hover {
+  background: #f8fafc;
+}
+
+.file-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .file-item {
+  position: relative;
+  width: 140px;
+  min-height: 100px;
   background: #FFFFFF;
+  border: 1px solid #eff2f7;
+  border-radius: 8px;
+  padding: 12px 10px;
+}
+
+.file-item-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
 }
 
 .file-icon {
-  font-size: 20px;
-  color: #64748B;
+  font-size: 22px;
+  color: #d1d5db;
 }
 
 .file-name {
-  font-size: 13px;
-  color: #1E293B;
+  font-size: 12px;
+  color: #111827;
   font-weight: 500;
+  line-height: 1.3;
+  word-break: break-word;
 }
 
 .file-size {
   font-size: 11px;
+  color: #9ca3af !important;
 }
 
 .remove-icon {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ef233c;
+  color: #fff;
   cursor: pointer;
-  color: #94A3B8;
+  padding: 3px;
   transition: color 0.2s;
 }
 
 .remove-icon:hover {
-  color: #EF4444;
+  color: #fff;
+  background: #dc1f37;
 }
 
 .spinner {

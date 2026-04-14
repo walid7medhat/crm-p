@@ -141,10 +141,7 @@
     <div class="col-12">
       <h6 class="section-title mb-3">Tenant Documents</h6>
       <div class="view-card p-3 radius-12">
-        <p v-if="!(deal.tenant_documents?.length)" class="info-value text-muted mb-0">No documents uploaded</p>
-        <div v-else class="d-flex flex-wrap gap-2">
-          <span v-for="(doc, i) in (deal.tenant_documents || [])" :key="i" class="doc-tag">{{ doc.name || `Document ${i + 1}` }}</span>
-        </div>
+        <DealDocumentsReadonly :documents="deal.tenant_documents || []" />
       </div>
     </div>
 
@@ -209,10 +206,7 @@
     <div class="col-12">
       <h6 class="section-title mb-3">Landlord Documents</h6>
       <div class="view-card p-3 radius-12">
-        <p v-if="!(deal.landlord_documents?.length)" class="info-value text-muted mb-0">No documents uploaded</p>
-        <div v-else class="d-flex flex-wrap gap-2">
-          <span v-for="(doc, i) in (deal.landlord_documents || [])" :key="i" class="doc-tag">{{ doc.name || `Document ${i + 1}` }}</span>
-        </div>
+        <DealDocumentsReadonly :documents="deal.landlord_documents || []" />
       </div>
     </div>
 
@@ -283,10 +277,7 @@
     <div class="col-12">
       <h6 class="section-title mb-3">Property Documents</h6>
       <div class="view-card p-3 radius-12">
-        <p v-if="!(deal.property_documents?.length)" class="info-value text-muted mb-0">No documents uploaded</p>
-        <div v-else class="d-flex flex-wrap gap-2">
-          <span v-for="(doc, i) in (deal.property_documents || [])" :key="i" class="doc-tag">{{ doc.name || `Document ${i + 1}` }}</span>
-        </div>
+        <DealDocumentsReadonly :documents="deal.property_documents || []" />
       </div>
     </div>
 
@@ -356,6 +347,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
 
 const props = defineProps({
   deal: { type: Object, default: null }
@@ -415,14 +407,13 @@ h6.section-title {
   font-size: 16px !important;
   font-weight: 600;
   color: #01062C;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   margin-bottom: 12px;
 }
 .view-card { background: #fff; border: 1px solid #F3F3F3; box-shadow: 1px 1px 5px rgba(0,0,0,0.03); }
 .radius-12 { border-radius: 12px; }
-.info-label { font-size: 12px !important; font-weight: 500; color: #64748B; display: block; margin-bottom: 6px; }
-.info-value { font-size: 14px !important; font-weight: 500; color: #01062C; }
-.doc-tag { padding: 4px 10px; background: #F1F5F9; border-radius: 100px; font-size: 13px; color: #334155; }
+.info-label { font-size: 12px !important; font-weight: 500; color: #64748B; display: block; margin-bottom: 6px; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.info-value { font-size: 14px !important; font-weight: 500; color: #01062C; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .department-badge { font-size: 12px; color: #475569; }
 .avatar-sm { width: 40px; height: 40px; }
 </style>

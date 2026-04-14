@@ -1,3 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/**
+ * Deal modals & Deals tab — Figma CRM typography (Montserrat).
+ * Add class `deal-figma-ui` on the root of each deal surface so children inherit tokens.
+ */
+.deal-figma-ui {
+  --deal-font: 'Montserrat', 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+  --deal-text: #334155;
+  --deal-text-strong: #0f172a;
+  --deal-text-muted: #64748b;
+  --deal-text-subtle: #94a3b8;
+  --deal-accent: #f59e0b;
+  --deal-accent-text: #c2410c;
+  --deal-navy: #0f172a;
+  --deal-navy-deep: #01062c;
+  --deal-link: #0f172a;
+  --deal-border: #e2e8f0;
+  --deal-surface-muted: #f8fafc;
+  --deal-input-h: 44px;
+  --deal-input-r: 10px;
+  --deal-modal-max-w: 1200px;
+  --deal-modal-max-h: 92vh;
+  --deal-radius-lg: 12px;
+  --deal-radius-pill: 9999px;
+  font-family: var(--deal-font);
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--deal-text);
+}
+
+/* vue-select inside deal surfaces — same height/radius/type as text inputs */
+.deal-figma-ui .vs__dropdown-toggle {
+  min-height: var(--deal-input-h) !important;
+  border-radius: var(--deal-input-r) !important;
+  border-color: var(--deal-border) !important;
+  font-size: 14px !important;
+  font-family: var(--deal-font) !important;
+}
+
+.deal-figma-ui .vs__selected,
+.deal-figma-ui .vs__search {
+  font-size: 14px !important;
+  font-family: var(--deal-font) !important;
+  margin-top: 0;
+}
+
+.deal-figma-ui .modal-title,
+.deal-figma-ui .view-deal-title,
+.deal-figma-ui .info-card-title {
+  font-family: var(--deal-font);
+}

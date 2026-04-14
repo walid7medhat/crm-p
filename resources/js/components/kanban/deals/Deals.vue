@@ -1,5 +1,5 @@
 <template>
-  <div class="deals-tab-content">
+  <div class="deals-tab-content deal-figma-ui">
     <!-- Top tabs: Primary/Off-Plan, Secondary, Rental -->
     <div class="deals-type-tabs d-flex gap-2 mb-24">
       <button
@@ -49,13 +49,13 @@
           :ghost-class="'ghost'" 
           :drag-class="'dragging'"
         >
-          <template #item="{ element: column, index }">
+          <template #item="{ element: column }">
             <div class="kanban-column radius-12 d-flex flex-column" :style="{ '--column-color': column.color }">
               <div class="p-0 overflow-hidden shadow-none border-0 bg-transparent h-100 d-flex flex-column">
                 <div class="card-body p-0 d-flex flex-column h-100">
                   <!-- Column Header with editing capability -->
                   <div 
-                    class="column-header d-flex align-items-center justify-content-between p-8 cursor-move flex-shrink-0" 
+                    class="column-header d-flex align-items-center justify-content-between cursor-move flex-shrink-0" 
                     :style="{ backgroundColor: column.headerBg }"
                   >
                     <div class="d-flex align-items-center gap-2">
@@ -91,12 +91,8 @@
                     </div>
                   </div>
 
-                  <!-- Column Content: deal cards + empty state when no deals -->
+                  <!-- Column Content: deal cards (empty columns stay minimal, like leads) -->
                   <div class="column-content column-content-scrollable p-8 flex-grow-1 d-flex flex-column">
-                    <div v-if="!column.deals || column.deals.length === 0" class="column-empty-hint">
-                      <span class="column-empty-text">No deals in this stage</span>
-                      <span class="column-empty-sub">Create a deal or drag one here</span>
-                    </div>
                     <draggable 
                       v-model="column.deals" 
                       :group="'deals-' + activeTypeTab" 
@@ -108,44 +104,48 @@
                     >
                       <template #item="{ element: deal }">
                         <div
-                          class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
+                          class="kanban-card kanban-card-figma bg-white radius-12 mb-10 cursor-pointer"
                           @click="viewDeal(deal, column)"
                         >
-                          <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
+                          <div class="kanban-card-top d-flex align-items-start">
                             <p class="task-title flex-grow-1 mb-0">{{ deal.deal_name || 'Untitled Deal' }}</p>
                           </div>
-                          
+
                           <div class="task-info">
-                            <div class="info-item date-info d-flex align-items-center gap-1 mb-8">
-                              <span>Created</span>
-                              <span>{{ formatDate(deal.created_at) }}</span>
+                            <div class="info-item date-created-line mb-10">
+                              <span class="date-created-label">Created By</span>
+                              <span class="date-created-value">{{ formatDealCardCreated(deal.created_at) }}</span>
                             </div>
-                            
-                            <div class="info-item mb-8">
+
+                            <div class="info-item mb-10">
                               <div class="info-label text-secondary-light text-xs">Buyer Name</div>
-                              <div class="info-value">{{ deal.buyer_name || 'No Buyer' }}</div>
+                              <div class="info-value">{{ deal.buyer_name || '—' }}</div>
                             </div>
-                            
+
                             <div class="info-item mb-0">
                               <div class="info-label text-secondary-light text-xs">Source</div>
-                              <div class="info-value">{{ deal.source || 'N/A' }}</div>
+                              <div class="info-value">{{ deal.source || '—' }}</div>
                             </div>
 
-                            <hr class="my-8 border-neutral-200">
+                            <hr class="kanban-card-divider my-10">
 
-                            <div class="d-flex align-items-center justify-content-between">
-                              <div class="info-item mb-0">
-                                <div class="info-label text-secondary-light text-xs mb-1">Assigned To</div>
-                                <div class="info-value">{{ deal.responsible_person?.name || 'Unassigned' }}</div>
+                            <div class="d-flex align-items-end justify-content-between gap-2">
+                              <div class="info-item mb-0 min-w-0">
+                                <div class="info-label text-secondary-light text-xs mb-1">Assigned By</div>
+                                <div class="assigned-by-line text-truncate">
+                                  {{ formatDealCardAssigned(getAssignedTimestamp(deal)) }}
+                                </div>
                               </div>
-                              <div class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0">
-                                <img 
-                                  v-if="deal.responsible_person?.avatar" 
-                                  :src="getAvatarUrl(deal.responsible_person.avatar)" 
+                              <div
+                                class="avatar-sm kanban-card-footer-avatar rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0"
+                              >
+                                <img
+                                  v-if="deal.responsible_person?.avatar"
+                                  :src="getAvatarUrl(deal.responsible_person.avatar)"
                                   class="w-100 h-100 object-fit-cover"
-                                  alt="Avatar"
+                                  alt=""
                                 >
-                                <iconify-icon v-else icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
+                                <iconify-icon v-else icon="solar:user-bold" class="text-neutral-600" />
                               </div>
                             </div>
                           </div>
@@ -343,7 +343,7 @@ const stageForm = ref({
 })
 
 const typeTabs = [
-  { id: 'primary', name: 'Primary/Off-Plan', icon: 'lucide:layout-grid' },
+  { id: 'primary', name: 'Primary / Off Plan', icon: 'lucide:layout-grid' },
   { id: 'secondary', name: 'Secondary', icon: 'lucide:calendar' },
   { id: 'rental', name: 'Rental', icon: 'lucide:building-2' }
 ]
@@ -383,16 +383,29 @@ function getAvatarUrl(path) {
   return `/storage/${path}`
 }
 
-// Format date
-function formatDate(dateString) {
-  if (!dateString) return 'N/A'
+/** Figma card: "Nov 21 | 9:26 PM" */
+function formatDealCardCreated(dateString) {
+  if (!dateString) return '—'
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  if (Number.isNaN(date.getTime())) return '—'
+  const datePart = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const timePart = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  return `${datePart} | ${timePart}`
+}
+
+/** Figma card footer: "21 Dec 2025 | 12:05 PM" (uses best available timestamp from API) */
+function getAssignedTimestamp(deal) {
+  if (!deal) return null
+  return deal.converted_at || deal.updated_at || deal.created_at || null
+}
+
+function formatDealCardAssigned(dateString) {
+  if (!dateString) return '—'
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return '—'
+  const datePart = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  const timePart = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  return `${datePart} | ${timePart}`
 }
 
 // Scroll functions
@@ -869,8 +882,6 @@ async function saveStageName(column) {
 }
 
 function editStage(column) {
-  console.log('Editing stage:', column)
-  
   stageForm.value = {
     id: column.stage_id,  
     name: column.title,
@@ -879,12 +890,9 @@ function editStage(column) {
   
   isEditingStage.value = true
   showStageModal.value = true
-    console.log('showStageModal after:', showStageModal.value)
-
 }
 
 function closeStageModal() {
-  console.log('Closing stage modal')
   showStageModal.value = false
   isEditingStage.value = false
   stageForm.value = { 
@@ -906,14 +914,10 @@ async function saveStage() {
   }
 
   try {
-    console.log('Saving stage:', stageForm.value)
-    
     const response = await axios.put(`/stages/${stageForm.value.id}`, {
       name: stageForm.value.name,
       color: stageForm.value.color
     })
-
-    console.log('API Response:', response.data)
 
     const column = columns.value.find(c => c.stage_id === stageForm.value.id)
     if (column) {
@@ -921,10 +925,6 @@ async function saveStage() {
       column.dotColor = stageForm.value.color
       column.color = stageForm.value.color
       column.headerBg = stageForm.value.color
-      
-      console.log('Updated column:', column) 
-    } else {
-      console.log('Column not found with stage_id:', stageForm.value.id)
     }
 
     showNotification('Stage updated successfully', 'success')
@@ -1076,7 +1076,6 @@ function clearPendingCompleteFields() {
       if (!sourceColumn.deals.find(d => d.id === pending.dealData.id)) {
         sourceColumn.deals.push(pending.dealData)
         sourceColumn.deals_count = sourceColumn.deals.length
-        console.log('Deal returned to original stage:', pending.originalStageId)
       }
     }
   }
@@ -1094,21 +1093,12 @@ async function handleCompleteFieldsSave({ payload, documents, stage_id }) {
   const targetStageId = stage_id || pending.targetStageId
 
   try {
-    console.log('Saving data:', { 
-      payload, 
-      documents, 
-      targetStageId,
-      documentsCount: documents?.length 
-    })
-    
     const response = await updateAndChangeStage({
       dealId,
       payload,
       documents,
       stageId: targetStageId,
     })
-    
-    console.log('Response:', response.data)
 
     showNotification('Deal updated and stage changed successfully', 'success')
     clearPendingCompleteFields()
@@ -1230,7 +1220,7 @@ defineExpose({
 .deals-tab-content {
   padding: 24px;
   min-height: 500px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   position: relative;
 }
 
@@ -1245,7 +1235,7 @@ defineExpose({
   padding: 6px 14px;
   border-radius: 100px;
   border: none;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   font-size: 12px;
   font-weight: 500;
   color: #64748B;
@@ -1320,21 +1310,51 @@ defineExpose({
   background-color: transparent;
   border-radius: 12px;
   border: none;
-  border-left: 1px dashed rgba(255, 255, 255, 0.55);
+  border-left: 1px dashed rgba(148, 163, 184, 0.45);
   height: 100%;
   flex-shrink: 0;
+  overflow: visible;
 }
 .kanban-column:first-child {
   border-left: none;
 }
+.column-content {
+  background: transparent;
+  border-radius: 0;
+}
+
 .column-header {
+  min-height: 36px;
+  padding: 3px 8px 3px 10px !important;
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
   border: none;
   box-shadow: none;
   position: relative;
-  padding-left: 12px !important;
-  color: #ffffff;
+  z-index: 1;
+  overflow: visible;
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 0 100%);
+}
+
+.column-header .header-title {
+  color: #01062c !important;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.column-header .stage-circle {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(1, 6, 44, 0.12);
+  background: rgba(255, 255, 255, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .column-header::before {
   content: "";
@@ -1342,7 +1362,7 @@ defineExpose({
 }
 .column-menu-icon {
   font-size: 18px;
-  color: #fff;
+  color: rgba(1, 6, 44, 0.5);
 }
 
 /* Column content scroll */
@@ -1400,10 +1420,11 @@ defineExpose({
 }
 
 .header-title {
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   font-weight: 600;
-  font-size: 13px;
-  color: #01062C;
+  font-size: 11px;
+  line-height: 1.1;
+  color: #01062c;
   margin: 0;
 }
 
@@ -1434,14 +1455,62 @@ defineExpose({
   border-color: rgba(255, 255, 255, 0.6);
 }
 
+/* Kanban card — Figma deal card */
+.kanban-card-figma {
+  padding: 10px 10px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kanban-card-top {
+  margin-bottom: 8px;
+}
+
+.kanban-card-divider {
+  border: 0;
+  border-top: 1px solid #e8ecf4;
+  opacity: 1;
+}
+
+.date-created-line {
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  font-size: 11px;
+  line-height: 1.3;
+  color: #8a8f98;
+}
+
+.date-created-label {
+  font-weight: 500;
+  margin-right: 6px;
+}
+
+.date-created-value {
+  font-weight: 500;
+  color: #777e89;
+}
+
+.assigned-by-line {
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  font-size: 11px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.kanban-card-footer-avatar {
+  width: 26px;
+  height: 26px;
+}
+
 /* Kanban Card */
 .task-title {
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   font-weight: 700;
-  font-size: 12px;
-  line-height: 19px;
-  letter-spacing: -0.25px;
-  color: #01062C;
+  font-size: 16px;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: #01062c;
 }
 
 .task-header {
@@ -1449,36 +1518,32 @@ defineExpose({
 }
 
 .info-label {
-  font-family: 'Montserrat', sans-serif;
-  color: #979797;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  color: #8b9099;
   font-weight: 500;
   font-size: 11px;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .info-value {
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   font-weight: 500;
-  font-size: 11px;
-  line-height: 12px;
-  color: #353535;
+  font-size: 12px;
+  line-height: 1.25;
+  color: #343a40;
 }
 
 .date-info {
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   font-weight: 500;
   font-size: 10px;
   line-height: 9px;
   color: #64748B;
 }
 
-.kanban-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
 .kanban-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.08);
 }
 
 .avatar-sm {
@@ -1493,39 +1558,11 @@ defineExpose({
 
 .tasks-list {
   min-height: 100%;
-  font-family: Montserrat;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
 .min-height-cards {
-  min-height: 120px;
-}
-
-.column-empty-hint {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 120px;
-  padding: 16px;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 8px;
-  border: 1px dashed #cbd5e1;
-  margin-bottom: 8px;
-}
-
-.column-empty-text {
-  font-size: 13px;
-  font-weight: 500;
-  color: #64748B;
-  display: block;
-}
-
-.column-empty-sub {
-  font-size: 11px;
-  color: #94a3b8;
-  margin-top: 4px;
-  display: block;
+  min-height: 40px;
 }
 
 /* Draggable styles */

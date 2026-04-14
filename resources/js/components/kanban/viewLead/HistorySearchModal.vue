@@ -22,15 +22,15 @@
                         @click.stop
                         @mousedown.stop
                     >
-                        <input
-                            ref="eventTypeSearchRef"
-                            v-model="eventTypeQuery"
-                            type="text"
-                            class="custom-select-search"
-                            placeholder="Search..."
-                            autocomplete="off"
-                            @keydown.enter.prevent="pickFirstEventType"
-                        />
+                <input
+                        ref="eventTypeSearchRef"
+                        v-model="eventTypeQuery"
+                        type="text"
+                        class="custom-select-search"
+                        placeholder="Search..."
+                        autocomplete="off"
+                        @keydown.enter.prevent="pickFirstEventType"
+                    />
                         <ul class="custom-select-list">
                             <li
                                 v-for="opt in filteredEventTypeOptions"
@@ -158,6 +158,11 @@ const props = defineProps({
     users: {
         type: Array,
         default: () => []
+    },
+    /** When set, replaces the default lead event-type list (e.g. deal history). */
+    eventTypeOptions: {
+        type: Array,
+        default: null
     }
 })
 
@@ -166,7 +171,7 @@ const emit = defineEmits(['search', 'close'])
 const localSearch = ref(props.initialSearch)
 const localAction = ref(props.initialAction)
 const localUser = ref(props.initialUser || '')
-const eventTypeOptions = [
+const defaultLeadEventTypeOptions = [
     { label: 'View', value: 'view' },
     { label: 'Status Changed', value: 'stage_changed' },
     { label: 'Revert', value: 'revert' },
@@ -174,6 +179,11 @@ const eventTypeOptions = [
     { label: 'Lead Updated', value: 'updated' },
     { label: 'Lead Created', value: 'created' }
 ]
+const resolvedEventTypeOptions = computed(() =>
+    Array.isArray(props.eventTypeOptions) && props.eventTypeOptions.length
+        ? props.eventTypeOptions
+        : defaultLeadEventTypeOptions
+)
 const userOptions = computed(() =>
     (props.users || []).map((u) => ({ label: u.name || 'Unknown', value: String(u.id) }))
 )
@@ -209,7 +219,7 @@ function updateDropdownPosition(wrapRef, styleRef) {
 
 const eventTypeLabel = computed(() => {
     if (!localAction.value) return 'Not Specified'
-    const o = eventTypeOptions.find((opt) => opt.value === localAction.value)
+    const o = resolvedEventTypeOptions.value.find((opt) => opt.value === localAction.value)
     return o ? o.label : 'Not Specified'
 })
 const createdByLabel = computed(() => {
@@ -220,7 +230,7 @@ const createdByLabel = computed(() => {
 
 const filteredEventTypeOptions = computed(() => {
     const q = (eventTypeQuery.value || '').toLowerCase().trim()
-    const list = [{ label: 'Not Specified', value: '' }, ...eventTypeOptions]
+    const list = [{ label: 'Not Specified', value: '' }, ...resolvedEventTypeOptions.value]
     if (!q) return list
     return list.filter((o) => o.label.toLowerCase().includes(q))
 })

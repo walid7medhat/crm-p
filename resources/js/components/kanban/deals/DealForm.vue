@@ -1,5 +1,5 @@
 <template>
-  <div class="deal-form-container">
+  <div class="deal-form-container deal-figma-ui">
     <div v-if="missingFieldLabels.length" class="alert alert-warning py-2 mb-3">
       <div class="small fw-semibold mb-1">Missing fields for selected stage</div>
       <div class="small">{{ missingFieldLabels.join(' • ') }}</div>
@@ -7,24 +7,9 @@
 
     <!-- Source and Deal Name (Common for all) -->
     <section class="form-section">
-      <h6 class="section-title mb-3">Source and Deal Name</h6>
+      <h6 class="section-title mb-3">About Deal</h6>
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label-custom">Source <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.source" 
-              :options="sources" 
-              :reduce="item => item.name" 
-              label="name" 
-              placeholder="Select Source" 
-              class="custom-v-select" 
-              :class="{ 'is-invalid': showErrors && !form.source }"
-            />
-              <div v-if="showErrors && fieldErrors.source" class="invalid-feedback d-block">
-                {{ fieldErrors.source }}
-              </div>
-          </div>
           <div class="col-md-6">
             <label class="form-label-custom">Deal Name <span class="text-danger">*</span></label>
             <b-form-input 
@@ -37,6 +22,21 @@
                 {{ fieldErrors.deal_name }}
               </div>
           </div>
+          <div class="col-md-6">
+            <label class="form-label-custom">Source <span class="text-danger">*</span></label>
+            <v-select 
+              v-model="form.source" 
+              :options="sources" 
+              :reduce="item => item.name" 
+              label="name" 
+              placeholder="Not Selected" 
+              class="custom-v-select" 
+              :class="{ 'is-invalid': showErrors && !form.source }"
+            />
+              <div v-if="showErrors && fieldErrors.source" class="invalid-feedback d-block">
+                {{ fieldErrors.source }}
+              </div>
+          </div>
         </div>
       </div>
     </section>
@@ -47,7 +47,7 @@
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
+            <label class="form-label-custom">Buyer First Name <span class="text-danger">*</span></label>
             <b-form-input 
               v-model="form.buyer_first_name" 
               placeholder="Enter First Name" 
@@ -59,7 +59,7 @@
               </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">Last Name <span class="text-danger">*</span></label>
+            <label class="form-label-custom">Buyer Last Name <span class="text-danger">*</span></label>
             <b-form-input 
               v-model="form.buyer_last_name" 
               placeholder="Enter Last Name" 
@@ -71,7 +71,7 @@
               </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
+            <label class="form-label-custom">Buyer Date Of Birth <span class="text-danger">*</span></label>
             <b-form-input 
               v-model="form.buyer_dob" 
               type="date" 
@@ -83,7 +83,7 @@
               </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
+            <label class="form-label-custom">Buyer Phone Number <span class="text-danger">*</span></label>
             <b-form-input 
               v-model="form.buyer_phone" 
               placeholder="Enter Phone" 
@@ -95,7 +95,7 @@
               </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">Email <span class="text-danger">*</span></label>
+            <label class="form-label-custom">Buyer Email <span class="text-danger">*</span></label>
             <b-form-input 
               v-model="form.buyer_email" 
               type="email" 
@@ -108,7 +108,7 @@
               </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
+            <label class="form-label-custom">Buyer Nationality <span class="text-danger">*</span></label>
             <v-select 
               v-model="form.buyer_nationality" 
               :options="nationalityOptions" 
@@ -123,7 +123,7 @@
               </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
+            <label class="form-label-custom">Buyer Residency Status <span class="text-danger">*</span></label>
             <v-select 
               v-model="form.buyer_residency_status" 
               :options="residencyOptions" 
@@ -138,7 +138,7 @@
               </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+            <label class="form-label-custom">Buyer City Of Residence <span class="text-danger">*</span></label>
             <b-form-input 
               v-model="form.buyer_city" 
               placeholder="Enter City" 
@@ -150,7 +150,7 @@
               </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">Country Of Residence</label>
+            <label class="form-label-custom">Buyer Country Of Residence <span class="text-danger">*</span></label>
             <v-select 
               v-model="form.buyer_country" 
               :options="countryOptions" 
@@ -164,7 +164,7 @@
               </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">Language <span class="text-danger">*</span></label>
+            <label class="form-label-custom">Buyer Language <span class="text-danger">*</span></label>
             <v-select 
               v-model="form.buyer_language" 
               :options="languageOptions" 
@@ -179,7 +179,7 @@
               </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">Amount</label>
+            <label class="form-label-custom">Amount &amp; Currency</label>
             <div class="input-group-custom">
               <b-form-input v-model="form.amount" type="number" placeholder="Enter Amount" class="custom-input" />
               <v-select 
@@ -1281,16 +1281,16 @@ const languageOptions = [
 ]
 
 const currencyOptions = [
-  { value: 'AED', text: 'AED - UAE Dirham' },
-  { value: 'USD', text: 'USD - US Dollar' },
-  { value: 'EUR', text: 'EUR - Euro' },
-  { value: 'GBP', text: 'GBP - British Pound' },
-  { value: 'SAR', text: 'SAR - Saudi Riyal' },
-  { value: 'QAR', text: 'QAR - Qatari Riyal' },
-  { value: 'KWD', text: 'KWD - Kuwaiti Dinar' },
-  { value: 'BHD', text: 'BHD - Bahraini Dinar' },
-  { value: 'OMR', text: 'OMR - Omani Rial' },
-  { value: 'EGP', text: 'EGP - Egyptian Pound' }
+  { value: 'AED', text: 'AED' },
+  { value: 'USD', text: 'USD' },
+  { value: 'EUR', text: 'EUR' },
+  { value: 'GBP', text: 'GBP' },
+  { value: 'SAR', text: 'SAR' },
+  { value: 'QAR', text: 'QAR' },
+  { value: 'KWD', text: 'KWD' },
+  { value: 'BHD', text: 'BHD' },
+  { value: 'OMR', text: 'OMR' },
+  { value: 'EGP', text: 'EGP' }
 ]
 
 const bedroomOptions = [
@@ -1302,34 +1302,46 @@ const bedroomOptions = [
   { value: '5', text: '5 Bedrooms' },
   { value: '5+', text: '5+ Bedrooms' }
 ]
+
+watch(
+  () => form.value?.currency,
+  (val) => {
+    if (!val && form.value) form.value.currency = 'AED'
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
-/* Compact scale — aligned with Create Lead modal */
-.section-title { font-size: 14px !important; font-weight: 600; color: #01062C; font-family: 'Montserrat', sans-serif; margin-bottom: 10px; letter-spacing: -0.01em; }
+/* Figma deal forms — Inter, 16px sections, 12px labels, 14px inputs */
+.section-title { font-size: 16px !important; font-weight: 600; color: var(--deal-navy-deep, #01062c); font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); margin-bottom: 10px; letter-spacing: -0.02em; line-height: 1.35; }
 .form-card { background: #fff; border: 1px solid #eef2f7; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); padding: 0.875rem 1rem !important; }
-.radius-12 { border-radius: 10px; }
-.form-label-custom { font-size: 12px !important; font-weight: 500; color: #475569; margin-bottom: 4px; display: block; font-family: 'Montserrat', sans-serif; }
-.custom-input { height: 36px !important; min-height: 36px; border-radius: 8px !important; border: 1px solid #E2E8F0 !important; font-size: 13px !important; font-family: 'Montserrat', sans-serif; }
+.radius-12 { border-radius: 8px; }
+.form-label-custom { font-size: 12px !important; font-weight: 500; color: var(--deal-text-muted, #64748b); margin-bottom: 4px; display: block; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.custom-input { height: 42px !important; min-height: 42px; border-radius: 8px !important; border: 1px solid #E2E8F0 !important; font-size: 13px !important; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.custom-input::placeholder { font-size: 12px; color: #9ca3af; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .custom-input.is-invalid { border-color: #dc3545 !important; }
-.input-group-custom { display: flex; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; }
-.input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 10px 0 0 10px !important; }
+.input-group-custom { display: flex; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; }
+.input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 8px 0 0 8px !important; }
 :deep(.custom-v-select) { font-size: 13px; }
-:deep(.custom-v-select .vs__dropdown-toggle) { height: 36px !important; min-height: 36px; border-radius: 8px; border: 1px solid #E2E8F0; font-size: 13px; padding: 2px 8px; }
+:deep(.custom-v-select .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border-radius: 8px; border: 1px solid #E2E8F0; font-size: 13px; padding: 2px 8px; }
 :deep(.custom-v-select.is-invalid .vs__dropdown-toggle) { border-color: #dc3545 !important; }
 :deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 13px; }
+:deep(.custom-v-select .vs__search::placeholder) { font-size: 12px; color: #9ca3af; }
 :deep(.custom-v-select-inline) { min-width: 120px; }
-:deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 36px !important; min-height: 36px; border: none; border-left: 1px solid #E2E8F0; border-radius: 0 8px 8px 0; font-size: 13px; }
-.doc-tabs { gap: 6px; }
-.doc-tab { height: 30px; min-height: 30px; padding: 0 12px; border-radius: 100px; border: 1px solid #E2E8F0; background: #F1F5F9; font-size: 12px; color: #64748B; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-.doc-tab.active { background: #2196F3; color: #fff; border-color: #2196F3; }
+:deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border: none; border-left: 1px solid #E2E8F0; border-radius: 0 8px 8px 0; font-size: 11px; }
+:deep(.custom-v-select-inline .vs__selected) { font-size: 11px; font-weight: 500; color: #64748b; }
+:deep(.custom-v-select-inline .vs__search::placeholder) { font-size: 11px; color: #9ca3af; }
+.doc-tabs { gap: 8px; }
+.doc-tab { height: 32px; min-height: 32px; padding: 0 14px; border-radius: 100px; border: 1px solid #E2E8F0; background: #fff; font-size: 12px; font-weight: 500; color: #64748B; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.doc-tab.active { background: #0F172A; color: #fff; border-color: #0F172A; }
 .upload-zone { border-style: dashed !important; border-color: #E2E8F0 !important; background: #F8FAFC; }
 .upload-icon { font-size: 36px; color: #94A3B8; }
 .upload-text { font-size: 14px; color: #475569; margin: 0; }
 .tag-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #F1F5F9; border-radius: 100px; font-size: 13px; }
 .tag-remove { cursor: pointer; font-size: 16px; }
-.btn-tag-search { background: transparent; border: none; color: #3B82F6; font-size: 14px; cursor: pointer; }
-.add-custom-field-link { font-size: 14px; color: #3B82F6; text-decoration: underline; }
+.btn-tag-search { background: transparent; border: none; color: var(--deal-navy, #0f172a); font-size: 14px; font-weight: 500; cursor: pointer; }
+.add-custom-field-link { font-size: 14px; color: var(--deal-navy, #0f172a); font-weight: 500; text-decoration: underline; }
 .form-section { margin-top: 14px; }
 .form-section:first-of-type { margin-top: 0; }
 </style>

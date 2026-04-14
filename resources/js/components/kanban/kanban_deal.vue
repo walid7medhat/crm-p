@@ -41,7 +41,7 @@
     <AddStageModal v-model="showAddStageModal"   :stage-type="currentStageType"
         :deal-type="currentDealType"
         @stage-created="handleStageCreated" />
-    <div class="kanban-main-wrapper">
+    <div class="kanban-main-wrapper" :class="{ 'deal-figma-ui': activeTab === 'deals' }">
         <b-tabs 
             v-model="activeTabIndex"
             class="kanban-tabs-container"
@@ -106,7 +106,7 @@
                             >
                                 <iconify-icon icon="lucide:plus" class="search-plus-icon" style="cursor: pointer;"></iconify-icon>
                                 <b-form-input
-                                    placeholder="Search"
+                                    :placeholder="searchInputPlaceholder"
                                     v-model="search"
                                     class="search-input"
                                     @focus="onSearchFocus"
@@ -247,6 +247,11 @@ const activeTabIndex = computed({
 
 const activeTabName = computed(() => {
     return tabs.value.find(t => t.id === activeTab.value)?.name || ''
+})
+
+const searchInputPlaceholder = computed(() => {
+    if (activeTab.value === 'deals') return '+ Filter and search'
+    return '+ Search'
 })
 // Get user from storage (same pattern as header/index.vue)
 const getUserFromStorage = () => {
@@ -755,7 +760,7 @@ const $showNotification = (message, type = 'info') => {
     margin-bottom: 0 !important;
     text-decoration: none;
     color: #fff;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--deal-font, 'Montserrat', sans-serif);
     font-size: 15px;
     font-weight: 600;
     transition: all 0.2s ease;

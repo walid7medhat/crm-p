@@ -1,13 +1,24 @@
 <template>
   <Teleport to="body">
     <div v-if="show" class="complete-fields-overlay" @click.self="closeModal">
-      <div class="complete-fields-modal">
+      <div
+        class="complete-fields-modal deal-figma-ui"
+        :class="{
+          'complete-fields-modal--compact': isCompactStageModal,
+          'complete-fields-modal--deal-won': isDealWonStage,
+          'complete-fields-modal--lost-reason': isLostReasonOnly
+        }"
+      >
         <!-- Header -->
         <div class="modal-header-deal p-3">
-          <div class="d-flex justify-content-between align-items-center w-100">
-            <div class="d-flex align-items-center gap-3">
-              <span class="modal-title">Complete Required Fields</span>
-              <div class="deals-type-tabs-inline d-flex gap-2">
+          <div class="d-flex justify-content-between align-items-start gap-3 w-100">
+            <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2 gap-md-3 min-w-0 flex-grow-1">
+              <div class="complete-fields-title-wrap min-w-0 flex-grow-1">
+                <span class="modal-title complete-fields-main-title">
+                  Complete All The Required Fields To Change Deal Stage
+                </span>
+              </div>
+              <div class="deals-type-tabs-inline d-flex gap-2 flex-shrink-0">
                 <span class="deals-type-tab-inline active">
                   {{ getDealTypeName(dealType) }}
                 </span>
@@ -19,18 +30,19 @@
           </div>
         </div>
 
-        <!-- Stage Progress -->
-        <div class="deal-progress-wrapper py-3 px-3" v-if="targetStageName">
+        <!-- Stage progress (same chrome as View Deal modal) -->
+        <div class="deal-progress-wrapper py-2 px-3" v-if="targetStageName">
+          <div class="deal-progress-label">Pipeline</div>
           <div class="deal-progress-bar">
-            <div class="deal-stage-pill active">
+            <div class="deal-stage-pill active" aria-current="step">
               <div class="stage-circle">
-                <div class="stage-dot" style="background-color: #3B82F6;"></div>
+                <div class="stage-dot" style="background-color: #3b82f6;"></div>
               </div>
               <span class="stage-text">{{ targetStageName }}</span>
             </div>
           </div>
-          <p class="text-muted small mt-2 mb-0">
-            <iconify-icon icon="lucide:info" class="me-1"></iconify-icon>
+          <p class="deal-progress-hint mb-0 mt-2">
+            <iconify-icon icon="lucide:info" class="me-1" aria-hidden="true"></iconify-icon>
             Complete the required fields below to move to this stage
           </p>
         </div>
@@ -81,25 +93,25 @@
                 </div>
               </div>
             </section>
-             <section  v-if="hasField('lost_reason')"class="form-section">
-              <h6 class="section-title mb-3">Lost Reason </h6>
-                    <div class="col-md-6" v-if="hasField('lost_reason')">
-                    <!--<label class="form-label-custom">Lost Reason <span class="text-danger">*</span></label>-->
-                   <b-form-input 
-                      v-model="formData.lost_reason" 
-                      placeholder="Enter Lost Reason" 
-                      class="custom-input"
-                    />
-                  </div>
-                  </section>
+            <section v-if="hasField('lost_reason')" class="form-section">
+              <div class="form-card p-3 radius-12">
+                <label class="form-label-custom">Enter Reason For Deal Lost</label>
+                <textarea
+                  v-model="formData.lost_reason"
+                  class="lost-reason-textarea"
+                  placeholder="Text Here"
+                  rows="4"
+                ></textarea>
+              </div>
+            </section>
             <!-- Buyer Section -->
             <section v-if="hasPartyFields('buyer') || documentTypesByParty.buyer.length > 0" class="form-section">
               <h6 class="section-title mb-3" v-if="hasPartyFields('buyer')">Buyer Details</h6>
               <div class="form-card p-3 radius-12" v-if="hasPartyFields('buyer')">
                 <div class="row g-3">
                   <!-- Buyer First Name -->
-                  <div class="col-md-4" v-if="hasField('buyer_first_name')">
-                    <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
+                  <div class="col-md-6" v-if="hasField('buyer_first_name')">
+                    <label class="form-label-custom">Buyer First Name <span class="text-danger">*</span></label>
                     <b-form-input 
                       v-model="formData.buyer_first_name" 
                       placeholder="Enter First Name" 
@@ -108,8 +120,8 @@
                   </div>
                   
                   <!-- Buyer Last Name -->
-                  <div class="col-md-4" v-if="hasField('buyer_last_name')">
-                    <label class="form-label-custom">Last Name <span class="text-danger">*</span></label>
+                  <div class="col-md-6" v-if="hasField('buyer_last_name')">
+                    <label class="form-label-custom">Buyer Last Name <span class="text-danger">*</span></label>
                     <b-form-input 
                       v-model="formData.buyer_last_name" 
                       placeholder="Enter Last Name" 
@@ -117,40 +129,30 @@
                     />
                   </div>
                   
-                  <!-- Buyer Date of Birth -->
-                  <div class="col-md-4" v-if="hasField('buyer_dob')">
-                    <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
-                    <b-form-input 
-                      v-model="formData.buyer_dob" 
-                      type="date" 
-                      class="custom-input"
-                    />
-                  </div>
-                  
                   <!-- Buyer Phone -->
-                  <div class="col-md-4" v-if="hasField('buyer_phone')">
-                    <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
+                  <div class="col-md-6" v-if="hasField('buyer_phone')">
+                    <label class="form-label-custom">Buyer Phone Number <span class="text-danger">*</span></label>
                     <b-form-input 
                       v-model="formData.buyer_phone" 
-                      placeholder="Enter Phone" 
+                      placeholder="Enter Phone Number" 
                       class="custom-input"
                     />
                   </div>
                   
                   <!-- Buyer Email -->
-                  <div class="col-md-4" v-if="hasField('buyer_email')">
-                    <label class="form-label-custom">Email <span class="text-danger">*</span></label>
+                  <div class="col-md-6" v-if="hasField('buyer_email')">
+                    <label class="form-label-custom">Buyer Email <span class="text-danger">*</span></label>
                     <b-form-input 
                       v-model="formData.buyer_email" 
                       type="email" 
-                      placeholder="Enter Email" 
+                      placeholder="Enter Your Email" 
                       class="custom-input"
                     />
                   </div>
                   
                   <!-- Buyer Nationality -->
-                  <div class="col-md-4" v-if="hasField('buyer_nationality')">
-                    <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
+                  <div class="col-md-6" v-if="hasField('buyer_nationality')">
+                    <label class="form-label-custom">Buyer Nationality <span class="text-danger">*</span></label>
                     <v-select 
                       v-model="formData.buyer_nationality" 
                       :options="nationalityOptions" 
@@ -162,8 +164,8 @@
                   </div>
                   
                   <!-- Buyer Residency Status -->
-                  <div class="col-md-4" v-if="hasField('buyer_residency_status')">
-                    <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
+                  <div class="col-md-6" v-if="hasField('buyer_residency_status')">
+                    <label class="form-label-custom">Buyer Residency Status <span class="text-danger">*</span></label>
                     <v-select 
                       v-model="formData.buyer_residency_status" 
                       :options="residencyOptions" 
@@ -174,19 +176,9 @@
                     />
                   </div>
                   
-                  <!-- Buyer City -->
-                  <div class="col-md-4" v-if="hasField('buyer_city')">
-                    <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-                    <b-form-input 
-                      v-model="formData.buyer_city" 
-                      placeholder="Enter City" 
-                      class="custom-input"
-                    />
-                  </div>
-                  
                   <!-- Buyer Country -->
-                  <div class="col-md-4" v-if="hasField('buyer_country')">
-                    <label class="form-label-custom">Country Of Residence</label>
+                  <div class="col-md-6" v-if="hasField('buyer_country')">
+                    <label class="form-label-custom">Buyer Country Of Residence <span class="text-danger">*</span></label>
                     <v-select 
                       v-model="formData.buyer_country" 
                       :options="countryOptions" 
@@ -197,9 +189,29 @@
                     />
                   </div>
                   
+                  <!-- Buyer City -->
+                  <div class="col-md-6" v-if="hasField('buyer_city')">
+                    <label class="form-label-custom">Buyer City Of Residence <span class="text-danger">*</span></label>
+                    <b-form-input 
+                      v-model="formData.buyer_city" 
+                      placeholder="Enter Buyer City" 
+                      class="custom-input"
+                    />
+                  </div>
+
+                  <!-- Buyer Date of Birth -->
+                  <div class="col-md-6" v-if="hasField('buyer_dob')">
+                    <label class="form-label-custom">Buyer Date Of Birth <span class="text-danger">*</span></label>
+                    <b-form-input 
+                      v-model="formData.buyer_dob" 
+                      type="date" 
+                      class="custom-input"
+                    />
+                  </div>
+
                   <!-- Buyer Language -->
-                  <div class="col-md-4" v-if="hasField('buyer_language')">
-                    <label class="form-label-custom">Language <span class="text-danger">*</span></label>
+                  <div class="col-md-6" v-if="hasField('buyer_language')">
+                    <label class="form-label-custom">Buyer Language <span class="text-danger">*</span></label>
                     <v-select 
                       v-model="formData.buyer_language" 
                       :options="languageOptions" 
@@ -521,12 +533,12 @@
               <h6 class="section-title mb-3">Property Details</h6>
               <div class="form-card p-3 radius-12">
                 <div class="row g-3">
-                  <div class="col-md-4" v-if="hasField('unit_no')">
+                  <div class="col-md-6" v-if="hasField('unit_no')">
                     <label class="form-label-custom">Unit No <span class="text-danger">*</span></label>
                     <b-form-input v-model="formData.unit_no" placeholder="Enter Unit No" class="custom-input" />
                   </div>
                   
-                  <div class="col-md-4" v-if="hasField('property_type_id')">
+                  <div class="col-md-6" v-if="hasField('property_type_id')">
                     <label class="form-label-custom">Property Type <span class="text-danger">*</span></label>
                     <v-select 
                       v-model="formData.property_type_id" 
@@ -538,7 +550,7 @@
                     />
                   </div>
                   
-                  <div class="col-md-4" v-if="hasField('subcommunity_id')">
+                  <div class="col-md-6" v-if="hasField('subcommunity_id')">
                     <label class="form-label-custom">Subcommunity <span class="text-danger">*</span></label>
                     <v-select 
                       v-model="formData.subcommunity_id" 
@@ -552,7 +564,7 @@
                     />
                   </div>
                   
-                  <div class="col-md-4" v-if="hasField('bedrooms')">
+                  <div class="col-md-6" v-if="hasField('bedrooms')">
                     <label class="form-label-custom">Bedrooms</label>
                     <v-select 
                       v-model="formData.bedrooms" 
@@ -564,7 +576,7 @@
                     />
                   </div>
                   
-                  <div class="col-md-4" v-if="hasField('area_id')">
+                  <div class="col-md-6" v-if="hasField('area_id')">
                     <label class="form-label-custom">Area</label>
                     <v-select 
                       v-model="formData.area_id" 
@@ -577,7 +589,7 @@
                     />
                   </div>
                   
-                  <div class="col-md-4" v-if="hasField('unit_size')">
+                  <div class="col-md-6" v-if="hasField('unit_size')">
                     <label class="form-label-custom">Unit Size</label>
                     <b-form-input v-model="formData.unit_size" placeholder="Enter Unit Size (sq. ft)" class="custom-input" />
                   </div>
@@ -645,10 +657,7 @@
               <span v-if="submitting">
                 <b-spinner small></b-spinner> Saving...
               </span>
-              <span v-else>
-                Save & Move Deal
-                <iconify-icon icon="lucide:chevron-right" class="ms-1" />
-              </span>
+              <span v-else>Save</span>
             </button>
           </div>
         </div>
@@ -703,8 +712,6 @@ const landlordDocUploadRef = ref(null)
 
 // ================ حساب document types مرة واحدة فقط ================
 const documentTypesByParty = computed(() => {
-  console.log('Calculating document types, missingFields:', props.missingFields)
-  
   const result = {
     buyer: [],
     seller: [],
@@ -782,6 +789,20 @@ const unresolvedMissingKeys = computed(() => {
 
 const canSubmit = computed(() => {
   return !loading.value && !submitting.value && unresolvedMissingKeys.value.length === 0
+})
+
+const isCompactStageModal = computed(() => {
+  const count = (props.missingFields || []).length
+  return count > 0 && count <= 4
+})
+
+const isDealWonStage = computed(() => {
+  return String(props.targetStageName || '').toLowerCase().includes('deal won')
+})
+
+const isLostReasonOnly = computed(() => {
+  const keys = props.missingFields || []
+  return keys.length === 1 && keys[0] === 'lost_reason'
 })
 
 // Load initial data
@@ -1197,29 +1218,121 @@ const bedroomOptions = [
 
 .complete-fields-modal {
   background: white;
-  border-radius: 12px;
-  width: 900px;
-  max-width: 95vw;
+  border-radius: 10px;
+  width: min(760px, 94vw);
+  max-width: 94vw;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.complete-fields-modal--compact {
+  width: min(640px, 94vw);
+}
+
+.complete-fields-modal--deal-won {
+  width: min(560px, 94vw);
+  border: 2px solid #2ea7ef;
+}
+
+.complete-fields-modal--deal-won .modal-header-deal {
+  padding: 12px 14px !important;
+}
+
+.complete-fields-modal--deal-won .form-scroll-area {
+  padding: 0 10px 6px;
+}
+
+.complete-fields-modal--deal-won .section-title {
+  font-size: 12px !important;
+  margin-bottom: 10px !important;
+}
+
+.complete-fields-modal--deal-won .form-card {
+  padding: 10px !important;
+}
+
+.complete-fields-modal--deal-won .row.g-3 {
+  --bs-gutter-x: 0.75rem;
+  --bs-gutter-y: 0.5rem;
+}
+
+.complete-fields-modal--deal-won :deep(.col-md-4) {
+  flex: 0 0 auto;
+  width: 50%;
+}
+
+.complete-fields-modal--deal-won .modal-footer-custom {
+  padding: 10px 16px 12px !important;
+}
+
+.complete-fields-modal--lost-reason {
+  width: min(560px, 94vw);
+}
+
+.complete-fields-modal--lost-reason .form-scroll-area {
+  padding: 0 12px 8px;
+}
+
+.complete-fields-modal--lost-reason .form-section {
+  margin-top: 8px;
+}
+
+.lost-reason-textarea {
+  width: 100%;
+  min-height: 104px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  color: #0f172a;
+  resize: none;
+  outline: none;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+}
+
+.lost-reason-textarea::placeholder {
+  color: #9ca3af;
 }
 
 .modal-header-deal {
   border-bottom: 1px solid #F4F4F4;
+  flex-shrink: 0;
+  padding: 14px 18px !important;
 }
 
 .modal-title {
-  font-weight: 600;
-  font-size: 16px;
+  font-weight: 500;
+  font-size: 14px;
   color: #01062C;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+}
+
+.complete-fields-title-wrap {
+  max-width: 100%;
+}
+
+.complete-fields-main-title {
+  display: block;
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: -0.018em;
+  max-width: 52ch;
+  color: var(--deal-navy-deep, #01062c);
+}
+
+@media (min-width: 768px) {
+  .complete-fields-main-title {
+    font-size: 14px;
+    max-width: 36rem;
+  }
 }
 
 .deals-type-tabs-inline {
-  flex-wrap: wrap;
+  display: none !important;
 }
 
 .deals-type-tab-inline {
@@ -1230,12 +1343,12 @@ const bedroomOptions = [
   font-weight: 500;
   background: #0F172A;
   color: #fff;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
 .close-btn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   cursor: pointer;
   color: #64748B;
@@ -1253,7 +1366,20 @@ const bedroomOptions = [
 }
 
 .deal-progress-wrapper {
-  border-bottom: 1px solid #F4F4F4;
+  display: none;
+}
+
+.deal-progress-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.deal-progress-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  margin-bottom: 8px;
 }
 
 .deal-progress-bar {
@@ -1266,78 +1392,114 @@ const bedroomOptions = [
 .deal-stage-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 30px;
-  border: 1px solid #3B82F6;
-  background: #EFF6FF;
+  gap: 6px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 100px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.deal-stage-pill.active {
+  border-color: #0f172a;
+  background: #0f172a;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
 }
 
 .deal-stage-pill .stage-circle {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
   border-radius: 50%;
-  background: #fff;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.deal-stage-pill.active .stage-circle {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
 .deal-stage-pill .stage-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #3B82F6;
 }
 
 .deal-stage-pill .stage-text {
   font-size: 12px;
-  color: #01062C;
+  color: #64748b;
   font-weight: 500;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deal-stage-pill.active .stage-text {
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.deal-progress-hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #64748b;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
 .form-scroll-area {
-  max-height: 60vh;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 0;
+  padding: 0 14px 8px;
 }
 
 .form-section {
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .section-title { 
-  font-size: 14px !important; 
+  font-size: 13px !important; 
   font-weight: 600; 
-  color: #01062C; 
-  font-family: 'Montserrat'; 
+  color: var(--deal-navy-deep, #01062c); 
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  letter-spacing: -0.02em;
 }
 
 .form-card { 
   background: #fff; 
-  border: 1px solid #F3F3F3; 
-  box-shadow: 1px 1px 5px rgba(0,0,0,0.03); 
+  border: 1px solid #f1f5f9; 
+  box-shadow: none; 
 }
 
 .radius-12 { 
-  border-radius: 12px; 
+  border-radius: 8px; 
 }
 
 .form-label-custom { 
-  font-size: 13px; 
+  font-size: 12px; 
   font-weight: 500; 
-  color: #000; 
+  color: var(--deal-text-muted, #64748b); 
   margin-bottom: 6px; 
   display: block; 
-  font-family: 'Montserrat'; 
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); 
 }
 
 .custom-input { 
   height: 42px !important; 
-  border-radius: 10px !important; 
+  min-height: 42px;
+  border-radius: 8px !important; 
   border: 1px solid #E2E8F0 !important; 
   font-size: 13px !important; 
-  font-family: 'Montserrat'; 
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); 
   width: 100%;
   padding: 0 12px;
 }
@@ -1345,14 +1507,14 @@ const bedroomOptions = [
 .input-group-custom { 
   display: flex; 
   border: 1px solid #E2E8F0; 
-  border-radius: 10px; 
+  border-radius: 8px; 
   overflow: hidden; 
 }
 
 .input-group-custom .custom-input { 
   border: none !important; 
   flex: 1; 
-  border-radius: 10px 0 0 10px !important; 
+  border-radius: var(--deal-input-r, 10px) 0 0 var(--deal-input-r, 10px) !important; 
 }
 
 :deep(.custom-v-select-inline) { 
@@ -1360,47 +1522,57 @@ const bedroomOptions = [
 }
 
 :deep(.custom-v-select-inline .vs__dropdown-toggle) { 
-  height: 42px; 
+  height: 42px !important;
+  min-height: 42px !important;
   border: none; 
   border-left: 1px solid #E2E8F0; 
-  border-radius: 0 10px 10px 0; 
+  border-radius: 0 var(--deal-input-r, 10px) var(--deal-input-r, 10px) 0; 
 }
 
-:deep(.vs__dropdown-toggle) {
+:deep(.custom-v-select .vs__dropdown-toggle) {
   border: 1px solid #E2E8F0;
-  border-radius: 10px;
-  min-height: 42px;
+  border-radius: 8px;
+  min-height: 42px !important;
+  height: 42px !important;
+  font-size: 13px;
 }
 
 .modal-footer-custom {
   border-top: 1px solid #F4F4F4;
   background: white;
+  flex-shrink: 0;
+  padding: 14px 20px !important;
 }
 
 .btn-clear {
   background: #F4F4F4;
   border: none;
-  padding: 10px 25px;
+  width: 96px;
+  height: 40px;
+  padding: 0;
   border-radius: 100px;
   font-size: 14px;
   color: #01062C;
   cursor: pointer;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
 .btn-next-step {
   background: #01062C;
   border: none;
-  padding: 10px 20px;
+  width: 96px;
+  height: 40px;
+  padding: 0;
   border-radius: 100px;
   font-size: 14px;
   color: #fff;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: background 0.2s;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
 .btn-next-step:hover:not(:disabled) {
@@ -1417,5 +1589,17 @@ const bedroomOptions = [
   border: 1px solid #ffe69c;
   color: #664d03;
   border-radius: 8px;
+}
+
+.modal-footer-custom .d-flex {
+  justify-content: center !important;
+  width: 100%;
+}
+
+/* Booking >> SPA modal tabs are soft gray in Figma */
+:deep(.complete-fields-modal .document-upload-container .doc-tab.active) {
+  background: #f8fafc;
+  color: #64748b;
+  border-color: #e2e8f0;
 }
 </style>

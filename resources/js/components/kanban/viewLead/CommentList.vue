@@ -609,7 +609,7 @@ defineExpose({
     font-size: 13px;
     font-weight: 400;
     color: #666666;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--deal-font, 'Montserrat', sans-serif);
 }
 
 .comment-header-right {
@@ -625,7 +625,7 @@ defineExpose({
     font-size: 12px;
     font-weight: 400;
     color: #999999;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--deal-font, 'Montserrat', sans-serif);
 }
 
 .comment-user-avatar {
@@ -788,7 +788,7 @@ defineExpose({
     color: #333333;
     line-height: 1.5;
     flex: 1;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--deal-font, 'Montserrat', sans-serif);
 }
 
 .comment-attachments {
@@ -830,14 +830,14 @@ defineExpose({
     font-weight: 500;
     color: #333333;
     margin-bottom: 4px;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--deal-font, 'Montserrat', sans-serif);
 }
 
 .attachment-size {
     font-size: 12px;
     font-weight: 400;
     color: #999999;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--deal-font, 'Montserrat', sans-serif);
 }
 
 .attachment-actions {
@@ -892,7 +892,7 @@ defineExpose({
     font-weight: 400;
     color: #333333;
     transition: all 0.2s;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--deal-font, 'Montserrat', sans-serif);
 }
 
 .comment-footer-btn:hover {

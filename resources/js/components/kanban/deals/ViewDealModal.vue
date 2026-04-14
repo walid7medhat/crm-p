@@ -10,7 +10,7 @@
     modal-class="view-deal-modal-outer"
     content-class="view-deal-modal-content-wrap"
   >
-    <div v-if="show" class="view-deal-modal-content view-deal-modal-padding">
+    <div v-if="show" class="view-deal-modal-content view-deal-modal-padding deal-figma-ui">
       <!-- Header: title + deal type dropdown + close -->
       <div class="view-deal-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -24,6 +24,7 @@
           >
             <template #button-content>
               <span class="deal-type-dropdown-label">{{ selectedDealTypeName }}</span>
+              <iconify-icon icon="lucide:pencil" class="deal-type-pencil-icon" aria-hidden="true" />
               <iconify-icon icon="lucide:chevron-down" class="deal-type-dropdown-chevron"></iconify-icon>
             </template>
             <b-dropdown-item
@@ -221,121 +222,12 @@
           </div>
         </template>
 
-        <!-- History tab -->
-        <div v-if="activeTab === 'history'" class="deal-history-wrapper">
-          <div class="deal-history-toolbar">
-            <div class="history-search-wrap">
-              <iconify-icon icon="lucide:search" class="history-search-icon"></iconify-icon>
-              <input
-                v-model="historySearch"
-                type="text"
-                class="history-search-input"
-                placeholder="Search anything in deal history or deal info"
-                @input="onHistorySearchInput"
-              />
-            </div>
-            <div class="position-relative">
-              <button type="button" class="history-filter-btn" @click="showHistoryFilters = !showHistoryFilters">
-                <iconify-icon icon="lucide:sliders-horizontal"></iconify-icon>
-                Filter
-              </button>
-
-              <div v-if="showHistoryFilters" class="history-filters-panel">
-                <div class="history-filter-grid">
-                  <div class="history-filter-field">
-                    <label>Type</label>
-                    <select v-model="historyFilters.type">
-                      <option value="">Not Specified</option>
-                      <option value="view">View</option>
-                      <option value="updated">Changes</option>
-                      <option value="stage_changed">Pipeline Changed</option>
-                    </select>
-                  </div>
-                  <div class="history-filter-field">
-                    <label>Event Type</label>
-                    <select v-model="historyFilters.event_type">
-                      <option value="">Not Specified</option>
-                      <option value="view">View</option>
-                      <option value="updated">Changes</option>
-                      <option value="status_changed">Status Changed</option>
-                      <option value="activity_created">Activity Created</option>
-                      <option value="comment_created">Comment Added</option>
-                    </select>
-                  </div>
-                  <div class="history-filter-field">
-                    <label>Created By (User ID)</label>
-                    <input v-model="historyFilters.created_by" type="text" placeholder="User ID" />
-                  </div>
-                  <div class="history-filter-field">
-                    <label>Date</label>
-                    <select v-model="historyFilters.date">
-                      <option value="">Any Date</option>
-                      <option value="today">Today</option>
-                      <option value="yesterday">Yesterday</option>
-                      <option value="this_week">This Week</option>
-                      <option value="this_month">This Month</option>
-                      <option value="current_quarter">Current Quarter</option>
-                      <option value="last_week">Last Week</option>
-                      <option value="last_30_days">Last 30 Days</option>
-                      <option value="last_60_days">Last 60 Days</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="history-filter-actions">
-                  <button type="button" class="history-reset-btn" @click="resetHistoryFilters">Reset</button>
-                  <button type="button" class="history-search-btn" @click="applyHistoryFilters">Search</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="history-table-wrap">
-            <table class="history-table">
-              <thead>
-                <tr>
-                  <th>Date & Time</th>
-                  <th>Created By</th>
-                  <th>Event Type</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-if="historyLoading">
-                  <td colspan="4" class="text-center text-muted py-4">Loading history...</td>
-                </tr>
-                <tr v-else-if="!historyItems.length">
-                  <td colspan="4" class="text-center text-muted py-4">No history found.</td>
-                </tr>
-                <tr v-else v-for="row in historyItems" :key="row.id">
-                  <td>{{ row.date }}</td>
-                  <td>{{ row.created_by }}</td>
-                  <td>{{ row.event_type }}</td>
-                  <td>{{ row.description }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="history-pagination-bar">
-            <span>Showing {{ historyItems.length }} of {{ historyPagination.total }} entries</span>
-            <div class="d-flex align-items-center gap-2">
-              <button
-                class="history-page-btn"
-                :disabled="historyPagination.current_page <= 1 || historyLoading"
-                @click="fetchDealHistory(historyPagination.current_page - 1)"
-              >
-                Previous
-              </button>
-              <span class="history-page-number">{{ historyPagination.current_page }}</span>
-              <button
-                class="history-page-btn"
-                :disabled="historyPagination.current_page >= historyPagination.last_page || historyLoading"
-                @click="fetchDealHistory(historyPagination.current_page + 1)"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+        <!-- History tab (Figma: search chips + sidebar quick filters + advanced form + table + pagination) -->
+        <div v-if="activeTab === 'history'" class="deal-history-tab-pane">
+          <DealHistoryPanel
+            :deal-id="deal?.id"
+            :is-active="show && activeTab === 'history'"
+          />
         </div>
       </div>
     </div>
@@ -350,6 +242,7 @@ import ViewSecondaryDeal from './ViewSecondaryDeal.vue'
 import ViewRentalDeal from './ViewRentalDeal.vue'
 import DealForm from './DealForm.vue'
 import DealCreatedCard from './DealCreatedCard.vue'
+import DealHistoryPanel from './DealHistoryPanel.vue'
 import ActivitySection from '../viewLead/ActivitySection.vue'
 import CommentsSection from '../viewLead/CommentsSection.vue'
 import ActivityList from '../viewLead/ActivityList.vue'
@@ -370,24 +263,6 @@ const dealType = ref('primary')
 const selectedStageIndex = ref(0)
 const activeTab = ref('general')
 const activeViewTab = ref('activity')
-const historyLoading = ref(false)
-const historyItems = ref([])
-const historyPagination = ref({
-  current_page: 1,
-  last_page: 1,
-  per_page: 10,
-  total: 0,
-})
-const historySearch = ref('')
-const showHistoryFilters = ref(false)
-const historyFilters = ref({
-  type: '',
-  event_type: '',
-  created_by: '',
-  date: '',
-})
-let historySearchDebounce = null
-
 // Edit deal state
 const isEditingDeal = ref(false)
 const editFormData = ref({})
@@ -402,7 +277,7 @@ const editLookup = ref({
   developers: [],
   areas: []
 })
-const { updateAndChangeStage, buildUpdateAndStageFormData } = useStageTransition()
+const { updateAndChangeStage } = useStageTransition()
 
 const dealTitle = computed(() => {
   if (!props.deal) return 'View Deal'
@@ -483,103 +358,6 @@ const currentStageIndex = computed(() => {
 
 function selectStage(index) {
   selectedStageIndex.value = index
-}
-
-function mapActionLabel(action) {
-  if (!action) return 'Information'
-  const normalized = String(action).toLowerCase().replace(/_/g, ' ')
-  const dictionary = {
-    view: 'View',
-    updated: 'Changes',
-    stage_changed: 'Pipeline Changed',
-    status_changed: 'Status Changed',
-    comment_created: 'Comment Added',
-    activity_created: 'Activity Created',
-  }
-  return dictionary[normalized] || normalized.replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-function describeChanges(changes) {
-  if (!changes || typeof changes !== 'object') return '—'
-  if (changes.description) return changes.description
-  if (changes.old_stage != null || changes.new_stage != null) {
-    const oldVal = changes.old_stage ?? '—'
-    const newVal = changes.new_stage ?? '—'
-    return `Stage changed from ${oldVal} to ${newVal}`
-  }
-  if (changes.old_person || changes.new_person) {
-    return `Responsible person: ${changes.old_person ?? '—'} → ${changes.new_person ?? '—'}`
-  }
-  if (changes.title && (changes.action === 'activity_created' || changes.action === 'activity_updated')) {
-    return `${changes.action === 'activity_created' ? 'Activity created' : 'Activity updated'}: ${changes.title}`
-  }
-  if (changes.comment && (changes.action === 'comment_added' || changes.action === 'comment_updated')) {
-    return `${changes.action === 'comment_added' ? 'Comment added' : 'Comment updated'}: ${changes.comment}`
-  }
-  if (changes.action) return mapActionLabel(changes.action)
-  return '—'
-}
-
-async function fetchDealHistory(page = 1) {
-  if (!props.deal?.id) return
-  historyLoading.value = true
-  try {
-    const params = {
-      page,
-      per_page: historyPagination.value.per_page || 10,
-    }
-
-    if (historySearch.value?.trim()) params.search = historySearch.value.trim()
-    if (historyFilters.value.type) params.type = historyFilters.value.type
-    if (historyFilters.value.event_type) params.event_type = historyFilters.value.event_type
-    if (historyFilters.value.created_by) params.created_by = historyFilters.value.created_by
-    if (historyFilters.value.date) params.date = historyFilters.value.date
-
-    const { data } = await axios.get(`/deals/${props.deal.id}/history`, { params })
-    const payload = data?.data || {}
-    const items = payload.items || []
-
-    historyItems.value = items.map((item) => ({
-      id: item.id,
-      date: item.date || '----',
-      created_by: item.user?.name || 'System',
-      event_type: mapActionLabel(item.action),
-      description: item.description ?? describeChanges(item.changes),
-    }))
-
-    historyPagination.value = {
-      current_page: payload.pagination?.current_page || 1,
-      last_page: payload.pagination?.last_page || 1,
-      per_page: payload.pagination?.per_page || 10,
-      total: payload.pagination?.total || historyItems.value.length,
-    }
-  } catch (error) {
-    historyItems.value = []
-  } finally {
-    historyLoading.value = false
-  }
-}
-
-function onHistorySearchInput() {
-  if (historySearchDebounce) clearTimeout(historySearchDebounce)
-  historySearchDebounce = setTimeout(() => {
-    fetchDealHistory(1)
-  }, 350)
-}
-
-function applyHistoryFilters() {
-  showHistoryFilters.value = false
-  fetchDealHistory(1)
-}
-
-function resetHistoryFilters() {
-  historyFilters.value = {
-    type: '',
-    event_type: '',
-    created_by: '',
-    date: '',
-  }
-  fetchDealHistory(1)
 }
 
 // --- Edit deal ---
@@ -731,7 +509,14 @@ function cancelEditDeal() {
 
 async function saveEditDeal() {
   if (!props.deal?.id) return
-  const stageId = props.deal.stage_id ?? props.deal.stage?.id
+  const stageId =
+    props.deal.stage_id ??
+    props.deal.stage?.id ??
+    props.deal.stageId ??
+    editFormData.value?.stage_id ??
+    editFormData.value?.stageId ??
+    currentStages.value[selectedStageIndex.value]?.id ??
+    currentStages.value[0]?.id
   if (!stageId) {
     console.error('No stage_id for deal')
     return
@@ -739,11 +524,6 @@ async function saveEditDeal() {
   editSaving.value = true
   editShowErrors.value = false
   try {
-    const formData = buildUpdateAndStageFormData({
-      payload: editFormData.value,
-      documents: [],
-      stageId
-    })
     const res = await updateAndChangeStage({
       dealId: props.deal.id,
       payload: editFormData.value,
@@ -768,7 +548,6 @@ watch(() => props.modelValue, (val) => {
   show.value = val
   if (val && props.deal?.deal_type) dealType.value = props.deal.deal_type
   if (val) selectedStageIndex.value = currentStageIndex.value
-  if (val && activeTab.value === 'history') fetchDealHistory(1)
 })
 
 watch(() => props.deal?.stageId, () => {
@@ -784,10 +563,6 @@ watch(show, (val) => {
   emit('update:modelValue', val)
 })
 
-watch(activeTab, (val) => {
-  if (val === 'history' && show.value) fetchDealHistory(1)
-})
-
 function close() {
   show.value = false
 }
@@ -796,16 +571,13 @@ function close() {
 <style>
 /* Global: modal large, 12px radius, like image */
 #view-deal-modal .modal-dialog {
-  max-width: 95vw !important;
-  width: 95vw !important;
-  max-width: 1200px !important;
+  max-width: min(1200px, 95vw) !important;
+  width: min(1200px, 95vw) !important;
   max-height: 92vh !important;
-  min-height: 85vh !important;
   margin: 2vh auto !important;
 }
 #view-deal-modal .modal-content {
   max-height: 92vh !important;
-  min-height: 85vh !important;
   border-radius: 12px !important;
   overflow: hidden !important;
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
@@ -821,16 +593,13 @@ function close() {
 
 <style scoped>
 :deep(.view-deal-modal-outer .modal-dialog) {
-  max-width: 95vw !important;
-  width: 95vw !important;
-  max-width: 1200px !important;
+  max-width: min(1200px, 95vw) !important;
+  width: min(1200px, 95vw) !important;
   max-height: 92vh !important;
-  min-height: 85vh !important;
 }
 :deep(.view-deal-modal-outer .modal-content.view-deal-modal-content-wrap),
 :deep(#view-deal-modal .modal-content) {
   max-height: 92vh !important;
-  min-height: 85vh !important;
   border-radius: 12px !important;
   overflow: hidden !important;
 }
@@ -840,7 +609,6 @@ function close() {
 
 .view-deal-modal-content {
   background: #fff;
-  font-family: 'Montserrat', sans-serif;
   display: flex;
   flex-direction: column;
   min-height: 100%;
@@ -855,19 +623,23 @@ function close() {
 }
 
 .view-deal-body-padding {
-  padding: 1rem 2.5rem 1.5rem 2.5rem;
+  padding: 0.65rem 1rem 0.9rem 1rem;
 }
 
 /* Header: title 18px + deal type tag pill + close */
 .view-deal-header {
-  padding: 0.5rem 0.75rem 0.5rem 0.75rem;
+  padding: 0.45rem 0.35rem 0.55rem;
   border-bottom: none;
+  position: relative;
+  z-index: 3;
+  background: #fff;
 }
 .view-deal-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--deal-navy-deep, #01062c);
   letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 .deal-type-tag-pill {
   display: inline-flex;
@@ -905,22 +677,57 @@ function close() {
   color: #1E293B;
 }
 
-.deal-progress-label {
+:deep(.deal-type-dropdown-toggle) {
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.deal-type-dropdown-label {
   font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  color: #475569;
+  line-height: 1;
+}
+
+.deal-type-dropdown-chevron {
+  font-size: 12px;
   color: #94a3b8;
-  margin-bottom: 8px;
-  padding-left: 0.75rem;
+}
+
+:deep(.deal-type-dropdown-menu) {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 4px;
+}
+
+:deep(.deal-type-dropdown-item) {
+  font-size: 12px;
+  color: #334155;
+  border-radius: 8px;
+}
+
+.deal-progress-label {
+  display: none;
 }
 
 /* Stage progress (match Create Deal modal) */
 .deal-progress-wrapper {
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 0 0.75rem 0.5rem;
+  padding: 0 0.35rem 0.55rem;
   border-bottom: 1px solid #f1f5f9;
+  position: relative;
+  z-index: 2;
+  background: #fff;
+  display: block !important;
+  margin-top: 2px;
+  min-height: 42px;
 }
 .deal-progress-wrapper::-webkit-scrollbar {
   display: none;
@@ -929,7 +736,8 @@ function close() {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-height: 30px;
 }
 .deal-stage-pill {
   display: inline-flex;
@@ -945,22 +753,26 @@ function close() {
   white-space: nowrap;
   box-sizing: border-box;
   cursor: pointer;
+  flex-shrink: 0;
 }
 .deal-stage-pill:hover {
   border-color: #cbd5e1;
 }
 .deal-stage-pill.completed {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  border-color: #8ee3f8;
+  background: linear-gradient(90deg, #8ee3f8 0%, #55d6f4 100%);
 }
 .deal-stage-pill.active {
-  border-color: #0f172a;
-  background: #0f172a;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+  border-color: #299de9;
+  background: linear-gradient(90deg, #2ea7ef 0%, #2d92dc 100%);
+  box-shadow: 0 2px 8px rgba(41, 157, 233, 0.3);
 }
 .deal-stage-pill.active .stage-text {
   color: #fff !important;
   font-weight: 600;
+}
+.deal-stage-pill.completed .stage-text {
+  color: #fff !important;
 }
 .deal-stage-pill.upcoming {
   opacity: 0.72;
@@ -995,11 +807,13 @@ function close() {
 }
 .deal-stage-pill .stage-text {
   font-size: 12px;
-  color: #64748b;
+  color: var(--deal-text-muted, #64748b);
   font-weight: 500;
-  max-width: 140px;
+  font-family: var(--deal-font, 'Inter', sans-serif);
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1;
 }
 .stage-arrow {
   font-size: 14px;
@@ -1012,20 +826,25 @@ function close() {
   margin-bottom: 0;
   padding-left: 0.75rem;
   padding-right: 0.75rem;
+  position: relative;
+  z-index: 2;
+  background: #fff;
+  margin-top: 2px;
 }
 .tab-item {
   background: none;
   border: none;
   padding: 12px 0;
   margin-right: 24px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: #64748B;
+  color: var(--deal-text-muted, #64748b);
   position: relative;
   cursor: pointer;
+  font-family: var(--deal-font, 'Inter', sans-serif);
 }
 .tab-item.active {
-  color: #01062C;
+  color: #01062c;
   font-weight: 600;
 }
 .tab-item.active::after {
@@ -1035,7 +854,7 @@ function close() {
   left: 0;
   width: 100%;
   height: 2px;
-  background: #FAA300;
+  background: #faa300;
 }
 
 .radius-12 { border-radius: 12px; }
@@ -1045,9 +864,10 @@ function close() {
   padding: 0;
 }
 .info-card-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #01062C;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--deal-navy-deep, #01062c);
+  letter-spacing: -0.01em;
 }
 .btn-edit-icon {
   width: 32px;
@@ -1068,20 +888,23 @@ function close() {
 }
 
 .activity-card {
-  border: 1px solid #F4F4F4;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  box-shadow: none !important;
 }
 .toggle-buttons-container {
   width: fit-content;
 }
 .w-fit-content { width: fit-content; }
 .btn-toggle {
-  height: 32px;
-  min-height: 32px;
-  padding: 0 14px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 12px;
   border-radius: 100px;
   border: none;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
+  font-family: var(--deal-font, 'Inter', sans-serif);
   cursor: pointer;
   transition: all 0.2s;
   display: inline-flex;
@@ -1120,152 +943,20 @@ function close() {
   min-width: 0;
 }
 
-.deal-history-wrapper {
-  border: 1px solid #eef2f7;
-  border-radius: 12px;
-  padding: 14px;
+:deep(.info-card) {
+  border: 1px solid #eef2f7 !important;
+  box-shadow: none !important;
 }
-.deal-history-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
+
+.deal-history-tab-pane {
+  padding: 0 0.25rem 0.5rem;
 }
-.history-search-wrap {
-  flex: 1;
-  position: relative;
-}
-.history-search-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #94a3b8;
+
+.deal-type-pencil-icon {
   font-size: 14px;
-}
-.history-search-input {
-  width: 100%;
-  height: 38px;
-  border: 1px solid #e2e8f0;
-  border-radius: 999px;
-  padding: 0 14px 0 32px;
-  font-size: 13px;
-  color: #1e293b;
-}
-.history-filter-btn {
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #334155;
-  border-radius: 999px;
-  height: 38px;
-  padding: 0 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.history-filters-panel {
-  position: absolute;
-  top: 44px;
-  right: 0;
-  width: min(560px, 82vw);
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px;
-  z-index: 10;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
-}
-.history-filter-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-.history-filter-field label {
-  font-size: 12px;
-  color: #64748b;
-  margin-bottom: 4px;
-  display: block;
-}
-.history-filter-field input,
-.history-filter-field select {
-  width: 100%;
-  height: 36px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0 10px;
-  font-size: 13px;
-}
-.history-filter-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 10px;
-}
-.history-reset-btn,
-.history-search-btn {
-  height: 34px;
-  border-radius: 999px;
-  padding: 0 14px;
-  border: 0;
-  font-size: 13px;
-  font-weight: 600;
-}
-.history-reset-btn {
-  background: #f1f5f9;
-  color: #334155;
-}
-.history-search-btn {
-  background: #01062c;
-  color: #fff;
-}
-.history-table-wrap {
-  border: 1px solid #eef2f7;
-  border-radius: 10px;
-  overflow: auto;
-}
-.history-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.history-table th,
-.history-table td {
-  padding: 11px 12px;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 13px;
-  color: #334155;
-  text-align: left;
-}
-.history-table th {
-  font-size: 12px;
-  color: #64748b;
-  background: #f8fafc;
-}
-.history-pagination-bar {
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #64748b;
-}
-.history-page-btn {
-  height: 30px;
-  border-radius: 999px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #334155;
-  padding: 0 12px;
-  font-size: 12px;
-}
-.history-page-btn:disabled {
-  opacity: 0.5;
-}
-.history-page-number {
-  min-width: 24px;
-  text-align: center;
-  color: #01062c;
-  font-weight: 600;
+  color: #faa300;
+  margin-left: 2px;
+  flex-shrink: 0;
 }
 
 .edit-deal-form-wrap {
@@ -1274,7 +965,7 @@ function close() {
 .edit-deal-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 10px;
 }
 .deal-edit-footer-sticky {
@@ -1283,28 +974,34 @@ function close() {
   z-index: 4;
   background: linear-gradient(to top, #fff 75%, rgba(255, 255, 255, 0.92));
   box-shadow: 0 -8px 20px rgba(15, 23, 42, 0.06);
-  margin-left: -0.5rem;
-  margin-right: -0.5rem;
-  padding-left: 0.5rem !important;
-  padding-right: 0.5rem !important;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
   padding-bottom: 10px !important;
 }
 .btn-history-cancel {
-  height: 34px;
-  padding: 0 16px;
+  height: 40px;
+  width: 95px;
+  padding: 0;
   border-radius: 999px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   color: #334155;
   font-size: 13px;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 .btn-history-cancel:hover {
   background: #f1f5f9;
 }
 .btn-save-deal-view {
-  height: 34px;
-  padding: 0 20px;
+  height: 40px;
+  width: 95px;
+  padding: 0;
   border-radius: 999px;
   border: none;
   background: #0f172a;
@@ -1312,6 +1009,10 @@ function close() {
   font-size: 13px;
   font-weight: 600;
   transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 .btn-save-deal-view:hover:not(:disabled) {
   background: #020617;
@@ -1359,18 +1060,53 @@ function close() {
 /* Child sections: section titles 16px, labels 12px #64748B, values 14px #01062C */
 :deep(.info-card .section-title),
 :deep(.info-card h6.section-title) {
-  font-size: 16px !important;
-  font-weight: 600;
-  color: #01062C;
+  font-size: 13px !important;
+  font-weight: 500;
+  color: var(--deal-navy-deep, #01062c);
   margin-bottom: 12px;
+  font-family: var(--deal-font, 'Inter', sans-serif);
+  letter-spacing: -0.02em;
 }
 :deep(.info-card .info-label) {
   font-size: 12px !important;
-  color: #64748B;
+  font-weight: 500;
+  color: var(--deal-text-muted, #64748b);
   margin-bottom: 4px;
+  font-family: var(--deal-font, 'Inter', sans-serif);
 }
 :deep(.info-card .info-value) {
-  font-size: 14px !important;
-  color: #01062C;
+  font-size: 13px !important;
+  font-weight: 500;
+  color: var(--deal-text-strong, #0f172a);
+  font-family: var(--deal-font, 'Inter', sans-serif);
+}
+
+:deep(.activity-input-section .custom-textarea) {
+  min-height: 86px;
+}
+
+:deep(.activity-input-section .custom-textarea::placeholder) {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+:deep(.activity-input-section .modal-footer-custom) {
+  border-top: none;
+  padding-top: 12px;
+  margin-top: 8px;
+}
+
+:deep(.activity-input-section .btn-cancel),
+:deep(.activity-input-section .btn-save) {
+  width: 92px;
+  height: 38px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 13px;
+  justify-content: center;
+}
+
+:deep(.activity-input-section .btn-save) {
+  background: #02014f;
 }
 </style>

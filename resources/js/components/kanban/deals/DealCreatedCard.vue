@@ -1,5 +1,5 @@
 <template>
-    <div class="deal-created-section info-card bg-white p-3 radius-12 shadow-sm mb-3">
+    <div class="deal-created-section info-card bg-white p-3 radius-12 shadow-sm mb-3 deal-figma-ui">
         <div class="deal-created-timeline">
             <div class="timeline-date-row">
                 <span class="timeline-date-text">{{ dateLabel }}</span>
@@ -84,6 +84,9 @@ const creatorTooltip = computed(() => creatorName.value !== '—' ? `Created by 
 <style scoped>
 .deal-created-section {
     border: 1px solid #F4F4F4;
+    font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
 }
 
 .deal-created-timeline {

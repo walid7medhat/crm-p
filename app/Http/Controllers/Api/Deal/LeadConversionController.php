@@ -25,7 +25,13 @@ class LeadConversionController extends Controller
    public function convert(Request $request)
     {
         $user = auth()->user();
-        $lead=Lead::find($request->lead_id);
+        $lead = Lead::find($request->lead_id);
+        if (!$lead) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lead not found'
+            ], 404);
+        }
         if($lead){
         if (!$user->hasAnyRole(['super_admin'])) {
             $canAccess = false;
@@ -48,7 +54,7 @@ class LeadConversionController extends Controller
         }
         }
 
-        if ($lead && $lead->converted_to_deal_id) {
+        if ($lead->converted_to_deal_id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Lead already converted to deal',
@@ -58,16 +64,30 @@ class LeadConversionController extends Controller
         
        
 
-             $stage = Stage::where('stage_type', 'deal')
+        $stage = Stage::where('stage_type', 'deal')
             ->where('deal_type', $request->deal_type)
             ->orderBy('order')
             ->first();
+        if (!$stage) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No deal stage configured for selected deal type'
+            ], 422);
+        }
         
 
         try {
             DB::beginTransaction();
 
             $dealNumber = $this->generateDealNumber($lead);
+            $unitNo = $request->unit_no ?? $lead->unit_no;
+            $propertyTypeId = $request->property_type_id ?? $lead->property_type_id;
+            if (empty($unitNo) || empty($propertyTypeId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Lead is missing required property fields (unit number or property type). Please convert using Create Deal modal and complete required fields.'
+                ], 422);
+            }
 
             $deal = Deal::create([
                 'added_by'=>$user->id,
@@ -77,18 +97,17 @@ class LeadConversionController extends Controller
                 'deal_type' => $request->deal_type,
                 'stage_id' => $stage->id,
                 
-                'source' => $lead->lead_source,
+                'source' => $lead->lead_source ?? $lead->source,
                 'deal_name' => $lead->lead_name,
 
                 'deal_total_amount' => $lead->budget,
                 'currency' => $lead->currency ?? 'AED',
                
-                'unit_no' => $request->unit_no,
-                'property_type_id' => $request->property_type_id,
+                'unit_no' => $unitNo,
+                'property_type_id' => $propertyTypeId,
                 'bedrooms' => $lead->bedrooms,
-                'created_by'=>auth()->user()->id,
-                'addedBy'=>auth()->user()->id,
-                'responsible_person_id '=>$lead->responsible_person_id??auth()->user()->id ,
+                'created_by' => auth()->id(),
+                'responsible_person_id' => $lead->responsible_person_id ?? auth()->id(),
             ]);
             if($request->deal_type !='rental'){
             DealParty::create([

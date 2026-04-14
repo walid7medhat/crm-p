@@ -485,7 +485,7 @@ const groupedActivities = computed(() => {
 })
 
 // Fetch activities from API
-const fetchActivities = async () => {
+async function fetchActivities() {
     if (!props.leadId) {
         return
     }
