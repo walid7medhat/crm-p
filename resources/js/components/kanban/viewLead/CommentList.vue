@@ -49,6 +49,7 @@
                                     class="comment-avatar-hover-anchor"
                                     @mouseenter="activeHoverUserId = comment.id"
                                     @mouseleave="activeHoverUserId = null"
+                                     @click="openPersonProfile(props.lead, comment.userId, $event)"
                                 >
                                     <img 
                                         v-if="comment.userAvatar" 
@@ -159,11 +160,17 @@
             </div>
         </div>
     </div>
+      <ProfilePopup 
+        v-model="showProfilePopup"
+        :user-id="profileUserId"
+        @update:model-value="closeProfilePopup"
+    />
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch, getCurrentInstance } from 'vue'
 import api from '@/plugins/axios'
+import ProfilePopup from '../shared/ProfilePopup.vue'
 
 const instance = getCurrentInstance()
 const $showNotification = (message, type = 'info') => {
@@ -193,6 +200,25 @@ const loading = ref(false)
 const loadingOlder = ref(false)
 const nextPageUrl = ref(null)
 const hasNextPage = computed(() => !!nextPageUrl.value)
+
+
+
+const showProfilePopup = ref(false)
+const profileUserId = ref(null)
+const profileTriggerType = ref(null)
+
+
+const openPersonProfile = (lead, userId, event) => {
+    if (event) event.stopPropagation()
+    
+    if (!userId) {
+        console.warn('No user ID provided')
+        return
+    }
+    
+    profileUserId.value = userId
+    showProfilePopup.value = true
+}
 
 
 watch(() => props.key, () => {
@@ -315,6 +341,7 @@ const transformComment = (comment) => {
         time: formatTime(comment.created_at),
         dateLabel: formatDateLabel(comment.created_at),
         userAvatar: comment.user_avatar,
+         userId: comment.user_id,
         userName: comment.user_name,
         userRole: comment.user_role_name ? formatRoleName(comment.user_role_name) : null,
         userParentName: comment.user_parent_name || null,

@@ -15,7 +15,7 @@
                 </b-button>
             </div>
             <div class="d-flex align-items-center gap-3">
-                <div class="avatar-wrapper person-hover-anchor" @mouseenter="showPersonCard = true" @mouseleave="showPersonCard = false">
+                <div class="avatar-wrapper person-hover-anchor" @mouseenter="showPersonCard = true" @mouseleave="showPersonCard = false" @click.stop="openPersonProfile(lead, 'responsible', $event)">
                     <img
                         v-if="lead?.responsible_person?.avatar"
                         :src="lead?.responsible_person?.avatar"
@@ -53,7 +53,7 @@
                     </transition>
                 </div>
                 <div class="flex-grow-1"  >
-                    <div class="info-value" @mouseenter="showPersonCard = true" @mouseleave="showPersonCard = false">{{ lead?.responsible_person?.name || '—' }}
+                    <div class="info-value" @mouseenter="showPersonCard = true" @mouseleave="showPersonCard = false"   >{{ lead?.responsible_person?.name || '—' }}
                              <span v-if="lead?.responsible_person?.role_name" class="user-position-badge">{{ lead?.responsible_person?.role_name }}</span>
                     </div>
                     <div class="info-subline">
@@ -139,6 +139,12 @@
                 </div>
             </div>
         </b-modal>
+        
+        <ProfilePopup 
+        v-model="showProfilePopup"
+        :user-id="profileUserId"
+        @update:model-value="closeProfilePopup"
+    />
     </div>
 </template>
 
@@ -146,6 +152,7 @@
 import { ref, computed } from 'vue'
 import { BButton, BModal, BFormInput, BSpinner } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
+import ProfilePopup from '../shared/ProfilePopup.vue'
 
 const props = defineProps({ lead: Object })
 const emit = defineEmits(['person-updated'])
@@ -158,6 +165,25 @@ const personsList = ref([])
 const selectedPersonId = ref(null)
 const personUpdateError = ref('')
 const showPersonCard = ref(false)
+
+
+
+const showProfilePopup = ref(false)
+const profileUserId = ref(null)
+const profileTriggerType = ref(null)
+
+
+const openPersonProfile = (task, type, event) => {
+    if (event) event.stopPropagation()
+    
+    const person = type === 'assigned' ? task?.parent : task?.responsible_person
+    if (!person?.id) return
+    
+    profileUserId.value = person.id
+    profileTriggerType.value = type
+    showProfilePopup.value = true
+}
+
 
 const filteredPersons = computed(() => {
     if (!personSearchQuery.value) return personsList.value

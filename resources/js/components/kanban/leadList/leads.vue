@@ -239,6 +239,7 @@
                                                                         class="person-hover-anchor"
                                                                         @mouseenter.stop="showPersonHoverCard(task, 'responsible')"
                                                                         @mouseleave.stop="hidePersonHoverCard"
+                                                                        @click.stop="openPersonProfile(task, 'responsible', $event)"
                                                                     >
                                                                         <img v-if="task.responsible_person?.avatar"  :src="task.responsible_person.avatar" alt="" class="avatar-sm rounded-circle" />
                                                                         <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
@@ -250,6 +251,7 @@
                                                                                 class="person-hover-card"
                                                                                 @mouseenter.stop="cancelPersonHoverHide"
                                                                                 @mouseleave.stop="hidePersonHoverCard"
+                                                                                  @click.stop="openPersonProfile(task, 'responsible', $event)"
                                                                             >
                                                                                 <div class="person-hover-head">
                                                                                     <img
@@ -273,7 +275,7 @@
                                                                     </div>
                                                                     <div>
                                                                         <div class="info-value" @mouseenter.stop="showPersonHoverCard(task, 'responsible')"
-                                                                        @mouseleave.stop="hidePersonHoverCard">{{ task.responsible_person?.name }}</div>
+                                                                        @mouseleave.stop="hidePersonHoverCard"   @click.stop="openPersonProfile(task, 'responsible', $event)">{{ task.responsible_person?.name }}</div>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -290,6 +292,7 @@
                                                                         class="person-hover-anchor"
                                                                         @mouseenter.stop="showPersonHoverCard(task, 'assigned')"
                                                                         @mouseleave.stop="hidePersonHoverCard"
+                                                                          @click.stop="openPersonProfile(task, 'assigned', $event)"
                                                                     >
                                                                         <img v-if="task?.parent?.avatar" :src="task.parent.avatar"   alt="" class="avatar-sm rounded-circle" />
                                                                         <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
@@ -301,6 +304,7 @@
                                                                                 class="person-hover-card person-hover-card-right"
                                                                                 @mouseenter.stop="cancelPersonHoverHide"
                                                                                 @mouseleave.stop="hidePersonHoverCard"
+                                                                                 @click.stop="openPersonProfile(task, 'assigned', $event)"
                                                                             >
                                                                                 <div class="person-hover-head">
                                                                                     <img
@@ -582,7 +586,11 @@
             </div>
         </div>
     </Teleport>
-
+   <ProfilePopup 
+        v-model="showProfilePopup"
+        :user-id="profileUserId"
+        @update:model-value="closeProfilePopup"
+    />
     <!-- View Lead Modal -->
     <ViewLeadModal
         v-model="showViewModal"
@@ -741,6 +749,7 @@ import ViewLeadModal from '../viewLead/ViewLeadModal.vue'
 import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
 import ConvertLeadModal from './ConvertLeadModal.vue'
+import ProfilePopup from '../shared/ProfilePopup.vue'
 
 
 import api from '@/plugins/axios'
@@ -760,6 +769,24 @@ const CONVERTED_STAGE_ID = 8
 
 const stageOrderMap = ref({})
 
+
+
+
+const showProfilePopup = ref(false)
+const profileUserId = ref(null)
+const profileTriggerType = ref(null)
+
+
+const openPersonProfile = (task, type, event) => {
+    if (event) event.stopPropagation()
+    
+    const person = type === 'assigned' ? task?.parent : task?.responsible_person
+    if (!person?.id) return
+    
+    profileUserId.value = person.id
+    profileTriggerType.value = type
+    showProfilePopup.value = true
+}
 
 // Get user from storage (same pattern as header/index.vue)
 const getUserFromStorage = () => {

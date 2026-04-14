@@ -23,7 +23,7 @@
             <!-- Form Content -->
             <div class="form-scroll-area">
                 <div class="step-content">
-                    <div class="row g-4 p-4 position-relative">
+                    <div class="row g-4 p-0 p-md-4 position-relative">
                         <!-- Lead Name -->
                         <div class="col-12">
                             <label class="form-label-custom">Lead Name</label>

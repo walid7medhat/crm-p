@@ -29,6 +29,7 @@
                                 :title="creatorTooltip"
                                 @mouseenter="showCreatorCard = true"
                                 @mouseleave="showCreatorCard = false"
+                                @click.stop="openPersonProfile(props.lead, 'assigned', $event)"
                             >
                                 <img
                                     v-if="creatorAvatar"
@@ -86,10 +87,16 @@
             </div>
         </div>
     </div>
+       <ProfilePopup 
+        v-model="showProfilePopup"
+        :user-id="profileUserId"
+        @update:model-value="closeProfilePopup"
+    />
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
+import ProfilePopup from '../shared/ProfilePopup.vue'
 
 const props = defineProps({
     lead: {
@@ -97,6 +104,23 @@ const props = defineProps({
         default: null
     }
 })
+
+const showProfilePopup = ref(false)
+const profileUserId = ref(null)
+const profileTriggerType = ref(null)
+
+
+const openPersonProfile = (task, type, event) => {
+    if (event) event.stopPropagation()
+    
+    const person = props.lead?.added_by_user
+    if (!person?.id) return
+    
+    profileUserId.value = person.id
+    profileTriggerType.value = type
+    showProfilePopup.value = true
+}
+
 
 const dateLabel = computed(() => {
     const d = props.lead?.created_at ? new Date(props.lead.created_at) : null
@@ -124,6 +148,7 @@ const branch = computed(() => props.lead?.original_branch ||  '—')
 const branchOffice=computed(() => props.lead?.office_branch ||  '—')
 const source = computed(() => props.lead?.lead_source || null)
 const creatorName = computed(() => props.lead?.added_by_user?.name || '—')
+const creatorId = computed(() => props.lead?.added_by_user?.id || '—')
 const creatorAvatar = computed(() => props.lead?.added_by_user?.avatar || null)
 const creatorRole = computed(() => {
     const role = props.lead?.added_by_user?.role_name

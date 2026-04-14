@@ -51,7 +51,9 @@
                                     <img  class="comment-avatar-hover-anchor activity-avatar"
                                             @mouseenter="activeHoverUserId = item.id"
                                             @mouseleave="activeHoverUserId = null"
-                                        v-if="item.user?.avatar"
+                                             v-if="item.user?.avatar"
+                                            @click.stop="openPersonProfile(item.user.id, $event)"
+                                       
                                         :src="item.user.avatar"
                                         
                                         :alt="item.user?.name"
@@ -107,11 +109,17 @@
             <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
         </div>
     </div>
+      <ProfilePopup 
+        v-model="showProfilePopup"
+        :user-id="profileUserId"
+        @update:model-value="closeProfilePopup"
+    />
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue'
 import api from '@/plugins/axios'
+import ProfilePopup from '../shared/ProfilePopup.vue'
 
 const props = defineProps({
     leadId: {
@@ -138,6 +146,22 @@ const perPage = 10
 const activeHoverUserId = ref(null)
 
 const hasMore = computed(() => currentPage.value < lastPage.value)
+
+
+
+const showProfilePopup = ref(false)
+const profileUserId = ref(null)
+const profileTriggerType = ref(null)
+
+
+const openPersonProfile = ( user, event) => {
+    if (event) event.stopPropagation()
+    
+    
+    profileUserId.value = user
+    showProfilePopup.value = true
+}
+
 
 function formatDateLabel(dateStr) {
     const d = new Date(dateStr)
@@ -229,7 +253,7 @@ function transformEntry(entry) {
         icon,
         iconClass,
         detailsHtml: detailsHtml || '<span class="text-muted">—</span>',
-        user: { name: user.name || 'System', avatar }
+        user: { id: user.id, name: user.name || 'System', avatar }
     }
 }
 
