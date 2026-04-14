@@ -114,7 +114,14 @@
                                     @input="showSearchModal = false"
                                 />
                             </div>
-                            <iconify-icon v-if="hasAnySearchCriteria" icon="lucide:x" class="clear-search-icon" @click="clearSearchFilter" style="cursor: pointer;"></iconify-icon>
+                           <iconify-icon v-if="hasAnySearchCriteria" icon="lucide:x" class="clear-search-icon" @click="clearSearchFilter" style="cursor: pointer;"></iconify-icon>
+                            <iconify-icon
+                                v-if="isMobileKanban && !hasAnySearchCriteria"
+                                icon="lucide:search"
+                                class="search-magnify-mobile"
+                                aria-hidden="true"
+                                @click.stop="openSearchModal"
+                            />
                         </div>
                         <div v-if="showSearchModal" class="lead-search-dropdown-outer">
                             <LeadSearchModal
@@ -262,7 +269,7 @@ const activeTabName = computed(() => {
 
 const searchInputPlaceholder = computed(() => {
     if (activeTab.value === 'deals') return 'Search deals'
-    return '+ Search'
+    return 'Search'
 })
 // Get user from storage (same pattern as header/index.vue)
 const getUserFromStorage = () => {

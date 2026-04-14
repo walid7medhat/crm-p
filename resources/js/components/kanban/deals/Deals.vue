@@ -60,9 +60,9 @@
                     :style="{ backgroundColor: column.headerBg }"
                   >
                     <div class="d-flex align-items-center gap-2">
-                      <div class="stage-circle">
+                      <!-- <div class="stage-circle">
                         <div class="stage-dot" :style="{ backgroundColor: column.dotColor }"></div>
-                      </div>
+                      </div> -->
                       <div v-if="editingStageId !== column.stage_id" class="header-title-wrapper" @click="startEditingStage(column)">
                         <p class="header-title">{{ column.title }} ({{ column.deals_count }})</p>
                       </div>
@@ -77,7 +77,7 @@
                         type="text"
                       />
                     </div>
-                    <div class="dropdown">
+                    <!-- <div class="dropdown">
                       <button type="button" data-bs-toggle="dropdown" aria-expanded="false" class="bg-transparent border-0 p-0 d-flex align-items-center">
                         <iconify-icon icon="entypo:dots-three-vertical" class="column-menu-icon"></iconify-icon>
                       </button>
@@ -89,7 +89,7 @@
                           </a>
                         </li>
                       </ul>
-                    </div>
+                    </div> -->
                   </div>
 
                   <!-- Column Content: deal cards (empty columns stay minimal, like leads) -->
@@ -1350,11 +1350,12 @@ defineExpose({
 }
 
 .column-header .header-title {
-  color: #01062c !important;
-  font-weight: 600;
-  font-size: 11px;
-  line-height: 1.1;
-  margin: 0;
+font-weight: 600;
+    font-style: SemiBold;
+    font-size: 11px;
+    line-height: 1.1;
+    color: #01062c;
+    margin: 0;
 }
 
 .column-header .stage-circle {
@@ -1519,7 +1520,7 @@ defineExpose({
 .task-title {
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   font-weight: 700;
-  font-size: 16px;
+  font-size: 12px;
   line-height: 1.25;
   letter-spacing: -0.02em;
   color: #01062c;

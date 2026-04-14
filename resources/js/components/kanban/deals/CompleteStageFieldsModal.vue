@@ -58,12 +58,12 @@
 
           <!-- Form Sections -->
           <div v-else class="complete-fields-form">
-            <div v-if="missingFieldLabels.length > 0" class="alert alert-info py-2 mb-3">
+            <!-- <div v-if="missingFieldLabels.length > 0" class="alert alert-info py-2 mb-3">
               <div class="small fw-semibold mb-1">Missing required data:</div>
               <div class="small">
                 {{ missingFieldLabels.join(' • ') }}
               </div>
-            </div>
+            </div> -->
 
             <!-- Source and Deal Name Section -->
             <section v-if="hasSourceAndDealNameFields()" class="form-section">
@@ -638,14 +638,13 @@
                 </div>
               </div>
             </section>
-
-            <!-- Responsible Person -->
-            <div class="col-12 mt-3" v-if="hasField('responsible_person_id')">
-              <ResponsiblePersonSelector 
-                v-model="formData.responsible_person_id" 
-                :users="users" 
-              />
-            </div>
+              <!-- Responsible Person -->
+              <div class="col-12 mt-3" v-if="hasField('responsible_person_id')">
+                <ResponsiblePersonSelector 
+                  v-model="formData.responsible_person_id" 
+                  :users="users" 
+                />
+              </div>
           </div>
         </div>
 
@@ -1629,10 +1628,5 @@ const bedroomOptions = [
   width: 100%;
 }
 
-/* Booking >> SPA modal tabs are soft gray in Figma */
-:deep(.complete-fields-modal .document-upload-container .doc-tab.active) {
-  background: #f8fafc;
-  color: #64748b;
-  border-color: #e2e8f0;
-}
+
 </style>

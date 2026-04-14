@@ -41,6 +41,7 @@
                             class="change-person-dropdown"
                             :show="dropdownShow"
                             @update:show="dropdownShow = $event"
+                           
                         >
                             <template #button-content>
                                 <button class="btn-change-person">

@@ -275,13 +275,13 @@ defineExpose({
 }
 
 .doc-tab.active {
-  background: #02014f;
-  color: #fff;
-  border-color: #02014f;
+  background: #01062C !important;
+  color: #fff !important;
+  border-color: #01062C !important;
 }
 
 .doc-tab.required:not(.active) {
-  border-left: 3px solid #ef4444;
+  /* border-left: 3px solid #ef4444; */
 }
 
 .doc-tab.has-files:not(.active) {
@@ -291,13 +291,13 @@ defineExpose({
 }
 
 .file-count-badge {
-  background: #FAA300;
+  /* background: #FAA300; */
   color: white;
   width: 12px;
   height: 12px;
   border-radius: 50%;
   padding: 0;
-  font-size: 0;
+  font-size: 12px;
 }
 
 .file-group-title {
@@ -307,7 +307,7 @@ defineExpose({
 }
 
 .file-group {
-  border-left: 3px solid #E2E8F0;
+  /*border-left: 3px solid #E2E8F0;*/
   padding-left: 12px;
 }
 
@@ -454,5 +454,8 @@ defineExpose({
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+.uploaded-files-list{
+    display:flex !important;
 }
 </style>
