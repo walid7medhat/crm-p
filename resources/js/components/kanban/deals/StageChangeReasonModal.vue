@@ -139,7 +139,7 @@ async function submitReason() {
   overflow-y: auto;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .modal-header {
@@ -151,7 +151,7 @@ async function submitReason() {
 }
 
 .modal-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--deal-navy-deep, #01062c);
   margin: 0;
@@ -173,14 +173,14 @@ async function submitReason() {
 }
 
 .modal-body {
-  padding: 24px;
+  padding: 16px 20px;
 }
 
 .modal-footer {
-  padding: 16px 24px;
+  padding: 12px 20px;
   border-top: 1px solid #E2E8F0;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 12px;
 }
 
@@ -195,13 +195,18 @@ async function submitReason() {
 .form-control {
   width: 100%;
   padding: 10px 12px;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.5;
   color: #1E293B;
   background-color: #fff;
   border: 1px solid #E2E8F0;
   border-radius: var(--deal-input-r, 10px);
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control::placeholder {
+  font-size: 12px;
+  color: #9ca3af;
 }
 
 .form-control:focus {
@@ -225,14 +230,20 @@ async function submitReason() {
 }
 
 .btn {
-  padding: 10px 20px;
-  font-size: 14px;
+  width: 96px;
+  height: 38px;
+  padding: 0;
+  font-size: 13px;
   font-weight: 500;
   border-radius: 999px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s;
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .btn-light {

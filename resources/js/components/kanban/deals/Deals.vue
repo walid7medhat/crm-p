@@ -1,5 +1,5 @@
 <template>
-  <div class="deals-tab-content deal-figma-ui">
+  <div class="deals-tab-content deal-figma-ui" :class="{ 'deals-tab-content--mobile': kanbanIsMobile }">
     <!-- Top tabs: Primary/Off-Plan, Secondary, Rental -->
     <div class="deals-type-tabs d-flex gap-2 mb-24">
       <button
@@ -15,8 +15,8 @@
     </div>
 
     <!-- Kanban board with navigation arrows -->
-    <div class="kanban-outer">
-      <div ref="kanbanContainerRef" class="kanban-container" @scroll="updateScrollArrows">
+    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile }">
+      <div ref="kanbanContainerRef" class="kanban-container" :class="{ 'kanban-container--mobile': kanbanIsMobile }" @scroll="updateScrollArrows">
         <!-- Loading state -->
         <div v-if="loading && columns.length === 0" class="kanban-empty-state kanban-loading">
           <div class="kanban-empty-spinner"></div>
@@ -46,6 +46,7 @@
           class="kanban-wrapper kanban-wrapper-tight d-flex h-100" 
           :group="'deals-columns'"
           handle=".column-header"
+          :disabled="kanbanIsMobile"
           :ghost-class="'ghost'" 
           :drag-class="'dragging'"
         >
@@ -98,6 +99,7 @@
                       :group="'deals-' + activeTypeTab" 
                       item-key="id"
                       class="tasks-list flex-grow-1 min-height-cards" 
+                      :disabled="kanbanIsMobile"
                       :ghost-class="'ghost'"
                       :drag-class="'dragging'"
                       @change="(evt) => onDealDragChange(evt, column)"
@@ -276,7 +278,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, inject } from 'vue'
 import draggable from 'vuedraggable'
 import axios from '@/plugins/axios'
 
@@ -312,6 +314,7 @@ const kanbanContainerRef = ref(null)
 const scrollInterval = ref(null)
 const showLeftZone = ref(true)
 const showRightZone = ref(true)
+const kanbanIsMobile = inject('kanbanIsMobile', ref(false))
 
 // Real-time updates
 const echoListeners = ref([])
@@ -1731,5 +1734,83 @@ defineExpose({
     padding: 24px;
     border-radius: 12px;
     width: 400px;
+}
+
+@media (max-width: 768px) {
+  .deals-tab-content--mobile {
+    padding: 0 6px;
+  }
+
+  .deals-tab-content--mobile .deals-type-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+    margin-bottom: 10px !important;
+    scrollbar-width: none;
+  }
+
+  .deals-tab-content--mobile .deals-type-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .deals-tab-content--mobile .deals-type-tab {
+    height: 30px;
+    font-size: 11px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 0 10px;
+  }
+
+  .kanban-outer--mobile {
+    height: calc(100vh - 190px);
+  }
+
+  .kanban-container--mobile {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    padding-right: 2px;
+  }
+
+  .kanban-container--mobile .kanban-wrapper {
+    width: 100% !important;
+    min-width: 100% !important;
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    height: auto !important;
+  }
+
+  .kanban-container--mobile .kanban-column {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;
+    border-left: none;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0;
+  }
+
+  .kanban-container--mobile .column-header {
+    clip-path: none;
+    border-radius: 10px 10px 0 0;
+    min-height: 34px;
+  }
+
+  .kanban-container--mobile .column-content-scrollable {
+    overflow: visible;
+  }
+
+  .kanban-container--mobile .tasks-list {
+    min-height: 0;
+  }
+
+  .kanban-container--mobile .kanban-card-figma {
+    margin-bottom: 8px !important;
+  }
+
+  .kanban-nav-zone {
+    display: none !important;
+  }
 }
 </style>

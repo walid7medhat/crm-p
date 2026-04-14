@@ -580,8 +580,8 @@ function close() {
   max-height: 92vh !important;
   border-radius: 12px !important;
   overflow: hidden !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08) !important;
 }
 #view-deal-modal .modal-body {
   overflow: hidden !important;
@@ -602,6 +602,8 @@ function close() {
   max-height: 92vh !important;
   border-radius: 12px !important;
   overflow: hidden !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08) !important;
 }
 :deep(.view-deal-modal-outer .modal-body) {
   overflow: hidden !important;

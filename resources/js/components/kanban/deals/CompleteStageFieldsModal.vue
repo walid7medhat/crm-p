@@ -233,7 +233,9 @@
                         :reduce="o => o.value" 
                         label="text" 
                         :clearable="false" 
-                        class="custom-v-select-inline" 
+                        :searchable="false"
+                        :disabled="true"
+                        class="custom-v-select-inline currency-fixed" 
                       />
                     </div>
                   </div>
@@ -413,7 +415,7 @@
                     <label class="form-label-custom">Amount</label>
                     <div class="input-group-custom">
                       <b-form-input v-model="formData.tenant_amount" type="number" placeholder="Enter Amount" class="custom-input" />
-                      <v-select v-model="formData.currency" :options="currencyOptions" :reduce="o => o.value" label="text" :clearable="false" class="custom-v-select-inline" />
+                      <v-select v-model="formData.currency" :options="currencyOptions" :reduce="o => o.value" label="text" :clearable="false" :searchable="false" :disabled="true" class="custom-v-select-inline currency-fixed" />
                     </div>
                   </div>
                   
@@ -612,7 +614,9 @@
                         :reduce="o => o.value" 
                         label="text" 
                         :clearable="false" 
-                        class="custom-v-select-inline" 
+                        :searchable="false"
+                        :disabled="true"
+                        class="custom-v-select-inline currency-fixed" 
                       />
                     </div>
                   </div>
@@ -851,6 +855,7 @@ async function initializeForm() {
     })
     
     formData.value = { ...initial }
+    if (!formData.value.currency) formData.value.currency = 'AED'
     
     // Initialize document arrays for each party
     const parties = ['buyer', 'seller', 'tenant', 'landlord']
@@ -1494,14 +1499,19 @@ const bedroomOptions = [
 }
 
 .custom-input { 
-  height: 42px !important; 
-  min-height: 42px;
+  height: 40px !important; 
+  min-height: 40px;
   border-radius: 8px !important; 
   border: 1px solid #E2E8F0 !important; 
-  font-size: 13px !important; 
+  font-size: 12px !important; 
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); 
   width: 100%;
   padding: 0 12px;
+}
+
+.custom-input::placeholder {
+  font-size: 12px;
+  color: #9ca3af;
 }
 
 .input-group-custom { 
@@ -1522,19 +1532,37 @@ const bedroomOptions = [
 }
 
 :deep(.custom-v-select-inline .vs__dropdown-toggle) { 
-  height: 42px !important;
-  min-height: 42px !important;
+  height: 40px !important;
+  min-height: 40px !important;
   border: none; 
   border-left: 1px solid #E2E8F0; 
   border-radius: 0 var(--deal-input-r, 10px) var(--deal-input-r, 10px) 0; 
+  font-size: 11px;
 }
 
 :deep(.custom-v-select .vs__dropdown-toggle) {
   border: 1px solid #E2E8F0;
   border-radius: 8px;
-  min-height: 42px !important;
-  height: 42px !important;
-  font-size: 13px;
+  min-height: 40px !important;
+  height: 40px !important;
+  font-size: 12px;
+}
+
+:deep(.custom-v-select .vs__search::placeholder) {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+:deep(.custom-v-select .vs__open-indicator),
+:deep(.custom-v-select-inline .vs__open-indicator) {
+  transform: scale(0.8);
+  color: #94a3b8;
+}
+
+:deep(.currency-fixed .vs__selected) {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
 }
 
 .modal-footer-custom {
@@ -1555,6 +1583,10 @@ const bedroomOptions = [
   color: #01062C;
   cursor: pointer;
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .btn-next-step {
@@ -1573,6 +1605,7 @@ const bedroomOptions = [
   cursor: pointer;
   transition: background 0.2s;
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  line-height: 1;
 }
 
 .btn-next-step:hover:not(:disabled) {

@@ -169,7 +169,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide } from 'vue'
 import Deals from './deals/Deals.vue'
 import Leads from './leadList/leads.vue'
 import Integration from './integration/Integration.vue'
@@ -200,6 +200,13 @@ const searchDropdownAnchorRef = ref(null)
 const search = ref(null)
 const searchDebounceTimer = ref(null)
 const SEARCH_DEBOUNCE_MS = 400
+const kanbanIsMobile = ref(false)
+
+function updateKanbanMobileBreakpoint() {
+    kanbanIsMobile.value = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+}
+
+provide('kanbanIsMobile', kanbanIsMobile)
 
 const echoListeners = ref([])
 const pollingInterval = ref(null)
@@ -321,6 +328,8 @@ function onDocumentClick(e) {
 }
 
 onMounted(() => {
+    updateKanbanMobileBreakpoint()
+    window.addEventListener('resize', updateKanbanMobileBreakpoint)
     setTimeout(() => {
         initializeStageUpdates()
     }, 1000)
@@ -328,6 +337,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+    window.removeEventListener('resize', updateKanbanMobileBreakpoint)
     document.removeEventListener('click', onDocumentClick)
     if (searchDebounceTimer.value) {
         clearTimeout(searchDebounceTimer.value)
@@ -881,7 +891,7 @@ const $showNotification = (message, type = 'info') => {
 
 .search-wrapper {
     background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
     border-radius: 999px;
     height: 36px;
     min-height: 36px;
@@ -893,7 +903,7 @@ const $showNotification = (message, type = 'info') => {
     width: max-content;
     max-width: 560px;
     min-width: 460px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.06);
     transition: max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
     cursor: text;
 }
@@ -906,17 +916,12 @@ const $showNotification = (message, type = 'info') => {
     min-height: 36px;
     padding: 4px 12px 4px 10px;
     border-radius: 999px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.08);
 }
 
 .search-wrapper-expanded {
     max-width: 900px;
     min-width: 300px;
-}
-.search-wrapper-tall {
-    /*min-height: 72px;*/
-    /*padding: 12px 12px 12px 14px;*/
-    /*border-radius: 16px;*/
 }
 
 .search-filters-pills {
@@ -1091,9 +1096,10 @@ const $showNotification = (message, type = 'info') => {
 :deep(.stage-dropdown-menu) {
     background: rgba(255, 255, 255, 0.95);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px);
+  border: 1px solid #e5e7eb;
     border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.08);
     padding: 8px;
     min-width: 220px;
     margin-top: 8px !important;
