@@ -25,7 +25,7 @@
             @click="onMobileColumnAddLead"
         >
             <span class="mobile-create-new-fixed__plus">+</span>
-            <span class="mobile-create-new-fixed__text">New Listing</span>
+            <span class="mobile-create-new-fixed__text">Create New Lead</span>
         </button>
         <div
             ref="kanbanContainerRef"

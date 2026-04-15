@@ -996,7 +996,7 @@ textarea, input, select {
         flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
-        padding: 8px 4px 90px !important;
+        padding: 8px 4px 16px !important;
     }
     .modal-header-custom,
     .stage-selector-wrapper,

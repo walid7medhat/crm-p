@@ -107,7 +107,15 @@
                       <template #item="{ element: deal }">
                         <div
                           class="kanban-card kanban-card-figma bg-white radius-12 mb-10 cursor-pointer"
-                          @click="viewDeal(deal, column)"
+                          :class="{
+                            'mobile-pressing': mobilePressState.dealId === deal.id && mobilePressState.isPressing,
+                            'mobile-action-origin': mobileActionSheet.visible && mobileActionSheet.deal?.id === deal.id
+                          }"
+                          @click="onDealCardTap(deal, column)"
+                          @touchstart.passive="onDealTouchStart($event, deal, column)"
+                          @touchmove.passive="onDealTouchMove($event)"
+                          @touchend="onDealTouchEnd"
+                          @touchcancel="onDealTouchCancel"
                         >
                           <div class="kanban-card-top d-flex align-items-start">
                             <p class="task-title flex-grow-1 mb-0">{{ deal.deal_name || 'Untitled Deal' }}</p>
@@ -196,6 +204,66 @@
       @deal-updated="handleDealUpdatedFromModal"
       @stage-change-request="handleStageChangeFromModal"
     />
+
+    <div
+      v-if="mobileActionSheet.visible"
+      class="mobile-action-sheet-overlay"
+      @click="closeMobileActionSheet"
+    >
+      <div class="mobile-action-sheet" @click.stop>
+        <div class="mobile-action-sheet-handle"></div>
+        <div class="mobile-action-sheet-title">
+          {{ mobileActionSheet.deal?.deal_name || 'Deal actions' }}
+        </div>
+
+        <button
+          type="button"
+          class="mobile-action-item"
+          :class="{ active: mobileActionSheet.mode === 'assign' }"
+          @click="mobileActionSheet.mode = 'assign'"
+        >
+          <iconify-icon icon="lucide:user-plus" />
+          Assign
+        </button>
+
+        <button
+          type="button"
+          class="mobile-action-item"
+          :class="{ active: mobileActionSheet.mode === 'stage' }"
+          @click="mobileActionSheet.mode = 'stage'"
+        >
+          <iconify-icon icon="lucide:move-right" />
+          Move to stage
+        </button>
+
+        <div v-if="mobileActionSheet.mode === 'assign'" class="mobile-action-panel">
+          <div class="mobile-action-panel-title">Select responsible person</div>
+          <div v-if="mobileResponsibleLoading" class="mobile-action-loading">Loading...</div>
+          <button
+            v-for="person in mobileResponsibleOptions"
+            :key="person.id"
+            type="button"
+            class="mobile-list-item"
+            @click="assignDealFromMobileSheet(person.id)"
+          >
+            <span class="text-truncate">{{ person.name }}</span>
+          </button>
+        </div>
+
+        <div v-if="mobileActionSheet.mode === 'stage'" class="mobile-action-panel">
+          <div class="mobile-action-panel-title">Select stage</div>
+          <button
+            v-for="stage in mobileStageOptions"
+            :key="stage.stage_id"
+            type="button"
+            class="mobile-list-item"
+            @click="moveDealFromMobileSheet(stage)"
+          >
+            <span class="text-truncate">{{ stage.title }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
     
     <CompleteStageFieldsModal
       :show="showCompleteFieldsModal"
@@ -320,6 +388,27 @@ const scrollInterval = ref(null)
 const showLeftZone = ref(true)
 const showRightZone = ref(true)
 const kanbanIsMobile = inject('kanbanIsMobile', ref(false))
+const LONG_PRESS_MS = 420
+const TOUCH_MOVE_THRESHOLD = 10
+const suppressTapUntil = ref(0)
+const mobileResponsibleLoading = ref(false)
+const mobileResponsibleOptions = ref([])
+const mobilePressState = ref({
+  timer: null,
+  startX: 0,
+  startY: 0,
+  isPressing: false,
+  isLongPress: false,
+  dealId: null,
+  deal: null,
+  column: null,
+})
+const mobileActionSheet = ref({
+  visible: false,
+  mode: null, // assign | stage
+  deal: null,
+  column: null,
+})
 
 // Real-time updates
 const echoListeners = ref([])
@@ -536,6 +625,12 @@ const columns = computed({
   set: (value) => {
     stagesData.value = value
   }
+})
+
+const mobileStageOptions = computed(() => {
+  if (!mobileActionSheet.value.deal) return []
+  const currentStageId = mobileActionSheet.value.deal.stage_id || mobileActionSheet.value.column?.stage_id
+  return columns.value.filter((c) => String(c.stage_id) !== String(currentStageId))
 })
 
 // Switch between tabs
@@ -1305,6 +1400,155 @@ async function handleStageChangeFromModal({ dealId, originalStageId, targetStage
   }
 }
 
+function resetMobilePressState() {
+  if (mobilePressState.value.timer) {
+    clearTimeout(mobilePressState.value.timer)
+    mobilePressState.value.timer = null
+  }
+  mobilePressState.value.isPressing = false
+  mobilePressState.value.isLongPress = false
+  mobilePressState.value.dealId = null
+  mobilePressState.value.deal = null
+  mobilePressState.value.column = null
+}
+
+function openMobileActionSheet(deal, column) {
+  mobileActionSheet.value = {
+    visible: true,
+    mode: null,
+    deal,
+    column,
+  }
+}
+
+function closeMobileActionSheet() {
+  mobileActionSheet.value = {
+    visible: false,
+    mode: null,
+    deal: null,
+    column: null,
+  }
+}
+
+async function ensureMobileResponsibleOptions() {
+  if (mobileResponsibleOptions.value.length > 0) return
+  mobileResponsibleLoading.value = true
+  try {
+    const response = await axios.get('/available-responsible-persons')
+    const data = response?.data?.data || response?.data || []
+    mobileResponsibleOptions.value = Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Failed to load responsible persons', error)
+    showNotification('Failed to load responsible persons', 'error')
+  } finally {
+    mobileResponsibleLoading.value = false
+  }
+}
+
+function onDealTouchStart(event, deal, column) {
+  if (!kanbanIsMobile.value) return
+  if (mobileActionSheet.value.visible) return
+  const touch = event.touches?.[0]
+  if (!touch) return
+
+  resetMobilePressState()
+  mobilePressState.value.isPressing = true
+  mobilePressState.value.dealId = deal.id
+  mobilePressState.value.deal = deal
+  mobilePressState.value.column = column
+  mobilePressState.value.startX = touch.clientX
+  mobilePressState.value.startY = touch.clientY
+  mobilePressState.value.timer = setTimeout(async () => {
+    mobilePressState.value.isLongPress = true
+    mobilePressState.value.isPressing = false
+    suppressTapUntil.value = Date.now() + 500
+    openMobileActionSheet(deal, column)
+    await ensureMobileResponsibleOptions()
+  }, LONG_PRESS_MS)
+}
+
+function onDealTouchMove(event) {
+  if (!kanbanIsMobile.value || !mobilePressState.value.isPressing) return
+  const touch = event.touches?.[0]
+  if (!touch) return
+  const dx = Math.abs(touch.clientX - mobilePressState.value.startX)
+  const dy = Math.abs(touch.clientY - mobilePressState.value.startY)
+  if (dx > TOUCH_MOVE_THRESHOLD || dy > TOUCH_MOVE_THRESHOLD) {
+    resetMobilePressState()
+  }
+}
+
+function onDealTouchEnd() {
+  if (!kanbanIsMobile.value) return
+  if (mobilePressState.value.timer) {
+    clearTimeout(mobilePressState.value.timer)
+    mobilePressState.value.timer = null
+  }
+  mobilePressState.value.isPressing = false
+}
+
+function onDealTouchCancel() {
+  if (!kanbanIsMobile.value) return
+  resetMobilePressState()
+}
+
+function onDealCardTap(deal, column) {
+  if (!kanbanIsMobile.value) {
+    viewDeal(deal, column)
+    return
+  }
+  if (mobileActionSheet.value.visible) return
+  if (Date.now() < suppressTapUntil.value) return
+  viewDeal(deal, column)
+}
+
+async function assignDealFromMobileSheet(responsiblePersonId) {
+  const deal = mobileActionSheet.value.deal
+  const column = mobileActionSheet.value.column
+  if (!deal?.id) return
+  const stageId = deal.stage_id || column?.stage_id
+  if (!stageId) return
+
+  try {
+    const res = await updateAndChangeStage({
+      dealId: deal.id,
+      payload: { responsible_person_id: responsiblePersonId },
+      documents: [],
+      stageId,
+    })
+    const updatedDeal = res?.data?.data ?? res?.data ?? { ...deal, responsible_person_id: responsiblePersonId }
+    const selectedResponsible = mobileResponsibleOptions.value.find((p) => String(p.id) === String(responsiblePersonId))
+    if (selectedResponsible) {
+      updatedDeal.responsible_person = {
+        id: selectedResponsible.id,
+        name: selectedResponsible.name,
+        avatar: selectedResponsible.avatar || selectedResponsible.profile_image || null,
+      }
+    }
+    handleUpdatedDeal(updatedDeal)
+    closeMobileActionSheet()
+    showNotification('Responsible person updated successfully', 'success')
+  } catch (error) {
+    console.error('Assign from mobile sheet failed', error)
+    showNotification(error?.response?.data?.message || 'Failed to assign deal', 'error')
+  }
+}
+
+async function moveDealFromMobileSheet(stage) {
+  const deal = mobileActionSheet.value.deal
+  const column = mobileActionSheet.value.column
+  if (!deal?.id || !stage?.stage_id) return
+
+  closeMobileActionSheet()
+  await handleStageChangeFromModal({
+    dealId: deal.id,
+    originalStageId: deal.stage_id || column?.stage_id,
+    targetStageId: stage.stage_id,
+    targetStageName: stage.title,
+    dealData: { ...deal },
+  })
+}
+
 // View deal
 function viewDeal(deal, column) {
   selectedDeal.value = {
@@ -1350,6 +1594,8 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  resetMobilePressState()
+  closeMobileActionSheet()
   stopScroll()
   window.removeEventListener('resize', updateScrollArrows)
   cleanup()
@@ -1698,6 +1944,17 @@ font-weight: 600;
   box-shadow: 0 2px 8px rgba(2, 6, 23, 0.08);
 }
 
+.mobile-pressing {
+  transform: scale(0.985);
+  box-shadow: 0 4px 18px rgba(2, 6, 23, 0.18);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.mobile-action-origin {
+  border-color: #faa300 !important;
+  box-shadow: 0 0 0 2px rgba(250, 163, 0, 0.25);
+}
+
 .avatar-sm {
   width: 32px;
   height: 32px;
@@ -1883,6 +2140,97 @@ font-weight: 600;
     padding: 24px;
     border-radius: 12px;
     width: 400px;
+}
+
+.mobile-action-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 14, 34, 0.35);
+  z-index: 2500;
+  display: flex;
+  align-items: flex-end;
+}
+
+.mobile-action-sheet {
+  width: 100%;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  padding: 10px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.18);
+}
+
+.mobile-action-sheet-handle {
+  width: 42px;
+  height: 4px;
+  background: #d1d5db;
+  border-radius: 999px;
+  margin: 0 auto 8px;
+}
+
+.mobile-action-sheet-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.mobile-action-item {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 12px;
+  min-height: 44px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.mobile-action-item.active {
+  border-color: #faa300;
+  background: #fff8eb;
+}
+
+.mobile-action-panel {
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 10px;
+  max-height: 42vh;
+  overflow-y: auto;
+}
+
+.mobile-action-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.mobile-action-loading {
+  font-size: 13px;
+  color: #6b7280;
+  padding: 8px 2px;
+}
+
+.mobile-list-item {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 10px;
+  min-height: 40px;
+  padding: 0 10px;
+  text-align: left;
+  color: #111827;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.mobile-list-item:active {
+  background: #f8fafc;
 }
 
 @media (max-width: 768px) {

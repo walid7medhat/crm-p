@@ -774,4 +774,14 @@ onMounted(() => {
     color: #0369A1;
 }
 
+@media (max-width: 768px) {
+    .edit-lead-bar-spacer {
+        height: calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .edit-lead-bottom-bar {
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
 </style>
