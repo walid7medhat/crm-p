@@ -1108,10 +1108,7 @@ async function onDealDragChange(evt, targetColumn) {
 
     // ❌ case 1: missing fields
     if (!valid && missingFields.length > 0) {
-      // حفظ حالة السحب قبل التراجع
-      saveDragStateBeforeModal(sourceColumn, targetColumn, originalDeal)
-      
-      // تراجع مؤقت في UI
+      // تراجع فوري في UI قبل فتح المودال
       revertDealDrag(deal, targetColumn, oldStageId)
 
       pendingCompleteFields.value = {
@@ -1139,10 +1136,7 @@ async function onDealDragChange(evt, targetColumn) {
     )
 
     if (reasonRequired) {
-      // حفظ حالة السحب قبل التراجع
-      saveDragStateBeforeModal(sourceColumn, targetColumn, originalDeal)
-      
-      // تراجع مؤقت في UI
+      // تراجع فوري في UI قبل فتح المودال
       revertDealDrag(deal, targetColumn, oldStageId)
 
       pendingStageChange.value = {
@@ -1198,21 +1192,23 @@ async function moveDealDirectly(deal, newStageId, targetColumn, oldStageId) {
   }
 }
 
-function revertDealDrag(deal, targetColumn, originalStageId) {
-  // لا تقم بأي شيء إذا كان هناك حالة سحب نشطة (لأننا سنستعيدها لاحقاً)
-  if (tempDragState.value.isActive) {
-    return
-  }
-  
-  // نشيل الديل من العمود الجديد
-  targetColumn.deals = targetColumn.deals.filter(d => d.id !== deal.id)
-  targetColumn.deals_count = targetColumn.deals.length
+function findColumnByStageId(stageId) {
+  return columns.value.find(c => String(c.stage_id) === String(stageId))
+}
 
-  // نضيفه للعمود القديم
-  const sourceColumn = columns.value.find(c => c.stage_id === originalStageId)
-  if (sourceColumn) {
-    if (!sourceColumn.deals.find(d => d.id === deal.id)) {
-      sourceColumn.deals.push(deal)
+function revertDealDrag(deal, targetColumn, originalStageId) {
+  const safeTargetColumn = targetColumn || findColumnByStageId(deal?.stage_id)
+  const sourceColumn = findColumnByStageId(originalStageId)
+
+  if (safeTargetColumn?.deals) {
+    safeTargetColumn.deals = safeTargetColumn.deals.filter(d => d.id !== deal.id)
+    safeTargetColumn.deals_count = safeTargetColumn.deals.length
+  }
+
+  if (sourceColumn?.deals) {
+    const existing = sourceColumn.deals.find(d => d.id === deal.id)
+    if (!existing) {
+      sourceColumn.deals.push({ ...deal, stage_id: originalStageId })
       sourceColumn.deals_count = sourceColumn.deals.length
     }
   }
@@ -1289,17 +1285,12 @@ function restoreDealFromDragState() {
 }
 
 // استبدل دالة clearPendingCompleteFields الحالية بهذه
-function clearPendingCompleteFields() {
+async function clearPendingCompleteFields() {
   const pending = pendingCompleteFields.value
   
-  // استعادة الكارد إلى مكانه الأصلي إذا كان هناك حالة سحب نشطة
-  if (tempDragState.value.isActive) {
-    restoreDealFromDragState()
-  }
-  // أو استخدم الطريقة القديمة كـ fallback
-  else if (pending && pending.dealData && pending.originalStageId && pending.targetStageId) {
-    const sourceColumn = columns.value.find(c => c.stage_id === pending.originalStageId)
-    const targetColumn = columns.value.find(c => c.stage_id === pending.targetStageId)
+  if (pending && pending.dealData && pending.originalStageId && pending.targetStageId) {
+    const sourceColumn = findColumnByStageId(pending.originalStageId)
+    const targetColumn = findColumnByStageId(pending.targetStageId)
     
     if (sourceColumn && targetColumn) {
       targetColumn.deals = targetColumn.deals.filter(d => d.id !== pending.dealData.id)
@@ -1314,21 +1305,21 @@ function clearPendingCompleteFields() {
   
   showCompleteFieldsModal.value = false
   pendingCompleteFields.value = null
-  tempDragState.value.isActive = false
+
+  // Final guard: resync board from backend so card never stays hidden/stuck.
+  // This keeps UI consistent even if drag state became out-of-sync.
+  if (pending) {
+    await fetchDeals(true)
+  }
 }
 
 // استبدل دالة clearPendingStageChange الحالية بهذه
-function clearPendingStageChange() {
+async function clearPendingStageChange() {
   const pending = pendingStageChange.value
   
-  // استعادة الكارد إلى مكانه الأصلي إذا كان هناك حالة سحب نشطة
-  if (tempDragState.value.isActive) {
-    restoreDealFromDragState()
-  }
-  // أو استخدم الطريقة القديمة كـ fallback
-  else if (pending && pending.dealData && pending.originalStageId && pending.targetStageId) {
-    const sourceColumn = columns.value.find(c => c.stage_id === pending.originalStageId)
-    const targetColumn = columns.value.find(c => c.stage_id === pending.targetStageId)
+  if (pending && pending.dealData && pending.originalStageId && pending.targetStageId) {
+    const sourceColumn = findColumnByStageId(pending.originalStageId)
+    const targetColumn = findColumnByStageId(pending.targetStageId)
     if (sourceColumn && targetColumn) {
       targetColumn.deals = targetColumn.deals.filter(d => d.id !== pending.dealData.id)
       targetColumn.deals_count = targetColumn.deals.length
@@ -1341,7 +1332,11 @@ function clearPendingStageChange() {
   
   pendingStageChange.value = null
   showStageChangeModal.value = false
-  tempDragState.value.isActive = false
+
+  // Final guard: resync board from backend after cancel/close.
+  if (pending) {
+    await fetchDeals(true)
+  }
 }
 /// في DealsKanban.vue
 // ✅ الطريقة الصحيحة - في DealsKanban.vue
