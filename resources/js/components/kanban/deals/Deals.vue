@@ -102,6 +102,7 @@
                       :disabled="kanbanIsMobile"
                       :ghost-class="'ghost'"
                       :drag-class="'dragging'"
+                      @move="onMoveDeal"
                       @change="(evt) => onDealDragChange(evt, column)"
                     >
                       <template #item="{ element: deal }">
@@ -430,6 +431,22 @@ const pendingStageChange = ref(null)
 const showCompleteFieldsModal = ref(false)
 const pendingCompleteFields = ref(null)
 
+
+const showStageChangeModal = ref(false)
+
+const blockedMove = ref(false)
+
+function onMoveDeal(evt) {
+  if (kanbanIsMobile.value) return true
+
+  // إذا كان هناك مودال مفتوح، امنع الحركة
+  if (showCompleteFieldsModal.value || pendingStageChange.value) {
+    return false
+  }
+
+  // اسمح بالحركة دائماً، وسيتم التعامل مع التحقق في onDealDragChange
+  return true
+}
 // Stage modal for editing
 const showStageModal = ref(false)
 const isEditingStage = ref(false)
@@ -1056,19 +1073,18 @@ async function saveStage() {
 }
 
 // Drag and drop handlers
-// في DealsKanban.vue - تعديل دالة onDealDragChange
 
 async function onDealDragChange(evt, targetColumn) {
   if (showCompleteFieldsModal.value || pendingStageChange.value) {
-    const draggedDeal = evt?.added?.element || evt?.directResult
-    if (draggedDeal?.stage_id && targetColumn) {
-      revertDealDrag(draggedDeal, targetColumn, draggedDeal.stage_id)
+    const deal = evt.added?.element
+    if (deal) {
+      revertDealDrag(deal, targetColumn, deal.stage_id)
     }
     return
   }
 
-  const added = evt.added || (evt.directResult && { element: evt.directResult })
-  if (!added || !added.element) return
+  const added = evt.added
+  if (!added?.element) return
 
   const deal = added.element
   const newStageId = targetColumn.stage_id
@@ -1076,60 +1092,81 @@ async function onDealDragChange(evt, targetColumn) {
 
   if (oldStageId === newStageId) return
 
+  // احتفظ بنسخة قبل أي تعديل
+  const originalDeal = { ...deal }
+  const sourceColumn = columns.value.find(c => c.stage_id === oldStageId)
+
   try {
-    // التحقق من متطلبات المرحلة
-    const normalized = await checkStageRequirements({
+    const res = await checkStageRequirements({
       dealId: deal.id,
       targetStageId: newStageId,
       dealType: activeTypeTab.value,
     })
-    const valid = normalized.valid
-    const missingFields = normalized.missingFields
 
-    // لو مفيش حقول مفقودة، ننقل الديل على طول
-    if (valid || missingFields.length === 0) {
-      const reasonRequired = Boolean(
-        targetColumn?.reason_required || targetColumn?.requires_reason || targetColumn?.require_reason,
-      )
-      if (reasonRequired) {
-        revertDealDrag(deal, targetColumn, oldStageId)
-        pendingStageChange.value = {
-          dealId: deal.id,
-          targetStageId: newStageId,
-          targetStageName: targetColumn.title,
-          originalStageId: oldStageId,
-          originalStageName: columns.value.find((c) => c.stage_id === oldStageId)?.title || 'Previous Stage',
-          dealData: { ...deal },
-        }
-        return
+    const valid = res.valid
+    const missingFields = res.missingFields || []
+
+    // ❌ case 1: missing fields
+    if (!valid && missingFields.length > 0) {
+      // حفظ حالة السحب قبل التراجع
+      saveDragStateBeforeModal(sourceColumn, targetColumn, originalDeal)
+      
+      // تراجع مؤقت في UI
+      revertDealDrag(deal, targetColumn, oldStageId)
+
+      pendingCompleteFields.value = {
+        dealId: deal.id,
+        targetStageId: newStageId,
+        targetStageName: targetColumn.title,
+        originalStageId: oldStageId,
+        dealData: originalDeal,
+        missingFields,
+        missingFieldsGrouped: res.missingFieldsGrouped,
+        missingFieldsGroupedByStage: res.missingFieldsGroupedByStage,
+        groupedMissing: res.groupedMissing,
+        canProceedWithoutFields: false,
       }
-      // نقل الديل مباشرة
-      await moveDealDirectly(deal, newStageId, targetColumn, oldStageId)
+
+      showCompleteFieldsModal.value = true
       return
     }
 
-    // لو في حقول مفقودة، نفتح المودال - بس الديل لسه في مكانه الأصلي
-    // مش بنعمله revert هنا لأننا لسه مانقلناهوش
-    
-    pendingCompleteFields.value = {
-      dealId: deal.id,
-      targetStageId: newStageId,
-      targetStageName: targetColumn.title,
-      originalStageId: oldStageId,
-      dealData: { ...deal }, // copy عشان البيانات تتغيرش
-      missingFields,
-      missingFieldsGrouped: normalized.missingFieldsGrouped,
-      missingFieldsGroupedByStage: normalized.missingFieldsGroupedByStage,
-      groupedMissing: normalized.groupedMissing,
-      canProceedWithoutFields: valid
+    // ❌ case 2: reason required
+    const reasonRequired = Boolean(
+      targetColumn?.reason_required ||
+      targetColumn?.requires_reason ||
+      targetColumn?.require_reason
+    )
+
+    if (reasonRequired) {
+      // حفظ حالة السحب قبل التراجع
+      saveDragStateBeforeModal(sourceColumn, targetColumn, originalDeal)
+      
+      // تراجع مؤقت في UI
+      revertDealDrag(deal, targetColumn, oldStageId)
+
+      pendingStageChange.value = {
+        dealId: deal.id,
+        targetStageId: newStageId,
+        targetStageName: targetColumn.title,
+        originalStageId: oldStageId,
+        originalStageName:
+          columns.value.find(c => c.stage_id === oldStageId)?.title || 'Previous Stage',
+        dealData: originalDeal,
+      }
+      return
     }
-    
-    showCompleteFieldsModal.value = true
-    
+
+    // ✅ case 3: allowed move - لا نحتاج لحفظ الحالة هنا
+    await moveDealDirectly(deal, newStageId, targetColumn, oldStageId)
+
   } catch (err) {
     console.error('Stage check error', err)
     revertDealDrag(deal, targetColumn, oldStageId)
-    showNotification(err.response?.data?.message || 'Failed to validate stage change', 'error')
+    showNotification(
+      err.response?.data?.message || 'Failed to validate stage change',
+      'error'
+    )
   }
 }
 // دالة جديدة لنقل الديل مباشرة
@@ -1161,8 +1198,12 @@ async function moveDealDirectly(deal, newStageId, targetColumn, oldStageId) {
   }
 }
 
-// تعديل revertDealDrag
 function revertDealDrag(deal, targetColumn, originalStageId) {
+  // لا تقم بأي شيء إذا كان هناك حالة سحب نشطة (لأننا سنستعيدها لاحقاً)
+  if (tempDragState.value.isActive) {
+    return
+  }
+  
   // نشيل الديل من العمود الجديد
   targetColumn.deals = targetColumn.deals.filter(d => d.id !== deal.id)
   targetColumn.deals_count = targetColumn.deals.length
@@ -1192,9 +1233,100 @@ async function moveDealWithStageChange(deal, newStageId) {
   }
 }
 
+// متغير لتخزين حالة السحب المؤقتة
+const tempDragState = ref({
+  isActive: false,
+  sourceColumn: null,
+  targetColumn: null,
+  draggedDeal: null,
+  originalIndex: -1
+})
+
+// دالة لحفظ حالة السحب قبل المودال
+function saveDragStateBeforeModal(sourceColumn, targetColumn, draggedDeal) {
+  tempDragState.value = {
+    isActive: true,
+    sourceColumn: sourceColumn,
+    targetColumn: targetColumn,
+    draggedDeal: { ...draggedDeal }, // نسخة عميقة
+    originalIndex: sourceColumn?.deals.findIndex(d => d.id === draggedDeal.id) || -1
+  }
+}
+
+// دالة لاستعادة الكارد عند الإلغاء
+function restoreDealFromDragState() {
+  if (!tempDragState.value.isActive) return false
+  
+  const { sourceColumn, targetColumn, draggedDeal, originalIndex } = tempDragState.value
+  
+  // 1. إزالة الكارد من العمود الهدف (إذا كان موجوداً)
+  if (targetColumn) {
+    const existingIndex = targetColumn.deals.findIndex(d => d.id === draggedDeal.id)
+    if (existingIndex !== -1) {
+      targetColumn.deals.splice(existingIndex, 1)
+      targetColumn.deals_count = targetColumn.deals.length
+    }
+  }
+  
+  // 2. إعادة الكارد إلى العمود المصدر في مكانه الأصلي
+  if (sourceColumn) {
+    // تأكد من عدم وجوده مسبقاً
+    const alreadyExists = sourceColumn.deals.find(d => d.id === draggedDeal.id)
+    if (!alreadyExists) {
+      if (originalIndex >= 0 && originalIndex <= sourceColumn.deals.length) {
+        sourceColumn.deals.splice(originalIndex, 0, draggedDeal)
+      } else {
+        sourceColumn.deals.push(draggedDeal)
+      }
+      sourceColumn.deals_count = sourceColumn.deals.length
+    }
+  }
+  
+  // 3. تنظيف الحالة
+  tempDragState.value.isActive = false
+  
+  return true
+}
+
+// استبدل دالة clearPendingCompleteFields الحالية بهذه
+function clearPendingCompleteFields() {
+  const pending = pendingCompleteFields.value
+  
+  // استعادة الكارد إلى مكانه الأصلي إذا كان هناك حالة سحب نشطة
+  if (tempDragState.value.isActive) {
+    restoreDealFromDragState()
+  }
+  // أو استخدم الطريقة القديمة كـ fallback
+  else if (pending && pending.dealData && pending.originalStageId && pending.targetStageId) {
+    const sourceColumn = columns.value.find(c => c.stage_id === pending.originalStageId)
+    const targetColumn = columns.value.find(c => c.stage_id === pending.targetStageId)
+    
+    if (sourceColumn && targetColumn) {
+      targetColumn.deals = targetColumn.deals.filter(d => d.id !== pending.dealData.id)
+      targetColumn.deals_count = targetColumn.deals.length
+      
+      if (!sourceColumn.deals.find(d => d.id === pending.dealData.id)) {
+        sourceColumn.deals.push(pending.dealData)
+        sourceColumn.deals_count = sourceColumn.deals.length
+      }
+    }
+  }
+  
+  showCompleteFieldsModal.value = false
+  pendingCompleteFields.value = null
+  tempDragState.value.isActive = false
+}
+
+// استبدل دالة clearPendingStageChange الحالية بهذه
 function clearPendingStageChange() {
   const pending = pendingStageChange.value
-  if (pending?.dealData && pending?.originalStageId && pending?.targetStageId) {
+  
+  // استعادة الكارد إلى مكانه الأصلي إذا كان هناك حالة سحب نشطة
+  if (tempDragState.value.isActive) {
+    restoreDealFromDragState()
+  }
+  // أو استخدم الطريقة القديمة كـ fallback
+  else if (pending && pending.dealData && pending.originalStageId && pending.targetStageId) {
     const sourceColumn = columns.value.find(c => c.stage_id === pending.originalStageId)
     const targetColumn = columns.value.find(c => c.stage_id === pending.targetStageId)
     if (sourceColumn && targetColumn) {
@@ -1206,33 +1338,10 @@ function clearPendingStageChange() {
       }
     }
   }
+  
   pendingStageChange.value = null
-}
-
-// تعديل clearPendingCompleteFields
-function clearPendingCompleteFields() {
-  const pending = pendingCompleteFields.value
-  
-  // لو كان في ديل معلق وكان المستخدم عمل Cancel، نرجعه لمكانه
-  if (pending && pending.dealData && pending.originalStageId && pending.targetStageId) {
-    const sourceColumn = columns.value.find(c => c.stage_id === pending.originalStageId)
-    const targetColumn = columns.value.find(c => c.stage_id === pending.targetStageId)
-    
-    if (sourceColumn && targetColumn) {
-      // نشيل الديل من العمود الجديد لو موجود
-      targetColumn.deals = targetColumn.deals.filter(d => d.id !== pending.dealData.id)
-      targetColumn.deals_count = targetColumn.deals.length
-      
-      // نضيفه للعمود القديم لو مش موجود
-      if (!sourceColumn.deals.find(d => d.id === pending.dealData.id)) {
-        sourceColumn.deals.push(pending.dealData)
-        sourceColumn.deals_count = sourceColumn.deals.length
-      }
-    }
-  }
-  
-  showCompleteFieldsModal.value = false
-  pendingCompleteFields.value = null
+  showStageChangeModal.value = false
+  tempDragState.value.isActive = false
 }
 /// في DealsKanban.vue
 // ✅ الطريقة الصحيحة - في DealsKanban.vue

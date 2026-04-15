@@ -48,7 +48,7 @@ class StageController extends Controller
                 'Stages retrieved successfully'
             );
         } catch (\Exception $e) {
-            dd($e->getMessage());
+            // dd($e->getMessage());
              \Log::info('Failed to retrieve stages: ' . $e->getMessage(), [
                 'stack' => $e->getTraceAsString(),
                 'request' => $request->all()

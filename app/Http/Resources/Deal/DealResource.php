@@ -4,7 +4,7 @@
 namespace App\Http\Resources\Deal;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-
+use  App\Http\Resources\User\UserResource;
 class DealResource extends JsonResource
 {
     public function toArray($request)
@@ -69,11 +69,7 @@ class DealResource extends JsonResource
             ]),
             'responsible_person_id' => $this->responsible_person_id,
             
-            'responsible_person' => $this->whenLoaded('responsiblePerson', fn() => [
-                'id' => $this->responsiblePerson->id,
-                'name' => $this->responsiblePerson->name,
-                'avatar' => $this->responsiblePerson->avatar,
-            ]),
+               'responsible_person' => new UserResource($this->responsiblePerson),
            'buyer_name' => (function () {
                     $buyer = $this->parties
                         ->where('party_type', 'buyer')

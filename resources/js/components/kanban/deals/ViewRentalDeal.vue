@@ -33,19 +33,19 @@
       </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-4" v-if="deal.project">
+          <div class="col-md-12" v-if="deal.project">
             <div class="info-group">
               <label class="info-label">Project</label>
               <p class="info-value mb-0">{{ deal.project }}</p>
             </div>
           </div>
-          <div class="col-md-4" v-if="deal.createdBy">
+          <div class="col-md-12" v-if="deal.createdBy">
             <div class="info-group">
               <label class="info-label">Created By</label>
               <p class="info-value mb-0">{{ deal.createdBy }}</p>
             </div>
           </div>
-          <div class="col-md-4" v-if="deal.source">
+          <div class="col-md-12" v-if="deal.source">
             <div class="info-group">
               <label class="info-label">Source</label>
               <p class="info-value mb-0">{{ deal.source }}</p>
@@ -65,13 +65,13 @@
       </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-6">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Source</label>
               <p class="info-value mb-0">{{ val(deal.source) }}</p>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Deal Name</label>
               <p class="info-value mb-0">{{ val(deal.deal_name) }}</p>
@@ -91,19 +91,19 @@
       </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Name</label>
               <p class="info-value mb-0">{{ val(deal.client_name) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Phone</label>
               <p class="info-value mb-0">{{ val(deal.client_phone) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Email</label>
               <p class="info-value mb-0">{{ val(deal.client_email) }}</p>
@@ -123,34 +123,40 @@
       </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Tenant First Name</label>
-              <p class="info-value mb-0">{{ val(deal.tenant_first_name) }}</p>
+              <p class="info-value mb-0">{{ val(tenant.first_name) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Tenant Last Name</label>
-              <p class="info-value mb-0">{{ val(deal.tenant_last_name) }}</p>
+              <p class="info-value mb-0">{{ val(tenant.last_name) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Tenant Phone Number</label>
-              <p class="info-value mb-0">{{ val(deal.tenant_phone) }}</p>
+              <p class="info-value mb-0">{{ val(tenant.phone) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Tenant Email</label>
-              <p class="info-value mb-0">{{ val(deal.tenant_email) }}</p>
+              <p class="info-value mb-0">{{ val(tenant.email) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Tenant Nationality</label>
-              <p class="info-value mb-0">{{ val(deal.tenant_nationality) }}</p>
+              <p class="info-value mb-0">{{ val(tenant.nationality) }}</p>
+            </div>
+          </div>
+           <div class="col-md-12">
+            <div class="info-group">
+              <label class="info-label">Amount & Currency</label>
+              <p class="info-value mb-0">{{ val(tenant.amount_formatted) }}</p>
             </div>
           </div>
         </div>
@@ -166,7 +172,7 @@
         </button>
       </div>
       <div class="view-card p-3 radius-12">
-        <DealDocumentsReadonly :documents="deal.tenant_documents || []" />
+        <DealDocumentsReadonly :documents="tenantDocuments" />
       </div>
     </div>
 
@@ -180,52 +186,58 @@
       </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Landlord First Name</label>
-              <p class="info-value mb-0">{{ val(deal.landlord_first_name) }}</p>
+              <p class="info-value mb-0">{{ val(landlord.first_name) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Landlord Last Name</label>
-              <p class="info-value mb-0">{{ val(deal.landlord_last_name) }}</p>
+              <p class="info-value mb-0">{{ val(landlord.last_name) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Landlord Phone Number</label>
-              <p class="info-value mb-0">{{ val(deal.landlord_phone) }}</p>
+              <p class="info-value mb-0">{{ val(landlord.phone) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Landlord Email</label>
-              <p class="info-value mb-0">{{ val(deal.landlord_email) }}</p>
+              <p class="info-value mb-0">{{ val(landlord.email) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Landlord Nationality</label>
-              <p class="info-value mb-0">{{ val(deal.landlord_nationality) }}</p>
+              <p class="info-value mb-0">{{ val(landlord.nationality) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Landlord Residency Status</label>
-              <p class="info-value mb-0">{{ val(deal.landlord_residency_status) }}</p>
+              <p class="info-value mb-0">{{ val(landlord.residency_status) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Landlord Country Of Residence</label>
-              <p class="info-value mb-0">{{ val(deal.landlord_country) }}</p>
+              <p class="info-value mb-0">{{ val(landlord.country) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Landlord City Of Residence</label>
-              <p class="info-value mb-0">{{ val(deal.landlord_city) }}</p>
+              <p class="info-value mb-0">{{ val(landlord.city) }}</p>
+            </div>
+          </div>
+           <div class="col-md-12">
+            <div class="info-group">
+              <label class="info-label">Amount & Currency</label>
+              <p class="info-value mb-0">{{ val(landlord.amount_formatted) }}</p>
             </div>
           </div>
         </div>
@@ -241,7 +253,7 @@
         </button>
       </div>
       <div class="view-card p-3 radius-12">
-        <DealDocumentsReadonly :documents="deal.landlord_documents || []" />
+        <DealDocumentsReadonly :documents="landlordDocuments" />
       </div>
     </div>
 
@@ -255,49 +267,49 @@
       </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Unit No</label>
               <p class="info-value mb-0">{{ val(deal.unit_no) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Property Type</label>
-              <p class="info-value mb-0">{{ val(deal.property_type) }}</p>
+              <p class="info-value mb-0">{{ val(deal.property_type?.name) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Bedrooms</label>
               <p class="info-value mb-0">{{ val(deal.bedrooms) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Property Link</label>
               <p class="info-value mb-0">{{ val(deal.property_link) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Property Reference</label>
               <p class="info-value mb-0">{{ val(deal.property_reference) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Unit Size</label>
               <p class="info-value mb-0">{{ val(deal.unit_size) }}</p>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Area</label>
               <p class="info-value mb-0">{{ tagsDisplay(deal.areas) }}</p>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Sub Community</label>
               <p class="info-value mb-0">{{ tagsDisplay(deal.sub_communities) }}</p>
@@ -336,25 +348,25 @@
       </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Deal Total Amount And Currency</label>
               <p class="info-value mb-0">{{ amountCurrency }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Deal Total Commission %</label>
               <p class="info-value mb-0">{{ val(deal.deal_commission) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Agent Share %</label>
               <p class="info-value mb-0">{{ val(deal.agent_share) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Company Share %</label>
               <p class="info-value mb-0">{{ val(deal.company_share) }}</p>
@@ -364,39 +376,6 @@
       </div>
     </div>
 
-    <!-- Responsible Person -->
-    <div v-if="showResponsibleSection" class="col-12">
-      <div class="section-head mb-3">
-        <h6 class="section-title mb-0">Responsible Person</h6>
-        <button type="button" class="section-edit-btn" @click="requestEdit('responsible_person')">
-          <iconify-icon icon="lucide:pencil" />
-        </button>
-      </div>
-      <div class="view-card p-3 radius-12">
-        <div class="d-flex align-items-center justify-content-between">
-          <div>
-            <div class="info-group mb-1">
-              <label class="info-label">Name</label>
-              <p class="info-value mb-0">{{ val(deal.assignedBy) || val(deal.responsible_person_name) }}</p>
-            </div>
-            <div class="info-group mb-1">
-              <label class="info-label">Email</label>
-              <p class="info-value mb-0">{{ val(deal.responsible_person_email) }}</p>
-            </div>
-            <div class="info-group mb-0">
-              <label class="info-label">Position</label>
-              <p class="info-value mb-0">{{ val(deal.responsible_person_position) }}</p>
-            </div>
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <span class="department-badge">Department: {{ val(deal.department) || 'Sales' }}</span>
-            <div class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center overflow-hidden">
-              <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </template>
 </template>
 
@@ -413,7 +392,15 @@ const emit = defineEmits(['edit-section'])
 function requestEdit(sectionKey) {
   emit('edit-section', sectionKey)
 }
+const tenant = computed(() => {
+  const parties = props.deal?.parties || []
+  return parties.find(p => p.party_type === 'tenant') || {}
+})
 
+const landlord = computed(() => {
+  const parties = props.deal?.parties || []
+  return parties.find(p => p.party_type === 'landlord') || {}
+})
 function val(v) {
   if (v === null || v === undefined || v === '') return '----'
   return v
@@ -440,26 +427,58 @@ const amountCurrency = computed(() => {
   if (amt != null && amt !== '') return `${amt} ${cur}`
   return '----'
 })
+const tenantDocuments = computed(() => {
+  const d = props.deal || {}
+
+  // لو API الجديد
+  if (d.parties) {
+    const tenant = d.parties.find(p => p.party_type === 'tenant')
+    return tenant?.documents || []
+  }
+
+  // القديم
+  return d.tenant_documents || []
+})
+const landlordDocuments = computed(() => {
+  const d = props.deal || {}
+
+  if (d.parties) {
+    const landlord = d.parties.find(p => p.party_type === 'landlord')
+    return landlord?.documents || []
+  }
+
+  return d.landlord_documents || []
+})
 
 const missingSummary = computed(() => {
   const d = props.deal || {}
+
   const checks = [
-    ['deal_name', 'Deal Name'],
-    ['source', 'Source'],
-    ['unit_no', 'Unit No'],
-    ['property_type', 'Property Type'],
-    ['tenant_first_name', 'Tenant First Name'],
-    ['tenant_last_name', 'Tenant Last Name'],
-    ['landlord_first_name', 'Landlord First Name'],
-    ['landlord_last_name', 'Landlord Last Name'],
+    [d.deal_name, 'Deal Name'],
+    [d.source, 'Source'],
+    [d.unit_no, 'Unit No'],
+    [d.property_type?.name, 'Property Type'],
+
+    // tenant
+    [d.tenant_first_name, 'Tenant First Name'],
+    [d.tenant_last_name, 'Tenant Last Name'],
+    [d.tenant_phone, 'Tenant Phone'],
+    [d.tenant_email, 'Tenant Email'],
+
+    // landlord
+    [d.landlord_first_name, 'Landlord First Name'],
+    [d.landlord_last_name, 'Landlord Last Name'],
+    [d.landlord_phone, 'Landlord Phone'],
+    [d.landlord_email, 'Landlord Email'],
   ]
 
   const labels = checks
-    .filter(([key]) => d[key] === null || d[key] === undefined || d[key] === '')
+    .filter(([value]) => value === null || value === undefined || value === '')
     .map(([, label]) => label)
 
   return { count: labels.length, labels }
 })
+
 </script>
 
 <style scoped>
@@ -477,7 +496,6 @@ h6.section-title {
 .info-value { font-size: 14px !important; font-weight: 500; color: #01062C; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .department-badge { font-size: 12px; color: #475569; }
 .avatar-sm { width: 40px; height: 40px; }
-
 .section-head {
   display: flex;
   align-items: center;

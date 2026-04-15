@@ -15,7 +15,7 @@
       <div class="view-deal-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div class="d-flex align-items-center gap-3 flex-wrap">
           <span class="view-deal-title">{{ dealTitle }}</span>
-          <b-dropdown
+          <!-- <b-dropdown
             class="deal-type-dropdown"
             menu-class="deal-type-dropdown-menu"
             toggle-class="deal-type-dropdown-toggle"
@@ -36,7 +36,7 @@
             >
               {{ tab.name }}
             </b-dropdown-item>
-          </b-dropdown>
+          </b-dropdown> -->
         </div>
         <button class="close-btn" @click="close" type="button">
           <iconify-icon icon="lucide:x"></iconify-icon>
@@ -56,28 +56,18 @@
                 completed: selectedStageIndex > index,
                 upcoming: selectedStageIndex < index
               }"
+               :style="{
+                            backgroundColor: index <= selectedStageIndex ? stage.color : 'transparent',
+                            borderColor: index <= selectedStageIndex ? stage.color : '#E2E8F0',
+                            zIndex: currentStages.length - index,
+                        }"
               :aria-current="selectedStageIndex === index ? 'step' : undefined"
               @click="selectStage(index)"
             >
-              <div class="stage-circle" :class="{ 'is-done': selectedStageIndex > index }">
-                <iconify-icon
-                  v-if="selectedStageIndex > index"
-                  icon="lucide:check"
-                  class="stage-check-icon"
-                />
-                <div
-                  v-else
-                  class="stage-dot"
-                  :style="{ backgroundColor: stage.dotColor }"
-                />
-              </div>
+              
               <span class="stage-text">{{ stage.name }}</span>
             </button>
-            <iconify-icon
-              v-if="index < currentStages.length - 1"
-              icon="lucide:chevron-right"
-              class="stage-arrow"
-            />
+            
           </template>
         </div>
       </div>
@@ -135,7 +125,7 @@
                       :property-types="editLookup.propertyTypes"
                       :developers="editLookup.developers"
                       :areas="editLookup.areas"
-                      :selected-stage-id="deal?.stage_id ?? deal?.stage?.id"
+                      :selected-stage-id="deal?.stage?.id"
                       :show-errors="editShowErrors"
                       :field-errors="editFieldErrors"
                       @search-areas="editSearchAreas"
@@ -201,7 +191,6 @@
                   </button>
                 </div>
               </div>
-
               <div class="activity-card bg-white p-3 radius-12 shadow-sm">
                 <div class="d-flex gap-2 mb-4 w-fit-content toggle-buttons-container">
                   <button
@@ -337,52 +326,96 @@ const dealTypeTabs = [
   { id: 'rental', name: 'Rental' }
 ]
 
-const primaryStages = [
-  { id: 'new', name: 'New', bg: '#DBEAFE', dotColor: '#3B82F6' },
-  { id: 'eoi', name: 'EOI', bg: '#DBEAFE', dotColor: '#3B82F6' },
-  { id: 'booking', name: 'Booking', bg: '#D1FAE5', dotColor: '#22C55E' },
-  { id: 'spa-signed', name: 'SPA Signed (Deal Done)', bg: '#D1FAE5', dotColor: '#22C55E' },
-  { id: 'deal-won', name: 'Deal Won', bg: '#D1FAE5', dotColor: '#22C55E' },
-  { id: 'deal-lost', name: 'Deal Lost', bg: '#FEE2E2', dotColor: '#EF4444' }
-]
-
-const secondaryStages = [
-  { id: 'security-deposit', name: 'Security Deposit', bg: '#DBEAFE', dotColor: '#3B82F6' },
-  { id: 'mou-signed', name: 'MOU / Contract If Signed', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'noc', name: 'NOC', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'deal-lost', name: 'Deal Lost', bg: '#FEE2E2', dotColor: '#DC2626' },
-  { id: 'deal-won', name: 'Deal Won', bg: '#D1FAE5', dotColor: '#059669' }
-]
-
-const rentalStages = [
-  { id: 'lease-offer', name: 'Lease Offer Letter', bg: '#DBEAFE', dotColor: '#3B82F6' },
-  { id: 'guarantee', name: 'Guarantee Letter / Cheque Collected', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'internal-contract', name: 'Internal Contract Signed', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'ejari', name: 'Ejari / Tawtheq Issued', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'tenant-moved', name: 'Tenant moved in', bg: '#D1FAE5', dotColor: '#059669' },
-  { id: 'close-deal', name: 'Close Deal', bg: '#D1FAE5', dotColor: '#059669' }
-]
-
-const currentStages = computed(() => {
-  if (dealType.value === 'secondary') return secondaryStages
-  if (dealType.value === 'rental') return rentalStages
-  return primaryStages
+// إضافة ref لتخزين stages من الـ API
+const dynamicStages = ref({
+  primary: [],
+  secondary: [],
+  rental: []
 })
 
+// تبسيط currentStages - يعتمد فقط على dynamicStages
+const currentStages = computed(() => {
+  const stagesForType = dynamicStages.value[dealType.value]
+  if (stagesForType && Array.isArray(stagesForType)) {
+    return stagesForType
+  }
+  return []
+})
+
+// دالة جلب الـ stages من الـ API
+async function fetchStagesFromAPI(dealTypeValue = null) {
+  const type = dealTypeValue || dealType.value
+  try {
+    const response = await axios.get('/stages', {
+      params: { 
+        stage_type: 'deal',
+        deal_type: type 
+      }
+    })
+    
+    const responseData = response.data
+    let stagesData = []
+    
+    if (responseData?.data?.data) {
+      stagesData = responseData.data.data
+    } else if (responseData?.data && Array.isArray(responseData.data)) {
+      stagesData = responseData.data
+    } else if (Array.isArray(responseData)) {
+      stagesData = responseData
+    }
+    
+    // تحويل البيانات إلى الفورمات المطلوب
+    const formattedStages = stagesData.map(stage => ({
+      id: stage.id,
+      name: stage.name,
+      order: stage.order,
+      dotColor: stage.color || getDefaultColor(stage.order),
+      bg: stage.bg_color || '#F1F5F9',
+      color: stage.color || '#3B82F6'
+    }))
+    
+    // ترتيب حسب order
+    formattedStages.sort((a, b) => (a.order || 0) - (b.order || 0))
+    
+    // تخزين في dynamicStages
+    dynamicStages.value[type] = formattedStages
+    
+    return formattedStages
+  } catch (error) {
+    console.error('Error fetching stages:', error)
+    return []
+  }
+}
+
+// دالة مساعدة للحصول على لون افتراضي
+function getDefaultColor(order) {
+  const colors = ['#3B82F6', '#22C55E', '#059669', '#DC2626']
+  return colors[(order || 0) % colors.length] || '#3B82F6'
+}
 const currentStageIndex = computed(() => {
   const d = props.deal
   if (!d) return 0
+  
   const stages = currentStages.value
-  let stageId = d.stageId ?? d.stage_id
+  // تأكد أن stages موجودة ومصفوفة
+  if (!stages || !Array.isArray(stages) || stages.length === 0) return 0
+  
+  let stageId = d.stage?.id ?? d.stage_id ?? d.stageId
   if (stageId == null) return 0
-  if (stageId === 'deal-lost-sec') stageId = 'deal-lost'
-  if (stageId === 'deal-won-sec') stageId = 'deal-won'
-  if (stageId === 'lease-off') stageId = 'lease-offer'
-  if (stageId === 'guarantee-letter') stageId = 'guarantee'
-  const idx = stages.findIndex(s => String(s.id) === String(stageId))
+  
+  // معالجة الـ mapping
+  const stageMapping = {
+    'deal-lost-sec': 'deal-lost',
+    'deal-won-sec': 'deal-won',
+    'lease-off': 'lease-offer',
+    'guarantee-letter': 'guarantee'
+  }
+  
+  stageId = stageMapping[stageId] || stageId
+  
+  const idx = stages.findIndex(s => s && String(s.id) === String(stageId))
   return idx >= 0 ? idx : 0
 })
-
 function selectStage(index) {
   if (!props.deal) return
   const targetStage = currentStages.value[index]
@@ -394,13 +427,16 @@ function selectStage(index) {
   if (String(originalStageId) === String(targetStageId)) return
 
   selectedStageIndex.value = index
-  emit('stage-change-request', {
-    dealId: props.deal.id,
-    originalStageId,
-    targetStageId,
-    targetStageName: targetStage.name,
-    dealData: props.deal,
-  })
+    if (!isEditingDeal.value) {
+
+      emit('stage-change-request', {
+        dealId: props.deal.id,
+        originalStageId,
+        targetStageId,
+        targetStageName: targetStage.name,
+        dealData: props.deal,
+      })
+    }
 }
 
 // --- Edit deal ---
@@ -548,7 +584,6 @@ async function startEditDeal() {
 function startEditDealFromSection() {
   startEditDeal()
 }
-
 function cancelEditDeal() {
   isEditingDeal.value = false
   editFormData.value = {}
@@ -605,17 +640,23 @@ async function saveEditDeal() {
   }
 }
 
-watch(() => props.modelValue, (val) => {
+watch(() => props.modelValue, async (val) => {
   show.value = val
-  if (val && props.deal?.deal_type) dealType.value = props.deal.deal_type
-  if (val) selectedStageIndex.value = currentStageIndex.value
+  if (val && props.deal?.deal_type) {
+    dealType.value = props.deal.deal_type
+    await fetchStagesFromAPI(props.deal.deal_type)
+    selectedStageIndex.value = currentStageIndex.value
+  }
 })
 
 watch(() => props.deal?.stageId, () => {
   if (show.value && props.deal) selectedStageIndex.value = currentStageIndex.value
 })
-watch(dealType, () => {
-  if (show.value) selectedStageIndex.value = currentStageIndex.value
+watch(dealType, async (newType) => {
+  if (show.value) {
+    await fetchStagesFromAPI(newType)
+    selectedStageIndex.value = currentStageIndex.value
+  }
 })
 
 watch(show, (val) => {
@@ -649,6 +690,7 @@ function close() {
   height: 100%;
   display: flex;
   flex-direction: column;
+    padding: 12px;
 }
 </style>
 
@@ -722,25 +764,6 @@ function close() {
   font-size: 14px;
   opacity: 0.8;
 }
-.close-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: #f1f5f9;
-  border: none;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 16px;
-  color: #64748b;
-  transition: background 0.2s, color 0.2s;
-}
-.close-btn:hover {
-  background: #E2E8F0;
-  color: #1E293B;
-}
 
 :deep(.deal-type-dropdown-toggle) {
   height: 28px;
@@ -806,87 +829,58 @@ function close() {
   min-height: 30px;
 }
 .deal-stage-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  min-height: 30px;
-  padding: 0 10px;
-  border-radius: 100px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
-  white-space: nowrap;
-  box-sizing: border-box;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.deal-stage-pill:hover {
-  border-color: #cbd5e1;
-}
-.deal-stage-pill.completed {
-  border-color: #8ee3f8;
-  background: linear-gradient(90deg, #8ee3f8 0%, #55d6f4 100%);
-}
-.deal-stage-pill.active {
-  border-color: #299de9;
-  background: linear-gradient(90deg, #2ea7ef 0%, #2d92dc 100%);
-  box-shadow: 0 2px 8px rgba(41, 157, 233, 0.3);
-}
-.deal-stage-pill.active .stage-text {
-  color: #fff !important;
-  font-weight: 600;
-}
-.deal-stage-pill.completed .stage-text {
-  color: #fff !important;
-}
-.deal-stage-pill.upcoming {
-  opacity: 0.72;
-}
-.deal-stage-pill .stage-circle {
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  border-radius: 50%;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.deal-stage-pill .stage-circle.is-done {
-  background: #22c55e;
-  border-color: #16a34a;
-}
-.deal-stage-pill.active .stage-circle {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.35);
-}
-.stage-check-icon {
-  font-size: 12px;
-  color: #fff;
-}
-.deal-stage-pill .stage-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-.deal-stage-pill .stage-text {
-  font-size: 12px;
-  color: var(--deal-text-muted, #64748b);
-  font-weight: 500;
-  font-family: var(--deal-font, 'Inter', sans-serif);
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1;
-}
-.stage-arrow {
-  font-size: 14px;
-  color: #CBD5E1;
-  flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    min-width: 140px;
+    max-width: 170px;
+    padding: 2px 10px;
+    /*border-radius: 30px;*/
+    cursor: pointer;
+    transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+    position: relative;
+    overflow: hidden;
+    /*border: 1px solid transparent;*/
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.55);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 0 100%);
+    height: 25px;
 }
 
+.deal-stage-pill:not(.active) {
+    color: #544e4e;
+}
+
+.stage-text {
+    font-family: Montserrat;
+    font-weight: 400;
+    font-size: 13px;
+    color: #544e4e;
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.deal-stage-pill.active .stage-text {
+    color: #01062C;
+    font-weight: 400;
+}
+
+@media (max-width: 768px) {
+ .deal-stage-pill {
+        min-width: 104px;
+        max-width: 138px;
+        padding: 1px 8px;
+    }
+
+    .stage-text {
+        font-size: 11px;
+        font-weight: 500;
+    }
+}
 /* Tabs: General | History (orange underline when active) */
 .tabs-container {
   margin-bottom: 0;
@@ -1231,5 +1225,20 @@ function close() {
 
 :deep(.activity-input-section .btn-save) {
   background: #02014f;
+}
+.close-btn {
+   position: absolute;
+    top: 13px;
+    left: -11px;
+    transform: translate(-56%);
+    width: 50px;
+    height: 30px;
+    border-radius: 999px;
+    background: #01062c;
+    color: #d9e7f5;
+    font-size: 20px;
+    padding: 0;
+    box-shadow: none;
+    z-index: -1;
 }
 </style>

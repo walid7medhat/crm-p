@@ -191,6 +191,7 @@ function addFiles(newFiles) {
       name: file.name,
       size: file.size,
       type: file.type,
+       mime_type: file.type, 
       document_type: selectedType.value,     // national_id, passport, etc.
       category: props.category,               // buyer, seller, etc.
       party_type: props.category,              // buyer, seller, etc.

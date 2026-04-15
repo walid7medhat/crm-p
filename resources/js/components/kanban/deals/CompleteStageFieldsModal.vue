@@ -72,7 +72,8 @@
                 <div class="row g-3">
                   <div class="col-md-6" v-if="hasField('source')">
                     <label class="form-label-custom">Source <span class="text-danger">*</span></label>
-                    <v-select 
+                    <v-select
+                      append-to-body 
                       v-model="formData.source" 
                       :options="sources" 
                       :reduce="item => item.name" 
@@ -153,7 +154,8 @@
                   <!-- Buyer Nationality -->
                   <div class="col-md-6" v-if="hasField('buyer_nationality')">
                     <label class="form-label-custom">Buyer Nationality <span class="text-danger">*</span></label>
-                    <v-select 
+                    <v-select
+ append-to-body 
                       v-model="formData.buyer_nationality" 
                       :options="nationalityOptions" 
                       :reduce="item => item.value" 
@@ -166,7 +168,8 @@
                   <!-- Buyer Residency Status -->
                   <div class="col-md-6" v-if="hasField('buyer_residency_status')">
                     <label class="form-label-custom">Buyer Residency Status <span class="text-danger">*</span></label>
-                    <v-select 
+                    <v-select
+ append-to-body 
                       v-model="formData.buyer_residency_status" 
                       :options="residencyOptions" 
                       :reduce="item => item.value" 
@@ -179,7 +182,8 @@
                   <!-- Buyer Country -->
                   <div class="col-md-6" v-if="hasField('buyer_country')">
                     <label class="form-label-custom">Buyer Country Of Residence <span class="text-danger">*</span></label>
-                    <v-select 
+                    <v-select
+ append-to-body 
                       v-model="formData.buyer_country" 
                       :options="countryOptions" 
                       :reduce="item => item.value" 
@@ -212,7 +216,8 @@
                   <!-- Buyer Language -->
                   <div class="col-md-6" v-if="hasField('buyer_language')">
                     <label class="form-label-custom">Buyer Language <span class="text-danger">*</span></label>
-                    <v-select 
+                    <v-select
+ append-to-body 
                       v-model="formData.buyer_language" 
                       :options="languageOptions" 
                       :reduce="item => item.value" 
@@ -227,7 +232,8 @@
                     <label class="form-label-custom">Amount</label>
                     <div class="input-group-custom">
                       <b-form-input v-model="formData.buyer_amount" type="number" placeholder="Enter Amount" class="custom-input" />
-                      <v-select 
+                      <v-select
+ append-to-body 
                         v-model="formData.currency" 
                         :options="currencyOptions" 
                         :reduce="o => o.value" 
@@ -301,13 +307,15 @@
                   <!-- Seller Nationality -->
                   <div class="col-md-4" v-if="hasField('seller_nationality')">
                     <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
-                    <v-select v-model="formData.seller_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" />
+                    <v-select
+ append-to-body v-model="formData.seller_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" />
                   </div>
                   
                   <!-- Seller Residency Status -->
                   <div class="col-md-4" v-if="hasField('seller_residency_status')">
                     <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
-                    <v-select v-model="formData.seller_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" />
+                    <v-select
+ append-to-body v-model="formData.seller_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" />
                   </div>
                   
                   <!-- Seller City -->
@@ -319,13 +327,15 @@
                   <!-- Seller Country -->
                   <div class="col-md-4" v-if="hasField('seller_country')">
                     <label class="form-label-custom">Country Of Residence</label>
-                    <v-select v-model="formData.seller_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" />
+                    <v-select
+ append-to-body v-model="formData.seller_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" />
                   </div>
                   
                   <!-- Seller Language -->
                   <div class="col-md-4" v-if="hasField('seller_language')">
                     <label class="form-label-custom">Language <span class="text-danger">*</span></label>
-                    <v-select v-model="formData.seller_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" />
+                    <v-select
+ append-to-body v-model="formData.seller_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" />
                   </div>
                   
                   <!-- Seller Party Missing -->
@@ -383,13 +393,15 @@
                   <!-- Tenant Nationality -->
                   <div class="col-md-4" v-if="hasField('tenant_nationality')">
                     <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
-                    <v-select v-model="formData.tenant_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" />
+                    <v-select
+ append-to-body v-model="formData.tenant_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" />
                   </div>
                   
                   <!-- Tenant Residency Status -->
                   <div class="col-md-4" v-if="hasField('tenant_residency_status')">
                     <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
-                    <v-select v-model="formData.tenant_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" />
+                    <v-select
+ append-to-body v-model="formData.tenant_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" />
                   </div>
                   
                   <!-- Tenant City -->
@@ -401,13 +413,15 @@
                   <!-- Tenant Country -->
                   <div class="col-md-4" v-if="hasField('tenant_country')">
                     <label class="form-label-custom">Country Of Residence</label>
-                    <v-select v-model="formData.tenant_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" />
+                    <v-select
+ append-to-body v-model="formData.tenant_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" />
                   </div>
                   
                   <!-- Tenant Language -->
                   <div class="col-md-4" v-if="hasField('tenant_language')">
                     <label class="form-label-custom">Language <span class="text-danger">*</span></label>
-                    <v-select v-model="formData.tenant_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" />
+                    <v-select
+ append-to-body v-model="formData.tenant_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" />
                   </div>
                   
                   <!-- Tenant Amount -->
@@ -415,7 +429,8 @@
                     <label class="form-label-custom">Amount</label>
                     <div class="input-group-custom">
                       <b-form-input v-model="formData.tenant_amount" type="number" placeholder="Enter Amount" class="custom-input" />
-                      <v-select v-model="formData.currency" :options="currencyOptions" :reduce="o => o.value" label="text" :clearable="false" :searchable="false" :disabled="true" class="custom-v-select-inline currency-fixed" />
+                      <v-select
+ append-to-body v-model="formData.currency" :options="currencyOptions" :reduce="o => o.value" label="text" :clearable="false" :searchable="false" :disabled="true" class="custom-v-select-inline currency-fixed" />
                     </div>
                   </div>
                   
@@ -480,13 +495,15 @@
                   <!-- Landlord Nationality -->
                   <div class="col-md-4" v-if="hasField('landlord_nationality')">
                     <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
-                    <v-select v-model="formData.landlord_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" />
+                    <v-select
+ append-to-body v-model="formData.landlord_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" />
                   </div>
                   
                   <!-- Landlord Residency Status -->
                   <div class="col-md-4" v-if="hasField('landlord_residency_status')">
                     <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
-                    <v-select v-model="formData.landlord_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" />
+                    <v-select
+ append-to-body v-model="formData.landlord_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" />
                   </div>
                   
                   <!-- Landlord City -->
@@ -498,13 +515,15 @@
                   <!-- Landlord Country -->
                   <div class="col-md-4" v-if="hasField('landlord_country')">
                     <label class="form-label-custom">Country Of Residence</label>
-                    <v-select v-model="formData.landlord_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" />
+                    <v-select
+ append-to-body v-model="formData.landlord_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" />
                   </div>
                   
                   <!-- Landlord Language -->
                   <div class="col-md-4" v-if="hasField('landlord_language')">
                     <label class="form-label-custom">Language <span class="text-danger">*</span></label>
-                    <v-select v-model="formData.landlord_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" />
+                    <v-select
+ append-to-body v-model="formData.landlord_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" />
                   </div>
                   
                   <!-- Landlord Party Missing -->
@@ -542,7 +561,8 @@
                   
                   <div class="col-md-6" v-if="hasField('property_type_id')">
                     <label class="form-label-custom">Property Type <span class="text-danger">*</span></label>
-                    <v-select 
+                    <v-select
+ append-to-body 
                       v-model="formData.property_type_id" 
                       :options="propertyTypes" 
                       :reduce="item => item.id" 
@@ -554,7 +574,8 @@
                   
                   <div class="col-md-6" v-if="hasField('subcommunity_id')">
                     <label class="form-label-custom">Subcommunity <span class="text-danger">*</span></label>
-                    <v-select 
+                    <v-select
+ append-to-body 
                       v-model="formData.subcommunity_id" 
                       :options="areas" 
                       :reduce="item => item.id" 
@@ -568,7 +589,8 @@
                   
                   <div class="col-md-6" v-if="hasField('bedrooms')">
                     <label class="form-label-custom">Bedrooms</label>
-                    <v-select 
+                    <v-select
+ append-to-body 
                       v-model="formData.bedrooms" 
                       :options="bedroomOptions" 
                       :reduce="o => o.value" 
@@ -580,7 +602,8 @@
                   
                   <div class="col-md-6" v-if="hasField('area_id')">
                     <label class="form-label-custom">Area</label>
-                    <v-select 
+                    <v-select
+ append-to-body 
                       v-model="formData.area_id" 
                       :options="areas" 
                       :reduce="item => item.id" 
@@ -608,7 +631,8 @@
                     <label class="form-label-custom">Deal Total Amount</label>
                     <div class="input-group-custom">
                       <b-form-input v-model="formData.deal_total_amount" type="number" placeholder="Enter Amount" class="custom-input" />
-                      <v-select 
+                      <v-select
+ append-to-body 
                         v-model="formData.currency" 
                         :options="currencyOptions" 
                         :reduce="o => o.value" 
@@ -1226,7 +1250,7 @@ const bedroomOptions = [
   width: min(760px, 94vw);
   max-width: 94vw;
   max-height: 90vh;
-  overflow: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -1461,8 +1485,8 @@ const bedroomOptions = [
 
 .form-scroll-area {
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  /* min-height: 0; */
+  /* overflow-y: auto; */
   padding: 0 14px 8px;
 }
 
