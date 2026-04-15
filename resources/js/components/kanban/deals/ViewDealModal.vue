@@ -100,7 +100,7 @@
             <!-- Left column: Deal Information (with edit icon) or full-width edit form -->
             <div :class="isEditingDeal ? 'col-12' : 'col-md-5'">
               <div class="info-card bg-white p-3 radius-12 shadow-sm">
-                <div class="info-card-header d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                <!-- <div class="info-card-header d-flex justify-content-between align-items-center pb-3 mb-3 ">
                   <span class="info-card-title">{{ isEditingDeal ? 'Edit Deal' : 'Deal Information' }}</span>
                   <button
                     v-if="!isEditingDeal"
@@ -111,7 +111,7 @@
                   >
                     <iconify-icon icon="lucide:pencil"></iconify-icon>
                   </button>
-                </div>
+                </div> -->
                 <template v-if="isEditingDeal">
                   <div v-if="editLoading" class="text-center py-4 text-muted">
                     Loading form...
@@ -159,38 +159,11 @@
 
             <!-- Right column: Activity | Comments (hidden when editing) -->
             <div v-if="!isEditingDeal" class="col-md-7">
-              <div class="responsible-person-card bg-white p-3 radius-12 shadow-sm mb-3">
-                <div class="info-card-header d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
-                  <span class="info-card-title">Responsible Person</span>
-                  <button type="button" class="btn-edit-icon" aria-label="Edit responsible person" @click="startEditDealFromSection('responsible_person')">
-                    <iconify-icon icon="lucide:pencil"></iconify-icon>
-                  </button>
-                </div>
-                <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-                  <div class="d-flex align-items-center gap-3 min-w-0">
-                    <div class="responsible-avatar-wrap">
-                      <img
-                        v-if="deal?.responsible_person?.avatar"
-                        :src="deal.responsible_person.avatar"
-                        alt=""
-                        class="responsible-avatar"
-                      />
-                      <div v-else class="responsible-avatar-fallback">
-                        <iconify-icon icon="solar:user-bold" />
-                      </div>
-                    </div>
-                    <div class="min-w-0">
-                      <div class="responsible-name text-truncate">{{ deal?.responsible_person?.name || '----' }}</div>
-                      <div class="responsible-meta text-truncate">{{ deal?.responsible_person_position || 'Sales' }}</div>
-                      <div class="responsible-meta text-truncate">Branch: {{ deal?.branch || deal?.responsible_person_branch || '----' }}</div>
-                    </div>
-                  </div>
-                  <button type="button" class="responsible-change-btn" @click="startEditDealFromSection('responsible_person')">
-                    <iconify-icon icon="lucide:square-pen" />
-                    Change
-                  </button>
-                </div>
-              </div>
+                <ResponsiblePersonSection
+                    v-if="deal?.id"
+                    :deal="deal"
+                    @person-updated="handlePersonUpdated"
+                />
               <div class="activity-card bg-white p-3 radius-12 shadow-sm">
                 <div class="d-flex gap-2 mb-4 w-fit-content toggle-buttons-container">
                   <button
@@ -266,7 +239,7 @@ import DealActivityList from './DealActivityList.vue'
 import DealCommentList from './DealCommentList.vue'
 import axios from '@/plugins/axios'
 import { useStageTransition } from '@/composables/useStageTransition'
-
+import ResponsiblePersonSection from './ResponsiblePersonSection.vue'
 const props = defineProps({
   modelValue: Boolean,
   deal: { type: Object, default: null }
@@ -439,6 +412,22 @@ function selectStage(index) {
     }
 }
 
+const handlePersonUpdated = (updatedPerson) => {
+    if (!props.deal) return
+    emit('update:deals', {
+        ...props.deal,
+        responsible_person_id: updatedPerson.id,
+        responsible_person: {
+            ...(props.deal.responsible_person || {}),
+            id: updatedPerson.id,
+            name: updatedPerson.name,
+            avatar: updatedPerson.avatar,
+            role_name: updatedPerson.role_name || props.deal?.responsible_person?.role_name,
+            manager_name: updatedPerson.manager_name || props.deal?.responsible_person?.manager_name,
+            branch_name: updatedPerson.branch_name || props.deal?.responsible_person?.branch_name,
+        }
+    })
+}
 // --- Edit deal ---
 function getParty(deal, type) {
   const parties = deal?.parties || []
@@ -691,6 +680,8 @@ function close() {
   display: flex;
   flex-direction: column;
     padding: 12px;
+    background-color: #fff;
+    border-radius: 12px;
 }
 </style>
 
@@ -711,9 +702,13 @@ function close() {
 :deep(.view-deal-modal-outer .modal-body) {
   overflow: visible !important;
 }
-
+:deep(.view-deal-modal-outer .modal-content.view-deal-modal-content-wrap),
+:deep(#view-deal-modal .modal-content) {
+  overflow: hidden !important; /* 👈 بدل visible */
+  position: relative;
+}
 .view-deal-modal-content {
-  background: #fff;
+  /* background: #fff; */
   display: flex;
   flex-direction: column;
   min-height: 100%;
@@ -722,6 +717,8 @@ function close() {
   max-width: 100%;
   font-family: 'Montserrat', sans-serif;
   --deal-font: 'Montserrat', sans-serif;
+      background: #fff;
+    border-radius: 12px;
 }
 
 /* Header (match View Lead) */
@@ -738,8 +735,7 @@ function close() {
   padding: 0.45rem 0.35rem 0.55rem;
   border-bottom: none;
   position: relative;
-  z-index: 3;
-  background: #fff;
+  /* background: #fff; */
 }
 .view-deal-title {
   font-size: 14px;
@@ -930,12 +926,11 @@ function close() {
   letter-spacing: -0.01em;
 }
 .btn-edit-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 15px;
+  height: 15px;
   border: none;
   background: transparent;
-  color: #64748B;
+  color: fcb600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1227,7 +1222,7 @@ function close() {
   background: #02014f;
 }
 .close-btn {
-   position: absolute;
+    position: absolute;
     top: 13px;
     left: -11px;
     transform: translate(-56%);
@@ -1240,5 +1235,13 @@ function close() {
     padding: 0;
     box-shadow: none;
     z-index: -1;
+        justify-content: center;
+    display: flex;
+    align-items: center;
+}
+
+:deep(.view-deal-modal-outer .modal-content) {
+  position: relative;
+  z-index: 2;
 }
 </style>

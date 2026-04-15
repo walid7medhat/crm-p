@@ -252,27 +252,98 @@ class Deal extends Model
 public function scopeFilter($query, $request)
 {
     return $query
-        ->when($request->deal_type, fn($q,$v) => $q->where('deal_type',$v))
-        ->when($request->stage_id, fn($q,$v) => $q->where('stage_id',$v))
-        ->when($request->status, fn($q,$v) => $q->where('status',$v))
-        ->when($request->responsible_id, fn($q,$v) => $q->where('responsible_person_id',$v))
-        ->when($request->project_id, fn($q,$v) => $q->where('project_id',$v))
-        ->when($request->area_id, fn($q,$v) => $q->where('area_id',$v))
-        ->when($request->developer_id, fn($q,$v) => $q->where('developer_id',$v))
-        ->when($request->from_date, fn($q,$v) => $q->whereDate('created_at','>=',$v))
-        ->when($request->to_date, fn($q,$v) => $q->whereDate('created_at','<=',$v))
-        ->when($request->search,function($q,$search){
-
-            $q->where(function($query) use ($search){
-
-                $query->where('deal_number','like',"%$search%")
-                    ->orWhere('deal_name','like',"%$search%")
-                    ->orWhere('source','like',"%$search%")
-                    ->orWhere('unit_no','like',"%$search%")
-                    ->orWhere('property_reference','like',"%$search%")
-                    ->orWhere('property_link','like',"%$search%")
-                    ->orWhere('currency','like',"%$search%")
-                    ->orWhere('lost_reason','like',"%$search%")
+        // Basic deal filters
+        ->when($request->deal_type, fn($q, $v) => $q->where('deal_type', $v))
+        ->when($request->stage_id, fn($q, $v) => $q->where('stage_id', $v))
+        ->when($request->status, fn($q, $v) => $q->where('status', $v))
+        ->when($request->responsible_id, fn($q, $v) => $q->where('responsible_person_id', $v))
+        ->when($request->modified_by, fn($q, $v) => $q->where('modified_by', $v))
+        
+        // Property filters
+        ->when($request->project_id, fn($q, $v) => $q->where('project_id', $v))
+        ->when($request->area_id, fn($q, $v) => $q->where('area_id', $v))
+        ->when($request->subcommunity_id, fn($q, $v) => $q->where('subcommunity_id', $v))
+        ->when($request->developer_id, fn($q, $v) => $q->where('developer_id', $v))
+        ->when($request->property_type_id, fn($q, $v) => $q->where('property_type_id', $v))
+        ->when($request->bedrooms, fn($q, $v) => $q->where('bedrooms', $v))
+        ->when($request->unit_no, fn($q, $v) => $q->where('unit_no', 'like', "%$v%"))
+        ->when($request->unit_size, fn($q, $v) => $q->where('unit_size', $v))
+        
+        // Financial filters
+        ->when($request->amount, fn($q, $v) => $q->where('deal_total_amount', $v))
+        ->when($request->currency, fn($q, $v) => $q->where('currency', $v))
+        
+        // Date filters
+        ->when($request->from_date, fn($q, $v) => $q->whereDate('created_at', '>=', $v))
+        ->when($request->to_date, fn($q, $v) => $q->whereDate('created_at', '<=', $v))
+        
+        // Buyer party filters (using whereHas on parties relationship)
+        ->when($request->buyer_first_name, function($q, $v) {
+            $q->whereHas('parties', function($party) use ($v) {
+                $party->where('party_type', 'buyer')
+                      ->where('first_name', 'like', "%$v%");
+            });
+        })
+        ->when($request->buyer_last_name, function($q, $v) {
+            $q->whereHas('parties', function($party) use ($v) {
+                $party->where('party_type', 'buyer')
+                      ->where('last_name', 'like', "%$v%");
+            });
+        })
+        ->when($request->buyer_phone, function($q, $v) {
+            $q->whereHas('parties', function($party) use ($v) {
+                $party->where('party_type', 'buyer')
+                      ->where('phone', 'like', "%$v%");
+            });
+        })
+        ->when($request->buyer_email, function($q, $v) {
+            $q->whereHas('parties', function($party) use ($v) {
+                $party->where('party_type', 'buyer')
+                      ->where('email', 'like', "%$v%");
+            });
+        })
+        ->when($request->buyer_dob, function($q, $v) {
+            $q->whereHas('parties', function($party) use ($v) {
+                $party->where('party_type', 'buyer')
+                      ->where('date_of_birth', $v);
+            });
+        })
+        ->when($request->buyer_nationality, function($q, $v) {
+            $q->whereHas('parties', function($party) use ($v) {
+                $party->where('party_type', 'buyer')
+                      ->where('nationality', $v);
+            });
+        })
+        ->when($request->buyer_residency_status, function($q, $v) {
+            $q->whereHas('parties', function($party) use ($v) {
+                $party->where('party_type', 'buyer')
+                      ->where('residency_status', $v);
+            });
+        })
+        ->when($request->buyer_country, function($q, $v) {
+            $q->whereHas('parties', function($party) use ($v) {
+                $party->where('party_type', 'buyer')
+                      ->where('country_of_residence', $v);
+            });
+        })
+        ->when($request->buyer_city, function($q, $v) {
+            $q->whereHas('parties', function($party) use ($v) {
+                $party->where('party_type', 'buyer')
+                      ->where('city_of_residence', 'like', "%$v%");
+            });
+        })
+        
+        // Global search (keeps existing functionality)
+        ->when($request->search, function($q, $search) {
+            $q->where(function($query) use ($search) {
+                $query->where('deal_number', 'like', "%$search%")
+                    ->orWhere('deal_name', 'like', "%$search%")
+                    ->orWhere('source', 'like', "%$search%")
+                    ->orWhere('unit_no', 'like', "%$search%")
+                    ->orWhere('property_reference', 'like', "%$search%")
+                    ->orWhere('property_link', 'like', "%$search%")
+                    ->orWhere('currency', 'like', "%$search%")
+                    ->orWhere('lost_reason', 'like', "%$search%")
                     ->orWhereHas('responsiblePerson', function($user) use ($search) {
                         $user->where('name', 'like', "%$search%")
                              ->orWhere('email', 'like', "%$search%");
@@ -283,24 +354,21 @@ public function scopeFilter($query, $request)
                     ->orWhereHas('area', function($area) use ($search) {
                         $area->where('name', 'like', "%$search%");
                     })
-                    ->orWhereHas('subcommunity', function($area) use ($search) {
-                        $area->where('name', 'like', "%$search%");
+                    ->orWhereHas('subcommunity', function($sub) use ($search) {
+                        $sub->where('name', 'like', "%$search%");
                     })
                     ->orWhereHas('parties', function($party) use ($search) {
-                        $party->where('first_name','like',"%$search%")
-                              ->orWhere('last_name','like',"%$search%")
-                              ->orWhere('email','like',"%$search%")
-                              ->orWhere('phone','like',"%$search%");
+                        $party->where('first_name', 'like', "%$search%")
+                              ->orWhere('last_name', 'like', "%$search%")
+                              ->orWhere('email', 'like', "%$search%")
+                              ->orWhere('phone', 'like', "%$search%");
                     })
-                    ->orWhereHas('lead',function($lead) use ($search){
-
-                        $lead->where('lead_name','like',"%$search%")
-                             ->orWhere('email','like',"%$search%")
-                             ->orWhere('phone','like',"%$search%");
+                    ->orWhereHas('lead', function($lead) use ($search) {
+                        $lead->where('lead_name', 'like', "%$search%")
+                             ->orWhere('email', 'like', "%$search%")
+                             ->orWhere('work_phone', 'like', "%$search%");
                     });
-
             });
-
         });
 }
 }

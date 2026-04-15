@@ -22,6 +22,9 @@ use App\Services\DealStageValidatorService;
 use App\Http\Requests\Deal\UpdateDealStageRequest;
 use Illuminate\Support\Facades\Log; 
 use App\Models\DealDocument;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
+
 class DealController extends Controller
 {
     /**
@@ -329,7 +332,60 @@ class DealController extends Controller
     ]);
 }
 
+  public function assignResponsiblePerson(Request $request, Deal $deal): JsonResponse
+{
+    try {
+        $user = auth()->user();
 
+        if (!$user->hasRole(['super_admin','admin', 'manager', 'team_lead'])) {
+            return ApiResponse::error('You are not authorized to assign responsible person', 403);
+        }
+
+        $responsiblePerson = User::find($request->responsible_person_id);
+
+        // if (!$responsiblePerson->hasRole(['admin', 'manager', 'team_lead'])) {
+        //     return ApiResponse::error('The assigned user must be an admin, manager, or team lead', 422);
+        // }
+
+        if (!($user->hasRole('admin') || $user->hasRole('super_admin'))) {
+            $subordinatesIds = $user->getAllSubordinatesIds();
+            if (!in_array($request->responsible_person_id, $subordinatesIds)) {
+                return ApiResponse::error('You can only assign responsible person from your team', 403);
+            }
+        }
+        $oldPerson = User::find($deal->responsible_person_id);
+
+        $deal->update([
+            'responsible_person_id' => $request->responsible_person_id,
+            'last_stage_change_at' => now(),
+            'revert'=>null,
+        ]);
+                $changes = [
+                    'old_person_id'=>$oldPerson?->id,
+            'old_person' => $oldPerson?->name,
+            'new_person' => $responsiblePerson?->name
+        ];
+        broadcast(new DealUpdated($deal, 'assigned', null, $changes));
+        //  ==================================hiatory====================
+        DealHistoryHelper::log(
+            $deal->id,
+            [
+                'action' => 'assigned',
+                                    'old_person_id'=>$oldPerson?->id,
+                'old_person' => $oldPerson?->name,
+                'new_person' => $responsiblePerson?->name
+            ]
+        );
+
+
+        return ApiResponse::success(
+            new DealResource($deal->load(['responsiblePerson', 'stage'])),
+            'Responsible person assigned successfully'
+        );
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to assign responsible person: ' . $e->getMessage());
+    }
+}
 
     // ======================history =======================
         public function history(Request $request, $dealId)

@@ -582,7 +582,7 @@
                       label="name" 
                       placeholder="Search Subcommunity..." 
                       class="custom-v-select"
-                      :filterable="false"
+                      :filterable="true"
                       @search="onSearchAreas"
                     />
                   </div>
@@ -609,7 +609,7 @@
                       :reduce="item => item.id" 
                       label="name" 
                       placeholder="Select Area" 
-                      :filterable="false"
+                      :filterable="true"
                       class="custom-v-select" 
                     />
                   </div>

@@ -20,6 +20,7 @@
 
       <div class="form-content-wrapper flex-grow-1">
         <div class="search-sections-wrap">
+          <!-- Deal Information Section -->
           <div class="search-section-card">
             <div class="search-section-title">Deal Information</div>
             <div class="row g-3">
@@ -40,7 +41,13 @@
                   :searchable="true"
                   :clearable="true"
                   append-to-body
-                />
+                >
+              <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+                </v-select>
               </div>
               <div v-if="fieldSettings.stage_changed_by" class="col-md-6">
                 <label class="form-label-custom">Stage Changed By</label>
@@ -55,7 +62,13 @@
                   :searchable="true"
                   :clearable="true"
                   append-to-body
-                />
+                >
+                   <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+              </v-select>
               </div>
               <div v-if="fieldSettings.stage_group" class="col-md-6">
                 <label class="form-label-custom">Stage Group</label>
@@ -71,11 +84,257 @@
                   :multiple="true"
                   :clearable="true"
                   append-to-body
-                />
+                >
+              
+                <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+                </v-select>
               </div>
             </div>
           </div>
 
+          <!-- Buyer Details Section -->
+          <div class="search-section-card">
+            <div class="search-section-title">Buyer Details</div>
+            <div class="row g-3">
+              <div v-if="fieldSettings.buyer_first_name" class="col-md-6">
+                <label class="form-label-custom">First Name</label>
+                <b-form-input v-model="form.buyer_first_name" class="custom-input" placeholder="Enter First Name" />
+              </div>
+              <div v-if="fieldSettings.buyer_last_name" class="col-md-6">
+                <label class="form-label-custom">Last Name</label>
+                <b-form-input v-model="form.buyer_last_name" class="custom-input" placeholder="Enter Last Name" />
+              </div>
+              <div v-if="fieldSettings.buyer_phone" class="col-md-6">
+                <label class="form-label-custom">Phone Number</label>
+                <b-form-input v-model="form.buyer_phone" class="custom-input" placeholder="Enter Phone Number" />
+              </div>
+              <div v-if="fieldSettings.buyer_date_of_birth" class="col-md-6">
+                <label class="form-label-custom">Date Of Birth</label>
+                <b-form-input v-model="form.buyer_dob" type="date" class="custom-input" />
+              </div>
+              <div v-if="fieldSettings.buyer_amount_currency" class="col-md-6">
+                <label class="form-label-custom">Amount & Currency</label>
+                <div class="input-group-custom">
+                  <b-form-input v-model="form.amount" type="number" placeholder="Enter Amount" class="custom-input" />
+              
+                </div>
+              </div>
+              <div v-if="fieldSettings.buyer_email" class="col-md-6">
+                <label class="form-label-custom">Email</label>
+                <b-form-input v-model="form.buyer_email" type="email" class="custom-input" placeholder="Enter Email" />
+              </div>
+              <div v-if="fieldSettings.buyer_residency_status" class="col-md-6">
+                <label class="form-label-custom">Residency Status</label>
+                <v-select
+                  v-model="form.buyer_residency_status"
+                  :options="residencyOptions"
+                  :reduce="opt => opt.value"
+                  label="text"
+                  class="custom-v-select deal-select-placeholder"
+                  placeholder="Select Status"
+                  :clearable="true"
+                    append-to-body
+                >
+                   <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+              </v-select>
+              </div>
+              <div v-if="fieldSettings.buyer_country_residence" class="col-md-6">
+                <label class="form-label-custom">Country Of Residence</label>
+                <v-select
+                  v-model="form.buyer_country"
+                  :options="countryOptions"
+                  :reduce="opt => opt.value"
+                  label="text"
+                  class="custom-v-select deal-select-placeholder"
+                  placeholder="Select Country"
+                  :clearable="true"
+                    append-to-body
+                >
+                  <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+              
+                </v-select>
+              </div>
+              <div v-if="fieldSettings.buyer_nationality" class="col-md-6">
+                <label class="form-label-custom">Nationality</label>
+                <v-select
+                  v-model="form.buyer_nationality"
+                  :options="nationalityOptions"
+                  :reduce="opt => opt.value"
+                  label="text"
+                  class="custom-v-select deal-select-placeholder"
+                  placeholder="Select Nationality"
+                  :clearable="true"
+                    append-to-body
+                >
+                  <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+              
+              
+               </v-select>
+              </div>
+              <div v-if="fieldSettings.buyer_city_residence" class="col-md-6">
+                <label class="form-label-custom">City Of Residence</label>
+                <b-form-input v-model="form.buyer_city" class="custom-input" placeholder="Enter City" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Property Details Section -->
+          <div class="search-section-card">
+            <div class="search-section-title">Property Details</div>
+            <div class="row g-3">
+              <div v-if="fieldSettings.property_unit_no" class="col-md-6">
+                <label class="form-label-custom">Unit No</label>
+                <b-form-input v-model="form.unit_no" class="custom-input" placeholder="Enter Unit No" />
+              </div>
+              <div v-if="fieldSettings.property_type" class="col-md-6">
+                <label class="form-label-custom">Property Type</label>
+                <v-select
+                  v-model="form.property_type_id"
+                  :options="propertyTypes"
+                  :reduce="opt => opt.id"
+                  label="name"
+                  class="custom-v-select deal-select-placeholder"
+                  placeholder="Select Property Type"
+                  :clearable="true"
+                    append-to-body
+                >
+              
+                 <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+              </v-select>
+              </div>
+              <div v-if="fieldSettings.property_bedrooms" class="col-md-6">
+                <label class="form-label-custom">Bedrooms</label>
+                <v-select
+                  v-model="form.bedrooms"
+                  :options="bedroomOptions"
+                  :reduce="opt => opt.value"
+                  label="text"
+                  class="custom-v-select deal-select-placeholder"
+                  placeholder="Select Bedroom"
+                  :clearable="true"
+                    append-to-body
+                 >
+                   <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+              
+                </v-select>
+              </div>
+              <div v-if="fieldSettings.property_project_name" class="col-md-6">
+                <label class="form-label-custom">Project Name</label>
+                <v-select
+                  v-model="form.project_id"
+                  :options="projects"
+                  :reduce="opt => opt.id"
+                  label="name"
+                  class="custom-v-select deal-select-placeholder"
+                  placeholder="Search Project.."
+                  :filterable="true"
+                  :searchable="true"
+                  @search="searchProjects"
+                    append-to-body
+                >
+              
+                  <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+              </v-select>
+              </div>
+              <div v-if="fieldSettings.property_developer" class="col-md-6">
+                <label class="form-label-custom">Developer</label>
+                <v-select
+                  v-model="form.developer_id"
+                  :options="developers"
+                  :reduce="opt => opt.id"
+                  label="name"
+                  class="custom-v-select deal-select-placeholder"
+                  placeholder="Select Developer"
+                  :clearable="true"
+                    append-to-body
+                >
+              
+                <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+              </v-select>
+              </div>
+              <div v-if="fieldSettings.property_area" class="col-md-6">
+                <label class="form-label-custom">Area</label>
+                <v-select
+                  v-model="form.area_id"
+                  :options="areas"
+                  :reduce="opt => opt.id"
+                  label="name"
+                  class="custom-v-select deal-select-placeholder"
+                  placeholder="Select Area"
+                  :clearable="true"
+                  :filterable="true"
+                  :searchable="true"
+                  @search="searchAreas"
+                    append-to-body
+                >
+                  <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+                </v-select>
+              </div>
+              <div v-if="fieldSettings.property_sub_community" class="col-md-6">
+                <label class="form-label-custom">Sub Community</label>
+                <v-select
+                  v-model="form.subcommunity_id"
+                  :options="subCommunities"
+                  :reduce="opt => opt.id"
+                  label="name"
+                  class="custom-v-select deal-select-placeholder"
+                  placeholder="Select Subcommunity"
+                  :clearable="true"
+                  :filterable="true"
+                  :searchable="true"
+                  @search="searchSubCommunities"
+                    append-to-body
+                ><template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+                </v-select>
+              </div>
+              <div v-if="fieldSettings.property_unit_size" class="col-md-6">
+                <label class="form-label-custom">Unit Size</label>
+                <b-form-input v-model="form.unit_size" class="custom-input" placeholder="Enter Unit Size (sq. ft)" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Assignment Section -->
           <div class="search-section-card">
             <div class="search-section-title">Assignment</div>
             <div class="row g-3">
@@ -93,10 +352,10 @@
                   :clearable="true"
                   append-to-body
                 >
-                  <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon" />
-                    </span>
+                 <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
                   </template>
                   <template #option="option">
                     <div v-if="option.value == null" class="deal-rp-opt-placeholder text-muted">Select Person</div>
@@ -145,7 +404,13 @@
                   :searchable="true"
                   :clearable="true"
                   append-to-body
-                />
+                >
+                   <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+              </v-select>
               </div>
               <div v-if="fieldSettings.created_by" class="col-md-6">
                 <label class="form-label-custom">Created By</label>
@@ -160,7 +425,13 @@
                   :searchable="true"
                   :clearable="true"
                   append-to-body
-                />
+                >
+               <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+              </v-select>
               </div>
             </div>
           </div>
@@ -203,6 +474,11 @@ const props = defineProps({
   asDropdown: { type: Boolean, default: true },
   currentQuery: { type: Object, default: null },
   dealType: { type: String, default: 'primary' },
+  // Optional external data sources
+  propertyTypes: { type: Array, default: () => [] },
+  developers: { type: Array, default: () => [] },
+  areas: { type: Array, default: () => [] },
+  subCommunities: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['update:modelValue', 'search'])
@@ -215,7 +491,6 @@ const sidebarPills = [
   { id: 'closed-deals', label: 'Closed Deals' },
   { id: 'deals-in-progress', label: 'Deals In Progress' },
   { id: 'my-deals', label: 'My Deals' },
-  { id: 'test-deals', label: 'Test Deals' },
 ]
 
 const defaultFieldSettings = {
@@ -236,7 +511,6 @@ const defaultFieldSettings = {
   buyer_country_residence: false,
   buyer_nationality: false,
   buyer_city_residence: false,
-  buyer_nationality_secondary: false,
   property_unit_no: true,
   property_type: true,
   property_bedrooms: false,
@@ -244,7 +518,6 @@ const defaultFieldSettings = {
   property_developer: false,
   property_area: false,
   property_sub_community: false,
-  property_building_cluster: false,
   property_unit_size: false,
 }
 
@@ -288,9 +561,10 @@ const fieldSettings = ref({ ...defaultFieldSettings })
 
 const fieldSettingsTabs = [
   { id: 'buyer', label: 'Buyer Details' },
-  { id: 'contact', label: 'Contact' },
+  { id: 'property', label: 'Property Details' },
   { id: 'activity', label: 'Activity' },
 ]
+
 const fieldSettingsSections = [
   {
     id: 'buyer-details',
@@ -305,14 +579,13 @@ const fieldSettingsSections = [
       { id: 'buyer_email', label: 'Email' },
       { id: 'buyer_residency_status', label: 'Residency Status' },
       { id: 'buyer_country_residence', label: 'Country Of Residence' },
-      { id: 'buyer_nationality', label: 'Buyer Nationality' },
+      { id: 'buyer_nationality', label: 'Nationality' },
       { id: 'buyer_city_residence', label: 'City Of Residence' },
-      { id: 'buyer_nationality_secondary', label: 'Nationality' },
     ],
   },
   {
     id: 'property-details',
-    tab: 'contact',
+    tab: 'property',
     label: 'Property Details',
     fields: [
       { id: 'property_unit_no', label: 'Unit No' },
@@ -322,7 +595,6 @@ const fieldSettingsSections = [
       { id: 'property_developer', label: 'Developer' },
       { id: 'property_area', label: 'Area' },
       { id: 'property_sub_community', label: 'Sub Community' },
-      { id: 'property_building_cluster', label: 'Building/Cluster' },
       { id: 'property_unit_size', label: 'Unit Size' },
     ],
   },
@@ -343,6 +615,7 @@ const fieldSettingsSections = [
 ]
 
 const form = ref({
+  // Activity fields
   deal_name: '',
   end_date: null,
   stage_changed_by: null,
@@ -350,10 +623,79 @@ const form = ref({
   responsible_person_id: null,
   modified_by: null,
   created_by_date: null,
+  // Buyer fields
+  buyer_first_name: '',
+  buyer_last_name: '',
+  buyer_phone: '',
+  buyer_dob: '',
+  amount: '',
+  currency: 'AED',
+  buyer_email: '',
+  buyer_residency_status: null,
+  buyer_country: null,
+  buyer_nationality: null,
+  buyer_city: '',
+  // Property fields
+  unit_no: '',
+  property_type_id: null,
+  bedrooms: null,
+  project_id: null,
+  developer_id: null,
+  area_id: null,
+  subcommunity_id: null,
+  unit_size: '',
 })
 
 const people = ref([])
 const stages = ref([])
+const projects = ref([])
+
+// Options for selects
+const nationalityOptions = [
+  { value: 'emirati', text: 'Emirati' },
+  { value: 'saudi', text: 'Saudi' },
+  { value: 'egyptian', text: 'Egyptian' },
+  { value: 'indian', text: 'Indian' },
+  { value: 'british', text: 'British' },
+  { value: 'american', text: 'American' },
+  { value: 'other', text: 'Other' },
+]
+
+const residencyOptions = [
+  { value: 'citizen', text: 'Citizen' },
+  { value: 'resident', text: 'Resident' },
+  { value: 'investor', text: 'Investor' },
+  { value: 'tourist', text: 'Tourist' },
+  { value: 'other', text: 'Other' },
+]
+
+const countryOptions = [
+  { value: 'AE', text: 'United Arab Emirates' },
+  { value: 'SA', text: 'Saudi Arabia' },
+  { value: 'EG', text: 'Egypt' },
+  { value: 'IN', text: 'India' },
+  { value: 'GB', text: 'United Kingdom' },
+  { value: 'US', text: 'United States' },
+  { value: 'other', text: 'Other' },
+]
+
+const currencyOptions = [
+  { value: 'AED', text: 'AED' },
+  { value: 'USD', text: 'USD' },
+  { value: 'EUR', text: 'EUR' },
+  { value: 'GBP', text: 'GBP' },
+  { value: 'SAR', text: 'SAR' },
+]
+
+const bedroomOptions = [
+  { value: 'studio', text: 'Studio' },
+  { value: '1', text: '1 Bedroom' },
+  { value: '2', text: '2 Bedrooms' },
+  { value: '3', text: '3 Bedrooms' },
+  { value: '4', text: '4 Bedrooms' },
+  { value: '5', text: '5 Bedrooms' },
+  { value: '5+', text: '5+ Bedrooms' },
+]
 
 const personOptions = computed(() =>
   people.value.map((u) => ({
@@ -365,6 +707,7 @@ const personOptions = computed(() =>
     branch_name: u.branch_name || '',
   })),
 )
+
 const stageOptions = computed(() => stages.value.map((s) => ({ value: s.id, text: s.name })))
 
 const datePresetOptions = [
@@ -376,6 +719,44 @@ const datePresetOptions = [
   { text: 'Last Week', value: 'last_week' },
   { text: 'Last Month', value: 'last_month' },
 ]
+
+// Search functions for dynamic data
+const searchProjects = async (search) => {
+  if (!search && search !== '') return
+  try {
+    const response = await api.get('/listings/projects', { params: { search } })
+    projects.value = response.data?.data ?? response.data ?? []
+  } catch (e) {
+    console.error('Error searching projects:', e)
+  }
+}
+
+const searchAreas = async (search) => {
+  if (!search && search !== '') return
+  try {
+    const response = await api.get('/listings/areas', { params: { search } })
+    // Assuming the response structure
+    const areasData = response.data?.data ?? response.data ?? []
+    // Emit to parent if needed, otherwise update local ref
+    if (props.areas?.length) {
+      // If areas are passed as prop, we don't override
+      return
+    }
+    // Otherwise we would need to manage areas locally
+  } catch (e) {
+    console.error('Error searching areas:', e)
+  }
+}
+
+const searchSubCommunities = async (search) => {
+  if (!search && search !== '') return
+  try {
+    const response = await api.get('/listings/subcommunities', { params: { search } })
+    // Handle response
+  } catch (e) {
+    console.error('Error searching subcommunities:', e)
+  }
+}
 
 const fetchUsers = async () => {
   try {
@@ -406,6 +787,25 @@ const resetForm = () => {
     responsible_person_id: null,
     modified_by: null,
     created_by_date: null,
+    buyer_first_name: '',
+    buyer_last_name: '',
+    buyer_phone: '',
+    buyer_dob: '',
+    amount: '',
+    currency: 'AED',
+    buyer_email: '',
+    buyer_residency_status: null,
+    buyer_country: null,
+    buyer_nationality: null,
+    buyer_city: '',
+    unit_no: '',
+    property_type_id: null,
+    bedrooms: null,
+    project_id: null,
+    developer_id: null,
+    area_id: null,
+    subcommunity_id: null,
+    unit_size: '',
   }
   emit('search', { query: null, activeFilters: [] })
 }
@@ -462,8 +862,13 @@ const applySearch = () => {
   const query = {}
   const activeFilters = []
 
-  const pushFilter = (id, label, value) => activeFilters.push({ id, label, value, queryKey: id })
+  const pushFilter = (id, label, value) => {
+    if (value !== null && value !== undefined && value !== '' && !(Array.isArray(value) && value.length === 0)) {
+      activeFilters.push({ id, label, value, queryKey: id })
+    }
+  }
 
+  // Activity fields
   if (form.value.deal_name) {
     query.search = form.value.deal_name.trim()
     pushFilter('deal_name', 'Name', form.value.deal_name)
@@ -482,20 +887,95 @@ const applySearch = () => {
     const p = personOptions.value.find((u) => u.value === form.value.responsible_person_id)
     pushFilter('responsible_person', 'Responsible Person', p?.text || form.value.responsible_person_id)
   }
-  if (form.value.stage_changed_by && !query.responsible_id) {
-    query.responsible_id = form.value.stage_changed_by
-    const p = personOptions.value.find((u) => u.value === form.value.stage_changed_by)
-    pushFilter('stage_changed_by', 'Stage Changed By', p?.text || form.value.stage_changed_by)
-  }
   if (form.value.modified_by) {
+    query.modified_by = form.value.modified_by
     const p = personOptions.value.find((u) => u.value === form.value.modified_by)
-    if (!query.search && p?.text) query.search = p.text
     pushFilter('modified_by', 'Modified By', p?.text || form.value.modified_by)
   }
   if (form.value.created_by_date && form.value.created_by_date !== 'any') {
     const range = presetRange(form.value.created_by_date)
     if (range) Object.assign(query, range)
     pushFilter('created_by', 'Created By', form.value.created_by_date)
+  }
+
+  // Buyer fields
+  if (form.value.buyer_first_name) {
+    query.buyer_first_name = form.value.buyer_first_name
+    pushFilter('buyer_first_name', 'Buyer First Name', form.value.buyer_first_name)
+  }
+  if (form.value.buyer_last_name) {
+    query.buyer_last_name = form.value.buyer_last_name
+    pushFilter('buyer_last_name', 'Buyer Last Name', form.value.buyer_last_name)
+  }
+  if (form.value.buyer_phone) {
+    query.buyer_phone = form.value.buyer_phone
+    pushFilter('buyer_phone', 'Buyer Phone', form.value.buyer_phone)
+  }
+  if (form.value.buyer_dob) {
+    query.buyer_dob = form.value.buyer_dob
+    pushFilter('buyer_dob', 'Buyer Date of Birth', form.value.buyer_dob)
+  }
+  if (form.value.amount) {
+    query.amount = form.value.amount
+    pushFilter('amount', 'Amount', form.value.amount)
+  }
+  if (form.value.currency && form.value.currency !== 'AED') {
+    query.currency = form.value.currency
+    pushFilter('currency', 'Currency', form.value.currency)
+  }
+  if (form.value.buyer_email) {
+    query.buyer_email = form.value.buyer_email
+    pushFilter('buyer_email', 'Buyer Email', form.value.buyer_email)
+  }
+  if (form.value.buyer_residency_status) {
+    query.buyer_residency_status = form.value.buyer_residency_status
+    pushFilter('buyer_residency_status', 'Buyer Residency Status', form.value.buyer_residency_status)
+  }
+  if (form.value.buyer_country) {
+    query.buyer_country = form.value.buyer_country
+    pushFilter('buyer_country', 'Buyer Country', form.value.buyer_country)
+  }
+  if (form.value.buyer_nationality) {
+    query.buyer_nationality = form.value.buyer_nationality
+    pushFilter('buyer_nationality', 'Buyer Nationality', form.value.buyer_nationality)
+  }
+  if (form.value.buyer_city) {
+    query.buyer_city = form.value.buyer_city
+    pushFilter('buyer_city', 'Buyer City', form.value.buyer_city)
+  }
+
+  // Property fields
+  if (form.value.unit_no) {
+    query.unit_no = form.value.unit_no
+    pushFilter('unit_no', 'Unit No', form.value.unit_no)
+  }
+  if (form.value.property_type_id) {
+    query.property_type_id = form.value.property_type_id
+    pushFilter('property_type_id', 'Property Type', form.value.property_type_id)
+  }
+  if (form.value.bedrooms) {
+    query.bedrooms = form.value.bedrooms
+    pushFilter('bedrooms', 'Bedrooms', form.value.bedrooms)
+  }
+  if (form.value.project_id) {
+    query.project_id = form.value.project_id
+    pushFilter('project_id', 'Project', form.value.project_id)
+  }
+  if (form.value.developer_id) {
+    query.developer_id = form.value.developer_id
+    pushFilter('developer_id', 'Developer', form.value.developer_id)
+  }
+  if (form.value.area_id) {
+    query.area_id = form.value.area_id
+    pushFilter('area_id', 'Area', form.value.area_id)
+  }
+  if (form.value.subcommunity_id) {
+    query.subcommunity_id = form.value.subcommunity_id
+    pushFilter('subcommunity_id', 'Subcommunity', form.value.subcommunity_id)
+  }
+  if (form.value.unit_size) {
+    query.unit_size = form.value.unit_size
+    pushFilter('unit_size', 'Unit Size', form.value.unit_size)
   }
 
   emit('search', { query: Object.keys(query).length ? query : null, activeFilters })
@@ -509,6 +989,7 @@ watch(
     form.value.deal_name = q.search || ''
     form.value.stage_group = q.stage_id ? [q.stage_id] : []
     form.value.responsible_person_id = q.responsible_id || null
+    // Add other field mappings as needed
   },
   { immediate: true },
 )
@@ -521,6 +1002,7 @@ onMounted(async () => {
   await Promise.all([fetchUsers(), fetchStages()])
 })
 </script>
+
 
 <style scoped>
 .deal-search-dropdown-panel {
@@ -646,7 +1128,7 @@ onMounted(async () => {
   opacity: 1 !important;
 }
 
-::deep(.custom-v-select) {
+::deep(.custom-v-select.deal-select-placeholder) {
   font-family: 'Montserrat', sans-serif;
 }
 
@@ -657,6 +1139,7 @@ onMounted(async () => {
   background: #fff;
   padding: 0 8px;
 }
+
 
 ::deep(.custom-v-select .vs__selected-options) {
   flex-wrap: nowrap;
@@ -701,7 +1184,7 @@ onMounted(async () => {
   opacity: 1;
 }
 
-::deep(.custom-v-select.vs--unsearchable:not(.vs--disabled) .vs__search) {
+::deep(.custom-v-select.deal-select-placeholder.vs--unsearchable:not(.vs--disabled) .vs__search) {
   cursor: pointer !important;
   color: #64748b !important;
   font-size: 12px !important;
@@ -713,31 +1196,31 @@ onMounted(async () => {
   opacity: 1 !important;
 }
 
-::deep(.custom-v-select.vs--single .vs__selected) {
+::deep(.custom-v-select.deal-select-placeholder.vs--single .vs__selected) {
   color: #64748b;
 }
 
-::deep(.custom-v-select.vs--single:not(.vs--has-value) .vs__selected) {
+::deep(.custom-v-select.deal-select-placeholder.vs--single:not(.vs--has-value) .vs__selected) {
   color: #94a3b8 !important;
   font-size: 12px !important;
 }
 
-::deep(.custom-v-select.vs--single .vs__selected),
-::deep(.custom-v-select.vs--single .vs__placeholder),
-::deep(.custom-v-select.vs--unsearchable .vs__search),
+::deep(.custom-v-select.deal-select-placeholder.vs--single .vs__selected),
+::deep(.custom-v-select.deal-select-placeholder.vs--single .vs__placeholder),
+::deep(.custom-v-select.deal-select-placeholder.vs--unsearchable .vs__search),
 ::deep(.custom-v-select .vs__search::placeholder) {
   color: #64748b !important;
   font-size: 12px !important;
 }
 
-::deep(.custom-v-select.vs--single:not(.vs--has-value) .vs__selected),
-::deep(.custom-v-select.vs--single .vs__placeholder),
-::deep(.custom-v-select.vs--unsearchable.vs--single:not(.vs--has-value) .vs__search::placeholder) {
+::deep(.custom-v-select.deal-select-placeholder.vs--single:not(.vs--has-value) .vs__selected),
+::deep(.custom-v-select.deal-select-placeholder.vs--single .vs__placeholder),
+::deep(.custom-v-select.deal-select-placeholder.vs--unsearchable.vs--single:not(.vs--has-value) .vs__search::placeholder) {
   color: #94a3b8 !important;
 }
 
-::deep(.deal-select-placeholder .vs__placeholder),
-::deep(.deal-select-placeholder .vs__search::placeholder),
+::deep(.vs__placeholder),
+::deep(.vs__search::placeholder),
 ::deep(.deal-select-placeholder.vs--single:not(.vs--has-value) .vs__selected) {
   color: #94a3b8 !important;
   font-size: 12px !important;
@@ -747,14 +1230,14 @@ onMounted(async () => {
 }
 
 /* Force actual input element style (matches what works in inspect) */
-:deep(.deal-select-placeholder input.vs__search) {
+:deep(.input.vs__search) {
   color: #64748b !important;
   font-size: 12px !important;
   font-weight: 500 !important;
   font-family: 'Montserrat', sans-serif !important;
 }
 
-:deep(.deal-select-placeholder input.vs__search::placeholder) {
+:deep(.input.vs__search::placeholder) {
   color: #94a3b8 !important;
   font-size: 12px !important;
   font-weight: 500 !important;
@@ -804,7 +1287,7 @@ onMounted(async () => {
 ::deep(.custom-v-select .vs__dropdown-option) {
   padding: 5px 10px;
   font-size: 12px;
-  color: #475569;
+  color: #475569 !important;
   transition: all 0.2s;
 }
 
@@ -997,4 +1480,50 @@ onMounted(async () => {
     padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   }
 }
+:deep(.custom-v-select .vs__open-indicator-icon) {
+    font-size: 13px;
+    color: #cfdbec;
+}
+
+:deep(.custom-v-select svg) {
+    vertical-align: middle !important;
+}
 </style>
+<style>
+
+.custom-v-select .vs__dropdown-option {
+  padding: 5px 10px;
+  font-size: 12px;
+  color: #475569 !important;
+  transition: all 0.2s;
+}
+
+.custom-v-select .vs__placeholder {
+  color: #94a3b8 !important;
+  font-size: 12px !important;
+  opacity: 1 !important;
+}
+
+.custom-v-select .vs__dropdown-toggle {
+  height: 40px;
+  border-radius: 9px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 0 8px;
+}
+.custom-v-select .vs__search {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  padding: 0;
+  min-width: 100% !important;
+  width: 100% !important;
+  flex: 1 0 auto !important;
+  opacity: 1 !important;
+}
+
+.custom-v-select .vs__search::placeholder{
+  color: #94a3b8;
+  font-size: 12px;
+  opacity: 1;
+}</style>

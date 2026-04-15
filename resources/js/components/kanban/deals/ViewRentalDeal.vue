@@ -25,13 +25,14 @@
 
     <!-- Deal Information (from card) -->
     <div class="col-12" v-if="deal.createdBy || deal.source || deal.project">
-      <div class="section-head mb-3">
-        <h6 class="section-title mb-0">Deal Information</h6>
-        <button type="button" class="section-edit-btn" @click="requestEdit('deal_information')">
-          <iconify-icon icon="lucide:pencil" />
-        </button>
-      </div>
+      
       <div class="view-card p-3 radius-12">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Deal Information</h6>
+          <button type="button" class="section-edit-btn" @click="requestEdit('deal_information')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
         <div class="row g-3">
           <div class="col-md-12" v-if="deal.project">
             <div class="info-group">
@@ -57,13 +58,14 @@
 
     <!-- Source and Deal Name -->
     <div class="col-12">
-      <div class="section-head mb-3">
-        <h6 class="section-title mb-0">Source and Deal Name</h6>
-        <button type="button" class="section-edit-btn" @click="requestEdit('source_deal_name')">
-          <iconify-icon icon="lucide:pencil" />
-        </button>
-      </div>
+    
       <div class="view-card p-3 radius-12">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Source and Deal Name</h6>
+          <button type="button" class="section-edit-btn" @click="requestEdit('source_deal_name')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
         <div class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
@@ -83,13 +85,14 @@
 
     <!-- Client Details -->
     <div class="col-12">
-      <div class="section-head mb-3">
-        <h6 class="section-title mb-0">Client Details</h6>
-        <button type="button" class="section-edit-btn" @click="requestEdit('client_details')">
-          <iconify-icon icon="lucide:pencil" />
-        </button>
-      </div>
+      
       <div class="view-card p-3 radius-12">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Client Details</h6>
+          <button type="button" class="section-edit-btn" @click="requestEdit('client_details')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
         <div class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
@@ -115,13 +118,14 @@
 
     <!-- Tenant Details -->
     <div class="col-12">
-      <div class="section-head mb-3">
-        <h6 class="section-title mb-0">Tenant Details</h6>
-        <button type="button" class="section-edit-btn" @click="requestEdit('tenant_details')">
-          <iconify-icon icon="lucide:pencil" />
-        </button>
-      </div>
+      
       <div class="view-card p-3 radius-12">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Tenant Details</h6>
+          <button type="button" class="section-edit-btn" @click="requestEdit('tenant_details')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
         <div class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
@@ -165,26 +169,28 @@
 
     <!-- Tenant Documents -->
     <div class="col-12">
-      <div class="section-head mb-3">
-        <h6 class="section-title mb-0">Tenant Documents</h6>
-        <button type="button" class="section-edit-btn" @click="requestEdit('tenant_documents')">
-          <iconify-icon icon="lucide:pencil" />
-        </button>
-      </div>
+      
       <div class="view-card p-3 radius-12">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Tenant Documents</h6>
+          <button type="button" class="section-edit-btn" @click="requestEdit('tenant_documents')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
         <DealDocumentsReadonly :documents="tenantDocuments" />
       </div>
     </div>
 
     <!-- Landlord Details -->
     <div class="col-12">
-      <div class="section-head mb-3">
-        <h6 class="section-title mb-0">Landlord Details</h6>
-        <button type="button" class="section-edit-btn" @click="requestEdit('landlord_details')">
-          <iconify-icon icon="lucide:pencil" />
-        </button>
-      </div>
+      
       <div class="view-card p-3 radius-12">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Landlord Details</h6>
+          <button type="button" class="section-edit-btn" @click="requestEdit('landlord_details')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
         <div class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
@@ -246,26 +252,28 @@
 
     <!-- Landlord Documents -->
     <div class="col-12">
-      <div class="section-head mb-3">
-        <h6 class="section-title mb-0">Landlord Documents</h6>
-        <button type="button" class="section-edit-btn" @click="requestEdit('landlord_documents')">
-          <iconify-icon icon="lucide:pencil" />
-        </button>
-      </div>
+      
       <div class="view-card p-3 radius-12">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Landlord Documents</h6>
+          <button type="button" class="section-edit-btn" @click="requestEdit('landlord_documents')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
         <DealDocumentsReadonly :documents="landlordDocuments" />
       </div>
     </div>
 
     <!-- Property Details -->
     <div class="col-12">
-      <div class="section-head mb-3">
-        <h6 class="section-title mb-0">Property Details</h6>
-        <button type="button" class="section-edit-btn" @click="requestEdit('property_details')">
-          <iconify-icon icon="lucide:pencil" />
-        </button>
-      </div>
+     
       <div class="view-card p-3 radius-12">
+         <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Property Details</h6>
+          <button type="button" class="section-edit-btn" @click="requestEdit('property_details')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
         <div class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
@@ -327,26 +335,28 @@
 
     <!-- Property Documents -->
     <div class="col-12">
-      <div class="section-head mb-3">
-        <h6 class="section-title mb-0">Property Documents</h6>
-        <button type="button" class="section-edit-btn" @click="requestEdit('property_documents')">
-          <iconify-icon icon="lucide:pencil" />
-        </button>
-      </div>
+     
       <div class="view-card p-3 radius-12">
+         <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Property Documents</h6>
+          <button type="button" class="section-edit-btn" @click="requestEdit('property_documents')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
         <DealDocumentsReadonly :documents="deal.property_documents || []" />
       </div>
     </div>
 
     <!-- Deal Financials -->
     <div class="col-12">
-      <div class="section-head mb-3">
-        <h6 class="section-title mb-0">Deal Financials</h6>
-        <button type="button" class="section-edit-btn" @click="requestEdit('deal_financials')">
-          <iconify-icon icon="lucide:pencil" />
-        </button>
-      </div>
+      
       <div class="view-card p-3 radius-12">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Deal Financials</h6>
+          <button type="button" class="section-edit-btn" @click="requestEdit('deal_financials')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
         <div class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
@@ -504,12 +514,12 @@ h6.section-title {
 }
 
 .section-edit-btn {
-  width: 30px;
-  height: 30px;
+  width: 15px;
+  height: 15px;
   border-radius: 8px;
   border: none;
-  background: #f8fafc;
-  color: #64748b;
+  background: transparent;
+  color: #fcb600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
