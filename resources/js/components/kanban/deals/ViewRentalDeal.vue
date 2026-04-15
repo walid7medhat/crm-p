@@ -25,7 +25,12 @@
 
     <!-- Deal Information (from card) -->
     <div class="col-12" v-if="deal.createdBy || deal.source || deal.project">
-      <h6 class="section-title mb-3">Deal Information</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Deal Information</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('deal_information')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4" v-if="deal.project">
@@ -52,7 +57,12 @@
 
     <!-- Source and Deal Name -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Source and Deal Name</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Source and Deal Name</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('source_deal_name')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-6">
@@ -73,7 +83,12 @@
 
     <!-- Client Details -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Client Details</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Client Details</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('client_details')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4">
@@ -100,7 +115,12 @@
 
     <!-- Tenant Details -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Tenant Details</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Tenant Details</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('tenant_details')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4">
@@ -139,7 +159,12 @@
 
     <!-- Tenant Documents -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Tenant Documents</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Tenant Documents</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('tenant_documents')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <DealDocumentsReadonly :documents="deal.tenant_documents || []" />
       </div>
@@ -147,7 +172,12 @@
 
     <!-- Landlord Details -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Landlord Details</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Landlord Details</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('landlord_details')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4">
@@ -204,7 +234,12 @@
 
     <!-- Landlord Documents -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Landlord Documents</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Landlord Documents</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('landlord_documents')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <DealDocumentsReadonly :documents="deal.landlord_documents || []" />
       </div>
@@ -212,7 +247,12 @@
 
     <!-- Property Details -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Property Details</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Property Details</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('property_details')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4">
@@ -275,7 +315,12 @@
 
     <!-- Property Documents -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Property Documents</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Property Documents</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('property_documents')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <DealDocumentsReadonly :documents="deal.property_documents || []" />
       </div>
@@ -283,7 +328,12 @@
 
     <!-- Deal Financials -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Deal Financials</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Deal Financials</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('deal_financials')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4">
@@ -315,8 +365,13 @@
     </div>
 
     <!-- Responsible Person -->
-    <div class="col-12">
-      <h6 class="section-title mb-3">Responsible Person</h6>
+    <div v-if="showResponsibleSection" class="col-12">
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Responsible Person</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('responsible_person')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="d-flex align-items-center justify-content-between">
           <div>
@@ -350,8 +405,14 @@ import { computed } from 'vue'
 import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
 
 const props = defineProps({
-  deal: { type: Object, default: null }
+  deal: { type: Object, default: null },
+  showResponsibleSection: { type: Boolean, default: true },
 })
+const emit = defineEmits(['edit-section'])
+
+function requestEdit(sectionKey) {
+  emit('edit-section', sectionKey)
+}
 
 function val(v) {
   if (v === null || v === undefined || v === '') return '----'
@@ -416,4 +477,23 @@ h6.section-title {
 .info-value { font-size: 14px !important; font-weight: 500; color: #01062C; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .department-badge { font-size: 12px; color: #475569; }
 .avatar-sm { width: 40px; height: 40px; }
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-edit-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: #f8fafc;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 </style>

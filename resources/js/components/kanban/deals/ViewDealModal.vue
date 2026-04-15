@@ -155,13 +155,13 @@
                 </template>
                 <template v-else>
                   <div v-if="dealType === 'primary'" class="row g-3 view-deal-content">
-                    <ViewPrimaryDeal :deal="deal" />
+                    <ViewPrimaryDeal :deal="deal" :show-responsible-section="false" @edit-section="startEditDealFromSection" />
                   </div>
                   <div v-else-if="dealType === 'secondary'" class="row g-3 view-deal-content">
-                    <ViewSecondaryDeal :deal="deal" />
+                    <ViewSecondaryDeal :deal="deal" :show-responsible-section="false" @edit-section="startEditDealFromSection" />
                   </div>
                   <div v-else class="row g-3 view-deal-content">
-                    <ViewRentalDeal :deal="deal" />
+                    <ViewRentalDeal :deal="deal" :show-responsible-section="false" @edit-section="startEditDealFromSection" />
                   </div>
                 </template>
               </div>
@@ -169,6 +169,39 @@
 
             <!-- Right column: Activity | Comments (hidden when editing) -->
             <div v-if="!isEditingDeal" class="col-md-7">
+              <div class="responsible-person-card bg-white p-3 radius-12 shadow-sm mb-3">
+                <div class="info-card-header d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                  <span class="info-card-title">Responsible Person</span>
+                  <button type="button" class="btn-edit-icon" aria-label="Edit responsible person" @click="startEditDealFromSection('responsible_person')">
+                    <iconify-icon icon="lucide:pencil"></iconify-icon>
+                  </button>
+                </div>
+                <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                  <div class="d-flex align-items-center gap-3 min-w-0">
+                    <div class="responsible-avatar-wrap">
+                      <img
+                        v-if="deal?.responsible_person?.avatar"
+                        :src="deal.responsible_person.avatar"
+                        alt=""
+                        class="responsible-avatar"
+                      />
+                      <div v-else class="responsible-avatar-fallback">
+                        <iconify-icon icon="solar:user-bold" />
+                      </div>
+                    </div>
+                    <div class="min-w-0">
+                      <div class="responsible-name text-truncate">{{ deal?.responsible_person?.name || '----' }}</div>
+                      <div class="responsible-meta text-truncate">{{ deal?.responsible_person_position || 'Sales' }}</div>
+                      <div class="responsible-meta text-truncate">Branch: {{ deal?.branch || deal?.responsible_person_branch || '----' }}</div>
+                    </div>
+                  </div>
+                  <button type="button" class="responsible-change-btn" @click="startEditDealFromSection('responsible_person')">
+                    <iconify-icon icon="lucide:square-pen" />
+                    Change
+                  </button>
+                </div>
+              </div>
+
               <div class="activity-card bg-white p-3 radius-12 shadow-sm">
                 <div class="d-flex gap-2 mb-4 w-fit-content toggle-buttons-container">
                   <button
@@ -512,6 +545,10 @@ async function startEditDeal() {
   }
 }
 
+function startEditDealFromSection() {
+  startEditDeal()
+}
+
 function cancelEditDeal() {
   isEditingDeal.value = false
   editFormData.value = {}
@@ -641,6 +678,8 @@ function close() {
   height: 100%;
   overflow: visible;
   max-width: 100%;
+  font-family: 'Montserrat', sans-serif;
+  --deal-font: 'Montserrat', sans-serif;
 }
 
 /* Header (match View Lead) */
@@ -918,6 +957,63 @@ function close() {
   border: 1px solid #eef2f7;
   border-radius: 8px;
   box-shadow: none !important;
+}
+
+.responsible-person-card {
+  border: 1px solid #eef2f7;
+  box-shadow: none !important;
+}
+
+.responsible-avatar-wrap {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.responsible-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+}
+
+.responsible-avatar-fallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.responsible-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.responsible-meta {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.responsible-change-btn {
+  height: 30px;
+  border: 1px solid #fee2a8;
+  background: #fffaf0;
+  color: #b45309;
+  border-radius: 999px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .toggle-buttons-container {
   width: fit-content;

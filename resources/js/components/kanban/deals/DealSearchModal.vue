@@ -247,6 +247,43 @@ const defaultFieldSettings = {
   property_building_cluster: false,
   property_unit_size: false,
 }
+
+const DEAL_SEARCH_FIELDS_SESSION_KEY = 'deal_search_field_settings_v1'
+
+const buildSessionStorageKey = () => `${DEAL_SEARCH_FIELDS_SESSION_KEY}:${props.dealType || 'primary'}`
+
+const normalizeFieldSettings = (raw) => {
+  const normalized = { ...defaultFieldSettings }
+  if (!raw || typeof raw !== 'object') return normalized
+
+  Object.keys(defaultFieldSettings).forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(raw, key)) {
+      normalized[key] = !!raw[key]
+    }
+  })
+
+  return normalized
+}
+
+const persistFieldSettingsToSession = (settings) => {
+  try {
+    sessionStorage.setItem(buildSessionStorageKey(), JSON.stringify(normalizeFieldSettings(settings)))
+  } catch {
+    // Ignore storage access errors (private mode / disabled storage)
+  }
+}
+
+const hydrateFieldSettingsFromSession = () => {
+  try {
+    const raw = sessionStorage.getItem(buildSessionStorageKey())
+    if (!raw) return
+    const parsed = JSON.parse(raw)
+    fieldSettings.value = normalizeFieldSettings(parsed)
+  } catch {
+    fieldSettings.value = { ...defaultFieldSettings }
+  }
+}
+
 const fieldSettings = ref({ ...defaultFieldSettings })
 
 const fieldSettingsTabs = [
@@ -375,11 +412,13 @@ const resetForm = () => {
 
 const restoreDefaultSearchFields = () => {
   fieldSettings.value = { ...defaultFieldSettings }
+  persistFieldSettingsToSession(fieldSettings.value)
   resetForm()
 }
 
 const applyFieldSettings = (settings) => {
-  fieldSettings.value = { ...fieldSettings.value, ...(settings || {}) }
+  fieldSettings.value = normalizeFieldSettings({ ...fieldSettings.value, ...(settings || {}) })
+  persistFieldSettingsToSession(fieldSettings.value)
 }
 
 const toYmd = (d) => {
@@ -475,8 +514,10 @@ watch(
 )
 
 watch(() => props.dealType, fetchStages)
+watch(() => props.dealType, hydrateFieldSettingsFromSession)
 
 onMounted(async () => {
+  hydrateFieldSettingsFromSession()
   await Promise.all([fetchUsers(), fetchStages()])
 })
 </script>

@@ -25,7 +25,12 @@
 
     <!-- Deal Information (from card) -->
     <div class="col-12" v-if="deal.createdBy || deal.source">
-      <h6 class="section-title mb-3">Deal Information</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Deal Information</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('deal_information')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4" v-if="deal.project">
@@ -52,7 +57,12 @@
 
     <!-- Buyer Details -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Buyer Details</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Buyer Details</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('buyer_details')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4" v-if="deal.buyerName && !deal.buyer_first_name">
@@ -133,7 +143,12 @@
 
     <!-- Buyer Documents -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Buyer Documents</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Buyer Documents</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('buyer_documents')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <DealDocumentsReadonly :documents="deal.buyer_documents || []" />
       </div>
@@ -141,7 +156,12 @@
 
     <!-- Property Details -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Property Details</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Property Details</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('property_details')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4">
@@ -198,7 +218,12 @@
 
     <!-- Deal Financials -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Deal Financials</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Deal Financials</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('deal_financials')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4">
@@ -224,8 +249,13 @@
     </div>
 
     <!-- Responsible Person / Assigned -->
-    <div class="col-12">
-      <h6 class="section-title mb-3">Responsible Person</h6>
+    <div v-if="showResponsibleSection" class="col-12">
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Responsible Person</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('responsible_person')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="d-flex align-items-center justify-content-between">
           <div>
@@ -259,8 +289,14 @@ import { computed } from 'vue'
 import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
 
 const props = defineProps({
-  deal: { type: Object, default: null }
+  deal: { type: Object, default: null },
+  showResponsibleSection: { type: Boolean, default: true },
 })
+const emit = defineEmits(['edit-section'])
+
+function requestEdit(sectionKey) {
+  emit('edit-section', sectionKey)
+}
 
 function val(v) {
   if (v === null || v === undefined || v === '') return '----'
@@ -325,4 +361,23 @@ h6.section-title {
 .info-value { font-size: 14px !important; font-weight: 500; color: #01062C; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .department-badge { font-size: 12px; color: #475569; }
 .avatar-sm { width: 40px; height: 40px; }
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-edit-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: #f8fafc;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 </style>
