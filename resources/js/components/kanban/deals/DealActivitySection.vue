@@ -465,6 +465,7 @@ onUnmounted(() => {
     font-size: 14px;
     color: #01062C;
     cursor: pointer;
+    text-align: center !important;
 }
 
 .btn-cancel:hover {
@@ -483,6 +484,7 @@ onUnmounted(() => {
     align-items: center;
     cursor: pointer;
     transition: background 0.2s;
+    text-align: center !important;
 }
 
 .btn-save:hover {

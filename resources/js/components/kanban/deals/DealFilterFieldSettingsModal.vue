@@ -1,6 +1,6 @@
 <template>
     <div v-if="modelValue" class="deal-field-settings-overlay" @click.self="close">
-      <div class="deal-field-settings-modal modal-body-content p-3">
+      <div class="deal-field-settings-modal modal-body-content p-3" @click.stop>
         <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom-light">
           <h5 class="modal-title-custom mb-0">Filter Field Settings</h5>
           <button class="close-btn-custom" @click="close">

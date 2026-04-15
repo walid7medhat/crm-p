@@ -25,22 +25,27 @@
 
     <!-- Deal Information (from card) -->
     <div class="col-12" v-if="deal.createdBy || deal.source">
-      <h6 class="section-title mb-3">Deal Information</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Deal Information</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('deal_information')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-4" v-if="deal.project">
+          <div class="col-md-12" v-if="deal.project">
             <div class="info-group">
               <label class="info-label">Project</label>
               <p class="info-value mb-0">{{ deal.project }}</p>
             </div>
           </div>
-          <div class="col-md-4" v-if="deal.createdBy">
+          <div class="col-md-12" v-if="deal.createdBy">
             <div class="info-group">
               <label class="info-label">Created By</label>
               <p class="info-value mb-0">{{ deal.createdBy }}</p>
             </div>
           </div>
-          <div class="col-md-4" v-if="deal.source">
+          <div class="col-md-12" v-if="deal.source">
             <div class="info-group">
               <label class="info-label">Source</label>
               <p class="info-value mb-0">{{ deal.source }}</p>
@@ -50,143 +55,164 @@
       </div>
     </div>
 
-    <!-- Buyer Details -->
+   <!-- Buyer Details -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Buyer Details</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Buyer Details</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('buyer_details')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-4" v-if="deal.buyerName && !deal.buyer_first_name">
-            <div class="info-group">
-              <label class="info-label">Buyer Name</label>
-              <p class="info-value mb-0">{{ deal.buyerName }}</p>
-            </div>
-          </div>
-          <div class="col-md-4">
+
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Buyer First Name</label>
-              <p class="info-value mb-0">{{ val(deal.buyer_first_name) }}</p>
+              <p class="info-value mb-0">{{ val(buyer.first_name) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Buyer Last Name</label>
-              <p class="info-value mb-0">{{ val(deal.buyer_last_name) }}</p>
+              <p class="info-value mb-0">{{ val(buyer.last_name) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Buyer Date Of Birth</label>
-              <p class="info-value mb-0">{{ val(deal.buyer_dob) }}</p>
+              <p class="info-value mb-0">{{ val(buyer.date_of_birth) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Buyer Phone Number</label>
-              <p class="info-value mb-0">{{ val(deal.buyer_phone) }}</p>
+              <p class="info-value mb-0">{{ val(buyer.phone) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Buyer Email</label>
-              <p class="info-value mb-0">{{ val(deal.buyer_email) }}</p>
+              <p class="info-value mb-0">{{ val(buyer.email) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Buyer Nationality</label>
-              <p class="info-value mb-0">{{ val(deal.buyer_nationality) }}</p>
+              <p class="info-value mb-0">{{ val(buyer.nationality) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Buyer Residency Status</label>
-              <p class="info-value mb-0">{{ val(deal.buyer_residency_status) }}</p>
+              <p class="info-value mb-0">{{ val(buyer.residency_status) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Buyer City Of Residence</label>
-              <p class="info-value mb-0">{{ val(deal.buyer_city) }}</p>
+              <p class="info-value mb-0">{{ val(buyer.city) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Buyer Country Of Residence</label>
-              <p class="info-value mb-0">{{ val(deal.buyer_country) }}</p>
+              <p class="info-value mb-0">{{ val(buyer.country) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Amount & Currency</label>
-              <p class="info-value mb-0">{{ amountCurrency }}</p>
+              <p class="info-value mb-0">{{ val(buyer.amount_formatted) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Buyer Language</label>
-              <p class="info-value mb-0">{{ val(deal.buyer_language) }}</p>
+              <p class="info-value mb-0">{{ val(buyer.language) }}</p>
             </div>
           </div>
+
         </div>
       </div>
     </div>
 
     <!-- Buyer Documents -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Buyer Documents</h6>
+       <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Buyer Documents</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('buyer_documents')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
-        <DealDocumentsReadonly :documents="deal.buyer_documents || []" />
+            <DealDocumentsReadonly :documents="buyerDocuments" />
       </div>
     </div>
 
     <!-- Property Details -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Property Details</h6>
+      <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Property Details</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('property_details')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Unit No</label>
               <p class="info-value mb-0">{{ val(deal.unit_no) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Property Type</label>
-              <p class="info-value mb-0">{{ val(deal.property_type) }}</p>
+              <p class="info-value mb-0">{{ val(deal.property_type?.name) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Bedrooms</label>
               <p class="info-value mb-0">{{ val(deal.bedrooms) }}</p>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Project Name</label>
               <p class="info-value mb-0">{{ projectDisplay }}</p>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Developer</label>
               <p class="info-value mb-0">{{ tagsDisplay(deal.developers) }}</p>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Area</label>
               <p class="info-value mb-0">{{ tagsDisplay(deal.areas) }}</p>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Sub Community</label>
               <p class="info-value mb-0">{{ tagsDisplay(deal.sub_communities) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Unit Size</label>
               <p class="info-value mb-0">{{ val(deal.unit_size) }}</p>
@@ -198,22 +224,27 @@
 
     <!-- Deal Financials -->
     <div class="col-12">
-      <h6 class="section-title mb-3">Deal Financials</h6>
+       <div class="section-head mb-3">
+        <h6 class="section-title mb-0">Deal Financials</h6>
+        <button type="button" class="section-edit-btn" @click="requestEdit('deal_financials')">
+          <iconify-icon icon="lucide:pencil" />
+        </button>
+      </div>
       <div class="view-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Agent Share %</label>
               <p class="info-value mb-0">{{ val(deal.agent_share) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Company Share %</label>
               <p class="info-value mb-0">{{ val(deal.company_share) }}</p>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Deal Total Commission %</label>
               <p class="info-value mb-0">{{ val(deal.deal_commission) }}</p>
@@ -223,34 +254,7 @@
       </div>
     </div>
 
-    <!-- Responsible Person / Assigned -->
-    <div class="col-12">
-      <h6 class="section-title mb-3">Responsible Person</h6>
-      <div class="view-card p-3 radius-12">
-        <div class="d-flex align-items-center justify-content-between">
-          <div>
-            <div class="info-group mb-1">
-              <label class="info-label">Name</label>
-              <p class="info-value mb-0">{{ val(deal.assignedBy) || val(deal.responsible_person_name) }}</p>
-            </div>
-            <div class="info-group mb-1">
-              <label class="info-label">Email</label>
-              <p class="info-value mb-0">{{ val(deal.responsible_person_email) }}</p>
-            </div>
-            <div class="info-group mb-0">
-              <label class="info-label">Position</label>
-              <p class="info-value mb-0">{{ val(deal.responsible_person_position) }}</p>
-            </div>
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <span class="department-badge">Department: {{ val(deal.department) || 'Sales' }}</span>
-            <div class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center overflow-hidden">
-              <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+     
   </template>
 </template>
 
@@ -261,7 +265,11 @@ import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
 const props = defineProps({
   deal: { type: Object, default: null }
 })
+const emit = defineEmits(['edit-section'])
 
+function requestEdit(sectionKey) {
+  emit('edit-section', sectionKey)
+}
 function val(v) {
   if (v === null || v === undefined || v === '') return '----'
   return v
@@ -271,7 +279,16 @@ function tagsDisplay(arr) {
   if (!Array.isArray(arr) || !arr.length) return '----'
   return arr.join(', ')
 }
+const buyer = computed(() => {
+  const parties = props.deal?.parties || []
+  return parties.find(p => p.party_type === 'buyer' && p.party_role === 'primary') || {}
+})
 
+const buyerAmountCurrency = computed(() => {
+  if (!buyer.value) return '----'
+  if (buyer.value.amount) return `${buyer.value.amount} AED`
+  return '----'
+})
 const projectDisplay = computed(() => {
   const d = props.deal
   if (!d) return '----'
@@ -288,26 +305,43 @@ const amountCurrency = computed(() => {
   if (amt != null && amt !== '') return `${amt} ${cur}`
   return '----'
 })
+const buyerDocuments = computed(() => {
+  const parties = props.deal?.parties || []
 
+  const buyer = parties.find(
+    p => p.party_type === 'buyer' && p.party_role === 'primary'
+  )
+
+  return buyer?.documents || []
+})
 const missingSummary = computed(() => {
   const d = props.deal || {}
+  const parties = d.parties || []
+
+  const buyer = parties.find(
+    p => p.party_type === 'buyer' && p.party_role === 'primary'
+  ) || {}
+
   const checks = [
-    ['deal_name', 'Deal Name'],
-    ['source', 'Source'],
-    ['unit_no', 'Unit No'],
-    ['property_type', 'Property Type'],
-    ['buyer_first_name', 'Buyer First Name'],
-    ['buyer_last_name', 'Buyer Last Name'],
-    ['buyer_phone', 'Buyer Phone'],
-    ['buyer_email', 'Buyer Email'],
+    [d.deal_name, 'Deal Name'],
+    [d.source, 'Source'],
+    [d.unit_no, 'Unit No'],
+    [d.property_type?.name, 'Property Type'],
+
+    // buyer fields
+    [buyer.first_name, 'Buyer First Name'],
+    [buyer.last_name, 'Buyer Last Name'],
+    [buyer.phone, 'Buyer Phone'],
+    [buyer.email, 'Buyer Email'],
   ]
 
   const labels = checks
-    .filter(([key]) => d[key] === null || d[key] === undefined || d[key] === '')
+    .filter(([value]) => value === null || value === undefined || value === '')
     .map(([, label]) => label)
 
   return { count: labels.length, labels }
 })
+
 </script>
 
 <style scoped>
@@ -325,4 +359,22 @@ h6.section-title {
 .info-value { font-size: 14px !important; font-weight: 500; color: #01062C; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .department-badge { font-size: 12px; color: #475569; }
 .avatar-sm { width: 40px; height: 40px; }
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-edit-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: #f8fafc;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 </style>

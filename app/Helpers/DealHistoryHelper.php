@@ -18,7 +18,7 @@ class DealHistoryHelper
            $deal=Deal::find($deal_id);
         LeadHistory::create([
             'deal_id' => $deal_id,
-            'lead_id'=>$deal?->lead_id,
+            'lead_id'=>$deal?->lead_id??null,
             'user_id' => $userId ?? auth()->id(),
             'changes' => $changes,
         ]);

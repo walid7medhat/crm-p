@@ -107,7 +107,7 @@ class DealController extends Controller
     /**
      * 3. تحديث صفقة
      */
-    public function update(Request $request, Deal $deal)
+    public function update(UpdateDealRequest $request, Deal $deal)
 {
     DB::beginTransaction();
 
@@ -178,7 +178,6 @@ class DealController extends Controller
         | Upload Documents
         |--------------------------------------------------------------------------
         */
-
       if ($request->hasFile('documents')) {
 
             foreach ($request->file('documents') as $index => $file) {

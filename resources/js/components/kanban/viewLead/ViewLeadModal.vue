@@ -708,22 +708,19 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .close-btn {
-    position: static;
-    top: auto;
-    left: auto;
-    transform: none;
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
-    min-height: 40px;
+   position: absolute;
+    top: 13px;
+    left: -11px;
+    transform: translate(-56%);
+    width: 50px;
+    height: 30px;
     border-radius: 999px;
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
-    color: #0f172a;
-    font-size: 18px;
+    background: #01062c;
+    color: #d9e7f5;
+    font-size: 20px;
     padding: 0;
     box-shadow: none;
-    z-index: 10;
+    z-index: -1;
 }
 
 .close-btn iconify-icon {

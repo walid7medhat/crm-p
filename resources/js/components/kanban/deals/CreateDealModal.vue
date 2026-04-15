@@ -52,23 +52,18 @@
             <button
               type="button"
               class="deal-stage-pill"
-              :class="{ active: selectedStageId === stage.id }"
+              :class="{ active: selectedStageIndex === index }"
+                :style="{
+                            backgroundColor: index <= selectedStageIndex ? stage.color : 'transparent',
+                            borderColor: index <= selectedStageIndex ? stage.color : '#E2E8F0',
+                            zIndex: currentStages.length - index,
+                        }"
               @click="selectedStageId = stage.id"
             >
-              <div class="stage-circle">
-                <div
-                  class="stage-dot"
-                  :style="{ backgroundColor: stage.color || '#3b82f6' }"
-                />
-              </div>
+            
               <span class="stage-text">{{ stage.name }}</span>
             </button>
-            <iconify-icon
-              v-if="index < currentStages.length - 1"
-              icon="lucide:chevron-right"
-              class="stage-arrow"
-              aria-hidden="true"
-            />
+       
           </template>
         </div>
       </div>
@@ -201,6 +196,11 @@ watch(() => props.dealType, (newVal) => {
   if (newVal && newVal !== dealType.value) {
     dealType.value = newVal
   }
+})
+const selectedStageIndex = computed(() => {
+  return currentStages.value.findIndex(
+    stage => stage.id === selectedStageId.value
+  )
 })
 
 // Watch for modal visibility
@@ -1090,73 +1090,66 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.deal-stage-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  min-height: 30px;
-  padding: 0 10px;
-  border-radius: 100px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
-  white-space: nowrap;
-  box-sizing: border-box;
-  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
-}
-
-.deal-stage-pill:hover {
-  border-color: #cbd5e1;
-}
-
-.deal-stage-pill .stage-circle {
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  border-radius: 50%;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+.deal-progress-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  min-height: 30px;
+}
+.deal-stage-pill {
+    display: flex;
+    align-items: center;
+    min-width: 140px;
+    max-width: 170px;
+    padding: 2px 10px;
+    /*border-radius: 30px;*/
+    cursor: pointer;
+    transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+    position: relative;
+    overflow: hidden;
+    /*border: 1px solid transparent;*/
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.55);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 0 100%);
+    height: 25px;
 }
 
-.deal-stage-pill.active .stage-circle {
-  background: rgba(255, 255, 255, 0.24);
-  border-color: rgba(255, 255, 255, 0.65);
+.deal-stage-pill:not(.active) {
+    color: #544e4e;
 }
 
-.deal-stage-pill .stage-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-
-.deal-stage-pill.active {
-  border-color: #299de9;
-  background: linear-gradient(90deg, #2ea7ef 0%, #2d92dc 100%);
-  box-shadow: 0 2px 6px rgba(41, 157, 233, 0.32);
-}
-
-.deal-stage-pill .stage-text {
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 500;
+.stage-text {
+    font-family: Montserrat;
+    font-weight: 400;
+    font-size: 13px;
+    color: #544e4e;
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .deal-stage-pill.active .stage-text {
-  color: #fff !important;
-  font-weight: 600;
+    color: #01062C;
+    font-weight: 400;
 }
 
-.stage-arrow {
-  font-size: 14px;
-  color: #CBD5E1;
-  flex-shrink: 0;
-}
+@media (max-width: 768px) {
+ .deal-stage-pill {
+        min-width: 104px;
+        max-width: 138px;
+        padding: 1px 8px;
+    }
 
+    .stage-text {
+        font-size: 11px;
+        font-weight: 500;
+    }
+}
 .form-scroll-area {
   flex: 1;
   min-height: 0;

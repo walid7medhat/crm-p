@@ -638,6 +638,7 @@ const handleCancelFileModal = () => {
     align-items: center;
     cursor: pointer;
     transition: background 0.2s;
+    text-align: center;
 }
 
 .btn-save:hover {
