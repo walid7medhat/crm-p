@@ -105,7 +105,7 @@
                 <iconify-icon icon="lucide:x" width="18" height="18" />
               </button>
               <div class="history-search-modal-body">
-                <HistorySearchForm
+                <DealHistorySearchModal
                   :initial-search="searchFilters.search"
                   :initial-action="searchFilters.action"
                   :initial-user="searchFilters.user"
@@ -259,7 +259,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, getCurrentInstance, nextTick } from 'vue'
 import api from '@/plugins/axios'
-import HistorySearchForm from '../viewLead/HistorySearchModal.vue'
+import DealHistorySearchModal from './DealHistorySearchModal.vue'
 
 const instance = getCurrentInstance()
 const $showNotification = (message, type = 'info') => {

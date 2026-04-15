@@ -204,6 +204,17 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/grouped-by-stage', [DealController::class, 'getDealsGroupedByStage']);
         Route::get('/{id}/history', [DealController::class, 'history']);
         Route::get('/{id}/history/view', [DealController::class, 'view_history']);
+        Route::get('/{dealId}/activities', [DealActivityController::class, 'getDealActivities']);
+        Route::post('/activities', [DealActivityController::class, 'storeActivity']);
+        Route::put('/activities/{id}', [DealActivityController::class, 'updateActivity']);
+        Route::patch('/activities/{id}/toggle-completion', [DealActivityController::class, 'toggleActivityCompletion']);
+        Route::delete('/activities/{id}', [DealActivityController::class, 'destroyActivity']);
+        Route::get('/{dealId}/comments', [DealActivityController::class, 'getDealComments']);
+        Route::post('/comments', [DealActivityController::class, 'storeComment']);
+        Route::put('/comments/{id}', [DealActivityController::class, 'updateComment']);
+        Route::delete('/comments/{id}', [DealActivityController::class, 'destroyComment']);
+        Route::post('/comments/{commentId}/attachments', [DealActivityController::class, 'addCommentAttachments']);
+        Route::delete('/comments/{commentId}/attachments/{attachmentId}', [DealActivityController::class, 'destroyCommentAttachment']);
         Route::get('/{deal}', [DealController::class, 'show']);
         Route::put('/{deal}', [DealController::class, 'update']);
         Route::post('/store/new', [LeadConversionController::class, 'store']);

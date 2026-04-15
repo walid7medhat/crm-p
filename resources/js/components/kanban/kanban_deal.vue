@@ -124,7 +124,16 @@
                             />
                         </div>
                         <div v-if="showSearchModal" class="lead-search-dropdown-outer">
+                            <DealSearchModal
+                                v-if="activeTab === 'deals'"
+                                v-model="showSearchModal"
+                                :as-dropdown="true"
+                                :current-query="lastQuery"
+                                :deal-type="currentDealType"
+                                @search="onDealSearch"
+                            />
                             <LeadSearchModal
+                                v-else
                                 v-model="showSearchModal"
                                 :as-dropdown="true"
                                 :initial-active-pill="activeFilter?.id"
@@ -181,6 +190,7 @@ import Deals from './deals/Deals.vue'
 import Leads from './leadList/leads.vue'
 import Integration from './integration/Integration.vue'
 import LeadSearchModal from './leadList/LeadSearchModal.vue'
+import DealSearchModal from './deals/DealSearchModal.vue'
 import CreateLeadModal from './createLead/CreateLeadModal.vue'
 import CreateDealModal from './deals/CreateDealModal.vue'
 import CreateIntegrationModal from './integration/CreateIntegrationModal.vue'
@@ -190,6 +200,7 @@ import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem, BModal, BButton } fr
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import SettingsHub from './settings/SettingsHub.vue'
+import { useRoute } from 'vue-router'
 const activeTab = ref('leads')
 const showSearchModal = ref(false)
 const showSelectedFiltersModal = ref(false)
@@ -208,6 +219,13 @@ const search = ref(null)
 const searchDebounceTimer = ref(null)
 const SEARCH_DEBOUNCE_MS = 400
 const kanbanIsMobile = ref(false)
+const route = useRoute()
+
+const syncActiveTabWithRoute = () => {
+    if (route.path === '/kanban_deal') {
+        activeTab.value = 'deals'
+    }
+}
 
 function updateKanbanMobileBreakpoint() {
     kanbanIsMobile.value = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
@@ -347,6 +365,7 @@ function onDocumentClick(e) {
 }
 
 onMounted(() => {
+    syncActiveTabWithRoute()
     updateKanbanMobileBreakpoint()
     window.addEventListener('resize', updateKanbanMobileBreakpoint)
     setTimeout(() => {
@@ -354,6 +373,13 @@ onMounted(() => {
     }, 1000)
     document.addEventListener('click', onDocumentClick)
 })
+
+watch(
+    () => route.path,
+    () => {
+        syncActiveTabWithRoute()
+    },
+)
 
 onUnmounted(() => {
     window.removeEventListener('resize', updateKanbanMobileBreakpoint)
@@ -394,7 +420,6 @@ const initializeStageUpdates = () => {
     }
 }
 const openSearchModal = () => {
-    if (activeTab.value !== 'leads') return
     showSearchModal.value = true
     searchInputFocused.value = true
     // Focus on input after modal opens
@@ -570,6 +595,32 @@ const onLeadSearch = (payload) => {
     }
 }
 
+const onDealSearch = (payload) => {
+    if (payload === null || payload?.query === null) {
+        activeFilter.value = null
+        activeFilters.value = []
+        lastQuery.value = null
+        if (dealsRef.value) {
+            const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+            if (dealsComponent && typeof dealsComponent.fetchDeals === 'function') {
+                dealsComponent.fetchDeals(true, null)
+            }
+        }
+        return
+    }
+
+    const query = payload?.query !== undefined ? payload.query : payload
+    activeFilters.value = Array.isArray(payload?.activeFilters) ? payload.activeFilters : []
+    lastQuery.value = query && Object.keys(query).length ? { ...query } : null
+
+    if (dealsRef.value) {
+        const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+        if (dealsComponent && typeof dealsComponent.fetchDeals === 'function') {
+            dealsComponent.fetchDeals(true, query || null)
+        }
+    }
+}
+
 const visibleFilterPills = computed(() => {
     const list = activeFilters.value || []
     return list.slice(0, 2)
@@ -594,6 +645,15 @@ const removeFilter = (f) => {
         search.value = ''
     }
 
+    if (activeTab.value === 'deals') {
+        if (dealsRef.value) {
+            const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+            if (dealsComponent && typeof dealsComponent.fetchDeals === 'function') {
+                dealsComponent.fetchDeals(true, Object.keys(nextQuery).length ? nextQuery : null)
+            }
+        }
+        return
+    }
     if (leadsRef.value) {
         const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
@@ -620,6 +680,15 @@ const clearMoreFilters = () => {
         activeFilters.value = []
         lastQuery.value = null
         search.value = ''
+    }
+    if (activeTab.value === 'deals') {
+        if (dealsRef.value) {
+            const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+            if (dealsComponent && typeof dealsComponent.fetchDeals === 'function') {
+                dealsComponent.fetchDeals(true, Object.keys(nextQuery).length ? nextQuery : null)
+            }
+        }
+        return
     }
     if (leadsRef.value) {
         const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
@@ -654,7 +723,7 @@ function onSearchFocus() {
         searchBlurTimeout = null
     }
     searchInputFocused.value = true
-    showSearchModal.value = activeTab.value === 'leads'
+    showSearchModal.value = true
 }
 function onSearchBlur() {
     searchBlurTimeout = setTimeout(() => {

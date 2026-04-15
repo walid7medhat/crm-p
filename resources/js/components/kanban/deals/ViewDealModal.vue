@@ -189,33 +189,28 @@
                   </button>
                 </div>
 
-                <ActivitySection
+                <DealActivitySection
                   v-if="activeViewTab === 'activity'"
-                  :lead-id="dealLeadId"
+                  :deal-id="dealEntityId"
                   @activity-created="handleActivityCreated"
                 />
 
-                <CommentsSection
+                <DealCommentsSection
                   v-if="activeViewTab === 'comments'"
-                  :lead-id="dealLeadId"
+                  :deal-id="dealEntityId"
                   @comment-created="handleCommentCreated"
                 />
               </div>
 
-              <ActivityList
+              <DealActivityList
                 v-if="activeViewTab === 'activity'"
                 ref="activityListRef"
-                :lead-id="dealLeadId"
+                :deal-id="dealEntityId"
               />
-              <CommentList
+              <DealCommentList
                 v-if="activeViewTab === 'comments'"
                 ref="commentListRef"
-                :lead-id="dealLeadId"
-              />
-              <LeadActivityTimeline
-                v-if="activeViewTab === 'activity' && dealLeadId"
-                :key="`timeline-deal-${deal?.id}-${dealLeadId}`"
-                :lead-id="dealLeadId"
+                :deal-id="dealEntityId"
               />
               <DealCreatedCard v-if="deal?.id" :deal="deal" />
             </div>
@@ -243,11 +238,10 @@ import ViewRentalDeal from './ViewRentalDeal.vue'
 import DealForm from './DealForm.vue'
 import DealCreatedCard from './DealCreatedCard.vue'
 import DealHistoryPanel from './DealHistoryPanel.vue'
-import ActivitySection from '../viewLead/ActivitySection.vue'
-import CommentsSection from '../viewLead/CommentsSection.vue'
-import ActivityList from '../viewLead/ActivityList.vue'
-import CommentList from '../viewLead/CommentList.vue'
-import LeadActivityTimeline from '../viewLead/LeadActivityTimeline.vue'
+import DealActivitySection from './DealActivitySection.vue'
+import DealCommentsSection from './DealCommentsSection.vue'
+import DealActivityList from './DealActivityList.vue'
+import DealCommentList from './DealCommentList.vue'
 import axios from '@/plugins/axios'
 import { useStageTransition } from '@/composables/useStageTransition'
 
@@ -256,7 +250,7 @@ const props = defineProps({
   deal: { type: Object, default: null }
 })
 
-const emit = defineEmits(['update:modelValue', 'deal-updated'])
+const emit = defineEmits(['update:modelValue', 'deal-updated', 'stage-change-request'])
 
 const show = ref(props.modelValue)
 const dealType = ref('primary')
@@ -286,7 +280,7 @@ const dealTitle = computed(() => {
   return props.deal.id ? `Deal #${props.deal.id}` : 'View Deal'
 })
 
-const dealLeadId = computed(() => props.deal?.lead_id ?? null)
+const dealEntityId = computed(() => props.deal?.id ?? null)
 
 const selectedDealTypeName = computed(() => {
   const tab = dealTypeTabs.find(t => t.id === dealType.value)
@@ -357,7 +351,23 @@ const currentStageIndex = computed(() => {
 })
 
 function selectStage(index) {
+  if (!props.deal) return
+  const targetStage = currentStages.value[index]
+  const currentStage = currentStages.value[selectedStageIndex.value]
+  if (!targetStage) return
+
+  const originalStageId = props.deal.stage_id ?? props.deal.stage?.id ?? props.deal.stageId ?? currentStage?.id
+  const targetStageId = targetStage.id
+  if (String(originalStageId) === String(targetStageId)) return
+
   selectedStageIndex.value = index
+  emit('stage-change-request', {
+    dealId: props.deal.id,
+    originalStageId,
+    targetStageId,
+    targetStageName: targetStage.name,
+    dealData: props.deal,
+  })
 }
 
 // --- Edit deal ---
@@ -530,7 +540,21 @@ async function saveEditDeal() {
       documents: [],
       stageId
     })
-    const updated = res?.data?.data ?? res?.data
+    const updated = res?.data?.data ?? res?.data ?? {}
+    const selectedResponsibleId = editFormData.value?.responsible_person_id ?? null
+    const selectedResponsible = editLookup.value?.users?.find(
+      (u) => String(u.id) === String(selectedResponsibleId),
+    )
+    if (selectedResponsibleId) {
+      updated.responsible_person_id = selectedResponsibleId
+      if (selectedResponsible) {
+        updated.responsible_person = {
+          id: selectedResponsible.id,
+          name: selectedResponsible.name,
+          avatar: selectedResponsible.avatar || selectedResponsible.profile_image || null,
+        }
+      }
+    }
     emit('deal-updated', updated)
     isEditingDeal.value = false
   } catch (err) {
@@ -579,12 +603,12 @@ function close() {
 #view-deal-modal .modal-content {
   max-height: 92vh !important;
   border-radius: 12px !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   border: 1px solid #e5e7eb !important;
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08) !important;
 }
 #view-deal-modal .modal-body {
-  overflow: hidden !important;
+  overflow: visible !important;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -601,12 +625,12 @@ function close() {
 :deep(#view-deal-modal .modal-content) {
   max-height: 92vh !important;
   border-radius: 12px !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   border: 1px solid #e5e7eb !important;
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08) !important;
 }
 :deep(.view-deal-modal-outer .modal-body) {
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 
 .view-deal-modal-content {
@@ -615,7 +639,7 @@ function close() {
   flex-direction: column;
   min-height: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
   max-width: 100%;
 }
 
@@ -706,6 +730,7 @@ function close() {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 4px;
+  z-index: 2000 !important;
 }
 
 :deep(.deal-type-dropdown-item) {

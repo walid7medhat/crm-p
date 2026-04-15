@@ -67,6 +67,7 @@ class DealResource extends JsonResource
                 'id' => $this->developer->id,
                 'name' => $this->developer->name,
             ]),
+            'responsible_person_id' => $this->responsible_person_id,
             
             'responsible_person' => $this->whenLoaded('responsiblePerson', fn() => [
                 'id' => $this->responsiblePerson->id,

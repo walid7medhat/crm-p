@@ -311,4 +311,52 @@ onBeforeUnmount(() => {
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .modal-actions button { border-radius: 18px; height: 34px; border: 1px solid #ebeef3; padding: 0 14px; font-size: 12px; }
 .modal-actions .apply { background: #020b38; color: #fff; border-color: #020b38; }
+
+@media (max-width: 768px) {
+  .lead-reports-page {
+    padding: 8px;
+  }
+
+  .lead-reports-shell {
+    border-radius: 10px;
+  }
+
+  .stage-back {
+    padding: 0 10px;
+  }
+
+  .stage-head {
+    margin: 0 10px 10px;
+    padding: 12px;
+  }
+
+  .stage-head .stage-value {
+    font-size: 30px;
+  }
+
+  .stage-head h3 {
+    font-size: 17px;
+  }
+
+  .deal-placeholder {
+    margin: 10px;
+    padding: 16px;
+  }
+
+  .advanced-modal {
+    width: calc(100vw - 22px);
+    max-width: 100%;
+    border-radius: 10px;
+    padding: 10px;
+  }
+
+  .modal-actions {
+    justify-content: stretch;
+  }
+
+  .modal-actions button {
+    flex: 1;
+    height: 38px;
+  }
+}
 </style>

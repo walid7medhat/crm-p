@@ -11,7 +11,7 @@
 <script>
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import { Icon } from "@iconify/vue"; 
-import KanbanData from "@/components/kanban/Kanban_deal.vue"
+import KanbanData from "@/components/kanban/kanban_deal.vue"
 
 export default {
   name: "Kanban",

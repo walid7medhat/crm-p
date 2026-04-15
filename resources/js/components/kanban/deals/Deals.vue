@@ -190,7 +190,12 @@
     </div>
 
     <!-- Modals -->
-    <ViewDealModal v-model="showViewDealModal" :deal="selectedDeal" @deal-updated="handleDealUpdatedFromModal" />
+    <ViewDealModal
+      v-model="showViewDealModal"
+      :deal="selectedDeal"
+      @deal-updated="handleDealUpdatedFromModal"
+      @stage-change-request="handleStageChangeFromModal"
+    />
     
     <CompleteStageFieldsModal
       :show="showCompleteFieldsModal"
@@ -535,6 +540,9 @@ const columns = computed({
 
 // Switch between tabs
 async function switchTab(tabId) {
+  showCompleteFieldsModal.value = false
+  pendingCompleteFields.value = null
+  pendingStageChange.value = null
   activeTypeTab.value = tabId
   emit('deal-type-change', tabId)
   await fetchDeals(true)
@@ -956,6 +964,14 @@ async function saveStage() {
 // في DealsKanban.vue - تعديل دالة onDealDragChange
 
 async function onDealDragChange(evt, targetColumn) {
+  if (showCompleteFieldsModal.value || pendingStageChange.value) {
+    const draggedDeal = evt?.added?.element || evt?.directResult
+    if (draggedDeal?.stage_id && targetColumn) {
+      revertDealDrag(draggedDeal, targetColumn, draggedDeal.stage_id)
+    }
+    return
+  }
+
   const added = evt.added || (evt.directResult && { element: evt.directResult })
   if (!added || !added.element) return
 
@@ -977,6 +993,21 @@ async function onDealDragChange(evt, targetColumn) {
 
     // لو مفيش حقول مفقودة، ننقل الديل على طول
     if (valid || missingFields.length === 0) {
+      const reasonRequired = Boolean(
+        targetColumn?.reason_required || targetColumn?.requires_reason || targetColumn?.require_reason,
+      )
+      if (reasonRequired) {
+        revertDealDrag(deal, targetColumn, oldStageId)
+        pendingStageChange.value = {
+          dealId: deal.id,
+          targetStageId: newStageId,
+          targetStageName: targetColumn.title,
+          originalStageId: oldStageId,
+          originalStageName: columns.value.find((c) => c.stage_id === oldStageId)?.title || 'Previous Stage',
+          dealData: { ...deal },
+        }
+        return
+      }
       // نقل الديل مباشرة
       await moveDealDirectly(deal, newStageId, targetColumn, oldStageId)
       return
@@ -1067,6 +1098,19 @@ async function moveDealWithStageChange(deal, newStageId) {
 }
 
 function clearPendingStageChange() {
+  const pending = pendingStageChange.value
+  if (pending?.dealData && pending?.originalStageId && pending?.targetStageId) {
+    const sourceColumn = columns.value.find(c => c.stage_id === pending.originalStageId)
+    const targetColumn = columns.value.find(c => c.stage_id === pending.targetStageId)
+    if (sourceColumn && targetColumn) {
+      targetColumn.deals = targetColumn.deals.filter(d => d.id !== pending.dealData.id)
+      targetColumn.deals_count = targetColumn.deals.length
+      if (!sourceColumn.deals.find(d => d.id === pending.dealData.id)) {
+        sourceColumn.deals.push({ ...pending.dealData, stage_id: pending.originalStageId })
+        sourceColumn.deals_count = sourceColumn.deals.length
+      }
+    }
+  }
   pendingStageChange.value = null
 }
 
@@ -1154,15 +1198,110 @@ async function handleCompleteFieldsSave({ payload, documents, stage_id }) {
 
 async function handleStageChangeWithReason({ dealId, targetStageId, reason }) {
   try {
-    const deal = pendingStageChange.value?.dealData
+    const pending = pendingStageChange.value
+    const deal = pending?.dealData
     if (!deal) return
 
     await changeStage({ dealId, stageId: targetStageId, reason })
+    moveDealBetweenColumns(deal, pending.originalStageId, targetStageId)
     
     showNotification('Deal moved successfully', 'success')
+    pendingStageChange.value = null
   } catch (error) {
     showNotification(error.response?.data?.message || 'Failed to move deal', 'error')
     throw error
+  }
+}
+
+function moveDealBetweenColumns(deal, fromStageId, toStageId) {
+  const fromColumn = columns.value.find(c => c.stage_id === fromStageId)
+  const toColumn = columns.value.find(c => c.stage_id === toStageId)
+  if (!toColumn) return
+
+  if (fromColumn) {
+    fromColumn.deals = fromColumn.deals.filter(d => d.id !== deal.id)
+    fromColumn.deals_count = fromColumn.deals.length
+  }
+
+  const movedDeal = { ...deal, stage_id: toStageId }
+  if (!toColumn.deals.find(d => d.id === deal.id)) {
+    toColumn.deals.push(movedDeal)
+    toColumn.deals_count = toColumn.deals.length
+  }
+}
+
+function normalizeStageName(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+}
+
+async function handleStageChangeFromModal({ dealId, originalStageId, targetStageId, targetStageName, dealData }) {
+  if (!dealId || targetStageId == null) return
+  if (String(originalStageId) === String(targetStageId)) return
+
+  const targetColumn =
+    columns.value.find((c) => String(c.stage_id) === String(targetStageId)) ||
+    columns.value.find((c) => normalizeStageName(c.title) === normalizeStageName(targetStageName))
+
+  if (!targetColumn) {
+    showNotification('Target stage was not found in Kanban columns', 'error')
+    return
+  }
+
+  try {
+    const normalized = await checkStageRequirements({
+      dealId,
+      targetStageId: targetColumn.stage_id,
+      dealType: activeTypeTab.value,
+    })
+
+    const valid = normalized.valid
+    const missingFields = normalized.missingFields || []
+
+    if (valid || missingFields.length === 0) {
+      const reasonRequired = Boolean(
+        targetColumn?.reason_required || targetColumn?.requires_reason || targetColumn?.require_reason,
+      )
+
+      if (reasonRequired) {
+        pendingStageChange.value = {
+          dealId,
+          targetStageId: targetColumn.stage_id,
+          targetStageName: targetColumn.title,
+          originalStageId,
+          originalStageName: columns.value.find((c) => String(c.stage_id) === String(originalStageId))?.title || 'Previous Stage',
+          dealData: { ...(dealData || selectedDeal.value || {}) },
+        }
+        return
+      }
+
+      await changeStage({ dealId, stageId: targetColumn.stage_id })
+      moveDealBetweenColumns(dealData || selectedDeal.value || { id: dealId }, originalStageId, targetColumn.stage_id)
+      selectedDeal.value = {
+        ...(selectedDeal.value || {}),
+        stage_id: targetColumn.stage_id,
+        stageId: targetColumn.stage_id,
+        stageTitle: targetColumn.title,
+      }
+      showNotification('Deal moved successfully', 'success')
+      return
+    }
+
+    pendingCompleteFields.value = {
+      dealId,
+      targetStageId: targetColumn.stage_id,
+      targetStageName: targetColumn.title,
+      originalStageId,
+      dealData: { ...(dealData || selectedDeal.value || {}) },
+      missingFields,
+      missingFieldsGrouped: normalized.missingFieldsGrouped,
+      missingFieldsGroupedByStage: normalized.missingFieldsGroupedByStage,
+      groupedMissing: normalized.groupedMissing,
+      canProceedWithoutFields: valid,
+    }
+    showCompleteFieldsModal.value = true
+  } catch (err) {
+    console.error('Modal stage validation error', err)
+    showNotification(err.response?.data?.message || 'Failed to validate stage change', 'error')
   }
 }
 
