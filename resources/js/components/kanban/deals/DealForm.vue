@@ -1,12 +1,12 @@
 <template>
-  <div class="deal-form-container deal-figma-ui">
+  <div class="deal-form-container deal-figma-ui" :class="{ 'inline-mode': inlineMode }">
     <div v-if="missingFieldLabels.length" class="alert alert-warning py-2 mb-3">
       <div class="small fw-semibold mb-1">Missing fields for selected stage</div>
       <div class="small">{{ missingFieldLabels.join(' • ') }}</div>
     </div>
 
     <!-- Source and Deal Name (Common for all) -->
-    <section class="form-section">
+    <section v-if="isSectionVisible('deal_information')" class="form-section">
       <h6 class="section-title mb-3">About Deal</h6>
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
@@ -42,7 +42,7 @@
     </section>
 
     <!-- Buyer Section (for Primary & Secondary) -->
-    <section v-if="dealType === 'primary' || dealType === 'secondary'" class="form-section">
+    <section v-if="(dealType === 'primary' || dealType === 'secondary') && isSectionVisible('buyer_details')" class="form-section">
       <h6 class="section-title mb-3">Buyer Details</h6>
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
@@ -221,7 +221,7 @@
     </section>
 
     <!-- Seller Section (for Secondary only) -->
-    <section v-if="dealType === 'secondary'" class="form-section">
+    <section v-if="dealType === 'secondary' && isSectionVisible('seller_details')" class="form-section">
       <h6 class="section-title mb-3">Seller Details</h6>
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
@@ -374,7 +374,7 @@
     </section>
 
     <!-- Tenant Section (for Rental) -->
-    <section v-if="dealType === 'rental'" class="form-section">
+    <section v-if="dealType === 'rental' && isSectionVisible('tenant_details')" class="form-section">
       <h6 class="section-title mb-3">Tenant Details</h6>
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
@@ -522,7 +522,7 @@
     </section>
 
     <!-- Landlord Section (for Rental) -->
-    <section v-if="dealType === 'rental'" class="form-section">
+    <section v-if="dealType === 'rental' && isSectionVisible('landlord_details')" class="form-section">
       <h6 class="section-title mb-3">Landlord Details</h6>
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
@@ -675,7 +675,7 @@
     </section>
 
     <!-- Property Details (Common for all) -->
-    <section class="form-section">
+    <section v-if="isSectionVisible('property_details')" class="form-section">
       <h6 class="section-title mb-3">Property Details</h6>
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
@@ -816,7 +816,7 @@
     </section>
 
     <!-- Deal Financials (Common for all) -->
-    <section class="form-section">
+    <section v-if="isSectionVisible('deal_financials')" class="form-section">
       <h6 class="section-title mb-3">Deal Financials</h6>
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
@@ -863,7 +863,7 @@
     </section>
 
     <!-- Responsible Person -->
-    <div class="col-12">
+    <div v-if="!inlineMode" class="col-12">
       <ResponsiblePersonSelector 
         v-model="form.responsible_person_id" 
         :users="users" 
@@ -900,6 +900,9 @@ const props = defineProps({
     fieldErrors: { type: Object, default: () => ({}) },
       selectedStageId: { type: [Number, String], default: null },
   missingFields: { type: Array, default: () => [] }
+  ,
+  activeEditSection: { type: String, default: null },
+  inlineMode: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update:modelValue', 'search-areas', 'search-subcommunities'])
@@ -922,6 +925,22 @@ const missingFieldLabels = computed(() => {
   if (!Array.isArray(props.missingFields) || !props.missingFields.length) return []
   return props.missingFields.map((k) => String(k).replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
 })
+
+const sectionAliases = {
+  deal_information: ['deal_information', 'source_deal_name', 'client_details'],
+  buyer_details: ['buyer_details', 'buyer_documents'],
+  seller_details: ['seller_details', 'seller_documents'],
+  tenant_details: ['tenant_details', 'tenant_documents'],
+  landlord_details: ['landlord_details', 'landlord_documents'],
+  property_details: ['property_details', 'property_documents'],
+  deal_financials: ['deal_financials'],
+}
+
+function isSectionVisible(sectionName) {
+  const active = props.activeEditSection
+  if (!active) return true
+  return (sectionAliases[sectionName] || [sectionName]).includes(active)
+}
 
 // Document type options based on requirements
 const primaryBuyerDocTypes = [
@@ -1319,7 +1338,7 @@ watch(
 .radius-12 { border-radius: 8px; }
 .form-label-custom { font-size: 12px !important; font-weight: 500; color: var(--deal-text-muted, #64748b); margin-bottom: 4px; display: block; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .custom-input { height: 42px !important; min-height: 42px; border-radius: 8px !important; border: 1px solid #e5e7eb !important; font-size: 13px !important; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
-.custom-input::placeholder { font-size: 12px; color: #9ca3af; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.custom-input::placeholder { font-size: 11px !important; color: #9ca3af; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .custom-input.is-invalid { border-color: #dc3545 !important; }
 .input-group-custom { display: flex; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
 .input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 8px 0 0 8px !important; }
@@ -1327,11 +1346,13 @@ watch(
 :deep(.custom-v-select .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 13px; padding: 2px 8px; }
 :deep(.custom-v-select.is-invalid .vs__dropdown-toggle) { border-color: #dc3545 !important; }
 :deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 13px; }
-:deep(.custom-v-select .vs__search::placeholder) { font-size: 12px; color: #9ca3af; }
+:deep(.custom-v-select .vs__search::placeholder) { font-size: 11px !important; color: #9ca3af; }
+:deep(.custom-v-select .vs__placeholder) { font-size: 11px !important; color: #9ca3af; }
 :deep(.custom-v-select-inline) { min-width: 120px; }
 :deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border: none; border-left: 1px solid #e5e7eb; border-radius: 0 8px 8px 0; font-size: 11px; }
 :deep(.custom-v-select-inline .vs__selected) { font-size: 11px; font-weight: 500; color: #64748b; }
-:deep(.custom-v-select-inline .vs__search::placeholder) { font-size: 11px; color: #9ca3af; }
+:deep(.custom-v-select-inline .vs__search::placeholder) { font-size: 10px !important; color: #9ca3af; }
+:deep(.custom-v-select-inline .vs__placeholder) { font-size: 10px !important; color: #9ca3af; }
 .doc-tabs { gap: 8px; }
 .doc-tab { height: 32px; min-height: 32px; padding: 0 14px; border-radius: 100px; border: 1px solid #E2E8F0; background: #fff; font-size: 12px; font-weight: 500; color: #64748B; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .doc-tab.active { background: #0F172A; color: #fff; border-color: #0F172A; }
@@ -1344,4 +1365,30 @@ watch(
 .add-custom-field-link { font-size: 14px; color: var(--deal-navy, #0f172a); font-weight: 500; text-decoration: underline; }
 .form-section { margin-top: 14px; }
 .form-section:first-of-type { margin-top: 0; }
+
+/* Inline per-section edit mode */
+.inline-mode .section-title {
+  display: none !important;
+}
+.inline-mode .form-card {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+.inline-mode .form-section {
+  margin-top: 0 !important;
+}
+.inline-mode :deep(.row.g-3) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px !important;
+}
+.inline-mode :deep(.row.g-3 > [class*='col-']) {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
 </style>

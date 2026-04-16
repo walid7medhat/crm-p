@@ -8,7 +8,7 @@
           </button>
         </div>
 
-        <div class="d-flex gap-2 mb-4">
+        <div class="d-flex gap-2 mb-3">
           <button
             v-for="tab in tabs"
             :key="tab.id"
@@ -70,7 +70,14 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'apply'])
 
-const localTabs = computed(() => (props.tabs.length ? props.tabs : [{ id: 'activity', label: 'Activity' }]))
+const localTabs = computed(() =>
+  props.tabs.length
+    ? props.tabs
+    : [
+        { id: 'deals', label: 'Deals' },
+        { id: 'activity', label: 'Activity' },
+      ],
+)
 const localSections = computed(() => props.sections || [])
 const activeTab = ref(localTabs.value[0]?.id || 'activity')
 const draft = reactive({ ...(props.defaults || {}) })
@@ -87,8 +94,10 @@ watch(
 
 const visibleSections = computed(() => {
   if (!localSections.value.length) return []
-  // Match provided design where all groups are visible in one view.
-  return localSections.value
+  return localSections.value.filter((section) => {
+    if (!section.tab) return activeTab.value === 'deals'
+    return section.tab === activeTab.value
+  })
 })
 
 const isSectionChecked = (section) => section.fields.every((f) => !!draft[f.id])
@@ -128,8 +137,8 @@ const apply = () => {
   overflow: auto;
   background: #fff;
   border: 1px solid #e5eaf0;
-  border-radius: 12px;
-  padding: 22px 22px 18px;
+  border-radius: 14px;
+  padding: 18px 18px 14px;
   font-family: var(--deal-font, 'Montserrat', sans-serif);
 }
 .modal-body-content,
@@ -138,14 +147,14 @@ const apply = () => {
   font-weight: 500;
   font-size: 14px;
 }
-.modal-title-custom { font-size: 14px !important; font-weight: 500 !important; color: #01062c; }
+.modal-title-custom { font-size: 14px !important; font-weight: 600 !important; color: #01062c; }
 .close-btn-custom { background: transparent; border: none; color: #000; padding: 0; display: flex; align-items: center; justify-content: center; }
 .border-bottom-light { border-bottom: 1px solid #f1f5f9 !important; }
 .tab-btn {
   border: 1px solid #e2e8f0;
   background: #fff;
   border-radius: 100px;
-  padding: 3px 15px;
+  padding: 6px 16px;
   font-size: 13px;
   font-weight: 400;
   color: #666;
@@ -166,16 +175,23 @@ const apply = () => {
   justify-content: center;
   border: 1.5px solid #fff;
 }
-.settings-subsections { display: flex; flex-direction: column; gap: 14px; }
+.settings-subsections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 62vh;
+  overflow: auto;
+  padding-right: 2px;
+}
 .settings-subsection {
-  border: 1px solid #f1f5f9;
+  border: 1px solid #eef2f7;
   border-radius: 12px;
   padding: 12px 14px;
   background: #fff;
 }
-.settings-subsection-head { border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 10px; }
-.settings-subsection-title { font-size: 12px; color: #01062c; font-weight: 600; }
-.fields-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 24px; }
+.settings-subsection-head { border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 10px; }
+.settings-subsection-title { font-size: 13px; color: #01062c; font-weight: 600; }
+.fields-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 22px; }
 .field-checkbox { font-size: 13px !important; font-weight: 400 !important; color: #666 !important; }
 
 ::deep(.form-check-input::before) { display: none !important; }
@@ -199,7 +215,7 @@ const apply = () => {
 .btn-cancel {
   background: #f4f4f4;
   border: none;
-  padding: 10px 25px;
+  padding: 9px 28px;
   border-radius: 100px;
   font-size: 14px;
   color: #01062c;
@@ -207,7 +223,7 @@ const apply = () => {
 .btn-apply {
   background: #000;
   border: none;
-  padding: 10px 25px;
+  padding: 9px 28px;
   border-radius: 100px;
   font-size: 14px;
   color: #fff;
@@ -215,6 +231,7 @@ const apply = () => {
 .text-muted { color: #979797 !important; font-size: 13px; font-weight: 400; }
 @media (max-width: 768px) {
   .fields-grid { grid-template-columns: 1fr; }
-  .tab-btn, .field-checkbox, .settings-subsection-title { font-size: 13px; }
+  .tab-btn, .field-checkbox, .settings-subsection-title { font-size: 13px !important; }
+  .modal-title-custom { font-size: 18px !important; }
 }
 </style>

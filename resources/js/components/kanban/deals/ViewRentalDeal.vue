@@ -26,14 +26,32 @@
     <!-- Deal Information (from card) -->
     <div class="col-12" v-if="deal.createdBy || deal.source || deal.project">
       
-      <div class="view-card p-3 radius-12">
+      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'deal_information' }">
         <div class="section-head mb-3">
           <h6 class="section-title mb-0">Deal Information</h6>
           <button type="button" class="section-edit-btn" @click="requestEdit('deal_information')">
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <div class="row g-3">
+        <InlineSectionEditor
+          v-if="isEditingSection('deal_information', 'source_deal_name', 'client_details')"
+          :model-value="inlineEditData"
+          section-key="deal_information"
+          deal-type="rental"
+          :lookup="inlineEditLookup"
+          :selected-stage-id="selectedStageId"
+          :show-errors="inlineEditShowErrors"
+          :field-errors="inlineEditFieldErrors"
+          :saving="inlineEditSaving"
+          :loading="inlineEditLoading"
+          @update:model-value="(v) => emit('update:inline-edit-data', v)"
+          @save="emit('inline-edit-save')"
+          @cancel="emit('inline-edit-cancel')"
+          @search-areas="(v) => emit('search-areas', v)"
+          @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
+        />
+        <div v-else class="row g-3">
           <div class="col-md-12" v-if="deal.project">
             <div class="info-group">
               <label class="info-label">Project</label>
@@ -59,14 +77,14 @@
     <!-- Source and Deal Name -->
     <div class="col-12">
     
-      <div class="view-card p-3 radius-12">
+      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'source_deal_name' }">
         <div class="section-head mb-3">
           <h6 class="section-title mb-0">Source and Deal Name</h6>
           <button type="button" class="section-edit-btn" @click="requestEdit('source_deal_name')">
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <div class="row g-3">
+        <div v-if="!isEditingSection('deal_information', 'source_deal_name', 'client_details')" class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Source</label>
@@ -86,14 +104,14 @@
     <!-- Client Details -->
     <div class="col-12">
       
-      <div class="view-card p-3 radius-12">
+      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'client_details' }">
         <div class="section-head mb-3">
           <h6 class="section-title mb-0">Client Details</h6>
           <button type="button" class="section-edit-btn" @click="requestEdit('client_details')">
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <div class="row g-3">
+        <div v-if="!isEditingSection('deal_information', 'source_deal_name', 'client_details')" class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Name</label>
@@ -119,14 +137,32 @@
     <!-- Tenant Details -->
     <div class="col-12">
       
-      <div class="view-card p-3 radius-12">
+      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'tenant_details' }">
         <div class="section-head mb-3">
           <h6 class="section-title mb-0">Tenant Details</h6>
           <button type="button" class="section-edit-btn" @click="requestEdit('tenant_details')">
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <div class="row g-3">
+        <InlineSectionEditor
+          v-if="isEditingSection('tenant_details', 'tenant_documents')"
+          :model-value="inlineEditData"
+          section-key="tenant_details"
+          deal-type="rental"
+          :lookup="inlineEditLookup"
+          :selected-stage-id="selectedStageId"
+          :show-errors="inlineEditShowErrors"
+          :field-errors="inlineEditFieldErrors"
+          :saving="inlineEditSaving"
+          :loading="inlineEditLoading"
+          @update:model-value="(v) => emit('update:inline-edit-data', v)"
+          @save="emit('inline-edit-save')"
+          @cancel="emit('inline-edit-cancel')"
+          @search-areas="(v) => emit('search-areas', v)"
+          @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
+        />
+        <div v-else class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Tenant First Name</label>
@@ -170,28 +206,46 @@
     <!-- Tenant Documents -->
     <div class="col-12">
       
-      <div class="view-card p-3 radius-12">
+      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'tenant_documents' }">
         <div class="section-head mb-3">
           <h6 class="section-title mb-0">Tenant Documents</h6>
           <button type="button" class="section-edit-btn" @click="requestEdit('tenant_documents')">
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <DealDocumentsReadonly :documents="tenantDocuments" />
+        <DealDocumentsReadonly v-if="!isEditingSection('tenant_details', 'tenant_documents')" :documents="tenantDocuments" />
       </div>
     </div>
 
     <!-- Landlord Details -->
     <div class="col-12">
       
-      <div class="view-card p-3 radius-12">
+      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'landlord_details' }">
         <div class="section-head mb-3">
           <h6 class="section-title mb-0">Landlord Details</h6>
           <button type="button" class="section-edit-btn" @click="requestEdit('landlord_details')">
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <div class="row g-3">
+        <InlineSectionEditor
+          v-if="isEditingSection('landlord_details', 'landlord_documents')"
+          :model-value="inlineEditData"
+          section-key="landlord_details"
+          deal-type="rental"
+          :lookup="inlineEditLookup"
+          :selected-stage-id="selectedStageId"
+          :show-errors="inlineEditShowErrors"
+          :field-errors="inlineEditFieldErrors"
+          :saving="inlineEditSaving"
+          :loading="inlineEditLoading"
+          @update:model-value="(v) => emit('update:inline-edit-data', v)"
+          @save="emit('inline-edit-save')"
+          @cancel="emit('inline-edit-cancel')"
+          @search-areas="(v) => emit('search-areas', v)"
+          @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
+        />
+        <div v-else class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Landlord First Name</label>
@@ -253,28 +307,46 @@
     <!-- Landlord Documents -->
     <div class="col-12">
       
-      <div class="view-card p-3 radius-12">
+      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'landlord_documents' }">
         <div class="section-head mb-3">
           <h6 class="section-title mb-0">Landlord Documents</h6>
           <button type="button" class="section-edit-btn" @click="requestEdit('landlord_documents')">
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <DealDocumentsReadonly :documents="landlordDocuments" />
+        <DealDocumentsReadonly v-if="!isEditingSection('landlord_details', 'landlord_documents')" :documents="landlordDocuments" />
       </div>
     </div>
 
     <!-- Property Details -->
     <div class="col-12">
      
-      <div class="view-card p-3 radius-12">
+      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'property_details' }">
          <div class="section-head mb-3">
           <h6 class="section-title mb-0">Property Details</h6>
           <button type="button" class="section-edit-btn" @click="requestEdit('property_details')">
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <div class="row g-3">
+        <InlineSectionEditor
+          v-if="isEditingSection('property_details', 'property_documents')"
+          :model-value="inlineEditData"
+          section-key="property_details"
+          deal-type="rental"
+          :lookup="inlineEditLookup"
+          :selected-stage-id="selectedStageId"
+          :show-errors="inlineEditShowErrors"
+          :field-errors="inlineEditFieldErrors"
+          :saving="inlineEditSaving"
+          :loading="inlineEditLoading"
+          @update:model-value="(v) => emit('update:inline-edit-data', v)"
+          @save="emit('inline-edit-save')"
+          @cancel="emit('inline-edit-cancel')"
+          @search-areas="(v) => emit('search-areas', v)"
+          @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
+        />
+        <div v-else class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Unit No</label>
@@ -336,28 +408,46 @@
     <!-- Property Documents -->
     <div class="col-12">
      
-      <div class="view-card p-3 radius-12">
+      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'property_documents' }">
          <div class="section-head mb-3">
           <h6 class="section-title mb-0">Property Documents</h6>
           <button type="button" class="section-edit-btn" @click="requestEdit('property_documents')">
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <DealDocumentsReadonly :documents="deal.property_documents || []" />
+        <DealDocumentsReadonly v-if="!isEditingSection('property_details', 'property_documents')" :documents="deal.property_documents || []" />
       </div>
     </div>
 
     <!-- Deal Financials -->
     <div class="col-12">
       
-      <div class="view-card p-3 radius-12">
+      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'deal_financials' }">
         <div class="section-head mb-3">
           <h6 class="section-title mb-0">Deal Financials</h6>
           <button type="button" class="section-edit-btn" @click="requestEdit('deal_financials')">
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <div class="row g-3">
+        <InlineSectionEditor
+          v-if="isEditingSection('deal_financials')"
+          :model-value="inlineEditData"
+          section-key="deal_financials"
+          deal-type="rental"
+          :lookup="inlineEditLookup"
+          :selected-stage-id="selectedStageId"
+          :show-errors="inlineEditShowErrors"
+          :field-errors="inlineEditFieldErrors"
+          :saving="inlineEditSaving"
+          :loading="inlineEditLoading"
+          @update:model-value="(v) => emit('update:inline-edit-data', v)"
+          @save="emit('inline-edit-save')"
+          @cancel="emit('inline-edit-cancel')"
+          @search-areas="(v) => emit('search-areas', v)"
+          @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
+        />
+        <div v-else class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Deal Total Amount And Currency</label>
@@ -392,15 +482,27 @@
 <script setup>
 import { computed } from 'vue'
 import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
+import InlineSectionEditor from './InlineSectionEditor.vue'
 
 const props = defineProps({
   deal: { type: Object, default: null },
   showResponsibleSection: { type: Boolean, default: true },
+  activeEditSection: { type: String, default: null },
+  inlineEditData: { type: Object, default: () => ({}) },
+  inlineEditLookup: { type: Object, default: () => ({}) },
+  inlineEditShowErrors: { type: Boolean, default: false },
+  inlineEditFieldErrors: { type: Object, default: () => ({}) },
+  inlineEditSaving: { type: Boolean, default: false },
+  inlineEditLoading: { type: Boolean, default: false },
+  selectedStageId: { type: [Number, String], default: null },
 })
-const emit = defineEmits(['edit-section'])
+const emit = defineEmits(['edit-section', 'update:inline-edit-data', 'inline-edit-save', 'inline-edit-cancel', 'search-areas', 'search-subcommunities', 'search-projects'])
 
 function requestEdit(sectionKey) {
   emit('edit-section', sectionKey)
+}
+function isEditingSection(...keys) {
+  return !!props.activeEditSection && keys.includes(props.activeEditSection)
 }
 const tenant = computed(() => {
   const parties = props.deal?.parties || []
@@ -523,5 +625,10 @@ h6.section-title {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.section-highlight {
+  border-color: #faa300 !important;
+  box-shadow: 0 0 0 2px rgba(250, 163, 0, 0.12);
 }
 </style>

@@ -98,72 +98,81 @@
         <template v-if="activeTab === 'general'">
           <div class="row g-4">
             <!-- Left column: Deal Information (with edit icon) or full-width edit form -->
-            <div :class="isEditingDeal ? 'col-12' : 'col-md-5'">
+            <div class="col-md-5">
               <div class="info-card bg-white p-3 radius-12 shadow-sm">
-                <!-- <div class="info-card-header d-flex justify-content-between align-items-center pb-3 mb-3 ">
-                  <span class="info-card-title">{{ isEditingDeal ? 'Edit Deal' : 'Deal Information' }}</span>
-                  <button
-                    v-if="!isEditingDeal"
-                    type="button"
-                    class="btn-edit-icon"
-                    aria-label="Edit"
-                    @click="startEditDeal"
-                  >
-                    <iconify-icon icon="lucide:pencil"></iconify-icon>
-                  </button>
-                </div> -->
-                <template v-if="isEditingDeal">
-                  <div v-if="editLoading" class="text-center py-4 text-muted">
-                    Loading form...
-                  </div>
-                  <div v-else class="edit-deal-form-wrap">
-                    <DealForm
-                      v-model="editFormData"
-                      :deal-type="dealType"
-                      :users="editLookup.users"
-                      :sources="editLookup.sources"
-                      :property-types="editLookup.propertyTypes"
-                      :developers="editLookup.developers"
-                      :areas="editLookup.areas"
+                  <div v-if="dealType === 'primary'" class="row g-3 view-deal-content">
+                    <ViewPrimaryDeal
+                      :deal="deal"
+                      :show-responsible-section="false"
+                      :active-edit-section="activeEditSection"
+                      :inline-edit-data="editFormData"
+                      :inline-edit-lookup="editLookup"
+                      :inline-edit-loading="editLoading"
+                      :inline-edit-saving="editSaving"
+                      :inline-edit-show-errors="editShowErrors"
+                      :inline-edit-field-errors="editFieldErrors"
                       :selected-stage-id="deal?.stage?.id"
-                      :show-errors="editShowErrors"
-                      :field-errors="editFieldErrors"
+                      @edit-section="startEditDealFromSection"
+                      @update:inline-edit-data="onInlineEditDataUpdate"
+                      @inline-edit-save="saveEditDeal"
+                      @inline-edit-cancel="cancelEditDeal"
                       @search-areas="editSearchAreas"
                       @search-subcommunities="editSearchSubCommunities"
                       @search-projects="editSearchProjects"
                     />
-                    <div class="edit-deal-actions deal-edit-footer-sticky mt-3 pt-3 border-top">
-                      <button type="button" class="btn-history-cancel me-2" @click="cancelEditDeal">
-                        Cancel
-                      </button>
-                      <button type="button" class="btn-save-deal-view" :disabled="editSaving" @click="saveEditDeal">
-                        <span v-if="editSaving">Saving…</span>
-                        <span v-else>Save</span>
-                      </button>
-                    </div>
-                  </div>
-                </template>
-                <template v-else>
-                  <div v-if="dealType === 'primary'" class="row g-3 view-deal-content">
-                    <ViewPrimaryDeal :deal="deal" :show-responsible-section="false" @edit-section="startEditDealFromSection" />
                   </div>
                   <div v-else-if="dealType === 'secondary'" class="row g-3 view-deal-content">
-                    <ViewSecondaryDeal :deal="deal" :show-responsible-section="false" @edit-section="startEditDealFromSection" />
+                    <ViewSecondaryDeal
+                      :deal="deal"
+                      :show-responsible-section="false"
+                      :active-edit-section="activeEditSection"
+                      :inline-edit-data="editFormData"
+                      :inline-edit-lookup="editLookup"
+                      :inline-edit-loading="editLoading"
+                      :inline-edit-saving="editSaving"
+                      :inline-edit-show-errors="editShowErrors"
+                      :inline-edit-field-errors="editFieldErrors"
+                      :selected-stage-id="deal?.stage?.id"
+                      @edit-section="startEditDealFromSection"
+                      @update:inline-edit-data="onInlineEditDataUpdate"
+                      @inline-edit-save="saveEditDeal"
+                      @inline-edit-cancel="cancelEditDeal"
+                      @search-areas="editSearchAreas"
+                      @search-subcommunities="editSearchSubCommunities"
+                      @search-projects="editSearchProjects"
+                    />
                   </div>
                   <div v-else class="row g-3 view-deal-content">
-                    <ViewRentalDeal :deal="deal" :show-responsible-section="false" @edit-section="startEditDealFromSection" />
+                    <ViewRentalDeal
+                      :deal="deal"
+                      :show-responsible-section="false"
+                      :active-edit-section="activeEditSection"
+                      :inline-edit-data="editFormData"
+                      :inline-edit-lookup="editLookup"
+                      :inline-edit-loading="editLoading"
+                      :inline-edit-saving="editSaving"
+                      :inline-edit-show-errors="editShowErrors"
+                      :inline-edit-field-errors="editFieldErrors"
+                      :selected-stage-id="deal?.stage?.id"
+                      @edit-section="startEditDealFromSection"
+                      @update:inline-edit-data="onInlineEditDataUpdate"
+                      @inline-edit-save="saveEditDeal"
+                      @inline-edit-cancel="cancelEditDeal"
+                      @search-areas="editSearchAreas"
+                      @search-subcommunities="editSearchSubCommunities"
+                      @search-projects="editSearchProjects"
+                    />
                   </div>
-                </template>
               </div>
             </div>
 
             <!-- Right column: Activity | Comments (hidden when editing) -->
-            <div v-if="!isEditingDeal" class="col-md-7">
-                <ResponsiblePersonSection
-                    v-if="deal?.id"
-                    :deal="deal"
-                    @person-updated="handlePersonUpdated"
-                />
+            <div class="col-md-7">
+              <ResponsiblePersonSection
+                v-if="deal?.id"
+                :deal="deal"
+                @person-updated="handlePersonUpdated"
+              />
               <div class="activity-card bg-white p-3 radius-12 shadow-sm">
                 <div class="d-flex gap-2 mb-4 w-fit-content toggle-buttons-container">
                   <button
@@ -230,16 +239,15 @@ import { BModal, BDropdown, BDropdownItem } from 'bootstrap-vue-3'
 import ViewPrimaryDeal from './ViewPrimaryDeal.vue'
 import ViewSecondaryDeal from './ViewSecondaryDeal.vue'
 import ViewRentalDeal from './ViewRentalDeal.vue'
-import DealForm from './DealForm.vue'
 import DealCreatedCard from './DealCreatedCard.vue'
 import DealHistoryPanel from './DealHistoryPanel.vue'
 import DealActivitySection from './DealActivitySection.vue'
 import DealCommentsSection from './DealCommentsSection.vue'
 import DealActivityList from './DealActivityList.vue'
 import DealCommentList from './DealCommentList.vue'
+import ResponsiblePersonSection from './ResponsiblePersonSection.vue'
 import axios from '@/plugins/axios'
 import { useStageTransition } from '@/composables/useStageTransition'
-import ResponsiblePersonSection from './ResponsiblePersonSection.vue'
 const props = defineProps({
   modelValue: Boolean,
   deal: { type: Object, default: null }
@@ -259,6 +267,7 @@ const editLoading = ref(false)
 const editSaving = ref(false)
 const editShowErrors = ref(false)
 const editFieldErrors = ref({})
+const activeEditSection = ref(null)
 const editLookup = ref({
   users: [],
   sources: [],
@@ -291,6 +300,18 @@ function handleCommentCreated(newComment) {
 
 function handleActivityCreated(newActivity) {
   if (activityListRef.value?.addActivity) activityListRef.value.addActivity(newActivity)
+}
+
+function handlePersonUpdated(updatedPerson) {
+  if (!props.deal) return
+  emit('deal-updated', {
+    ...props.deal,
+    responsible_person_id: updatedPerson?.id ?? props.deal?.responsible_person_id,
+    responsible_person: {
+      ...(props.deal?.responsible_person || {}),
+      ...(updatedPerson || {}),
+    },
+  })
 }
 
 const dealTypeTabs = [
@@ -400,7 +421,7 @@ function selectStage(index) {
   if (String(originalStageId) === String(targetStageId)) return
 
   selectedStageIndex.value = index
-    if (!isEditingDeal.value) {
+    if (!activeEditSection.value) {
 
       emit('stage-change-request', {
         dealId: props.deal.id,
@@ -412,22 +433,6 @@ function selectStage(index) {
     }
 }
 
-const handlePersonUpdated = (updatedPerson) => {
-    if (!props.deal) return
-    emit('update:deals', {
-        ...props.deal,
-        responsible_person_id: updatedPerson.id,
-        responsible_person: {
-            ...(props.deal.responsible_person || {}),
-            id: updatedPerson.id,
-            name: updatedPerson.name,
-            avatar: updatedPerson.avatar,
-            role_name: updatedPerson.role_name || props.deal?.responsible_person?.role_name,
-            manager_name: updatedPerson.manager_name || props.deal?.responsible_person?.manager_name,
-            branch_name: updatedPerson.branch_name || props.deal?.responsible_person?.branch_name,
-        }
-    })
-}
 // --- Edit deal ---
 function getParty(deal, type) {
   const parties = deal?.parties || []
@@ -549,8 +554,9 @@ async function editSearchProjects(search) {
   return data?.data?.data ?? data?.data ?? data ?? []
 }
 
-async function startEditDeal() {
+async function startEditDeal(sectionKey = null) {
   if (!props.deal?.id) return
+  activeEditSection.value = sectionKey
   isEditingDeal.value = true
   editLoading.value = true
   editShowErrors.value = false
@@ -570,11 +576,15 @@ async function startEditDeal() {
   }
 }
 
-function startEditDealFromSection() {
-  startEditDeal()
+function startEditDealFromSection(sectionKey) {
+  startEditDeal(sectionKey)
+}
+function onInlineEditDataUpdate(value) {
+  editFormData.value = value
 }
 function cancelEditDeal() {
   isEditingDeal.value = false
+  activeEditSection.value = null
   editFormData.value = {}
 }
 
@@ -618,6 +628,7 @@ async function saveEditDeal() {
     }
     emit('deal-updated', updated)
     isEditingDeal.value = false
+    activeEditSection.value = null
   } catch (err) {
     if (err?.response?.status === 422) {
       editShowErrors.value = true
@@ -650,7 +661,10 @@ watch(dealType, async (newType) => {
 
 watch(show, (val) => {
   if (val && props.deal) selectedStageIndex.value = currentStageIndex.value
-  if (!val) isEditingDeal.value = false
+  if (!val) {
+    isEditingDeal.value = false
+    activeEditSection.value = null
+  }
   emit('update:modelValue', val)
 })
 
@@ -718,7 +732,11 @@ function close() {
   font-family: 'Montserrat', sans-serif;
   --deal-font: 'Montserrat', sans-serif;
       background: #fff;
-    border-radius: 12px;
+    border-radius: 16px;
+}
+
+.view-deal-modal-padding {
+  padding: 1rem !important; /* match ViewLeadModal p-3 */
 }
 
 /* Header (match View Lead) */
@@ -727,12 +745,12 @@ function close() {
 }
 
 .view-deal-body-padding {
-  padding: 0.65rem 1rem 0.9rem 1rem;
+  padding: 1.5rem !important; /* match ViewLeadModal p-4 */
 }
 
 /* Header: title 18px + deal type tag pill + close */
 .view-deal-header {
-  padding: 0.45rem 0.35rem 0.55rem;
+  padding: 0 0.25rem;
   border-bottom: none;
   position: relative;
   /* background: #fff; */
@@ -805,7 +823,7 @@ function close() {
 .deal-progress-wrapper {
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 0 0.35rem 0.55rem;
+  padding: 0.75rem 0.75rem 0;
   border-bottom: 1px solid #f1f5f9;
   position: relative;
   z-index: 2;
@@ -823,6 +841,8 @@ function close() {
   gap: 4px;
   flex-wrap: nowrap;
   min-height: 30px;
+  padding: 4px 4px 8px;
+  box-shadow: 1px 1px 5px 5px #00000005;
 }
 .deal-stage-pill {
     display: flex;
@@ -845,14 +865,14 @@ function close() {
 }
 
 .deal-stage-pill:not(.active) {
-    color: #544e4e;
+    color: #94A3B8;
 }
 
 .stage-text {
     font-family: Montserrat;
     font-weight: 400;
     font-size: 13px;
-    color: #544e4e;
+    color: #979797;
     display: block;
     width: 100%;
     overflow: hidden;
@@ -890,8 +910,7 @@ function close() {
 .tab-item {
   background: none;
   border: none;
-  padding: 12px 0;
-  margin-right: 24px;
+  padding: 12px 10px;
   font-size: 13px;
   font-weight: 500;
   color: var(--deal-text-muted, #64748b);
@@ -1222,22 +1241,21 @@ function close() {
   background: #02014f;
 }
 .close-btn {
-    position: absolute;
-    top: 13px;
-    left: -11px;
-    transform: translate(-56%);
-    width: 50px;
-    height: 30px;
+    position: static;
+    width: 36px;
+    height: 36px;
     border-radius: 999px;
-    background: #01062c;
-    color: #d9e7f5;
-    font-size: 20px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 18px;
     padding: 0;
     box-shadow: none;
-    z-index: -1;
-        justify-content: center;
-    display: flex;
+    z-index: 2;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
+    cursor: pointer;
 }
 
 :deep(.view-deal-modal-outer .modal-content) {

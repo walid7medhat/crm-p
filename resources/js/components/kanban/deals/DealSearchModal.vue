@@ -560,15 +560,28 @@ const hydrateFieldSettingsFromSession = () => {
 const fieldSettings = ref({ ...defaultFieldSettings })
 
 const fieldSettingsTabs = [
-  { id: 'buyer', label: 'Buyer Details' },
-  { id: 'property', label: 'Property Details' },
+  { id: 'deals', label: 'Deals' },
   { id: 'activity', label: 'Activity' },
 ]
 
 const fieldSettingsSections = [
   {
+    id: 'deal-information',
+    tab: 'deals',
+    label: 'Deal Information',
+    fields: [
+      { id: 'name', label: 'Deal Name' },
+      { id: 'stage_group', label: 'Stage' },
+      { id: 'responsible_person', label: 'Secondary Phone' },
+      { id: 'stage_changed_by', label: 'Stage Changed By' },
+      { id: 'modified_by', label: 'Modified By' },
+      { id: 'end_date', label: 'Last Updated' },
+      { id: 'created_by', label: 'Created By' },
+    ],
+  },
+  {
     id: 'buyer-details',
-    tab: 'buyer',
+    tab: 'deals',
     label: 'Buyer Details',
     fields: [
       { id: 'buyer_first_name', label: 'First Name' },
@@ -585,7 +598,7 @@ const fieldSettingsSections = [
   },
   {
     id: 'property-details',
-    tab: 'property',
+    tab: 'deals',
     label: 'Property Details',
     fields: [
       { id: 'property_unit_no', label: 'Unit No' },
@@ -603,13 +616,13 @@ const fieldSettingsSections = [
     tab: 'activity',
     label: 'Activity',
     fields: [
-      { id: 'name', label: 'Name' },
-      { id: 'stage_changed_by', label: 'Stage Changed By' },
-      { id: 'created_by', label: 'Created By' },
+      { id: 'created_by', label: 'Date Created' },
+      { id: 'name', label: 'Activity Source' },
+      { id: 'stage_changed_by', label: 'Activity Type' },
       { id: 'responsible_person', label: 'Responsible Person' },
-      { id: 'stage_group', label: 'Stage Group' },
-      { id: 'modified_by', label: 'Modified By' },
-      { id: 'end_date', label: 'End Date' },
+      { id: 'end_date', label: 'DeadLine' },
+      { id: 'modified_by', label: 'Created By' },
+      { id: 'stage_group', label: 'Status' },
     ],
   },
 ]
@@ -1013,26 +1026,45 @@ onMounted(async () => {
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
   background: #fff;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .deal-search-container {
+  position: relative;
   min-height: 460px;
   background: #fff;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .close-btn {
   position: absolute;
-  top: 0;
+  top: 12px;
   right: 12px;
-  border: none;
-  background: transparent;
-  font-size: 22px;
-  color: #000;
+  left: auto;
+  transform: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 18px;
+  font-weight: 500;
+  padding: 0;
+  box-shadow: none;
+  z-index: 9999;
   cursor: pointer;
-  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  opacity: 0.95;
+}
+
+.close-btn :deep(iconify-icon) {
+  width: 18px;
+  height: 18px;
 }
 
 .deal-sidebar-pills {
