@@ -59,11 +59,6 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import api from '@/plugins/axios'
 
-const __debug = import.meta.env.DEV
-const dlog = (...args) => {
-    if (__debug) console.log(...args)
-}
-
 const props = defineProps({
     modelValue: {
         type: Number,
@@ -184,13 +179,13 @@ const scrollSelectedIntoView = () => {
 
 // Function to auto-select stage based on user role
 const autoSelectStage = () => {
-    dlog('=== autoSelectStage called ===')
-    dlog('stages.length:', stages.value.length)
-    dlog('props.modelValue:', props.modelValue)
-    dlog('currentStageId.value:', currentStageId.value)
+    console.log('=== autoSelectStage called ===')
+    console.log('stages.length:', stages.value.length)
+    console.log('props.modelValue:', props.modelValue)
+    console.log('currentStageId.value:', currentStageId.value)
     
     if (!stages.value.length) {
-        dlog('No stages available, returning')
+        console.log('No stages available, returning')
         return false
     }
     
@@ -202,35 +197,35 @@ const autoSelectStage = () => {
         if (isSuperAdmin.value) {
             // Admin: select first stage
             stageToSelectId = stages.value[0].id
-            dlog('Admin auto-selecting first stage:', stageToSelectId, stages.value[0].name)
+            console.log('Admin auto-selecting first stage:', stageToSelectId, stages.value[0].name)
         } else {
             // Regular user: select second stage if exists, otherwise first
             if (stages.value.length > 1) {
                 stageToSelectId = stages.value[1].id
-                dlog('Regular user auto-selecting second stage:', stageToSelectId, stages.value[1].name)
+                console.log('Regular user auto-selecting second stage:', stageToSelectId, stages.value[1].name)
             } else {
                 stageToSelectId = stages.value[0].id
-                dlog('Regular user auto-selecting first stage:', stageToSelectId, stages.value[0].name)
+                console.log('Regular user auto-selecting first stage:', stageToSelectId, stages.value[0].name)
             }
         }
         
         currentStageId.value = stageToSelectId
         emit('update:modelValue', stageToSelectId)
-        dlog('Auto-selected stage, emitted value:', stageToSelectId)
+        console.log('Auto-selected stage, emitted value:', stageToSelectId)
         
         nextTick(() => {
             scrollSelectedIntoView()
         })
         return true
     } else {
-        dlog('Skipping auto-select because there is already a value:', props.modelValue || currentStageId.value)
+        console.log('Skipping auto-select because there is already a value:', props.modelValue || currentStageId.value)
         return false
     }
 }
 
 const fetchStages = async () => {
     try {
-        dlog('Fetching stages...')
+        console.log('Fetching stages...')
         const response = await api.get('/stages')
         let stagesData = []
 
@@ -249,7 +244,7 @@ const fetchStages = async () => {
             order: stage.order || index
         }))
 
-        dlog('Stages loaded successfully:', stages.value)
+        console.log('Stages loaded successfully:', stages.value)
         
         // Auto-select after stages are loaded ONLY if no value is set
         autoSelectStage()
@@ -260,7 +255,7 @@ const fetchStages = async () => {
 
     } catch (error) {
         console.error('Error fetching stages:', error)
-        if (__debug) console.error('Error response:', error.response?.data)
+        console.error('Error response:', error.response?.data)
     }
 }
 
@@ -268,23 +263,23 @@ const currentStageId = ref(props.modelValue)
 
 // Watch for changes in props.modelValue
 watch(() => props.modelValue, (newVal, oldVal) => {
-    dlog('modelValue changed from', oldVal, 'to', newVal)
+    console.log('modelValue changed from', oldVal, 'to', newVal)
     currentStageId.value = newVal
     
     // Only auto-select if modelValue becomes null AND there's no current value
     // AND this is not a case where we want to preserve the value
     if (newVal === null && stages.value.length > 0 && !currentStageId.value) {
-        dlog('modelValue is null and no stage selected, checking auto-select...')
+        console.log('modelValue is null and no stage selected, checking auto-select...')
         autoSelectStage()
     }
 })
 
 // Watch for changes in stages array
 watch(stages, (newStages) => {
-    dlog('Stages array changed, length:', newStages.length)
+    console.log('Stages array changed, length:', newStages.length)
     // Only auto-select if there's no stage selected and no value from parent
     if (newStages.length > 0 && !currentStageId.value && props.modelValue === null) {
-        dlog('Stages loaded, no stage selected, and no parent value, auto-selecting...')
+        console.log('Stages loaded, no stage selected, and no parent value, auto-selecting...')
         autoSelectStage()
     }
 }, { deep: true })
@@ -292,7 +287,7 @@ watch(stages, (newStages) => {
 const selectedStageIndex = computed(() => {
     if (!currentStageId.value || stages.value.length === 0) return -1
     const index = stages.value.findIndex(stage => stage.id === currentStageId.value)
-    dlog('Selected stage index:', index, 'for stage ID:', currentStageId.value)
+    console.log('Selected stage index:', index, 'for stage ID:', currentStageId.value)
     return index >= 0 ? index : -1
 })
 
@@ -301,7 +296,7 @@ const selectStage = (index) => {
         const selectedStage = stages.value[index]
         const newStageId = selectedStage.id
         
-        dlog('User clicked stage:', selectedStage.name, 'ID:', newStageId)
+        console.log('User clicked stage:', selectedStage.name, 'ID:', newStageId)
         
         // If validation is required, emit a custom event to let parent handle validation
         if (props.requireValidation) {
@@ -315,7 +310,7 @@ const selectStage = (index) => {
             // Direct update without validation
             currentStageId.value = newStageId
             emit('update:modelValue', newStageId)
-            dlog('Direct stage update (no validation):', selectedStage.name)
+            console.log('Direct stage update (no validation):', selectedStage.name)
         }
     }
 }
@@ -339,7 +334,7 @@ watch(() => stages.value.length, () => {
 })
 
 onMounted(() => {
-    dlog('StageSelector mounted')
+    console.log('StageSelector mounted')
     fetchStages()
     nextTick(() => {
         scrollSelectedIntoView()
