@@ -1250,4 +1250,37 @@ private function uploadDocuments($deal, $request)
         ]);
     }
 }
+public function deleteDocument($id)
+{
+    try {
+        $document = DealDocument::find($id);
+
+        if (!$document) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Document not found'
+            ], 404);
+        }
+
+        // حذف من storage
+        if (\Storage::disk('public')->exists($document->file_path)) {
+            \Storage::disk('public')->delete($document->file_path);
+        }
+
+        // حذف من DB
+        $document->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Document deleted successfully'
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Delete failed',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 }

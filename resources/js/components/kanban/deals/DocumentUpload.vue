@@ -125,6 +125,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import axios from 'axios'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -133,7 +134,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue'])
-
+import Swal from 'sweetalert2'
 const fileInput = ref(null)
 const replaceFileInput = ref(null)
 
@@ -295,12 +296,39 @@ function addFiles(newFiles) {
   })
 }
 
-function removeFile(typeId, fileId) {
-  if (!filesByType.value?.[typeId]) return
+async function removeFile(typeId, fileId) {
+  const file = filesByType.value?.[typeId]?.find(f => f.id === fileId)
+  if (!file) return
+
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    text: 'This file will be permanently deleted!',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Yes, delete it',
+    cancelButtonText: 'Cancel'
+  })
+
+  if (!result.isConfirmed) return
+
+  // 🟡 لو فايل من السيرفر
+  if (file.is_existing) {
+    try {
+      await axios.delete(`/api/deals/documents/${file.id}`)
+    } catch (err) {
+      console.error(err)
+      $showNotification('Delete failed', 'error')
+      return
+    }
+  }
+
+  // 🟢 امسحي من UI
   filesByType.value[typeId] =
     filesByType.value[typeId].filter(f => f.id !== fileId)
 
-  openFileMenuKey.value = null
+  $showNotification('File deleted successfully', 'success')
 }
 
 // =========================
@@ -460,14 +488,18 @@ defineExpose({
 
 .file-count-badge {
   /* background: #FAA300; */
-  color: white;
+  color: #01062C;
   width: 12px;
   height: 12px;
   border-radius: 50%;
   padding: 0;
   font-size: 12px;
 }
+.doc-tab.active .file-count-badge {
+  /* background: #FAA300; */
+  color: #fff;
 
+}
 .file-group-title {
   font-size: 13px;
   font-weight: 600;

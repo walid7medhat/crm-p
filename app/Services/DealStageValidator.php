@@ -263,6 +263,9 @@ public function getRequiredFieldsForStage(Deal $deal, int $targetStageId, string
         $bySection = [];
         
         foreach ($missingFields as $key) {
+            if (str_ends_with($key, '_party')) {
+                continue;
+            }
             // المستندات
             if (str_contains($key, '_document_')) {
                 $parts = explode('_document_', $key, 2);
@@ -491,12 +494,7 @@ public function getRequiredFieldsForStage(Deal $deal, int $targetStageId, string
             'landlord_country' => ['section' => 'Landlord Details', 'label' => 'Landlord Country', 'type' => 'select'],
             'landlord_language' => ['section' => 'Landlord Details', 'label' => 'Landlord Language', 'type' => 'select'],
             
-            // Party existence flags
-            'buyer_party' => ['section' => 'Buyer Details', 'label' => 'Buyer information required', 'type' => 'text'],
-            'seller_party' => ['section' => 'Seller Details', 'label' => 'Seller information required', 'type' => 'text'],
-            'tenant_party' => ['section' => 'Tenant Details', 'label' => 'Tenant information required', 'type' => 'text'],
-            'landlord_party' => ['section' => 'Landlord Details', 'label' => 'Landlord information required', 'type' => 'text'],
-        ];
+          ];
         
         // Dynamically add document fields for all possible document types
         $documentTypes = [

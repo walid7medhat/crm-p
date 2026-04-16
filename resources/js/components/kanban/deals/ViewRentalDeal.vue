@@ -80,65 +80,8 @@
       </div>
     </div>
 
-    <!-- Source and Deal Name -->
-    <div class="col-12">
-    
-      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'source_deal_name' }">
-        <div class="section-head mb-3">
-          <h6 class="section-title mb-0">Source and Deal Name</h6>
-          <button type="button" class="section-edit-btn" @click="requestEdit('source_deal_name')">
-            <iconify-icon icon="lucide:pencil" />
-          </button>
-        </div>
-        <div v-if="!isEditingSection('deal_information', 'source_deal_name', 'client_details')" class="row g-3">
-          <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Source</label>
-              <p class="info-value mb-0">{{ val(deal.source) }}</p>
-            </div>
-          </div>
-          <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Deal Name</label>
-              <p class="info-value mb-0">{{ val(deal.deal_name) }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Client Details -->
-    <div class="col-12">
-      
-      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'client_details' }">
-        <div class="section-head mb-3">
-          <h6 class="section-title mb-0">Client Details</h6>
-          <button type="button" class="section-edit-btn" @click="requestEdit('client_details')">
-            <iconify-icon icon="lucide:pencil" />
-          </button>
-        </div>
-        <div v-if="!isEditingSection('deal_information', 'source_deal_name', 'client_details')" class="row g-3">
-          <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Name</label>
-              <p class="info-value mb-0">{{ val(deal.client_name) }}</p>
-            </div>
-          </div>
-          <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Phone</label>
-              <p class="info-value mb-0">{{ val(deal.client_phone) }}</p>
-            </div>
-          </div>
-          <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Email</label>
-              <p class="info-value mb-0">{{ val(deal.client_email) }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+
 
     <!-- Tenant Details -->
     <div class="col-12">

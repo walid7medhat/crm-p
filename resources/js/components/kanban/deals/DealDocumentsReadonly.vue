@@ -32,31 +32,7 @@
               </div>
             </div>
             
-            <div class="document-actions">
-              <button 
-                class="action-btn" 
-                @click.stop="toggleMenu(doc.key)"
-                aria-label="Document actions"
-              >
-                <iconify-icon icon="lucide:more-vertical" />
-              </button>
-              
-              <!-- Dropdown Menu -->
-              <div v-if="activeMenu === doc.key" class="dropdown-menu" @click.stop>
-                <button @click="previewDocument(doc)" class="dropdown-item">
-                  <iconify-icon icon="lucide:eye" />
-                  <span>Preview</span>
-                </button>
-                <button @click="downloadDocument(doc)" class="dropdown-item">
-                  <iconify-icon icon="lucide:download" />
-                  <span>Download</span>
-                </button>
-                <button @click="deleteDocument(doc)" class="dropdown-item delete-item">
-                  <iconify-icon icon="lucide:trash-2" />
-                  <span>Delete</span>
-                </button>
-              </div>
-            </div>
+   
           </div>
       </div>
     </div>
@@ -359,8 +335,8 @@ function deleteDocument(doc) {
 }
 
 .document-name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   color: #0F172A;
   margin-bottom: 4px;
   line-height: 1.4;

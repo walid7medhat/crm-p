@@ -918,7 +918,7 @@ function close() {
     font-family: Montserrat;
     font-weight: 400;
     font-size: 13px;
-    color: #979797;
+    color: #01062C;
     display: block;
     width: 100%;
     overflow: hidden;
@@ -1287,21 +1287,16 @@ function close() {
   background: #02014f;
 }
 .close-btn {
-    position: static;
-    width: 36px;
-    height: 36px;
-    border-radius: 999px;
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #334155;
-    font-size: 18px;
+    position: absolute;
+    top: 13px;
+    left: -11px;
+    transform: translate(-56%);
     padding: 0;
     box-shadow: none;
-    z-index: 2;
-    display: inline-flex;
+    z-index: -1;
+        justify-content: center;
+    display: flex;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
 }
 
 :deep(.view-deal-modal-outer .modal-content) {

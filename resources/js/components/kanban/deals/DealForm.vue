@@ -32,7 +32,14 @@
               placeholder="Not Selected" 
               class="custom-v-select" 
               :class="{ 'is-invalid': showErrors && !form.source }"
-            />
+            >
+                 <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+          
+            </v-select>
               <div v-if="showErrors && fieldErrors.source" class="invalid-feedback d-block">
                 {{ fieldErrors.source }}
               </div>
@@ -117,7 +124,14 @@
               placeholder="Select Nationality" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.buyer_nationality }"
-            />
+            >
+          
+               <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+            </v-select>
              <div v-if="showErrors && fieldErrors.buyer_nationality" class="invalid-feedback d-block">
                 {{ fieldErrors.buyer_nationality }}
               </div>
@@ -132,23 +146,19 @@
               placeholder="Select Status" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.buyer_residency_status }"
-            />
+            >
+               <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+          
+             </v-select>
               <div v-if="showErrors && fieldErrors.buyer_residency_status" class="invalid-feedback d-block">
                 {{ fieldErrors.buyer_residency_status }}
               </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Buyer City Of Residence <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.buyer_city" 
-              placeholder="Enter City" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.buyer_city }"
-            />
-             <div v-if="showErrors && fieldErrors.buyer_city" class="invalid-feedback d-block">
-                {{ fieldErrors.buyer_city }}
-              </div>
-          </div>
+          
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Country Of Residence <span class="text-danger">*</span></label>
             <v-select 
@@ -158,10 +168,39 @@
               label="text" 
               placeholder="Select Country" 
               class="custom-v-select" 
-            />
+            >
+             <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+          
+          
+             </v-select>
              <div v-if="showErrors && fieldErrors.buyer_country" class="invalid-feedback d-block">
                 {{ fieldErrors.buyer_country }}
               </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Buyer City Of Residence <span class="text-danger">*</span></label>
+            <v-select 
+              v-model="form.buyer_city" 
+              :options="buyerCityOptions" 
+              :reduce="item => item.value" 
+              label="text" 
+              placeholder="Select City" 
+              class="custom-v-select"
+              :class="{ 'is-invalid': showErrors && !form.buyer_city }"
+            >
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.buyer_city" class="invalid-feedback d-block">
+              {{ fieldErrors.buyer_city }}
+            </div>
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Language <span class="text-danger">*</span></label>
@@ -173,7 +212,14 @@
               placeholder="Select Language" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.buyer_language }"
-            />
+            >
+                <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+          
+            </v-select>
             <div v-if="showErrors && fieldErrors.buyer_language" class="invalid-feedback d-block">
                 {{ fieldErrors.buyer_language }}
               </div>
@@ -189,7 +235,13 @@
                 label="text" 
                 :clearable="false" 
                 class="custom-v-select-inline" 
-              />
+              >
+               <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+             </v-select>
              <div v-if="showErrors && fieldErrors.amount" class="invalid-feedback d-block">
                 {{ fieldErrors.amount }}
               </div>
@@ -296,7 +348,13 @@
               placeholder="Select Nationality" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.seller_nationality }"
-            />
+            >
+             <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+            </v-select>
             <div v-if="showErrors && fieldErrors.seller_nationality" class="invalid-feedback d-block">
                 {{ fieldErrors.seller_nationality }}
               </div>
@@ -311,23 +369,19 @@
               placeholder="Select Status" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.seller_residency_status }"
-            />
+            >
+          
+             <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>  
+           </v-select>
              <div v-if="showErrors && fieldErrors.seller_residency_status" class="invalid-feedback d-block">
                 {{ fieldErrors.seller_residency_status }}
               </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.seller_city" 
-              placeholder="Enter City" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.seller_city }"
-            />
-              <div v-if="showErrors && fieldErrors.seller_city" class="invalid-feedback d-block">
-                {{ fieldErrors.seller_city }}
-              </div>
-          </div>
+          
           <div class="col-md-4">
             <label class="form-label-custom">Country Of Residence</label>
             <v-select 
@@ -337,10 +391,37 @@
               label="text" 
               placeholder="Select Country" 
               class="custom-v-select" 
-            />
+            >
+             <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+            </v-select>
              <div v-if="showErrors && fieldErrors.seller_country" class="invalid-feedback d-block">
                 {{ fieldErrors.seller_country }}
               </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+            <v-select 
+              v-model="form.seller_city" 
+              :options="sellerCityOptions" 
+              :reduce="item => item.value" 
+              label="text" 
+              placeholder="Select City" 
+              class="custom-v-select"
+              :class="{ 'is-invalid': showErrors && !form.seller_city }"
+            >
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.seller_city" class="invalid-feedback d-block">
+              {{ fieldErrors.seller_city }}
+            </div>
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Language <span class="text-danger">*</span></label>
@@ -352,7 +433,13 @@
               placeholder="Select Language" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.seller_language }"
-            />
+            > 
+           <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+             </v-select>
               <div v-if="showErrors && fieldErrors.seller_language" class="invalid-feedback d-block">
                 {{ fieldErrors.seller_language }}
               </div>
@@ -444,7 +531,13 @@
               placeholder="Select Nationality" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.tenant_nationality }"
-            />
+            >
+                <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+            </v-select>
             <div v-if="showErrors && fieldErrors.tenant_nationality" class="invalid-feedback d-block">
                 {{ fieldErrors.tenant_nationality }}
               </div>
@@ -459,23 +552,19 @@
               placeholder="Select Status" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.tenant_residency_status }"
-            />
+            > 
+               <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+          
+            </v-select>
              <div v-if="showErrors && fieldErrors.tenant_residency_status" class="invalid-feedback d-block">
                 {{ fieldErrors.tenant_residency_status }}
               </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.tenant_city" 
-              placeholder="Enter City" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.tenant_city }"
-            />
-             <div v-if="showErrors && fieldErrors.tenant_city" class="invalid-feedback d-block">
-                {{ fieldErrors.tenant_city }}
-              </div>
-          </div>
+         
           <div class="col-md-4">
             <label class="form-label-custom">Country Of Residence</label>
             <v-select 
@@ -485,11 +574,39 @@
               label="text" 
               placeholder="Select Country" 
               class="custom-v-select" 
-            />
+            >
+              <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+          
+            </v-select>
              <div v-if="showErrors && fieldErrors.tenant_country" class="invalid-feedback d-block">
                 {{ fieldErrors.tenant_country }}
               </div>
           </div>
+          <div class="col-md-4">
+          <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+          <v-select 
+            v-model="form.tenant_city" 
+            :options="tenantCityOptions" 
+            :reduce="item => item.value" 
+            label="text" 
+            placeholder="Select City" 
+            class="custom-v-select"
+            :class="{ 'is-invalid': showErrors && !form.tenant_city }"
+          >
+            <template #open-indicator="{ attributes }">
+              <span v-bind="attributes">
+                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+              </span>
+            </template>
+          </v-select>
+          <div v-if="showErrors && fieldErrors.tenant_city" class="invalid-feedback d-block">
+            {{ fieldErrors.tenant_city }}
+          </div>
+        </div>
           <div class="col-md-4">
             <label class="form-label-custom">Language <span class="text-danger">*</span></label>
             <v-select 
@@ -500,7 +617,13 @@
               placeholder="Select Language" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.tenant_language }"
-            />
+            >
+           <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+            </v-select>
             <div v-if="showErrors && fieldErrors.tenant_language" class="invalid-feedback d-block">
                 {{ fieldErrors.tenant_language }}
               </div>
@@ -597,7 +720,14 @@
               placeholder="Select Nationality" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.landlord_nationality }"
-            />
+             >
+             <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+              
+              </v-select>
              <div v-if="showErrors && fieldErrors.landlord_nationality" class="invalid-feedback d-block">
                 {{ fieldErrors.landlord_nationality }}
               </div>
@@ -612,23 +742,19 @@
               placeholder="Select Status" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.landlord_residency_status }"
-            />
+            >
+             <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template> 
+          
+           </v-select>
              <div v-if="showErrors && fieldErrors.landlord_residency_status" class="invalid-feedback d-block">
                 {{ fieldErrors.landlord_residency_status }}
               </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.landlord_city" 
-              placeholder="Enter City" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.landlord_city }"
-            />
-             <div v-if="showErrors && fieldErrors.landlord_city" class="invalid-feedback d-block">
-                {{ fieldErrors.landlord_city }}
-              </div>
-          </div>
+          
           <div class="col-md-4">
             <label class="form-label-custom">Country Of Residence</label>
             <v-select 
@@ -638,10 +764,38 @@
               label="text" 
               placeholder="Select Country" 
               class="custom-v-select" 
-            />
+            >
+              <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+          
+           </v-select>
              <div v-if="showErrors && fieldErrors.landlord_country" class="invalid-feedback d-block">
                 {{ fieldErrors.landlord_country }}
               </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+            <v-select 
+              v-model="form.landlord_city" 
+              :options="landlordCityOptions" 
+              :reduce="item => item.value" 
+              label="text" 
+              placeholder="Select City" 
+              class="custom-v-select"
+              :class="{ 'is-invalid': showErrors && !form.landlord_city }"
+            >
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.landlord_city" class="invalid-feedback d-block">
+              {{ fieldErrors.landlord_city }}
+            </div>
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Language <span class="text-danger">*</span></label>
@@ -653,7 +807,14 @@
               placeholder="Select Language" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.landlord_language }"
-            />
+            >
+              <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+          
+            </v-select>
                <div v-if="showErrors && fieldErrors.landlord_language" class="invalid-feedback d-block">
                 {{ fieldErrors.landlord_language }}
               </div>
@@ -701,7 +862,14 @@
               placeholder="Select Property Type" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.property_type_id }"
-            />
+             >
+               <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+          
+            </v-select>
              <div v-if="showErrors && fieldErrors.property_type_id" class="invalid-feedback d-block">
                 {{ fieldErrors.property_type_id }}
               </div>
@@ -721,7 +889,14 @@
                 @open="() => $emit('search-areas', '', form.area_id)"  
                 @search="(search) => $emit('search-areas', search, form.area_id)" 
                 :class="{ 'is-invalid': showErrors && !form.subcommunity_id }"
-              />
+              >
+             <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+            
+             </v-select>
               <div v-if="showErrors && fieldErrors.subcommunity_id" class="invalid-feedback d-block">
                 {{ fieldErrors.subcommunity_id }}
               </div>
@@ -741,7 +916,14 @@
                     @open="() => $emit('search-areas', '')"  
                     @search="(search) => $emit('search-areas', search)" 
                     :class="{ 'is-invalid': showErrors && !form.area_id }"
-                  />
+                  >
+                   <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                    </template>
+                
+                 </v-select>
                   <div v-if="showErrors && fieldErrors.area_id" class="invalid-feedback d-block">
                     {{ fieldErrors.area_id }}
                   </div>
@@ -755,7 +937,14 @@
               label="text" 
               placeholder="Select Bedroom" 
               class="custom-v-select" 
-            />
+            >
+              <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+          
+           </v-select>
              <div v-if="showErrors && fieldErrors.bedrooms" class="invalid-feedback d-block">
                 {{ fieldErrors.bedrooms }}
               </div>
@@ -771,7 +960,15 @@
               class="custom-v-select"
               :filterable="false"
               @search="searchProjects"
-                @open="() => searchProjects('')"              />
+                @open="() => searchProjects('')"         >
+              
+               <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+              
+              </v-select>
             <div v-if="showErrors && fieldErrors.project_id" class="invalid-feedback d-block">
                 {{ fieldErrors.project_id }}
               </div>
@@ -785,7 +982,15 @@
               label="name" 
               placeholder="Select Developer" 
               class="custom-v-select" 
-            />
+            >
+          
+            
+            <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+          </v-select>
             <div v-if="showErrors && fieldErrors.developer_id" class="invalid-feedback d-block">
                 {{ fieldErrors.developer_id }}
               </div>
@@ -831,7 +1036,14 @@
                 label="text" 
                 :clearable="false" 
                 class="custom-v-select-inline" 
-              />
+              >
+                <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+            
+              </v-select>
                <div v-if="showErrors && fieldErrors.deal_total_amount" class="invalid-feedback d-block">
                 {{ fieldErrors.deal_total_amount }}
               </div>
@@ -988,6 +1200,27 @@ const landlordDocTypes = [
   { id: 'visa', name: 'Landlord Visa', required: true }
 ]
 
+
+// Computed property for city options based on selected country
+const buyerCityOptions = computed(() => {
+  const country = form.value?.buyer_country || 'other'
+  return citiesByCountry[country] || citiesByCountry['other']
+})
+
+const sellerCityOptions = computed(() => {
+  const country = form.value?.seller_country || 'other'
+  return citiesByCountry[country] || citiesByCountry['other']
+})
+
+const tenantCityOptions = computed(() => {
+  const country = form.value?.tenant_country || 'other'
+  return citiesByCountry[country] || citiesByCountry['other']
+})
+
+const landlordCityOptions = computed(() => {
+  const country = form.value?.landlord_country || 'other'
+  return citiesByCountry[country] || citiesByCountry['other']
+})
 // Refs for document upload components
 const buyerDocUploadRef = ref(null)
 const sellerDocUploadRef = ref(null)
@@ -1292,8 +1525,89 @@ const countryOptions = [
   { value: 'IN', text: 'India' },
   { value: 'PK', text: 'Pakistan' },
   { value: 'other', text: 'Other' }
-]
+];
 
+const citiesByCountry = {
+  AE: [
+    'Abu Dhabi','Dubai','Sharjah','Ajman',
+    'Ras Al Khaimah','Umm Al Quwain','Fujairah','Al Ain'
+  ],
+
+  SA: [
+    'Riyadh','Jeddah','Mecca','Medina','Dammam','Khobar','Tabuk','Abha'
+  ],
+
+  EG: [
+    'Cairo','Giza','Alexandria','Sharm El Sheikh',
+    'Hurghada','Mansoura','Tanta','Aswan','Luxor'
+  ],
+
+  JO: [
+    'Amman','Zarqa','Irbid','Aqaba'
+  ],
+
+  LB: [
+    'Beirut','Tripoli','Sidon','Tyre'
+  ],
+
+  SY: [
+    'Damascus','Aleppo','Homs','Latakia'
+  ],
+
+  PS: [
+    'Ramallah','Gaza','Hebron','Nablus'
+  ],
+
+  IQ: [
+    'Baghdad','Erbil','Basra','Mosul'
+  ],
+
+  YE: [
+    'Sanaa','Aden','Taiz','Hodeidah'
+  ],
+
+  OM: [
+    'Muscat','Salalah','Sohar','Nizwa'
+  ],
+
+  QA: [
+    'Doha','Al Rayyan','Al Wakrah'
+  ],
+
+  KW: [
+    'Kuwait City','Hawalli','Salmiya'
+  ],
+
+  BH: [
+    'Manama','Riffa','Muharraq'
+  ],
+
+  GB: [
+    'London','Manchester','Birmingham','Liverpool','Leeds','Glasgow'
+  ],
+
+  US: [
+    'New York','Los Angeles','Chicago','Houston','Miami','San Francisco'
+  ],
+
+  CA: [
+    'Toronto','Vancouver','Montreal','Ottawa','Calgary'
+  ],
+
+  AU: [
+    'Sydney','Melbourne','Brisbane','Perth','Adelaide'
+  ],
+
+  IN: [
+    'Mumbai','Delhi','Bangalore','Hyderabad','Chennai','Kolkata'
+  ],
+
+  PK: [
+    'Karachi','Lahore','Islamabad','Rawalpindi'
+  ],
+
+  other: []
+};
 const languageOptions = [
   { value: 'ar', text: 'Arabic' },
   { value: 'en', text: 'English' },
@@ -1338,6 +1652,42 @@ watch(
   },
   { immediate: true }
 )
+// امسح الـ city لما الـ country يتغير عشان ما يبقاش فيه بيانات غير متطابقة
+watch(() => form.value?.buyer_country, () => {
+  if (form.value?.buyer_city) {
+    const country = form.value?.buyer_country || 'other'
+    const validCities = citiesByCountry[country] || citiesByCountry['other']
+    const isValid = validCities.some(c => c.value === form.value?.buyer_city)
+    if (!isValid) form.value.buyer_city = null
+  }
+})
+
+watch(() => form.value?.seller_country, () => {
+  if (form.value?.seller_city) {
+    const country = form.value?.seller_country || 'other'
+    const validCities = citiesByCountry[country] || citiesByCountry['other']
+    const isValid = validCities.some(c => c.value === form.value?.seller_city)
+    if (!isValid) form.value.seller_city = null
+  }
+})
+
+watch(() => form.value?.tenant_country, () => {
+  if (form.value?.tenant_city) {
+    const country = form.value?.tenant_country || 'other'
+    const validCities = citiesByCountry[country] || citiesByCountry['other']
+    const isValid = validCities.some(c => c.value === form.value?.tenant_city)
+    if (!isValid) form.value.tenant_city = null
+  }
+})
+
+watch(() => form.value?.landlord_country, () => {
+  if (form.value?.landlord_city) {
+    const country = form.value?.landlord_country || 'other'
+    const validCities = citiesByCountry[country] || citiesByCountry['other']
+    const isValid = validCities.some(c => c.value === form.value?.landlord_city)
+    if (!isValid) form.value.landlord_city = null
+  }
+})
 </script>
 
 <style scoped>
@@ -1399,5 +1749,13 @@ watch(
   flex: 0 0 100% !important;
   padding-left: 0 !important;
   padding-right: 0 !important;
+}
+:deep(.custom-v-select .vs__open-indicator-icon) {
+    font-size: 13px;
+    color: #cfdbec;
+}
+
+:deep(.custom-v-select svg) {
+    vertical-align: middle !important;
 }
 </style>

@@ -63,7 +63,11 @@
               <div class="small">
                 {{ missingFieldLabels.join(' • ') }}
               </div>
-            </div> -->
+            </div>
+            <div>
+              {{ unresolvedMissingLabels.join(' • ') }}
+            </div>
+             -->
 
             <!-- Source and Deal Name Section -->
             <section v-if="hasSourceAndDealNameFields()" class="form-section">
@@ -80,7 +84,13 @@
                       label="name" 
                       placeholder="Select Source" 
                       class="custom-v-select" 
-                    />
+                    >
+                     <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                    </template>
+                    </v-select>
                   </div>
                   <div class="col-md-6" v-if="hasField('deal_name')">
                     <label class="form-label-custom">Deal Name <span class="text-danger">*</span></label>
@@ -162,7 +172,14 @@
                       label="text" 
                       placeholder="Select Nationality" 
                       class="custom-v-select"
-                    />
+                    >
+                   <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                    </template>
+                  
+                   </v-select>
                   </div>
                   
                   <!-- Buyer Residency Status -->
@@ -176,7 +193,14 @@
                       label="text" 
                       placeholder="Select Status" 
                       class="custom-v-select"
-                    />
+                    >
+                  
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                   </v-select>
                   </div>
                   
                   <!-- Buyer Country -->
@@ -190,18 +214,35 @@
                       label="text" 
                       placeholder="Select Country" 
                       class="custom-v-select"
-                    />
+                    >
+                     <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                  
+                    </v-select>
                   </div>
                   
                   <!-- Buyer City -->
-                  <div class="col-md-6" v-if="hasField('buyer_city')">
-                    <label class="form-label-custom">Buyer City Of Residence <span class="text-danger">*</span></label>
-                    <b-form-input 
-                      v-model="formData.buyer_city" 
-                      placeholder="Enter Buyer City" 
-                      class="custom-input"
-                    />
-                  </div>
+                <div class="col-md-6" v-if="hasField('buyer_city')">
+                  <label class="form-label-custom">Buyer City Of Residence <span class="text-danger">*</span></label>
+                  <v-select
+                    append-to-body 
+                    v-model="formData.buyer_city" 
+                    :options="buyerCityOptions" 
+                    :reduce="item => item.value" 
+                    label="text" 
+                    placeholder="Select City" 
+                    class="custom-v-select"
+                  >
+                    <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                    </template>
+                  </v-select>
+                </div>
 
                   <!-- Buyer Date of Birth -->
                   <div class="col-md-6" v-if="hasField('buyer_dob')">
@@ -224,7 +265,14 @@
                       label="text" 
                       placeholder="Select Language" 
                       class="custom-v-select"
-                    />
+                    >
+                  
+                        <template #open-indicator="{ attributes }">
+                            <span v-bind="attributes">
+                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                            </span>
+                          </template>
+                    </v-select>
                   </div>
                   
                   <!-- Buyer Amount -->
@@ -232,18 +280,10 @@
                     <label class="form-label-custom">Amount</label>
                     <div class="input-group-custom">
                       <b-form-input v-model="formData.buyer_amount" type="number" placeholder="Enter Amount" class="custom-input" />
-                      <v-select
- append-to-body 
-                        v-model="formData.currency" 
-                        :options="currencyOptions" 
-                        :reduce="o => o.value" 
-                        label="text" 
-                        :clearable="false" 
-                        :searchable="false"
-                        :disabled="true"
-                        class="custom-v-select-inline currency-fixed" 
-                      />
-                    </div>
+                      <div class="currency-fixed-display">
+                        {{ formData.currency || 'AED' }}
+                      </div>
+                  </div>
                   </div>
                   
                   <!-- Buyer Party Missing -->
@@ -308,34 +348,74 @@
                   <div class="col-md-4" v-if="hasField('seller_nationality')">
                     <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
                     <v-select
- append-to-body v-model="formData.seller_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" />
+                      append-to-body v-model="formData.seller_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                     </v-select>
                   </div>
                   
                   <!-- Seller Residency Status -->
                   <div class="col-md-4" v-if="hasField('seller_residency_status')">
                     <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
                     <v-select
- append-to-body v-model="formData.seller_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" />
+                        append-to-body v-model="formData.seller_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select">
+                      
+                       <template #open-indicator="{ attributes }">
+                          <span v-bind="attributes">
+                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          </span>
+                        </template>
+                      </v-select>
                   </div>
                   
-                  <!-- Seller City -->
-                  <div class="col-md-4" v-if="hasField('seller_city')">
-                    <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.seller_city" placeholder="Enter City" class="custom-input" />
-                  </div>
+               
                   
                   <!-- Seller Country -->
                   <div class="col-md-4" v-if="hasField('seller_country')">
                     <label class="form-label-custom">Country Of Residence</label>
                     <v-select
- append-to-body v-model="formData.seller_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" />
+                        append-to-body v-model="formData.seller_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" >
+                    
+                             <template #open-indicator="{ attributes }">
+                              <span v-bind="attributes">
+                                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                              </span>
+                            </template>
+                      </v-select>
                   </div>
-                  
+                  <!-- Seller City -->
+                    <div class="col-md-4" v-if="hasField('seller_city')">
+                      <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+                      <v-select
+                        append-to-body 
+                        v-model="formData.seller_city" 
+                        :options="sellerCityOptions" 
+                        :reduce="item => item.value" 
+                        label="text" 
+                        placeholder="Select City" 
+                        class="custom-v-select"
+                      >
+                        <template #open-indicator="{ attributes }">
+                          <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          </span>
+                        </template>
+                      </v-select>
+                    </div>
                   <!-- Seller Language -->
                   <div class="col-md-4" v-if="hasField('seller_language')">
                     <label class="form-label-custom">Language <span class="text-danger">*</span></label>
                     <v-select
- append-to-body v-model="formData.seller_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" />
+                        append-to-body v-model="formData.seller_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" >
+                        <template #open-indicator="{ attributes }">
+                          <span v-bind="attributes">
+                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          </span>
+                        </template>
+                      </v-select>
                   </div>
                   
                   <!-- Seller Party Missing -->
@@ -394,34 +474,79 @@
                   <div class="col-md-4" v-if="hasField('tenant_nationality')">
                     <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
                     <v-select
- append-to-body v-model="formData.tenant_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" />
+                          append-to-body v-model="formData.tenant_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" >
+                         <template #open-indicator="{ attributes }">
+                              <span v-bind="attributes">
+                                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                              </span>
+                            </template>
+                        
+                    </v-select>
                   </div>
                   
                   <!-- Tenant Residency Status -->
                   <div class="col-md-4" v-if="hasField('tenant_residency_status')">
                     <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
                     <v-select
- append-to-body v-model="formData.tenant_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" />
+                          append-to-body v-model="formData.tenant_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" >
+                    
+                     <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
                   </div>
                   
-                  <!-- Tenant City -->
-                  <div class="col-md-4" v-if="hasField('tenant_city')">
-                    <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.tenant_city" placeholder="Enter City" class="custom-input" />
-                  </div>
+                
                   
                   <!-- Tenant Country -->
                   <div class="col-md-4" v-if="hasField('tenant_country')">
                     <label class="form-label-custom">Country Of Residence</label>
                     <v-select
- append-to-body v-model="formData.tenant_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" />
+                        append-to-body v-model="formData.tenant_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" >
+                       
+                         <template #open-indicator="{ attributes }">
+                            <span v-bind="attributes">
+                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                            </span>
+                          </template>
+                    
+                      </v-select>
                   </div>
+                  <!-- Tenant City -->
+                    <div class="col-md-4" v-if="hasField('tenant_city')">
+                      <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+                      <v-select
+                        append-to-body 
+                        v-model="formData.tenant_city" 
+                        :options="tenantCityOptions" 
+                        :reduce="item => item.value" 
+                        label="text" 
+                        placeholder="Select City" 
+                        class="custom-v-select"
+                      >
+                        <template #open-indicator="{ attributes }">
+                          <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          </span>
+                        </template>
+                      </v-select>
+                    </div>
                   
                   <!-- Tenant Language -->
                   <div class="col-md-4" v-if="hasField('tenant_language')">
                     <label class="form-label-custom">Language <span class="text-danger">*</span></label>
                     <v-select
- append-to-body v-model="formData.tenant_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" />
+                        append-to-body v-model="formData.tenant_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" >
+                       
+                         <template #open-indicator="{ attributes }">
+                            <span v-bind="attributes">
+                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                            </span>
+                          </template>
+                    
+                      </v-select>
                   </div>
                   
                   <!-- Tenant Amount -->
@@ -429,8 +554,9 @@
                     <label class="form-label-custom">Amount</label>
                     <div class="input-group-custom">
                       <b-form-input v-model="formData.tenant_amount" type="number" placeholder="Enter Amount" class="custom-input" />
-                      <v-select
- append-to-body v-model="formData.currency" :options="currencyOptions" :reduce="o => o.value" label="text" :clearable="false" :searchable="false" :disabled="true" class="custom-v-select-inline currency-fixed" />
+                      <div class="currency-fixed-display">
+                          {{ formData.currency || 'AED' }}
+                        </div>
                     </div>
                   </div>
                   
@@ -496,34 +622,79 @@
                   <div class="col-md-4" v-if="hasField('landlord_nationality')">
                     <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
                     <v-select
- append-to-body v-model="formData.landlord_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" />
+                            append-to-body v-model="formData.landlord_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" >
+                     <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    
+                    </v-select>
                   </div>
                   
                   <!-- Landlord Residency Status -->
                   <div class="col-md-4" v-if="hasField('landlord_residency_status')">
                     <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
                     <v-select
- append-to-body v-model="formData.landlord_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" />
+                            append-to-body v-model="formData.landlord_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" >
+                    
+                     <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
                   </div>
                   
-                  <!-- Landlord City -->
-                  <div class="col-md-4" v-if="hasField('landlord_city')">
-                    <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.landlord_city" placeholder="Enter City" class="custom-input" />
-                  </div>
+                  
                   
                   <!-- Landlord Country -->
                   <div class="col-md-4" v-if="hasField('landlord_country')">
                     <label class="form-label-custom">Country Of Residence</label>
                     <v-select
- append-to-body v-model="formData.landlord_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" />
+                      append-to-body v-model="formData.landlord_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" >
+                       
+                       <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    
+                    </v-select>
                   </div>
+                  <!-- Landlord City -->
+                    <div class="col-md-4" v-if="hasField('landlord_city')">
+                      <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+                      <v-select
+                        append-to-body 
+                        v-model="formData.landlord_city" 
+                        :options="landlordCityOptions" 
+                        :reduce="item => item.value" 
+                        label="text" 
+                        placeholder="Select City" 
+                        class="custom-v-select"
+                      >
+                        <template #open-indicator="{ attributes }">
+                          <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          </span>
+                        </template>
+                      </v-select>
+                    </div>
                   
                   <!-- Landlord Language -->
                   <div class="col-md-4" v-if="hasField('landlord_language')">
                     <label class="form-label-custom">Language <span class="text-danger">*</span></label>
                     <v-select
- append-to-body v-model="formData.landlord_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" />
+                      append-to-body v-model="formData.landlord_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" >
+                       
+                       <template #open-indicator="{ attributes }">
+                          <span v-bind="attributes">
+                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          </span>
+                        </template>
+                    
+                    </v-select>
                   </div>
                   
                   <!-- Landlord Party Missing -->
@@ -569,13 +740,20 @@
                       label="name" 
                       placeholder="Select Property Type" 
                       class="custom-v-select"
-                    />
+                    >
+                      <template #open-indicator="{ attributes }">
+                          <span v-bind="attributes">
+                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          </span>
+                        </template>
+                  
+                     </v-select>
                   </div>
                   
                   <div class="col-md-6" v-if="hasField('subcommunity_id')">
                     <label class="form-label-custom">Subcommunity <span class="text-danger">*</span></label>
                     <v-select
- append-to-body 
+                        append-to-body 
                       v-model="formData.subcommunity_id" 
                       :options="areas" 
                       :reduce="item => item.id" 
@@ -584,26 +762,39 @@
                       class="custom-v-select"
                       :filterable="true"
                       @search="onSearchAreas"
-                    />
+                    >
+                   <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                  
+                    </v-select>
                   </div>
                   
                   <div class="col-md-6" v-if="hasField('bedrooms')">
                     <label class="form-label-custom">Bedrooms</label>
                     <v-select
- append-to-body 
+                        append-to-body 
                       v-model="formData.bedrooms" 
                       :options="bedroomOptions" 
                       :reduce="o => o.value" 
                       label="text" 
                       placeholder="Select Bedroom" 
                       class="custom-v-select" 
-                    />
+                    >
+                   <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                    </template>
+                   </v-select>
                   </div>
                   
                   <div class="col-md-6" v-if="hasField('area_id')">
                     <label class="form-label-custom">Area</label>
                     <v-select
- append-to-body 
+                        append-to-body 
                       v-model="formData.area_id" 
                       :options="areas" 
                       :reduce="item => item.id" 
@@ -612,7 +803,14 @@
                       :filterable="true"
                       class="custom-v-select" 
                         @search="onSearchAreas"
-                    />
+                    >
+                  
+                   <template #open-indicator="{ attributes }">
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                    </template>
+                   </v-select>
                   </div>
                   
                   <div class="col-md-6" v-if="hasField('unit_size')">
@@ -632,18 +830,10 @@
                     <label class="form-label-custom">Deal Total Amount</label>
                     <div class="input-group-custom">
                       <b-form-input v-model="formData.deal_total_amount" type="number" placeholder="Enter Amount" class="custom-input" />
-                      <v-select
- append-to-body 
-                        v-model="formData.currency" 
-                        :options="currencyOptions" 
-                        :reduce="o => o.value" 
-                        label="text" 
-                        :clearable="false" 
-                        :searchable="false"
-                        :disabled="true"
-                        class="custom-v-select-inline currency-fixed" 
-                      />
-                    </div>
+                      <div class="currency-fixed-display">
+                        {{ formData.currency || 'AED' }}
+                      </div>
+                      </div>
                   </div>
                   
                   <div class="col-md-4" v-if="hasField('deal_commission')">
@@ -752,6 +942,7 @@ const documentTypesByParty = computed(() => {
   }
   
   props.missingFields.forEach(field => {
+    if (field.endsWith('_party')) return
     if (field && field.includes('_document_')) {
       const [partyType, docPart] = field.split('_document_')
       const docType = docPart
@@ -791,6 +982,12 @@ const missingFieldLabels = computed(() => {
   })
   return labels
 })
+const unresolvedMissingLabels = computed(() => {
+  return unresolvedMissingKeys.value.map(key => {
+    const label = missingFieldLabels.value.find(l => l === key)
+    return label || key
+  })
+})
 
 const unresolvedMissingKeys = computed(() => {
   const unresolved = []
@@ -798,6 +995,8 @@ const unresolvedMissingKeys = computed(() => {
 
   missingKeys.forEach((key) => {
     if (!key) return
+    if (key === 'currency') return
+    if (key.endsWith('_party')) return
 
     if (key.includes('_document_')) {
       const [partyType, docType] = key.split('_document_')
@@ -1011,7 +1210,6 @@ function hasPartyFields(partyType) {
     `${partyType}_country`,
     `${partyType}_language`,
     `${partyType}_amount`,
-    `${partyType}_party`
   ]
   
   return possibleFields.some(field => props.missingFields.includes(field))
@@ -1140,6 +1338,19 @@ function closeModal() {
 }
 
 // Options for selects
+const languageOptions = [
+  { value: 'ar', text: 'Arabic' },
+  { value: 'en', text: 'English' },
+  { value: 'fr', text: 'French' },
+  { value: 'es', text: 'Spanish' },
+  { value: 'de', text: 'German' },
+  { value: 'it', text: 'Italian' },
+  { value: 'ru', text: 'Russian' },
+  { value: 'zh', text: 'Chinese' },
+  { value: 'hi', text: 'Hindi' },
+  { value: 'ur', text: 'Urdu' },
+  { value: 'other', text: 'Other' }
+]
 const nationalityOptions = [
   { value: 'emirati', text: 'Emirati' },
   { value: 'saudi', text: 'Saudi' },
@@ -1193,33 +1404,93 @@ const countryOptions = [
   { value: 'IN', text: 'India' },
   { value: 'PK', text: 'Pakistan' },
   { value: 'other', text: 'Other' }
-]
+];
 
-const languageOptions = [
-  { value: 'ar', text: 'Arabic' },
-  { value: 'en', text: 'English' },
-  { value: 'fr', text: 'French' },
-  { value: 'es', text: 'Spanish' },
-  { value: 'de', text: 'German' },
-  { value: 'it', text: 'Italian' },
-  { value: 'ru', text: 'Russian' },
-  { value: 'zh', text: 'Chinese' },
-  { value: 'hi', text: 'Hindi' },
-  { value: 'ur', text: 'Urdu' },
-  { value: 'other', text: 'Other' }
-]
+const citiesByCountry = {
+  AE: [
+    'Abu Dhabi','Dubai','Sharjah','Ajman',
+    'Ras Al Khaimah','Umm Al Quwain','Fujairah','Al Ain'
+  ],
+
+  SA: [
+    'Riyadh','Jeddah','Mecca','Medina','Dammam','Khobar','Tabuk','Abha'
+  ],
+
+  EG: [
+    'Cairo','Giza','Alexandria','Sharm El Sheikh',
+    'Hurghada','Mansoura','Tanta','Aswan','Luxor'
+  ],
+
+  JO: [
+    'Amman','Zarqa','Irbid','Aqaba'
+  ],
+
+  LB: [
+    'Beirut','Tripoli','Sidon','Tyre'
+  ],
+
+  SY: [
+    'Damascus','Aleppo','Homs','Latakia'
+  ],
+
+  PS: [
+    'Ramallah','Gaza','Hebron','Nablus'
+  ],
+
+  IQ: [
+    'Baghdad','Erbil','Basra','Mosul'
+  ],
+
+  YE: [
+    'Sanaa','Aden','Taiz','Hodeidah'
+  ],
+
+  OM: [
+    'Muscat','Salalah','Sohar','Nizwa'
+  ],
+
+  QA: [
+    'Doha','Al Rayyan','Al Wakrah'
+  ],
+
+  KW: [
+    'Kuwait City','Hawalli','Salmiya'
+  ],
+
+  BH: [
+    'Manama','Riffa','Muharraq'
+  ],
+
+  GB: [
+    'London','Manchester','Birmingham','Liverpool','Leeds','Glasgow'
+  ],
+
+  US: [
+    'New York','Los Angeles','Chicago','Houston','Miami','San Francisco'
+  ],
+
+  CA: [
+    'Toronto','Vancouver','Montreal','Ottawa','Calgary'
+  ],
+
+  AU: [
+    'Sydney','Melbourne','Brisbane','Perth','Adelaide'
+  ],
+
+  IN: [
+    'Mumbai','Delhi','Bangalore','Hyderabad','Chennai','Kolkata'
+  ],
+
+  PK: [
+    'Karachi','Lahore','Islamabad','Rawalpindi'
+  ],
+
+  other: []
+};
 
 const currencyOptions = [
-  { value: 'AED', text: 'AED - UAE Dirham' },
-  { value: 'USD', text: 'USD - US Dollar' },
-  { value: 'EUR', text: 'EUR - Euro' },
-  { value: 'GBP', text: 'GBP - British Pound' },
-  { value: 'SAR', text: 'SAR - Saudi Riyal' },
-  { value: 'QAR', text: 'QAR - Qatari Riyal' },
-  { value: 'KWD', text: 'KWD - Kuwaiti Dinar' },
-  { value: 'BHD', text: 'BHD - Bahraini Dinar' },
-  { value: 'OMR', text: 'OMR - Omani Rial' },
-  { value: 'EGP', text: 'EGP - Egyptian Pound' }
+  { value: 'AED', text: 'AED' },
+
 ]
 
 const bedroomOptions = [
@@ -1231,6 +1502,87 @@ const bedroomOptions = [
   { value: '5', text: '5 Bedrooms' },
   { value: '5+', text: '5+ Bedrooms' }
 ]
+// Buyer city options based on selected country
+
+// جمع كل المدن من كل الدول في مصفوفة واحدة
+const allCities = computed(() => {
+  const all = []
+  Object.keys(citiesByCountry).forEach(country => {
+    if (country !== 'other' && Array.isArray(citiesByCountry[country])) {
+      citiesByCountry[country].forEach(city => {
+        if (!all.includes(city)) {
+          all.push(city)
+        }
+      })
+    }
+  })
+  return all.sort() // ترتيب أبجدي
+})
+
+// Buyer city options - لو country مش موجود أو other، يجيب كل المدن
+const buyerCityOptions = computed(() => {
+  const country = formData.value?.buyer_country
+  // لو مفيش country أو country = other أو country مش موجود في citiesByCountry
+  if (!country || country === 'other' || !citiesByCountry[country]) {
+    return allCities.value.map(city => ({ value: city, text: city }))
+  }
+  const cities = citiesByCountry[country] || []
+  return cities.map(city => ({ value: city, text: city }))
+})
+
+// Seller city options
+const sellerCityOptions = computed(() => {
+  const country = formData.value?.seller_country
+  if (!country || country === 'other' || !citiesByCountry[country]) {
+    return allCities.value.map(city => ({ value: city, text: city }))
+  }
+  const cities = citiesByCountry[country] || []
+  return cities.map(city => ({ value: city, text: city }))
+})
+
+// Tenant city options
+const tenantCityOptions = computed(() => {
+  const country = formData.value?.tenant_country
+  if (!country || country === 'other' || !citiesByCountry[country]) {
+    return allCities.value.map(city => ({ value: city, text: city }))
+  }
+  const cities = citiesByCountry[country] || []
+  return cities.map(city => ({ value: city, text: city }))
+})
+
+// Landlord city options
+const landlordCityOptions = computed(() => {
+  const country = formData.value?.landlord_country
+  if (!country || country === 'other' || !citiesByCountry[country]) {
+    return allCities.value.map(city => ({ value: city, text: city }))
+  }
+  const cities = citiesByCountry[country] || []
+  return cities.map(city => ({ value: city, text: city }))
+})
+// Watch for country changes to reset city
+watch(() => formData.value?.buyer_country, (newCountry, oldCountry) => {
+  if (newCountry !== oldCountry) {
+    formData.value.buyer_city = null
+  }
+})
+
+watch(() => formData.value?.seller_country, (newCountry, oldCountry) => {
+  if (newCountry !== oldCountry) {
+    formData.value.seller_city = null
+  }
+})
+
+watch(() => formData.value?.tenant_country, (newCountry, oldCountry) => {
+  if (newCountry !== oldCountry) {
+    formData.value.tenant_city = null
+  }
+})
+
+watch(() => formData.value?.landlord_country, (newCountry, oldCountry) => {
+  if (newCountry !== oldCountry) {
+    formData.value.landlord_city = null
+  }
+})
 </script>
 
 <style scoped>
@@ -1652,6 +2004,31 @@ const bedroomOptions = [
   justify-content: center !important;
   width: 100%;
 }
+/* في نهاية الـ style، أضف الكود ده */
 
+.currency-fixed-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
+  width: auto;
+  padding: 0 12px;
+  background: #f8fafc;
+  border-left: 1px solid #E2E8F0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  white-space: nowrap;
+}
+
+:deep(.custom-v-select .vs__open-indicator-icon) {
+    font-size: 13px;
+    color: #cfdbec;
+}
+
+:deep(.custom-v-select svg) {
+    vertical-align: middle !important;
+}
 
 </style>

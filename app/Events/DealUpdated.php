@@ -61,7 +61,7 @@ class DealUpdated implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'deal'        => new \App\Http\Resources\Deal\DealResource($this->deal),
+            'deal'        => new \App\Http\Resources\Deal\DealPusherResource($this->deal),
             'action_type' => $this->actionType,
             'user_id'     => $this->userId,
             'user_name'   => $this->getActorName(),

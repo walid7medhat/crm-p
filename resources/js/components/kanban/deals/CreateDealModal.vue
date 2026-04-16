@@ -1125,7 +1125,7 @@ onMounted(() => {
     font-family: Montserrat;
     font-weight: 400;
     font-size: 13px;
-    color: #544e4e;
+    color: #01062C;
     display: block;
     width: 100%;
     overflow: hidden;
