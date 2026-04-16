@@ -219,7 +219,25 @@
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <DealDocumentsReadonly v-if="!isEditingSection('tenant_details', 'tenant_documents')" :documents="tenantDocuments" />
+        <InlineSectionEditor
+          v-if="isEditingSection('tenant_documents')"
+          :model-value="inlineEditData"
+          section-key="tenant_documents"
+          deal-type="rental"
+          :lookup="inlineEditLookup"
+          :selected-stage-id="selectedStageId"
+          :show-errors="inlineEditShowErrors"
+          :field-errors="inlineEditFieldErrors"
+          :saving="inlineEditSaving"
+          :loading="inlineEditLoading"
+          @update:model-value="(v) => emit('update:inline-edit-data', v)"
+          @save="emit('inline-edit-save')"
+          @cancel="emit('inline-edit-cancel')"
+          @search-areas="(v) => emit('search-areas', v)"
+          @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
+        />
+        <DealDocumentsReadonly v-else :documents="tenantDocuments" />
       </div>
     </div>
 
@@ -234,7 +252,7 @@
           </button>
         </div>
         <InlineSectionEditor
-          v-if="isEditingSection('landlord_details', 'landlord_documents')"
+          v-if="isEditingSection('landlord_details')"
           :model-value="inlineEditData"
           section-key="landlord_details"
           deal-type="rental"
@@ -320,7 +338,25 @@
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <DealDocumentsReadonly v-if="!isEditingSection('landlord_details', 'landlord_documents')" :documents="landlordDocuments" />
+        <InlineSectionEditor
+          v-if="isEditingSection('landlord_documents')"
+          :model-value="inlineEditData"
+          section-key="landlord_documents"
+          deal-type="rental"
+          :lookup="inlineEditLookup"
+          :selected-stage-id="selectedStageId"
+          :show-errors="inlineEditShowErrors"
+          :field-errors="inlineEditFieldErrors"
+          :saving="inlineEditSaving"
+          :loading="inlineEditLoading"
+          @update:model-value="(v) => emit('update:inline-edit-data', v)"
+          @save="emit('inline-edit-save')"
+          @cancel="emit('inline-edit-cancel')"
+          @search-areas="(v) => emit('search-areas', v)"
+          @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
+        />
+        <DealDocumentsReadonly v-else :documents="landlordDocuments" />
       </div>
     </div>
 

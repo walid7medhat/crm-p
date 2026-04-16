@@ -439,6 +439,24 @@ function getParty(deal, type) {
   return parties.find((p) => p.party_type === type && (p.party_role === 'primary' || !p.party_role)) || {}
 }
 
+function mapPartyDocuments(party, category) {
+  const docs = Array.isArray(party?.documents) ? party.documents : []
+  return docs.map((doc, idx) => ({
+    id: doc.id || doc.doc_id || `${category}-doc-${idx}-${Date.now()}`,
+    name: doc.file_name || doc.filename || doc.original_name || doc.name || `document-${idx + 1}`,
+    url: doc.url || doc.file_url || doc.path || doc.link || null,
+    size: doc.size || doc.file_size || 0,
+    type: doc.mime_type || doc.type || '',
+    mime_type: doc.mime_type || doc.type || '',
+    document_type: doc.document_type || doc.type_name || null,
+    category,
+    party_type: category,
+    status: doc.status || 'existing',
+    is_existing: true,
+    raw: doc,
+  }))
+}
+
 function dealToFormData(deal) {
   if (!deal) return {}
   const buyer = getParty(deal, 'buyer')
@@ -476,7 +494,7 @@ function dealToFormData(deal) {
     buyer_country: buyer.country ?? '',
     buyer_language: buyer.language ?? '',
     buyer_amount: buyer.amount ?? null,
-    buyer_documents: [],
+    buyer_documents: mapPartyDocuments(buyer, 'buyer'),
     seller_first_name: seller.first_name ?? '',
     seller_last_name: seller.last_name ?? '',
     seller_dob: seller.date_of_birth ?? seller.dob ?? '',
@@ -487,7 +505,7 @@ function dealToFormData(deal) {
     seller_city: seller.city ?? '',
     seller_country: seller.country ?? '',
     seller_language: seller.language ?? '',
-    seller_documents: [],
+    seller_documents: mapPartyDocuments(seller, 'seller'),
     tenant_first_name: tenant.first_name ?? '',
     tenant_last_name: tenant.last_name ?? '',
     tenant_dob: tenant.date_of_birth ?? tenant.dob ?? '',
@@ -499,7 +517,7 @@ function dealToFormData(deal) {
     tenant_country: tenant.country ?? '',
     tenant_language: tenant.language ?? '',
     tenant_amount: tenant.amount ?? null,
-    tenant_documents: [],
+    tenant_documents: mapPartyDocuments(tenant, 'tenant'),
     landlord_first_name: landlord.first_name ?? '',
     landlord_last_name: landlord.last_name ?? '',
     landlord_dob: landlord.date_of_birth ?? landlord.dob ?? '',
@@ -510,8 +528,35 @@ function dealToFormData(deal) {
     landlord_city: landlord.city ?? '',
     landlord_country: landlord.country ?? '',
     landlord_language: landlord.language ?? '',
-    landlord_documents: []
+    landlord_documents: mapPartyDocuments(landlord, 'landlord')
   }
+}
+
+function collectEditDocuments(formData) {
+  if (!formData || typeof formData !== 'object') return []
+
+  const mapKeyToParty = {
+    buyer_documents: 'buyer',
+    seller_documents: 'seller',
+    tenant_documents: 'tenant',
+    landlord_documents: 'landlord',
+  }
+
+  const docs = []
+  Object.entries(mapKeyToParty).forEach(([key, party]) => {
+    const list = Array.isArray(formData[key]) ? formData[key] : []
+    list.forEach((doc) => {
+      if (!doc?.file) return
+      docs.push({
+        file: doc.file,
+        document_type: doc.document_type || 'other',
+        category: doc.category || party,
+        party_type: doc.party_type || party,
+      })
+    })
+  })
+
+  return docs
 }
 
 async function fetchEditLookups() {
@@ -605,10 +650,11 @@ async function saveEditDeal() {
   editSaving.value = true
   editShowErrors.value = false
   try {
+    const documents = collectEditDocuments(editFormData.value)
     const res = await updateAndChangeStage({
       dealId: props.deal.id,
       payload: editFormData.value,
-      documents: [],
+      documents,
       stageId
     })
     const updated = res?.data?.data ?? res?.data ?? {}

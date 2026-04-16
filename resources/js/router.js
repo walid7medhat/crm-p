@@ -297,12 +297,28 @@ const logout = () => {
 }
 
 /** Sidebar “CRM” block (Kanban, reports, lead tools, investments) — must match header isSuperAdmin */
+const normalizeRoleNames = (roles) => {
+  if (!Array.isArray(roles)) return []
+
+  return roles
+    .map((r) => {
+      if (typeof r === 'string') return r
+      if (r && typeof r === 'object') {
+        return r.name || r.slug || r.role || r.title || ''
+      }
+      return ''
+    })
+    .filter(Boolean)
+    .map((s) => String(s).trim())
+}
+
 const isSuperAdminFromStorage = () => {
   try {
     const raw = localStorage.getItem('user')
     if (!raw) return false
     const u = JSON.parse(raw)
-    return Array.isArray(u.roles) && u.roles.includes('super_admin')
+    const roleNames = normalizeRoleNames(u.roles)
+    return roleNames.includes('super_admin')
   } catch {
     return false
   }
@@ -312,7 +328,8 @@ const isAdminFromStorage = () => {
     const raw = localStorage.getItem('user')
     if (!raw) return false
     const u = JSON.parse(raw)
-    return Array.isArray(u.roles) && (u.roles.includes('super_admin') || u.roles.includes('admin'))
+    const roleNames = normalizeRoleNames(u.roles)
+    return roleNames.includes('super_admin') || roleNames.includes('admin')
   } catch {
     return false
   }
@@ -332,7 +349,9 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const isValidToken = isTokenValid()
 
-  console.log(`Navigation to: ${to.path}, Token valid: ${isValidToken}`)
+  if (import.meta.env.DEV) {
+    console.log(`Navigation to: ${to.path}, Token valid: ${isValidToken}`)
+  }
 
   if (to.path.startsWith('/__dev__/')) {
     if (import.meta.env.PROD) {
@@ -342,37 +361,37 @@ router.beforeEach((to, from, next) => {
   }
 
   if (token && !isValidToken) {
-    console.log('Token exists but is invalid, logging out...')
+    if (import.meta.env.DEV) console.log('Token exists but is invalid, logging out...')
     logout()
     next('/sign-in')
     return
   }
 
   if (to.meta.requiresAuth && !isValidToken) {
-    console.log('Auth required, redirecting to sign-in')
+    if (import.meta.env.DEV) console.log('Auth required, redirecting to sign-in')
     next('/sign-in')
     return
   }
 
   if (to.matched.some((r) => r.meta.requiresSuperAdmin) && !isSuperAdminFromStorage()) {
-    console.log('Super admin only — redirecting home')
+    if (import.meta.env.DEV) console.log('Super admin only — redirecting home')
     next('/')
     return
   }
   if (to.matched.some((r) => r.meta.requiresAdmin) && !isAdminFromStorage()) {
-    console.log('Super admin only — redirecting home')
+    if (import.meta.env.DEV) console.log('Admin only — redirecting home')
     next('/')
     return
   }
 
   if (to.path === '/sign-in' && isValidToken) {
-    console.log('User authenticated, redirecting to home')
+    if (import.meta.env.DEV) console.log('User authenticated, redirecting to home')
     next('/')
   } else if ((to.path === '/sign-up' || to.path === '/forgot-password' || to.path === '/reset-password') && isValidToken) {
-    console.log('User authenticated, redirecting from auth pages to home')
+    if (import.meta.env.DEV) console.log('User authenticated, redirecting from auth pages to home')
     next('/')
   } else {
-    console.log('Navigation allowed')
+    if (import.meta.env.DEV) console.log('Navigation allowed')
     next()
   }
 })

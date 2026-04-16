@@ -48,6 +48,13 @@
         @change="handleFileSelect"
         accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
       />
+      <input
+        ref="replaceFileInput"
+        type="file"
+        class="d-none"
+        accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+        @change="handleReplaceFileSelect"
+      />
     </div>
 
     <!-- Uploaded Files List -->
@@ -61,11 +68,27 @@
         </div>
         <div class="file-grid">
           <div v-for="file in group.files" :key="file.id" class="file-item border rounded mb-2">
-            <iconify-icon 
-              icon="lucide:x" 
-              class="remove-icon" 
-              @click="removeFile(group.type, file.id)"
-            />
+            <button type="button" class="file-actions-btn" @click.stop="toggleFileMenu(group.type, file.id)">
+              <iconify-icon icon="lucide:more-vertical" />
+            </button>
+            <div
+              v-if="isFileMenuOpen(group.type, file.id)"
+              class="file-actions-menu"
+              @click.stop
+            >
+              <button type="button" class="file-action-item" @click="viewFile(file)">
+                <iconify-icon icon="lucide:eye" />
+                <span>View document</span>
+              </button>
+              <button type="button" class="file-action-item" @click="triggerReplaceFile(group.type, file.id)">
+                <iconify-icon icon="lucide:refresh-cw" />
+                <span>Change</span>
+              </button>
+              <button type="button" class="file-action-item delete" @click="removeFile(group.type, file.id)">
+                <iconify-icon icon="lucide:trash-2" />
+                <span>Delete</span>
+              </button>
+            </div>
             <div class="file-item-content">
               <iconify-icon 
                 :icon="getFileIcon(file.type)" 
@@ -88,7 +111,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -99,8 +122,12 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const fileInput = ref(null)
+const replaceFileInput = ref(null)
 const selectedType = ref(props.documentTypes[0]?.id || '')
 const filesByType = ref({})
+const openFileMenuKey = ref(null)
+const pendingReplace = ref(null)
+const isHydratingFromModel = ref(false)
 
 // Initialize filesByType
 function initializeFilesByType() {
@@ -112,11 +139,26 @@ function initializeFilesByType() {
 
 onMounted(() => {
   initializeFilesByType()
+  hydrateFilesFromModelValue(props.modelValue)
+  document.addEventListener('click', closeFileMenuOnOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeFileMenuOnOutside)
 })
 
 watch(() => props.documentTypes, () => {
   initializeFilesByType()
+  hydrateFilesFromModelValue(props.modelValue)
 }, { deep: true })
+
+watch(
+  () => props.modelValue,
+  (val) => {
+    hydrateFilesFromModelValue(val)
+  },
+  { deep: true, immediate: true },
+)
 
 // Computed properties
 const groupedFiles = computed(() => {
@@ -200,10 +242,98 @@ function addFiles(newFiles) {
   })
 }
 
+function hydrateFilesFromModelValue(model) {
+  isHydratingFromModel.value = true
+  const list = Array.isArray(model) ? model : []
+  const next = {}
+  props.documentTypes.forEach((type) => {
+    next[type.id] = []
+  })
+
+  list.forEach((doc, idx) => {
+    const typeId = doc.document_type || selectedType.value || props.documentTypes[0]?.id
+    if (!typeId || !next[typeId]) return
+    next[typeId].push({
+      id: doc.id || `${typeId}-${idx}`,
+      file: doc.file || null,
+      name: doc.name || doc.file_name || doc.filename || `document-${idx + 1}`,
+      size: doc.size || doc.file_size || 0,
+      type: doc.type || doc.mime_type || '',
+      mime_type: doc.mime_type || doc.type || '',
+      url: doc.url || doc.file_url || doc.path || null,
+      document_type: typeId,
+      category: doc.category || props.category,
+      party_type: doc.party_type || props.category,
+      status: doc.status || (doc.url ? 'existing' : 'pending'),
+      is_existing: !!doc.url && !doc.file,
+      raw: doc.raw || null,
+    })
+  })
+
+  filesByType.value = next
+  isHydratingFromModel.value = false
+}
+
 function removeFile(typeId, fileId) {
   if (filesByType.value[typeId]) {
     filesByType.value[typeId] = filesByType.value[typeId].filter(f => f.id !== fileId)
   }
+  openFileMenuKey.value = null
+}
+
+function fileMenuKey(typeId, fileId) {
+  return `${typeId}::${fileId}`
+}
+
+function toggleFileMenu(typeId, fileId) {
+  const key = fileMenuKey(typeId, fileId)
+  openFileMenuKey.value = openFileMenuKey.value === key ? null : key
+}
+
+function isFileMenuOpen(typeId, fileId) {
+  return openFileMenuKey.value === fileMenuKey(typeId, fileId)
+}
+
+function closeFileMenuOnOutside(event) {
+  if (event.target.closest('.file-actions-btn') || event.target.closest('.file-actions-menu')) return
+  openFileMenuKey.value = null
+}
+
+function viewFile(file) {
+  const target = file?.url || (file?.file ? URL.createObjectURL(file.file) : null)
+  if (!target) return
+  window.open(target, '_blank')
+  openFileMenuKey.value = null
+}
+
+function triggerReplaceFile(typeId, fileId) {
+  pendingReplace.value = { typeId, fileId }
+  replaceFileInput.value?.click()
+}
+
+function handleReplaceFileSelect(event) {
+  const selected = event.target.files?.[0]
+  if (!selected || !pendingReplace.value) return
+  const { typeId, fileId } = pendingReplace.value
+  const list = filesByType.value[typeId] || []
+  const index = list.findIndex((f) => String(f.id) === String(fileId))
+  if (index >= 0) {
+    const current = list[index]
+    list[index] = {
+      ...current,
+      file: selected,
+      name: selected.name,
+      size: selected.size,
+      type: selected.type,
+      mime_type: selected.type,
+      status: 'pending',
+      url: null,
+      is_existing: false,
+    }
+  }
+  pendingReplace.value = null
+  openFileMenuKey.value = null
+  event.target.value = ''
 }
 
 function clearAllFiles() {
@@ -212,6 +342,7 @@ function clearAllFiles() {
 
 // Watch for changes and emit
 watch(filesByType, (newFilesByType) => {
+  if (isHydratingFromModel.value) return
   const allFiles = []
   Object.entries(newFilesByType).forEach(([type, files]) => {
     files.forEach(file => {
@@ -279,10 +410,6 @@ defineExpose({
   background: #01062C !important;
   color: #fff !important;
   border-color: #01062C !important;
-}
-
-.doc-tab.required:not(.active) {
-  /* border-left: 3px solid #ef4444; */
 }
 
 .doc-tab.has-files:not(.active) {
@@ -429,23 +556,59 @@ defineExpose({
   color: #9ca3af !important;
 }
 
-.remove-icon {
+.file-actions-btn {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #ef233c;
-  color: #fff;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  padding: 3px;
-  transition: color 0.2s;
 }
 
-.remove-icon:hover {
-  color: #fff;
-  background: #dc1f37;
+.file-actions-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.file-actions-menu {
+  position: absolute;
+  top: 30px;
+  right: 6px;
+  min-width: 140px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  z-index: 20;
+  overflow: hidden;
+}
+
+.file-action-item {
+  width: 100%;
+  border: none;
+  background: #fff;
+  color: #334155;
+  padding: 8px 10px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.file-action-item:hover {
+  background: #f8fafc;
+}
+
+.file-action-item.delete {
+  color: #dc2626;
 }
 
 .spinner {

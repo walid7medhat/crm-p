@@ -9,7 +9,7 @@
     <section v-if="isSectionVisible('deal_information')" class="form-section">
       <h6 class="section-title mb-3">About Deal</h6>
       <div class="form-card p-3 radius-12">
-        <div class="row g-3">
+        <div v-if="!isDocumentEditMode('buyer_documents')" class="row g-3">
           <div class="col-md-6">
             <label class="form-label-custom">Deal Name <span class="text-danger">*</span></label>
             <b-form-input 
@@ -45,7 +45,7 @@
     <section v-if="(dealType === 'primary' || dealType === 'secondary') && isSectionVisible('buyer_details')" class="form-section">
       <h6 class="section-title mb-3">Buyer Details</h6>
       <div class="form-card p-3 radius-12">
-        <div class="row g-3">
+        <div v-if="!isDocumentEditMode('seller_documents')" class="row g-3">
           <div class="col-md-4">
             <label class="form-label-custom">Buyer First Name <span class="text-danger">*</span></label>
             <b-form-input 
@@ -224,7 +224,7 @@
     <section v-if="dealType === 'secondary' && isSectionVisible('seller_details')" class="form-section">
       <h6 class="section-title mb-3">Seller Details</h6>
       <div class="form-card p-3 radius-12">
-        <div class="row g-3">
+        <div v-if="!isDocumentEditMode('tenant_documents')" class="row g-3">
           <div class="col-md-4">
             <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
             <b-form-input 
@@ -377,7 +377,7 @@
     <section v-if="dealType === 'rental' && isSectionVisible('tenant_details')" class="form-section">
       <h6 class="section-title mb-3">Tenant Details</h6>
       <div class="form-card p-3 radius-12">
-        <div class="row g-3">
+        <div v-if="!isDocumentEditMode('landlord_documents')" class="row g-3">
           <div class="col-md-4">
             <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
             <b-form-input 
@@ -942,6 +942,10 @@ function isSectionVisible(sectionName) {
   return (sectionAliases[sectionName] || [sectionName]).includes(active)
 }
 
+function isDocumentEditMode(documentSectionKey) {
+  return props.activeEditSection === documentSectionKey
+}
+
 // Document type options based on requirements
 const primaryBuyerDocTypes = [
   { id: 'national_id', name: 'National ID', required: true },
@@ -990,9 +994,14 @@ const sellerDocUploadRef = ref(null)
 const tenantDocUploadRef = ref(null)
 const landlordDocUploadRef = ref(null)
 
+const __debug = import.meta.env.DEV
+const dlog = (...args) => {
+  if (__debug) console.log(...args)
+}
+
 // Clear all documents function
 function clearAllDocuments() {
-  console.log('Clearing all documents...')
+  dlog('Clearing all documents...')
   if (buyerDocUploadRef.value) buyerDocUploadRef.value.clearAllFiles()
   if (sellerDocUploadRef.value) sellerDocUploadRef.value.clearAllFiles()
   if (tenantDocUploadRef.value) tenantDocUploadRef.value.clearAllFiles()
@@ -1195,7 +1204,7 @@ function validateForm() {
 
 // Search functions
 function onSearchProjects(search) {
-  console.log('Searching projects with term:', search)
+  dlog('Searching projects with term:', search)
   emit('search-projects', search)
 }
 async function searchProjects(search) {
@@ -1208,11 +1217,11 @@ async function searchProjects(search) {
   }
 }
 watch(() => props.fieldErrors, (newVal) => {
-  console.log('fieldErrors in DealForm:', newVal)
+  dlog('fieldErrors in DealForm:', newVal)
 }, { deep: true, immediate: true })
 
 watch(() => props.showErrors, (newVal) => {
-  console.log('showErrors in DealForm:', newVal)
+  dlog('showErrors in DealForm:', newVal)
 }, { immediate: true })
 
 function onSearchAreas(search) {

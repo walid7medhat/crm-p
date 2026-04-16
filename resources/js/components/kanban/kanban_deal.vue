@@ -46,6 +46,7 @@
             v-model="activeTabIndex"
             class="kanban-tabs-container"
             content-class="kanban-content-area"
+            lazy
             no-fade
         >
             <!-- Tabs -->
@@ -53,6 +54,7 @@
                 v-for="tab in tabs" 
                 :key="tab.id"
                 title-link-class="nav-tab-item"
+                lazy
             >
                 <template #title>
                     <span class="d-flex align-items-center gap-2 h-100 nav-tab-item">
@@ -63,9 +65,11 @@
                 </template>
 
                 <!-- Tab Content -->
-                <Deals v-if="tab.id === 'deals'" ref="dealsRef" />
-                <Leads v-else-if="tab.id === 'leads'" ref="leadsRef" />
-                <Integration v-else-if="tab.id === 'integration'" ref="integrationRef" />
+                <template v-if="activeTab === tab.id">
+                    <Deals v-if="tab.id === 'deals'" ref="dealsRef" />
+                    <Leads v-else-if="tab.id === 'leads'" ref="leadsRef" />
+                    <Integration v-else-if="tab.id === 'integration'" ref="integrationRef" />
+                </template>
             </b-tab>
 
             <!-- Header Actions at the end of the tabs row -->
@@ -579,7 +583,7 @@ const onLeadSearch = (payload) => {
     }
     const query = payload?.query !== undefined ? payload.query : payload
     const pill = payload?.activePill
-    console.log("pill"+pill.id);
+    console.log('active pill', pill?.id || null)
     if (pill) {
         activeFilter.value = { id: pill.id, label: pill.label }
     } else if (!activeFilter.value) {

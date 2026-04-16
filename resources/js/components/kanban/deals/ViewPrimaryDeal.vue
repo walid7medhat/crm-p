@@ -91,7 +91,7 @@
           </button>
         </div>
         <InlineSectionEditor
-          v-if="isEditingSection('buyer_details', 'buyer_documents')"
+          v-if="isEditingSection('buyer_details')"
           :model-value="inlineEditData"
           section-key="buyer_details"
           deal-type="primary"
@@ -201,7 +201,25 @@
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-            <DealDocumentsReadonly v-if="!isEditingSection('buyer_documents', 'buyer_details')" :documents="buyerDocuments" />
+        <InlineSectionEditor
+          v-if="isEditingSection('buyer_documents')"
+          :model-value="inlineEditData"
+          section-key="buyer_documents"
+          deal-type="primary"
+          :lookup="inlineEditLookup"
+          :selected-stage-id="selectedStageId"
+          :show-errors="inlineEditShowErrors"
+          :field-errors="inlineEditFieldErrors"
+          :saving="inlineEditSaving"
+          :loading="inlineEditLoading"
+          @update:model-value="(v) => emit('update:inline-edit-data', v)"
+          @save="emit('inline-edit-save')"
+          @cancel="emit('inline-edit-cancel')"
+          @search-areas="(v) => emit('search-areas', v)"
+          @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
+        />
+        <DealDocumentsReadonly v-else :documents="buyerDocuments" />
       </div>
     </div>
 
