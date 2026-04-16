@@ -136,136 +136,72 @@ const emit = defineEmits(['update:modelValue'])
 
 const fileInput = ref(null)
 const replaceFileInput = ref(null)
-const selectedType = ref(props.documentTypes[0]?.id || '')
+
+const selectedType = ref(null) // ✅ FIX 1 (was causing crash)
+
 const filesByType = ref({})
 const openFileMenuKey = ref(null)
 const pendingReplace = ref(null)
 const isHydratingFromModel = ref(false)
 const previewModal = ref({ open: false, url: '', kind: 'file' })
 
-// Initialize filesByType
+// =========================
+// INIT
+// =========================
 function initializeFilesByType() {
-  filesByType.value = {}
+  const next = {}
   props.documentTypes.forEach(type => {
-    filesByType.value[type.id] = []
+    next[type.id] = []
   })
+  filesByType.value = next
 }
 
-onMounted(() => {
-  initializeFilesByType()
-  hydrateFilesFromModelValue(props.modelValue)
-  document.addEventListener('click', closeFileMenuOnOutside)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', closeFileMenuOnOutside)
-})
-
-watch(() => props.documentTypes, () => {
-  initializeFilesByType()
-  hydrateFilesFromModelValue(props.modelValue)
-}, { deep: true })
-
+// =========================
+// SAFE SELECTED TYPE INIT
+// =========================
 watch(
-  () => props.modelValue,
-  (val) => {
-    hydrateFilesFromModelValue(val)
+  () => props.documentTypes,
+  (types) => {
+    if (!types?.length) return
+
+    initializeFilesByType()
+
+    if (!selectedType.value) {
+      selectedType.value = types[0].id
+    }
+
+    hydrateFilesFromModelValue(props.modelValue)
   },
-  { deep: true, immediate: true },
+  { immediate: true }
 )
 
-// Computed properties
-const selectedTypeFiles = computed(() => {
-  return filesByType.value[selectedType.value] || []
-})
-
-const missingRequiredDocs = computed(() => {
-  const missing = []
-  props.documentTypes.forEach(type => {
-    if (type.required && (!filesByType.value[type.id] || filesByType.value[type.id].length === 0)) {
-      missing.push(type.name)
-    }
-  })
-  return missing
-})
-
-// Helper functions
-function hasFilesForType(typeId) {
-  return filesByType.value[typeId]?.length > 0
-}
-
-function getFileCountForType(typeId) {
-  return filesByType.value[typeId]?.length || 0
-}
-
-function isTypeRequired(typeId) {
-  const type = props.documentTypes.find(t => t.id === typeId)
-  return type?.required || false
-}
-
-function canUploadMoreForType(typeId) {
-  const type = props.documentTypes.find(t => t.id === typeId)
-  // For required types, allow multiple files
-  return true
-}
-
-function getTypeName(typeId) {
-  const type = props.documentTypes.find(t => t.id === typeId)
-  return type ? type.name : typeId
-}
-
-function triggerFileInput() {
-  fileInput.value?.click()
-}
-
-function handleFileSelect(event) {
-  const selectedFiles = Array.from(event.target.files)
-  addFiles(selectedFiles)
-  event.target.value = ''
-}
-
-function handleDrop(event) {
-  const droppedFiles = Array.from(event.dataTransfer.files)
-  addFiles(droppedFiles)
-}
-
-function addFiles(newFiles) {
-  newFiles.forEach(file => {
-    if (!filesByType.value[selectedType.value]) {
-      filesByType.value[selectedType.value] = []
-    }
-    
-    // ✅ إضافة كل البيانات المهمة للملف
-    filesByType.value[selectedType.value].push({
-      id: Date.now() + Math.random(),
-      file: file,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-       mime_type: file.type, 
-      document_type: selectedType.value,     // national_id, passport, etc.
-      category: props.category,               // buyer, seller, etc.
-      party_type: props.category,              // buyer, seller, etc.
-      status: 'pending'
-    })
-  })
-}
-
+// =========================
+// HYDRATE
+// =========================
 function hydrateFilesFromModelValue(model) {
   isHydratingFromModel.value = true
+
   const list = Array.isArray(model) ? model : []
   const next = {}
-  props.documentTypes.forEach((type) => {
+
+  props.documentTypes.forEach(type => {
     next[type.id] = []
   })
 
+  const fallbackType = props.documentTypes?.[0]?.id
+
   list.forEach((doc, idx) => {
-    const typeId = doc.document_type || selectedType.value || props.documentTypes[0]?.id
+    const typeId =
+      (doc.document_type && next[doc.document_type])
+        ? doc.document_type
+        : fallbackType
+
     if (!typeId || !next[typeId]) return
+
     next[typeId].push({
       id: doc.id || `${typeId}-${idx}`,
       file: doc.file || null,
-      name: doc.name || doc.file_name || doc.filename || `document-${idx + 1}`,
+      name: doc.name || doc.file_name || `document-${idx + 1}`,
       size: doc.size || doc.file_size || 0,
       type: doc.type || doc.mime_type || '',
       mime_type: doc.mime_type || doc.type || '',
@@ -274,8 +210,7 @@ function hydrateFilesFromModelValue(model) {
       category: doc.category || props.category,
       party_type: doc.party_type || props.category,
       status: doc.status || (doc.url ? 'existing' : 'pending'),
-      is_existing: !!doc.url && !doc.file,
-      raw: doc.raw || null,
+      is_existing: !!doc.url && !doc.file
     })
   })
 
@@ -283,20 +218,102 @@ function hydrateFilesFromModelValue(model) {
   isHydratingFromModel.value = false
 }
 
-function removeFile(typeId, fileId) {
-  if (filesByType.value[typeId]) {
-    filesByType.value[typeId] = filesByType.value[typeId].filter(f => f.id !== fileId)
+// =========================
+// COMPUTED
+// =========================
+const selectedTypeFiles = computed(() => {
+  return filesByType.value?.[selectedType.value] || []
+})
+
+const missingRequiredDocs = computed(() => {
+  const missing = []
+  props.documentTypes.forEach(type => {
+    if (
+      type.required &&
+      (!filesByType.value[type.id] || filesByType.value[type.id].length === 0)
+    ) {
+      missing.push(type.name)
+    }
+  })
+  return missing
+})
+
+// =========================
+// SAFE HELPERS
+// =========================
+function hasFilesForType(typeId) {
+  return filesByType.value?.[typeId]?.length > 0
+}
+
+function getFileCountForType(typeId) {
+  return filesByType.value?.[typeId]?.length || 0
+}
+
+function canUploadMoreForType(typeId) {
+  if (!typeId) return false
+  return true
+}
+
+// =========================
+// FILE ACTIONS
+// =========================
+function triggerFileInput() {
+  fileInput.value?.click()
+}
+
+function handleFileSelect(event) {
+  const selectedFiles = Array.from(event.target.files || [])
+  addFiles(selectedFiles)
+  event.target.value = ''
+}
+
+function handleDrop(event) {
+  const droppedFiles = Array.from(event.dataTransfer.files || [])
+  addFiles(droppedFiles)
+}
+
+function addFiles(newFiles) {
+  if (!selectedType.value) return
+
+  if (!filesByType.value[selectedType.value]) {
+    filesByType.value[selectedType.value] = []
   }
+
+  newFiles.forEach(file => {
+    filesByType.value[selectedType.value].push({
+      id: Date.now() + Math.random(),
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      mime_type: file.type,
+      document_type: selectedType.value,
+      category: props.category,
+      party_type: props.category,
+      status: 'pending'
+    })
+  })
+}
+
+function removeFile(typeId, fileId) {
+  if (!filesByType.value?.[typeId]) return
+  filesByType.value[typeId] =
+    filesByType.value[typeId].filter(f => f.id !== fileId)
+
   openFileMenuKey.value = null
 }
 
+// =========================
+// MENU
+// =========================
 function fileMenuKey(typeId, fileId) {
   return `${typeId}::${fileId}`
 }
 
 function toggleFileMenu(typeId, fileId) {
   const key = fileMenuKey(typeId, fileId)
-  openFileMenuKey.value = openFileMenuKey.value === key ? null : key
+  openFileMenuKey.value =
+    openFileMenuKey.value === key ? null : key
 }
 
 function isFileMenuOpen(typeId, fileId) {
@@ -304,40 +321,38 @@ function isFileMenuOpen(typeId, fileId) {
 }
 
 function closeFileMenuOnOutside(event) {
-  if (event.target.closest('.file-actions-btn') || event.target.closest('.file-actions-menu')) return
+  if (
+    event.target.closest('.file-actions-btn') ||
+    event.target.closest('.file-actions-menu')
+  ) return
+
   openFileMenuKey.value = null
 }
 
+// =========================
+// VIEW FILE
+// =========================
 function resolveViewTarget(file) {
   if (!file) return null
-  if (typeof file.url === 'string' && file.url.trim()) return file.url.trim()
-
-  // Some existing docs are serialized as string path/url inside `file`.
-  if (typeof file.file === 'string' && file.file.trim()) return file.file.trim()
-
-  // Backend payload variants for existing files.
-  if (typeof file.path === 'string' && file.path.trim()) return file.path.trim()
-  if (typeof file.file_url === 'string' && file.file_url.trim()) return file.file_url.trim()
-
-  // New uploads as File/Blob instances.
+  if (file.url) return file.url
+  if (typeof file.file === 'string') return file.file
   if (file.file instanceof Blob) return URL.createObjectURL(file.file)
   return null
 }
 
 function viewFile(file) {
   const target = resolveViewTarget(file)
-  if (!target) {
-    openFileMenuKey.value = null
-    return
-  }
-  const mime = String(file?.mime_type || file?.type || '').toLowerCase()
-  const name = String(file?.name || '').toLowerCase()
-  const isImage = mime.includes('image') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name)
+  if (!target) return
+
+  const mime = (file?.mime_type || file?.type || '').toLowerCase()
+  const isImage = mime.includes('image')
+
   previewModal.value = {
     open: true,
     url: target,
-    kind: isImage ? 'image' : 'file',
+    kind: isImage ? 'image' : 'file'
   }
+
   openFileMenuKey.value = null
 }
 
@@ -345,67 +360,54 @@ function closePreview() {
   previewModal.value = { open: false, url: '', kind: 'file' }
 }
 
-function triggerReplaceFile(typeId, fileId) {
-  pendingReplace.value = { typeId, fileId }
-  replaceFileInput.value?.click()
-}
+// =========================
+// WATCH EMIT (SAFE)
+// =========================
+watch(
+  filesByType,
+  (newVal) => {
+    if (isHydratingFromModel.value) return
 
-function handleReplaceFileSelect(event) {
-  const selected = event.target.files?.[0]
-  if (!selected || !pendingReplace.value) return
-  const { typeId, fileId } = pendingReplace.value
-  const list = filesByType.value[typeId] || []
-  const index = list.findIndex((f) => String(f.id) === String(fileId))
-  if (index >= 0) {
-    const current = list[index]
-    list[index] = {
-      ...current,
-      file: selected,
-      name: selected.name,
-      size: selected.size,
-      type: selected.type,
-      mime_type: selected.type,
-      status: 'pending',
-      url: null,
-      is_existing: false,
-    }
-  }
-  pendingReplace.value = null
-  openFileMenuKey.value = null
-  event.target.value = ''
-}
+    const allFiles = []
 
-function clearAllFiles() {
-  initializeFilesByType()
-}
-
-// Watch for changes and emit
-watch(filesByType, (newFilesByType) => {
-  if (isHydratingFromModel.value) return
-  const allFiles = []
-  Object.entries(newFilesByType).forEach(([type, files]) => {
-    files.forEach(file => {
-      allFiles.push({
-        ...file,
-        category: props.category,
-        document_type: type,
-        document_category: props.category
+    Object.entries(newVal || {}).forEach(([type, files]) => {
+      files?.forEach(file => {
+        allFiles.push({
+          ...file,
+          category: props.category,
+          document_type: type,
+          document_category: props.category
+        })
       })
     })
-  })
-  emit('update:modelValue', allFiles)
-}, { deep: true })
 
-// File helpers
+    emit('update:modelValue', allFiles)
+  },
+  { deep: true, flush: 'post' }
+)
+
+// =========================
+// OUTSIDE CLICK
+// =========================
+onMounted(() => {
+  document.addEventListener('click', closeFileMenuOnOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeFileMenuOnOutside)
+})
+
+// =========================
+// HELPERS UI
+// =========================
 function getFileIcon(mimeType) {
   if (mimeType?.includes('pdf')) return 'lucide:file-text'
   if (mimeType?.includes('image')) return 'lucide:image'
-  if (mimeType?.includes('word')) return 'lucide:file-text'
   return 'lucide:file'
 }
 
 function formatFileSize(bytes) {
-  if (bytes === 0) return '0 Bytes'
+  if (!bytes) return '0 Bytes'
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -413,7 +415,6 @@ function formatFileSize(bytes) {
 }
 
 defineExpose({
-  clearAllFiles,
   missingRequiredDocs
 })
 </script>
