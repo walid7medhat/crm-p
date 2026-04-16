@@ -151,7 +151,7 @@
           </button>
         </div>
         <InlineSectionEditor
-          v-if="isEditingSection('tenant_details', 'tenant_documents')"
+          v-if="isEditingSection('tenant_details')"
           :model-value="inlineEditData"
           section-key="tenant_details"
           deal-type="rental"
@@ -371,7 +371,7 @@
           </button>
         </div>
         <InlineSectionEditor
-          v-if="isEditingSection('property_details', 'property_documents')"
+          v-if="isEditingSection('property_details')"
           :model-value="inlineEditData"
           section-key="property_details"
           deal-type="rental"
@@ -457,7 +457,7 @@
             <iconify-icon icon="lucide:pencil" />
           </button>
         </div>
-        <DealDocumentsReadonly v-if="!isEditingSection('property_details', 'property_documents')" :documents="deal.property_documents || []" />
+        <DealDocumentsReadonly v-if="!isEditingSection('property_documents')" :documents="deal.property_documents || []" />
       </div>
     </div>
 

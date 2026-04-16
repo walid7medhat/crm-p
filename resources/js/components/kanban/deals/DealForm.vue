@@ -45,7 +45,7 @@
     <section v-if="(dealType === 'primary' || dealType === 'secondary') && isSectionVisible('buyer_details')" class="form-section">
       <h6 class="section-title mb-3">Buyer Details</h6>
       <div class="form-card p-3 radius-12">
-        <div v-if="!isDocumentEditMode('seller_documents')" class="row g-3">
+        <div v-if="!isDocumentEditMode('buyer_documents')" class="row g-3">
           <div class="col-md-4">
             <label class="form-label-custom">Buyer First Name <span class="text-danger">*</span></label>
             <b-form-input 
@@ -224,7 +224,7 @@
     <section v-if="dealType === 'secondary' && isSectionVisible('seller_details')" class="form-section">
       <h6 class="section-title mb-3">Seller Details</h6>
       <div class="form-card p-3 radius-12">
-        <div v-if="!isDocumentEditMode('tenant_documents')" class="row g-3">
+        <div v-if="!isDocumentEditMode('seller_documents')" class="row g-3">
           <div class="col-md-4">
             <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
             <b-form-input 
@@ -377,7 +377,7 @@
     <section v-if="dealType === 'rental' && isSectionVisible('tenant_details')" class="form-section">
       <h6 class="section-title mb-3">Tenant Details</h6>
       <div class="form-card p-3 radius-12">
-        <div v-if="!isDocumentEditMode('landlord_documents')" class="row g-3">
+        <div v-if="!isDocumentEditMode('tenant_documents')" class="row g-3">
           <div class="col-md-4">
             <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
             <b-form-input 
@@ -525,7 +525,7 @@
     <section v-if="dealType === 'rental' && isSectionVisible('landlord_details')" class="form-section">
       <h6 class="section-title mb-3">Landlord Details</h6>
       <div class="form-card p-3 radius-12">
-        <div class="row g-3">
+        <div v-if="!isDocumentEditMode('landlord_documents')" class="row g-3">
           <div class="col-md-4">
             <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
             <b-form-input 

@@ -58,21 +58,15 @@
     </div>
 
     <!-- Uploaded Files List -->
-    <div v-if="groupedFiles.length > 0" class="uploaded-files-list mt-3">
-      <div v-for="group in groupedFiles" :key="group.type" class="file-group mb-3">
-        <div class="d-flex justify-content-between align-items-center mb-2 d-none">
-          <h6 class="file-group-title mb-0">{{ getTypeName(group.type) }}</h6>
-          <span v-if="isTypeRequired(group.type)" class="text-danger small">
-            Required
-          </span>
-        </div>
+    <div v-if="selectedTypeFiles.length > 0" class="uploaded-files-list mt-3">
+      <div class="file-group mb-3">
         <div class="file-grid">
-          <div v-for="file in group.files" :key="file.id" class="file-item border rounded mb-2">
-            <button type="button" class="file-actions-btn" @click.stop="toggleFileMenu(group.type, file.id)">
+          <div v-for="file in selectedTypeFiles" :key="file.id" class="file-item border rounded mb-2">
+            <button type="button" class="file-actions-btn" @click.stop="toggleFileMenu(selectedType, file.id)">
               <iconify-icon icon="lucide:more-vertical" />
             </button>
             <div
-              v-if="isFileMenuOpen(group.type, file.id)"
+              v-if="isFileMenuOpen(selectedType, file.id)"
               class="file-actions-menu"
               @click.stop
             >
@@ -80,11 +74,7 @@
                 <iconify-icon icon="lucide:eye" />
                 <span>View document</span>
               </button>
-              <button type="button" class="file-action-item" @click="triggerReplaceFile(group.type, file.id)">
-                <iconify-icon icon="lucide:refresh-cw" />
-                <span>Change</span>
-              </button>
-              <button type="button" class="file-action-item delete" @click="removeFile(group.type, file.id)">
+              <button type="button" class="file-action-item delete" @click="removeFile(selectedType, file.id)">
                 <iconify-icon icon="lucide:trash-2" />
                 <span>Delete</span>
               </button>
@@ -107,6 +97,29 @@
       <iconify-icon icon="lucide:alert-triangle" class="me-1"></iconify-icon>
       Required documents missing: {{ missingRequiredDocs.join(', ') }}
     </div>
+
+    <div v-if="previewModal.open" class="doc-preview-backdrop" @click.self="closePreview">
+      <div class="doc-preview-modal">
+        <button type="button" class="doc-preview-close" @click="closePreview">
+          <iconify-icon icon="lucide:x" />
+        </button>
+        <div class="doc-preview-body">
+          <img
+            v-if="previewModal.kind === 'image'"
+            :src="previewModal.url"
+            alt="Document preview"
+            class="doc-preview-image"
+          />
+          <iframe
+            v-else-if="previewModal.url"
+            :src="previewModal.url"
+            class="doc-preview-iframe"
+            title="Document preview"
+          />
+          <div v-else class="doc-preview-empty">Preview is not available for this file.</div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -128,6 +141,7 @@ const filesByType = ref({})
 const openFileMenuKey = ref(null)
 const pendingReplace = ref(null)
 const isHydratingFromModel = ref(false)
+const previewModal = ref({ open: false, url: '', kind: 'file' })
 
 // Initialize filesByType
 function initializeFilesByType() {
@@ -161,13 +175,8 @@ watch(
 )
 
 // Computed properties
-const groupedFiles = computed(() => {
-  return Object.entries(filesByType.value)
-    .filter(([type, files]) => files.length > 0)
-    .map(([type, files]) => ({
-      type,
-      files
-    }))
+const selectedTypeFiles = computed(() => {
+  return filesByType.value[selectedType.value] || []
 })
 
 const missingRequiredDocs = computed(() => {
@@ -299,11 +308,41 @@ function closeFileMenuOnOutside(event) {
   openFileMenuKey.value = null
 }
 
+function resolveViewTarget(file) {
+  if (!file) return null
+  if (typeof file.url === 'string' && file.url.trim()) return file.url.trim()
+
+  // Some existing docs are serialized as string path/url inside `file`.
+  if (typeof file.file === 'string' && file.file.trim()) return file.file.trim()
+
+  // Backend payload variants for existing files.
+  if (typeof file.path === 'string' && file.path.trim()) return file.path.trim()
+  if (typeof file.file_url === 'string' && file.file_url.trim()) return file.file_url.trim()
+
+  // New uploads as File/Blob instances.
+  if (file.file instanceof Blob) return URL.createObjectURL(file.file)
+  return null
+}
+
 function viewFile(file) {
-  const target = file?.url || (file?.file ? URL.createObjectURL(file.file) : null)
-  if (!target) return
-  window.open(target, '_blank')
+  const target = resolveViewTarget(file)
+  if (!target) {
+    openFileMenuKey.value = null
+    return
+  }
+  const mime = String(file?.mime_type || file?.type || '').toLowerCase()
+  const name = String(file?.name || '').toLowerCase()
+  const isImage = mime.includes('image') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name)
+  previewModal.value = {
+    open: true,
+    url: target,
+    kind: isImage ? 'image' : 'file',
+  }
   openFileMenuKey.value = null
+}
+
+function closePreview() {
+  previewModal.value = { open: false, url: '', kind: 'file' }
 }
 
 function triggerReplaceFile(typeId, fileId) {
@@ -515,27 +554,28 @@ defineExpose({
 }
 
 .file-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
 .file-item {
   position: relative;
-  width: 140px;
-  min-height: 100px;
+  width: 100%;
+  min-height: 72px;
   background: #FFFFFF;
   border: 1px solid #eff2f7;
   border-radius: 8px;
-  padding: 12px 10px;
+  padding: 10px 12px;
 }
 
 .file-item-content {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  text-align: center;
-  gap: 6px;
+  text-align: left;
+  gap: 10px;
+  padding-right: 28px;
 }
 
 .file-icon {
@@ -549,11 +589,14 @@ defineExpose({
   font-weight: 500;
   line-height: 1.3;
   word-break: break-word;
+  overflow-wrap: anywhere;
+  flex: 1;
 }
 
 .file-size {
   font-size: 11px;
   color: #9ca3af !important;
+  white-space: nowrap;
 }
 
 .file-actions-btn {
@@ -565,7 +608,7 @@ defineExpose({
   border: none;
   background: transparent;
   border-radius: 6px;
-  color: #94a3b8;
+  color: #000000 !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -574,7 +617,7 @@ defineExpose({
 
 .file-actions-btn:hover {
   background: #f1f5f9;
-  color: #334155;
+  color: #000000 !important;
 }
 
 .file-actions-menu {
@@ -594,7 +637,7 @@ defineExpose({
   width: 100%;
   border: none;
   background: #fff;
-  color: #334155;
+  color: #000000;
   padding: 8px 10px;
   font-size: 12px;
   display: flex;
@@ -608,7 +651,80 @@ defineExpose({
 }
 
 .file-action-item.delete {
-  color: #dc2626;
+  color: #000000;
+}
+
+.file-action-item iconify-icon {
+  color: #000000 !important;
+}
+
+.doc-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.doc-preview-modal {
+  position: relative;
+  width: min(900px, 100%);
+  height: min(80vh, 760px);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(2, 6, 23, 0.28);
+  overflow: hidden;
+}
+
+.doc-preview-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #0f172a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.doc-preview-body {
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+}
+
+.doc-preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.doc-preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.doc-preview-empty {
+  font-size: 14px;
+  color: #334155;
 }
 
 .spinner {
@@ -619,7 +735,12 @@ defineExpose({
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-.uploaded-files-list{
-    display:flex !important;
+.uploaded-files-list {
+  display: block !important;
+  width: 100%;
+}
+
+.file-group {
+  width: 100%;
 }
 </style>
