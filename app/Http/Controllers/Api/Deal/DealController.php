@@ -113,7 +113,6 @@ class DealController extends Controller
     public function update(UpdateDealRequest $request, Deal $deal)
 {
     DB::beginTransaction();
-
     try {
 
         $changes = [];

@@ -3693,9 +3693,7 @@ const createNewDesignContent = (currentUser) => {
     <!-- Slide 5 - Floor Plan (optional) -->
     ${hasFloorPlans ? createSlide5() : ''}
     
-    ${hasProject ? createSlide7ProjectDetails() : ''}
-
-    ${hasProject ? createSlide7Amenities() : ''}
+    ${createSlide7ProjectDetails()}
     
     <!-- Slide 6 - Thank You (Full Blue Page) -->
     ${createSlide6(currentUser)}
@@ -4305,12 +4303,18 @@ const createSlide7ProjectDetails = () => {
   const projectImage    = project?.image || '';
   const propertyType    = property.value?.property_type?.name || '';
 
+  const features = Array.isArray(project?.features)
+    ? project.features.map(f => f?.name || f?.title || f).filter(Boolean)
+    : [];
+
   const hasAbout    = projectAbout.trim().length > 0;
   const hasLocation = projectLocation.trim().length > 0;
 
   if (!projectImage && !hasAbout) return '';
 
   const projectAboutLimited = limitText(projectAbout, 200);
+
+  const featuresLimited = features.slice(0, 20);
 
   return `
 <div style="
@@ -4349,9 +4353,10 @@ const createSlide7ProjectDetails = () => {
       <div style="
         width:50% !important;
         height:100% !important;
-        padding:8mm 7mm 12mm 7mm !important;
+        padding:10mm 7mm 12mm 7mm !important;
         box-sizing:border-box !important;
         display:flex !important;
+        justify-content: center !important;
         flex-direction:column !important;
         overflow:hidden !important;
         font-size:2.8mm !important;
@@ -4360,35 +4365,21 @@ const createSlide7ProjectDetails = () => {
 
         <!-- LOCATION -->
         ${hasLocation ? `
-        <div style="display:flex; align-items:center; gap:2.5mm; margin-bottom:2mm;">
+        <div style="display:flex; align-items:center; gap:2.5mm; margin-bottom:5mm;">
           <div style="width:6mm; height:0.7mm; background:#faa300; flex-shrink:0;"></div>
           <span style="font-size:2.3mm; font-weight:bold; color:#faa300; letter-spacing:0.4mm;">${projectLocation}</span>
         </div>` : ''}
 
         <!-- TITLE -->
-        <div style="font-size:5mm; font-weight:bold; color:#1c2230; margin:0 0 3mm 0; line-height:1.15;">
+        <div style="font-size:6mm; font-weight:bold; text-transform:uppercase; color:#1c2230; margin:0 0 5mm 0; line-height:1.15;">
           ${projectTitle}
         </div>
-
-        <!-- TYPOLOGY -->
-        ${propertyType ? `
-        <div style="
-          display:inline-flex; align-items:center; gap:2mm;
-          border:0.4mm solid #cccccc; border-radius:2mm;
-          padding:1.5mm 3mm; margin-bottom:4mm; width:fit-content;
-        ">
-          <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="#faa300">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-          </svg>
-          <span style="font-size:2.8mm; font-weight:bold; color:#faa300;">Typology:</span>
-          <span style="font-size:2.8mm; color:#444;">${propertyType}</span>
-        </div>` : ''}
 
         <!-- ABOUT -->
         ${hasAbout ? `
         <div style="margin-bottom:4mm;">
-          <div style="display:flex; align-items:center; gap:2mm; margin-bottom:2mm;">
-            <div style="width:2mm; height:2mm; border-radius:50%; background:#faa300; flex-shrink:0;"></div>
+          <div style="display:flex; align-items:center; gap:2mm; margin-bottom:4mm;">
+            <div style="width:2mm; height:2mm; border-radius:50%; padding-top:2mm; background:#faa300; flex-shrink:0;"></div>
             <span style="font-size:3mm; font-weight:bold; color:#1c2230;">About Project</span>
           </div>
           <p style="
@@ -4399,7 +4390,26 @@ const createSlide7ProjectDetails = () => {
         </div>` : ''}
 
    
-
+       ${features.length ? `
+        <div>
+          <div style="display:flex; align-items:center; gap:2mm; margin-bottom:4mm;">
+            <div style="width:2mm; height:2mm; border-radius:50%; padding-top:2mm; background:#faa300; flex-shrink:0;"></div>
+            <span style="font-size:3mm; font-weight:bold; color:#1c2230;"> Amenities & Features</span>
+          </div>
+          ${featuresLimited.map(f => `
+            <span style="
+              display:inline-block !important;
+              background:#f5f5f5 !important;
+              border:1px solid #d7dedd !important;
+              border-radius:0.8mm !important;
+              padding:0.5mm 2mm 2mm 2mm !important;
+              font-size:2.5mm !important;
+              margin:0 2mm 2mm 0 !important;
+            ">
+              ${f}
+            </span>
+          `).join('')}
+        </div>` : ''}
      
 
       </div>
@@ -4411,62 +4421,7 @@ const createSlide7ProjectDetails = () => {
   `;
 };
 
-// ─── Slide 7b: Amenities & Features (separate slide) ─────────────────────────
-const createSlide7Amenities = () => {
-  const project = property.value?.project;
-  if (!project) return '';
-
-  const features = Array.isArray(project?.features)
-    ? project.features.map(f => f?.name || f?.title || f).filter(Boolean)
-    : [];
-
-  if (!features.length) return '';
-
-  return `
-  <div style="
-    width:${PDF_CONFIG.pageWidth}mm !important;
-    height:${PDF_CONFIG.pageHeight}mm !important;
-    margin:0 !important;
-    padding:0 !important;
-    background:#fff !important;
-    position:relative !important;
-    overflow:hidden !important;
-  ">
-    <div style="height:15% !important; width:100% !important; text-align:left !important;">
-      <h1 style="font-size:6mm !important; margin:0 !important; padding:30px !important;">Amenities &amp; Features</h1>
-    </div>
-
-    <div style="
-      height:75% !important;
-      padding:8mm !important;
-      box-sizing:border-box !important;
-    ">
-      <div style="
-        display:flex !important;
-        flex-wrap:wrap !important;
-        gap:2mm !important;
-        align-content:flex-start !important;
-      ">
-        ${features.map(f => `
-          <span style="
-            display:inline-block !important;
-            background:#f5f5f5 !important;
-            border:1px solid #d7dedd !important;
-            border-radius:2mm !important;
-            padding:1mm 4mm 2mm 4mm !important;
-            font-size:3mm !important;
-            margin:0 !important;
-          ">
-            ${f}
-          </span>
-        `).join('')}
-      </div>
-    </div>
-
-    ${createFooter()}
-  </div>
-  `;
-};
+ 
 
 
 // Helper function to format text

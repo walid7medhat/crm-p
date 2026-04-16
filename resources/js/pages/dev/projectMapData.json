@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-04-11T14:54:32.655Z",
+  "generatedAt": "2026-04-16T11:11:36.679Z",
   "root": "resources/js",
   "stats": {
-    "jsVueFilesApprox": 347,
-    "routesCount": 77,
-    "apiCallRows": 34,
+    "jsVueFilesApprox": 359,
+    "routesCount": 78,
+    "apiCallRows": 35,
     "laravelMobileRoutes": 2,
-    "vueNodes": 303,
-    "vueEdges": 316
+    "vueNodes": 314,
+    "vueEdges": 336
   },
   "tree": {
     "name": "resources/js",
@@ -409,7 +409,31 @@
                   },
                   {
                     "type": "file",
+                    "name": "DealActivityList.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "DealActivitySection.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "DealCommentList.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "DealCommentsSection.vue"
+                  },
+                  {
+                    "type": "file",
                     "name": "DealCreatedCard.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "DealDocumentsReadonly.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "DealFilterFieldSettingsModal.vue"
                   },
                   {
                     "type": "file",
@@ -417,11 +441,27 @@
                   },
                   {
                     "type": "file",
+                    "name": "DealHistoryPanel.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "DealHistorySearchModal.vue"
+                  },
+                  {
+                    "type": "file",
                     "name": "Deals.vue"
                   },
                   {
                     "type": "file",
+                    "name": "DealSearchModal.vue"
+                  },
+                  {
+                    "type": "file",
                     "name": "DocumentUpload.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "InlineSectionEditor.vue"
                   },
                   {
                     "type": "file",
@@ -430,6 +470,10 @@
                   {
                     "type": "file",
                     "name": "RentalDealForm.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ResponsiblePersonSection.vue"
                   },
                   {
                     "type": "file",
@@ -572,6 +616,10 @@
                   {
                     "type": "file",
                     "name": "ModalHeader.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ProfilePopup.vue"
                   },
                   {
                     "type": "file",
@@ -1935,6 +1983,14 @@
       "requiresAdmin": false
     },
     {
+      "path": "/project-map",
+      "component": null,
+      "name": "project-map",
+      "redirect": null,
+      "requiresSuperAdmin": true,
+      "requiresAdmin": false
+    },
+    {
       "path": "/settings/kanban",
       "component": "kanban_settings",
       "name": null,
@@ -2582,6 +2638,22 @@
             "name": null,
             "redirect": null,
             "requiresSuperAdmin": false,
+            "requiresAdmin": false,
+            "kind": "route"
+          }
+        ]
+      },
+      {
+        "segment": "project-map",
+        "fullPath": "/project-map",
+        "children": [],
+        "routes": [
+          {
+            "path": "/project-map",
+            "component": null,
+            "name": "project-map",
+            "redirect": null,
+            "requiresSuperAdmin": true,
             "requiresAdmin": false,
             "kind": "route"
           }
@@ -3848,17 +3920,137 @@
   "apiCalls": [
     {
       "file": "routes/api.php",
-      "line": 369,
+      "line": 384,
       "method": "GET",
       "url": "/api/v1/mobile/kanban",
       "source": "laravel-mobile"
     },
     {
       "file": "routes/api.php",
-      "line": 370,
+      "line": 385,
       "method": "POST",
       "url": "/api/v1/mobile/leads/{lead}/move",
       "source": "laravel-mobile"
+    },
+    {
+      "file": "components/dashboard/Ai/AiWidgets.vue",
+      "line": 138,
+      "method": "get",
+      "url": "/api/dashboard/stats"
+    },
+    {
+      "file": "components/dashboard/Ai/LatestUser.vue",
+      "line": 333,
+      "method": "get",
+      "url": "/api/dashboard/admin/latest-requests"
+    },
+    {
+      "file": "components/dashboard/Ai/LatestUser.vue",
+      "line": 350,
+      "method": "get",
+      "url": "/api/dashboard/my-latest-requests"
+    },
+    {
+      "file": "components/dashboard/Ai/LatestUser.vue",
+      "line": 357,
+      "method": "get",
+      "url": "/api/dashboard/my-latest-orders"
+    },
+    {
+      "file": "components/dashboard/Ai/propertyType.vue",
+      "line": 96,
+      "method": "get",
+      "url": "/api/dashboard/property-types-with-listings"
+    },
+    {
+      "file": "components/dashboard/Ai/SalesStatistic.vue",
+      "line": 38,
+      "method": "get",
+      "url": "/api/dashboard/listings-statistics?period=${selectedPeriod.value}"
+    },
+    {
+      "file": "components/dashboard/Ai/TopPerformer.vue",
+      "line": 69,
+      "method": "get",
+      "url": "/api/dashboard/top-agent-performance"
+    },
+    {
+      "file": "components/dashboard/Ai/TotalSubscriber.vue",
+      "line": 41,
+      "method": "get",
+      "url": "/api/dashboard/active-agents"
+    },
+    {
+      "file": "components/dashboard/Ai/UserOverview.vue",
+      "line": 74,
+      "method": "get",
+      "url": "/api/dashboard/leads-overview?timeframe=${selectedTimeframe.value}"
+    },
+    {
+      "file": "components/kanban/deals/Deals.vue",
+      "line": 731,
+      "method": "get",
+      "url": "/deals/grouped-by-stage"
+    },
+    {
+      "file": "components/kanban/deals/Deals.vue",
+      "line": 1123,
+      "method": "put",
+      "url": "/stages/${column.stage_id}"
+    },
+    {
+      "file": "components/kanban/deals/Deals.vue",
+      "line": 1176,
+      "method": "put",
+      "url": "/stages/${stageForm.value.id}"
+    },
+    {
+      "file": "components/kanban/deals/Deals.vue",
+      "line": 1351,
+      "method": "post",
+      "url": "/deals/${deal.id}/change-stage"
+    },
+    {
+      "file": "components/kanban/deals/Deals.vue",
+      "line": 1673,
+      "method": "get",
+      "url": "/available-responsible-persons"
+    },
+    {
+      "file": "components/kanban/deals/ViewDealModal.vue",
+      "line": 343,
+      "method": "get",
+      "url": "/stages"
+    },
+    {
+      "file": "components/kanban/deals/ViewDealModal.vue",
+      "line": 538,
+      "method": "get",
+      "url": "/listings/areas"
+    },
+    {
+      "file": "components/kanban/deals/ViewDealModal.vue",
+      "line": 548,
+      "method": "get",
+      "url": "/listings/areas"
+    },
+    {
+      "file": "components/kanban/deals/ViewDealModal.vue",
+      "line": 553,
+      "method": "get",
+      "url": "/listings/projects"
+    },
+    {
+      "file": "components/kanban/deals/ViewDealModal.vue",
+      "line": 566,
+      "method": "get",
+      "url": "/deals/${props.deal.id}"
+    },
+    {
+      "file": "components/kanban/leadList/ImportPitrix.vue",
+      "line": 328,
+      "method": "post",
+      "url": "/api/leads/import"
     },
     {
       "file": "components/Users/ViewProfile.vue",
@@ -3903,120 +4095,6 @@
       "url": "/api/profile/avatar"
     },
     {
-      "file": "components/dashboard/Ai/AiWidgets.vue",
-      "line": 138,
-      "method": "get",
-      "url": "/api/dashboard/stats"
-    },
-    {
-      "file": "components/dashboard/Ai/LatestUser.vue",
-      "line": 333,
-      "method": "get",
-      "url": "/api/dashboard/admin/latest-requests"
-    },
-    {
-      "file": "components/dashboard/Ai/LatestUser.vue",
-      "line": 350,
-      "method": "get",
-      "url": "/api/dashboard/my-latest-requests"
-    },
-    {
-      "file": "components/dashboard/Ai/LatestUser.vue",
-      "line": 357,
-      "method": "get",
-      "url": "/api/dashboard/my-latest-orders"
-    },
-    {
-      "file": "components/dashboard/Ai/SalesStatistic.vue",
-      "line": 38,
-      "method": "get",
-      "url": "/api/dashboard/listings-statistics?period=${selectedPeriod.value}"
-    },
-    {
-      "file": "components/dashboard/Ai/TopPerformer.vue",
-      "line": 69,
-      "method": "get",
-      "url": "/api/dashboard/top-agent-performance"
-    },
-    {
-      "file": "components/dashboard/Ai/TotalSubscriber.vue",
-      "line": 41,
-      "method": "get",
-      "url": "/api/dashboard/active-agents"
-    },
-    {
-      "file": "components/dashboard/Ai/UserOverview.vue",
-      "line": 74,
-      "method": "get",
-      "url": "/api/dashboard/leads-overview?timeframe=${selectedTimeframe.value}"
-    },
-    {
-      "file": "components/dashboard/Ai/propertyType.vue",
-      "line": 96,
-      "method": "get",
-      "url": "/api/dashboard/property-types-with-listings"
-    },
-    {
-      "file": "components/kanban/deals/Deals.vue",
-      "line": 469,
-      "method": "get",
-      "url": "/deals/grouped-by-stage"
-    },
-    {
-      "file": "components/kanban/deals/Deals.vue",
-      "line": 851,
-      "method": "put",
-      "url": "/stages/${column.stage_id}"
-    },
-    {
-      "file": "components/kanban/deals/Deals.vue",
-      "line": 911,
-      "method": "put",
-      "url": "/stages/${stageForm.value.id}"
-    },
-    {
-      "file": "components/kanban/deals/Deals.vue",
-      "line": 1044,
-      "method": "post",
-      "url": "/deals/${deal.id}/change-stage"
-    },
-    {
-      "file": "components/kanban/deals/ViewDealModal.vue",
-      "line": 538,
-      "method": "get",
-      "url": "/deals/${props.deal.id}/history"
-    },
-    {
-      "file": "components/kanban/deals/ViewDealModal.vue",
-      "line": 687,
-      "method": "get",
-      "url": "/listings/areas"
-    },
-    {
-      "file": "components/kanban/deals/ViewDealModal.vue",
-      "line": 697,
-      "method": "get",
-      "url": "/listings/areas"
-    },
-    {
-      "file": "components/kanban/deals/ViewDealModal.vue",
-      "line": 702,
-      "method": "get",
-      "url": "/listings/projects"
-    },
-    {
-      "file": "components/kanban/deals/ViewDealModal.vue",
-      "line": 714,
-      "method": "get",
-      "url": "/deals/${props.deal.id}"
-    },
-    {
-      "file": "components/kanban/leadList/ImportPitrix.vue",
-      "line": 328,
-      "method": "post",
-      "url": "/api/leads/import"
-    },
-    {
       "file": "composables/useStageTransition.js",
       "line": 8,
       "method": "post",
@@ -4057,17 +4135,141 @@
     "routes/api.php": [
       {
         "file": "routes/api.php",
-        "line": 369,
+        "line": 384,
         "method": "GET",
         "url": "/api/v1/mobile/kanban",
         "source": "laravel-mobile"
       },
       {
         "file": "routes/api.php",
-        "line": 370,
+        "line": 385,
         "method": "POST",
         "url": "/api/v1/mobile/leads/{lead}/move",
         "source": "laravel-mobile"
+      }
+    ],
+    "components/dashboard": [
+      {
+        "file": "components/dashboard/Ai/AiWidgets.vue",
+        "line": 138,
+        "method": "get",
+        "url": "/api/dashboard/stats"
+      },
+      {
+        "file": "components/dashboard/Ai/LatestUser.vue",
+        "line": 333,
+        "method": "get",
+        "url": "/api/dashboard/admin/latest-requests"
+      },
+      {
+        "file": "components/dashboard/Ai/LatestUser.vue",
+        "line": 350,
+        "method": "get",
+        "url": "/api/dashboard/my-latest-requests"
+      },
+      {
+        "file": "components/dashboard/Ai/LatestUser.vue",
+        "line": 357,
+        "method": "get",
+        "url": "/api/dashboard/my-latest-orders"
+      },
+      {
+        "file": "components/dashboard/Ai/propertyType.vue",
+        "line": 96,
+        "method": "get",
+        "url": "/api/dashboard/property-types-with-listings"
+      },
+      {
+        "file": "components/dashboard/Ai/SalesStatistic.vue",
+        "line": 38,
+        "method": "get",
+        "url": "/api/dashboard/listings-statistics?period=${selectedPeriod.value}"
+      },
+      {
+        "file": "components/dashboard/Ai/TopPerformer.vue",
+        "line": 69,
+        "method": "get",
+        "url": "/api/dashboard/top-agent-performance"
+      },
+      {
+        "file": "components/dashboard/Ai/TotalSubscriber.vue",
+        "line": 41,
+        "method": "get",
+        "url": "/api/dashboard/active-agents"
+      },
+      {
+        "file": "components/dashboard/Ai/UserOverview.vue",
+        "line": 74,
+        "method": "get",
+        "url": "/api/dashboard/leads-overview?timeframe=${selectedTimeframe.value}"
+      }
+    ],
+    "components/kanban": [
+      {
+        "file": "components/kanban/deals/Deals.vue",
+        "line": 731,
+        "method": "get",
+        "url": "/deals/grouped-by-stage"
+      },
+      {
+        "file": "components/kanban/deals/Deals.vue",
+        "line": 1123,
+        "method": "put",
+        "url": "/stages/${column.stage_id}"
+      },
+      {
+        "file": "components/kanban/deals/Deals.vue",
+        "line": 1176,
+        "method": "put",
+        "url": "/stages/${stageForm.value.id}"
+      },
+      {
+        "file": "components/kanban/deals/Deals.vue",
+        "line": 1351,
+        "method": "post",
+        "url": "/deals/${deal.id}/change-stage"
+      },
+      {
+        "file": "components/kanban/deals/Deals.vue",
+        "line": 1673,
+        "method": "get",
+        "url": "/available-responsible-persons"
+      },
+      {
+        "file": "components/kanban/deals/ViewDealModal.vue",
+        "line": 343,
+        "method": "get",
+        "url": "/stages"
+      },
+      {
+        "file": "components/kanban/deals/ViewDealModal.vue",
+        "line": 538,
+        "method": "get",
+        "url": "/listings/areas"
+      },
+      {
+        "file": "components/kanban/deals/ViewDealModal.vue",
+        "line": 548,
+        "method": "get",
+        "url": "/listings/areas"
+      },
+      {
+        "file": "components/kanban/deals/ViewDealModal.vue",
+        "line": 553,
+        "method": "get",
+        "url": "/listings/projects"
+      },
+      {
+        "file": "components/kanban/deals/ViewDealModal.vue",
+        "line": 566,
+        "method": "get",
+        "url": "/deals/${props.deal.id}"
+      },
+      {
+        "file": "components/kanban/leadList/ImportPitrix.vue",
+        "line": 328,
+        "method": "post",
+        "url": "/api/leads/import"
       }
     ],
     "components/Users": [
@@ -4112,124 +4314,6 @@
         "line": 624,
         "method": "post",
         "url": "/api/profile/avatar"
-      }
-    ],
-    "components/dashboard": [
-      {
-        "file": "components/dashboard/Ai/AiWidgets.vue",
-        "line": 138,
-        "method": "get",
-        "url": "/api/dashboard/stats"
-      },
-      {
-        "file": "components/dashboard/Ai/LatestUser.vue",
-        "line": 333,
-        "method": "get",
-        "url": "/api/dashboard/admin/latest-requests"
-      },
-      {
-        "file": "components/dashboard/Ai/LatestUser.vue",
-        "line": 350,
-        "method": "get",
-        "url": "/api/dashboard/my-latest-requests"
-      },
-      {
-        "file": "components/dashboard/Ai/LatestUser.vue",
-        "line": 357,
-        "method": "get",
-        "url": "/api/dashboard/my-latest-orders"
-      },
-      {
-        "file": "components/dashboard/Ai/SalesStatistic.vue",
-        "line": 38,
-        "method": "get",
-        "url": "/api/dashboard/listings-statistics?period=${selectedPeriod.value}"
-      },
-      {
-        "file": "components/dashboard/Ai/TopPerformer.vue",
-        "line": 69,
-        "method": "get",
-        "url": "/api/dashboard/top-agent-performance"
-      },
-      {
-        "file": "components/dashboard/Ai/TotalSubscriber.vue",
-        "line": 41,
-        "method": "get",
-        "url": "/api/dashboard/active-agents"
-      },
-      {
-        "file": "components/dashboard/Ai/UserOverview.vue",
-        "line": 74,
-        "method": "get",
-        "url": "/api/dashboard/leads-overview?timeframe=${selectedTimeframe.value}"
-      },
-      {
-        "file": "components/dashboard/Ai/propertyType.vue",
-        "line": 96,
-        "method": "get",
-        "url": "/api/dashboard/property-types-with-listings"
-      }
-    ],
-    "components/kanban": [
-      {
-        "file": "components/kanban/deals/Deals.vue",
-        "line": 469,
-        "method": "get",
-        "url": "/deals/grouped-by-stage"
-      },
-      {
-        "file": "components/kanban/deals/Deals.vue",
-        "line": 851,
-        "method": "put",
-        "url": "/stages/${column.stage_id}"
-      },
-      {
-        "file": "components/kanban/deals/Deals.vue",
-        "line": 911,
-        "method": "put",
-        "url": "/stages/${stageForm.value.id}"
-      },
-      {
-        "file": "components/kanban/deals/Deals.vue",
-        "line": 1044,
-        "method": "post",
-        "url": "/deals/${deal.id}/change-stage"
-      },
-      {
-        "file": "components/kanban/deals/ViewDealModal.vue",
-        "line": 538,
-        "method": "get",
-        "url": "/deals/${props.deal.id}/history"
-      },
-      {
-        "file": "components/kanban/deals/ViewDealModal.vue",
-        "line": 687,
-        "method": "get",
-        "url": "/listings/areas"
-      },
-      {
-        "file": "components/kanban/deals/ViewDealModal.vue",
-        "line": 697,
-        "method": "get",
-        "url": "/listings/areas"
-      },
-      {
-        "file": "components/kanban/deals/ViewDealModal.vue",
-        "line": 702,
-        "method": "get",
-        "url": "/listings/projects"
-      },
-      {
-        "file": "components/kanban/deals/ViewDealModal.vue",
-        "line": 714,
-        "method": "get",
-        "url": "/deals/${props.deal.id}"
-      },
-      {
-        "file": "components/kanban/leadList/ImportPitrix.vue",
-        "line": 328,
-        "method": "post",
-        "url": "/api/leads/import"
       }
     ],
     "composables/useStageTransition.js": [
@@ -4298,27 +4382,6 @@
         ],
         "components": [
           {
-            "id": "components/kanban/Kanban_vue",
-            "rel": "components/kanban/Kanban.vue",
-            "label": "Kanban",
-            "file": "Kanban.vue",
-            "shared": false
-          },
-          {
-            "id": "components/kanban/KanbanSettings_vue",
-            "rel": "components/kanban/KanbanSettings.vue",
-            "label": "Kanban Settings",
-            "file": "KanbanSettings.vue",
-            "shared": false
-          },
-          {
-            "id": "components/kanban/LeadScoringSettings_vue",
-            "rel": "components/kanban/LeadScoringSettings.vue",
-            "label": "Lead Scoring Settings",
-            "file": "LeadScoringSettings.vue",
-            "shared": false
-          },
-          {
             "id": "components/kanban/createLead/CreateLeadModal_vue",
             "rel": "components/kanban/createLead/CreateLeadModal.vue",
             "label": "Create Lead Modal",
@@ -4340,10 +4403,52 @@
             "shared": false
           },
           {
+            "id": "components/kanban/deals/DealActivityList_vue",
+            "rel": "components/kanban/deals/DealActivityList.vue",
+            "label": "Deal Activity List",
+            "file": "DealActivityList.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban/deals/DealActivitySection_vue",
+            "rel": "components/kanban/deals/DealActivitySection.vue",
+            "label": "Deal Activity Section",
+            "file": "DealActivitySection.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban/deals/DealCommentList_vue",
+            "rel": "components/kanban/deals/DealCommentList.vue",
+            "label": "Deal Comment List",
+            "file": "DealCommentList.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban/deals/DealCommentsSection_vue",
+            "rel": "components/kanban/deals/DealCommentsSection.vue",
+            "label": "Deal Comments Section",
+            "file": "DealCommentsSection.vue",
+            "shared": false
+          },
+          {
             "id": "components/kanban/deals/DealCreatedCard_vue",
             "rel": "components/kanban/deals/DealCreatedCard.vue",
             "label": "Deal Created Card",
             "file": "DealCreatedCard.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban/deals/DealDocumentsReadonly_vue",
+            "rel": "components/kanban/deals/DealDocumentsReadonly.vue",
+            "label": "Deal Documents Readonly",
+            "file": "DealDocumentsReadonly.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban/deals/DealFilterFieldSettingsModal_vue",
+            "rel": "components/kanban/deals/DealFilterFieldSettingsModal.vue",
+            "label": "Deal Filter Field Settings Modal",
+            "file": "DealFilterFieldSettingsModal.vue",
             "shared": false
           },
           {
@@ -4354,6 +4459,20 @@
             "shared": false
           },
           {
+            "id": "components/kanban/deals/DealHistoryPanel_vue",
+            "rel": "components/kanban/deals/DealHistoryPanel.vue",
+            "label": "Deal History Panel",
+            "file": "DealHistoryPanel.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban/deals/DealHistorySearchModal_vue",
+            "rel": "components/kanban/deals/DealHistorySearchModal.vue",
+            "label": "Deal History Search Modal",
+            "file": "DealHistorySearchModal.vue",
+            "shared": false
+          },
+          {
             "id": "components/kanban/deals/Deals_vue",
             "rel": "components/kanban/deals/Deals.vue",
             "label": "Deals",
@@ -4361,10 +4480,24 @@
             "shared": false
           },
           {
+            "id": "components/kanban/deals/DealSearchModal_vue",
+            "rel": "components/kanban/deals/DealSearchModal.vue",
+            "label": "Deal Search Modal",
+            "file": "DealSearchModal.vue",
+            "shared": false
+          },
+          {
             "id": "components/kanban/deals/DocumentUpload_vue",
             "rel": "components/kanban/deals/DocumentUpload.vue",
             "label": "Document Upload",
             "file": "DocumentUpload.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban/deals/InlineSectionEditor_vue",
+            "rel": "components/kanban/deals/InlineSectionEditor.vue",
+            "label": "Inline Section Editor",
+            "file": "InlineSectionEditor.vue",
             "shared": false
           },
           {
@@ -4379,6 +4512,13 @@
             "rel": "components/kanban/deals/RentalDealForm.vue",
             "label": "Rental Deal Form",
             "file": "RentalDealForm.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban/deals/ResponsiblePersonSection_vue",
+            "rel": "components/kanban/deals/ResponsiblePersonSection.vue",
+            "label": "Responsible Person Section",
+            "file": "ResponsiblePersonSection.vue",
             "shared": false
           },
           {
@@ -4473,6 +4613,20 @@
             "shared": false
           },
           {
+            "id": "components/kanban/Kanban_vue",
+            "rel": "components/kanban/Kanban.vue",
+            "label": "Kanban",
+            "file": "Kanban.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban/KanbanSettings_vue",
+            "rel": "components/kanban/KanbanSettings.vue",
+            "label": "Kanban Settings",
+            "file": "KanbanSettings.vue",
+            "shared": false
+          },
+          {
             "id": "components/kanban/kanban_deal_vue",
             "rel": "components/kanban/kanban_deal.vue",
             "label": "Kanban Deal",
@@ -4508,6 +4662,13 @@
             "shared": false
           },
           {
+            "id": "components/kanban/leadList/leads_vue",
+            "rel": "components/kanban/leadList/leads.vue",
+            "label": "Leads",
+            "file": "leads.vue",
+            "shared": false
+          },
+          {
             "id": "components/kanban/leadList/LeadSearchModal_vue",
             "rel": "components/kanban/leadList/LeadSearchModal.vue",
             "label": "Lead Search Modal",
@@ -4522,10 +4683,10 @@
             "shared": false
           },
           {
-            "id": "components/kanban/leadList/leads_vue",
-            "rel": "components/kanban/leadList/leads.vue",
-            "label": "Leads",
-            "file": "leads.vue",
+            "id": "components/kanban/LeadScoringSettings_vue",
+            "rel": "components/kanban/LeadScoringSettings.vue",
+            "label": "Lead Scoring Settings",
+            "file": "LeadScoringSettings.vue",
             "shared": false
           },
           {
@@ -4554,6 +4715,13 @@
             "rel": "components/kanban/shared/ModalHeader.vue",
             "label": "Modal Header",
             "file": "ModalHeader.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban/shared/ProfilePopup_vue",
+            "rel": "components/kanban/shared/ProfilePopup.vue",
+            "label": "Profile Popup",
+            "file": "ProfilePopup.vue",
             "shared": false
           },
           {
@@ -4690,41 +4858,53 @@
             "method": "GET",
             "url": "/api/v1/mobile/kanban",
             "file": "routes/api.php",
-            "line": 369
+            "line": 384
           },
           {
             "method": "POST",
             "url": "/api/v1/mobile/leads/{lead}/move",
             "file": "routes/api.php",
-            "line": 370
+            "line": 385
           },
           {
             "method": "get",
             "url": "/deals/grouped-by-stage",
             "file": "components/kanban/deals/Deals.vue",
-            "line": 469
+            "line": 731
           },
           {
             "method": "put",
             "url": "/stages/${column.stage_id}",
             "file": "components/kanban/deals/Deals.vue",
-            "line": 851
+            "line": 1123
           },
           {
             "method": "put",
             "url": "/stages/${stageForm.value.id}",
             "file": "components/kanban/deals/Deals.vue",
-            "line": 911
+            "line": 1176
           },
           {
             "method": "post",
             "url": "/deals/${deal.id}/change-stage",
             "file": "components/kanban/deals/Deals.vue",
-            "line": 1044
+            "line": 1351
           },
           {
             "method": "get",
-            "url": "/deals/${props.deal.id}/history",
+            "url": "/available-responsible-persons",
+            "file": "components/kanban/deals/Deals.vue",
+            "line": 1673
+          },
+          {
+            "method": "get",
+            "url": "/stages",
+            "file": "components/kanban/deals/ViewDealModal.vue",
+            "line": 343
+          },
+          {
+            "method": "get",
+            "url": "/listings/areas",
             "file": "components/kanban/deals/ViewDealModal.vue",
             "line": 538
           },
@@ -4732,25 +4912,19 @@
             "method": "get",
             "url": "/listings/areas",
             "file": "components/kanban/deals/ViewDealModal.vue",
-            "line": 687
-          },
-          {
-            "method": "get",
-            "url": "/listings/areas",
-            "file": "components/kanban/deals/ViewDealModal.vue",
-            "line": 697
+            "line": 548
           },
           {
             "method": "get",
             "url": "/listings/projects",
             "file": "components/kanban/deals/ViewDealModal.vue",
-            "line": 702
+            "line": 553
           },
           {
             "method": "get",
             "url": "/deals/${props.deal.id}",
             "file": "components/kanban/deals/ViewDealModal.vue",
-            "line": 714
+            "line": 566
           },
           {
             "method": "post",
@@ -4769,14 +4943,6 @@
             "rel": "pages/listings/AllRequests.vue",
             "label": "All Requests",
             "file": "AllRequests.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
-            "id": "pages/listings/SearchBar_vue",
-            "rel": "pages/listings/SearchBar.vue",
-            "label": "Search Bar",
-            "file": "SearchBar.vue",
             "shared": false,
             "isEntry": true
           },
@@ -4849,6 +5015,14 @@
             "rel": "pages/listings/property-map.vue",
             "label": "Property Map",
             "file": "property-map.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
+            "id": "pages/listings/SearchBar_vue",
+            "rel": "pages/listings/SearchBar.vue",
+            "label": "Search Bar",
+            "file": "SearchBar.vue",
             "shared": false,
             "isEntry": true
           }
@@ -5047,22 +5221,6 @@
         "title": "Dashboard & AI home",
         "pages": [
           {
-            "id": "pages/dashboard/NFTgaming_vue",
-            "rel": "pages/dashboard/NFTgaming.vue",
-            "label": "NFTgaming",
-            "file": "NFTgaming.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
-            "id": "pages/dashboard/PosInventory_vue",
-            "rel": "pages/dashboard/PosInventory.vue",
-            "label": "Pos Inventory",
-            "file": "PosInventory.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
             "id": "pages/dashboard/ai_vue",
             "rel": "pages/dashboard/ai.vue",
             "label": "Ai",
@@ -5159,10 +5317,26 @@
             "isEntry": true
           },
           {
+            "id": "pages/dashboard/NFTgaming_vue",
+            "rel": "pages/dashboard/NFTgaming.vue",
+            "label": "NFTgaming",
+            "file": "NFTgaming.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
             "id": "pages/dashboard/podcast_vue",
             "rel": "pages/dashboard/podcast.vue",
             "label": "Podcast",
             "file": "podcast.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
+            "id": "pages/dashboard/PosInventory_vue",
+            "rel": "pages/dashboard/PosInventory.vue",
+            "label": "Pos Inventory",
+            "file": "PosInventory.vue",
             "shared": false,
             "isEntry": true
           },
@@ -5205,6 +5379,13 @@
             "shared": false
           },
           {
+            "id": "components/dashboard/Ai/propertyType_vue",
+            "rel": "components/dashboard/Ai/propertyType.vue",
+            "label": "Property Type",
+            "file": "propertyType.vue",
+            "shared": false
+          },
+          {
             "id": "components/dashboard/Ai/SalesStatistic_vue",
             "rel": "components/dashboard/Ai/SalesStatistic.vue",
             "label": "Sales Statistic",
@@ -5230,13 +5411,6 @@
             "rel": "components/dashboard/Ai/UserOverview.vue",
             "label": "User Overview",
             "file": "UserOverview.vue",
-            "shared": false
-          },
-          {
-            "id": "components/dashboard/Ai/propertyType_vue",
-            "rel": "components/dashboard/Ai/propertyType.vue",
-            "label": "Property Type",
-            "file": "propertyType.vue",
             "shared": false
           },
           {
@@ -5339,6 +5513,12 @@
           },
           {
             "method": "get",
+            "url": "/api/dashboard/property-types-with-listings",
+            "file": "components/dashboard/Ai/propertyType.vue",
+            "line": 96
+          },
+          {
+            "method": "get",
             "url": "/api/dashboard/listings-statistics?period=${selectedPeriod.value}",
             "file": "components/dashboard/Ai/SalesStatistic.vue",
             "line": 38
@@ -5360,12 +5540,6 @@
             "url": "/api/dashboard/leads-overview?timeframe=${selectedTimeframe.value}",
             "file": "components/dashboard/Ai/UserOverview.vue",
             "line": 74
-          },
-          {
-            "method": "get",
-            "url": "/api/dashboard/property-types-with-listings",
-            "file": "components/dashboard/Ai/propertyType.vue",
-            "line": 96
           }
         ]
       },
@@ -5461,30 +5635,6 @@
             "isEntry": true
           },
           {
-            "id": "pages/users/UserDetail_vue",
-            "rel": "pages/users/UserDetail.vue",
-            "label": "User Detail",
-            "file": "UserDetail.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
-            "id": "pages/users/UserForm_vue",
-            "rel": "pages/users/UserForm.vue",
-            "label": "User Form",
-            "file": "UserForm.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
-            "id": "pages/users/UsersList_vue",
-            "rel": "pages/users/UsersList.vue",
-            "label": "Users List",
-            "file": "UsersList.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
             "id": "pages/users/add-user_vue",
             "rel": "pages/users/add-user.vue",
             "label": "Add User",
@@ -5517,6 +5667,22 @@
             "isEntry": true
           },
           {
+            "id": "pages/users/UserDetail_vue",
+            "rel": "pages/users/UserDetail.vue",
+            "label": "User Detail",
+            "file": "UserDetail.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
+            "id": "pages/users/UserForm_vue",
+            "rel": "pages/users/UserForm.vue",
+            "label": "User Form",
+            "file": "UserForm.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
             "id": "pages/users/users-grid_vue",
             "rel": "pages/users/users-grid.vue",
             "label": "Users Grid",
@@ -5529,6 +5695,14 @@
             "rel": "pages/users/users-list.vue",
             "label": "Users List",
             "file": "users-list.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
+            "id": "pages/users/UsersList_vue",
+            "rel": "pages/users/UsersList.vue",
+            "label": "Users List",
+            "file": "UsersList.vue",
             "shared": false,
             "isEntry": true
           },
@@ -5662,6 +5836,14 @@
         "title": "Email",
         "pages": [
           {
+            "id": "pages/email/email_vue",
+            "rel": "pages/email/email.vue",
+            "label": "Email",
+            "file": "email.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
             "id": "pages/email/StarredEmail_vue",
             "rel": "pages/email/StarredEmail.vue",
             "label": "Starred Email",
@@ -5674,14 +5856,6 @@
             "rel": "pages/email/VeiwDetails.vue",
             "label": "Veiw Details",
             "file": "VeiwDetails.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
-            "id": "pages/email/email_vue",
-            "rel": "pages/email/email.vue",
-            "label": "Email",
-            "file": "email.vue",
             "shared": false,
             "isEntry": true
           }
@@ -5732,18 +5906,18 @@
         "title": "Developers / owners / catalog",
         "pages": [
           {
-            "id": "pages/areas/BulkAreaCoordinates_vue",
-            "rel": "pages/areas/BulkAreaCoordinates.vue",
-            "label": "Bulk Area Coordinates",
-            "file": "BulkAreaCoordinates.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
             "id": "pages/areas/areas-list_vue",
             "rel": "pages/areas/areas-list.vue",
             "label": "Areas List",
             "file": "areas-list.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
+            "id": "pages/areas/BulkAreaCoordinates_vue",
+            "rel": "pages/areas/BulkAreaCoordinates.vue",
+            "label": "Bulk Area Coordinates",
+            "file": "BulkAreaCoordinates.vue",
             "shared": false,
             "isEntry": true
           },
@@ -6267,14 +6441,6 @@
         "title": "Dev tools",
         "pages": [
           {
-            "id": "pages/dev/ProjectMapPage_vue",
-            "rel": "pages/dev/ProjectMapPage.vue",
-            "label": "Project Map Page",
-            "file": "ProjectMapPage.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
             "id": "pages/dev/project-map/nodes/RoadmapNode_vue",
             "rel": "pages/dev/project-map/nodes/RoadmapNode.vue",
             "label": "Roadmap Node",
@@ -6351,6 +6517,14 @@
             "rel": "pages/dev/project-map/tabs/RoutesTab.vue",
             "label": "Routes Tab",
             "file": "RoutesTab.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
+            "id": "pages/dev/ProjectMapPage_vue",
+            "rel": "pages/dev/ProjectMapPage.vue",
+            "label": "Project Map Page",
+            "file": "ProjectMapPage.vue",
             "shared": false,
             "isEntry": true
           }
@@ -6695,6 +6869,13 @@
         ],
         "components": [
           {
+            "id": "components/breadcrumb/Breadcrumb_vue",
+            "rel": "components/breadcrumb/Breadcrumb.vue",
+            "label": "Breadcrumb",
+            "file": "Breadcrumb.vue",
+            "shared": false
+          },
+          {
             "id": "components/ConfirmationModal_vue",
             "rel": "components/ConfirmationModal.vue",
             "label": "Confirmation Modal",
@@ -6706,6 +6887,13 @@
             "rel": "components/NotificationBell.vue",
             "label": "Notification Bell",
             "file": "NotificationBell.vue",
+            "shared": false
+          },
+          {
+            "id": "components/pagination/index_vue",
+            "rel": "components/pagination/index.vue",
+            "label": "Index",
+            "file": "index.vue",
             "shared": false
           },
           {
@@ -6860,20 +7048,6 @@
             "rel": "components/Table/UsersTable.vue",
             "label": "Users Table",
             "file": "UsersTable.vue",
-            "shared": false
-          },
-          {
-            "id": "components/breadcrumb/Breadcrumb_vue",
-            "rel": "components/breadcrumb/Breadcrumb.vue",
-            "label": "Breadcrumb",
-            "file": "Breadcrumb.vue",
-            "shared": false
-          },
-          {
-            "id": "components/pagination/index_vue",
-            "rel": "components/pagination/index.vue",
-            "label": "Index",
-            "file": "index.vue",
             "shared": false
           }
         ],
@@ -7306,193 +7480,11 @@
         }
       },
       {
-        "id": "f:components/RoleAccess/AssignRole.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 200,
-          "y": 360
-        },
-        "data": {
-          "group": "component",
-          "label": "Assign Role",
-          "detail": "components/RoleAccess/AssignRole.vue",
-          "rel": "components/RoleAccess/AssignRole.vue"
-        }
-      },
-      {
-        "id": "f:components/pagination/index.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 400,
-          "y": 360
-        },
-        "data": {
-          "group": "component",
-          "label": "Index",
-          "detail": "components/pagination/index.vue",
-          "rel": "components/pagination/index.vue"
-        }
-      },
-      {
-        "id": "f:components/RoleAccess/Role.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 600,
-          "y": 360
-        },
-        "data": {
-          "group": "component",
-          "label": "Role",
-          "detail": "components/RoleAccess/Role.vue",
-          "rel": "components/RoleAccess/Role.vue"
-        }
-      },
-      {
-        "id": "f:components/Settings/Currencies.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 800,
-          "y": 360
-        },
-        "data": {
-          "group": "component",
-          "label": "Currencies",
-          "detail": "components/Settings/Currencies.vue",
-          "rel": "components/Settings/Currencies.vue"
-        }
-      },
-      {
-        "id": "f:components/Settings/Languages.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 1000,
-          "y": 360
-        },
-        "data": {
-          "group": "component",
-          "label": "Languages",
-          "detail": "components/Settings/Languages.vue",
-          "rel": "components/Settings/Languages.vue"
-        }
-      },
-      {
-        "id": "f:components/Table/AreasTable.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 0,
-          "y": 450
-        },
-        "data": {
-          "group": "component",
-          "label": "Areas Table",
-          "detail": "components/Table/AreasTable.vue",
-          "rel": "components/Table/AreasTable.vue"
-        }
-      },
-      {
-        "id": "f:components/Table/TreeNode.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 200,
-          "y": 450
-        },
-        "data": {
-          "group": "component",
-          "label": "Tree Node",
-          "detail": "components/Table/TreeNode.vue",
-          "rel": "components/Table/TreeNode.vue"
-        }
-      },
-      {
-        "id": "f:components/Table/ProjectTable.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 400,
-          "y": 450
-        },
-        "data": {
-          "group": "component",
-          "label": "Project Table",
-          "detail": "components/Table/ProjectTable.vue",
-          "rel": "components/Table/ProjectTable.vue"
-        }
-      },
-      {
-        "id": "f:components/breadcrumb/Breadcrumb.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 600,
-          "y": 450
-        },
-        "data": {
-          "group": "component",
-          "label": "Breadcrumb",
-          "detail": "components/breadcrumb/Breadcrumb.vue",
-          "rel": "components/breadcrumb/Breadcrumb.vue"
-        }
-      },
-      {
-        "id": "f:components/Table/TeamTree.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 800,
-          "y": 450
-        },
-        "data": {
-          "group": "component",
-          "label": "Team Tree",
-          "detail": "components/Table/TeamTree.vue",
-          "rel": "components/Table/TeamTree.vue"
-        }
-      },
-      {
-        "id": "f:components/Table/TeamTreeNode.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 1000,
-          "y": 450
-        },
-        "data": {
-          "group": "component",
-          "label": "Team Tree Node",
-          "detail": "components/Table/TeamTreeNode.vue",
-          "rel": "components/Table/TeamTreeNode.vue"
-        }
-      },
-      {
-        "id": "f:components/Users/UserGrid.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 0,
-          "y": 540
-        },
-        "data": {
-          "group": "component",
-          "label": "User Grid",
-          "detail": "components/Users/UserGrid.vue",
-          "rel": "components/Users/UserGrid.vue"
-        }
-      },
-      {
-        "id": "f:components/Users/UserList.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 200,
-          "y": 540
-        },
-        "data": {
-          "group": "component",
-          "label": "User List",
-          "detail": "components/Users/UserList.vue",
-          "rel": "components/Users/UserList.vue"
-        }
-      },
-      {
         "id": "f:components/alllisting/AllLsting.vue",
         "type": "roadmap",
         "position": {
-          "x": 400,
-          "y": 540
+          "x": 200,
+          "y": 360
         },
         "data": {
           "group": "component",
@@ -7505,8 +7497,8 @@
         "id": "f:components/alllisting/SearchBar.vue",
         "type": "roadmap",
         "position": {
-          "x": 600,
-          "y": 540
+          "x": 400,
+          "y": 360
         },
         "data": {
           "group": "component",
@@ -7516,11 +7508,25 @@
         }
       },
       {
+        "id": "f:components/breadcrumb/Breadcrumb.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 600,
+          "y": 360
+        },
+        "data": {
+          "group": "component",
+          "label": "Breadcrumb",
+          "detail": "components/breadcrumb/Breadcrumb.vue",
+          "rel": "components/breadcrumb/Breadcrumb.vue"
+        }
+      },
+      {
         "id": "f:components/alllisting/PropertyShow.vue",
         "type": "roadmap",
         "position": {
           "x": 800,
-          "y": 540
+          "y": 360
         },
         "data": {
           "group": "component",
@@ -7534,7 +7540,7 @@
         "type": "roadmap",
         "position": {
           "x": 1000,
-          "y": 540
+          "y": 360
         },
         "data": {
           "group": "component",
@@ -7548,7 +7554,7 @@
         "type": "roadmap",
         "position": {
           "x": 0,
-          "y": 630
+          "y": 450
         },
         "data": {
           "group": "component",
@@ -7562,7 +7568,7 @@
         "type": "roadmap",
         "position": {
           "x": 200,
-          "y": 630
+          "y": 450
         },
         "data": {
           "group": "component",
@@ -7576,7 +7582,7 @@
         "type": "roadmap",
         "position": {
           "x": 400,
-          "y": 630
+          "y": 450
         },
         "data": {
           "group": "component",
@@ -7590,7 +7596,7 @@
         "type": "roadmap",
         "position": {
           "x": 600,
-          "y": 630
+          "y": 450
         },
         "data": {
           "group": "component",
@@ -7604,7 +7610,7 @@
         "type": "roadmap",
         "position": {
           "x": 800,
-          "y": 630
+          "y": 450
         },
         "data": {
           "group": "component",
@@ -7618,7 +7624,7 @@
         "type": "roadmap",
         "position": {
           "x": 1000,
-          "y": 630
+          "y": 450
         },
         "data": {
           "group": "component",
@@ -7628,81 +7634,11 @@
         }
       },
       {
-        "id": "f:components/kanban/Kanban.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 0,
-          "y": 720
-        },
-        "data": {
-          "group": "component",
-          "label": "Kanban",
-          "detail": "components/kanban/Kanban.vue",
-          "rel": "components/kanban/Kanban.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/Deals.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 200,
-          "y": 720
-        },
-        "data": {
-          "group": "component",
-          "label": "Deals",
-          "detail": "components/kanban/deals/Deals.vue",
-          "rel": "components/kanban/deals/Deals.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/leadList/leads.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 400,
-          "y": 720
-        },
-        "data": {
-          "group": "component",
-          "label": "Leads",
-          "detail": "components/kanban/leadList/leads.vue",
-          "rel": "components/kanban/leadList/leads.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/integration/Integration.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 600,
-          "y": 720
-        },
-        "data": {
-          "group": "component",
-          "label": "Integration",
-          "detail": "components/kanban/integration/Integration.vue",
-          "rel": "components/kanban/integration/Integration.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/leadList/LeadSearchModal.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 800,
-          "y": 720
-        },
-        "data": {
-          "group": "component",
-          "label": "Lead Search Modal",
-          "detail": "components/kanban/leadList/LeadSearchModal.vue",
-          "rel": "components/kanban/leadList/LeadSearchModal.vue"
-        }
-      },
-      {
         "id": "f:components/kanban/createLead/CreateLeadModal.vue",
         "type": "roadmap",
         "position": {
-          "x": 1000,
-          "y": 720
+          "x": 0,
+          "y": 540
         },
         "data": {
           "group": "component",
@@ -7712,67 +7648,11 @@
         }
       },
       {
-        "id": "f:components/kanban/deals/CreateDealModal.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 0,
-          "y": 810
-        },
-        "data": {
-          "group": "component",
-          "label": "Create Deal Modal",
-          "detail": "components/kanban/deals/CreateDealModal.vue",
-          "rel": "components/kanban/deals/CreateDealModal.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/integration/CreateIntegrationModal.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 200,
-          "y": 810
-        },
-        "data": {
-          "group": "component",
-          "label": "Create Integration Modal",
-          "detail": "components/kanban/integration/CreateIntegrationModal.vue",
-          "rel": "components/kanban/integration/CreateIntegrationModal.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/stage/AddStageModal.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 400,
-          "y": 810
-        },
-        "data": {
-          "group": "component",
-          "label": "Add Stage Modal",
-          "detail": "components/kanban/stage/AddStageModal.vue",
-          "rel": "components/kanban/stage/AddStageModal.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/settings/SettingsHub.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 600,
-          "y": 810
-        },
-        "data": {
-          "group": "component",
-          "label": "Settings Hub",
-          "detail": "components/kanban/settings/SettingsHub.vue",
-          "rel": "components/kanban/settings/SettingsHub.vue"
-        }
-      },
-      {
         "id": "f:components/kanban/shared/ModalHeader.vue",
         "type": "roadmap",
         "position": {
-          "x": 800,
-          "y": 810
+          "x": 200,
+          "y": 540
         },
         "data": {
           "group": "component",
@@ -7785,8 +7665,8 @@
         "id": "f:components/kanban/shared/StageSelector.vue",
         "type": "roadmap",
         "position": {
-          "x": 1000,
-          "y": 810
+          "x": 400,
+          "y": 540
         },
         "data": {
           "group": "component",
@@ -7799,8 +7679,8 @@
         "id": "f:components/kanban/shared/ResponsiblePersonSelector.vue",
         "type": "roadmap",
         "position": {
-          "x": 0,
-          "y": 900
+          "x": 600,
+          "y": 540
         },
         "data": {
           "group": "component",
@@ -7813,8 +7693,8 @@
         "id": "f:components/kanban/deals/CompleteStageFieldsModal.vue",
         "type": "roadmap",
         "position": {
-          "x": 200,
-          "y": 900
+          "x": 800,
+          "y": 540
         },
         "data": {
           "group": "component",
@@ -7827,8 +7707,8 @@
         "id": "f:components/kanban/deals/DocumentUpload.vue",
         "type": "roadmap",
         "position": {
-          "x": 400,
-          "y": 900
+          "x": 1000,
+          "y": 540
         },
         "data": {
           "group": "component",
@@ -7838,11 +7718,25 @@
         }
       },
       {
+        "id": "f:components/kanban/deals/CreateDealModal.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 0,
+          "y": 630
+        },
+        "data": {
+          "group": "component",
+          "label": "Create Deal Modal",
+          "detail": "components/kanban/deals/CreateDealModal.vue",
+          "rel": "components/kanban/deals/CreateDealModal.vue"
+        }
+      },
+      {
         "id": "f:components/kanban/deals/DealForm.vue",
         "type": "roadmap",
         "position": {
-          "x": 600,
-          "y": 900
+          "x": 200,
+          "y": 630
         },
         "data": {
           "group": "component",
@@ -7852,11 +7746,123 @@
         }
       },
       {
+        "id": "f:components/kanban/deals/DealActivityList.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 400,
+          "y": 630
+        },
+        "data": {
+          "group": "component",
+          "label": "Deal Activity List",
+          "detail": "components/kanban/deals/DealActivityList.vue",
+          "rel": "components/kanban/deals/DealActivityList.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/shared/DateTimePicker.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 600,
+          "y": 630
+        },
+        "data": {
+          "group": "component",
+          "label": "Date Time Picker",
+          "detail": "components/kanban/shared/DateTimePicker.vue",
+          "rel": "components/kanban/shared/DateTimePicker.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/DealActivitySection.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 800,
+          "y": 630
+        },
+        "data": {
+          "group": "component",
+          "label": "Deal Activity Section",
+          "detail": "components/kanban/deals/DealActivitySection.vue",
+          "rel": "components/kanban/deals/DealActivitySection.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/DealCommentList.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 1000,
+          "y": 630
+        },
+        "data": {
+          "group": "component",
+          "label": "Deal Comment List",
+          "detail": "components/kanban/deals/DealCommentList.vue",
+          "rel": "components/kanban/deals/DealCommentList.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/shared/ProfilePopup.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 0,
+          "y": 720
+        },
+        "data": {
+          "group": "component",
+          "label": "Profile Popup",
+          "detail": "components/kanban/shared/ProfilePopup.vue",
+          "rel": "components/kanban/shared/ProfilePopup.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/DealHistoryPanel.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 200,
+          "y": 720
+        },
+        "data": {
+          "group": "component",
+          "label": "Deal History Panel",
+          "detail": "components/kanban/deals/DealHistoryPanel.vue",
+          "rel": "components/kanban/deals/DealHistoryPanel.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/DealHistorySearchModal.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 400,
+          "y": 720
+        },
+        "data": {
+          "group": "component",
+          "label": "Deal History Search Modal",
+          "detail": "components/kanban/deals/DealHistorySearchModal.vue",
+          "rel": "components/kanban/deals/DealHistorySearchModal.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/Deals.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 600,
+          "y": 720
+        },
+        "data": {
+          "group": "component",
+          "label": "Deals",
+          "detail": "components/kanban/deals/Deals.vue",
+          "rel": "components/kanban/deals/Deals.vue"
+        }
+      },
+      {
         "id": "f:components/kanban/deals/ViewDealModal.vue",
         "type": "roadmap",
         "position": {
           "x": 800,
-          "y": 900
+          "y": 720
         },
         "data": {
           "group": "component",
@@ -7870,7 +7876,7 @@
         "type": "roadmap",
         "position": {
           "x": 1000,
-          "y": 900
+          "y": 720
         },
         "data": {
           "group": "component",
@@ -7880,11 +7886,53 @@
         }
       },
       {
-        "id": "f:components/kanban/deals/PrimaryDealForm.vue",
+        "id": "f:components/kanban/deals/DealSearchModal.vue",
         "type": "roadmap",
         "position": {
           "x": 0,
-          "y": 990
+          "y": 810
+        },
+        "data": {
+          "group": "component",
+          "label": "Deal Search Modal",
+          "detail": "components/kanban/deals/DealSearchModal.vue",
+          "rel": "components/kanban/deals/DealSearchModal.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/DealFilterFieldSettingsModal.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 200,
+          "y": 810
+        },
+        "data": {
+          "group": "component",
+          "label": "Deal Filter Field Settings Modal",
+          "detail": "components/kanban/deals/DealFilterFieldSettingsModal.vue",
+          "rel": "components/kanban/deals/DealFilterFieldSettingsModal.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/InlineSectionEditor.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 400,
+          "y": 810
+        },
+        "data": {
+          "group": "component",
+          "label": "Inline Section Editor",
+          "detail": "components/kanban/deals/InlineSectionEditor.vue",
+          "rel": "components/kanban/deals/InlineSectionEditor.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/PrimaryDealForm.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 600,
+          "y": 810
         },
         "data": {
           "group": "component",
@@ -7897,8 +7945,8 @@
         "id": "f:components/kanban/deals/RentalDealForm.vue",
         "type": "roadmap",
         "position": {
-          "x": 200,
-          "y": 990
+          "x": 800,
+          "y": 810
         },
         "data": {
           "group": "component",
@@ -7908,11 +7956,25 @@
         }
       },
       {
+        "id": "f:components/kanban/deals/ResponsiblePersonSection.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 1000,
+          "y": 810
+        },
+        "data": {
+          "group": "component",
+          "label": "Responsible Person Section",
+          "detail": "components/kanban/deals/ResponsiblePersonSection.vue",
+          "rel": "components/kanban/deals/ResponsiblePersonSection.vue"
+        }
+      },
+      {
         "id": "f:components/kanban/deals/SecondaryDealForm.vue",
         "type": "roadmap",
         "position": {
-          "x": 400,
-          "y": 990
+          "x": 0,
+          "y": 900
         },
         "data": {
           "group": "component",
@@ -7925,8 +7987,8 @@
         "id": "f:components/kanban/deals/ViewPrimaryDeal.vue",
         "type": "roadmap",
         "position": {
-          "x": 600,
-          "y": 990
+          "x": 200,
+          "y": 900
         },
         "data": {
           "group": "component",
@@ -7939,8 +8001,8 @@
         "id": "f:components/kanban/deals/ViewSecondaryDeal.vue",
         "type": "roadmap",
         "position": {
-          "x": 800,
-          "y": 990
+          "x": 400,
+          "y": 900
         },
         "data": {
           "group": "component",
@@ -7953,14 +8015,126 @@
         "id": "f:components/kanban/deals/ViewRentalDeal.vue",
         "type": "roadmap",
         "position": {
-          "x": 1000,
-          "y": 990
+          "x": 600,
+          "y": 900
         },
         "data": {
           "group": "component",
           "label": "View Rental Deal",
           "detail": "components/kanban/deals/ViewRentalDeal.vue",
           "rel": "components/kanban/deals/ViewRentalDeal.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/DealCreatedCard.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 800,
+          "y": 900
+        },
+        "data": {
+          "group": "component",
+          "label": "Deal Created Card",
+          "detail": "components/kanban/deals/DealCreatedCard.vue",
+          "rel": "components/kanban/deals/DealCreatedCard.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/DealCommentsSection.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 1000,
+          "y": 900
+        },
+        "data": {
+          "group": "component",
+          "label": "Deal Comments Section",
+          "detail": "components/kanban/deals/DealCommentsSection.vue",
+          "rel": "components/kanban/deals/DealCommentsSection.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/DealDocumentsReadonly.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 0,
+          "y": 990
+        },
+        "data": {
+          "group": "component",
+          "label": "Deal Documents Readonly",
+          "detail": "components/kanban/deals/DealDocumentsReadonly.vue",
+          "rel": "components/kanban/deals/DealDocumentsReadonly.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/integration/CreateIntegrationModal.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 200,
+          "y": 990
+        },
+        "data": {
+          "group": "component",
+          "label": "Create Integration Modal",
+          "detail": "components/kanban/integration/CreateIntegrationModal.vue",
+          "rel": "components/kanban/integration/CreateIntegrationModal.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/integration/CrmEntitiesTab.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 400,
+          "y": 990
+        },
+        "data": {
+          "group": "component",
+          "label": "Crm Entities Tab",
+          "detail": "components/kanban/integration/CrmEntitiesTab.vue",
+          "rel": "components/kanban/integration/CrmEntitiesTab.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/integration/HiddenFieldValuesTab.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 600,
+          "y": 990
+        },
+        "data": {
+          "group": "component",
+          "label": "Hidden Field Values Tab",
+          "detail": "components/kanban/integration/HiddenFieldValuesTab.vue",
+          "rel": "components/kanban/integration/HiddenFieldValuesTab.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/integration/FacebookLeadAdsTab.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 800,
+          "y": 990
+        },
+        "data": {
+          "group": "component",
+          "label": "Facebook Lead Ads Tab",
+          "detail": "components/kanban/integration/FacebookLeadAdsTab.vue",
+          "rel": "components/kanban/integration/FacebookLeadAdsTab.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/integration/OtherSettingsTab.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 1000,
+          "y": 990
+        },
+        "data": {
+          "group": "component",
+          "label": "Other Settings Tab",
+          "detail": "components/kanban/integration/OtherSettingsTab.vue",
+          "rel": "components/kanban/integration/OtherSettingsTab.vue"
         }
       }
     ],
@@ -8026,60 +8200,6 @@
         "label": "imports"
       },
       {
-        "id": "im:f:components/RoleAccess/AssignRole.vue->f:components/pagination/index.vue",
-        "source": "f:components/RoleAccess/AssignRole.vue",
-        "target": "f:components/pagination/index.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/RoleAccess/Role.vue->f:components/pagination/index.vue",
-        "source": "f:components/RoleAccess/Role.vue",
-        "target": "f:components/pagination/index.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/Settings/Currencies.vue->f:components/pagination/index.vue",
-        "source": "f:components/Settings/Currencies.vue",
-        "target": "f:components/pagination/index.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/Settings/Languages.vue->f:components/pagination/index.vue",
-        "source": "f:components/Settings/Languages.vue",
-        "target": "f:components/pagination/index.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/Table/AreasTable.vue->f:components/Table/TreeNode.vue",
-        "source": "f:components/Table/AreasTable.vue",
-        "target": "f:components/Table/TreeNode.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/Table/ProjectTable.vue->f:components/breadcrumb/Breadcrumb.vue",
-        "source": "f:components/Table/ProjectTable.vue",
-        "target": "f:components/breadcrumb/Breadcrumb.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/Table/TeamTree.vue->f:components/Table/TeamTreeNode.vue",
-        "source": "f:components/Table/TeamTree.vue",
-        "target": "f:components/Table/TeamTreeNode.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/Users/UserGrid.vue->f:components/pagination/index.vue",
-        "source": "f:components/Users/UserGrid.vue",
-        "target": "f:components/pagination/index.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/Users/UserList.vue->f:components/pagination/index.vue",
-        "source": "f:components/Users/UserList.vue",
-        "target": "f:components/pagination/index.vue",
-        "label": "imports"
-      },
-      {
         "id": "im:f:components/alllisting/AllLsting.vue->f:components/alllisting/SearchBar.vue",
         "source": "f:components/alllisting/AllLsting.vue",
         "target": "f:components/alllisting/SearchBar.vue",
@@ -8134,60 +8254,6 @@
         "label": "imports"
       },
       {
-        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/deals/Deals.vue",
-        "source": "f:components/kanban/Kanban.vue",
-        "target": "f:components/kanban/deals/Deals.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/leadList/leads.vue",
-        "source": "f:components/kanban/Kanban.vue",
-        "target": "f:components/kanban/leadList/leads.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/integration/Integration.vue",
-        "source": "f:components/kanban/Kanban.vue",
-        "target": "f:components/kanban/integration/Integration.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/leadList/LeadSearchModal.vue",
-        "source": "f:components/kanban/Kanban.vue",
-        "target": "f:components/kanban/leadList/LeadSearchModal.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/createLead/CreateLeadModal.vue",
-        "source": "f:components/kanban/Kanban.vue",
-        "target": "f:components/kanban/createLead/CreateLeadModal.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/deals/CreateDealModal.vue",
-        "source": "f:components/kanban/Kanban.vue",
-        "target": "f:components/kanban/deals/CreateDealModal.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/integration/CreateIntegrationModal.vue",
-        "source": "f:components/kanban/Kanban.vue",
-        "target": "f:components/kanban/integration/CreateIntegrationModal.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/stage/AddStageModal.vue",
-        "source": "f:components/kanban/Kanban.vue",
-        "target": "f:components/kanban/stage/AddStageModal.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/settings/SettingsHub.vue",
-        "source": "f:components/kanban/Kanban.vue",
-        "target": "f:components/kanban/settings/SettingsHub.vue",
-        "label": "imports"
-      },
-      {
         "id": "im:f:components/kanban/createLead/CreateLeadModal.vue->f:components/kanban/shared/ModalHeader.vue",
         "source": "f:components/kanban/createLead/CreateLeadModal.vue",
         "target": "f:components/kanban/shared/ModalHeader.vue",
@@ -8224,6 +8290,24 @@
         "label": "imports"
       },
       {
+        "id": "im:f:components/kanban/deals/DealActivityList.vue->f:components/kanban/shared/DateTimePicker.vue",
+        "source": "f:components/kanban/deals/DealActivityList.vue",
+        "target": "f:components/kanban/shared/DateTimePicker.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/DealActivitySection.vue->f:components/kanban/shared/DateTimePicker.vue",
+        "source": "f:components/kanban/deals/DealActivitySection.vue",
+        "target": "f:components/kanban/shared/DateTimePicker.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/DealCommentList.vue->f:components/kanban/shared/ProfilePopup.vue",
+        "source": "f:components/kanban/deals/DealCommentList.vue",
+        "target": "f:components/kanban/shared/ProfilePopup.vue",
+        "label": "imports"
+      },
+      {
         "id": "im:f:components/kanban/deals/DealForm.vue->f:components/kanban/deals/DocumentUpload.vue",
         "source": "f:components/kanban/deals/DealForm.vue",
         "target": "f:components/kanban/deals/DocumentUpload.vue",
@@ -8233,6 +8317,12 @@
         "id": "im:f:components/kanban/deals/DealForm.vue->f:components/kanban/shared/ResponsiblePersonSelector.vue",
         "source": "f:components/kanban/deals/DealForm.vue",
         "target": "f:components/kanban/shared/ResponsiblePersonSelector.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/DealHistoryPanel.vue->f:components/kanban/deals/DealHistorySearchModal.vue",
+        "source": "f:components/kanban/deals/DealHistoryPanel.vue",
+        "target": "f:components/kanban/deals/DealHistorySearchModal.vue",
         "label": "imports"
       },
       {
@@ -8254,6 +8344,24 @@
         "label": "imports"
       },
       {
+        "id": "im:f:components/kanban/deals/Deals.vue->f:components/kanban/shared/ProfilePopup.vue",
+        "source": "f:components/kanban/deals/Deals.vue",
+        "target": "f:components/kanban/shared/ProfilePopup.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/DealSearchModal.vue->f:components/kanban/deals/DealFilterFieldSettingsModal.vue",
+        "source": "f:components/kanban/deals/DealSearchModal.vue",
+        "target": "f:components/kanban/deals/DealFilterFieldSettingsModal.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/InlineSectionEditor.vue->f:components/kanban/deals/DealForm.vue",
+        "source": "f:components/kanban/deals/InlineSectionEditor.vue",
+        "target": "f:components/kanban/deals/DealForm.vue",
+        "label": "imports"
+      },
+      {
         "id": "im:f:components/kanban/deals/PrimaryDealForm.vue->f:components/kanban/shared/ResponsiblePersonSelector.vue",
         "source": "f:components/kanban/deals/PrimaryDealForm.vue",
         "target": "f:components/kanban/shared/ResponsiblePersonSelector.vue",
@@ -8263,6 +8371,12 @@
         "id": "im:f:components/kanban/deals/RentalDealForm.vue->f:components/kanban/shared/ResponsiblePersonSelector.vue",
         "source": "f:components/kanban/deals/RentalDealForm.vue",
         "target": "f:components/kanban/shared/ResponsiblePersonSelector.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ResponsiblePersonSection.vue->f:components/kanban/shared/ProfilePopup.vue",
+        "source": "f:components/kanban/deals/ResponsiblePersonSection.vue",
+        "target": "f:components/kanban/shared/ProfilePopup.vue",
         "label": "imports"
       },
       {
@@ -8281,6 +8395,108 @@
         "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/ViewSecondaryDeal.vue",
         "source": "f:components/kanban/deals/ViewDealModal.vue",
         "target": "f:components/kanban/deals/ViewSecondaryDeal.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/ViewRentalDeal.vue",
+        "source": "f:components/kanban/deals/ViewDealModal.vue",
+        "target": "f:components/kanban/deals/ViewRentalDeal.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/DealCreatedCard.vue",
+        "source": "f:components/kanban/deals/ViewDealModal.vue",
+        "target": "f:components/kanban/deals/DealCreatedCard.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/DealHistoryPanel.vue",
+        "source": "f:components/kanban/deals/ViewDealModal.vue",
+        "target": "f:components/kanban/deals/DealHistoryPanel.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/DealActivitySection.vue",
+        "source": "f:components/kanban/deals/ViewDealModal.vue",
+        "target": "f:components/kanban/deals/DealActivitySection.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/DealCommentsSection.vue",
+        "source": "f:components/kanban/deals/ViewDealModal.vue",
+        "target": "f:components/kanban/deals/DealCommentsSection.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/DealActivityList.vue",
+        "source": "f:components/kanban/deals/ViewDealModal.vue",
+        "target": "f:components/kanban/deals/DealActivityList.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/DealCommentList.vue",
+        "source": "f:components/kanban/deals/ViewDealModal.vue",
+        "target": "f:components/kanban/deals/DealCommentList.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/ResponsiblePersonSection.vue",
+        "source": "f:components/kanban/deals/ViewDealModal.vue",
+        "target": "f:components/kanban/deals/ResponsiblePersonSection.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewPrimaryDeal.vue->f:components/kanban/deals/DealDocumentsReadonly.vue",
+        "source": "f:components/kanban/deals/ViewPrimaryDeal.vue",
+        "target": "f:components/kanban/deals/DealDocumentsReadonly.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewPrimaryDeal.vue->f:components/kanban/deals/InlineSectionEditor.vue",
+        "source": "f:components/kanban/deals/ViewPrimaryDeal.vue",
+        "target": "f:components/kanban/deals/InlineSectionEditor.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewRentalDeal.vue->f:components/kanban/deals/DealDocumentsReadonly.vue",
+        "source": "f:components/kanban/deals/ViewRentalDeal.vue",
+        "target": "f:components/kanban/deals/DealDocumentsReadonly.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewRentalDeal.vue->f:components/kanban/deals/InlineSectionEditor.vue",
+        "source": "f:components/kanban/deals/ViewRentalDeal.vue",
+        "target": "f:components/kanban/deals/InlineSectionEditor.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewSecondaryDeal.vue->f:components/kanban/deals/DealDocumentsReadonly.vue",
+        "source": "f:components/kanban/deals/ViewSecondaryDeal.vue",
+        "target": "f:components/kanban/deals/DealDocumentsReadonly.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/deals/ViewSecondaryDeal.vue->f:components/kanban/deals/InlineSectionEditor.vue",
+        "source": "f:components/kanban/deals/ViewSecondaryDeal.vue",
+        "target": "f:components/kanban/deals/InlineSectionEditor.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/integration/CreateIntegrationModal.vue->f:components/kanban/integration/CrmEntitiesTab.vue",
+        "source": "f:components/kanban/integration/CreateIntegrationModal.vue",
+        "target": "f:components/kanban/integration/CrmEntitiesTab.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/integration/CreateIntegrationModal.vue->f:components/kanban/integration/HiddenFieldValuesTab.vue",
+        "source": "f:components/kanban/integration/CreateIntegrationModal.vue",
+        "target": "f:components/kanban/integration/HiddenFieldValuesTab.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/integration/CreateIntegrationModal.vue->f:components/kanban/integration/FacebookLeadAdsTab.vue",
+        "source": "f:components/kanban/integration/CreateIntegrationModal.vue",
+        "target": "f:components/kanban/integration/FacebookLeadAdsTab.vue",
         "label": "imports"
       }
     ]
@@ -8348,11 +8564,26 @@
         }
       },
       {
-        "id": "route:/settings/kanban",
+        "id": "route:/project-map",
         "type": "roadmap",
         "position": {
           "x": 880,
           "y": 0
+        },
+        "data": {
+          "group": "route",
+          "label": "Project Map",
+          "detail": "/project-map",
+          "rel": "—",
+          "meta": ""
+        }
+      },
+      {
+        "id": "route:/settings/kanban",
+        "type": "roadmap",
+        "position": {
+          "x": 0,
+          "y": 100
         },
         "data": {
           "group": "route",
@@ -8366,7 +8597,7 @@
         "id": "route:/settings/lead-scoring",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 100
         },
         "data": {
@@ -8381,7 +8612,7 @@
         "id": "route:/lead-scoring",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 100
         },
         "data": {
@@ -8396,7 +8627,7 @@
         "id": "route:/settings/stage-visibility",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 100
         },
         "data": {
@@ -8411,7 +8642,7 @@
         "id": "route:/lead-reports",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 100
         },
         "data": {
@@ -8426,8 +8657,8 @@
         "id": "route:/suggestion",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 100
+          "x": 0,
+          "y": 200
         },
         "data": {
           "group": "route",
@@ -8441,7 +8672,7 @@
         "id": "route:/investment-analysis",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 200
         },
         "data": {
@@ -8456,7 +8687,7 @@
         "id": "route:/settings/city-investments",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 200
         },
         "data": {
@@ -8471,7 +8702,7 @@
         "id": "route:/",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 200
         },
         "data": {
@@ -8486,7 +8717,7 @@
         "id": "route:/table-basic",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 200
         },
         "data": {
@@ -8501,8 +8732,8 @@
         "id": "route:/table-data",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 200
+          "x": 0,
+          "y": 300
         },
         "data": {
           "group": "route",
@@ -8516,7 +8747,7 @@
         "id": "route:/property-form",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 300
         },
         "data": {
@@ -8531,7 +8762,7 @@
         "id": "route:/my-listing",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 300
         },
         "data": {
@@ -8546,7 +8777,7 @@
         "id": "route:/archive",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 300
         },
         "data": {
@@ -8561,7 +8792,7 @@
         "id": "route:/alllisting",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 300
         },
         "data": {
@@ -8576,8 +8807,8 @@
         "id": "route:/notify-me",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 300
+          "x": 0,
+          "y": 400
         },
         "data": {
           "group": "route",
@@ -8591,7 +8822,7 @@
         "id": "route:/properties-map",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 400
         },
         "data": {
@@ -8606,7 +8837,7 @@
         "id": "route:/property-details/:id",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 400
         },
         "data": {
@@ -8621,7 +8852,7 @@
         "id": "route:/properties/:id/edit",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 400
         },
         "data": {
@@ -8636,7 +8867,7 @@
         "id": "route:/assign-role",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 400
         },
         "data": {
@@ -8651,8 +8882,8 @@
         "id": "route:/role-access",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 400
+          "x": 0,
+          "y": 500
         },
         "data": {
           "group": "route",
@@ -8666,7 +8897,7 @@
         "id": "route:/sign-in",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 500
         },
         "data": {
@@ -8681,7 +8912,7 @@
         "id": "route:/sign-up",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 500
         },
         "data": {
@@ -8696,7 +8927,7 @@
         "id": "route:/forgot-password",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 500
         },
         "data": {
@@ -8711,7 +8942,7 @@
         "id": "route:/reset-password",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 500
         },
         "data": {
@@ -8726,8 +8957,8 @@
         "id": "route:/developers",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 500
+          "x": 0,
+          "y": 600
         },
         "data": {
           "group": "route",
@@ -8741,7 +8972,7 @@
         "id": "route:/add-developer",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 600
         },
         "data": {
@@ -8756,7 +8987,7 @@
         "id": "route:/developers/:id/edit",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 600
         },
         "data": {
@@ -8771,7 +9002,7 @@
         "id": "route:/developers/:id",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 600
         },
         "data": {
@@ -8786,7 +9017,7 @@
         "id": "route:/owners",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 600
         },
         "data": {
@@ -8801,8 +9032,8 @@
         "id": "route:/add-owner",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 600
+          "x": 0,
+          "y": 700
         },
         "data": {
           "group": "route",
@@ -8816,7 +9047,7 @@
         "id": "route:/owners/:id/edit",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 700
         },
         "data": {
@@ -8831,7 +9062,7 @@
         "id": "route:/owners/:id",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 700
         },
         "data": {
@@ -8846,7 +9077,7 @@
         "id": "route:/property_types",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 700
         },
         "data": {
@@ -8861,7 +9092,7 @@
         "id": "route:/add-property_type",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 700
         },
         "data": {
@@ -8876,8 +9107,8 @@
         "id": "route:/property_types/:id/edit",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 700
+          "x": 0,
+          "y": 800
         },
         "data": {
           "group": "route",
@@ -8891,7 +9122,7 @@
         "id": "route:/unit_views",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 800
         },
         "data": {
@@ -8906,7 +9137,7 @@
         "id": "route:/add-unit_view",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 800
         },
         "data": {
@@ -8921,7 +9152,7 @@
         "id": "route:/unit_views/:id/edit",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 800
         },
         "data": {
@@ -8936,7 +9167,7 @@
         "id": "route:/layout_types",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 800
         },
         "data": {
@@ -8951,8 +9182,8 @@
         "id": "route:/add-layout_type",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 800
+          "x": 0,
+          "y": 900
         },
         "data": {
           "group": "route",
@@ -8966,7 +9197,7 @@
         "id": "route:/layout_types/:id/edit",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 900
         },
         "data": {
@@ -8981,7 +9212,7 @@
         "id": "route:/areas",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 900
         },
         "data": {
@@ -8996,7 +9227,7 @@
         "id": "route:/add-area",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 900
         },
         "data": {
@@ -9011,7 +9242,7 @@
         "id": "route:/areas/:id/edit",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 900
         },
         "data": {
@@ -9026,8 +9257,8 @@
         "id": "route:/roles",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 900
+          "x": 0,
+          "y": 1000
         },
         "data": {
           "group": "route",
@@ -9041,7 +9272,7 @@
         "id": "route:/add-role",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 1000
         },
         "data": {
@@ -9056,7 +9287,7 @@
         "id": "route:/roles/:id/edit",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 1000
         },
         "data": {
@@ -9071,7 +9302,7 @@
         "id": "route:/roles/:id",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 1000
         },
         "data": {
@@ -9086,7 +9317,7 @@
         "id": "route:/my-requests",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 1000
         },
         "data": {
@@ -9101,8 +9332,8 @@
         "id": "route:/my-orders",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 1000
+          "x": 0,
+          "y": 1100
         },
         "data": {
           "group": "route",
@@ -9116,7 +9347,7 @@
         "id": "route:/all-requests",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 1100
         },
         "data": {
@@ -9131,7 +9362,7 @@
         "id": "route:/hotDeal-requests",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 1100
         },
         "data": {
@@ -9146,7 +9377,7 @@
         "id": "route:/users",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 1100
         },
         "data": {
@@ -9161,7 +9392,7 @@
         "id": "route:/users/:id",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 1100
         },
         "data": {
@@ -9176,8 +9407,8 @@
         "id": "route:/add-user",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 1100
+          "x": 0,
+          "y": 1200
         },
         "data": {
           "group": "route",
@@ -9191,7 +9422,7 @@
         "id": "route:/users/:id/edit",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 1200
         },
         "data": {
@@ -9206,7 +9437,7 @@
         "id": "route:/view-profile",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 1200
         },
         "data": {
@@ -9221,7 +9452,7 @@
         "id": "route:/team-tree",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 1200
         },
         "data": {
@@ -9236,7 +9467,7 @@
         "id": "route:/notifications",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 1200
         },
         "data": {
@@ -9251,8 +9482,8 @@
         "id": "route:/admin/chat",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 1200
+          "x": 0,
+          "y": 1300
         },
         "data": {
           "group": "route",
@@ -9266,7 +9497,7 @@
         "id": "route:/email",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 1300
         },
         "data": {
@@ -9281,7 +9512,7 @@
         "id": "route:/email/starred",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 1300
         },
         "data": {
@@ -9296,7 +9527,7 @@
         "id": "route:/email/view",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 1300
         },
         "data": {
@@ -9311,7 +9542,7 @@
         "id": "route:/features",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 1300
         },
         "data": {
@@ -9326,8 +9557,8 @@
         "id": "route:/add-features",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 1300
+          "x": 0,
+          "y": 1400
         },
         "data": {
           "group": "route",
@@ -9341,7 +9572,7 @@
         "id": "route:/features/:id/edit",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 1400
         },
         "data": {
@@ -9356,7 +9587,7 @@
         "id": "route:/projects",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 1400
         },
         "data": {
@@ -9371,7 +9602,7 @@
         "id": "route:/add-projects",
         "type": "roadmap",
         "position": {
-          "x": 440,
+          "x": 660,
           "y": 1400
         },
         "data": {
@@ -9386,7 +9617,7 @@
         "id": "route:/projects/:id/edit",
         "type": "roadmap",
         "position": {
-          "x": 660,
+          "x": 880,
           "y": 1400
         },
         "data": {
@@ -9401,8 +9632,8 @@
         "id": "route:/projects/:id",
         "type": "roadmap",
         "position": {
-          "x": 880,
-          "y": 1400
+          "x": 0,
+          "y": 1500
         },
         "data": {
           "group": "route",
@@ -9416,7 +9647,7 @@
         "id": "route:/projects/:id/floor-plans",
         "type": "roadmap",
         "position": {
-          "x": 0,
+          "x": 220,
           "y": 1500
         },
         "data": {
@@ -9431,7 +9662,7 @@
         "id": "route:/__dev__/project-map",
         "type": "roadmap",
         "position": {
-          "x": 220,
+          "x": 440,
           "y": 1500
         },
         "data": {
@@ -9465,6 +9696,7 @@
       "./DuplicateLeadsModal.vue",
       "./StageChangeReasonModal.vue",
       "./ConvertLeadModal.vue",
+      "../shared/ProfilePopup.vue",
       "@/plugins/axios",
       "@/utils/budgetInput",
       "sweetalert2",
@@ -9554,17 +9786,27 @@
         "components/email/VeiwDetails.vue",
         "components/kanban/Kanban.vue",
         "components/kanban/KanbanSettings.vue",
-        "components/kanban/Kanban_deal.vue",
         "components/kanban/LeadScoringSettings.vue",
         "components/kanban/createLead/CreateLeadModal.vue",
         "components/kanban/deals/CompleteStageFieldsModal.vue",
         "components/kanban/deals/CreateDealModal.vue",
+        "components/kanban/deals/DealActivityList.vue",
+        "components/kanban/deals/DealActivitySection.vue",
+        "components/kanban/deals/DealCommentList.vue",
+        "components/kanban/deals/DealCommentsSection.vue",
         "components/kanban/deals/DealCreatedCard.vue",
+        "components/kanban/deals/DealDocumentsReadonly.vue",
+        "components/kanban/deals/DealFilterFieldSettingsModal.vue",
         "components/kanban/deals/DealForm.vue",
+        "components/kanban/deals/DealHistoryPanel.vue",
+        "components/kanban/deals/DealHistorySearchModal.vue",
+        "components/kanban/deals/DealSearchModal.vue",
         "components/kanban/deals/Deals.vue",
         "components/kanban/deals/DocumentUpload.vue",
+        "components/kanban/deals/InlineSectionEditor.vue",
         "components/kanban/deals/PrimaryDealForm.vue",
         "components/kanban/deals/RentalDealForm.vue",
+        "components/kanban/deals/ResponsiblePersonSection.vue",
         "components/kanban/deals/SecondaryDealForm.vue",
         "components/kanban/deals/StageChangeReasonModal.vue",
         "components/kanban/deals/ViewDealModal.vue",
@@ -9590,6 +9832,7 @@
         "components/kanban/settings/SettingsHub.vue",
         "components/kanban/shared/DateTimePicker.vue",
         "components/kanban/shared/ModalHeader.vue",
+        "components/kanban/shared/ProfilePopup.vue",
         "components/kanban/shared/ResponsiblePersonSelector.vue",
         "components/kanban/shared/StageSelector.vue",
         "components/kanban/stage/AddStageModal.vue",
@@ -9804,51 +10047,6 @@
           "kind": "import"
         },
         {
-          "from": "components/RoleAccess/AssignRole.vue",
-          "to": "components/pagination/index.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/RoleAccess/Role.vue",
-          "to": "components/pagination/index.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/Settings/Currencies.vue",
-          "to": "components/pagination/index.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/Settings/Languages.vue",
-          "to": "components/pagination/index.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/Table/AreasTable.vue",
-          "to": "components/Table/TreeNode.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/Table/ProjectTable.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/Table/TeamTree.vue",
-          "to": "components/Table/TeamTreeNode.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/Users/UserGrid.vue",
-          "to": "components/pagination/index.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/Users/UserList.vue",
-          "to": "components/pagination/index.vue",
-          "kind": "import"
-        },
-        {
           "from": "components/alllisting/AllLsting.vue",
           "to": "components/alllisting/SearchBar.vue",
           "kind": "import"
@@ -9894,51 +10092,6 @@
           "kind": "import"
         },
         {
-          "from": "components/kanban/Kanban.vue",
-          "to": "components/kanban/deals/Deals.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/Kanban.vue",
-          "to": "components/kanban/leadList/leads.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/Kanban.vue",
-          "to": "components/kanban/integration/Integration.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/Kanban.vue",
-          "to": "components/kanban/leadList/LeadSearchModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/Kanban.vue",
-          "to": "components/kanban/createLead/CreateLeadModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/Kanban.vue",
-          "to": "components/kanban/deals/CreateDealModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/Kanban.vue",
-          "to": "components/kanban/integration/CreateIntegrationModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/Kanban.vue",
-          "to": "components/kanban/stage/AddStageModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/Kanban.vue",
-          "to": "components/kanban/settings/SettingsHub.vue",
-          "kind": "import"
-        },
-        {
           "from": "components/kanban/createLead/CreateLeadModal.vue",
           "to": "components/kanban/shared/ModalHeader.vue",
           "kind": "import"
@@ -9969,6 +10122,21 @@
           "kind": "import"
         },
         {
+          "from": "components/kanban/deals/DealActivityList.vue",
+          "to": "components/kanban/shared/DateTimePicker.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/DealActivitySection.vue",
+          "to": "components/kanban/shared/DateTimePicker.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/DealCommentList.vue",
+          "to": "components/kanban/shared/ProfilePopup.vue",
+          "kind": "import"
+        },
+        {
           "from": "components/kanban/deals/DealForm.vue",
           "to": "components/kanban/deals/DocumentUpload.vue",
           "kind": "import"
@@ -9976,6 +10144,11 @@
         {
           "from": "components/kanban/deals/DealForm.vue",
           "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/DealHistoryPanel.vue",
+          "to": "components/kanban/deals/DealHistorySearchModal.vue",
           "kind": "import"
         },
         {
@@ -9994,6 +10167,21 @@
           "kind": "import"
         },
         {
+          "from": "components/kanban/deals/Deals.vue",
+          "to": "components/kanban/shared/ProfilePopup.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/DealSearchModal.vue",
+          "to": "components/kanban/deals/DealFilterFieldSettingsModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/InlineSectionEditor.vue",
+          "to": "components/kanban/deals/DealForm.vue",
+          "kind": "import"
+        },
+        {
           "from": "components/kanban/deals/PrimaryDealForm.vue",
           "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
           "kind": "import"
@@ -10001,6 +10189,11 @@
         {
           "from": "components/kanban/deals/RentalDealForm.vue",
           "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ResponsiblePersonSection.vue",
+          "to": "components/kanban/shared/ProfilePopup.vue",
           "kind": "import"
         },
         {
@@ -10025,37 +10218,67 @@
         },
         {
           "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/deals/DealForm.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewDealModal.vue",
           "to": "components/kanban/deals/DealCreatedCard.vue",
           "kind": "import"
         },
         {
           "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/viewLead/ActivitySection.vue",
+          "to": "components/kanban/deals/DealHistoryPanel.vue",
           "kind": "import"
         },
         {
           "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/viewLead/CommentsSection.vue",
+          "to": "components/kanban/deals/DealActivitySection.vue",
           "kind": "import"
         },
         {
           "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/viewLead/ActivityList.vue",
+          "to": "components/kanban/deals/DealCommentsSection.vue",
           "kind": "import"
         },
         {
           "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/viewLead/CommentList.vue",
+          "to": "components/kanban/deals/DealActivityList.vue",
           "kind": "import"
         },
         {
           "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/viewLead/LeadActivityTimeline.vue",
+          "to": "components/kanban/deals/DealCommentList.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewDealModal.vue",
+          "to": "components/kanban/deals/ResponsiblePersonSection.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewPrimaryDeal.vue",
+          "to": "components/kanban/deals/DealDocumentsReadonly.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewPrimaryDeal.vue",
+          "to": "components/kanban/deals/InlineSectionEditor.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewRentalDeal.vue",
+          "to": "components/kanban/deals/DealDocumentsReadonly.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewRentalDeal.vue",
+          "to": "components/kanban/deals/InlineSectionEditor.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewSecondaryDeal.vue",
+          "to": "components/kanban/deals/DealDocumentsReadonly.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewSecondaryDeal.vue",
+          "to": "components/kanban/deals/InlineSectionEditor.vue",
           "kind": "import"
         },
         {
@@ -10089,6 +10312,51 @@
           "kind": "import"
         },
         {
+          "from": "components/kanban/Kanban.vue",
+          "to": "components/kanban/deals/Deals.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/Kanban.vue",
+          "to": "components/kanban/leadList/leads.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/Kanban.vue",
+          "to": "components/kanban/integration/Integration.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/Kanban.vue",
+          "to": "components/kanban/leadList/LeadSearchModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/Kanban.vue",
+          "to": "components/kanban/createLead/CreateLeadModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/Kanban.vue",
+          "to": "components/kanban/deals/CreateDealModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/Kanban.vue",
+          "to": "components/kanban/integration/CreateIntegrationModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/Kanban.vue",
+          "to": "components/kanban/stage/AddStageModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/Kanban.vue",
+          "to": "components/kanban/settings/SettingsHub.vue",
+          "kind": "import"
+        },
+        {
           "from": "components/kanban/kanban_deal.vue",
           "to": "components/kanban/deals/Deals.vue",
           "kind": "import"
@@ -10106,6 +10374,11 @@
         {
           "from": "components/kanban/kanban_deal.vue",
           "to": "components/kanban/leadList/LeadSearchModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/kanban_deal.vue",
+          "to": "components/kanban/deals/DealSearchModal.vue",
           "kind": "import"
         },
         {
@@ -10134,16 +10407,6 @@
           "kind": "import"
         },
         {
-          "from": "components/kanban/leadList/LeadSearchModal.vue",
-          "to": "components/kanban/leadList/FilterFieldSettingsModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/leadList/StageChangeReasonModal.vue",
-          "to": "components/kanban/shared/DateTimePicker.vue",
-          "kind": "import"
-        },
-        {
           "from": "components/kanban/leadList/leads.vue",
           "to": "components/kanban/viewLead/ViewLeadModal.vue",
           "kind": "import"
@@ -10161,6 +10424,21 @@
         {
           "from": "components/kanban/leadList/leads.vue",
           "to": "components/kanban/leadList/ConvertLeadModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/leadList/leads.vue",
+          "to": "components/kanban/shared/ProfilePopup.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/leadList/LeadSearchModal.vue",
+          "to": "components/kanban/leadList/FilterFieldSettingsModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/leadList/StageChangeReasonModal.vue",
+          "to": "components/kanban/shared/DateTimePicker.vue",
           "kind": "import"
         },
         {
@@ -10196,6 +10474,11 @@
         {
           "from": "components/kanban/viewLead/ActivitySection.vue",
           "to": "components/kanban/shared/DateTimePicker.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/viewLead/CommentList.vue",
+          "to": "components/kanban/shared/ProfilePopup.vue",
           "kind": "import"
         },
         {
@@ -10249,8 +10532,23 @@
           "kind": "import"
         },
         {
+          "from": "components/kanban/viewLead/LeadActivityTimeline.vue",
+          "to": "components/kanban/shared/ProfilePopup.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/viewLead/LeadCreatedCard.vue",
+          "to": "components/kanban/shared/ProfilePopup.vue",
+          "kind": "import"
+        },
+        {
           "from": "components/kanban/viewLead/LeadInfoView.vue",
           "to": "components/kanban/viewLead/MatchingPropertiesSection.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/viewLead/ResponsiblePersonSection.vue",
+          "to": "components/kanban/shared/ProfilePopup.vue",
           "kind": "import"
         },
         {
@@ -10299,22 +10597,52 @@
           "kind": "import"
         },
         {
+          "from": "components/RoleAccess/AssignRole.vue",
+          "to": "components/pagination/index.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/RoleAccess/Role.vue",
+          "to": "components/pagination/index.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Settings/Currencies.vue",
+          "to": "components/pagination/index.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Settings/Languages.vue",
+          "to": "components/pagination/index.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Table/AreasTable.vue",
+          "to": "components/Table/TreeNode.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Table/ProjectTable.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Table/TeamTree.vue",
+          "to": "components/Table/TeamTreeNode.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Users/UserGrid.vue",
+          "to": "components/pagination/index.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Users/UserList.vue",
+          "to": "components/pagination/index.vue",
+          "kind": "import"
+        },
+        {
           "from": "form.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/Chart/column-chart.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/Chart/line-chart.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/Chart/pie-chart.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         },
@@ -10414,6 +10742,21 @@
           "kind": "import"
         },
         {
+          "from": "pages/Chart/column-chart.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/Chart/line-chart.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/Chart/pie-chart.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
           "from": "pages/chat/AdminChatDashboard.vue",
           "to": "components/chat/ChatWindow.vue",
           "kind": "import"
@@ -10445,16 +10788,6 @@
         },
         {
           "from": "pages/crypto-currency/wallet.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/dashboard/NFTgaming.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/dashboard/PosInventory.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         },
@@ -10664,7 +10997,17 @@
           "kind": "import"
         },
         {
+          "from": "pages/dashboard/NFTgaming.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
           "from": "pages/dashboard/podcast.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/dashboard/PosInventory.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         },
@@ -10709,6 +11052,21 @@
           "kind": "import"
         },
         {
+          "from": "pages/email/email.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/email/email.vue",
+          "to": "components/email/EmailSidebar.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/email/email.vue",
+          "to": "components/email/EmailData.vue",
+          "kind": "import"
+        },
+        {
           "from": "pages/email/StarredEmail.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
@@ -10736,21 +11094,6 @@
         {
           "from": "pages/email/VeiwDetails.vue",
           "to": "components/email/VeiwDetails.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/email/email.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/email/email.vue",
-          "to": "components/email/EmailSidebar.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/email/email.vue",
-          "to": "components/email/EmailData.vue",
           "kind": "import"
         },
         {
@@ -10845,7 +11188,7 @@
         },
         {
           "from": "pages/kanban.vue",
-          "to": "components/kanban/Kanban.vue",
+          "to": "components/kanban/kanban_deal.vue",
           "kind": "import"
         },
         {
@@ -10855,7 +11198,7 @@
         },
         {
           "from": "pages/kanban_deal.vue",
-          "to": "components/kanban/Kanban_deal.vue",
+          "to": "components/kanban/kanban_deal.vue",
           "kind": "import"
         },
         {
@@ -10894,11 +11237,6 @@
           "kind": "import"
         },
         {
-          "from": "pages/listings/SearchBar.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
           "from": "pages/listings/archive.vue",
           "to": "pages/listings/SearchBar.vue",
           "kind": "import"
@@ -10931,6 +11269,11 @@
         {
           "from": "pages/listings/property-map.vue",
           "to": "components/alllisting/PropertyMap.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/listings/SearchBar.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         },
         {
@@ -11284,26 +11627,6 @@
           "kind": "import"
         },
         {
-          "from": "pages/users/UserDetail.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/UserForm.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/UsersList.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/UsersList.vue",
-          "to": "components/Table/UsersTable.vue",
-          "kind": "import"
-        },
-        {
           "from": "pages/users/add-user.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
@@ -11324,6 +11647,16 @@
           "kind": "import"
         },
         {
+          "from": "pages/users/UserDetail.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/users/UserForm.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
           "from": "pages/users/users-grid.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
@@ -11341,6 +11674,16 @@
         {
           "from": "pages/users/users-list.vue",
           "to": "components/Users/UserList.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/users/UsersList.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/users/UsersList.vue",
+          "to": "components/Table/UsersTable.vue",
           "kind": "import"
         },
         {
