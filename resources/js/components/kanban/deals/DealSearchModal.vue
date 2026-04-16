@@ -488,7 +488,7 @@ const showFieldSettings = ref(false)
 const activePill = ref('deals-in-progress')
 
 const sidebarPills = [
-  { id: 'closed-deals', label: 'Closed Deals' },
+  // { id: 'closed-deals', label: 'Closed Deals' },
   { id: 'deals-in-progress', label: 'Deals In Progress' },
   { id: 'my-deals', label: 'My Deals' },
 ]
@@ -990,11 +990,20 @@ const applySearch = () => {
     query.unit_size = form.value.unit_size
     pushFilter('unit_size', 'Unit Size', form.value.unit_size)
   }
+  if (activePill.value === 'my-deals') {
+ 
+      query.my_deals = true
+      pushFilter('my_deals', 'Deals Scope', 'My Deals')
+    }
 
   emit('search', { query: Object.keys(query).length ? query : null, activeFilters })
   emit('update:modelValue', false)
 }
-
+watch(activePill, (val) => {
+  if (val === 'my-deals') {
+    form.value.responsible_person_id = null
+  }
+})
 watch(
   () => props.currentQuery,
   (q) => {

@@ -124,7 +124,7 @@
 
                           <div class="task-info">
                             <div class="info-item date-created-line mb-10">
-                              <span class="date-created-label">Created By</span>
+                              <span class="date-created-label">Created :</span>
                               <span class="date-created-value">{{ formatDealCardCreated(deal.created_at) }}</span>
                             </div>
 
@@ -138,27 +138,56 @@
                               <div class="info-value">{{ deal.source || '—' }}</div>
                             </div>
 
-                            <hr class="kanban-card-divider my-10">
+                            <!-- <hr class="kanban-card-divider my-10"> -->
 
-                            <div class="d-flex align-items-end justify-content-between gap-2">
-                              <div class="info-item mb-0 min-w-0">
-                                <div class="info-label text-secondary-light text-xs mb-1">Assigned By</div>
-                                <div class="assigned-by-line text-truncate">
-                                  {{ formatDealCardAssigned(getAssignedTimestamp(deal)) }}
-                                </div>
-                              </div>
-                              <div
-                                class="avatar-sm kanban-card-footer-avatar rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0"
-                              >
-                                <img
-                                  v-if="deal.responsible_person?.avatar"
-                                  :src="getAvatarUrl(deal.responsible_person.avatar)"
-                                  class="w-100 h-100 object-fit-cover"
-                                  alt=""
-                                >
-                                <iconify-icon v-else icon="solar:user-bold" class="text-neutral-600" />
-                              </div>
-                            </div>
+                              <!-- Assigned By -->
+                                          <div>
+                                              <hr class="mb-2 border-neutral-200">
+                                              <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
+                                                  <div class="info-item">
+                                                      <div class="info-label text-secondary-light text-xs mb-1">Assigned </div>
+                                                      <div class="info-value">{{ formatDate(deal.assigned_at) }}</div>
+                                                  </div>
+                                                  <div
+                                                      class="person-hover-anchor"
+                                                      @mouseenter.stop="showPersonHoverCard(deal, 'assigned')"
+                                                      @mouseleave.stop="hidePersonHoverCard"
+                                                        @click.stop="openPersonProfile(deal, 'assigned', $event)"
+                                                  >
+                                                      <img v-if="task?.parent?.avatar" :src="task.parent.avatar"   alt="" class="avatar-sm rounded-circle" />
+                                                      <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
+                                                          <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
+                                                      </div>
+                                                      <transition name="person-hover-pop">
+                                                          <div
+                                                              v-if="isPersonHoverVisible(deal, 'assigned') && activePersonHover?.data"
+                                                              class="person-hover-card person-hover-card-right"
+                                                              @mouseenter.stop="cancelPersonHoverHide"
+                                                              @mouseleave.stop="hidePersonHoverCard"
+                                                                @click.stop="openPersonProfile(deal, 'assigned', $event)"
+                                                          >
+                                                              <div class="person-hover-head">
+                                                                  <img
+                                                                      v-if="activePersonHover.data.avatar"
+                                                                      :src="activePersonHover.data.avatar"
+                                                                      alt=""
+                                                                      class="person-hover-avatar"
+                                                                  />
+                                                                  <div v-else class="person-hover-avatar person-hover-avatar-fallback d-flex align-items-center justify-content-center">
+                                                                      <iconify-icon icon="solar:user-bold" class="text-neutral-600" />
+                                                                  </div>
+                                                                  <div class="person-hover-head-text">
+                                                                      <div class="person-hover-name">{{ activePersonHover.data.name }}</div>
+                                                                      <div class="person-hover-role">{{ activePersonHover.data.position }}</div>
+                                                                  </div>
+                                                              </div>
+                                                              <div class="person-hover-line"><span>Reports To</span><b>{{ activePersonHover.data.manager }}</b></div>
+                                                              <div class="person-hover-line"><span>Branch</span><b>{{ activePersonHover.data.branch }}</b></div>
+                                                          </div>
+                                                      </transition>
+                                                  </div>
+                                              </div>
+                                          </div>
                           </div>
                         </div>
                       </template>
@@ -349,6 +378,11 @@
     </div>
     
   </div>
+     <ProfilePopup 
+        v-model="showProfilePopup"
+        :user-id="profileUserId"
+        @update:model-value="closeProfilePopup"
+    />
 </template>
 
 <script setup>
@@ -361,6 +395,7 @@ import ViewDealModal from './ViewDealModal.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
 import CompleteStageFieldsModal from './CompleteStageFieldsModal.vue'
 import { useStageTransition } from '@/composables/useStageTransition'
+import ProfilePopup from '../shared/ProfilePopup.vue'
 
 const props = defineProps({
   filters: {
@@ -434,6 +469,20 @@ const pendingCompleteFields = ref(null)
 
 const showStageChangeModal = ref(false)
 
+
+function formatDate(dateString) {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    const options = { month: 'short', day: 'numeric', year: 'numeric' }
+    const formattedDate = date.toLocaleDateString('en-US', options)
+    const formattedTime = date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    })
+    return `${formattedDate}  |  ${formattedTime}`
+}
+
 const blockedMove = ref(false)
 
 function onMoveDeal(evt) {
@@ -483,6 +532,84 @@ const isAdminOrSuperAdmin = computed(() => {
 
 const SCROLL_SPEED = 10
 const SCROLL_TICK_MS = 16
+
+const showProfilePopup = ref(false)
+const profileUserId = ref(null)
+const profileTriggerType = ref(null)
+const activePersonHover = ref(null)
+const personHoverHideTimer = ref(null)
+
+const openPersonProfile = (task, type, event) => {
+    if (event) event.stopPropagation()
+    
+    const person = type === 'assigned' ? task?.parent : task?.responsible_person
+    if (!person?.id) return
+    
+    profileUserId.value = person.id
+    profileTriggerType.value = type
+    showProfilePopup.value = true
+}
+
+
+const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallbackName = 'Unknown') => {
+    const name = person?.name || person?.full_name || fallbackName
+    const position = person?.position || person?.designation || person?.job_title || person?.role_name || person?.role || 'Team Member'
+    const manager =
+        person?.manager_name ||
+        person?.team_lead_name ||
+        person?.reports_to_name ||
+        person?.parent_name ||
+        person?.manager?.name ||
+        person?.team_lead?.name ||
+        person?.parent?.name ||
+        (type === 'responsible' ? (task?.parent?.name || task?.manager?.name || task?.team_lead?.name) : null) ||
+        (type === 'assigned' ? (task?.parent?.manager_name || task?.parent?.manager?.name || task?.manager?.name) : null) ||
+        'Not specified'
+    const branch =
+        person?.branch_name ||
+        person?.branch?.name ||
+        person?.office ||
+        person?.team ||
+        person?.department ||
+        person?.location ||
+        person?.team_name ||
+        task?.lead_branch_source ||
+        task?.branch_name ||
+        task?.branch?.name ||
+        task?.office_branch_name ||
+        task?.office_branch ||
+        'Not specified'
+    const avatar = person?.avatar || person?.image || person?.photo || ''
+    return { name, position, manager, branch, avatar }
+}
+const showPersonHoverCard = (task, type) => {
+    cancelPersonHoverHide()
+    const person = type === 'assigned' ? task?.parent : task?.responsible_person
+    const fallbackName = type === 'assigned' ? (task?.parent?.name || 'Assigned By') : (task?.responsible_person?.name || 'Responsible Person')
+    activePersonHover.value = {
+        leadId: task?.id,
+        type,
+        data: normalizePersonHoverData(person, task, type, fallbackName),
+    }
+}
+
+const hidePersonHoverCard = () => {
+    cancelPersonHoverHide()
+    personHoverHideTimer.value = setTimeout(() => {
+        activePersonHover.value = null
+    }, 90)
+}
+
+const cancelPersonHoverHide = () => {
+    if (personHoverHideTimer.value) {
+        clearTimeout(personHoverHideTimer.value)
+        personHoverHideTimer.value = null
+    }
+}
+
+const isPersonHoverVisible = (task, type) => {
+    return activePersonHover.value?.leadId === task?.id && activePersonHover.value?.type === type
+}
 
 // Map stage colors to header backgrounds
 function getHeaderBg(color) {
@@ -820,7 +947,7 @@ const handleUpdatedDeal = (deal) => {
             columns.value[newColumnIndex].deals_count = columns.value[newColumnIndex].deals.length
           }
         } else {
-          column.deals[index] = deal
+          column.deals[index] =  { ...deal }
         }
         column.deals_count = column.deals.length
         break
@@ -868,7 +995,7 @@ const handleStageChanged = (deal, changes) => {
               columns.value[newColumnIndex].deals = []
             }
             
-            columns.value[newColumnIndex].deals.unshift(deal)
+            columns.value[newColumnIndex].deals.unshift({ ...deal })
             columns.value[newColumnIndex].deals_count = columns.value[newColumnIndex].deals.length
           }
         }
@@ -1163,30 +1290,35 @@ async function onDealDragChange(evt, targetColumn) {
     )
   }
 }
-// دالة جديدة لنقل الديل مباشرة
 async function moveDealDirectly(deal, newStageId, targetColumn, oldStageId) {
   try {
-    // إزالة الديل من العمود القديم
     const sourceColumn = columns.value.find(c => c.stage_id === oldStageId)
+
     if (sourceColumn) {
       sourceColumn.deals = sourceColumn.deals.filter(d => d.id !== deal.id)
       sourceColumn.deals_count = sourceColumn.deals.length
     }
 
-    // إضافة الديل للعمود الجديد
+    // ✅ مهم جدًا
+    const updatedDeal = {
+      ...deal,
+      stage_id: newStageId
+    }
+
     if (!targetColumn.deals.find(d => d.id === deal.id)) {
-      targetColumn.deals.push(deal)
+      if (index !== -1) {
+          targetColumn.deals[index] = { ...updatedDeal } // ✅ أهم سطر
+        } else {
+          targetColumn.deals.push({ ...updatedDeal })
+        }
       targetColumn.deals_count = targetColumn.deals.length
     }
 
-    // تحديث المرحلة في الخلفية
     await changeStage({ dealId: deal.id, stageId: newStageId })
 
     showNotification('Deal moved successfully', 'success')
-    
+
   } catch (error) {
-    console.error('Error moving deal:', error)
-    // لو حصل خطأ، نرجع الديل لمكانه
     revertDealDrag(deal, targetColumn, oldStageId)
     showNotification('Failed to move deal', 'error')
   }
@@ -2414,4 +2546,105 @@ font-weight: 600;
     display: none !important;
   }
 }
+
+
+.assignedBy .avatar-sm{
+      width: 28px;
+    height: 28px;
+}
+
+.person-hover-anchor {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.person-hover-card {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: -10px;
+    width: 200px;
+    z-index: 60;
+    border-radius: 12px;
+    border: 1px solid #dbe3ef;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.2);
+    backdrop-filter: blur(8px);
+    padding: 10px;
+}
+
+.person-hover-card-right {
+    right: -10px;
+    left: auto;
+}
+
+.person-hover-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.person-hover-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+}
+
+.person-hover-avatar-fallback {
+    background: #f1f5f9;
+}
+
+.person-hover-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.person-hover-role {
+    margin-top: 1px;
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.2;
+}
+
+.person-hover-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11px;
+    padding: 4px 0;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.person-hover-line span {
+    color: #64748b;
+}
+
+.person-hover-line b {
+    color: #0f172a;
+    font-weight: 700;
+    text-align: right;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.person-hover-pop-enter-active,
+.person-hover-pop-leave-active {
+    transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.person-hover-pop-enter-from,
+.person-hover-pop-leave-to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+}
+
 </style>

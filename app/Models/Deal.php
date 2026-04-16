@@ -258,7 +258,12 @@ public function scopeFilter($query, $request)
         ->when($request->status, fn($q, $v) => $q->where('status', $v))
         ->when($request->responsible_id, fn($q, $v) => $q->where('responsible_person_id', $v))
         ->when($request->modified_by, fn($q, $v) => $q->where('modified_by', $v))
-        
+        ->when($request->my_deals, function ($q, $v) {
+            $q->where(function ($sub) use ($v) {
+                $sub->where('responsible_person_id', auth()->user()->id)
+                    ->orWhere('created_by', auth()->user()->id);
+            });
+        })
         // Property filters
         ->when($request->project_id, fn($q, $v) => $q->where('project_id', $v))
         ->when($request->area_id, fn($q, $v) => $q->where('area_id', $v))

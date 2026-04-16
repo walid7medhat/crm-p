@@ -611,6 +611,7 @@
                       placeholder="Select Area" 
                       :filterable="true"
                       class="custom-v-select" 
+                        @search="onSearchAreas"
                     />
                   </div>
                   

@@ -9,6 +9,16 @@ class DealResource extends JsonResource
 {
     public function toArray($request)
     {
+          $assignmentHistory = $this->histories()
+            ->where('changes->action', 'assigned')
+            ->orderBy('created_at', 'desc') 
+            ->first();
+        
+        if ($assignmentHistory && $assignmentHistory->user) {
+            $assignedBy = $assignmentHistory->user;
+        } else {
+            $assignedBy = $this->addedBy;
+        }
         return [
             'id' => $this->id,
             'deal_number' => $this->deal_number,
@@ -39,11 +49,11 @@ class DealResource extends JsonResource
                 'phone' => $this->lead->phone,
             ]),
             
-            'stage' => $this->whenLoaded('stage', fn() => [
+            'stage' => [
                 'id' => $this->stage->id,
                 'name' => $this->stage->name,
                 'color' => $this->stage->color,
-            ]),
+            ],
             
             'property_type' => $this->whenLoaded('propertyType', fn() => [
                 'id' => $this->propertyType->id,
@@ -52,7 +62,7 @@ class DealResource extends JsonResource
             
             'project' => $this->whenLoaded('project', fn() => [
                 'id' => $this->project->id,
-                'name' => $this->project->name,
+                'name' => $this->project->title,
             ]),
             'subcommunity' => $this->whenLoaded('subcommunity', fn() => [
                 'id' => $this->subcommunity->id,
@@ -80,6 +90,8 @@ class DealResource extends JsonResource
                 })(),
             'parties' => DealPartyResource::collection($this->whenLoaded('parties')),
             'documents' => DealDocumentResource::collection($this->whenLoaded('documents')),
+                 'parent'=>new UserResource($assignedBy),
+            'assigned_at'=>$assignmentHistory?$assignmentHistory->created_at:$this->created_at,
             'lost_reason'=>$this->lost_reason,
             // Timestamps
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),

@@ -140,6 +140,7 @@
                     <button class="btn-create-new btn-create-new--icon d-flex align-items-center justify-content-center" type="button" @click="handleCreateNew" aria-label="Create">
                         <iconify-icon icon="lucide:plus" width="18" height="18" class="btn-create-new-icon flex-shrink-0" aria-hidden="true"></iconify-icon>
                     </button>
+                    
 
                     <!-- More Options -->
                     <div class="more-options-wrapper d-flex align-items-center gap-12" v-if="(hasCreateStagePermission || isSuperAdmin)  ">

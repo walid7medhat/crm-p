@@ -26,7 +26,7 @@ class DealPartyResource extends JsonResource
             'language' => $this->language,
             'amount' => $this->amount,
             'amount_formatted' => $this->amount ? number_format($this->amount, 2) . ' AED' : null,
-            'documents' => DealDocumentResource::collection($this->whenLoaded('documents')),
+            'documents' => DealDocumentResource::collection($this->documents),
         ];
     }
 
