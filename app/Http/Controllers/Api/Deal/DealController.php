@@ -286,48 +286,104 @@ class DealController extends Controller
     /**
      * 4. جلب الصفقات مجمعة حسب المرحلة (للكانبان)
      */
-  public function getDealsGroupedByStage(Request $request)
+public function getDealsGroupedByStage(Request $request)
 {
     $user = auth()->user();
-
+    
+    // جلب المراحل فقط (بدون صفقات)
     $stages = Stage::where('stage_type','deal')
         ->when($request->deal_type, fn($q)=>$q->where('deal_type',$request->deal_type))
         ->orderBy('deal_type')
         ->orderBy('order')
         ->get();
-
-    $deals = Deal::with([
+    
+    // عدد الصفقات لكل صفحة (الافتراضي 10)
+    $perPage = $request->input('per_page', 10);
+    
+    $result = $stages->map(function($stage) use ($user, $request, $perPage) {
+        
+        // بناء الكويري للصفقات الخاصة بهذه المرحلة
+        $dealsQuery = Deal::with([
             'lead',
             'propertyType',
             'project',
             'area',
             'developer',
             'responsiblePerson',
-            'parties','documents','subcommunity'
+            'parties',
+            'documents',
+            'subcommunity'
         ])
         ->visibleFor($user)
         ->filter($request)
-        ->get()
-        ->groupBy('stage_id');
-
-    $result = $stages->map(function($stage) use ($deals){
-
-        $stageDeals = $deals->get($stage->id, collect());
-
+        ->where('stage_id', $stage->id);
+        
+        // الحصول على العدد الإجمالي للصفقات في هذه المرحلة
+        $totalCount = $dealsQuery->count();
+        
+        // جلب أول صفحة فقط من الصفقات
+        $stageDeals = $dealsQuery->paginate($perPage, ['*'], 'page', 1);
+        
         return [
-            'stage_id'=>$stage->id,
-            'stage_name'=>$stage->name,
-            'stage_color'=>$stage->color,
-            'deal_type'=>$stage->deal_type,
-            'deals_count'=>$stageDeals->count(),
-            'deals'=>DealResource::collection($stageDeals)
+            'stage_id' => $stage->id,
+            'stage_name' => $stage->name,
+            'stage_color' => $stage->color,
+            'deal_type' => $stage->deal_type,
+            'deals_count' => $totalCount, // العدد الإجمالي الحقيقي
+            'total_count' => $totalCount, // إضافة حقل للعدد الإجمالي
+            'current_page' => 1,
+            'per_page' => $perPage,
+            'deals' => DealResource::collection($stageDeals),
+            'has_more_pages' => $stageDeals->hasMorePages()
         ];
-
     });
-
+    
     return response()->json([
-        'success'=>true,
-        'data'=>$result
+        'success' => true,
+        'data' => $result
+    ]);
+}
+
+// دالة جديدة لجلب صفقات مرحلة معينة مع Pagination
+public function getDealsByStage(Request $request)
+{
+    $user = auth()->user();
+    
+    $request->validate([
+        'stage_id' => 'required|exists:stages,id',
+        'page' => 'integer|min:1',
+        'per_page' => 'integer|min:1|max:100'
+    ]);
+    
+    $stageId = $request->stage_id;
+    $page = $request->input('page', 1);
+    $perPage = $request->input('per_page', 10);
+    
+    $dealsQuery = Deal::with([
+        'lead',
+        'propertyType',
+        'project',
+        'area',
+        'developer',
+        'responsiblePerson',
+        'parties',
+        'documents',
+        'subcommunity'
+    ])
+    ->visibleFor($user)
+    ->filter($request)
+    ->where('stage_id', $stageId);
+    
+    $deals = $dealsQuery->paginate($perPage, ['*'], 'page', $page);
+    
+    return response()->json([
+        'success' => true,
+        'data' => DealResource::collection($deals),
+        'current_page' => $deals->currentPage(),
+        'last_page' => $deals->lastPage(),
+        'per_page' => $deals->perPage(),
+        'total' => $deals->total(),
+        'has_more_pages' => $deals->hasMorePages()
     ]);
 }
 

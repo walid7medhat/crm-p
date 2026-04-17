@@ -535,6 +535,11 @@ const dropLinkedQueryKeys = (query, queryKey) => {
         delete query.created_to
         return
     }
+    if (queryKey === 'end_date') {
+        delete query.from_date
+        delete query.to_date
+        return
+    }
     if (queryKey === 'assigned_at') {
                 delete query.assigned_from
                 delete query.assigned_to

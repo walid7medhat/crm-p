@@ -162,7 +162,7 @@
                                                       @mouseleave.stop="hidePersonHoverCard"
                                                         @click.stop="openPersonProfile(deal, 'assigned', $event)"
                                                   >
-                                                      <img v-if="task?.parent?.avatar" :src="task.parent.avatar"   alt="" class="avatar-sm rounded-circle" />
+                                                      <img v-if="deal?.parent?.avatar" :src="deal.parent.avatar"   alt="" class="avatar-sm rounded-circle" />
                                                       <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
                                                           <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
                                                       </div>
@@ -197,6 +197,20 @@
                                               </div>
                                           </div>
                           </div>
+                        </div>
+                      </template>
+                        <template #footer>
+                        <div v-if="column.hasMoreDeals || column.loadingMore" class="py-3 text-center">
+                          <div v-if="column.loadingMore" class="d-flex justify-content-center align-items-center gap-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                              <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span class="text-muted small">Loading more deals...</span>
+                          </div>
+                          <div v-else-if="column.hasMoreDeals" :id="`sentinel-${column.stage_id}`" class="sentinel-trigger" style="height: 10px;"></div>
+                        </div>
+                        <div v-if="!column.hasMoreDeals && column.deals.length > 0" class="text-center py-2">
+                          <span class="text-muted small">No more deals to load</span>
                         </div>
                       </template>
                     </draggable>
@@ -397,7 +411,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch, inject } from 'vue'
 import draggable from 'vuedraggable'
 import axios from '@/plugins/axios'
-
+import { useIntersectionObserver } from '@vueuse/core' 
 import Swal from 'sweetalert2'
 import ViewDealModal from './ViewDealModal.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
@@ -812,53 +826,140 @@ async function fetchDeals(immediate = false, externalFilters = null) {
   
   return executeFetchDeals()
 }
-
-async function executeFetchDeals() {
-  // Cancel any pending request
-  if (abortController.value) {
-    abortController.value.abort()
-  }
+const loadMoreDealsForColumn = async (column, reset = false) => {
+  if (column.loadingMore) return; // منع الطلبات المتكررة
   
-  // Create new abort controller
-  abortController.value = new AbortController()
-  isFetching.value = true
-  loading.value = true
+  const nextPage = reset ? 1 : (column.currentPage + 1);
+  
+  // إذا لم يكن هناك المزيد ولا نريد إعادة تعيين، نخرج
+  if (!reset && !column.hasMoreDeals) return;
+
+  column.loadingMore = true;
   
   try {
+    const response = await axios.get('/deals/get-more/by-stage', { 
+      params: {
+        stage_id: column.stage_id,
+        deal_type: activeTypeTab.value,
+        page: nextPage,
+        per_page: 10, // عدد الصفقات لكل تحميلة
+        ...props.filters,
+        ...runtimeFilters.value
+      }
+    });
+    
+    const newDeals = response.data.data || [];
+    const total = response.data.total || 0;
+    
+    if (reset) {
+      // أول تحميل: استبدال الصفقات
+      column.deals = newDeals;
+      column.currentPage = 1;
+    } else {
+      // تحميل إضافي: دمج الصفقات الجديدة مع القديمة
+      // نمنع تكرار الـ deals عن طريق الـ ID
+      const existingIds = new Set(column.deals.map(d => d.id));
+      const uniqueNewDeals = newDeals.filter(d => !existingIds.has(d.id));
+      column.deals.push(...uniqueNewDeals);
+      column.currentPage = nextPage;
+    }
+    
+    // تحديث عدد الصفقات الكلي
+    column.deals_count = response.data.total || column.deals.length;
+    // تحديد إذا كان هناك المزيد من الصفقات للتحميل
+    column.hasMoreDeals = column.deals.length < total;
+    
+  } catch (error) {
+    console.error(`Error loading deals for stage ${column.stage_id}:`, error);
+    showNotification('Failed to load more deals', 'error');
+  } finally {
+    column.loadingMore = false;
+  }
+};
+
+async function executeFetchDeals() {
+  if (abortController.value) {
+    abortController.value.abort();
+  }
+  
+  abortController.value = new AbortController();
+  isFetching.value = true;
+  loading.value = true;
+  
+  try {
+    // هذه الجلب الآن يجلب فقط الأعمدة (بدون صفقات) أو الصفقات الأولى للعرض الأولي
     const response = await axios.get('/deals/grouped-by-stage', { 
       params: {
         deal_type: activeTypeTab.value,
         ...props.filters,
-        ...runtimeFilters.value
+        ...runtimeFilters.value,
+        per_page: 10 
       }
-    })
+    });
     
     if (response.data.success) {
       stagesData.value = response.data.data.map(stage => ({
         stage_id: stage.stage_id,
         title: stage.stage_name,
         headerBg: stage.stage_color,
-        
         dotColor: stage.stage_color || '#3B82F6',
         color: stage.stage_color || '#3B82F6',
         deals_count: stage.deals_count,
-        deals: stage.deals || []
-      }))
-      error.value = null
+        deals: stage.deals || [], // أول 10 صفقات
+        currentPage: 1,
+        hasMoreDeals: (stage.deals?.length || 0) < (stage.total_count || stage.deals_count || 0),
+        loadingMore: false,
+        total_count: stage.total_count || stage.deals_count || 0
+      }));
+      error.value = null;
     } else {
-      throw new Error('Failed to fetch deals')
+      throw new Error('Failed to fetch deals');
     }
   } catch (err) {
     if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
-      console.error('Error fetching deals:', err)
-      error.value = err.message || 'Failed to load deals. Please try again.'
+      console.error('Error fetching deals:', err);
+      error.value = err.message || 'Failed to load deals. Please try again.';
     }
   } finally {
-    loading.value = false
-    isFetching.value = false
-    abortController.value = null
+    loading.value = false;
+    isFetching.value = false;
+    abortController.value = null;
   }
 }
+
+
+const setupInfiniteScroll = () => {
+  nextTick(() => {
+    if (window._infiniteObservers) {
+      window._infiniteObservers.forEach(observer => observer.disconnect());
+    }
+    
+    const observers = [];
+    
+    columns.value.forEach((column) => {
+      const sentinelId = `sentinel-${column.stage_id}`;
+      const sentinel = document.getElementById(sentinelId);
+      
+      if (sentinel && column.hasMoreDeals) {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting && column.hasMoreDeals && !column.loadingMore && !loading.value) {
+              loadMoreDealsForColumn(column, false);
+            }
+          });
+        }, { 
+          threshold: 0.1,
+          rootMargin: '0px 0px 100px 0px' // يبدأ التحميل قبل الوصول للنهاية بـ 100px
+        });
+        
+        observer.observe(sentinel);
+        observers.push(observer);
+      }
+    });
+    
+    window._infiniteObservers = observers;
+  });
+};
 
 // Columns computed from stagesData
 const columns = computed({
@@ -876,13 +977,19 @@ const mobileStageOptions = computed(() => {
 
 // Switch between tabs
 async function switchTab(tabId) {
-  showCompleteFieldsModal.value = false
-  pendingCompleteFields.value = null
-  pendingStageChange.value = null
-  activeTypeTab.value = tabId
-  emit('deal-type-change', tabId)
-  await fetchDeals(true)
+  showCompleteFieldsModal.value = false;
+  pendingCompleteFields.value = null;
+  pendingStageChange.value = null;
+  activeTypeTab.value = tabId;
+  
+  if (window._infiniteObservers) {
+    window._infiniteObservers.forEach(observer => observer.disconnect());
+    window._infiniteObservers = [];
+  }
+  
+  await fetchDeals(true);
 }
+
 
 // Initialize real-time updates with Echo/Pusher
 const initializeDealUpdates = () => {
@@ -941,33 +1048,22 @@ const handleDealUpdate = (event) => {
 }
 
 const handleNewDeal = (deal) => {
-  if (!deal || !deal.id) return
+  if (!deal || !deal.id) return;
+  const stageId = deal.stage_id || deal.stage?.id;
+  if (!stageId) return;
   
-  const stageId = deal.stage_id || deal.stage?.id
-  
-  if (!stageId) {
-    if (columns.value.length > 0) {
-      const firstStageId = columns.value[0].stage_id
-      const dealWithStage = { ...deal, stage_id: firstStageId }
-      handleNewDeal(dealWithStage)
-    }
-    return
-  }
-  
-  const columnIndex = columns.value.findIndex(col => col.stage_id === stageId)
-  
-  if (columnIndex !== -1) {
-    if (!columns.value[columnIndex].deals) {
-      columns.value[columnIndex].deals = []
-    }
-    
-    const existingIndex = columns.value[columnIndex].deals.findIndex(d => d.id === deal.id)
+  const column = columns.value.find(col => col.stage_id === stageId);
+  if (column) {
+    // نمنع التكرار
+    const existingIndex = column.deals.findIndex(d => d.id === deal.id);
     if (existingIndex === -1) {
-      columns.value[columnIndex].deals.unshift(deal)
-      columns.value[columnIndex].deals_count = columns.value[columnIndex].deals.length
+      column.deals.unshift(deal);
+      column.deals_count = column.deals.length;
+    } else {
+      column.deals[existingIndex] = deal;
     }
   }
-}
+};
 
 const handleDeletedDeal = (deal) => {
   const dealId = deal?.id
@@ -1387,6 +1483,7 @@ async function onDealDragChange(evt, targetColumn) {
     )
   }
 }
+// استبدل دالة moveDealDirectly بهذه:
 async function moveDealDirectly(deal, newStageId, targetColumn, oldStageId) {
   try {
     const sourceColumn = columns.value.find(c => c.stage_id === oldStageId)
@@ -1396,20 +1493,19 @@ async function moveDealDirectly(deal, newStageId, targetColumn, oldStageId) {
       sourceColumn.deals_count = sourceColumn.deals.length
     }
 
-    // ✅ مهم جدًا
     const updatedDeal = {
       ...deal,
       stage_id: newStageId
     }
 
-    if (!targetColumn.deals.find(d => d.id === deal.id)) {
-      if (index !== -1) {
-          targetColumn.deals[index] = { ...updatedDeal } // ✅ أهم سطر
-        } else {
-          targetColumn.deals.push({ ...updatedDeal })
-        }
-      targetColumn.deals_count = targetColumn.deals.length
+    // اصلاح الخطأ: التحقق من وجود الـ deal قبل الإضافة
+    const existingIndex = targetColumn.deals.findIndex(d => d.id === deal.id)
+    if (existingIndex !== -1) {
+      targetColumn.deals[existingIndex] = { ...updatedDeal }
+    } else {
+      targetColumn.deals.push({ ...updatedDeal })
     }
+    targetColumn.deals_count = targetColumn.deals.length
 
     await changeStage({ dealId: deal.id, stageId: newStageId })
 
@@ -1915,25 +2011,34 @@ const showNotification = (message, type = 'info') => {
     title: message
   })
 }
+watch(() => columns.value, () => {
+  setupInfiniteScroll();
+}, { deep: true, flush: 'post' });
 
 // Lifecycle hooks
 onMounted(async () => {
-  await fetchDeals(true)
-  nextTick(() => updateScrollArrows())
-  window.addEventListener('resize', updateScrollArrows)
+  await fetchDeals(true);
+  nextTick(() => {
+    updateScrollArrows();
+    setupInfiniteScroll();
+  });
+  window.addEventListener('resize', updateScrollArrows);
   setTimeout(() => {
-    initializeDealUpdates()
-  }, 1000)
-})
+    initializeDealUpdates();
+  }, 1000);
+});
 
 onUnmounted(() => {
-  resetMobilePressState()
-  closeMobileActionSheet()
-  onDealDragEnd()
-  stopScroll()
-  window.removeEventListener('resize', updateScrollArrows)
-  cleanup()
-})
+  resetMobilePressState();
+  closeMobileActionSheet();
+  onDealDragEnd();
+  stopScroll();
+  window.removeEventListener('resize', updateScrollArrows);
+  cleanup();
+  if (window._infiniteObservers) {
+    window._infiniteObservers.forEach(observer => observer.disconnect());
+  }
+});
 
 // Watch for filter changes
 watch(() => props.filters, () => {

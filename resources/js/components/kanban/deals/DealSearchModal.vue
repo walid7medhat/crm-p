@@ -70,7 +70,7 @@
                   </template>
               </v-select>
               </div>
-              <div v-if="fieldSettings.stage_group" class="col-md-6">
+              <!-- <div v-if="fieldSettings.stage_group" class="col-md-6">
                 <label class="form-label-custom">Stage Group</label>
                 <v-select
                   v-model="form.stage_group"
@@ -92,7 +92,7 @@
                       </span>
                   </template>
                 </v-select>
-              </div>
+              </div> -->
             </div>
           </div>
 

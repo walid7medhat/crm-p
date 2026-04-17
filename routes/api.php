@@ -202,6 +202,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::prefix('deals')->group(function () {
         Route::get('/', [DealController::class, 'index']);
         Route::get('/grouped-by-stage', [DealController::class, 'getDealsGroupedByStage']);
+        Route::get('/get-more/by-stage', [DealController::class, 'getDealsByStage']);
         Route::post('/{deal}/assign-responsible-person', [DealController::class, 'assignResponsiblePerson']);
         Route::delete('/documents/{id}', [DealController::class, 'deleteDocument']);
         Route::get('/{id}/history', [DealController::class, 'history']);
