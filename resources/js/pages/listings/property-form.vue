@@ -1485,9 +1485,9 @@ const listingFeatureOptions = [
 const isLoadingUnitNumber = ref(false);
 const unitNumberError = ref("");
 
-watch(() => [form.value.unit_number, selectedProject.value, form.value.saleOrRent], 
-  ([newUnitNumber, newProject, newStatus], [oldUnitNumber, oldProject, oldStatus]) => {
-  if ((newProject !== oldProject || newStatus !== oldStatus) && newUnitNumber) {
+watch(() => [form.value.unit_number, selectedProject.value, form.value.saleOrRent, form.value.area], 
+  ([newUnitNumber, newProject, newStatus, newArea], [oldUnitNumber, oldProject, oldStatus, oldArea]) => {
+  if ((newProject !== oldProject || newStatus !== oldStatus || newArea !== oldArea) && newUnitNumber) {
     setTimeout(() => {
       validateUnitNumber();
     }, 500);
@@ -1512,6 +1512,13 @@ watch(() => form.value.completionStatus, (newStatus) => {
     form.value.rentAmount = '';
     
     console.log('🏗️ Property under construction - occupancy status cleared');
+  }
+});
+watch(() => form.value.area, (newArea, oldArea) => {
+  if (newArea && newArea.id !== oldArea?.id && form.value.unit_number) {
+    setTimeout(() => {
+      validateUnitNumber();
+    }, 300);
   }
 });
 
@@ -1593,16 +1600,23 @@ const fetchProjectFloorPlans = async (projectId) => {
     
     const response = await api.get(`/listings/projects/${projectId}/floor-plans`);
     const allFloorPlans = response.data.data || response.data;
-    console.log(allFloorPlans);
+    
+    // Log area information for debugging
+    console.log(`📊 Loaded ${allFloorPlans.length} floor plans for project ${projectId}`);
+    console.log('Floor plan area assignments:', allFloorPlans.map(plan => ({
+      name: plan.name,
+      area_id: plan.area_id,
+      area_name: plan.area_name || 'Not specified'
+    })));
+    
     projectFloorPlans.value = allFloorPlans.map(plan => ({
       ...plan,
       area_id: plan.area_id || null 
     }));
-    console.log(projectFloorPlans);
+    
+    // Apply current area filter if an area is selected
     if (form.value.area && form.value.area.id) {
-      filteredFloorPlans.value = projectFloorPlans.value.filter(
-        plan => plan.area_id === form.value.area.id
-      );
+      filterFloorPlansByArea(form.value.area.id);
     } else {
       filteredFloorPlans.value = projectFloorPlans.value;
     }
@@ -1617,16 +1631,20 @@ const fetchProjectFloorPlans = async (projectId) => {
   } finally {
     isLoadingProjectFloorPlans.value = false;
   }
-};
-const filterFloorPlansByArea = (areaId) => {
+};const filterFloorPlansByArea = (areaId) => {
   if (!areaId) {
     filteredFloorPlans.value = projectFloorPlans.value;
+    console.log('Showing all floor plans (no area filter)');
   } else {
-    filteredFloorPlans.value = projectFloorPlans.value.filter(
-      plan => plan.area_id === areaId
-    );
+    filteredFloorPlans.value = projectFloorPlans.value.filter(plan => {
+      // For project 1788, include plans without area_id for al reef downtown
+      if (selectedProject.value?.id === 1788) {
+        return true;
+      }
+      return plan.area_id === areaId;
+    });
+    console.log(`Filtered floor plans for area ${areaId}:`, filteredFloorPlans.value.length);
   }
-  console.log(`✅ Filtered floor plans for area ${areaId}:`, filteredFloorPlans.value.length);
 };
 
 
@@ -1701,8 +1719,10 @@ const isSelectedProjectFloorPlan = (floorPlan) => {
 };
 
 const selectSingleProjectFloorPlan = (floorPlan) => {
+      if (selectedProject.value?.id !== 1788) {
+
   if (form.value.area && form.value.area.id) {
-    if (!floorPlan.area_id) {
+    if (!floorPlan.area_id ) {
       proxy.$showNotification(`⚠️ This floor plan doesn't have an area assigned`, "warning");
       return;
     }
@@ -1712,6 +1732,7 @@ const selectSingleProjectFloorPlan = (floorPlan) => {
       return;
     }
   }
+      }
   
   // Remove any existing project plan from form.floorPlans
   form.value.floorPlans = form.value.floorPlans.filter(fp => !fp.fromProject);
@@ -1819,31 +1840,51 @@ watch(() => selectedProject.value, async (newProject) => {
   }
 }, { immediate: true });
 
+// Replace the existing watch for form.value.area with this enhanced version
 watch(() => form.value.area, (newArea) => {
   console.log('🔄 Area changed value in form:', newArea);
+  console.log('📊 Current project ID:', selectedProject.value?.id);
   
   if (!selectedProject.value) {
     console.log('⚠️ No project selected, cannot filter floor plans');
+    filteredFloorPlans.value = [];
     return;
   }
-  console.log(newArea);
   
+  // Special handling for project ID 1788 or when no area is selected
   if (!newArea || !newArea.id) {
+    // Show all floor plans when no area is selected
     filteredFloorPlans.value = projectFloorPlans.value;
-    console.log('Showing all floor plans:', filteredFloorPlans.value.length);
+    console.log('Showing all floor plans (no area selected):', filteredFloorPlans.value.length);
   } else {
-    filteredFloorPlans.value = projectFloorPlans.value.filter(
-      plan => plan.area_id === newArea.id
-    );
-    console.log(`Filtered floor plans for area ${newArea.name}:`, filteredFloorPlans.value.length);
+    // Filter floor plans by area
+    filteredFloorPlans.value = projectFloorPlans.value.filter(plan => {
+      // If plan has no area_id, include it only if it's the only plan or has special flag
     
-    if (selectedProjectFloorPlan.value && 
-        selectedProjectFloorPlan.value.area_id !== newArea.id) {
-      clearSelectedProjectFloorPlan();
+        // For project 1788, include plans without area_id
+        if (selectedProject.value.id === 1788) {
+          console.log(`Including floor plan "${plan.name}" with no area assignment for project 1788`);
+          return true;
+        }
+        
+      // Normal area matching
+      return plan.area_id === newArea.id;
+    });
+    
+    console.log(`Filtered floor plans for area ${newArea.name} (ID: ${newArea.id}):`, filteredFloorPlans.value.length);
+    
+    // Check if current selected floor plan is still valid
+    if (selectedProjectFloorPlan.value) {
+      const isStillValid = filteredFloorPlans.value.some(
+        plan => plan.id === selectedProjectFloorPlan.value.id
+      );
+      if (!isStillValid) {
+        clearSelectedProjectFloorPlan();
+        proxy.$showNotification(`⚠️ Selected floor plan is not available in "${newArea.name}" area`, "warning");
+      }
     }
   }
-}, { immediate: true, deep: true });
-// Functions for handling project floor plans selection
+}, { immediate: true, deep: true });// Functions for handling project floor plans selection
 const isProjectFloorPlanSelected = (floorPlan) => {
   return selectedProjectFloorPlans.value.some(
     plan => plan.id === floorPlan.id
@@ -2762,7 +2803,10 @@ const validateUnitNumber = async () => {
       !selectedProject.value) {
     return true;
   }
-
+  if (!form.value.area || !form.value.area.id) {
+    unitNumberError.value = "⚠️ Please select an area first before checking unit number";
+    return false;
+  }
   try {
     isLoadingUnitNumber.value = true;
     unitNumberError.value = "";
@@ -2770,7 +2814,8 @@ const validateUnitNumber = async () => {
     const response = await api.post("/listings/properties/validate-unit-number", {
       unit_number: form.value.unit_number,
       listing_status: form.value.saleOrRent,
-      project_id: selectedProject.value.id
+      project_id: selectedProject.value.id,
+      area_id: form.value.area.id
     });
 
     const data = response.data;

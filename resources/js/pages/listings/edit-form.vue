@@ -1329,6 +1329,7 @@ const form = ref({
   store: false,
   laundry: false,
   driver: false,
+  project_id: null
 });
 
 // Computed Properties
@@ -1431,15 +1432,21 @@ watch(() => form.value.area, (newArea) => {
   
   if (!newArea || !newArea.id) {
     filteredProjectFloorPlans.value = projectFloorPlans.value;
-    console.log('Showing all floor plans:', filteredProjectFloorPlans.value.length);
+    console.log('Showing all floor plans (no area selected):', filteredProjectFloorPlans.value.length);
   } else {
-    filterFloorPlansByArea(newArea.id);
+      // ✅ التصحيح: للمشروع 1788 لا تطبق الفلترة
+      if(form.value.project_id != 1788){
+        filterFloorPlansByArea(newArea.id);
+      } else {
+        filteredProjectFloorPlans.value = projectFloorPlans.value;
+        console.log('Project 1788: Showing all floor plans without area filter');
+      }
     
     // شيل الفلور بلانز المستوردة اللي مش في المنطقة الجديدة
     importedFloorPlans.value = importedFloorPlans.value.filter(plan => {
       if (plan.project_floor_plan_id) {
         const originalPlan = projectFloorPlans.value.find(p => p.id === plan.project_floor_plan_id);
-        if (originalPlan && originalPlan.area_id !== newArea.id) {
+        if (originalPlan && originalPlan.area_id !== newArea.id && form.value.project_id != 1788) {
           return false;
         }
       }
@@ -1447,7 +1454,6 @@ watch(() => form.value.area, (newArea) => {
     });
   }
 }, { immediate: true, deep: true });
-
 
 // Fetch projects from API
 const fetchProjects = async () => {
@@ -1629,8 +1635,9 @@ const fetchPropertyData = async (id) => {
       is_hot_deal:propertyData.is_hot_deal,
       payment_plans: loadedPaymentPlans,
       payment_plan: paymentPlanString || "",
-       canShowOwner: propertyData.canShowOwner 
+       canShowOwner: propertyData.canShowOwner ,
     };
+    
     // 🔧 Fix: Load additional features from API
 if (propertyData.additional_features) {
   console.log('🎯 Loading additional features:', propertyData.additional_features);
@@ -1750,6 +1757,8 @@ const validateDriveLink = (link) => {
   return drivePatterns.some(pattern => pattern.test(link));
 };
 watch(() => selectedProject.value, async (newProject, oldProject) => {
+      form.value.project_id = newProject?.id || null;
+
   console.log('🔄 Project changed:', newProject?.name, 'from', oldProject?.name);
   
   if (newProject) {
@@ -2301,14 +2310,16 @@ const fetchProjectFloorPlans = async (page = 1) => {
     totalProjectFloorPlans.value = response.data.total || newPlans.length;
     currentProjectPage.value = page;
     
-    // بعد تحميل الفلور بلانز، طبق الفلترة لو في منطقة محددة
-    if (form.value.area && form.value.area.id) {
+    // ✅ التصحيح: للمشروع 1788 لا تطبق الفلترة، للمشاريع الأخرى طبق الفلترة إذا كانت المنطقة محددة
+    if (form.value.area && form.value.area.id && form.value.project_id != 1788) {
       filterFloorPlansByArea(form.value.area.id);
     } else {
       filteredProjectFloorPlans.value = projectFloorPlans.value;
+      console.log('Showing all floor plans (no filter or project 1788)');
     }
     
-    console.log('✅ Project floor plans loaded with areas:', projectFloorPlans.value);
+    console.log('✅ Project floor plans loaded:', projectFloorPlans.value.length);
+    console.log('📊 Filtered floor plans:', filteredProjectFloorPlans.value.length);
     
   } catch (error) {
     console.error("❌ Error fetching project floor plans:", error);
@@ -2317,7 +2328,6 @@ const fetchProjectFloorPlans = async (page = 1) => {
     loadingProjectFloorPlans.value = false;
   }
 };
-
   
 const resetAreaFilter = () => {
   form.value.area = null;
@@ -2328,6 +2338,13 @@ const resetAreaFilter = () => {
 const filterFloorPlansByArea = (areaId) => {
   if (!areaId || !projectFloorPlans.value.length) {
     filteredProjectFloorPlans.value = projectFloorPlans.value;
+    return;
+  }
+  
+  // ✅ للمشروع 1788، اعرض جميع المخططات (لا تقم بالفلترة)
+  if (form.value.project_id == 1788) {
+    filteredProjectFloorPlans.value = projectFloorPlans.value;
+    console.log('Project 1788: Skipping area filter');
     return;
   }
   
