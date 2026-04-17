@@ -1435,7 +1435,7 @@ watch(() => form.value.area, (newArea) => {
     console.log('Showing all floor plans (no area selected):', filteredProjectFloorPlans.value.length);
   } else {
       // ✅ التصحيح: للمشروع 1788 لا تطبق الفلترة
-      if(form.value.project_id != 1788){
+      if(form.value.project_id != 1788 || form.value.project_id != 1833){
         filterFloorPlansByArea(newArea.id);
       } else {
         filteredProjectFloorPlans.value = projectFloorPlans.value;
@@ -1446,7 +1446,7 @@ watch(() => form.value.area, (newArea) => {
     importedFloorPlans.value = importedFloorPlans.value.filter(plan => {
       if (plan.project_floor_plan_id) {
         const originalPlan = projectFloorPlans.value.find(p => p.id === plan.project_floor_plan_id);
-        if (originalPlan && originalPlan.area_id !== newArea.id && form.value.project_id != 1788) {
+        if (originalPlan && originalPlan.area_id !== newArea.id && form.value.project_id != 1788 && form.value.project_id != 1833) {
           return false;
         }
       }
@@ -2311,7 +2311,7 @@ const fetchProjectFloorPlans = async (page = 1) => {
     currentProjectPage.value = page;
     
     // ✅ التصحيح: للمشروع 1788 لا تطبق الفلترة، للمشاريع الأخرى طبق الفلترة إذا كانت المنطقة محددة
-    if (form.value.area && form.value.area.id && form.value.project_id != 1788) {
+    if (form.value.area && form.value.area.id && form.value.project_id != 1788 && form.value.project_id != 1833) {
       filterFloorPlansByArea(form.value.area.id);
     } else {
       filteredProjectFloorPlans.value = projectFloorPlans.value;
@@ -2342,7 +2342,7 @@ const filterFloorPlansByArea = (areaId) => {
   }
   
   // ✅ للمشروع 1788، اعرض جميع المخططات (لا تقم بالفلترة)
-  if (form.value.project_id == 1788) {
+  if (form.value.project_id == 1788 || form.value.project_id ==1833) {
     filteredProjectFloorPlans.value = projectFloorPlans.value;
     console.log('Project 1788: Skipping area filter');
     return;
