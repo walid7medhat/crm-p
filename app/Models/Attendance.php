@@ -7,12 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Attendance extends Model
 {
-<<<<<<< Updated upstream
-    //
-    protected $guarded=[];
-    public function user(){
-        return $this->belongsTo(User::class,'user_id');
-=======
     protected $fillable = [
         'user_id',
         'date',
@@ -29,6 +23,5 @@ class Attendance extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
->>>>>>> Stashed changes
     }
 }
