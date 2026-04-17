@@ -28,11 +28,59 @@ async function requestWithFallback(path, params = {}) {
 }
 
 export async function fetchAttendanceToday(params = {}) {
-  return requestWithFallback('/attendance/today', params)
+    const response = await requestWithFallback('/attendance/today', params)
+    
+    // إعادة تنسيق البيانات لتتناسب مع التوقعات
+    if (response?.data && Array.isArray(response.data) && !response.data.employees) {
+        return {
+            data: {
+                employees: response.data.map(item => ({
+                    employee_id: item.user_id || item.id,
+                    employee_name: item.user?.name || `Employee ${item.user_id}`,
+                    status: item.status || 'present',
+                    check_in: item.check_in,
+                    check_out: item.check_out,
+                    date: item.date,
+                })),
+                summary: {
+                    total_employees: response.data.length,
+                    present_today: response.data.filter(e => e.status === 'present').length,
+                    absent_today: response.data.filter(e => e.status === 'absent').length,
+                    late_today: response.data.filter(e => e.status === 'late').length,
+                }
+            }
+        }
+    }
+    
+    return response
 }
 
 export async function fetchAttendance(params = {}) {
-  return requestWithFallback('/attendance', params)
+    const response = await requestWithFallback('/attendance', params)
+    
+    // نفس المعالجة هنا
+    if (response?.data && Array.isArray(response.data) && !response.data.employees) {
+        return {
+            data: {
+                employees: response.data.map(item => ({
+                    employee_id: item.user_id || item.id,
+                    employee_name: item.user?.name || `Employee ${item.user_id}`,
+                    status: item.status || 'present',
+                    check_in: item.check_in,
+                    check_out: item.check_out,
+                    date: item.date,
+                })),
+                summary: {
+                    total_employees: response.data.length,
+                    present_today: response.data.filter(e => e.status === 'present').length,
+                    absent_today: response.data.filter(e => e.status === 'absent').length,
+                    late_today: response.data.filter(e => e.status === 'late').length,
+                }
+            }
+        }
+    }
+    
+    return response
 }
 
 export async function fetchLeadTotalCount() {

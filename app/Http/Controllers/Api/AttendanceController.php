@@ -22,56 +22,52 @@ class AttendanceController extends Controller
         return $this->respondWithAttendance($request, false);
     }
 
-    private function respondWithAttendance(Request $request, bool $todayOnly)
-    {
-        $date = $request->query('date');
-        $statusFilter = strtolower((string) $request->query('status', 'all'));
-        $targetDate = $todayOnly
-            ? Carbon::today('Africa/Cairo')->toDateString()
-            : ($date ?: Carbon::today('Africa/Cairo')->toDateString());
+   private function respondWithAttendance(Request $request, bool $todayOnly)
+{
+    $date = $request->query('date');
+    $statusFilter = strtolower((string) $request->query('status', 'all'));
+    $targetDate = $todayOnly
+        ? Carbon::today('Africa/Cairo')->toDateString()
+        : ($date ?: Carbon::today('Africa/Cairo')->toDateString());
+  $attendanceRows = $this->fetchFromLocalSnapshot($targetDate);
 
-        $attendanceRows = $this->fetchFromRemoteApi($targetDate);
-        if ($attendanceRows === null) {
-            $attendanceRows = $this->fetchFromLocalSnapshot($targetDate);
-        }
+    $normalized = collect($attendanceRows)
+        ->map(function (array $row) {
+            $status = $this->resolveStatus($row);
+            return [
+                'employee_id' => $row['employee_id'] ?? $row['user_id'] ?? null,
+                'employee_name' => $row['employee_name'] ?? 'Unknown',
+                'status' => $status,
+                'check_in' => $row['check_in'] ?? null,
+                'check_out' => $row['check_out'] ?? null,
+                'date' => $row['date'] ?? null,
+                'department' => $row['department'] ?? null,
+                'email' => $row['email'] ?? null,
+            ];
+        })
+        ->when(in_array($statusFilter, ['present', 'absent', 'late'], true), function ($collection) use ($statusFilter) {
+            return $collection->where('status', $statusFilter)->values();
+        })
+        ->values();
 
-        $normalized = collect($attendanceRows)
-            ->map(function (array $row) {
-                $status = $this->resolveStatus($row);
-                return [
-                    'employee_id' => $row['employee_id'] ?? $row['user_id'] ?? null,
-                    'employee_name' => $row['employee_name'] ?? 'Unknown',
-                    'status' => $status,
-                    'check_in' => $row['check_in'] ?? null,
-                    'check_out' => $row['check_out'] ?? null,
-                    'date' => $row['date'] ?? null,
-                    'department' => $row['department'] ?? null,
-                    'email' => $row['email'] ?? null,
-                ];
-            })
-            ->when(in_array($statusFilter, ['present', 'absent', 'late'], true), function ($collection) use ($statusFilter) {
-                return $collection->where('status', $statusFilter)->values();
-            })
-            ->values();
+    $resolvedDate = (string) ($normalized->first()['date'] ?? $targetDate);
 
-        $resolvedDate = (string) ($normalized->first()['date'] ?? $targetDate);
+    $summary = [
+        'total_employees' => $normalized->count(),
+        'present_today' => $normalized->where('status', 'present')->count(),
+        'absent_today' => $normalized->where('status', 'absent')->count(),
+        'late_today' => $normalized->where('status', 'late')->count(),
+    ];
 
-        $summary = [
-            'total_employees' => $normalized->count(),
-            'present_today' => $normalized->where('status', 'present')->count(),
-            'absent_today' => $normalized->where('status', 'absent')->count(),
-            'late_today' => $normalized->where('status', 'late')->count(),
-        ];
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'date' => $resolvedDate,
-                'summary' => $summary,
-                'employees' => $normalized,
-            ],
-        ]);
-    }
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'date' => $resolvedDate,
+            'summary' => $summary,
+            'employees' => $normalized,  // ← تأكد من أن هذا هو المفتاح المستخدم
+        ],
+    ]);
+}
 
     private function fetchFromRemoteApi(string $targetDate): ?array
     {
@@ -157,26 +153,26 @@ class AttendanceController extends Controller
         }
     }
 
-    private function fetchFromLocalSnapshot(string $targetDate): array
-    {
-        return Attendance::query()
-            ->with('user:id,name,email')
-            ->whereDate('date', $targetDate)
-            ->get()
-            ->map(function (Attendance $attendance) {
-                return [
-                    'employee_id' => $attendance->user_id,
-                    'employee_name' => $attendance->user?->name ?? 'Unknown',
-                    'email' => $attendance->user?->email,
-                    'department' => data_get($attendance->user, 'department'),
-                    'status' => null,
-                    'check_in' => $attendance->check_in,
-                    'check_out' => $attendance->check_out,
-                    'date' => $attendance->date,
-                ];
-            })
-            ->all();
-    }
+  private function fetchFromLocalSnapshot(string $targetDate): array
+{
+    return Attendance::query()
+        ->with('user:id,name,email')
+        ->whereDate('date', $targetDate)
+        ->get()
+        ->map(function (Attendance $attendance) {
+            return [
+                'employee_id' => $attendance->user_id,
+                'employee_name' => $attendance->user?->name ?? 'Unknown',
+                'email' => $attendance->user?->email,
+                'department' => data_get($attendance->user, 'department'),
+                'status' => null, // سيتم حسابه في resolveStatus
+                'check_in' => $attendance->check_in,
+                'check_out' => $attendance->check_out,
+                'date' => $attendance->date,
+            ];
+        })
+        ->all();
+}
 
     private function resolveStatus(array $row): string
     {

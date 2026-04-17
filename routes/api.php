@@ -34,7 +34,7 @@ use App\Http\Controllers\Api\LeadActivityController;
 use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\Deal\DealController;
 use App\Http\Controllers\Api\Deal\LeadConversionController;
-use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\HR\AttendanceController;
 use App\Http\Controllers\Api\SuggestionController;
 use App\Http\Controllers\Api\Deal\DealActivityController;
 use App\Http\Controllers\Api\ReportController;

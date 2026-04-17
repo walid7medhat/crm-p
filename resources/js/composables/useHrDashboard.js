@@ -27,21 +27,70 @@ export function useHrDashboard() {
     loading.value = true
     error.value = ''
     try {
-      const params = {
-        date: dateFilter.value,
-        status: statusFilter.value,
-      }
-      const response = todayOnly ? await fetchAttendanceToday(params) : await fetchAttendance(params)
-      const payload = response?.data || {}
-      employees.value = Array.isArray(payload.employees) ? payload.employees : []
-      summary.value = payload.summary || summary.value
+        const params = { date: dateFilter.value, status: statusFilter.value }
+        const response = todayOnly ? await fetchAttendanceToday(params) : await fetchAttendance(params)
+        
+        console.log('API Response:', response) // للتتبع
+        
+        // الحل: تحقق من تنسيق البيانات القادمة
+        let employeesData = []
+        let summaryData = summary.value
+        
+        if (response?.data?.employees) {
+            // التنسيق المتوقع
+            employeesData = response.data.employees
+            summaryData = response.data.summary || summaryData
+        } 
+        else if (Array.isArray(response?.data)) {
+            // التنسيق الفعلي: data مصفوفة مباشرة
+            employeesData = response.data.map(item => ({
+                employee_id: item.user_id || item.id,
+                employee_name: item.user?.name || `Employee ${item.user_id}`,
+                status: item.status || determineStatus(item.check_in),
+                check_in: item.check_in,
+                check_out: item.check_out,
+                date: item.date,
+            }))
+            
+            // حساب الـ summary من البيانات
+            summaryData = {
+                total_employees: employeesData.length,
+                present_today: employeesData.filter(e => e.status === 'present').length,
+                absent_today: employeesData.filter(e => e.status === 'absent').length,
+                late_today: employeesData.filter(e => e.status === 'late').length,
+            }
+        }
+        else if (response?.data?.data && Array.isArray(response.data.data)) {
+            // تنسيق آخر محتمل: response.data.data
+            employeesData = response.data.data
+        }
+        
+        employees.value = employeesData
+        summary.value = summaryData
+        
     } catch (e) {
-      error.value = e?.response?.data?.message || 'Failed to load attendance data'
-      employees.value = []
+        console.error('Error loading attendance:', e)
+        error.value = e?.response?.data?.message || 'Failed to load attendance data'
+        employees.value = []
     } finally {
-      loading.value = false
+        loading.value = false
     }
-  }
+}
+
+// دالة مساعدة لتحديد الحالة بناءً على وقت الحضور
+function determineStatus(checkIn) {
+    if (!checkIn) return 'absent'
+    
+    const checkInTime = new Date(checkIn)
+    const hours = checkInTime.getHours()
+    const minutes = checkInTime.getMinutes()
+    
+    // إذا كان الحضور بعد 9:15 صباحاً يعتبر متأخر
+    if (hours > 9 || (hours === 9 && minutes > 15)) {
+        return 'late'
+    }
+    return 'present'
+}
 
   async function loadLeadsCount() {
     try {
