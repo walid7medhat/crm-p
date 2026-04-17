@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\InvestmentController;
 use App\Http\Controllers\Api\CityInvestmentSettingsController;
 use App\Http\Controllers\Api\AbuDhabiBenchmarkController;
 use App\Http\Controllers\Api\AdminEmailController;
+use App\Http\Controllers\Api\HR\AttendanceController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\LeadImportController;
 use App\Http\Controllers\Api\Mobile\MobileKanbanController;
@@ -193,7 +194,8 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
 Route::get('/teams-with-leads', [StageController::class, 'getTeamsWithLeads'])->middleware('jwt.auth');
 
 Route::middleware('jwt.auth')->group(function () {
-    
+        Route::get('/attendance', [AttendanceController::class, 'index']);
+    Route::get('/attendance/today', [AttendanceController::class, 'today']);
     // === Lead Conversion API ===
     Route::post('/leads/convert/to-deal', [LeadConversionController::class, 'convert']);
     Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);
