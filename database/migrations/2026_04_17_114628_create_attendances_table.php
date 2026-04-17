@@ -11,14 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-                Schema::create('attendances', function (Blueprint $table) {
+               Schema::create('attendances', function (Blueprint $table) {
                     $table->id();
+
                     $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-                    $table->dateTime('check_time');
-                    $table->enum('type', ['in', 'out'])->nullable();
+
+                    $table->date('date');
+
+                    $table->dateTime('check_in')->nullable();
+
+                    $table->dateTime('check_out')->nullable();
+
                     $table->timestamps();
 
-                    $table->unique(['user_id', 'check_time']); // منع التكرار
+                    $table->unique(['user_id', 'date']);
                 });
     }
 

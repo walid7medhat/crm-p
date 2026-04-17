@@ -6,11 +6,12 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use App\Models\User;
 use App\Models\Attendance;
+use Carbon\Carbon;
 
 class SyncAttendance extends Command
 {
     protected $signature = 'attendance:sync';
-    protected $description = 'Sync today attendance from biometric API';
+    protected $description = 'Sync attendance snapshot from biometric API';
 
     public function handle()
     {
@@ -23,34 +24,66 @@ class SyncAttendance extends Command
                     'x-api-key' => 'zkbio_secure_2026',
                     'Accept' => 'application/json',
                 ])
+                ->withoutVerifying()
                 ->timeout(60)
-                ->get('http://oiahead.fortidyndns.com:8083/api/attendance/today');
+                ->get('https://oiahead.fortidyndns.com/api/attendance/today');
 
             if (!$response->successful()) {
-                $this->error('API Error');
+                $this->error('API Error: ' . $response->status());
                 return;
             }
 
-            $data = $response->json()['data'] ?? [];
+            $data = $response->json() ?? [];
+
+            \Log::info('Attendance API Data', $data);
+
+            // ✔️ users map
+            $users = User::whereNotNull('biometric_code')
+                ->pluck('id', 'biometric_code');
+
+            // ✔️ today date (Egypt timezone)
+            $today = now('Africa/Cairo')->toDateString();
 
             $count = 0;
 
             foreach ($data as $item) {
 
-                if (empty($item['emp_code'])) continue;
+                // ❌ skip wrong date
+                if (($item['attendance_date'] ?? null) !== $today) {
+                    continue;
+                }
 
-                // 🔥 ربط باليوزر
-                $user = User::where('biometric_code', $item['emp_code'])->first();
+                // ❌ skip empty employee
+                if (empty($item['emp_code'])) {
+                    continue;
+                }
 
-                if (!$user) continue;
+                // ✔️ find user
+                $userId = $users[$item['emp_code']] ?? null;
 
+                if (!$userId) {
+                    $this->warn('User not found: ' . $item['emp_code']);
+                    continue;
+                }
+
+                // ✔️ parse times
+                $checkIn = !empty($item['first_checkin'])
+                    ? Carbon::parse($item['first_checkin'])
+                    : null;
+
+                $checkOut = !empty($item['last_checkout'])
+                    ? Carbon::parse($item['last_checkout'])
+                    : null;
+
+                // ✔️ save daily snapshot
                 Attendance::updateOrCreate(
                     [
-                        'user_id' => $user->id,
-                        'check_time' => $item['punch_time'],
+                        'user_id' => $userId,
+                        'date' => $today,
                     ],
                     [
-                        'type' => $item['punch_state'] == "0" ? 'in' : 'out',
+                        'check_in' => $checkIn,
+                        'check_out' => $checkOut,
                     ]
                 );
 
@@ -60,7 +93,6 @@ class SyncAttendance extends Command
             $this->info("Done. Synced {$count} records.");
 
         } catch (\Exception $e) {
-
             $this->error('Error: ' . $e->getMessage());
         }
     }
