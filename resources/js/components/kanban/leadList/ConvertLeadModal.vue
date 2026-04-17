@@ -1,6 +1,6 @@
 <!-- components/Deals/ConvertLeadModal.vue -->
 <template>
-    <div class="modal fade" id="convertLeadModal" tabindex="-1" aria-hidden="true">
+    <div ref="modalRootRef" class="modal fade" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered convert-lead-dialog">
             <div class="modal-content convert-lead-content">
                 <div class="modal-header convert-lead-header">
@@ -61,7 +61,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import * as bootstrap from 'bootstrap'
@@ -87,6 +87,7 @@ const emit = defineEmits(['converted', 'closed'])
 
 const loading = ref(false)
 const modalInstance = ref(null)
+const modalRootRef = ref(null)
 
 const form = ref({
     lead_id: props.leadId,
@@ -97,17 +98,35 @@ watch(() => props.leadId, (newId) => {
     form.value.lead_id = newId
 })
 
-const show = () => {
+const resolveLeadId = (explicitLeadId = null, explicitLeadData = null) => {
+    const candidate =
+        explicitLeadId
+        ?? explicitLeadData?.id
+        ?? explicitLeadData?.lead_id
+        ?? explicitLeadData?.lead?.id
+        ?? explicitLeadData?.lead?.lead_id
+        ?? props.leadId
+        ?? form.value.lead_id
+        ?? props.leadData?.id
+        ?? props.leadData?.lead_id
+        ?? props.leadData?.lead?.id
+        ?? props.leadData?.lead?.lead_id
+        ?? null
+
+    const numeric = Number(candidate)
+    if (!Number.isNaN(numeric) && numeric > 0) return numeric
+    return candidate
+}
+
+const show = (leadId = null, leadData = null) => {
+    form.value.lead_id = resolveLeadId(leadId, leadData)
     nextTick(() => {
-        const modalEl = document.getElementById('convertLeadModal')
+        const modalEl = modalRootRef.value
         if (modalEl) {
-            modalInstance.value = new bootstrap.Modal(modalEl)
+            if (!modalInstance.value) {
+                modalInstance.value = new bootstrap.Modal(modalEl)
+            }
             modalInstance.value.show()
-            
-            modalEl.addEventListener('hidden.bs.modal', () => {
-                emit('closed')
-                form.value.deal_type = '' // Reset on close
-            })
         }
     })
 }
@@ -117,6 +136,28 @@ const hide = () => {
         modalInstance.value.hide()
     }
 }
+
+const onHidden = () => {
+    emit('closed')
+    form.value.deal_type = ''
+}
+
+onMounted(() => {
+    const modalEl = modalRootRef.value
+    if (!modalEl) return
+    modalEl.addEventListener('hidden.bs.modal', onHidden)
+})
+
+onUnmounted(() => {
+    const modalEl = modalRootRef.value
+    if (modalEl) {
+        modalEl.removeEventListener('hidden.bs.modal', onHidden)
+    }
+    if (modalInstance.value) {
+        modalInstance.value.dispose()
+        modalInstance.value = null
+    }
+})
 
 const submitConversion = async () => {
     if (!form.value.deal_type) {
@@ -134,8 +175,25 @@ const submitConversion = async () => {
     loading.value = true
     
     try {
+        const resolvedLeadId = resolveLeadId()
+        if (!resolvedLeadId) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Conversion failed',
+                text: 'Lead ID is missing. Please reopen the convert modal and try again.',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3500
+            })
+            loading.value = false
+            return
+        }
+
         const response = await api.post('/leads/convert/to-deal', {
-            lead_id: props.leadId,
+            lead_id: resolvedLeadId,
+            leadId: resolvedLeadId,
+            id: resolvedLeadId,
             deal_type: form.value.deal_type
         })
         
@@ -153,10 +211,13 @@ const submitConversion = async () => {
             hide()
         }
     } catch (error) {
+        const backendDebug = error?.response?.data?.debug?.payload
+            ? ` | payload: ${JSON.stringify(error.response.data.debug.payload)}`
+            : ''
         Swal.fire({
             icon: 'error',
             title: 'Conversion failed',
-            text: error.response?.data?.message || 'An error occurred',
+            text: (error.response?.data?.message || 'An error occurred') + backendDebug,
             toast: true,
             position: 'top-end',
             showConfirmButton: false,

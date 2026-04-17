@@ -631,7 +631,7 @@
     />
     <ConvertLeadModal
         ref="convertModalRef"
-        :leadId="selectedLeadForConversion"
+        :leadId="selectedLeadForConversion || selectedLeadData?.id || selectedLeadData?.lead_id || null"
         :leadData="selectedLeadData"
         @converted="handleLeadConverted"
         @closed="selectedLeadForConversion = null"
@@ -1477,12 +1477,12 @@ async function fetchResponsiblePersons() {
 }
 
 function openConvertLeadModal(lead) {
-    selectedLeadForConversion.value = lead.id
+    selectedLeadForConversion.value = lead?.id || lead?.lead_id || null
     selectedLeadData.value = lead
     
     nextTick(() => {
         if (convertModalRef.value) {
-            convertModalRef.value.show()
+            convertModalRef.value.show(selectedLeadForConversion.value, selectedLeadData.value)
         }
     })
 }
@@ -2882,7 +2882,7 @@ async function onLeadDragChange(evt, column) {
             
             // جميع البيانات موجودة، انتقل إلى التحويل
             console.log('All data complete, showing conversion modal')
-            selectedLeadForConversion.value = lead.id
+            selectedLeadForConversion.value = lead?.id || lead?.lead_id || null
             selectedLeadData.value = lead
             
             const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
@@ -2893,7 +2893,7 @@ async function onLeadDragChange(evt, column) {
             
             await nextTick()
             if (convertModalRef.value) {
-                convertModalRef.value.show()
+                convertModalRef.value.show(selectedLeadForConversion.value, selectedLeadData.value)
             }
             return
         }
@@ -3086,12 +3086,12 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         // If this was for conversion (stage 6), open conversion modal
         if (isConversion && targetStageOrder === 6) {
             console.log('Opening conversion modal')
-            selectedLeadForConversion.value = lead.id
+            selectedLeadForConversion.value = lead?.id || lead?.lead_id || null
             selectedLeadData.value = lead
             
             await nextTick()
             if (convertModalRef.value) {
-                convertModalRef.value.show()
+                convertModalRef.value.show(selectedLeadForConversion.value, selectedLeadData.value)
             }
         }
         

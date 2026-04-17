@@ -24,8 +24,30 @@ class LeadConversionController extends Controller
 {
    public function convert(Request $request)
     {
+        $leadId = $request->input('lead_id')
+            ?? $request->input('leadId')
+            ?? $request->input('id');
+
+        Log::info('Lead conversion request received', [
+            'lead_id' => $leadId,
+            'deal_type' => $request->deal_type,
+            'payload' => $request->all(),
+            'user_id' => auth()->id(),
+        ]);
+
+        if (empty($leadId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lead ID is required',
+                'debug' => [
+                    'received_lead_id' => $leadId,
+                    'payload' => $request->all(),
+                ],
+            ], 422);
+        }
+
         $user = auth()->user();
-        $lead = Lead::find($request->lead_id);
+        $lead = Lead::find($leadId);
         if (!$lead) {
             return response()->json([
                 'success' => false,
@@ -69,10 +91,25 @@ class LeadConversionController extends Controller
             ->orderBy('order')
             ->first();
         if (!$stage) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No deal stage configured for selected deal type'
-            ], 422);
+            $fallbackStage = Stage::where('stage_type', 'deal')
+                ->orderBy('order')
+                ->first();
+
+            if (!$fallbackStage) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No deal stage configured. Please create at least one deal stage in Settings.'
+                ], 422);
+            }
+
+            Log::warning('No deal stage found for requested deal_type, using fallback stage', [
+                'requested_deal_type' => $request->deal_type,
+                'fallback_stage_id' => $fallbackStage->id,
+                'fallback_stage_deal_type' => $fallbackStage->deal_type,
+                'lead_id' => $leadId,
+            ]);
+
+            $stage = $fallbackStage;
         }
         
 
@@ -80,14 +117,10 @@ class LeadConversionController extends Controller
             DB::beginTransaction();
 
             $dealNumber = $this->generateDealNumber($lead);
-            $unitNo = $request->unit_no ?? $lead->unit_no;
-            $propertyTypeId = $request->property_type_id ?? $lead->property_type_id;
-            if (empty($unitNo) || empty($propertyTypeId)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Lead is missing required property fields (unit number or property type). Please convert using Create Deal modal and complete required fields.'
-                ], 422);
-            }
+            // Allow quick conversion from Kanban even if lead has incomplete property data.
+            // Missing fields can be completed later from Deal edit modal/form.
+            $unitNo = $request->unit_no ?? $lead->unit_no ?? null;
+            $propertyTypeId = $request->property_type_id ?? $lead->property_type_id ?? null;
 
             $deal = Deal::create([
                 'added_by'=>$user->id,
@@ -195,7 +228,7 @@ class LeadConversionController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Failed to convert lead to deal', ['lead_id' => $request->lead_id, 'error' => $e->getMessage()]);
+            Log::error('Failed to convert lead to deal', ['lead_id' => $leadId, 'error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to convert lead to deal',
