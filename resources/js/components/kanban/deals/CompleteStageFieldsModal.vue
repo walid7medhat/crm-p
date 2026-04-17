@@ -2030,5 +2030,9 @@ watch(() => formData.value?.landlord_country, (newCountry, oldCountry) => {
 :deep(.custom-v-select svg) {
     vertical-align: middle !important;
 }
+.alert svg{
+    margin: 6px;
+
+}
 
 </style>

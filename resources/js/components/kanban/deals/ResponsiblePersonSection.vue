@@ -43,11 +43,11 @@
                             </div>
                             <div class="person-hover-line">
                                 <span>Reports To</span>
-                                <b>{{ deal?.responsible_person?.manager_name || deal?.responsible_person?.team_deal_name || 'Not specified' }}</b>
+                                <b>{{ deal?.responsible_person?.manager_name || deal?.responsible_person?.team_lead_name || 'Not specified' }}</b>
                             </div>
                             <div class="person-hover-line">
                                 <span>Branch</span>
-                                <b>{{ deal?.responsible_person?.branch_name || deal?.deal_branch_source || 'Not specified' }}</b>
+                                <b>{{ deal?.responsible_person?.branch_name || deal?.lead_branch_source || 'Not specified' }}</b>
                             </div>
                         </div>
                     </transition>
@@ -58,11 +58,11 @@
                     </div>
                     <div class="info-subline">
                            <span class="sub-key">Reports To: </span>
-                           <span class="sub-value"> {{ deal?.responsible_person?.admin_parent_name || deal?.responsible_person?.team_deal_name || 'Not specified' }}</span>
+                           <span class="sub-value"> {{ deal?.responsible_person?.admin_parent_name || deal?.responsible_person?.team_lead_name || 'Not specified' }}</span>
                        </div>
                     <div class="info-subline">
                         <span class="sub-key">Branch: </span>
-                        <span class="sub-value"> {{ deal?.responsible_person?.office_name || deal?.deal_branch_source || 'Not specified' }}</span>
+                        <span class="sub-value"> {{ deal?.responsible_person?.office_name || deal?.lead_branch_source || 'Not specified' }}</span>
                     </div>
                 </div>
             </div>

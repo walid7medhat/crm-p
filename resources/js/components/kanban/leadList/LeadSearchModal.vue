@@ -3231,7 +3231,7 @@ onBeforeUnmount(() => {
     margin: 0;
     padding: 0;
     white-space: nowrap;
-    overflow: hidden;
+    /*overflow: hidden;*/
     text-overflow: ellipsis;
     display: block;
     max-width: 100%;

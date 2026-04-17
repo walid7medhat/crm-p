@@ -152,24 +152,23 @@
 
                     <!-- More Options -->
                     <div class="more-options-wrapper d-flex align-items-center gap-12" v-if="hasCreateStagePermission || isSuperAdmin">
-                        <b-dropdown 
-                            variant="link" 
-                            no-caret 
-                            toggle-class="action-icon-btn-dropdown p-0 border-0"
-                            menu-class="stage-dropdown-menu"
-                            right
-                        >
-                            <template #button-content>
-                                <button class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">
-                                    <iconify-icon icon="lucide:more-vertical" class="text-lg font-weight-bold"></iconify-icon>
-                                </button>
-                            </template>
+                        <!--<b-dropdown -->
+                        <!--    variant="link" -->
+                        <!--    no-caret -->
+                        <!--    toggle-class="action-icon-btn-dropdown p-0 border-0"-->
+                        <!--    menu-class="stage-dropdown-menu"-->
+                        <!--    right>-->
+                        <!--    <template #button-content>-->
+                        <!--        <button class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">-->
+                        <!--            <iconify-icon icon="lucide:more-vertical" class="text-lg font-weight-bold"></iconify-icon>-->
+                        <!--        </button>-->
+                        <!--    </template>-->
                             
-                            <b-dropdown-item @click="showAddStageModal = true" v-if="hasCreateStagePermission"  class="dropdown-item-custom">
-                                <img :src="addStage" alt="Add Stage" class="dropdown-icon" />
-                                <span class="dropdown-text">Add New Stage</span>
-                            </b-dropdown-item>
-                        </b-dropdown>
+                        <!--    <b-dropdown-item @click="showAddStageModal = true" v-if="hasCreateStagePermission"  class="dropdown-item-custom">-->
+                        <!--        <img :src="addStage" alt="Add Stage" class="dropdown-icon" />-->
+                        <!--        <span class="dropdown-text">Add New Stage</span>-->
+                        <!--    </b-dropdown-item>-->
+                        <!--</b-dropdown>-->
                         
                         <button
                                     v-if="isSuperAdmin"

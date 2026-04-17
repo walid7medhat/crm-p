@@ -692,7 +692,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             'lead_source' => 'nullable|string|max:100',
             'purpose_buying' => 'nullable|string|max:100',
             'bedrooms' => 'nullable',
-            'status_lead' => 'nullable|string|max:50|in:cold,warm,hot', // استخدام العمود الموجود
+            'status_lead' => 'nullable|string|max:50', // استخدام العمود الموجود
             'property_status'=>'nullable',
             'lead_type'=>'nullable',
             

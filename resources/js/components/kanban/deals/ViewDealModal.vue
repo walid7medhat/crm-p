@@ -528,7 +528,8 @@ function dealToFormData(deal) {
     landlord_city: landlord.city ?? '',
     landlord_country: landlord.country ?? '',
     landlord_language: landlord.language ?? '',
-    landlord_documents: mapPartyDocuments(landlord, 'landlord')
+    landlord_documents: mapPartyDocuments(landlord, 'landlord'),
+    responsible_person:responsible_person
   }
 }
 

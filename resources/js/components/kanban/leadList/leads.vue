@@ -3086,7 +3086,7 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         // If this was for conversion (stage 6), open conversion modal
         if (isConversion && targetStageOrder === 6) {
             console.log('Opening conversion modal')
-            selectedLeadForConversion.value = leadId
+            selectedLeadForConversion.value = lead.id
             selectedLeadData.value = lead
             
             await nextTick()
