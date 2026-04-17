@@ -16,7 +16,13 @@
 
     <!-- Kanban board with navigation arrows -->
     <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile }">
-      <div ref="kanbanContainerRef" class="kanban-container" :class="{ 'kanban-container--mobile': kanbanIsMobile }" @scroll="updateScrollArrows">
+      <div
+        ref="kanbanContainerRef"
+        class="kanban-container"
+        :class="{ 'kanban-container--mobile': kanbanIsMobile }"
+        @scroll="updateScrollArrows"
+        @dragover.prevent="onContainerDragOver"
+      >
         <!-- Loading state -->
         <div v-if="loading && columns.length === 0" class="kanban-empty-state kanban-loading">
           <div class="kanban-empty-spinner"></div>
@@ -102,6 +108,8 @@
                       :disabled="kanbanIsMobile"
                       :ghost-class="'ghost'"
                       :drag-class="'dragging'"
+                      @start="onDealDragStart"
+                      @end="onDealDragEnd"
                       @move="onMoveDeal"
                       @change="(evt) => onDealDragChange(evt, column)"
                     >
@@ -532,6 +540,11 @@ const isAdminOrSuperAdmin = computed(() => {
 
 const SCROLL_SPEED = 10
 const SCROLL_TICK_MS = 16
+const isDealDragging = ref(false)
+const dragPointerX = ref(null)
+let dragAutoScrollRaf = null
+const DRAG_SCROLL_EDGE_THRESHOLD = 220
+const DRAG_SCROLL_MAX_SPEED = 10
 
 const showProfilePopup = ref(false)
 const profileUserId = ref(null)
@@ -681,6 +694,90 @@ function stopScroll() {
   if (scrollInterval.value) {
     clearInterval(scrollInterval.value)
     scrollInterval.value = null
+  }
+}
+
+function onGlobalPointerMove(event) {
+  const x = event?.touches?.[0]?.clientX ?? event?.clientX
+  if (typeof x === 'number') {
+    dragPointerX.value = x
+  }
+}
+
+function onContainerDragOver(event) {
+  if (!isDealDragging.value) return
+  const x = event?.clientX
+  if (typeof x === 'number') {
+    dragPointerX.value = x
+  }
+}
+
+function onGlobalDragOver(event) {
+  if (!isDealDragging.value) return
+  const x = event?.clientX
+  if (typeof x === 'number') {
+    dragPointerX.value = x
+  }
+}
+
+function stepDragAutoScroll() {
+  if (!isDealDragging.value) {
+    dragAutoScrollRaf = null
+    return
+  }
+
+  const container = kanbanContainerRef.value
+  if (container && typeof dragPointerX.value === 'number') {
+    const rect = container.getBoundingClientRect()
+    const threshold = DRAG_SCROLL_EDGE_THRESHOLD
+    const maxSpeed = DRAG_SCROLL_MAX_SPEED
+    let delta = 0
+
+    if (dragPointerX.value < rect.left + threshold) {
+      const ratio = Math.min(1, (rect.left + threshold - dragPointerX.value) / threshold)
+      delta = -Math.ceil(maxSpeed * ratio)
+    } else if (dragPointerX.value > rect.right - threshold) {
+      const ratio = Math.min(1, (dragPointerX.value - (rect.right - threshold)) / threshold)
+      delta = Math.ceil(maxSpeed * ratio)
+    }
+
+    if (delta !== 0) {
+      container.scrollLeft += delta
+      updateScrollArrows()
+    }
+  }
+
+  dragAutoScrollRaf = requestAnimationFrame(stepDragAutoScroll)
+}
+
+function onDealDragStart(event) {
+  if (kanbanIsMobile.value) return
+  isDealDragging.value = true
+  onGlobalPointerMove(event?.originalEvent || event)
+
+  document.addEventListener('pointermove', onGlobalPointerMove, { passive: true })
+  document.addEventListener('mousemove', onGlobalPointerMove, { passive: true })
+  document.addEventListener('touchmove', onGlobalPointerMove, { passive: true })
+  document.addEventListener('dragover', onGlobalDragOver)
+
+  if (!dragAutoScrollRaf) {
+    dragAutoScrollRaf = requestAnimationFrame(stepDragAutoScroll)
+  }
+}
+
+function onDealDragEnd() {
+  isDealDragging.value = false
+  dragPointerX.value = null
+  stopScroll()
+
+  document.removeEventListener('pointermove', onGlobalPointerMove)
+  document.removeEventListener('mousemove', onGlobalPointerMove)
+  document.removeEventListener('touchmove', onGlobalPointerMove)
+  document.removeEventListener('dragover', onGlobalDragOver)
+
+  if (dragAutoScrollRaf) {
+    cancelAnimationFrame(dragAutoScrollRaf)
+    dragAutoScrollRaf = null
   }
 }
 
@@ -1832,6 +1929,7 @@ onMounted(async () => {
 onUnmounted(() => {
   resetMobilePressState()
   closeMobileActionSheet()
+  onDealDragEnd()
   stopScroll()
   window.removeEventListener('resize', updateScrollArrows)
   cleanup()

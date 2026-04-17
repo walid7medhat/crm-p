@@ -55,8 +55,8 @@ const emit = defineEmits(['close'])
 
 const sections = [
   { id: 'leads', label: 'Leads Settings', icon: 'lucide:layout-template', component: KanbanSettings },
-  { id: 'stages', label: 'Stages Settings', icon: 'lucide:eye', component: StageVisibility },
-  { id: 'deals', label: 'Deals Settings', icon: 'lucide:badge-dollar-sign', component: DealsSettings },
+  { id: 'stages', label: 'Lead Stages', icon: 'lucide:eye', component: StageVisibility },
+  { id: 'deals', label: 'Deal Stage Settings', icon: 'lucide:badge-dollar-sign', component: DealsSettings },
   { id: 'lead-scoring', label: 'Lead Scoring Engine', icon: 'lucide:brain-circuit', component: LeadScoringSettings },
 ]
 

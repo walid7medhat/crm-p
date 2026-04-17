@@ -57,31 +57,28 @@
           </span>
         </template>
         </v-select>
-        <button
-          v-if="isMobileViewport"
-          type="button"
-          class="mobile-filter-trigger"
-          aria-label="Open filters"
-          @click="showMobileFilterSheet = true"
-        >
-          <i class="ri-equalizer-line"></i>
-          <span v-if="mobileActiveFilterCount > 0" class="mobile-filter-badge">{{ mobileActiveFilterCount }}</span>
-        </button>
-        <button
-          v-if="isMobileViewport"
-          type="button"
-          class="mobile-sort-trigger"
-          aria-label="Open sorting"
-          @click="openMobileSortSheet"
-        >
-          <i class="ri-sort-desc"></i>
-        </button>
       </div>
 
       <div v-if="isMobileViewport" class="mobile-quick-chips">
         <button type="button" class="mobile-quick-chip" :class="{ active: selectedSaleRent === 'Sale' }" @click="toggleMobileQuickSale()">For Sale</button>
         <button type="button" class="mobile-quick-chip" :class="{ active: selectedCompletionStatus?.value === 'Completed' }" @click="toggleMobileQuickReady()">Ready</button>
-        <button type="button" class="mobile-quick-chip" :class="{ active: selectedSort === 'hot_deal' }" @click="toggleMobileQuickHotDeal()">Hot Deal</button>
+        <button
+          type="button"
+          class="mobile-quick-chip mobile-quick-chip-action"
+          @click="showMobileFilterSheet = true"
+        >
+          <i class="ri-equalizer-line"></i>
+          <span>Filter</span>
+          <span v-if="mobileActiveFilterCount > 0" class="mobile-filter-badge">{{ mobileActiveFilterCount }}</span>
+        </button>
+        <button
+          type="button"
+          class="mobile-quick-chip mobile-quick-chip-action"
+          @click="openMobileSortSheet"
+        >
+          <i class="ri-sort-desc"></i>
+          <span>Sort</span>
+        </button>
       </div>
 
       <div class="listing-pill-row">
@@ -3660,7 +3657,7 @@ fetchProjects()
 
   .listing-main-search .listing-main-location {
     width: 100%;
-    padding-right: 48px;
+    padding-right: 10px;
   }
 
   .mobile-filter-trigger {
@@ -3696,9 +3693,7 @@ fetchProjects()
   }
 
   .mobile-filter-badge {
-    position: absolute;
-    top: -6px;
-    right: -6px;
+    position: static;
     min-width: 16px;
     height: 16px;
     border-radius: 999px;
@@ -3737,6 +3732,12 @@ fetchProjects()
     font-size: 11px;
     font-weight: 600;
     white-space: nowrap;
+  }
+
+  .mobile-quick-chip-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
   .mobile-quick-chip.active {
     border-color: #f59e0b;
