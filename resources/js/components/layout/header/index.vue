@@ -75,6 +75,12 @@
               <span>City Investments</span>
             </router-link>
           </li>
+          <li v-if="isAdmin">
+            <router-link to="/hr" :class="{ 'active-page': isActive('/hr') }">
+              <iconify-icon icon="lucide:users-round" class="menu-icon" />
+              <span>HR</span>
+            </router-link>
+          </li>
         <!-- Listings Dropdown -->
         <li v-if="filteredTableItems.length > 0" :class="{ 
           dropdown: true, 
@@ -832,6 +838,7 @@ const mobileDockItems = computed(() => {
 
   if (isAdmin.value) {
     items.splice(1, 0, { path: '/kanban', label: 'CRM', icon: 'lucide:handshake' });
+    items.splice(2, 0, { path: '/hr', label: 'HR', icon: 'lucide:users-round' });
   }
   if (isSuperAdmin.value) {
     items.push({ path: '/lead-reports', label: 'Reports', icon: 'lucide:bar-chart-3' });

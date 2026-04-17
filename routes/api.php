@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\LeadActivityController;
 use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\Deal\DealController;
 use App\Http\Controllers\Api\Deal\LeadConversionController;
+use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\SuggestionController;
 use App\Http\Controllers\Api\Deal\DealActivityController;
 use App\Http\Controllers\Api\ReportController;
@@ -194,8 +195,14 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
 Route::get('/teams-with-leads', [StageController::class, 'getTeamsWithLeads'])->middleware('jwt.auth');
 
 Route::middleware('jwt.auth')->group(function () {
+<<<<<<< Updated upstream
         Route::get('/attendance', [AttendanceController::class, 'index']);
     Route::get('/attendance/today', [AttendanceController::class, 'today']);
+=======
+    Route::get('/attendance/today', [AttendanceController::class, 'today']);
+    Route::get('/attendance', [AttendanceController::class, 'index']);
+    
+>>>>>>> Stashed changes
     // === Lead Conversion API ===
     Route::post('/leads/convert/to-deal', [LeadConversionController::class, 'convert']);
     Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);
