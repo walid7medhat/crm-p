@@ -73,6 +73,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ->everyTenMinutes()
             ->withoutOverlapping()
             ->runInBackground();
+            $schedule->command('attendance:sync')->everyFiveMinutes();
         // ==================== TEST COMMANDS ====================
         // $schedule->command('activities:send-reminders --timeframe=today --test')
         //     ->dailyAt('10:00')
