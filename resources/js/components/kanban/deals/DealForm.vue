@@ -1505,109 +1505,165 @@ const residencyOptions = [
 ]
 
 const countryOptions = [
-  { value: 'AE', text: 'United Arab Emirates' },
-  { value: 'SA', text: 'Saudi Arabia' },
-  { value: 'EG', text: 'Egypt' },
-  { value: 'JO', text: 'Jordan' },
-  { value: 'LB', text: 'Lebanon' },
-  { value: 'SY', text: 'Syria' },
-  { value: 'PS', text: 'Palestine' },
-  { value: 'IQ', text: 'Iraq' },
-  { value: 'YE', text: 'Yemen' },
-  { value: 'OM', text: 'Oman' },
-  { value: 'QA', text: 'Qatar' },
-  { value: 'KW', text: 'Kuwait' },
-  { value: 'BH', text: 'Bahrain' },
-  { value: 'GB', text: 'United Kingdom' },
-  { value: 'US', text: 'United States' },
-  { value: 'CA', text: 'Canada' },
-  { value: 'AU', text: 'Australia' },
-  { value: 'IN', text: 'India' },
-  { value: 'PK', text: 'Pakistan' },
+  { value: 'United Arab Emirates', text: 'United Arab Emirates' },
+  { value: 'Saudi Arabia', text: 'Saudi Arabia' },
+  { value: 'Egypt', text: 'Egypt' },
+  { value: 'Jordan', text: 'Jordan' },
+  { value: 'Lebanon', text: 'Lebanon' },
+  { value: 'Syria', text: 'Syria' },
+  { value: 'Palestine', text: 'Palestine' },
+  { value: 'Iraq', text: 'Iraq' },
+  { value: 'Yemen', text: 'Yemen' },
+  { value: 'Oman', text: 'Oman' },
+  { value: 'Qatar', text: 'Qatar' },
+  { value: 'Kuwait', text: 'Kuwait' },
+  { value: 'Bahrain', text: 'Bahrain' },
+  { value: 'United Kingdom', text: 'United Kingdom' },
+  { value: 'United States', text: 'United States' },
+  { value: 'Canada', text: 'Canada' },
+  { value: 'Australia', text: 'Australia' },
+  { value: 'India', text: 'India' },
+  { value: 'Pakistan', text: 'Pakistan' },
   { value: 'other', text: 'Other' }
 ];
 
+// Update citiesByCountry to use objects with value/text pairs
 const citiesByCountry = {
-  AE: [
-    'Abu Dhabi','Dubai','Sharjah','Ajman',
-    'Ras Al Khaimah','Umm Al Quwain','Fujairah','Al Ain'
+  'United Arab Emirates': [
+    { value: 'Abu Dhabi', text: 'Abu Dhabi' },
+    { value: 'Dubai', text: 'Dubai' },
+    { value: 'Sharjah', text: 'Sharjah' },
+    { value: 'Ajman', text: 'Ajman' },
+    { value: 'Ras Al Khaimah', text: 'Ras Al Khaimah' },
+    { value: 'Umm Al Quwain', text: 'Umm Al Quwain' },
+    { value: 'Fujairah', text: 'Fujairah' },
+    { value: 'Al Ain', text: 'Al Ain' }
   ],
-
-  SA: [
-    'Riyadh','Jeddah','Mecca','Medina','Dammam','Khobar','Tabuk','Abha'
+  'Saudi Arabia': [
+    { value: 'Riyadh', text: 'Riyadh' },
+    { value: 'Jeddah', text: 'Jeddah' },
+    { value: 'Mecca', text: 'Mecca' },
+    { value: 'Medina', text: 'Medina' },
+    { value: 'Dammam', text: 'Dammam' },
+    { value: 'Khobar', text: 'Khobar' },
+    { value: 'Tabuk', text: 'Tabuk' },
+    { value: 'Abha', text: 'Abha' }
   ],
-
-  EG: [
-    'Cairo','Giza','Alexandria','Sharm El Sheikh',
-    'Hurghada','Mansoura','Tanta','Aswan','Luxor'
+  'Egypt': [
+    { value: 'Cairo', text: 'Cairo' },
+    { value: 'Giza', text: 'Giza' },
+    { value: 'Alexandria', text: 'Alexandria' },
+    { value: 'Sharm El Sheikh', text: 'Sharm El Sheikh' },
+    { value: 'Hurghada', text: 'Hurghada' },
+    { value: 'Mansoura', text: 'Mansoura' },
+    { value: 'Tanta', text: 'Tanta' },
+    { value: 'Aswan', text: 'Aswan' },
+    { value: 'Luxor', text: 'Luxor' }
   ],
-
-  JO: [
-    'Amman','Zarqa','Irbid','Aqaba'
+  'Jordan': [
+    { value: 'Amman', text: 'Amman' },
+    { value: 'Zarqa', text: 'Zarqa' },
+    { value: 'Irbid', text: 'Irbid' },
+    { value: 'Aqaba', text: 'Aqaba' }
   ],
-
-  LB: [
-    'Beirut','Tripoli','Sidon','Tyre'
+  'Lebanon': [
+    { value: 'Beirut', text: 'Beirut' },
+    { value: 'Tripoli', text: 'Tripoli' },
+    { value: 'Sidon', text: 'Sidon' },
+    { value: 'Tyre', text: 'Tyre' }
   ],
-
-  SY: [
-    'Damascus','Aleppo','Homs','Latakia'
+  'Syria': [
+    { value: 'Damascus', text: 'Damascus' },
+    { value: 'Aleppo', text: 'Aleppo' },
+    { value: 'Homs', text: 'Homs' },
+    { value: 'Latakia', text: 'Latakia' }
   ],
-
-  PS: [
-    'Ramallah','Gaza','Hebron','Nablus'
+  'Palestine': [
+    { value: 'Ramallah', text: 'Ramallah' },
+    { value: 'Gaza', text: 'Gaza' },
+    { value: 'Hebron', text: 'Hebron' },
+    { value: 'Nablus', text: 'Nablus' }
   ],
-
-  IQ: [
-    'Baghdad','Erbil','Basra','Mosul'
+  'Iraq': [
+    { value: 'Baghdad', text: 'Baghdad' },
+    { value: 'Erbil', text: 'Erbil' },
+    { value: 'Basra', text: 'Basra' },
+    { value: 'Mosul', text: 'Mosul' }
   ],
-
-  YE: [
-    'Sanaa','Aden','Taiz','Hodeidah'
+  'Yemen': [
+    { value: 'Sanaa', text: 'Sanaa' },
+    { value: 'Aden', text: 'Aden' },
+    { value: 'Taiz', text: 'Taiz' },
+    { value: 'Hodeidah', text: 'Hodeidah' }
   ],
-
-  OM: [
-    'Muscat','Salalah','Sohar','Nizwa'
+  'Oman': [
+    { value: 'Muscat', text: 'Muscat' },
+    { value: 'Salalah', text: 'Salalah' },
+    { value: 'Sohar', text: 'Sohar' },
+    { value: 'Nizwa', text: 'Nizwa' }
   ],
-
-  QA: [
-    'Doha','Al Rayyan','Al Wakrah'
+  'Qatar': [
+    { value: 'Doha', text: 'Doha' },
+    { value: 'Al Rayyan', text: 'Al Rayyan' },
+    { value: 'Al Wakrah', text: 'Al Wakrah' }
   ],
-
-  KW: [
-    'Kuwait City','Hawalli','Salmiya'
+  'Kuwait': [
+    { value: 'Kuwait City', text: 'Kuwait City' },
+    { value: 'Hawalli', text: 'Hawalli' },
+    { value: 'Salmiya', text: 'Salmiya' }
   ],
-
-  BH: [
-    'Manama','Riffa','Muharraq'
+  'Bahrain': [
+    { value: 'Manama', text: 'Manama' },
+    { value: 'Riffa', text: 'Riffa' },
+    { value: 'Muharraq', text: 'Muharraq' }
   ],
-
-  GB: [
-    'London','Manchester','Birmingham','Liverpool','Leeds','Glasgow'
+  'United Kingdom': [
+    { value: 'London', text: 'London' },
+    { value: 'Manchester', text: 'Manchester' },
+    { value: 'Birmingham', text: 'Birmingham' },
+    { value: 'Liverpool', text: 'Liverpool' },
+    { value: 'Leeds', text: 'Leeds' },
+    { value: 'Glasgow', text: 'Glasgow' }
   ],
-
-  US: [
-    'New York','Los Angeles','Chicago','Houston','Miami','San Francisco'
+  'United States': [
+    { value: 'New York', text: 'New York' },
+    { value: 'Los Angeles', text: 'Los Angeles' },
+    { value: 'Chicago', text: 'Chicago' },
+    { value: 'Houston', text: 'Houston' },
+    { value: 'Miami', text: 'Miami' },
+    { value: 'San Francisco', text: 'San Francisco' }
   ],
-
-  CA: [
-    'Toronto','Vancouver','Montreal','Ottawa','Calgary'
+  'Canada': [
+    { value: 'Toronto', text: 'Toronto' },
+    { value: 'Vancouver', text: 'Vancouver' },
+    { value: 'Montreal', text: 'Montreal' },
+    { value: 'Ottawa', text: 'Ottawa' },
+    { value: 'Calgary', text: 'Calgary' }
   ],
-
-  AU: [
-    'Sydney','Melbourne','Brisbane','Perth','Adelaide'
+  'Australia': [
+    { value: 'Sydney', text: 'Sydney' },
+    { value: 'Melbourne', text: 'Melbourne' },
+    { value: 'Brisbane', text: 'Brisbane' },
+    { value: 'Perth', text: 'Perth' },
+    { value: 'Adelaide', text: 'Adelaide' }
   ],
-
-  IN: [
-    'Mumbai','Delhi','Bangalore','Hyderabad','Chennai','Kolkata'
+  'India': [
+    { value: 'Mumbai', text: 'Mumbai' },
+    { value: 'Delhi', text: 'Delhi' },
+    { value: 'Bangalore', text: 'Bangalore' },
+    { value: 'Hyderabad', text: 'Hyderabad' },
+    { value: 'Chennai', text: 'Chennai' },
+    { value: 'Kolkata', text: 'Kolkata' }
   ],
-
-  PK: [
-    'Karachi','Lahore','Islamabad','Rawalpindi'
+  'Pakistan': [
+    { value: 'Karachi', text: 'Karachi' },
+    { value: 'Lahore', text: 'Lahore' },
+    { value: 'Islamabad', text: 'Islamabad' },
+    { value: 'Rawalpindi', text: 'Rawalpindi' }
   ],
-
-  other: []
+  'other': []
 };
+
 const languageOptions = [
   { value: 'ar', text: 'Arabic' },
   { value: 'en', text: 'English' },
@@ -1652,40 +1708,46 @@ watch(
   },
   { immediate: true }
 )
-// امسح الـ city لما الـ country يتغير عشان ما يبقاش فيه بيانات غير متطابقة
-watch(() => form.value?.buyer_country, () => {
+
+
+// Update watchers to work with the new format
+watch(() => form.value?.buyer_country, (newCountry, oldCountry) => {
   if (form.value?.buyer_city) {
-    const country = form.value?.buyer_country || 'other'
-    const validCities = citiesByCountry[country] || citiesByCountry['other']
-    const isValid = validCities.some(c => c.value === form.value?.buyer_city)
-    if (!isValid) form.value.buyer_city = null
+    const validCities = citiesByCountry[newCountry] || citiesByCountry['other']
+    const isValid = validCities.some(city => city.value === form.value?.buyer_city)
+    if (!isValid) {
+      form.value.buyer_city = null
+    }
   }
 })
 
-watch(() => form.value?.seller_country, () => {
+watch(() => form.value?.seller_country, (newCountry, oldCountry) => {
   if (form.value?.seller_city) {
-    const country = form.value?.seller_country || 'other'
-    const validCities = citiesByCountry[country] || citiesByCountry['other']
-    const isValid = validCities.some(c => c.value === form.value?.seller_city)
-    if (!isValid) form.value.seller_city = null
+    const validCities = citiesByCountry[newCountry] || citiesByCountry['other']
+    const isValid = validCities.some(city => city.value === form.value?.seller_city)
+    if (!isValid) {
+      form.value.seller_city = null
+    }
   }
 })
 
-watch(() => form.value?.tenant_country, () => {
+watch(() => form.value?.tenant_country, (newCountry, oldCountry) => {
   if (form.value?.tenant_city) {
-    const country = form.value?.tenant_country || 'other'
-    const validCities = citiesByCountry[country] || citiesByCountry['other']
-    const isValid = validCities.some(c => c.value === form.value?.tenant_city)
-    if (!isValid) form.value.tenant_city = null
+    const validCities = citiesByCountry[newCountry] || citiesByCountry['other']
+    const isValid = validCities.some(city => city.value === form.value?.tenant_city)
+    if (!isValid) {
+      form.value.tenant_city = null
+    }
   }
 })
 
-watch(() => form.value?.landlord_country, () => {
+watch(() => form.value?.landlord_country, (newCountry, oldCountry) => {
   if (form.value?.landlord_city) {
-    const country = form.value?.landlord_country || 'other'
-    const validCities = citiesByCountry[country] || citiesByCountry['other']
-    const isValid = validCities.some(c => c.value === form.value?.landlord_city)
-    if (!isValid) form.value.landlord_city = null
+    const validCities = citiesByCountry[newCountry] || citiesByCountry['other']
+    const isValid = validCities.some(city => city.value === form.value?.landlord_city)
+    if (!isValid) {
+      form.value.landlord_city = null
+    }
   }
 })
 </script>
