@@ -14,62 +14,156 @@ class AttendanceController extends Controller
 {
     public function today(Request $request)
     {
-        return $this->respondWithAttendance($request, true);
+        return $this->respondFromDatabase($request, true);
     }
 
     public function index(Request $request)
     {
-        return $this->respondWithAttendance($request, false);
+        return $this->respondFromDatabase($request, false);
     }
 
-   private function respondWithAttendance(Request $request, bool $todayOnly)
-{
-    $date = $request->query('date');
-    $statusFilter = strtolower((string) $request->query('status', 'all'));
-    $targetDate = $todayOnly
-        ? Carbon::today('Africa/Cairo')->toDateString()
-        : ($date ?: Carbon::today('Africa/Cairo')->toDateString());
-  $attendanceRows = $this->fetchFromLocalSnapshot($targetDate);
+    /**
+     * Sync remote attendance into `attendances` for a calendar date (Y-m-d).
+     *
+     * @return array{api_count: int, saved_count: int}
+     */
+    public function syncAttendanceFromApi(string $date): array
+    {
+        $targetDate = Carbon::parse($date)->toDateString();
+        $remoteRows = $this->fetchRemoteRowsMapped($targetDate);
+        $apiCount = count($remoteRows);
+        $savedCount = 0;
 
-    $normalized = collect($attendanceRows)
-        ->map(function (array $row) {
+        foreach ($remoteRows as $row) {
+            $rawKey = (string) ($row['employee_key'] ?? $row['employee_id'] ?? '');
+            $normId = Attendance::normalizeEmployeeId($rawKey);
+            if ($normId === null || $normId === '') {
+                continue;
+            }
+
             $status = $this->resolveStatus($row);
-            return [
-                'employee_id' => $row['employee_id'] ?? $row['user_id'] ?? null,
-                'employee_name' => $row['employee_name'] ?? 'Unknown',
-                'status' => $status,
-                'check_in' => $row['check_in'] ?? null,
-                'check_out' => $row['check_out'] ?? null,
-                'date' => $row['date'] ?? null,
-                'department' => $row['department'] ?? null,
-                'email' => $row['email'] ?? null,
+            $checkIn = $this->parseDateTime($row['check_in'] ?? null);
+            $checkOut = $this->parseDateTime($row['check_out'] ?? null);
+
+            Attendance::updateOrCreate(
+                [
+                    'employee_id' => $normId,
+                    'date' => $targetDate,
+                ],
+                [
+                    'employee_name' => $row['employee_name'] ?? 'Unknown',
+                    'status' => $status,
+                    'check_in' => $checkIn,
+                    'check_out' => $checkOut,
+                    'user_id' => $row['user_id'] ?? null,
+                ]
+            );
+            $savedCount++;
+        }
+
+        Log::info('Attendance syncAttendanceFromApi', [
+            'date' => $targetDate,
+            'api_count' => $apiCount,
+            'db_saved_count' => $savedCount,
+        ]);
+
+        return ['api_count' => $apiCount, 'saved_count' => $savedCount];
+    }
+
+    private function respondFromDatabase(Request $request, bool $todayOnly): \Illuminate\Http\JsonResponse
+    {
+        $date = $request->query('date');
+        $statusFilter = strtolower((string) $request->query('status', 'all'));
+        $employeeIdFilter = $request->query('employee_id');
+
+        $defaultDate = Carbon::today('Africa/Cairo')->toDateString();
+        $targetDate = $todayOnly
+            ? ($date ? Carbon::parse($date)->toDateString() : $defaultDate)
+            : ($date ?: $defaultDate);
+
+        try {
+            if (Attendance::query()->whereDate('date', $targetDate)->count() === 0) {
+                $sync = $this->syncAttendanceFromApi($targetDate);
+                Log::info('Attendance auto-sync (empty date)', [
+                    'date' => $targetDate,
+                    'api_count' => $sync['api_count'],
+                    'db_saved_count' => $sync['saved_count'],
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Attendance auto-sync failed; serving DB only', [
+                'date' => $targetDate,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $query = Attendance::query()
+            ->with('user:id,name,email')
+            ->whereDate('date', $targetDate);
+
+        if ($employeeIdFilter !== null && $employeeIdFilter !== '') {
+            $norm = Attendance::normalizeEmployeeId((string) $employeeIdFilter);
+            if ($norm) {
+                $query->where('employee_id', $norm);
+            }
+        }
+
+        if (in_array($statusFilter, ['present', 'absent', 'late'], true)) {
+            $query->where('status', $statusFilter);
+        }
+
+        $rows = $query->orderBy('employee_name')->get();
+        $returnedCount = $rows->count();
+
+        Log::info('Attendance GET (database)', [
+            'date' => $targetDate,
+            'returned_db_count' => $returnedCount,
+            'status_filter' => $statusFilter,
+        ]);
+
+        $normalized = $rows->map(function (Attendance $attendance) {
+            $row = [
+                'employee_id' => $attendance->employee_id,
+                'employee_name' => $attendance->employee_name ?? $attendance->user?->name ?? 'Unknown',
+                'status' => $attendance->status ?: $this->resolveStatus([
+                    'status' => null,
+                    'check_in' => $attendance->check_in,
+                ]),
+                'check_in' => $attendance->check_in,
+                'check_out' => $attendance->check_out,
+                'date' => $attendance->date ? Carbon::parse($attendance->date)->toDateString() : null,
+                'department' => data_get($attendance->user, 'department'),
+                'email' => $attendance->user?->email,
             ];
-        })
-        ->when(in_array($statusFilter, ['present', 'absent', 'late'], true), function ($collection) use ($statusFilter) {
-            return $collection->where('status', $statusFilter)->values();
-        })
-        ->values();
 
-    $resolvedDate = (string) ($normalized->first()['date'] ?? $targetDate);
+            return $row;
+        })->values();
 
-    $summary = [
-        'total_employees' => $normalized->count(),
-        'present_today' => $normalized->where('status', 'present')->count(),
-        'absent_today' => $normalized->where('status', 'absent')->count(),
-        'late_today' => $normalized->where('status', 'late')->count(),
-    ];
+        $resolvedDate = (string) ($normalized->first()['date'] ?? $targetDate);
 
-    return response()->json([
-        'success' => true,
-        'data' => [
-            'date' => $resolvedDate,
-            'summary' => $summary,
-            'employees' => $normalized,  // ← تأكد من أن هذا هو المفتاح المستخدم
-        ],
-    ]);
-}
+        $summary = [
+            'total_employees' => $normalized->count(),
+            'present_today' => $normalized->where('status', 'present')->count(),
+            'absent_today' => $normalized->where('status', 'absent')->count(),
+            'late_today' => $normalized->where('status', 'late')->count(),
+        ];
 
-    private function fetchFromRemoteApi(string $targetDate): ?array
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'date' => $resolvedDate,
+                'summary' => $summary,
+                'employees' => $normalized,
+            ],
+        ]);
+    }
+
+    /**
+     * Remote API rows mapped to local shape (employee_id here is RAW — normalized inside sync).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchRemoteRowsMapped(string $targetDate): array
     {
         try {
             $baseUrl = rtrim((string) env('ATTENDANCE_BASE_URL', 'https://oiahead.fortidyndns.com/api'), '/');
@@ -92,11 +186,14 @@ class AttendanceController extends Controller
                     'status' => $response->status(),
                     'url' => $url,
                 ]);
-                return null;
+
+                return [];
             }
 
             $rows = $response->json();
-            if (!is_array($rows)) return null;
+            if (!is_array($rows)) {
+                return [];
+            }
 
             $usersByBioCode = User::query()
                 ->whereNotNull('biometric_code')
@@ -108,19 +205,8 @@ class AttendanceController extends Controller
                 ->filter(fn ($row) => ($row['attendance_date'] ?? null) === $targetDate)
                 ->values();
 
-            // Some integrations lag/lead by date; if target day is missing, show latest available.
             if ($rowsForDate->isEmpty()) {
-                $latestAvailableDate = $safeRows
-                    ->pluck('attendance_date')
-                    ->filter()
-                    ->sort()
-                    ->last();
-
-                if ($latestAvailableDate) {
-                    $rowsForDate = $safeRows
-                        ->filter(fn ($row) => ($row['attendance_date'] ?? null) === $latestAvailableDate)
-                        ->values();
-                }
+                return [];
             }
 
             $mapped = [];
@@ -132,8 +218,12 @@ class AttendanceController extends Controller
                     (string) ($row['first_name'] ?? '') . ' ' . (string) ($row['last_name'] ?? '')
                 );
 
+                $employeeKey = $user?->biometric_code ?: $bioCode ?: (string) ($user?->id ?? '');
+
                 $mapped[] = [
+                    'employee_key' => $employeeKey,
                     'employee_id' => $user?->id ?? $bioCode,
+                    'user_id' => $user?->id,
                     'employee_name' => $user?->name ?: ($fallbackName ?: ($bioCode ?: 'Unknown')),
                     'email' => $user?->email,
                     'department' => data_get($user, 'department') ?: ($row['department'] ?? null),
@@ -149,46 +239,42 @@ class AttendanceController extends Controller
             Log::warning('Attendance remote API exception', [
                 'error' => $e->getMessage(),
             ]);
+
+            return [];
+        }
+    }
+
+    private function parseDateTime(mixed $value): ?Carbon
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable $e) {
             return null;
         }
     }
 
-  private function fetchFromLocalSnapshot(string $targetDate): array
-{
-    return Attendance::query()
-        ->with('user:id,name,email')
-        ->whereDate('date', $targetDate)
-        ->get()
-        ->map(function (Attendance $attendance) {
-            return [
-                'employee_id' => $attendance->user_id,
-                'employee_name' => $attendance->user?->name ?? 'Unknown',
-                'email' => $attendance->user?->email,
-                'department' => data_get($attendance->user, 'department'),
-                'status' => null, // سيتم حسابه في resolveStatus
-                'check_in' => $attendance->check_in,
-                'check_out' => $attendance->check_out,
-                'date' => $attendance->date,
-            ];
-        })
-        ->all();
-}
-
     private function resolveStatus(array $row): string
     {
         $status = strtolower((string) ($row['status'] ?? ''));
-        if (in_array($status, ['present', 'absent', 'late'], true)) return $status;
+        if (in_array($status, ['present', 'absent', 'late'], true)) {
+            return $status;
+        }
 
         $checkInRaw = $row['check_in'] ?? null;
-        if (!$checkInRaw) return 'absent';
+        if (!$checkInRaw) {
+            return 'absent';
+        }
 
         try {
             $checkIn = Carbon::parse($checkInRaw);
             $lateBoundary = Carbon::parse($checkIn->toDateString() . ' 09:15:00');
+
             return $checkIn->gt($lateBoundary) ? 'late' : 'present';
         } catch (\Throwable $e) {
             return 'present';
         }
     }
 }
-

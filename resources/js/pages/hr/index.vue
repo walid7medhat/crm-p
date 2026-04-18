@@ -26,10 +26,20 @@
       </div>
 
       <div class="hr-content-card" v-if="activeTab === 'Leave / Attendance'">
-        <div class="hr-content-shell">
+        <div class="hr-content-shell" :class="{ 'hr-content-shell--team': hrSectionTab === 'team' }">
           <div class="hr-content-head">
             <h6 class="hr-heading">Manage Attendance</h6>
             <div class="hr-head-actions">
+              <div class="hr-date-filter">
+                <label for="hr-attendance-date">Date</label>
+                <input
+                  id="hr-attendance-date"
+                  v-model="dateFilter"
+                  type="date"
+                  class="form-control form-control-sm hr-date-input"
+                  @change="onAttendanceDateChange"
+                />
+              </div>
               <div class="hr-search-wrap">
                 <iconify-icon icon="lucide:plus" />
                 <input
@@ -166,7 +176,7 @@
                 <input v-model="teamSearch" type="text" class="form-control form-control-sm" placeholder="Search by name or ID" />
               </div>
               <div class="team-control">
-                <label>Team</label>
+                <label>Team Filter</label>
                 <select v-model="teamFilter" class="form-select form-select-sm">
                   <option v-for="option in teamOptions" :key="option" :value="option">
                     {{ option === 'all' ? 'All Teams' : option }}
@@ -184,37 +194,16 @@
               </div>
             </div>
 
-            <div class="team-tree-wrap" v-if="!loading && !loadingAgents">
-              <div v-if="groupedTeamTree.length === 0" class="hr-empty">
-                <div class="hr-empty-title">No team members found</div>
-                <div class="hr-empty-text">Try another team or status filter.</div>
+            <template v-if="hrDebugUi">
+              <div class="hr-pipeline-debug font-monospace small p-2 mb-2 bg-warning bg-opacity-25 rounded text-start">
+                <div>attendance: {{ attendance.length }} | tree roots: {{ hrAttendanceTeamTree.length }} | agents: {{ mergedData.length }}</div>
               </div>
+            </template>
 
-              <div v-for="team in groupedTeamTree" :key="team.team_name" class="team-group">
-                <button type="button" class="team-head" @click="toggleTeam(team.team_name)">
-                  <span class="team-toggle">
-                    <iconify-icon :icon="isTeamOpen(team.team_name) ? 'lucide:chevron-down' : 'lucide:chevron-right'" />
-                  </span>
-                  <span class="team-name">{{ team.team_name }}</span>
-                  <span class="team-count">{{ team.members.length }}</span>
-                </button>
-
-                <div v-if="isTeamOpen(team.team_name)" class="team-members">
-                  <div v-for="member in team.members" :key="`${team.team_name}-${member.employee_id}`" class="team-member-row">
-                    <span class="tree-line"></span>
-                    <div class="team-member-main">
-                      <div class="team-member-top">
-                        <span class="member-name">{{ member.employee_name }}</span>
-                        <span class="status-badge" :class="`status-${member.status}`">{{ member.status }}</span>
-                        <span class="attendance-indicator" :class="member.attendance_indicator"></span>
-                      </div>
-                      <div class="team-member-meta">
-                        <span>ID: {{ member.employee_id }}</span>
-                        <span>Check in: {{ formatTime(member.check_in) }}</span>
-                        <span>Check out: {{ formatTime(member.check_out) }}</span>
-                      </div>
-                    </div>
-                  </div>
+            <div class="card border-0 shadow-sm hr-team-tree-card mt-2" v-if="!loading && !loadingAgents">
+              <div class="card-body p-0 hr-team-tree-card-body">
+                <div class="team-tree-container hr-team-tree-container">
+                  <HrTeamTreePanel :roots="hrAttendanceTeamTree" :team-filter="teamFilter" />
                 </div>
               </div>
             </div>
@@ -250,14 +239,20 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import ApexCharts from 'vue3-apexcharts'
-import { useHrDashboard } from '@/composables/useHrDashboard'
+import api from '@/plugins/axios'
+import HrTeamTreePanel from '@/components/hr/HrTeamTreePanel.vue'
+import { hrPipelineDebugEnabled, useHrDashboard } from '@/composables/useHrDashboard'
 
 const {
   loading,
   error,
   dateFilter,
   employees,
+  attendance,
+  mergedData,
+  filteredMergedEmployees,
   summary,
   chartSeries,
   loadAttendance,
@@ -266,9 +261,17 @@ const {
   teamSearch,
   teamFilter,
   treeStatusFilter,
-  groupedTeamTree,
+  groupedTeams,
+  hrAttendanceTeamTree,
   teamOptions,
 } = useHrDashboard()
+
+const route = useRoute()
+/** True in Vite dev, when `VITE_HR_PIPELINE_DEBUG=1` (rebuild), or `?hr_debug=1` in the URL. */
+const hrDebugUi = computed(() => {
+  void route.fullPath
+  return hrPipelineDebugEnabled()
+})
 
 const headerTabs = ['Overview', 'Employees', 'Payroll', 'Leave / Attendance', 'Career', 'Assets']
 const activeTab = ref('Leave / Attendance')
@@ -277,8 +280,6 @@ const page = ref(1)
 const perPage = 10
 const editingRow = ref(null)
 const hrSectionTab = ref('attendance')
-const teamOpenState = ref({})
-
 const filteredRows = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase()
   if (!keyword) return employees.value
@@ -349,13 +350,9 @@ function openEdit(row) {
   editingRow.value = row
 }
 
-function toggleTeam(teamName) {
-  teamOpenState.value[teamName] = !teamOpenState.value[teamName]
-}
-
-function isTeamOpen(teamName) {
-  if (teamOpenState.value[teamName] === undefined) return true
-  return teamOpenState.value[teamName]
+async function onAttendanceDateChange() {
+  page.value = 1
+  await loadAttendance()
 }
 
 function exportAttendance() {
@@ -387,8 +384,10 @@ function exportAttendance() {
 }
 
 onMounted(async () => {
-  dateFilter.value = new Date().toISOString().slice(0, 10)
-  await Promise.all([loadAttendance(true), loadAgentData()])
+  console.log('BASE URL:', api.defaults.baseURL)
+  const d = new Date()
+  dateFilter.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  await Promise.all([loadAttendance(), loadAgentData()])
 })
 </script>
 
@@ -467,6 +466,17 @@ onMounted(async () => {
   border-radius: 12px;
   padding: 14px;
 }
+.hr-content-shell--team .hr-content-head {
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+.hr-content-shell--team .hr-heading {
+  font-size: 15px;
+  font-weight: 600;
+}
+.hr-content-shell--team .hr-inner-tabs {
+  margin-top: 4px;
+}
 .hr-content-head {
   display: flex;
   align-items: center;
@@ -479,7 +489,24 @@ onMounted(async () => {
   font-weight: 500;
   color: #374151;
 }
-.hr-head-actions { display: flex; gap: 10px; align-items: center; }
+.hr-head-actions { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.hr-date-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+}
+.hr-date-filter label {
+  margin: 0;
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+}
+.hr-date-input {
+  border-radius: 8px;
+  border: 1px solid #eceff5;
+  font-size: 12px;
+}
 .hr-search-wrap {
   min-width: 360px;
   display: flex;
@@ -697,101 +724,41 @@ onMounted(async () => {
   min-height: 620px;
 }
 .team-view-controls {
-  margin-top: 12px;
+  margin-top: 8px;
+  margin-bottom: 16px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 .team-control label {
   display: block;
-  margin-bottom: 4px;
-  font-size: 11px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
   color: #6b7280;
 }
-.team-tree-wrap {
-  margin-top: 12px;
-  border: 1px solid #edf1f8;
-  border-radius: 12px;
-  padding: 10px;
-  background: #fbfdff;
-}
-.team-group + .team-group { margin-top: 8px; }
-.team-head {
-  width: 100%;
-  border: 1px solid #e7edf8;
+.hr-team-tree-card {
   background: #fff;
-  border-radius: 10px;
-  padding: 8px 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #1f2937;
-}
-.team-toggle {
-  width: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #64748b;
-}
-.team-name { font-size: 13px; font-weight: 600; }
-.team-count {
-  margin-left: auto;
-  min-width: 24px;
-  height: 20px;
-  border-radius: 10px;
-  background: #eaf0fb;
-  color: #334155;
-  font-size: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.team-members {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #dfe4f1;
   margin-top: 6px;
-  margin-left: 20px;
-  display: grid;
-  gap: 6px;
 }
-.team-member-row {
+.hr-team-tree-card-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  max-height: 74vh;
+}
+.hr-team-tree-container {
   position: relative;
-  padding-left: 14px;
-}
-.tree-line {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 2px;
-  width: 1px;
-  background: #d7dfeb;
-}
-.team-member-main {
-  border: 1px solid #e7edf8;
-  background: #fff;
-  border-radius: 10px;
-  padding: 8px 10px;
-}
-.team-member-top {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.member-name { font-size: 13px; font-weight: 600; color: #111827; }
-.attendance-indicator {
-  margin-left: auto;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-.attendance-indicator.checked-in { background: #22c55e; }
-.attendance-indicator.no-check-in { background: #ef4444; }
-.team-member-meta {
-  margin-top: 4px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  font-size: 11px;
-  color: #64748b;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f4f4f5;
 }
 
 .edit-overlay {
