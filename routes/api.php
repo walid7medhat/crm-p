@@ -34,7 +34,7 @@ use App\Http\Controllers\Api\LeadActivityController;
 use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\Deal\DealController;
 use App\Http\Controllers\Api\Deal\LeadConversionController;
-use App\Http\Controllers\Api\HR\AttendanceController;
+use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\SuggestionController;
 use App\Http\Controllers\Api\Deal\DealActivityController;
 use App\Http\Controllers\Api\ReportController;
@@ -49,6 +49,9 @@ use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\LeadImportController;
 use App\Http\Controllers\Api\Mobile\MobileKanbanController;
 use App\Http\Controllers\Api\Mobile\MobileLeadMoveController;
+use App\Http\Controllers\Api\Employee\EmployeeController;
+use App\Http\Controllers\Api\Employee\DesignationController;
+
 Route::get('/test-email', function () {
     try {
         // Test basic email
@@ -191,11 +194,38 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
     Route::get('/visibility/settings', [StageController::class, 'getStageVisibilitySettings']);
     Route::post('/visibility/settings', [StageController::class, 'updateStageVisibility']);
 });
+  Route::prefix('designations')->group(function () {
+        Route::get('/', [DesignationController::class, 'index']);           
+        Route::post('/', [DesignationController::class, 'store']);          
+        Route::get('/{id}', [DesignationController::class, 'show']);        
+        Route::put('/{id}', [DesignationController::class, 'update']);      
+        Route::delete('/{id}', [DesignationController::class, 'destroy']);  
+        
+        // Extra routes
+        Route::get('/{id}/employees', [DesignationController::class, 'getEmployees']);  
+        Route::patch('/{id}/toggle-status', [DesignationController::class, 'toggleStatus']); 
+        Route::post('/bulk-delete', [DesignationController::class, 'bulkDelete']);  
+    });
+    
+    // ========== EMPLOYEE ROUTES ==========
+    Route::prefix('employees')->group(function () {
+        Route::get('/', [EmployeeController::class, 'index']);                    
+        Route::post('/', [EmployeeController::class, 'store']);                   
+        Route::get('/statistics', [EmployeeController::class, 'getStatistics']);  
+        Route::get('/{id}', [EmployeeController::class, 'show']);                 
+        Route::put('/{id}', [EmployeeController::class, 'update']);               
+        Route::delete('/{id}', [EmployeeController::class, 'destroy']);           
+        
+        // Document routes
+        Route::get('/{id}/documents', [EmployeeController::class, 'getDocuments']);           
+        Route::delete('/documents/{documentId}', [EmployeeController::class, 'deleteDocument']); 
+    });
 Route::get('/teams-with-leads', [StageController::class, 'getTeamsWithLeads'])->middleware('jwt.auth');
 
 Route::middleware('jwt.auth')->group(function () {
     Route::get('/attendance/today', [AttendanceController::class, 'today']);
     Route::get('/attendance', [AttendanceController::class, 'index']);
+    
     // === Lead Conversion API ===
     Route::post('/leads/convert/to-deal', [LeadConversionController::class, 'convert']);
     Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);

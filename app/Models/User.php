@@ -379,4 +379,20 @@ public function getAvatarUrlAttribute(){
     {
         return $this->hasMany(Lead::class, 'added_by');
     }
+    
+    public function employeeProfile()
+{
+    return $this->hasOne(EmployeeProfile::class);
+}
+
+public function isEmployee()
+{
+    return $this->employeeProfile()->exists();
+}
+
+public function getEmployeeDocumentsAttribute()
+{
+    return $this->employeeProfile?->documents;
+}
+
 }
