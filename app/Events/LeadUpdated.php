@@ -139,57 +139,50 @@ class LeadUpdated implements ShouldBroadcast
     }
 
    
-    private function getUserChannels(): array
-    {
-        $channels = [];
-        if($this->actionType=='assigned' && $this->changes['old_person_id']){
-              $channels[] = new PrivateChannel('user.' . $this->changes['old_person_id']);
-        }
-        if ($this->lead->responsible_person_id) {
-            $channels[] = new PrivateChannel('user.' . $this->lead->responsible_person_id);
-        }
+   private function getUserChannels(): array
+{
+    $channels = [];
 
-        if ($this->lead->added_by) {
-            $channels[] = new PrivateChannel('user.' . $this->lead->added_by);
-        }
+    if ($this->actionType == 'assigned' && $this->changes['old_person_id']) {
+        $this->addChannelIfNotSales($channels, $this->changes['old_person_id']);
+    }
 
-        foreach ($this->lead->participants ?? [] as $participant) {
-            if ($participant->user_id) {
-                $channels[] = new PrivateChannel('user.' . $participant->user_id);
+    $this->addChannelIfNotSales($channels, $this->lead->responsible_person_id);
+    $this->addChannelIfNotSales($channels, $this->lead->added_by);
+
+    foreach ($this->lead->participants ?? [] as $participant) {
+        $this->addChannelIfNotSales($channels, $participant->user_id);
+    }
+
+    foreach ($this->lead->observers ?? [] as $observer) {
+        $this->addChannelIfNotSales($channels, $observer->user_id);
+    }
+
+    // hierarchy managers
+    if ($this->lead->responsible_person_id) {
+        $responsibleUser = User::find($this->lead->responsible_person_id);
+
+        if ($responsibleUser) {
+            foreach ($this->getManagersHierarchy($responsibleUser) as $managerId) {
+                $this->addChannelIfNotSales($channels, $managerId);
             }
         }
+    }
 
-        foreach ($this->lead->observers ?? [] as $observer) {
-            if ($observer->user_id) {
-                $channels[] = new PrivateChannel('user.' . $observer->user_id);
-            }
-        }
-
-        // // hierarchy managers
-        if ($this->lead->responsible_person_id) {
-            $responsibleUser = User::find($this->lead->responsible_person_id);
-
-            if ($responsibleUser) {
-                foreach ($this->getManagersHierarchy($responsibleUser) as $managerId) {
-                    $channels[] = new PrivateChannel('user.' . $managerId);
-                }
-            }
-        }
-    // ✅ Admin & Super Admin
-// only super admin
+    // Admins
     $admins = User::whereHas('roles', function ($q) {
-        $q->whereIn('name', [ 'super_admin','admin']);
+        $q->whereIn('name', ['super_admin', 'admin']);
     })->pluck('id');
 
     foreach ($admins as $adminId) {
-        $channels[] = new PrivateChannel('user.' . $adminId);
-    }
-        return collect($channels)
-            ->unique(fn ($channel) => $channel->name)
-            ->values()
-            ->all();
+        $this->addChannelIfNotSales($channels, $adminId);
     }
 
+    return collect($channels)
+        ->unique(fn ($channel) => $channel->name)
+        ->values()
+        ->all();
+}
     /**
      * المدراء الأعلى في الهيكل الإداري
      */
@@ -211,4 +204,14 @@ class LeadUpdated implements ShouldBroadcast
 
         return array_unique($managerIds);
     }
+    private function addChannelIfNotSales(&$channels, $userId)
+{
+    if (!$userId) return;
+
+    $user = User::find($userId);
+
+    if ($user && !$user->hasRole('sales')) {
+        $channels[] = new PrivateChannel('user.' . $userId);
+    }
+}
 }

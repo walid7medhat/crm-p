@@ -18,7 +18,7 @@ class SendLeadUpdateNotification
         $usersToNotify = $this->getUsersToNotify($lead);
         
         foreach ($usersToNotify as $notifyUser) {
-            if (!$user || $notifyUser->id !== $user->id ) {
+            if (!$user || $notifyUser->id !== $user->id && !$user->hasRole('sales')) {
                 $notifyUser->notify(new LeadUpdatedNotification(
                     $lead, 
                     $event->actionType, 
