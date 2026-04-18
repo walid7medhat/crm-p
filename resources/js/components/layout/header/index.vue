@@ -75,7 +75,7 @@
               <span>City Investments</span>
             </router-link>
           </li>
-          <li v-if="isAdmin">
+          <li v-if="isSuperAdmin">
             <router-link to="/hr" :class="{ 'active-page': isActive('/hr') }">
               <iconify-icon icon="lucide:users-round" class="menu-icon" />
               <span>HR</span>
