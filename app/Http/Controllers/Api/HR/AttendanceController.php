@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\HR;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
@@ -155,17 +155,39 @@ class AttendanceController extends Controller
 
   private function fetchFromLocalSnapshot(string $targetDate): array
 {
+    $users = User::query()
+        ->get(['id', 'name', 'email', 'biometric_code']);
+
+    $usersByNormBio = $users
+        ->filter(fn ($u) => !empty($u->biometric_code))
+        ->keyBy(fn ($u) => Attendance::normalizeEmployeeId((string) $u->biometric_code));
+
+    $usersById = $users->keyBy('id');
+
     return Attendance::query()
-        ->with('user:id,name,email')
+        ->with('user:id,name,email,biometric_code')
         ->whereDate('date', $targetDate)
         ->get()
-        ->map(function (Attendance $attendance) {
+        ->map(function (Attendance $attendance) use ($usersByNormBio, $usersById) {
+            $normEmployeeId = Attendance::normalizeEmployeeId((string) ($attendance->employee_id ?? ''));
+            $matchedByBio = $normEmployeeId ? $usersByNormBio->get($normEmployeeId) : null;
+            $matchedByUserId = $attendance->user_id ? $usersById->get($attendance->user_id) : null;
+            $resolvedUser = $attendance->user ?: $matchedByBio ?: $matchedByUserId;
+
+            $name = trim((string) ($attendance->employee_name ?? ''));
+            if ($name === '' || strcasecmp($name, 'unknown') === 0) {
+                $name = (string) ($resolvedUser?->name ?: '');
+            }
+            if ($name === '') {
+                $name = $normEmployeeId ?: ('USER-' . ($attendance->user_id ?? $attendance->id));
+            }
+
             return [
-                'employee_id' => $attendance->user_id,
-                'employee_name' => $attendance->user?->name ?? 'Unknown',
-                'email' => $attendance->user?->email,
-                'department' => data_get($attendance->user, 'department'),
-                'status' => null, // سيتم حسابه في resolveStatus
+                'employee_id' => $normEmployeeId ?: ($attendance->employee_id ?? $attendance->user_id),
+                'employee_name' => $name,
+                'email' => $resolvedUser?->email,
+                'department' => data_get($resolvedUser, 'department'),
+                'status' => $attendance->status, // use stored status first, fallback handled in resolveStatus
                 'check_in' => $attendance->check_in,
                 'check_out' => $attendance->check_out,
                 'date' => $attendance->date,

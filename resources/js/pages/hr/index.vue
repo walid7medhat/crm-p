@@ -99,19 +99,21 @@
                   <th>Employee Name</th>
                   <th>Status</th>
                   <th>Check In &amp; Check Out</th>
+                  <th>Break</th>
+                  <th>OT</th>
                   <th>Action</th>
                 </tr>
               </thead>
 
               <tbody v-if="loading">
                 <tr v-for="i in 10" :key="`sk-${i}`">
-                  <td colspan="7"><div class="hr-skeleton"></div></td>
+                  <td colspan="9"><div class="hr-skeleton"></div></td>
                 </tr>
               </tbody>
 
               <tbody v-else-if="filteredRows.length === 0">
                 <tr>
-                  <td colspan="7">
+                  <td colspan="9">
                     <div class="hr-empty">
                       <div class="hr-empty-title">No attendance records found</div>
                       <div class="hr-empty-text">Try another date or filter keyword.</div>
@@ -145,6 +147,8 @@
                       <span class="check-time">{{ formatTime(row.check_out) }}</span>
                     </div>
                   </td>
+                  <td class="text-muted break-col">{{ formatBreakDisplay(row) }}</td>
+                  <td class="text-muted ot-col">{{ formatOtDisplay(row) }}</td>
                   <td>
                     <button type="button" class="row-action-btn" @click="openEdit(row)">
                       <iconify-icon icon="lucide:more-vertical" />
@@ -159,12 +163,19 @@
             <span>Showing {{ startEntry }} to {{ endEntry }} of {{ filteredRows.length }} Entries</span>
             <div class="hr-pagination">
               <button type="button" class="page-btn" :disabled="page === 1" @click="page = Math.max(1, page - 1)">Previous</button>
-              <button type="button" class="page-number active">1</button>
-              <button type="button" class="page-number">2</button>
-              <button type="button" class="page-number">3</button>
-              <span class="page-dots">...</span>
-              <button type="button" class="page-number">10</button>
-              <button type="button" class="page-btn" :disabled="page >= totalPages" @click="page = Math.min(totalPages, page + 1)">Next</button>
+              <template v-for="(item, idx) in paginationItems" :key="item.type === 'page' ? `p-${item.n}` : `d-${idx}`">
+                <span v-if="item.type === 'dots'" class="page-dots">...</span>
+                <button
+                  v-else
+                  type="button"
+                  class="page-number"
+                  :class="{ active: page === item.n }"
+                  @click="page = item.n"
+                >
+                  {{ item.n }}
+                </button>
+              </template>
+              <button type="button" class="page-btn" :disabled="page >= totalPages" @click="page = Math.min(totalPages, page + 1)">Next &gt;</button>
             </div>
           </div>
           </template>
@@ -238,7 +249,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ApexCharts from 'vue3-apexcharts'
 import api from '@/plugins/axios'
@@ -299,6 +310,39 @@ const pagedRows = computed(() => {
 const startEntry = computed(() => (filteredRows.value.length ? (page.value - 1) * perPage + 1 : 0))
 const endEntry = computed(() => Math.min(page.value * perPage, filteredRows.value.length))
 
+/** Standard work minutes before we treat extra time as OT (8h). */
+const STANDARD_WORK_DAY_MINUTES = 8 * 60
+
+const paginationItems = computed(() => {
+  const total = totalPages.value
+  const current = page.value
+  if (total <= 1) return [{ type: 'page', n: 1 }]
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => ({ type: 'page', n: i + 1 }))
+  }
+  const items = []
+  const pushDots = () => {
+    if (items.length && items[items.length - 1].type === 'dots') return
+    items.push({ type: 'dots' })
+  }
+  items.push({ type: 'page', n: 1 })
+  const left = Math.max(2, current - 1)
+  const right = Math.min(total - 1, current + 1)
+  if (left > 2) pushDots()
+  for (let i = left; i <= right; i += 1) items.push({ type: 'page', n: i })
+  if (right < total - 1) pushDots()
+  items.push({ type: 'page', n: total })
+  return items
+})
+
+watch(searchKeyword, () => {
+  page.value = 1
+})
+
+watch(totalPages, (tp) => {
+  if (page.value > tp) page.value = tp
+})
+
 const chartOptions = computed(() => ({
   chart: { toolbar: { show: false } },
   labels: ['Present', 'Absent', 'Late'],
@@ -346,6 +390,53 @@ function formatDuration(checkIn, checkOut) {
   return `${hours}h ${minutes}m`
 }
 
+function formatBreakDisplay(row) {
+  if (row.break_label) return row.break_label
+  const bm = row.break_minutes
+  if (bm != null && Number.isFinite(Number(bm)) && Number(bm) > 0) {
+    const m = Math.round(Number(bm))
+    if (m >= 60 && m % 60 === 0) return `${m / 60} hr`
+    if (m >= 60) {
+      const h = Math.floor(m / 60)
+      const r = m % 60
+      return r ? `${h} hr ${r}m` : `${h} hr`
+    }
+    return `${m} min`
+  }
+  return '--'
+}
+
+function inferOvertimeMinutes(row) {
+  if (row.overtime_minutes != null && Number.isFinite(Number(row.overtime_minutes))) {
+    return Math.max(0, Math.round(Number(row.overtime_minutes)))
+  }
+  const ci = row.check_in
+  const co = row.check_out
+  if (row.status === 'absent') return 0
+  if (!ci || !co) return null
+  const inDate = new Date(ci)
+  const outDate = new Date(co)
+  if (Number.isNaN(inDate.getTime()) || Number.isNaN(outDate.getTime())) return null
+  let worked = Math.round((outDate.getTime() - inDate.getTime()) / 60000)
+  if (worked < 0) worked = 0
+  return Math.max(0, worked - STANDARD_WORK_DAY_MINUTES)
+}
+
+function formatOtDisplay(row) {
+  if (row.ot_label != null && String(row.ot_label).trim() !== '') return row.ot_label
+  const inferred = inferOvertimeMinutes(row)
+  if (inferred === null) return '--'
+  if (inferred === 0) return '0'
+  if (inferred < 60) {
+    if (inferred > 0 && inferred % 30 === 0) return String(inferred)
+    return `${inferred} M`
+  }
+  const h = Math.floor(inferred / 60)
+  const r = inferred % 60
+  if (r === 0) return `${h} hr`
+  return `${h} hr ${r} M`
+}
+
 function openEdit(row) {
   editingRow.value = row
 }
@@ -361,7 +452,7 @@ function exportAttendance() {
     return
   }
 
-  const headers = ['Date', 'EMP ID', 'Employee Name', 'Status', 'Check In', 'Check Out']
+  const headers = ['Date', 'EMP ID', 'Employee Name', 'Status', 'Check In', 'Check Out', 'Break', 'OT']
   const rows = filteredRows.value.map((row) => [
     formatDate(row.date),
     `EMP${formatEmpId(row.employee_id)}`,
@@ -369,6 +460,8 @@ function exportAttendance() {
     row.status || '',
     formatTime(row.check_in),
     formatTime(row.check_out),
+    formatBreakDisplay(row),
+    formatOtDisplay(row),
   ])
 
   const csv = [headers, ...rows]

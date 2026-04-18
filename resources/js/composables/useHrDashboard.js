@@ -40,6 +40,13 @@ function parseDateOnly(value) {
   return String(value).slice(0, 10)
 }
 
+function toOptionalIntMinutes(value) {
+  if (value == null || value === '') return null
+  const n = Number(value)
+  if (!Number.isFinite(n)) return null
+  return Math.round(n)
+}
+
 function mapLegacyAttendanceRow(row) {
   if (!row || typeof row !== 'object') return null
   const user = row.user || {}
@@ -47,6 +54,22 @@ function mapLegacyAttendanceRow(row) {
   if (uid == null || uid === '') return null
   const name = row.employee_name ?? user.name ?? 'Unknown'
   const statusRaw = (row.status || 'present').toString().toLowerCase()
+  let break_minutes = toOptionalIntMinutes(
+    row.break_minutes ?? row.break_mins ?? row.break_duration_minutes ?? row.break_duration,
+  )
+  if (break_minutes == null && typeof row.break === 'number') break_minutes = toOptionalIntMinutes(row.break)
+  let overtime_minutes = toOptionalIntMinutes(
+    row.overtime_minutes ?? row.ot_minutes ?? row.overtime_mins ?? row.overtime_duration,
+  )
+  if (overtime_minutes == null && row.ot != null && typeof row.ot !== 'object') {
+    overtime_minutes = toOptionalIntMinutes(row.ot)
+  }
+  if (overtime_minutes == null && typeof row.overtime === 'number') {
+    overtime_minutes = toOptionalIntMinutes(row.overtime)
+  }
+  const break_label =
+    typeof row.break_label === 'string' && row.break_label.trim() ? row.break_label.trim() : null
+  const ot_label = typeof row.ot_label === 'string' && row.ot_label.trim() ? row.ot_label.trim() : null
   return {
     employee_id: uid,
     employee_id_normalized: normalizeEmployeeId(uid),
@@ -57,6 +80,10 @@ function mapLegacyAttendanceRow(row) {
     date: parseDateOnly(row.date ?? row.attendance_date),
     department: row.department ?? user.department,
     email: row.email ?? user.email,
+    break_minutes,
+    overtime_minutes,
+    break_label,
+    ot_label,
   }
 }
 
