@@ -2,7 +2,7 @@
   <div class="user-invitations">
     <div class="card">
       <div class="card-header">
-        <h3>Invite New Users</h3>
+        <h6 class="ui-h-sub">Invite New Users</h6>
       </div>
       <div class="card-body">
         <form @submit.prevent="sendInvitations">
@@ -44,7 +44,7 @@
     <!-- Sent Invitations List -->
     <div class="card mt-4">
       <div class="card-header">
-        <h4>Sent Invitations</h4>
+        <h6 class="ui-h-mini">Sent Invitations</h6>
       </div>
       <div class="card-body">
         <div v-if="invitations.length === 0" class="text-muted">

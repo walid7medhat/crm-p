@@ -32,7 +32,7 @@
 
     <div v-if="selected" class="node-detail">
       <button type="button" class="close" @click="selected = null">×</button>
-      <h4>{{ selected.data?.label }}</h4>
+      <h6 class="ui-h-mini">{{ selected.data?.label }}</h6>
       <p class="meta"><span class="pill">{{ selected.data?.group }}</span></p>
       <p v-if="selected.data?.detail" class="row"><strong>Detail</strong><br />{{ selected.data.detail }}</p>
       <p v-if="selected.data?.rel" class="row"><strong>File / source</strong><br /><code>{{ selected.data.rel }}</code></p>

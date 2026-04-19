@@ -4,9 +4,7 @@
             class="card-header border-bottom bg-base py-16 px-24 d-flex align-items-center flex-wrap gap-3 justify-content-between">
             <div class="d-flex align-items-center flex-wrap gap-3">
                 <span class="text-md fw-medium text-secondary-light mb-0">Show</span>
-                <select v-model="entriesPerPage" class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px">
-                    <option v-for="n in [5, 10, 15, 20]" :key="n" :value="n">{{ n }}</option>
-                </select>
+                <SearchableSelect preset="userEntries5101520" v-model="entriesPerPage" :clearable="false" inline class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px" />
 
                 <form class="navbar-search">
                     <input v-model="searchQuery" type="text" class="bg-base h-40-px w-auto" name="search"
@@ -14,11 +12,7 @@
                     <iconify-icon icon="ion:search-outline" class="icon"></iconify-icon>
                 </form>
 
-                <select v-model="selectedStatus" class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px">
-                    <option>Status</option>
-                    <option>Active</option>
-                    <option>Inactive</option>
-                </select>
+                <SearchableSelect preset="userStatusFilter" v-model="selectedStatus" :clearable="false" inline class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px" />
             </div>
             <router-link to="/add-user"
                 class="btn btn-primary text-sm btn-sm px-12 py-12 radius-8 d-flex align-items-center gap-2">

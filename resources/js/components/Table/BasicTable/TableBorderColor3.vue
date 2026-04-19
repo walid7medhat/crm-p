@@ -2,7 +2,7 @@
     <div class="col-lg-12">
       <div class="card">
         <div class="card-header">
-          <h5 class="card-title mb-0">Tables Border Colors</h5>
+          <h6 class="ui-h-mini card-title mb-0">Tables Border Colors</h6>
         </div>
         <div class="card-body">
           <div class="table-responsive">

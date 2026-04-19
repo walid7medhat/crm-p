@@ -6,9 +6,9 @@
 
     <div class="grid">
       <section class="card">
-        <h3 class="card-title">Hub</h3>
+        <h6 class="ui-h-sub card-title">Hub</h6>
         <p class="mono">{{ graph?.hub }}</p>
-        <h4>Imports from hub</h4>
+        <h6 class="ui-h-mini">Imports from hub</h6>
         <ul class="list">
           <li v-for="(imp, i) in filteredImports" :key="i">
             <code>{{ imp }}</code>
@@ -17,7 +17,7 @@
       </section>
 
       <section class="card">
-        <h3 class="card-title">Importers (string match)</h3>
+        <h6 class="ui-h-sub card-title">Importers (string match)</h6>
         <ul class="list compact">
           <li v-for="(f, i) in filteredImporters" :key="i">
             <code>{{ f }}</code>
@@ -26,10 +26,10 @@
       </section>
 
       <section class="card wide">
-        <h3 class="card-title">
+        <h6 class="ui-h-sub card-title">
           Vue import edges
           <span class="badge">{{ filteredEdges.length }} / {{ edges.length }}</span>
-        </h3>
+        </h6>
         <div class="edges">
           <div v-for="(e, i) in filteredEdges" :key="i" class="edge">
             <code class="from">{{ e.from }}</code>

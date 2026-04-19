@@ -53,6 +53,62 @@
   margin-top: 0;
 }
 
+/* ---------- Global UI polish: headings (h6-only hierarchy) ---------- */
+h6.ui-h-page {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  line-height: 1.25;
+  margin: 0 0 0.35rem;
+}
+h6.ui-h-section {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+  margin: 0 0 0.3rem;
+}
+h6.ui-h-sub {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.35;
+  margin: 0 0 0.25rem;
+}
+h6.ui-h-mini {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #334155;
+  line-height: 1.35;
+  margin: 0 0 0.2rem;
+}
+
+/* Forms: focus + searchable select */
+.crm-searchable-select .vs__dropdown-toggle {
+  border-radius: 10px !important;
+  min-height: 2.35rem !important;
+  border-color: #e2e8f0 !important;
+}
+.crm-searchable-select .vs__search::placeholder {
+  color: #94a3b8;
+}
+.crm-searchable-select.is-invalid .vs__dropdown-toggle {
+  border-color: #dc2626 !important;
+}
+.form-control:focus,
+.form-select:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.18);
+  outline: 0;
+}
+
+.crm-field__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
 .deal-figma-ui .modal-title,
 .deal-figma-ui .view-deal-title,
 .deal-figma-ui .info-card-title {

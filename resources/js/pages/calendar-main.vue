@@ -7,7 +7,7 @@
           <div class="card h-100 p-0">
             <div class="card-body p-24">
               <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="calendar-title">{{ currentTitle }}</h4>
+                <h6 class="ui-h-mini calendar-title">{{ currentTitle }}</h6>
                 <div class="calendar-controls align-items-center d-flex gap-2">
                   <div class="view-buttons">
                     <button

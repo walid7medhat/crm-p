@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use App\Helpers\LeadHistoryHelper;
 use App\Events\LeadUpdated;
 use App\Models\KanbanSetting;
+use App\Jobs\ProcessLeadAutoAssignmentJob;
 use App\Jobs\ProcessLeadIntelligenceJob;
 use App\Models\LeadScoringSetting;
 class Lead extends Model
@@ -27,6 +28,9 @@ class Lead extends Model
         'date_of_birth' => 'date',
         'available_to_everyone' => 'boolean',
         'last_stage_change_at' => 'datetime',
+        'first_contacted_at' => 'datetime',
+        'last_sla_escalation_at' => 'datetime',
+        'assignment_hold' => 'boolean',
         'revert'=>'datetime',
         'converted_at'=>'datetime',
         'last_scored_at' => 'datetime',
@@ -47,6 +51,8 @@ class Lead extends Model
                 if (($automation['on_create'] ?? true) === true) {
                     ProcessLeadIntelligenceJob::dispatch($lead->id);
                 }
+
+                ProcessLeadAutoAssignmentJob::dispatch($lead->id)->afterCommit();
             });
             static::updated(function ($lead) {
                 $intelligenceOnlyKeys = array_merge(self::INTELLIGENCE_FIELDS, ['updated_at']);
@@ -244,6 +250,31 @@ public function activitiesWithTrashed()
         {
             return $this->convertedToDeal;
         }
+    public function assignmentLogs()
+    {
+        return $this->hasMany(LeadAssignmentLog::class);
+    }
+
+    public function getComputedAssignmentScoreAttribute(): float
+    {
+        if ($this->score !== null) {
+            return (float) min(100, max(0, (int) $this->score));
+        }
+
+        $budget = (float) ($this->budget ?? 0);
+        $budgetPart = $budget > 0 ? min(45, log(1 + ($budget / 50000)) * 12) : 0.0;
+        $sourcePart = $this->lead_source ? 22.0 : 0.0;
+        $priority = strtolower((string) ($this->priority ?? ''));
+        $priorityPart = match (true) {
+            str_contains($priority, 'hot') => 28.0,
+            str_contains($priority, 'warm') => 16.0,
+            $priority !== '' => 10.0,
+            default => 6.0,
+        };
+
+        return round(min(100, $budgetPart + $sourcePart + $priorityPart), 1);
+    }
+
         public function area()
         {
             return $this->belongsTo(Area::class);

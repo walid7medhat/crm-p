@@ -2,7 +2,7 @@
     <div class="col-lg-6">
       <div class="card h-100">
         <div class="card-header">
-          <h5 class="card-title mb-0">Default Table</h5>
+          <h6 class="ui-h-mini card-title mb-0">Default Table</h6>
         </div>
         <div class="card-body">
           <div class="table-responsive">

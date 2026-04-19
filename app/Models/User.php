@@ -44,8 +44,10 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-             'on_vacation' => 'boolean',
-
+            'on_vacation' => 'boolean',
+            'last_lead_assigned_at' => 'datetime',
+            'lead_assign_count_date' => 'date',
+            'lead_assign_daily_count' => 'integer',
         ];
     }
     public function getJWTIdentifier()
@@ -159,6 +161,16 @@ public function agents()
 {
     return $this->hasMany(User::class, 'parent_id');
 }
+
+    public function salesPerformance()
+    {
+        return $this->hasOne(SalesPerformance::class, 'sales_id');
+    }
+
+    public function assignmentSkills()
+    {
+        return $this->hasMany(UserSkill::class, 'user_id');
+    }
 function getAdminParentAttribute()
 {
     $current = $this;
@@ -379,7 +391,6 @@ public function getAvatarUrlAttribute(){
     {
         return $this->hasMany(Lead::class, 'added_by');
     }
-    
     public function employeeProfile()
 {
     return $this->hasOne(EmployeeProfile::class);
@@ -395,4 +406,13 @@ public function getEmployeeDocumentsAttribute()
     return $this->employeeProfile?->documents;
 }
 
+    public function agentMetric()
+    {
+        return $this->hasOne(AgentMetric::class);
+    }
+
+    public function agentScores()
+    {
+        return $this->hasMany(AgentScore::class);
+    }
 }

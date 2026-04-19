@@ -75,7 +75,7 @@
 
                     <!-- Empty -->
                     <div v-if="!loading && hotDealRequests.length === 0" class="text-center py-5">
-                        <h5>No Requests</h5>
+                        <h6 class="ui-h-mini">No Requests</h6>
                     </div>
 
                     <!-- Loading -->
@@ -91,7 +91,7 @@
             <div class="modal-content" @click.stop>
 
                 <div class="modal-header">
-                    <h5>{{ actionType === 'approve' ? 'Approve' : 'Reject' }} Request</h5>
+                    <h6 class="ui-h-mini">{{ actionType === 'approve' ? 'Approve' : 'Reject' }} Request</h6>
                     <button class="btn-close" @click="selectedId = null"></button>
                 </div>
 

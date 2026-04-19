@@ -50,6 +50,7 @@ import KanbanSettings from '../KanbanSettings.vue'
 import LeadScoringSettings from '../LeadScoringSettings.vue'
 import StageVisibility from '../stage/StageVisibility.vue'
 import DealsSettings from './DealsSettings.vue'
+import LeadAssignmentEngine from './LeadAssignmentEngine.vue'
 
 const emit = defineEmits(['close'])
 
@@ -58,6 +59,7 @@ const sections = [
   { id: 'stages', label: 'Lead Stages', icon: 'lucide:eye', component: StageVisibility },
   { id: 'deals', label: 'Deal Stage Settings', icon: 'lucide:badge-dollar-sign', component: DealsSettings },
   { id: 'lead-scoring', label: 'Lead Scoring Engine', icon: 'lucide:brain-circuit', component: LeadScoringSettings },
+  { id: 'lead-assignment', label: 'Lead Assignment Engine', icon: 'lucide:git-branch-plus', component: LeadAssignmentEngine },
 ]
 
 const activeSectionId = ref(sections[0].id)

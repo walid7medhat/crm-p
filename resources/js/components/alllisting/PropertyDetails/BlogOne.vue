@@ -70,9 +70,9 @@
                   </button>
                 </div>
                 <div class="price-main">
-                  <h3 class="property-price">AED {{ formatPrice(property.price) }}</h3>
-                  <h4 class="property-title">{{ property.area?.area_title || '' }}</h4>
-                   <!--<h4 class="property-title"> Old Area {{ property.old_area || "" }}</h4>-->
+                  <h6 class="ui-h-sub property-price">AED {{ formatPrice(property.price) }}</h6>
+                  <h6 class="ui-h-mini property-title">{{ property.area?.area_title || '' }}</h6>
+                   <!--<h6 class="ui-h-mini property-title"> Old Area {{ property.old_area || "" }}</h6>-->
                 </div>
 
                 <div class="specs-grid-main">
@@ -123,7 +123,7 @@
             <!-- Basic Information Section -->
             <div class="detailed-info-section mb-16">
               <div class="info-section">
-                <h3 class="section-title mb-20">Property Details</h3>
+                <h6 class="ui-h-sub section-title mb-20">Property Details</h6>
                 <div class="info-grid">
                   <div class="info-item">
                     <span class="info-label">Sale/Rent</span>
@@ -250,7 +250,7 @@
             <!-- Mortgage Information Section -->
             <div class="detailed-info-section mb-16" v-if="hasMortgageInfo">
               <div class="info-section">
-                <h3 class="section-title mb-20">Mortgage Information</h3>
+                <h6 class="ui-h-sub section-title mb-20">Mortgage Information</h6>
                 <div class="info-grid">
             
                   <div class="info-item" v-if="property.mortgage_status">
@@ -290,7 +290,7 @@
             <!-- Notes Section -->
             <div class="detailed-info-section mb-16" v-if="property.comment && property.comment.trim()">
               <div class="info-section">
-                <h3 class="section-title mb-20">Notes</h3>
+                <h6 class="ui-h-sub section-title mb-20">Notes</h6>
                 <div class="description-content">
                   <p class="description-text">{{ property.comment }}</p>
                 </div>
@@ -299,10 +299,10 @@
   <!-- Property Documents -->
             <div class="detailed-info-section mb-16" v-if="property.additional_documents && property.additional_documents.length > 0 && property.user_permissions?.showDocuments">
               <div class="info-section">
-                <h3 class="section-title mb-20">
+                <h6 class="ui-h-sub section-title mb-20">
                   <i class="ri-file-text-line me-2"></i>
                   Property Documents
-                </h3>
+                </h6>
                 <div class="documents-grid">
                   <a v-for="doc in property.additional_documents" :key="doc.id"
                      :href="doc.url" target="_blank" rel="noopener" class="document-card">
@@ -318,15 +318,15 @@
                 <div class="comments-section " v-if="property">
                   <div class="card">
                     <div class="card-body">
-                      <h3 class="section-title mb-4">
+                      <h6 class="ui-h-sub section-title mb-4">
                         <i class="ri-chat-3-line me-2"></i>
                         Comments 
-                      </h3>
+                      </h6>
 
                       <!-- Add Comment Form -->
                       <div class="add-comment-form mb-4" v-if="isAuthenticated">
                         <div class="form-header">
-                          <h5>Add Your Comment</h5>
+                          <h6 class="ui-h-mini">Add Your Comment</h6>
                         </div>
                         <div class="form-body">
                           <!-- Comment Input -->
@@ -377,7 +377,7 @@
 
                   <div v-else-if="comments.length === 0" class="no-comments text-center py-5">
                     <i class="ri-chat-3-line no-comments-icon"></i>
-                    <h5>No Comments Yet</h5>
+                    <h6 class="ui-h-mini">No Comments Yet</h6>
                     <p class="text-muted">Be the first to share your thoughts about this property!</p>
                   </div>
 
@@ -535,7 +535,7 @@
             <div v-else-if="error" class="property-content ">
               <div class="text-center py-5">
                 <i class="ri-error-warning-line text-danger mb-3" style="font-size: 48px;"></i>
-                <h5>Failed to Load Property</h5>
+                <h6 class="ui-h-mini">Failed to Load Property</h6>
                 <p class="text-muted">{{ error }}</p>
                 <button class="btn btn-primary" @click="fetchProperty">
                   <i class="ri-refresh-line me-2"></i>
@@ -560,7 +560,7 @@
             class="agent-sidebar-avatar" 
           />
           <div class="agent-sidebar-info">
-            <h5 class="agent-sidebar-name">{{ property.agent.name || 'Agent Name' }}</h5>
+            <h6 class="ui-h-mini agent-sidebar-name">{{ property.agent.name || 'Agent Name' }}</h6>
             <button 
               class="btn-show-agent-details" 
               @click="goToAgentDetails(property.agent.id)"
@@ -903,10 +903,10 @@
     <div v-if="showAssignAgentModal" class="modal-overlay" @click="showAssignAgentModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h4 class="text-white">
+          <h6 class="ui-h-mini text-white">
             <i class="ri-user-shared-line me-2"></i>
             Assign Property to Agent
-          </h4>
+          </h6>
           <button class="modal-close" @click="showAssignAgentModal = false">
             <i class="ri-close-line"></i>
           </button>
@@ -965,7 +965,7 @@
       <div class="header-content">
         <i class="ri-user-3-line header-icon"></i>
         <div>
-          <h4 class="modal-title">Owner Information</h4>
+          <h6 class="ui-h-mini modal-title">Owner Information</h6>
           <p class="modal-subtitle">Complete owner details</p>
         </div>
       </div>
@@ -978,10 +978,10 @@
       <!-- Owner Summary Card -->
       <div class="owner-summary-card" v-if="getOwnerDataForModal()">
         <div class="owner-name-section">
-          <h3 class="owner-name">
+          <h6 class="ui-h-sub owner-name">
             {{ getOwnerDataForModal()?.first_name || '' }} 
             {{ getOwnerDataForModal()?.last_name || '' }}
-          </h3>
+          </h6>
           <div class="owner-identifiers">
             <span class="owner-id" v-if="getOwnerDataForModal()?.salutation">
               {{ getOwnerDataForModal()?.salutation }}
@@ -1000,10 +1000,10 @@
 
       <!-- Contact Information -->
       <div class="contact-section">
-        <h5 class="section-title">
+        <h6 class="ui-h-mini section-title">
           <i class="ri-phone-line"></i>
           Contact Information
-        </h5>
+        </h6>
         
         <div class="contact-list">
           <!-- Primary Phone -->
@@ -1065,10 +1065,10 @@
 
       <!-- Personal Information -->
       <div class="personal-section" v-if="hasPersonalInfo">
-        <h5 class="section-title">
+        <h6 class="ui-h-mini section-title">
           <i class="ri-user-line"></i>
           Personal Information
-        </h5>
+        </h6>
         
         <div class="info-grid">
           <div class="info-item" v-if="getOwnerDataForModal()?.first_name">
@@ -1095,10 +1095,10 @@
 
       <!-- Documents -->
       <div class="documents-section" v-if="hasOwnerDocuments">
-        <h5 class="section-title">
+        <h6 class="ui-h-mini section-title">
           <i class="ri-file-text-line"></i>
           Documents
-        </h5>
+        </h6>
         
         <div class="documents-grid">
           <button class="document-card" 
@@ -1149,10 +1149,10 @@
   <div class="modal-content sold-out-modal-content" @click.stop>
     <div class="modal-header sold-out-modal-header">
       <div class="sold-out-header-inner">
-        <h4 class="sold-out-modal-title">
+        <h6 class="ui-h-mini sold-out-modal-title">
           <i class="ri-award-line me-2"></i>
           Mark as Sold Out
-        </h4>
+        </h6>
         <p class="sold-out-modal-subtitle">
           {{ !soldByChoice ? 'Choose who sold this property' : 'Add the new owner for this property' }}
         </p>
@@ -1235,10 +1235,10 @@
   <div class="modal-content add-owner-modal-content" style="max-width: 1200px; width: 95%; max-height: 95vh; overflow-y: auto;" @click.stop>
     <div class="modal-header sold-out-modal-header">
       <div class="sold-out-header-inner">
-        <h4 class="sold-out-modal-title">
+        <h6 class="ui-h-mini sold-out-modal-title">
           <i class="ri-user-add-line me-2"></i>
           Add New Owner
-        </h4>
+        </h6>
         <p class="sold-out-modal-subtitle">Enter the new owner details for this property</p>
       </div>
       <button type="button" class="modal-close" @click="showAddOwnerModal = false" aria-label="Close">
@@ -3711,21 +3711,21 @@ const createSlide1 = (currentUser) => {
               <img src="${logo}" style="width:100% !important; height:auto !important; max-height:15mm !important;" />
             </div>
             <p style="font-size:3mm !important; line-height:4mm !important; background:#faa300 !important; display:inline-block !important; padding:1mm 3mm 3mm 3mm !important; text-transform:uppercase !important; border-radius:1.5mm !important; color:#fff !important; margin:0 0 3mm 0 !important;">For ${property.value.listing_status}</p>
-            <h1 style="font-size:6mm !important; margin:0 0 3mm 0 !important; text-align:left !important; line-height:1.2 !important;">
+            <h6 class="ui-h-page" style="font-size:6mm !important; margin:0 0 3mm 0 !important; text-align:left !important; line-height:1.2 !important;">
               ${
                 property.value?.number_of_bedrooms === 0
                   ? 'Studio'
                   : `${property.value?.number_of_bedrooms || ''} Bedrooms`
               }
               ${property.value?.property_type?.name || ''}
-            </h1>
+            </h6>
             <p style="font-size:3mm !important; line-height:4mm !important; margin:0 !important;">
               <span style="display:inline-block !important; width:5% !important; vertical-align:top !important;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 30" style="vertical-align:middle !important; margin-right:1mm !important;" fill="#FAA300">
             <path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/>
           </svg></span>
               <span style="display:inline-block !important; width:85% !important; color:#000000 !important">${property.value?.area?.title || 'Park Valley, Reem Hills, Al Reem Island, Abu Dhabi, UAE'}</span>
             </p>
-            <h1 style="font-size:6mm !important; margin:3mm 0 0 0 !important; color:#faa300 !important; font-weight:bold !important; text-align:left !important;">AED ${formatPrice(property.value?.price) || '1,345,673'}</h1>
+            <h6 class="ui-h-page" style="font-size:6mm !important; margin:3mm 0 0 0 !important; color:#faa300 !important; font-weight:bold !important; text-align:left !important;">AED ${formatPrice(property.value?.price) || '1,345,673'}</h6>
           </div>
         </div>
         
@@ -3784,7 +3784,7 @@ const createSlide2 = () => {
     <div style="width:${PDF_CONFIG.pageWidth}mm !important; height:${PDF_CONFIG.pageHeight}mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:white !important; position:relative !important; overflow:hidden !important;">
       <div style="width:100% !important; height:90% !important; overflow:hidden !important; padding:5mm !important;">
         <div style="height:20% !important; width:100% !important; text-align:left !important;">
-          <h1 style="font-size:6mm !important; margin:0 0 2mm 0 !important;">Property Details</h1>
+          <h6 class="ui-h-page" style="font-size:6mm !important; margin:0 0 2mm 0 !important;">Property Details</h6>
         </div>
         
         <div style="width:100% !important; height:68% !important; overflow:hidden !important; display:flex !important;">
@@ -3965,13 +3965,13 @@ const createSlide3 = () => {
         //     align-items: center !important;
         //     box-sizing: border-box !important;
         //   ">
-        //     <h1 style="
+        //     <h6 class="ui-h-page" style="
         //       font-size: 6mm !important; 
         //       margin: 0 !important;
         //       font-weight: bold !important;
         //     ">
         //       Property Images
-        //     </h1>
+        //     </h6>
         //   </div>
           
 const createSlide4 = () => {
@@ -4093,7 +4093,7 @@ const createSlide5 = () => {
 <div style="width:${PDF_CONFIG.pageWidth}mm !important; height:${PDF_CONFIG.pageHeight}mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:white !important; position:relative !important;">
         <div style="width:100% !important; height:90% !important; overflow:hidden !important; padding:5mm !important;">
           <div style="height:15% !important; width:100% !important; text-align:left !important;">
-            <h1 style="font-size:6mm !important; margin:0 !important;">Floor Plan</h1>
+            <h6 class="ui-h-page" style="font-size:6mm !important; margin:0 !important;">Floor Plan</h6>
           </div>
 <div style="
   width: 100% !important;
@@ -4134,7 +4134,7 @@ const createSlide5 = () => {
 <div style="width:${PDF_CONFIG.pageWidth}mm !important; height:${PDF_CONFIG.pageHeight}mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:white !important; position:relative !important;">
       <div style="width:100% !important; height:90% !important; overflow:hidden !important; padding:5mm !important;">
         <div style="height:15% !important; width:100% !important; text-align:left !important;">
-          <h1 style="font-size:6mm !important; margin:0 !important;">Floor Plan</h1>
+          <h6 class="ui-h-page" style="font-size:6mm !important; margin:0 !important;">Floor Plan</h6>
         </div>
 <div style="
   width: 100% !important;
@@ -4226,7 +4226,7 @@ const createSlide6 = (currentUser) => {
           text-align: center !important;
           margin-bottom: 25mm !important; 
         ">
-          <h1 style="
+          <h6 class="ui-h-page" style="
             font-size: 8mm !important; 
             text-transform: uppercase !important; 
             font-weight: 700 !important; 
@@ -4236,7 +4236,7 @@ const createSlide6 = (currentUser) => {
             line-height: 1.2 !important;
           ">
             THANK YOU
-          </h1>
+          </h6>
         </div>
         
         <div style="

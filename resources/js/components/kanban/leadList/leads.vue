@@ -475,7 +475,7 @@
         >
             <div class="mobile-kanban-sheet mobile-kanban-sheet--pick" @click.stop>
                 <div class="mobile-kanban-sheet__head">
-                    <h2 class="mobile-kanban-sheet__title">Select Stage</h2>
+                    <h6 class="ui-h-section mobile-kanban-sheet__title">Select Stage</h6>
                     <button type="button" class="mobile-kanban-sheet__close" aria-label="Close" @click="closeMobilePickStageSheet">
                         <iconify-icon icon="lucide:x" />
                     </button>

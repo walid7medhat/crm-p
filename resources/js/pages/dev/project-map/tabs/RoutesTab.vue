@@ -6,7 +6,7 @@
 
     <div class="split">
       <div class="card">
-        <h3 class="card-title">Route tree</h3>
+        <h6 class="ui-h-sub card-title">Route tree</h6>
         <div class="tree-box">
           <ul v-if="hierarchy" class="rt-tree">
             <RouteSeg :node="hierarchy" :depth="0" />
@@ -14,7 +14,7 @@
         </div>
       </div>
       <div class="card">
-        <h3 class="card-title">Flat map ({{ filteredFlat.length }})</h3>
+        <h6 class="ui-h-sub card-title">Flat map ({{ filteredFlat.length }})</h6>
         <div class="flat-list">
           <div v-for="r in filteredFlat" :key="r.path + (r.name || '')" class="flat-row">
             <code class="pth">{{ r.path }}</code>

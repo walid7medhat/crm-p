@@ -8,7 +8,7 @@
 
         <div class="card" v-if="developer">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Edit Developer Information</h5>
+                <h6 class="ui-h-mini card-title mb-0">Edit Developer Information</h6>
                 <button class="btn btn-outline-secondary" @click="$router.back()">
                     <iconify-icon icon="lucide:arrow-left" class="me-2"></iconify-icon>
                     Back
@@ -141,7 +141,7 @@
         <div v-else class="card">
             <div class="card-body text-center py-5">
                 <iconify-icon icon="lucide:user-x" class="text-muted mb-3" width="48"></iconify-icon>
-                <h5>Developer Not Found</h5>
+                <h6 class="ui-h-mini">Developer Not Found</h6>
                 <p class="text-muted">The developer you're trying to edit doesn't exist.</p>
                 <button class="btn btn-primary" @click="$router.push('/developers')">
                     Back to Developers List

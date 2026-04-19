@@ -2,7 +2,7 @@
   <div class="scoring-page">
     <div class="scoring-header">
       <div>
-        <h1>Lead Scoring Engine</h1>
+        <h6 class="ui-h-page">Lead Scoring Engine</h6>
         <p>Adjust how AI evaluates and prioritizes leads in real-time.</p>
       </div>
       <div class="header-actions">
@@ -16,11 +16,11 @@
     <div v-else class="layout">
       <div class="left-col">
         <section class="panel">
-          <h2>1. Core Factors</h2>
+          <h6 class="ui-h-section">1. Core Factors</h6>
           <p class="desc">Each factor shows exactly how many points it adds.</p>
           <div class="factor-grid">
             <article v-for="factor in factors" :key="factor.key" class="factor-card">
-              <h3>{{ factor.title }}</h3>
+              <h6 class="ui-h-sub">{{ factor.title }}</h6>
               <p>{{ factor.description }}</p>
               <div class="option-grid">
                 <button v-for="level in levels" :key="`${factor.key}-${level}`" type="button" class="option-btn" :class="{ active: getFactorLevel(factor.key) === level }" @click="setFactorLevel(factor.key, level)">
@@ -33,7 +33,7 @@
         </section>
 
         <section class="panel">
-          <h2>2. Priority Rules</h2>
+          <h6 class="ui-h-section">2. Priority Rules</h6>
           <p class="desc">Set Hot and Warm thresholds. Cold is below Warm.</p>
           <div class="threshold-grid">
             <label>Hot >= <input v-model.number="form.thresholds.hot" type="number" min="0" max="100" /></label>
@@ -45,7 +45,7 @@
         </section>
 
         <section class="panel">
-          <h2>3. Automation</h2>
+          <h6 class="ui-h-section">3. Automation</h6>
           <p class="desc">Enable smart automation options.</p>
           <div class="toggle-grid">
             <button class="toggle-card" :class="{ on: form.automation_flags.on_create }" @click="form.automation_flags.on_create = !form.automation_flags.on_create">Auto scoring</button>
@@ -55,7 +55,7 @@
         </section>
 
         <section class="panel">
-          <h2>4. AI Mode</h2>
+          <h6 class="ui-h-section">4. AI Mode</h6>
           <p class="desc">Pick how scoring should think.</p>
           <div class="mode-grid">
             <label class="mode-card" :class="{ selected: aiModeUi === 'rules' }"><input v-model="aiModeUi" value="rules" type="radio" />Rules only</label>
@@ -67,7 +67,7 @@
 
       <div class="right-col">
         <section class="panel sticky">
-          <h2>Live AI Preview</h2>
+          <h6 class="ui-h-section">Live AI Preview</h6>
           <p class="desc">Changes update this lead instantly.</p>
           <div class="lead-signals">
             <div><span>Budget</span><b>{{ testLead.budget || 0 }}</b></div>
@@ -97,7 +97,7 @@
         </section>
 
         <section class="panel">
-          <h2>AI Insights</h2>
+          <h6 class="ui-h-section">AI Insights</h6>
           <p class="desc">Suggestions and expected impact.</p>
           <div class="insight success">Increasing WhatsApp weight may improve conversion by <b>+14%</b>.</div>
           <div class="insight warn">Warm threshold is close to Hot. Wider gap improves triage clarity.</div>

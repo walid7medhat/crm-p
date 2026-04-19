@@ -9,7 +9,7 @@
                 </div>
                 <div class="form">
                     <template v-if="!success">
-                        <h4 class="mb-12 titleH">Forgot password</h4>
+                        <h6 class="ui-h-mini mb-12 titleH">Forgot password</h6>
                         <p class="mb-32 titleH2">
                             Enter the email for your account. We’ll send you a link to reset your password.
                         </p>
@@ -50,7 +50,7 @@
                     </template>
 
                     <template v-else>
-                        <h4 class="mb-12 titleH">Check your email</h4>
+                        <h6 class="ui-h-mini mb-12 titleH">Check your email</h6>
                         <p class="mb-24 titleH2">
                             If an account exists for <strong class="text-white">{{ email }}</strong>, we sent a link to reset your password.
                         </p>

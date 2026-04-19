@@ -3,7 +3,7 @@
   <div class="register-container">
     <div class="card mx-auto" style="max-width: 500px;">
       <div class="card-header">
-        <h3 class="text-center">Complete Your Registration</h3>
+        <h6 class="ui-h-sub text-center">Complete Your Registration</h6>
       </div>
       <div class="card-body">
         
@@ -82,7 +82,7 @@
 
         <!-- Success Message -->
         <div v-if="success" class="alert alert-success text-center">
-          <h5>🎉 Account Created Successfully!</h5>
+          <h6 class="ui-h-mini">🎉 Account Created Successfully!</h6>
           <p>You can now login with your new account.</p>
           <router-link to="/login" class="btn btn-success">Go to Login</router-link>
         </div>

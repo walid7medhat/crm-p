@@ -4,7 +4,7 @@
     <div v-if="visible" class="stage-change-modal-overlay" @click.self="closeModal">
         <div class="stage-change-modal" :class="{ 'modal-wide': missingFields.length > 0 || interactionMode }">
             <div class="modal-header">
-                <h5 class="modal-title">{{ isConversion ? 'Complete Lead Information' : `Move Lead to ${targetStageName}` }}</h5>
+                <h6 class="ui-h-mini modal-title">{{ isConversion ? 'Complete Lead Information' : `Move Lead to ${targetStageName}` }}</h6>
                 <button class="close-btn-custom" @click="closeModal">
                     <iconify-icon icon="lucide:x" width="20" height="20"></iconify-icon>
                 </button>
@@ -110,7 +110,7 @@
                             v-if="['status_lead','lead_type','property_status','available_date','branch','why_lost_lead','lost_reason'].some(f => missingFields.includes(f))" 
                             class="box-shadow lead_qualification lead-qualification-card"
                         >
-                             <h5 class="section-title ">Lead Qualification</h5>
+                             <h6 class="ui-h-mini section-title ">Lead Qualification</h6>
 
                             <div
                                 v-if="missingFields.includes('status_lead') || missingFields.includes('lead_type') || missingFields.includes('property_status')"
@@ -336,7 +336,7 @@
                             v-if="['salutation'].some(f => missingFields.includes(f)) && !(interactionMode && formData.interaction_result === 'no_answer')" 
                             class="box-shadow"
                         >
-                        <h5 class="section-title">Lead Information</h5>
+                        <h6 class="ui-h-mini section-title">Lead Information</h6>
                             <div v-if="missingFields.includes('salutation')" class="form-group mb-3">
                                 <label class="form-label">Salutation</label>
                                 <v-select append-to-body
@@ -360,7 +360,7 @@
                             v-if="['budget_from','budget_to','area_id','property_type_id','bedrooms','purpose_buying'].some(f => missingFields.includes(f))" 
                             class="box-shadow client-req-order"
                         >
-                          <h5 class="section-title">Client Requirement</h5>
+                          <h6 class="ui-h-mini section-title">Client Requirement</h6>
                           <div v-if="missingFields.includes('budget_from') || missingFields.includes('budget_to')" class="form-group mb-3" style="order: 6;">
                               <label class="form-label">Budget (AED)</label>
                               <div

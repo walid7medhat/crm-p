@@ -10,7 +10,7 @@
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">{{ isEditMode ? 'Edit Project' : 'Add Project' }}</h5>
+                <h6 class="ui-h-mini card-title mb-0">{{ isEditMode ? 'Edit Project' : 'Add Project' }}</h6>
                 <button class="btn btn-outline-secondary" @click="$router.back()">
                     <iconify-icon icon="lucide:arrow-left" class="me-2"></iconify-icon>
                     Back
@@ -309,7 +309,7 @@
                             <!--                <div class="empty-icon mb-4">-->
                             <!--                    <i class="fas fa-image fa-4x text-muted"></i>-->
                             <!--                </div>-->
-                            <!--                <h5 class="mb-3 text-muted">No Floor Plan Images</h5>-->
+                            <!--                <h6 class="ui-h-mini mb-3 text-muted">No Floor Plan Images</h6>-->
                             <!--                <p class="text-muted mb-4">Add floor plan images to showcase different layouts</p>-->
                             <!--                <button type="button" -->
                             <!--                        class="btn btn-primary"-->
@@ -335,7 +335,7 @@
                             <!--                 @drop.prevent="handleFloorPlanDrop">-->
                             <!--                <div class="drop-zone-content" v-if="isDragOver">-->
                             <!--                    <i class="fas fa-cloud-upload-alt fa-4x text-primary mb-3"></i>-->
-                            <!--                    <h5 class="text-primary mb-2">Drop to upload</h5>-->
+                            <!--                    <h6 class="ui-h-mini text-primary mb-2">Drop to upload</h6>-->
                             <!--                    <p class="text-muted">Release to add images</p>-->
                             <!--                </div>-->
                             <!--            </div>-->

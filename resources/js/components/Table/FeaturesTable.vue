@@ -1,7 +1,7 @@
 <template>
     <div class="card basic-data-table">
         <div class="card-header">
-            <h5 class="card-title mb-0">Features List</h5>
+            <h6 class="ui-h-mini card-title mb-0">Features List</h6>
         </div>
         <div class="card">
             <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-3"
@@ -9,12 +9,7 @@
 
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <div class="d-flex align-items-center gap-2">
-                        <select class="form-select form-select-lr w-auto rounded-3 me-10" v-model="selectedShow"
-                            style="border-radius: 10px; height: 2.4rem;">
-                            <option value="10">10</option>
-                            <option value="15">15</option>
-                            <option value="20">20</option>
-                        </select>
+                        <SearchableSelect preset="perPage10_15_20" v-model="selectedShow" :clearable="false" inline class="w-auto me-10" :input-style="{ borderRadius: '10px', height: '2.4rem', minWidth: '5.5rem' }" />
                         <span>entries per page</span>
                     </div>
                 </div>
@@ -424,7 +419,7 @@ export default {
                 confirmDiv.className = `alert ${alertClass} position-fixed`;
                 confirmDiv.style.cssText = 'top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; min-width: 400px;';
                 confirmDiv.innerHTML = `
-                    <h5 class="alert-heading">${title}</h5>
+                    <h6 class="ui-h-mini alert-heading">${title}</h6>
                     <p class="mb-3">${text}</p>
                     <div class="d-flex gap-2 justify-content-end">
                         <button class="btn btn-secondary" id="confirmCancel">Cancel</button>

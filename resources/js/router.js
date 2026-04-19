@@ -94,6 +94,7 @@ import Email from './pages/email/email.vue'
 import StarredEmail from './pages/email/StarredEmail.vue'
 import EmailViewDetails from './pages/email/VeiwDetails.vue'
 import HrDashboard from './pages/hr/index.vue'
+import SalesIntelligence from './pages/sales-intelligence/index.vue'
 
 
 import ImportPitrix from './components/kanban/leadList/ImportPitrix.vue'
@@ -125,6 +126,7 @@ const baseRoutes = [
   { path: '/settings/stage-visibility', component: StageVisibility, meta: { requiresAuth: true } },
 
   { path: '/lead-reports', component: LeadReports, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/sales-intelligence', component: SalesIntelligence, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue` (import HrDashboard above)
   { path: '/hr', component: HrDashboard, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/suggestion', component: Suggestions, meta: { requiresAuth: true } },

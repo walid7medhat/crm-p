@@ -5,12 +5,7 @@
               <div class="d-flex align-items-center flex-wrap gap-2 justify-content-between">
                 <h6 class="mb-2 fw-bold text-lg">Customer Overview</h6>
                 <div>
-                  <select v-model="selectedTimeframe" class="form-select form-select-sm w-auto bg-base border text-secondary-light radius-8">
-                    <option>Yearly</option>
-                    <option>Monthly</option>
-                    <option>Weekly</option>
-                    <option>Today</option>
-                  </select>
+                  <SearchableSelect preset="overviewTimeframeCapitalized" v-model="selectedTimeframe" :clearable="false" inline class="form-select form-select-sm w-auto bg-base border text-secondary-light radius-8" />
                 </div>
               </div>
   

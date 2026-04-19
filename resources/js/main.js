@@ -1,6 +1,8 @@
 import { createApp, h, markRaw } from 'vue'
 import App from './App.vue'
 import router from './router.js'
+import SearchableSelect from './components/ui/SearchableSelect.vue'
+import 'vue-select/dist/vue-select.css'
 import VueApexCharts from "vue3-apexcharts"
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
@@ -119,6 +121,7 @@ window.Echo = new Echo({
 
 
 const app = createApp(App)
+app.component('SearchableSelect', SearchableSelect)
 app.config.devtools = true
 
 app.config.errorHandler = (err, instance, info) => {

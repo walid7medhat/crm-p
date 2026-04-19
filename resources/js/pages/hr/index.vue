@@ -188,20 +188,29 @@
               </div>
               <div class="team-control">
                 <label>Team Filter</label>
-                <select v-model="teamFilter" class="form-select form-select-sm">
-                  <option v-for="option in teamOptions" :key="option" :value="option">
-                    {{ option === 'all' ? 'All Teams' : option }}
-                  </option>
-                </select>
+                <SearchableSelect
+                  v-model="teamFilter"
+                  :options="teamFilterSelectOptions"
+                  option-label="label"
+                  option-value="value"
+                  :clearable="false"
+                  inline
+                  class="form-select form-select-sm"
+                  placeholder="Team"
+                />
               </div>
               <div class="team-control">
                 <label>Status</label>
-                <select v-model="treeStatusFilter" class="form-select form-select-sm">
-                  <option value="all">All Status</option>
-                  <option value="present">Present</option>
-                  <option value="late">Late</option>
-                  <option value="absent">Absent</option>
-                </select>
+                <SearchableSelect
+                  v-model="treeStatusFilter"
+                  preset="hrTreeStatus"
+                  option-label="label"
+                  option-value="value"
+                  :clearable="false"
+                  inline
+                  class="form-select form-select-sm"
+                  placeholder="Status"
+                />
               </div>
             </div>
 
@@ -276,6 +285,13 @@ const {
   hrAttendanceTeamTree,
   teamOptions,
 } = useHrDashboard()
+
+const teamFilterSelectOptions = computed(() =>
+  (teamOptions.value || []).map((option) => ({
+    value: option,
+    label: option === 'all' ? 'All Teams' : String(option),
+  })),
+)
 
 const route = useRoute()
 /** True in Vite dev, when `VITE_HR_PIPELINE_DEBUG=1` (rebuild), or `?hr_debug=1` in the URL. */

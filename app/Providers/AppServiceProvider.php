@@ -8,6 +8,12 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Mail\Events\MessageFailed;
+use App\Models\Deal;
+use App\Models\LeadActivity;
+use App\Observers\DealAssignmentLearningObserver;
+use App\Observers\LeadFirstContactObserver;
+use App\Observers\SalesIntelligenceDealObserver;
+use App\Observers\SalesIntelligenceLeadActivityObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -44,5 +50,10 @@ class AppServiceProvider extends ServiceProvider
 
             return $base.'/reset-password?token='.urlencode($token).'&email='.$email;
         });
+
+        Deal::observe(SalesIntelligenceDealObserver::class);
+        Deal::observe(DealAssignmentLearningObserver::class);
+        LeadActivity::observe(SalesIntelligenceLeadActivityObserver::class);
+        LeadActivity::observe(LeadFirstContactObserver::class);
     }
 }

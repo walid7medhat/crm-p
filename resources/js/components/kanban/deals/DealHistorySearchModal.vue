@@ -7,17 +7,29 @@
       </div>
       <div class="col-md-6">
         <label class="form-label">Event</label>
-        <select v-model="form.action" class="form-control">
-          <option value="">Any Event</option>
-          <option v-for="opt in eventTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-        </select>
+        <SearchableSelect
+          v-model="form.action"
+          :options="eventSelectOptions"
+          option-label="label"
+          option-value="value"
+          :clearable="true"
+          inline
+          class="form-control p-0 border-0"
+          placeholder="Any event"
+        />
       </div>
       <div class="col-md-6">
         <label class="form-label">User</label>
-        <select v-model="form.user" class="form-control">
-          <option value="">Any User</option>
-          <option v-for="u in users" :key="u.id" :value="String(u.id)">{{ u.name }}</option>
-        </select>
+        <SearchableSelect
+          v-model="form.user"
+          :options="userSelectOptions"
+          option-label="label"
+          option-value="value"
+          :clearable="true"
+          inline
+          class="form-control p-0 border-0"
+          placeholder="Any user"
+        />
       </div>
       <div class="col-md-3">
         <label class="form-label">Date From</label>
@@ -36,7 +48,7 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 
 const props = defineProps({
   initialSearch: { type: String, default: '' },
@@ -49,6 +61,16 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['search', 'close'])
+
+const eventSelectOptions = computed(() => [
+  { value: '', label: 'Any Event' },
+  ...(props.eventTypeOptions || []).map((o) => ({ value: o.value, label: o.label })),
+])
+
+const userSelectOptions = computed(() => [
+  { value: '', label: 'Any User' },
+  ...(props.users || []).map((u) => ({ value: String(u.id), label: u.name })),
+])
 
 const form = reactive({
   search: '',

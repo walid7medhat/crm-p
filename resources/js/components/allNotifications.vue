@@ -5,7 +5,7 @@
         <!-- Header -->
         <div class="d-flex align-items-center justify-content-between mb-16">
           <div>
-            <h4 class=" fw-bold text-white mb-4">All Notifications</h4>
+            <h6 class="ui-h-mini  fw-bold text-white mb-4">All Notifications</h6>
             <p class="text-white mb-0">
               {{ unreadCount }} unread of {{ totalCount }} notifications
             </p>
@@ -40,7 +40,7 @@
 
             <div v-else-if="notifications.length === 0" class="text-center py-32">
               <iconify-icon icon="solar:bell-off-outline" class="text-3xl text-muted mb-8"></iconify-icon>
-              <h5 class="text-muted mb-8">No notifications yet</h5>
+              <h6 class="ui-h-mini text-muted mb-8">No notifications yet</h6>
               <p class="text-muted">You'll see notifications here when you receive them.</p>
             </div>
 

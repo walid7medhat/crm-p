@@ -4,21 +4,13 @@
       class="card-header border-bottom bg-base py-16 px-24 d-flex align-items-center flex-wrap gap-3 justify-content-between">
       <div class="d-flex align-items-center flex-wrap gap-3">
         <span class="text-md fw-medium text-secondary-light mb-0">Show</span>
-        <select v-model="rolesPerPage" @change="changePage(1)"
-          class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px">
-          <option v-for="n in 10" :key="n" :value="n">{{ n }}</option>
-        </select>
+        <SearchableSelect preset="assignRolePerPage1_10" v-model="rolesPerPage" :clearable="false" inline class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px" @update:model-value="changePage(1)" />
         <form class="navbar-search" @submit.prevent>
           <input type="text" v-model="searchQuery" @input="changePage(1)" class="bg-base h-40-px w-auto"
             placeholder="Search" />
           <iconify-icon icon="ion:search-outline" class="icon"></iconify-icon>
         </form>
-        <select v-model="statusFilter" @change="changePage(1)"
-          class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px">
-          <option value="">Status</option>
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-        </select>
+        <SearchableSelect preset="assignRoleUserFilterStatus" v-model="statusFilter" :clearable="false" inline class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px" @update:model-value="changePage(1)" />
       </div>
     </div>
 

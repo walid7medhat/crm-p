@@ -10,12 +10,7 @@
                     style="border-bottom: none; padding-bottom: 8px; padding-top: 1px;">
                     <div class="d-flex flex-wrap align-items-center gap-3">
                         <div class="d-flex align-items-center gap-2">
-                            <select class="form-select form-select-lr w-auto rounded-3 me-10" v-model="selectedShow"
-                                style="border-radius: 10px; height: 2.4rem;">
-                                <option value="10">10</option>
-                                <option value="15">15</option>
-                                <option value="20">20</option>
-                            </select>   
+                            <SearchableSelect preset="perPage10_15_20" v-model="selectedShow" :clearable="false" inline class="w-auto me-10" :input-style="{ borderRadius: '10px', height: '2.4rem', minWidth: '5.5rem' }" />   
                             <span>entries per page</span>
                         </div>
                     </div>
@@ -185,7 +180,7 @@
                     <!-- Empty State -->
                     <div v-if="!loading && filteredOrders.length === 0" class="text-center py-5">
                         <i class="ri-file-list-line" style="font-size: 64px; color: #6c757d;"></i>
-                        <h5 class="mt-3">No Orders Found</h5>
+                        <h6 class="ui-h-mini mt-3">No Orders Found</h6>
                         <p class="text-muted">You haven't made any access requests yet.</p>
                         <router-link to="/properties" class="btn btn-primary mt-3">
                             <i class="ri-home-5-line me-2"></i>
@@ -259,7 +254,7 @@
         <div v-if="showDetailsModal" class="modal-overlay" @click="showDetailsModal = false">
             <div class="modal-content" @click.stop style="max-width: 600px;">
                 <div class="modal-header">
-                    <h5 class="modal-title">Request Details</h5>
+                    <h6 class="ui-h-mini modal-title">Request Details</h6>
                     <button type="button" class="btn-close" @click="showDetailsModal = false"></button>
                 </div>
                 <div class="modal-body">
@@ -360,7 +355,7 @@
         <div v-if="showConvertModal" class="modal-overlay" @click="showConvertModal = false">
             <div class="modal-content" @click.stop style="max-width: 500px;">
                 <div class="modal-header">
-                    <h5 class="modal-title">Mark as Sold Out</h5>
+                    <h6 class="ui-h-mini modal-title">Mark as Sold Out</h6>
                     <button type="button" class="btn-close" @click="showConvertModal = false"></button>
                 </div>
                 <div class="modal-body">
@@ -392,10 +387,10 @@
 <div v-if="showReviewModal" class="modal-overlay" @click="closeReviewModal">
     <div class="modal-content" @click.stop style="max-width: 500px;">
         <div class="modal-header">
-            <h5 class="modal-title">
+            <h6 class="ui-h-mini modal-title">
                 <i class="ri-star-line me-2"></i>
                 {{ isEditingReview ? 'Edit Review' : 'Add Review' }}
-            </h5>
+            </h6>
             <button type="button" class="btn-close" @click="closeReviewModal"></button>
         </div>
         <div class="modal-body">
@@ -466,10 +461,10 @@
 <div v-if="showReviewNotification" class="modal-overlay notification-overlay" @click="closeReviewNotification">
     <div class="modal-content notification-content" @click.stop style="max-width: 500px;">
         <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title">
+            <h6 class="ui-h-mini modal-title">
                 <i class="ri-star-fill me-2"></i>
                 Pending Reviews Required
-            </h5>
+            </h6>
             <button type="button" class="btn-close btn-close-white" @click="closeReviewNotification"></button>
         </div>
         <div class="modal-body">

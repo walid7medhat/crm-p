@@ -26,7 +26,7 @@
 
     <div v-if="selected" class="node-detail">
       <button type="button" class="close" @click="selected = null">×</button>
-      <h4>{{ selected.data?.label }}</h4>
+      <h6 class="ui-h-mini">{{ selected.data?.label }}</h6>
       <p class="row"><strong>Path</strong><br /><code>{{ selected.data?.detail }}</code></p>
       <p v-if="selected.data?.meta" class="row"><strong>Component / redirect</strong><br />{{ selected.data.meta }}</p>
     </div>

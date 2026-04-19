@@ -96,7 +96,7 @@
             <!-- Field Mappings Section -->
             <div v-if="selectedFormId" class="mappings-card">
                 <div class="mappings-header">
-                    <!--<h4 class="mappings-title">Field Mapping</h4>-->
+                    <!--<h6 class="ui-h-mini mappings-title">Field Mapping</h6>-->
                     <label class="field-label">Field Mapping</label>
                     <p class="mappings-subtitle">Map Facebook form fields to CRM fields</p>
                 </div>

@@ -13,7 +13,7 @@
          <div class="form">
         <!-- form -->
         <form @submit.prevent="login">
-             <h4 class="mb-12 titleH">Sign In to your Account</h4>
+             <h6 class="ui-h-mini mb-12 titleH">Sign In to your Account</h6>
           <p class="mb-32 titleH2">Welcome Back! Please enter your details</p>
           <div class="icon-field mb-16">
             <span class="icon top-50 translate-middle-y">

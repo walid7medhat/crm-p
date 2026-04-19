@@ -57,6 +57,12 @@
               <span>Lead Reports</span>
             </router-link>
           </li>
+          <li v-if="isSuperAdmin">
+            <router-link to="/sales-intelligence" :class="{ 'active-page': isActive('/sales-intelligence') }">
+              <iconify-icon icon="lucide:sparkles" class="menu-icon" />
+              <span>Sales Intelligence</span>
+            </router-link>
+          </li>
           <li  v-if="isAdmin">
             <router-link to="/settings/lead-scoring" :class="{ 'active-page': isActive('/settings/lead-scoring') }">
               <iconify-icon icon="lucide:target" class="menu-icon" />
@@ -842,6 +848,7 @@ const mobileDockItems = computed(() => {
   }
   if (isSuperAdmin.value) {
     items.push({ path: '/lead-reports', label: 'Reports', icon: 'lucide:bar-chart-3' });
+    items.push({ path: '/sales-intelligence', label: 'Intel', icon: 'lucide:sparkles' });
   }
   if (filteredOwnersItems.value.length) items.push({ path: filteredOwnersItems.value[0].path, label: 'Owners', icon: 'lucide:users' });
   if (filteredDevelopersItems.value.length) items.push({ path: filteredDevelopersItems.value[0].path, label: 'Developers', icon: 'lucide:code' });

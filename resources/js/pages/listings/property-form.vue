@@ -674,7 +674,7 @@
         <!--              <div class="col-md-4">-->
         <!--                <div class="card bg-light">-->
         <!--                  <div class="card-body text-center py-2">-->
-        <!--                    <h5 class="mb-0">{{ form.floorPlans.length }}</h5>-->
+        <!--                    <h6 class="ui-h-mini mb-0">{{ form.floorPlans.length }}</h6>-->
         <!--                    <small class="text-muted">Total Plans</small>-->
         <!--                  </div>-->
         <!--                </div>-->
@@ -682,7 +682,7 @@
         <!--              <div class="col-md-4">-->
         <!--                <div class="card bg-light">-->
         <!--                  <div class="card-body text-center py-2">-->
-        <!--                    <h5 class="mb-0">{{ selectedProjectFloorPlan ? 1 : 0 }}</h5>-->
+        <!--                    <h6 class="ui-h-mini mb-0">{{ selectedProjectFloorPlan ? 1 : 0 }}</h6>-->
         <!--                    <small class="text-muted">From Project</small>-->
         <!--                  </div>-->
         <!--                </div>-->
@@ -690,7 +690,7 @@
         <!--              <div class="col-md-4">-->
         <!--                <div class="card bg-light">-->
         <!--                  <div class="card-body text-center py-2">-->
-        <!--                    <h5 class="mb-0">{{ customFloorPlansCount }}</h5>-->
+        <!--                    <h6 class="ui-h-mini mb-0">{{ customFloorPlansCount }}</h6>-->
         <!--                    <small class="text-muted">Custom Uploads</small>-->
         <!--                  </div>-->
         <!--                </div>-->
@@ -1339,12 +1339,12 @@
   <div v-if="showFloorPlanViewer" class="floor-plan-viewer-modal" @click.self="closeFloorPlanViewer">
     <div class="viewer-container">
       <div class="viewer-header">
-        <h5 class="viewer-title">
+        <h6 class="ui-h-mini viewer-title">
           {{ selectedFloorPlanForViewer?.name }}
           <span v-if="selectedFloorPlanForViewer?.dimensions" class="ms-2 text-muted">
             {{ selectedFloorPlanForViewer.dimensions }}
           </span>
-        </h5>
+        </h6>
         <button class="btn-close btn-close-white" @click="closeFloorPlanViewer">
           <!--<i class="fas fa-times"></i>-->
         </button>

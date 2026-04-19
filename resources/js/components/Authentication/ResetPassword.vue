@@ -11,7 +11,7 @@
         <div class="form">
           <form @submit.prevent="resetPassword">
 
-            <h4 class="mb-12 titleH">Reset Password</h4>
+            <h6 class="ui-h-mini mb-12 titleH">Reset Password</h6>
             <p class="mb-32 titleH2">
               Enter your new password
             </p>

@@ -3,7 +3,7 @@
     <p class="tab-lead">Curated pointers into Kanban / lead requirement logic (search filters blocks below).</p>
 
     <div v-for="(lines, key) in filteredBlocks" :key="key" class="logic-card">
-      <h3 class="logic-title">{{ formatTitle(key) }}</h3>
+      <h6 class="ui-h-sub logic-title">{{ formatTitle(key) }}</h6>
       <ul>
         <li v-for="(line, i) in lines" :key="key + '-' + i">{{ line }}</li>
       </ul>

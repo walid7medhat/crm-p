@@ -74,6 +74,29 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->runInBackground();
             $schedule->command('attendance:sync')->everyFiveMinutes();
+        $schedule->command('leads:auto-assign --scheduled-tick')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/lead-auto-assign.log'));
+        $schedule->command('leads:realtime-assign')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->runInBackground()
+            ->appendOutputTo(storage_path('logs/lead-realtime-assign.log'));
+        $schedule->command('leads:recover-stuck --sync')
+            ->everyFiveMinutes()
+            ->withoutOverlapping();
+        $schedule->command('leads:sla-escalation')
+            ->everyFiveMinutes()
+            ->withoutOverlapping();
+        $schedule->command('lead-assignment:refresh-performance')
+            ->hourly()
+            ->withoutOverlapping()
+            ->runInBackground();
+        $schedule->command('sales-intelligence:recalculate-scores')
+            ->dailyAt('02:15')
+            ->withoutOverlapping()
+            ->runInBackground();
         // ==================== TEST COMMANDS ====================
         // $schedule->command('activities:send-reminders --timeframe=today --test')
         //     ->dailyAt('10:00')

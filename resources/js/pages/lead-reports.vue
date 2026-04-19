@@ -35,7 +35,7 @@
           </div>
           <div class="stage-head">
             <div class="stage-value">{{ stageHeadlineValue }}</div>
-            <h3>{{ selectedStage }} Leads</h3>
+            <h6 class="ui-h-sub">{{ selectedStage }} Leads</h6>
           </div>
           <LeadReportsTable
             :title="`${selectedStage} Leads Reports`"
@@ -49,7 +49,7 @@
         </template>
       </template>
       <section v-else class="deal-placeholder">
-        <h3>Deals Reports</h3>
+        <h6 class="ui-h-sub">Deals Reports</h6>
         <p>Use the same shell and filters; bind real deals data when API is ready.</p>
       </section>
     </div>
@@ -57,14 +57,19 @@
     <div v-if="showAdvanced" class="advanced-backdrop" @click.self="showAdvanced = false">
       <div class="advanced-modal">
         <header>
-          <h4>Advanced Filter</h4>
+          <h6 class="ui-h-mini">Advanced Filter</h6>
           <button type="button" @click="showAdvanced = false"><iconify-icon icon="lucide:x" /></button>
         </header>
-        <label>Select Stage</label>
-        <select v-model="selectedStage">
-          <option value="">Not Selected</option>
-          <option v-for="item in stageList" :key="item.id || item.name" :value="item.name">{{ item.name }}</option>
-        </select>
+        <label class="crm-field__label d-block mb-1">Select stage</label>
+        <SearchableSelect
+          v-model="selectedStage"
+          :options="stageSelectOptions"
+          option-label="label"
+          option-value="value"
+          :clearable="true"
+          inline
+          placeholder="Not selected"
+        />
         <div class="modal-actions">
           <button class="cancel" @click="showAdvanced = false">Cancel</button>
           <button class="apply" @click="applyAdvanced">Apply</button>
@@ -98,6 +103,11 @@ const allLeads = ref([])
 const branchOptions = ref(['All Team'])
 const stageList = ref([])
 let searchDebounceTimer = null
+
+const stageSelectOptions = computed(() => [
+  { value: '', label: 'Not selected' },
+  ...stageList.value.map((item) => ({ value: item.name, label: item.name })),
+])
 
 const filteredRows = computed(() => {
   const q = tableSearch.value.trim().toLowerCase()

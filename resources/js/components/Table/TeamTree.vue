@@ -3,7 +3,7 @@
         <div class="card-header">
             <div class="row">
                 <div class="col-md-6 text-start">
-                    <h5 class="card-title mb-0">Team Tree</h5>
+                    <h6 class="ui-h-mini card-title mb-0">Team Tree</h6>
                     <p class="text-muted mb-0">View your team structure in a hierarchical tree</p>
                 </div>
                 <div class="col-md-6 text-end">
@@ -23,21 +23,34 @@
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <!-- Role Filter -->
                     <div class="d-flex align-items-center gap-2">
-                        <select class="form-select form-select-sm w-auto rounded-3" v-model="selectedRole"
-                            style="border-radius: 10px; height: 2.4rem;" @change="applyFilters">
-                            <option value="">All Roles</option>
-                            <option v-for="role in availableRoles" :key="role" :value="role">{{ role }}</option>
-                        </select>
+                        <SearchableSelect
+                            v-model="selectedRole"
+                            :options="roleFilterOptions"
+                            option-label="label"
+                            option-value="value"
+                            :clearable="false"
+                            inline
+                            placeholder="All roles"
+                            class="form-select form-select-sm w-auto rounded-3"
+                            :input-style="{ borderRadius: '10px', height: '2.4rem', minWidth: '9rem' }"
+                            @update:model-value="applyFilters"
+                        />
                     </div>
 
                     <!-- Status Filter -->
                     <div class="d-flex align-items-center gap-2">
-                        <select class="form-select form-select-sm w-auto rounded-3" v-model="selectedStatus"
-                            style="border-radius: 10px; height: 2.4rem;" @change="applyFilters">
-                            <option value="">All Status</option>
-                            <option value="active">Active</option>
-                            <option value="in_active">Inactive</option>
-                        </select>
+                        <SearchableSelect
+                            v-model="selectedStatus"
+                            :options="teamStatusFilterOptions"
+                            option-label="label"
+                            option-value="value"
+                            :clearable="false"
+                            inline
+                            placeholder="All status"
+                            class="form-select form-select-sm w-auto rounded-3"
+                            :input-style="{ borderRadius: '10px', height: '2.4rem', minWidth: '9rem' }"
+                            @update:model-value="applyFilters"
+                        />
                     </div>
 
                     <!-- Clear Filters Button -->
@@ -147,7 +160,7 @@
         <div class="team-lead-sidebar" :class="{'sidebar-open': isTeamLeadSidebarOpen}">
             <div class="sidebar-content">
                 <div class="sidebar-header">
-                    <h5>Team Lead Details</h5>
+                    <h6 class="ui-h-mini">Team Lead Details</h6>
                     <button class="close-btn" @click="closeTeamLeadSidebar">
                         <iconify-icon icon="lucide:x"></iconify-icon>
                     </button>
@@ -165,7 +178,7 @@
                                 </div>
                             </div>
                             <div class="info-section-simple">
-                                <h4 class="user-name-simple">{{ selectedTeamLead.name }}</h4>
+                                <h6 class="ui-h-mini user-name-simple">{{ selectedTeamLead.name }}</h6>
                                 <div class="role-section-simple">
                                     <span class="role-badge-simple">{{ selectedTeamLead.role_name }}</span>
                                 </div>
@@ -226,7 +239,7 @@
         <div class="employee-sidebar" :class="{'sidebar-open': isEmployeeSidebarOpen}">
             <div class="sidebar-content">
                 <div class="sidebar-header">
-                    <h5>Employee Details</h5>
+                    <h6 class="ui-h-mini">Employee Details</h6>
                     <button class="close-btn" @click="closeEmployeeSidebar">
                         <iconify-icon icon="lucide:x"></iconify-icon>
                     </button>
@@ -241,7 +254,7 @@
                                  @error="handleImageError">
                         </div>
                         <div class="user-info-large">
-                            <h4>{{ selectedEmployee.name }}</h4>
+                            <h6 class="ui-h-mini">{{ selectedEmployee.name }}</h6>
                             <span class="role-badge-large">{{ selectedEmployee.role_name }}</span>
                             <div v-if="selectedEmployee.team_members_count > 0" class="team-size-badge">
                                 {{ selectedEmployee.team_members_count }} Team Members
@@ -361,7 +374,22 @@ export default {
 
         hasActiveFilters() {
             return this.selectedRole || this.selectedStatus || this.searchText;
-        }
+        },
+
+        roleFilterOptions() {
+            return [
+                { value: '', label: 'All Roles' },
+                ...this.availableRoles.map((r) => ({ value: r, label: r })),
+            ];
+        },
+
+        teamStatusFilterOptions() {
+            return [
+                { value: '', label: 'All Status' },
+                { value: 'active', label: 'Active' },
+                { value: 'in_active', label: 'Inactive' },
+            ];
+        },
     },
     mounted() {
         console.log('TeamTree component mounted');

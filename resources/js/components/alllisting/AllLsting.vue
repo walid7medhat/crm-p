@@ -27,7 +27,7 @@
       <!-- Empty State -->
       <div v-else-if="properties.length === 0" class="col-12 text-center py-5">
         <i class="ri-home-4-line display-1 text-white"></i>
-        <h4 class="mt-3 text-white">No properties found</h4>
+        <h6 class="ui-h-mini mt-3 text-white">No properties found</h6>
         <button @click="notifyMe" class="btn btn-primary">
         Get notified when matching properties become available
         </button>
@@ -104,7 +104,7 @@
                     </div>
                    
 
-                <h5 class="property-title mb-2">{{ property.title || 'No Title' }}</h5>
+                <h6 class="ui-h-mini property-title mb-2">{{ property.title || 'No Title' }}</h6>
                 <p class="property-location mb-3" :title="property.area">
                   <i class="ri-map-pin-line me-1"></i>{{ property.area }}
                 </p>

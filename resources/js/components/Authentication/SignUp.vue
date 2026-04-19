@@ -14,7 +14,7 @@
        <div class="form">
         <!-- Success Message بعد التسجيل -->
         <div v-if="registrationSuccess" class="alert alert-success text-center">
-          <h5 class="mb-3">Registration Successful!</h5>
+          <h6 class="ui-h-mini mb-3">Registration Successful!</h6>
           <p class="mb-3">Your account has been created successfully and is pending activation.</p>
           <p class="mb-3"><strong>Your supervisor will activate your account shortly.</strong></p>
           <p class="mb-0">You will receive an email notification once your account is activated.</p>
@@ -26,7 +26,7 @@
          
         <!-- Registration Form -->
         <form v-else @submit.prevent="register">
-           <h4 class="mb-12 titleH">Create your account</h4>
+           <h6 class="ui-h-mini mb-12 titleH">Create your account</h6>
           <!-- <p class="mb-32 titleH2">Set up your profile to access the internal sales system</p> -->
           <div class="row g-2 mb-16">
             <div class="col-md-12">

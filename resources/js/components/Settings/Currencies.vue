@@ -5,9 +5,7 @@
             class="card-header border-bottom bg-base py-16 px-24 d-flex align-items-center flex-wrap gap-3 justify-content-between">
             <div class="d-flex align-items-center flex-wrap gap-3">
                 <span class="text-md fw-medium text-secondary-light mb-0">Show</span>
-                <select class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px" v-model="itemsToShow">
-                    <option v-for="n in 10" :key="n">{{ n }}</option>
-                </select>
+                <SearchableSelect preset="languagesPageSize" v-model="itemsToShow" :clearable="false" inline class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px" />
                 <form class="navbar-search" @submit.prevent>
                     <input type="text" class="bg-base h-40-px w-auto" name="search" placeholder="Search"
                         v-model="searchQuery" />
@@ -81,7 +79,7 @@
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content radius-16 bg-base">
                     <div class="modal-header py-16 px-24 border-bottom">
-                        <h1 class="modal-title fs-5">Add New Currency</h1>
+                        <h6 class="ui-h-page modal-title fs-5">Add New Currency</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body p-24">
@@ -142,7 +140,7 @@
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content radius-16 bg-base">
                     <div class="modal-header py-16 px-24 border-bottom">
-                        <h1 class="modal-title fs-5">Edit Currency</h1>
+                        <h6 class="ui-h-page modal-title fs-5">Edit Currency</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body p-24">

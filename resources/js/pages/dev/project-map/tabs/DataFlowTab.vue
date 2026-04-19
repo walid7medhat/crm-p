@@ -49,7 +49,7 @@
       </svg>
     </div>
 
-    <h3 class="sub">Entity notes</h3>
+    <h6 class="ui-h-sub sub">Entity notes</h6>
     <ul class="notes">
       <li v-for="(line, i) in filteredNotes" :key="i">{{ line }}</li>
     </ul>

@@ -113,6 +113,14 @@ Broadcast::channel('lead.{id}', function ($user, $id) {
 Broadcast::channel('lead.updated', function ($user) {
     return $user !== null;
 });
+
+Broadcast::channel('lead-assignment', function ($user) {
+    if (!$user) {
+        return false;
+    }
+
+    return $user->hasRole('admin') || $user->hasRole('super_admin');
+});
 Route::post('/test-broadcast-auth', function (\Illuminate\Http\Request $request) {
     \Log::info('Test Broadcast Auth Called', [
         'channel_name' => $request->input('channel_name'),

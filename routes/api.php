@@ -41,12 +41,14 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\KanbanSettingsController;
 use App\Http\Controllers\Api\LeadScoringSettingController;
+use App\Http\Controllers\Api\LeadAssignmentController;
 use App\Http\Controllers\Api\InvestmentController;
 use App\Http\Controllers\Api\CityInvestmentSettingsController;
 use App\Http\Controllers\Api\AbuDhabiBenchmarkController;
 use App\Http\Controllers\Api\AdminEmailController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\LeadImportController;
+use App\Http\Controllers\Api\SalesIntelligence\SalesIntelligenceController;
 use App\Http\Controllers\Api\Mobile\MobileKanbanController;
 use App\Http\Controllers\Api\Mobile\MobileLeadMoveController;
 use App\Http\Controllers\Api\Employee\EmployeeController;
@@ -165,6 +167,18 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/scoring-settings', [LeadScoringSettingController::class, 'show']);
     Route::post('/scoring-settings', [LeadScoringSettingController::class, 'store']);
     Route::post('/scoring/test', [LeadScoringSettingController::class, 'test']);
+
+    Route::get('/lead-assignment/settings', [LeadAssignmentController::class, 'show']);
+    Route::get('/lead-assignment/stats', [LeadAssignmentController::class, 'stats']);
+    Route::get('/lead-assignment/insights', [LeadAssignmentController::class, 'insights']);
+    Route::put('/lead-assignment/settings', [LeadAssignmentController::class, 'update']);
+    Route::get('/lead-assignment/queue', [LeadAssignmentController::class, 'queue']);
+    Route::get('/lead-assignment/logs', [LeadAssignmentController::class, 'logs']);
+    Route::post('/lead-assignment/run', [LeadAssignmentController::class, 'runNow']);
+    Route::post('/lead-assignment/reassign', [LeadAssignmentController::class, 'reassign']);
+    Route::post('/lead-assignment/simulate', [LeadAssignmentController::class, 'simulate']);
+    Route::post('/lead-assignment/override', [LeadAssignmentController::class, 'override']);
+    Route::post('/lead-assignment/revert-stage', [LeadAssignmentController::class, 'revertStageAssignments']);
     Route::get('/city-settings', [CityInvestmentSettingsController::class, 'index']);
     Route::get('/city-settings/{city}', [CityInvestmentSettingsController::class, 'show']);
     Route::post('/city-settings/update', [CityInvestmentSettingsController::class, 'update']);
@@ -223,6 +237,20 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
 Route::get('/teams-with-leads', [StageController::class, 'getTeamsWithLeads'])->middleware('jwt.auth');
 
 Route::middleware('jwt.auth')->group(function () {
+    Route::prefix('sales-intelligence')->group(function () {
+        Route::get('/overview', [SalesIntelligenceController::class, 'overview']);
+        Route::get('/settings', [SalesIntelligenceController::class, 'settings']);
+        Route::put('/settings', [SalesIntelligenceController::class, 'updateSettings']);
+        Route::get('/scoring-rules', [SalesIntelligenceController::class, 'scoringRules']);
+        Route::put('/scoring-rules', [SalesIntelligenceController::class, 'updateScoringRules']);
+        Route::get('/agents', [SalesIntelligenceController::class, 'agents']);
+        Route::post('/recalculate', [SalesIntelligenceController::class, 'recalculate']);
+        Route::post('/preview-score', [SalesIntelligenceController::class, 'previewScore']);
+        Route::post('/distribute', [SalesIntelligenceController::class, 'distribute']);
+        Route::get('/distribution-logs', [SalesIntelligenceController::class, 'distributionLogs']);
+        Route::post('/ai/suggest', [SalesIntelligenceController::class, 'aiSuggest']);
+    });
+
     Route::get('/attendance/today', [AttendanceController::class, 'today']);
     Route::get('/attendance', [AttendanceController::class, 'index']);
     

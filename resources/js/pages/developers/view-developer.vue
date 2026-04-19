@@ -7,7 +7,7 @@
 
         <div class="card" v-if="developer">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Developer Information</h5>
+                <h6 class="ui-h-mini card-title mb-0">Developer Information</h6>
                 <div class="d-flex gap-2">
                     <button class="btn btn-outline-secondary" @click="$router.back()">
                         <iconify-icon icon="lucide:arrow-left" class="me-2"></iconify-icon>
@@ -35,7 +35,7 @@
                                     <iconify-icon icon="lucide:check" class="text-white" width="16"></iconify-icon>
                                 </div>
                             </div>
-                            <h4 class="mt-3 mb-1">{{ developer.name }}</h4>
+                            <h6 class="ui-h-mini mt-3 mb-1">{{ developer.name }}</h6>
                             <div class="badge bg-primary fs-6">{{ developer.added_by }}</div>
                         </div>
                     </div>
@@ -95,7 +95,7 @@
         <div v-else class="card">
             <div class="card-body text-center py-5">
                 <iconify-icon icon="lucide:user-x" class="text-muted mb-3" width="48"></iconify-icon>
-                <h5>Developer Not Found</h5>
+                <h6 class="ui-h-mini">Developer Not Found</h6>
                 <p class="text-muted">The developer you're looking for doesn't exist.</p>
                 <button class="btn btn-primary" @click="$router.push('/developers')">
                     Back to Developers List

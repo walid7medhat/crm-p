@@ -24,7 +24,7 @@
 
       <div v-show="open[domain.id] !== false" class="domain-body">
         <section v-if="domain.pages?.length" class="bucket">
-          <h4 class="bucket-title entry">Pages & entry routes</h4>
+          <h6 class="ui-h-mini bucket-title entry">Pages & entry routes</h6>
           <ul class="item-list">
             <li v-for="p in domain.pages" :key="p.id" class="item entry">
               <span class="badge entry">page</span>
@@ -36,7 +36,7 @@
         </section>
 
         <section v-if="domain.components?.length" class="bucket">
-          <h4 class="bucket-title">Components</h4>
+          <h6 class="ui-h-mini bucket-title">Components</h6>
           <ul class="item-list">
             <li v-for="c in domain.components" :key="c.id" class="item">
               <span class="badge cmp">ui</span>
@@ -48,7 +48,7 @@
         </section>
 
         <section v-if="domain.composables?.length" class="bucket">
-          <h4 class="bucket-title">Composables / hooks</h4>
+          <h6 class="ui-h-mini bucket-title">Composables / hooks</h6>
           <ul class="item-list">
             <li v-for="c in domain.composables" :key="c.id" class="item">
               <span class="badge hook">hook</span>
@@ -59,7 +59,7 @@
         </section>
 
         <section v-if="domain.services?.length" class="bucket">
-          <h4 class="bucket-title">Services / API helpers</h4>
+          <h6 class="ui-h-mini bucket-title">Services / API helpers</h6>
           <ul class="item-list">
             <li v-for="s in domain.services" :key="s.id" class="item">
               <span class="badge svc">svc</span>
@@ -70,7 +70,7 @@
         </section>
 
         <section v-if="domain.apiSamples?.length" class="bucket">
-          <h4 class="bucket-title">Sample API usage (from this area)</h4>
+          <h6 class="ui-h-mini bucket-title">Sample API usage (from this area)</h6>
           <ul class="api-mini">
             <li v-for="(a, i) in domain.apiSamples" :key="i">
               <code class="meth">{{ a.method }}</code>

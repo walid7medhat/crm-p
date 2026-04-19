@@ -4,9 +4,7 @@
             class="card-header border-bottom bg-base py-16 px-24 d-flex align-items-center flex-wrap gap-3 justify-content-between">
             <div class="d-flex align-items-center flex-wrap gap-3">
                 <span class="text-md fw-medium text-secondary-light mb-0">Show</span>
-                <select class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px" v-model="itemsPerPage">
-                    <option v-for="n in 12" :key="n" :value="n">{{ n }}</option>
-                </select>
+                <SearchableSelect preset="userGridPerPage1_12" v-model="itemsPerPage" :clearable="false" inline class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px" />
                 <form class="navbar-search">
                     <input type="text" class="bg-base h-40-px w-auto" v-model="searchQuery" placeholder="Search" />
                     <iconify-icon icon="ion:search-outline" class="icon"></iconify-icon>
