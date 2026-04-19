@@ -8,7 +8,12 @@
               <span class="text-sm fw-medium text-secondary-light">Yearly earning overview</span>
             </div>
             <div>
-              <SearchableSelect preset="earningPeriodLower" v-model="selectedPeriod" :clearable="false" inline class="form-select form-select-sm w-auto bg-base border text-secondary-light radius-8" />
+              <select v-model="selectedPeriod" class="form-select form-select-sm w-auto bg-base border text-secondary-light radius-8">
+                <option value="yearly">Yearly</option>
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+                <option value="today">Today</option>
+              </select>
             </div>
           </div>
   

@@ -10,10 +10,10 @@
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="ui-h-mini card-title mb-0">
+                <h5 class="card-title mb-0">
                     <i class="fas fa-layer-group me-2"></i>
                    {{projectTitle}} Floor Plan Images
-                </h6>
+                </h5>
                 <button class="btn btn-outline-secondary" @click="goBack">
                     <iconify-icon icon="lucide:arrow-left" class="me-2"></iconify-icon>
                     Back

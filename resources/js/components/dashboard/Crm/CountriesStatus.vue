@@ -6,15 +6,12 @@
         <!-- Header -->
         <div class="d-flex align-items-center flex-wrap gap-2 justify-content-between mb-3">
           <h6 class="fw-bold text-lg">Countries Status</h6>
-          <SearchableSelect
-            v-model="selectedRange"
-            preset="aiPeriodLabels"
-            option-label="label"
-            option-value="value"
-            :clearable="false"
-            inline
-            class="form-select form-select-sm w-auto bg-base border text-secondary-light radius-8"
-          />
+          <select class="form-select form-select-sm w-auto bg-base border text-secondary-light radius-8">
+            <option>Today</option>
+            <option>Weekly</option>
+            <option>Monthly</option>
+            <option>Yearly</option>
+          </select>
         </div>
 
         <!-- Map -->
@@ -66,7 +63,6 @@ export default {
   name: 'WorldMap',
   setup() {
     const mapContainer = ref(null);
-    const selectedRange = ref('Today');
     // console.log(mapContainer);
 
     // Country data for the progress bars
@@ -145,7 +141,7 @@ export default {
       }
     });
 
-    return { mapContainer, countries, selectedRange };
+    return { mapContainer, countries };
   },
 };
 </script>

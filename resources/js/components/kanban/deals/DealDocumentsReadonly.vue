@@ -41,7 +41,7 @@
     <div v-if="previewDoc" class="modal-overlay" @click="closePreview">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h6 class="ui-h-sub">{{ previewDoc.name }}</h6>
+          <h3>{{ previewDoc.name }}</h3>
           <button class="modal-close" @click="closePreview">
             <iconify-icon icon="lucide:x" />
           </button>

@@ -114,12 +114,10 @@ Broadcast::channel('lead.updated', function ($user) {
     return $user !== null;
 });
 
-Broadcast::channel('lead-assignment', function ($user) {
-    if (!$user) {
-        return false;
-    }
 
-    return $user->hasRole('admin') || $user->hasRole('super_admin');
+Broadcast::channel('lead-assignment', function ($user) {
+    // Kanban + Lead Assignment UI subscribe here; allow any authenticated user (JWT/session).
+    return $user !== null;
 });
 Route::post('/test-broadcast-auth', function (\Illuminate\Http\Request $request) {
     \Log::info('Test Broadcast Auth Called', [

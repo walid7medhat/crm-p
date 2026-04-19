@@ -26,8 +26,8 @@
                 </div>
                 
                 <div class="price-main">
-                  <!--<h6 class="ui-h-sub property-price">{{ formatPrice(project.from_price) }} - {{ formatPrice(project.to_price) }}</h6>-->
-                  <h6 class="ui-h-mini property-title">{{ project.title || 'Project Title' }}</h6>
+                  <!--<h3 class="property-price">{{ formatPrice(project.from_price) }} - {{ formatPrice(project.to_price) }}</h3>-->
+                  <h4 class="property-title">{{ project.title || 'Project Title' }}</h4>
                 </div>
 
                 <div class="specs-grid-main">
@@ -63,7 +63,7 @@
               <!-- Project Details -->
               <div class="detailed-info-section mb-16">
                 <div class="info-section">
-                  <h6 class="ui-h-sub section-title mb-20">Project Details</h6>
+                  <h3 class="section-title mb-20">Project Details</h3>
                   <div class="info-grid">
                     <div class="info-item">
                       <span class="info-label">Title</span>
@@ -106,7 +106,7 @@
               <!-- About Project -->
               <div class="detailed-info-section mb-16" v-if="project.about && project.about.trim()">
                 <div class="info-section">
-                  <h6 class="ui-h-sub section-title mb-20">About Project</h6>
+                  <h3 class="section-title mb-20">About Project</h3>
                   <div class="description-content">
                     <p class="description-text">{{ project.about }}</p>
                   </div>
@@ -116,7 +116,7 @@
               <!-- Features -->
               <div class="detailed-info-section mb-16" v-if="project.features && project.features.length > 0">
                 <div class="info-section">
-                  <h6 class="ui-h-sub section-title mb-20">Features</h6>
+                  <h3 class="section-title mb-20">Features</h3>
                   <div class="row g-3">
                     <div v-for="feature in project.features" 
                          :key="feature.id" 
@@ -141,7 +141,7 @@
      
               <div class="detailed-info-section mb-16" v-if="project.floor_plan_images && project.floor_plan_images.length > 0">
                 <div class="info-section">
-                  <h6 class="ui-h-sub section-title mb-20">Floor Plans</h6>
+                  <h3 class="section-title mb-20">Floor Plans</h3>
                   <div class="row g-3">
                     <div v-for="(image, index) in project.floor_plan_images" 
                          :key="image.id" 
@@ -184,7 +184,7 @@
             <div v-else-if="error" class="property-content">
               <div class="text-center py-5">
                 <i class="ri-error-warning-line text-danger mb-3" style="font-size: 48px;"></i>
-                <h6 class="ui-h-mini">Failed to Load Project</h6>
+                <h5>Failed to Load Project</h5>
                 <p class="text-muted" style="font-size: 14px;">{{ error }}</p>
                 <button class="btn btn-primary" @click="fetchProject">
                   <i class="ri-refresh-line me-2"></i>
@@ -209,7 +209,7 @@
                 class="agent-sidebar-avatar" 
               />
               <div class="agent-sidebar-info">
-                <h6 class="ui-h-mini agent-sidebar-name">{{ project.developer.name || 'Developer Name' }}</h6>
+                <h5 class="agent-sidebar-name">{{ project.developer.name || 'Developer Name' }}</h5>
                 <small class="agent-sidebar-company">Developer</small>
               </div>
             </div>

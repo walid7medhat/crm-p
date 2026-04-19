@@ -5,7 +5,12 @@
                 style="border-bottom: none; padding-bottom: 8px; padding-top: 1px;">
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <div class="d-flex align-items-center gap-2">
-                        <SearchableSelect preset="perPage10_15_20" v-model="selectedShow" :clearable="false" inline class="w-auto me-10" :input-style="{ borderRadius: '10px', height: '2.4rem', minWidth: '5.5rem' }" />
+                        <select class="form-select form-select-lr w-auto rounded-3 me-10" v-model="selectedShow"
+                            style="border-radius: 10px; height: 2.4rem;">
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                        </select>
                         <span>entries per page</span>
                     </div>
                 </div>
@@ -49,28 +54,16 @@
                                     user.status }}</span>
                             </td>
                             <td>
-                                <SearchableSelect
-                                    v-model="user.role"
-                                    :options="roles.map((r) => ({ value: r, label: r }))"
-                                    option-label="label"
-                                    option-value="value"
-                                    :clearable="false"
-                                    inline
-                                    class="form-select form-select-sm rounded-3 me-2"
-                                    :input-style="{ borderRadius: '10px', height: '2.4rem', fontSize: '0.87rem', fontWeight: '500', width: '112px' }"
-                                />
+                                <select class="form-select form-select-sm rounded-3 me-2" v-model="user.role"
+                                    style="border-radius: 10px; height: 2.4rem; font-size: 0.87rem; font-weight: 500; width: 112px;">
+                                    <option v-for="role in roles" :key="role">{{ role }}</option>
+                                </select>
                             </td>
                             <td>
-                                <SearchableSelect
-                                    v-model="user.permission"
-                                    :options="permissionGroups.map((g) => ({ value: g, label: g }))"
-                                    option-label="label"
-                                    option-value="value"
-                                    :clearable="false"
-                                    inline
-                                    class="form-select form-select-sm rounded-3 me-2"
-                                    :input-style="{ borderRadius: '10px', height: '2.4rem', fontSize: '0.87rem', fontWeight: '500', width: '135px' }"
-                                />
+                                <select class="form-select form-select-sm rounded-3 me-2" v-model="user.permission"
+                                    style="border-radius: 10px; height: 2.4rem; font-size: 0.87rem; font-weight: 500; width: 135px;">
+                                    <option v-for="group in permissionGroups" :key="group">{{ group }}</option>
+                                </select>
                             </td>
                             <td>
                                 <span class="text-sm mb-0 fw-normal text-secondary-light d-block">{{ user.location

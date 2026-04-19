@@ -41,7 +41,7 @@
     <div class="dm-main">
       <header class="dm-top">
         <div>
-          <h6 class="ui-h-page dm-h1">{{ currentNav?.label || 'Dashboard' }}</h6>
+          <h1 class="dm-h1">{{ currentNav?.label || 'Dashboard' }}</h1>
           <p class="dm-sub">
             {{ envLabel }}
             · last scan {{ data?.generatedAt || '—' }}

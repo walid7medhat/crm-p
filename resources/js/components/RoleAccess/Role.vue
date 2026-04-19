@@ -4,13 +4,21 @@
             class="card-header border-bottom bg-base py-16 px-24 d-flex align-items-center flex-wrap gap-3 justify-content-between">
             <div class="d-flex align-items-center flex-wrap gap-3">
                 <span class="text-md fw-medium text-secondary-light mb-0">Show</span>
-                <SearchableSelect preset="assignRolePerPage1_10" v-model="rolesPerPage" :clearable="false" inline class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px" @update:model-value="changePage(1)" />
+                <select v-model="rolesPerPage" @change="changePage(1)"
+                    class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px">
+                    <option v-for="n in 10" :key="n">{{ n }}</option>
+                </select>
                 <form class="navbar-search">
                     <input type="text" v-model="searchQuery" @input="changePage(1)" class="bg-base h-40-px w-auto"
                         placeholder="Search">
                     <iconify-icon icon="ion:search-outline" class="icon"></iconify-icon>
                 </form>
-                <SearchableSelect preset="roleToolbarStatusLabels" v-model="statusFilter" :clearable="false" inline class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px" @update:model-value="changePage(1)" />
+                <select v-model="statusFilter" @change="changePage(1)"
+                    class="form-select form-select-sm w-auto ps-12 py-6 radius-12 h-40-px">
+                    <option>Status</option>
+                    <option>Active</option>
+                    <option>Inactive</option>
+                </select>
             </div>
             <button type="button"
                 class="btn btn-primary text-sm btn-sm px-12 py-12 radius-8 d-flex align-items-center gap-2"
@@ -94,7 +102,7 @@
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content radius-16 bg-base">
                 <div class="modal-header py-16 px-24 border border-top-0 border-start-0 border-end-0">
-                    <h6 class="ui-h-page modal-title fs-5" id="exampleModalLabel">Add New Role</h6>
+                    <h1 class="modal-title fs-5" id="exampleModalLabel">Add New Role</h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-24">

@@ -865,7 +865,7 @@
     <div v-if="showAddOwner" class="modal-backdrop">
       <div class="modal-container">
         <div class="modal-header d-flex justify-content-between align-items-center">
-          <h6 class="ui-h-mini mb-0"><i class="fas fa-user-plus me-2"></i>Add New Owner</h6>
+          <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Add New Owner</h5>
           <button class="btn-close" @click="closeAddOwner"></button>
         </div>
 
@@ -1033,12 +1033,12 @@
   <div v-if="showFloorPlanViewer" class="floor-plan-viewer-modal" @click.self="closeFloorPlanViewer">
     <div class="viewer-container">
       <div class="viewer-header">
-        <h6 class="ui-h-mini viewer-title">
+        <h5 class="viewer-title">
           {{ selectedFloorPlanForViewer?.name }}
           <span v-if="selectedFloorPlanForViewer?.dimensions" class="ms-2 text-muted">
             {{ selectedFloorPlanForViewer.dimensions }}
           </span>
-        </h6>
+        </h5>
         <button class="btn-close btn-close-white" @click="closeFloorPlanViewer">
           <!--<i class="fas fa-times"></i>-->
         </button>

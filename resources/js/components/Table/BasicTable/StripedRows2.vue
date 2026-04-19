@@ -2,7 +2,7 @@
     <div class="col-lg-6">
       <div class="card">
         <div class="card-header">
-          <h6 class="ui-h-mini card-title mb-0">Striped Rows</h6>
+          <h5 class="card-title mb-0">Striped Rows</h5>
         </div>
         <div class="card-body">
           <div class="table-responsive">

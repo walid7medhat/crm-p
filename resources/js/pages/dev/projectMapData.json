@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-04-16T11:11:36.679Z",
+  "generatedAt": "2026-04-16T11:11:29.661Z",
   "root": "resources/js",
   "stats": {
-    "jsVueFilesApprox": 359,
+    "jsVueFilesApprox": 413,
     "routesCount": 78,
-    "apiCallRows": 35,
+    "apiCallRows": 44,
     "laravelMobileRoutes": 2,
-    "vueNodes": 314,
-    "vueEdges": 336
+    "vueNodes": 368,
+    "vueEdges": 400
   },
   "tree": {
     "name": "resources/js",
@@ -461,19 +461,11 @@
                   },
                   {
                     "type": "file",
-                    "name": "InlineSectionEditor.vue"
-                  },
-                  {
-                    "type": "file",
                     "name": "PrimaryDealForm.vue"
                   },
                   {
                     "type": "file",
                     "name": "RentalDealForm.vue"
-                  },
-                  {
-                    "type": "file",
-                    "name": "ResponsiblePersonSection.vue"
                   },
                   {
                     "type": "file",
@@ -544,6 +536,290 @@
               {
                 "type": "file",
                 "name": "kanban_deal.vue"
+              },
+              {
+                "type": "file",
+                "name": "Kanban.vue"
+              },
+              {
+                "type": "file",
+                "name": "KanbanSettings.vue"
+              },
+              {
+                "name": "leadList",
+                "type": "dir",
+                "children": [
+                  {
+                    "type": "file",
+                    "name": "ConvertLeadModal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "DuplicateLeadsModal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "FilterFieldSettingsModal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ImportPitrix.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "leads.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "LeadSearchModal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "StageChangeReasonModal.vue"
+                  }
+                ]
+              },
+              {
+                "type": "file",
+                "name": "LeadScoringSettings.vue"
+              },
+              {
+                "name": "settings",
+                "type": "dir",
+                "children": [
+                  {
+                    "type": "file",
+                    "name": "DealsSettings.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "SettingsHub.vue"
+                  }
+                ]
+              },
+              {
+                "name": "shared",
+                "type": "dir",
+                "children": [
+                  {
+                    "type": "file",
+                    "name": "DateTimePicker.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ModalHeader.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ProfilePopup.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ResponsiblePersonSelector.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "StageSelector.vue"
+                  }
+                ]
+              },
+              {
+                "name": "stage",
+                "type": "dir",
+                "children": [
+                  {
+                    "type": "file",
+                    "name": "AddStageModal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "StageVisibility.vue"
+                  }
+                ]
+              },
+              {
+                "name": "viewLead",
+                "type": "dir",
+                "children": [
+                  {
+                    "type": "file",
+                    "name": "ActivityList.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ActivitySection.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "CommentList.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "CommentsSection.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "GeneralTab.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "HistorySearchModal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "HistoryTab.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "LeadActivityTimeline.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "LeadCreatedCard.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "LeadInfoView.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "MatchingPropertiesSection.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ResponsiblePersonSection.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ViewLead.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ViewLeadModal.vue"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "kanban1",
+            "type": "dir",
+            "children": [
+              {
+                "name": "createLead",
+                "type": "dir",
+                "children": [
+                  {
+                    "type": "file",
+                    "name": "CreateLeadModal.vue"
+                  }
+                ]
+              },
+              {
+                "name": "deals",
+                "type": "dir",
+                "children": [
+                  {
+                    "type": "file",
+                    "name": "CompleteStageFieldsModal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "CreateDealModal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "DealCreatedCard.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "DealForm.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "Deals.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "DocumentUpload.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "PrimaryDealForm.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "RentalDealForm.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "SecondaryDealForm.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "StageChangeReasonModal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ViewDealModal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ViewPrimaryDeal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ViewRentalDeal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "ViewSecondaryDeal.vue"
+                  }
+                ]
+              },
+              {
+                "name": "editLead",
+                "type": "dir",
+                "children": [
+                  {
+                    "type": "file",
+                    "name": "EditLead.vue"
+                  }
+                ]
+              },
+              {
+                "name": "integration",
+                "type": "dir",
+                "children": [
+                  {
+                    "type": "file",
+                    "name": "CreateIntegrationModal.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "CrmEntitiesTab.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "FacebookLeadAdsTab.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "HiddenFieldValuesTab.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "Integration.vue"
+                  },
+                  {
+                    "type": "file",
+                    "name": "OtherSettingsTab.vue"
+                  }
+                ]
+              },
+              {
+                "type": "file",
+                "name": "Kanban_deal.vue"
               },
               {
                 "type": "file",
@@ -3920,137 +4196,17 @@
   "apiCalls": [
     {
       "file": "routes/api.php",
-      "line": 384,
+      "line": 382,
       "method": "GET",
       "url": "/api/v1/mobile/kanban",
       "source": "laravel-mobile"
     },
     {
       "file": "routes/api.php",
-      "line": 385,
+      "line": 383,
       "method": "POST",
       "url": "/api/v1/mobile/leads/{lead}/move",
       "source": "laravel-mobile"
-    },
-    {
-      "file": "components/dashboard/Ai/AiWidgets.vue",
-      "line": 138,
-      "method": "get",
-      "url": "/api/dashboard/stats"
-    },
-    {
-      "file": "components/dashboard/Ai/LatestUser.vue",
-      "line": 333,
-      "method": "get",
-      "url": "/api/dashboard/admin/latest-requests"
-    },
-    {
-      "file": "components/dashboard/Ai/LatestUser.vue",
-      "line": 350,
-      "method": "get",
-      "url": "/api/dashboard/my-latest-requests"
-    },
-    {
-      "file": "components/dashboard/Ai/LatestUser.vue",
-      "line": 357,
-      "method": "get",
-      "url": "/api/dashboard/my-latest-orders"
-    },
-    {
-      "file": "components/dashboard/Ai/propertyType.vue",
-      "line": 96,
-      "method": "get",
-      "url": "/api/dashboard/property-types-with-listings"
-    },
-    {
-      "file": "components/dashboard/Ai/SalesStatistic.vue",
-      "line": 38,
-      "method": "get",
-      "url": "/api/dashboard/listings-statistics?period=${selectedPeriod.value}"
-    },
-    {
-      "file": "components/dashboard/Ai/TopPerformer.vue",
-      "line": 69,
-      "method": "get",
-      "url": "/api/dashboard/top-agent-performance"
-    },
-    {
-      "file": "components/dashboard/Ai/TotalSubscriber.vue",
-      "line": 41,
-      "method": "get",
-      "url": "/api/dashboard/active-agents"
-    },
-    {
-      "file": "components/dashboard/Ai/UserOverview.vue",
-      "line": 74,
-      "method": "get",
-      "url": "/api/dashboard/leads-overview?timeframe=${selectedTimeframe.value}"
-    },
-    {
-      "file": "components/kanban/deals/Deals.vue",
-      "line": 731,
-      "method": "get",
-      "url": "/deals/grouped-by-stage"
-    },
-    {
-      "file": "components/kanban/deals/Deals.vue",
-      "line": 1123,
-      "method": "put",
-      "url": "/stages/${column.stage_id}"
-    },
-    {
-      "file": "components/kanban/deals/Deals.vue",
-      "line": 1176,
-      "method": "put",
-      "url": "/stages/${stageForm.value.id}"
-    },
-    {
-      "file": "components/kanban/deals/Deals.vue",
-      "line": 1351,
-      "method": "post",
-      "url": "/deals/${deal.id}/change-stage"
-    },
-    {
-      "file": "components/kanban/deals/Deals.vue",
-      "line": 1673,
-      "method": "get",
-      "url": "/available-responsible-persons"
-    },
-    {
-      "file": "components/kanban/deals/ViewDealModal.vue",
-      "line": 343,
-      "method": "get",
-      "url": "/stages"
-    },
-    {
-      "file": "components/kanban/deals/ViewDealModal.vue",
-      "line": 538,
-      "method": "get",
-      "url": "/listings/areas"
-    },
-    {
-      "file": "components/kanban/deals/ViewDealModal.vue",
-      "line": 548,
-      "method": "get",
-      "url": "/listings/areas"
-    },
-    {
-      "file": "components/kanban/deals/ViewDealModal.vue",
-      "line": 553,
-      "method": "get",
-      "url": "/listings/projects"
-    },
-    {
-      "file": "components/kanban/deals/ViewDealModal.vue",
-      "line": 566,
-      "method": "get",
-      "url": "/deals/${props.deal.id}"
-    },
-    {
-      "file": "components/kanban/leadList/ImportPitrix.vue",
-      "line": 328,
-      "method": "post",
-      "url": "/api/leads/import"
     },
     {
       "file": "components/Users/ViewProfile.vue",
@@ -4095,6 +4251,180 @@
       "url": "/api/profile/avatar"
     },
     {
+      "file": "components/dashboard/Ai/AiWidgets.vue",
+      "line": 138,
+      "method": "get",
+      "url": "/api/dashboard/stats"
+    },
+    {
+      "file": "components/dashboard/Ai/LatestUser.vue",
+      "line": 333,
+      "method": "get",
+      "url": "/api/dashboard/admin/latest-requests"
+    },
+    {
+      "file": "components/dashboard/Ai/LatestUser.vue",
+      "line": 350,
+      "method": "get",
+      "url": "/api/dashboard/my-latest-requests"
+    },
+    {
+      "file": "components/dashboard/Ai/LatestUser.vue",
+      "line": 357,
+      "method": "get",
+      "url": "/api/dashboard/my-latest-orders"
+    },
+    {
+      "file": "components/dashboard/Ai/SalesStatistic.vue",
+      "line": 38,
+      "method": "get",
+      "url": "/api/dashboard/listings-statistics?period=${selectedPeriod.value}"
+    },
+    {
+      "file": "components/dashboard/Ai/TopPerformer.vue",
+      "line": 69,
+      "method": "get",
+      "url": "/api/dashboard/top-agent-performance"
+    },
+    {
+      "file": "components/dashboard/Ai/TotalSubscriber.vue",
+      "line": 41,
+      "method": "get",
+      "url": "/api/dashboard/active-agents"
+    },
+    {
+      "file": "components/dashboard/Ai/UserOverview.vue",
+      "line": 74,
+      "method": "get",
+      "url": "/api/dashboard/leads-overview?timeframe=${selectedTimeframe.value}"
+    },
+    {
+      "file": "components/dashboard/Ai/propertyType.vue",
+      "line": 96,
+      "method": "get",
+      "url": "/api/dashboard/property-types-with-listings"
+    },
+    {
+      "file": "components/kanban/deals/Deals.vue",
+      "line": 587,
+      "method": "get",
+      "url": "/deals/grouped-by-stage"
+    },
+    {
+      "file": "components/kanban/deals/Deals.vue",
+      "line": 979,
+      "method": "put",
+      "url": "/stages/${column.stage_id}"
+    },
+    {
+      "file": "components/kanban/deals/Deals.vue",
+      "line": 1032,
+      "method": "put",
+      "url": "/stages/${stageForm.value.id}"
+    },
+    {
+      "file": "components/kanban/deals/Deals.vue",
+      "line": 1182,
+      "method": "post",
+      "url": "/deals/${deal.id}/change-stage"
+    },
+    {
+      "file": "components/kanban/deals/Deals.vue",
+      "line": 1437,
+      "method": "get",
+      "url": "/available-responsible-persons"
+    },
+    {
+      "file": "components/kanban/deals/ViewDealModal.vue",
+      "line": 475,
+      "method": "get",
+      "url": "/listings/areas"
+    },
+    {
+      "file": "components/kanban/deals/ViewDealModal.vue",
+      "line": 485,
+      "method": "get",
+      "url": "/listings/areas"
+    },
+    {
+      "file": "components/kanban/deals/ViewDealModal.vue",
+      "line": 490,
+      "method": "get",
+      "url": "/listings/projects"
+    },
+    {
+      "file": "components/kanban/deals/ViewDealModal.vue",
+      "line": 502,
+      "method": "get",
+      "url": "/deals/${props.deal.id}"
+    },
+    {
+      "file": "components/kanban/leadList/ImportPitrix.vue",
+      "line": 328,
+      "method": "post",
+      "url": "/api/leads/import"
+    },
+    {
+      "file": "components/kanban1/deals/Deals.vue",
+      "line": 469,
+      "method": "get",
+      "url": "/deals/grouped-by-stage"
+    },
+    {
+      "file": "components/kanban1/deals/Deals.vue",
+      "line": 851,
+      "method": "put",
+      "url": "/stages/${column.stage_id}"
+    },
+    {
+      "file": "components/kanban1/deals/Deals.vue",
+      "line": 911,
+      "method": "put",
+      "url": "/stages/${stageForm.value.id}"
+    },
+    {
+      "file": "components/kanban1/deals/Deals.vue",
+      "line": 1044,
+      "method": "post",
+      "url": "/deals/${deal.id}/change-stage"
+    },
+    {
+      "file": "components/kanban1/deals/ViewDealModal.vue",
+      "line": 538,
+      "method": "get",
+      "url": "/deals/${props.deal.id}/history"
+    },
+    {
+      "file": "components/kanban1/deals/ViewDealModal.vue",
+      "line": 687,
+      "method": "get",
+      "url": "/listings/areas"
+    },
+    {
+      "file": "components/kanban1/deals/ViewDealModal.vue",
+      "line": 697,
+      "method": "get",
+      "url": "/listings/areas"
+    },
+    {
+      "file": "components/kanban1/deals/ViewDealModal.vue",
+      "line": 702,
+      "method": "get",
+      "url": "/listings/projects"
+    },
+    {
+      "file": "components/kanban1/deals/ViewDealModal.vue",
+      "line": 714,
+      "method": "get",
+      "url": "/deals/${props.deal.id}"
+    },
+    {
+      "file": "components/kanban1/leadList/ImportPitrix.vue",
+      "line": 328,
+      "method": "post",
+      "url": "/api/leads/import"
+    },
+    {
       "file": "composables/useStageTransition.js",
       "line": 8,
       "method": "post",
@@ -4135,141 +4465,17 @@
     "routes/api.php": [
       {
         "file": "routes/api.php",
-        "line": 384,
+        "line": 382,
         "method": "GET",
         "url": "/api/v1/mobile/kanban",
         "source": "laravel-mobile"
       },
       {
         "file": "routes/api.php",
-        "line": 385,
+        "line": 383,
         "method": "POST",
         "url": "/api/v1/mobile/leads/{lead}/move",
         "source": "laravel-mobile"
-      }
-    ],
-    "components/dashboard": [
-      {
-        "file": "components/dashboard/Ai/AiWidgets.vue",
-        "line": 138,
-        "method": "get",
-        "url": "/api/dashboard/stats"
-      },
-      {
-        "file": "components/dashboard/Ai/LatestUser.vue",
-        "line": 333,
-        "method": "get",
-        "url": "/api/dashboard/admin/latest-requests"
-      },
-      {
-        "file": "components/dashboard/Ai/LatestUser.vue",
-        "line": 350,
-        "method": "get",
-        "url": "/api/dashboard/my-latest-requests"
-      },
-      {
-        "file": "components/dashboard/Ai/LatestUser.vue",
-        "line": 357,
-        "method": "get",
-        "url": "/api/dashboard/my-latest-orders"
-      },
-      {
-        "file": "components/dashboard/Ai/propertyType.vue",
-        "line": 96,
-        "method": "get",
-        "url": "/api/dashboard/property-types-with-listings"
-      },
-      {
-        "file": "components/dashboard/Ai/SalesStatistic.vue",
-        "line": 38,
-        "method": "get",
-        "url": "/api/dashboard/listings-statistics?period=${selectedPeriod.value}"
-      },
-      {
-        "file": "components/dashboard/Ai/TopPerformer.vue",
-        "line": 69,
-        "method": "get",
-        "url": "/api/dashboard/top-agent-performance"
-      },
-      {
-        "file": "components/dashboard/Ai/TotalSubscriber.vue",
-        "line": 41,
-        "method": "get",
-        "url": "/api/dashboard/active-agents"
-      },
-      {
-        "file": "components/dashboard/Ai/UserOverview.vue",
-        "line": 74,
-        "method": "get",
-        "url": "/api/dashboard/leads-overview?timeframe=${selectedTimeframe.value}"
-      }
-    ],
-    "components/kanban": [
-      {
-        "file": "components/kanban/deals/Deals.vue",
-        "line": 731,
-        "method": "get",
-        "url": "/deals/grouped-by-stage"
-      },
-      {
-        "file": "components/kanban/deals/Deals.vue",
-        "line": 1123,
-        "method": "put",
-        "url": "/stages/${column.stage_id}"
-      },
-      {
-        "file": "components/kanban/deals/Deals.vue",
-        "line": 1176,
-        "method": "put",
-        "url": "/stages/${stageForm.value.id}"
-      },
-      {
-        "file": "components/kanban/deals/Deals.vue",
-        "line": 1351,
-        "method": "post",
-        "url": "/deals/${deal.id}/change-stage"
-      },
-      {
-        "file": "components/kanban/deals/Deals.vue",
-        "line": 1673,
-        "method": "get",
-        "url": "/available-responsible-persons"
-      },
-      {
-        "file": "components/kanban/deals/ViewDealModal.vue",
-        "line": 343,
-        "method": "get",
-        "url": "/stages"
-      },
-      {
-        "file": "components/kanban/deals/ViewDealModal.vue",
-        "line": 538,
-        "method": "get",
-        "url": "/listings/areas"
-      },
-      {
-        "file": "components/kanban/deals/ViewDealModal.vue",
-        "line": 548,
-        "method": "get",
-        "url": "/listings/areas"
-      },
-      {
-        "file": "components/kanban/deals/ViewDealModal.vue",
-        "line": 553,
-        "method": "get",
-        "url": "/listings/projects"
-      },
-      {
-        "file": "components/kanban/deals/ViewDealModal.vue",
-        "line": 566,
-        "method": "get",
-        "url": "/deals/${props.deal.id}"
-      },
-      {
-        "file": "components/kanban/leadList/ImportPitrix.vue",
-        "line": 328,
-        "method": "post",
-        "url": "/api/leads/import"
       }
     ],
     "components/Users": [
@@ -4314,6 +4520,186 @@
         "line": 624,
         "method": "post",
         "url": "/api/profile/avatar"
+      }
+    ],
+    "components/dashboard": [
+      {
+        "file": "components/dashboard/Ai/AiWidgets.vue",
+        "line": 138,
+        "method": "get",
+        "url": "/api/dashboard/stats"
+      },
+      {
+        "file": "components/dashboard/Ai/LatestUser.vue",
+        "line": 333,
+        "method": "get",
+        "url": "/api/dashboard/admin/latest-requests"
+      },
+      {
+        "file": "components/dashboard/Ai/LatestUser.vue",
+        "line": 350,
+        "method": "get",
+        "url": "/api/dashboard/my-latest-requests"
+      },
+      {
+        "file": "components/dashboard/Ai/LatestUser.vue",
+        "line": 357,
+        "method": "get",
+        "url": "/api/dashboard/my-latest-orders"
+      },
+      {
+        "file": "components/dashboard/Ai/SalesStatistic.vue",
+        "line": 38,
+        "method": "get",
+        "url": "/api/dashboard/listings-statistics?period=${selectedPeriod.value}"
+      },
+      {
+        "file": "components/dashboard/Ai/TopPerformer.vue",
+        "line": 69,
+        "method": "get",
+        "url": "/api/dashboard/top-agent-performance"
+      },
+      {
+        "file": "components/dashboard/Ai/TotalSubscriber.vue",
+        "line": 41,
+        "method": "get",
+        "url": "/api/dashboard/active-agents"
+      },
+      {
+        "file": "components/dashboard/Ai/UserOverview.vue",
+        "line": 74,
+        "method": "get",
+        "url": "/api/dashboard/leads-overview?timeframe=${selectedTimeframe.value}"
+      },
+      {
+        "file": "components/dashboard/Ai/propertyType.vue",
+        "line": 96,
+        "method": "get",
+        "url": "/api/dashboard/property-types-with-listings"
+      }
+    ],
+    "components/kanban": [
+      {
+        "file": "components/kanban/deals/Deals.vue",
+        "line": 587,
+        "method": "get",
+        "url": "/deals/grouped-by-stage"
+      },
+      {
+        "file": "components/kanban/deals/Deals.vue",
+        "line": 979,
+        "method": "put",
+        "url": "/stages/${column.stage_id}"
+      },
+      {
+        "file": "components/kanban/deals/Deals.vue",
+        "line": 1032,
+        "method": "put",
+        "url": "/stages/${stageForm.value.id}"
+      },
+      {
+        "file": "components/kanban/deals/Deals.vue",
+        "line": 1182,
+        "method": "post",
+        "url": "/deals/${deal.id}/change-stage"
+      },
+      {
+        "file": "components/kanban/deals/Deals.vue",
+        "line": 1437,
+        "method": "get",
+        "url": "/available-responsible-persons"
+      },
+      {
+        "file": "components/kanban/deals/ViewDealModal.vue",
+        "line": 475,
+        "method": "get",
+        "url": "/listings/areas"
+      },
+      {
+        "file": "components/kanban/deals/ViewDealModal.vue",
+        "line": 485,
+        "method": "get",
+        "url": "/listings/areas"
+      },
+      {
+        "file": "components/kanban/deals/ViewDealModal.vue",
+        "line": 490,
+        "method": "get",
+        "url": "/listings/projects"
+      },
+      {
+        "file": "components/kanban/deals/ViewDealModal.vue",
+        "line": 502,
+        "method": "get",
+        "url": "/deals/${props.deal.id}"
+      },
+      {
+        "file": "components/kanban/leadList/ImportPitrix.vue",
+        "line": 328,
+        "method": "post",
+        "url": "/api/leads/import"
+      }
+    ],
+    "components/kanban1": [
+      {
+        "file": "components/kanban1/deals/Deals.vue",
+        "line": 469,
+        "method": "get",
+        "url": "/deals/grouped-by-stage"
+      },
+      {
+        "file": "components/kanban1/deals/Deals.vue",
+        "line": 851,
+        "method": "put",
+        "url": "/stages/${column.stage_id}"
+      },
+      {
+        "file": "components/kanban1/deals/Deals.vue",
+        "line": 911,
+        "method": "put",
+        "url": "/stages/${stageForm.value.id}"
+      },
+      {
+        "file": "components/kanban1/deals/Deals.vue",
+        "line": 1044,
+        "method": "post",
+        "url": "/deals/${deal.id}/change-stage"
+      },
+      {
+        "file": "components/kanban1/deals/ViewDealModal.vue",
+        "line": 538,
+        "method": "get",
+        "url": "/deals/${props.deal.id}/history"
+      },
+      {
+        "file": "components/kanban1/deals/ViewDealModal.vue",
+        "line": 687,
+        "method": "get",
+        "url": "/listings/areas"
+      },
+      {
+        "file": "components/kanban1/deals/ViewDealModal.vue",
+        "line": 697,
+        "method": "get",
+        "url": "/listings/areas"
+      },
+      {
+        "file": "components/kanban1/deals/ViewDealModal.vue",
+        "line": 702,
+        "method": "get",
+        "url": "/listings/projects"
+      },
+      {
+        "file": "components/kanban1/deals/ViewDealModal.vue",
+        "line": 714,
+        "method": "get",
+        "url": "/deals/${props.deal.id}"
+      },
+      {
+        "file": "components/kanban1/leadList/ImportPitrix.vue",
+        "line": 328,
+        "method": "post",
+        "url": "/api/leads/import"
       }
     ],
     "composables/useStageTransition.js": [
@@ -4381,6 +4767,27 @@
           }
         ],
         "components": [
+          {
+            "id": "components/kanban/Kanban_vue",
+            "rel": "components/kanban/Kanban.vue",
+            "label": "Kanban",
+            "file": "Kanban.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban/KanbanSettings_vue",
+            "rel": "components/kanban/KanbanSettings.vue",
+            "label": "Kanban Settings",
+            "file": "KanbanSettings.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban/LeadScoringSettings_vue",
+            "rel": "components/kanban/LeadScoringSettings.vue",
+            "label": "Lead Scoring Settings",
+            "file": "LeadScoringSettings.vue",
+            "shared": false
+          },
           {
             "id": "components/kanban/createLead/CreateLeadModal_vue",
             "rel": "components/kanban/createLead/CreateLeadModal.vue",
@@ -4473,13 +4880,6 @@
             "shared": false
           },
           {
-            "id": "components/kanban/deals/Deals_vue",
-            "rel": "components/kanban/deals/Deals.vue",
-            "label": "Deals",
-            "file": "Deals.vue",
-            "shared": false
-          },
-          {
             "id": "components/kanban/deals/DealSearchModal_vue",
             "rel": "components/kanban/deals/DealSearchModal.vue",
             "label": "Deal Search Modal",
@@ -4487,17 +4887,17 @@
             "shared": false
           },
           {
+            "id": "components/kanban/deals/Deals_vue",
+            "rel": "components/kanban/deals/Deals.vue",
+            "label": "Deals",
+            "file": "Deals.vue",
+            "shared": false
+          },
+          {
             "id": "components/kanban/deals/DocumentUpload_vue",
             "rel": "components/kanban/deals/DocumentUpload.vue",
             "label": "Document Upload",
             "file": "DocumentUpload.vue",
-            "shared": false
-          },
-          {
-            "id": "components/kanban/deals/InlineSectionEditor_vue",
-            "rel": "components/kanban/deals/InlineSectionEditor.vue",
-            "label": "Inline Section Editor",
-            "file": "InlineSectionEditor.vue",
             "shared": false
           },
           {
@@ -4512,13 +4912,6 @@
             "rel": "components/kanban/deals/RentalDealForm.vue",
             "label": "Rental Deal Form",
             "file": "RentalDealForm.vue",
-            "shared": false
-          },
-          {
-            "id": "components/kanban/deals/ResponsiblePersonSection_vue",
-            "rel": "components/kanban/deals/ResponsiblePersonSection.vue",
-            "label": "Responsible Person Section",
-            "file": "ResponsiblePersonSection.vue",
             "shared": false
           },
           {
@@ -4613,20 +5006,6 @@
             "shared": false
           },
           {
-            "id": "components/kanban/Kanban_vue",
-            "rel": "components/kanban/Kanban.vue",
-            "label": "Kanban",
-            "file": "Kanban.vue",
-            "shared": false
-          },
-          {
-            "id": "components/kanban/KanbanSettings_vue",
-            "rel": "components/kanban/KanbanSettings.vue",
-            "label": "Kanban Settings",
-            "file": "KanbanSettings.vue",
-            "shared": false
-          },
-          {
             "id": "components/kanban/kanban_deal_vue",
             "rel": "components/kanban/kanban_deal.vue",
             "label": "Kanban Deal",
@@ -4662,13 +5041,6 @@
             "shared": false
           },
           {
-            "id": "components/kanban/leadList/leads_vue",
-            "rel": "components/kanban/leadList/leads.vue",
-            "label": "Leads",
-            "file": "leads.vue",
-            "shared": false
-          },
-          {
             "id": "components/kanban/leadList/LeadSearchModal_vue",
             "rel": "components/kanban/leadList/LeadSearchModal.vue",
             "label": "Lead Search Modal",
@@ -4683,10 +5055,10 @@
             "shared": false
           },
           {
-            "id": "components/kanban/LeadScoringSettings_vue",
-            "rel": "components/kanban/LeadScoringSettings.vue",
-            "label": "Lead Scoring Settings",
-            "file": "LeadScoringSettings.vue",
+            "id": "components/kanban/leadList/leads_vue",
+            "rel": "components/kanban/leadList/leads.vue",
+            "label": "Leads",
+            "file": "leads.vue",
             "shared": false
           },
           {
@@ -4849,6 +5221,398 @@
             "label": "View Lead Modal",
             "file": "ViewLeadModal.vue",
             "shared": false
+          },
+          {
+            "id": "components/kanban1/Kanban_vue",
+            "rel": "components/kanban1/Kanban.vue",
+            "label": "Kanban",
+            "file": "Kanban.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/KanbanSettings_vue",
+            "rel": "components/kanban1/KanbanSettings.vue",
+            "label": "Kanban Settings",
+            "file": "KanbanSettings.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/Kanban_deal_vue",
+            "rel": "components/kanban1/Kanban_deal.vue",
+            "label": "Kanban Deal",
+            "file": "Kanban_deal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/LeadScoringSettings_vue",
+            "rel": "components/kanban1/LeadScoringSettings.vue",
+            "label": "Lead Scoring Settings",
+            "file": "LeadScoringSettings.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/createLead/CreateLeadModal_vue",
+            "rel": "components/kanban1/createLead/CreateLeadModal.vue",
+            "label": "Create Lead Modal",
+            "file": "CreateLeadModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/CompleteStageFieldsModal_vue",
+            "rel": "components/kanban1/deals/CompleteStageFieldsModal.vue",
+            "label": "Complete Stage Fields Modal",
+            "file": "CompleteStageFieldsModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/CreateDealModal_vue",
+            "rel": "components/kanban1/deals/CreateDealModal.vue",
+            "label": "Create Deal Modal",
+            "file": "CreateDealModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/DealCreatedCard_vue",
+            "rel": "components/kanban1/deals/DealCreatedCard.vue",
+            "label": "Deal Created Card",
+            "file": "DealCreatedCard.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/DealForm_vue",
+            "rel": "components/kanban1/deals/DealForm.vue",
+            "label": "Deal Form",
+            "file": "DealForm.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/Deals_vue",
+            "rel": "components/kanban1/deals/Deals.vue",
+            "label": "Deals",
+            "file": "Deals.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/DocumentUpload_vue",
+            "rel": "components/kanban1/deals/DocumentUpload.vue",
+            "label": "Document Upload",
+            "file": "DocumentUpload.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/PrimaryDealForm_vue",
+            "rel": "components/kanban1/deals/PrimaryDealForm.vue",
+            "label": "Primary Deal Form",
+            "file": "PrimaryDealForm.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/RentalDealForm_vue",
+            "rel": "components/kanban1/deals/RentalDealForm.vue",
+            "label": "Rental Deal Form",
+            "file": "RentalDealForm.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/SecondaryDealForm_vue",
+            "rel": "components/kanban1/deals/SecondaryDealForm.vue",
+            "label": "Secondary Deal Form",
+            "file": "SecondaryDealForm.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/StageChangeReasonModal_vue",
+            "rel": "components/kanban1/deals/StageChangeReasonModal.vue",
+            "label": "Stage Change Reason Modal",
+            "file": "StageChangeReasonModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/ViewDealModal_vue",
+            "rel": "components/kanban1/deals/ViewDealModal.vue",
+            "label": "View Deal Modal",
+            "file": "ViewDealModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/ViewPrimaryDeal_vue",
+            "rel": "components/kanban1/deals/ViewPrimaryDeal.vue",
+            "label": "View Primary Deal",
+            "file": "ViewPrimaryDeal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/ViewRentalDeal_vue",
+            "rel": "components/kanban1/deals/ViewRentalDeal.vue",
+            "label": "View Rental Deal",
+            "file": "ViewRentalDeal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/deals/ViewSecondaryDeal_vue",
+            "rel": "components/kanban1/deals/ViewSecondaryDeal.vue",
+            "label": "View Secondary Deal",
+            "file": "ViewSecondaryDeal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/editLead/EditLead_vue",
+            "rel": "components/kanban1/editLead/EditLead.vue",
+            "label": "Edit Lead",
+            "file": "EditLead.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/integration/CreateIntegrationModal_vue",
+            "rel": "components/kanban1/integration/CreateIntegrationModal.vue",
+            "label": "Create Integration Modal",
+            "file": "CreateIntegrationModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/integration/CrmEntitiesTab_vue",
+            "rel": "components/kanban1/integration/CrmEntitiesTab.vue",
+            "label": "Crm Entities Tab",
+            "file": "CrmEntitiesTab.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/integration/FacebookLeadAdsTab_vue",
+            "rel": "components/kanban1/integration/FacebookLeadAdsTab.vue",
+            "label": "Facebook Lead Ads Tab",
+            "file": "FacebookLeadAdsTab.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/integration/HiddenFieldValuesTab_vue",
+            "rel": "components/kanban1/integration/HiddenFieldValuesTab.vue",
+            "label": "Hidden Field Values Tab",
+            "file": "HiddenFieldValuesTab.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/integration/Integration_vue",
+            "rel": "components/kanban1/integration/Integration.vue",
+            "label": "Integration",
+            "file": "Integration.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/integration/OtherSettingsTab_vue",
+            "rel": "components/kanban1/integration/OtherSettingsTab.vue",
+            "label": "Other Settings Tab",
+            "file": "OtherSettingsTab.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/leadList/ConvertLeadModal_vue",
+            "rel": "components/kanban1/leadList/ConvertLeadModal.vue",
+            "label": "Convert Lead Modal",
+            "file": "ConvertLeadModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/leadList/DuplicateLeadsModal_vue",
+            "rel": "components/kanban1/leadList/DuplicateLeadsModal.vue",
+            "label": "Duplicate Leads Modal",
+            "file": "DuplicateLeadsModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/leadList/FilterFieldSettingsModal_vue",
+            "rel": "components/kanban1/leadList/FilterFieldSettingsModal.vue",
+            "label": "Filter Field Settings Modal",
+            "file": "FilterFieldSettingsModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/leadList/ImportPitrix_vue",
+            "rel": "components/kanban1/leadList/ImportPitrix.vue",
+            "label": "Import Pitrix",
+            "file": "ImportPitrix.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/leadList/LeadSearchModal_vue",
+            "rel": "components/kanban1/leadList/LeadSearchModal.vue",
+            "label": "Lead Search Modal",
+            "file": "LeadSearchModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/leadList/StageChangeReasonModal_vue",
+            "rel": "components/kanban1/leadList/StageChangeReasonModal.vue",
+            "label": "Stage Change Reason Modal",
+            "file": "StageChangeReasonModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/leadList/leads_vue",
+            "rel": "components/kanban1/leadList/leads.vue",
+            "label": "Leads",
+            "file": "leads.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/settings/DealsSettings_vue",
+            "rel": "components/kanban1/settings/DealsSettings.vue",
+            "label": "Deals Settings",
+            "file": "DealsSettings.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/settings/SettingsHub_vue",
+            "rel": "components/kanban1/settings/SettingsHub.vue",
+            "label": "Settings Hub",
+            "file": "SettingsHub.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/shared/DateTimePicker_vue",
+            "rel": "components/kanban1/shared/DateTimePicker.vue",
+            "label": "Date Time Picker",
+            "file": "DateTimePicker.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/shared/ModalHeader_vue",
+            "rel": "components/kanban1/shared/ModalHeader.vue",
+            "label": "Modal Header",
+            "file": "ModalHeader.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/shared/ProfilePopup_vue",
+            "rel": "components/kanban1/shared/ProfilePopup.vue",
+            "label": "Profile Popup",
+            "file": "ProfilePopup.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/shared/ResponsiblePersonSelector_vue",
+            "rel": "components/kanban1/shared/ResponsiblePersonSelector.vue",
+            "label": "Responsible Person Selector",
+            "file": "ResponsiblePersonSelector.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/shared/StageSelector_vue",
+            "rel": "components/kanban1/shared/StageSelector.vue",
+            "label": "Stage Selector",
+            "file": "StageSelector.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/stage/AddStageModal_vue",
+            "rel": "components/kanban1/stage/AddStageModal.vue",
+            "label": "Add Stage Modal",
+            "file": "AddStageModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/stage/StageVisibility_vue",
+            "rel": "components/kanban1/stage/StageVisibility.vue",
+            "label": "Stage Visibility",
+            "file": "StageVisibility.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/ActivityList_vue",
+            "rel": "components/kanban1/viewLead/ActivityList.vue",
+            "label": "Activity List",
+            "file": "ActivityList.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/ActivitySection_vue",
+            "rel": "components/kanban1/viewLead/ActivitySection.vue",
+            "label": "Activity Section",
+            "file": "ActivitySection.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/CommentList_vue",
+            "rel": "components/kanban1/viewLead/CommentList.vue",
+            "label": "Comment List",
+            "file": "CommentList.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/CommentsSection_vue",
+            "rel": "components/kanban1/viewLead/CommentsSection.vue",
+            "label": "Comments Section",
+            "file": "CommentsSection.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/GeneralTab_vue",
+            "rel": "components/kanban1/viewLead/GeneralTab.vue",
+            "label": "General Tab",
+            "file": "GeneralTab.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/HistorySearchModal_vue",
+            "rel": "components/kanban1/viewLead/HistorySearchModal.vue",
+            "label": "History Search Modal",
+            "file": "HistorySearchModal.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/HistoryTab_vue",
+            "rel": "components/kanban1/viewLead/HistoryTab.vue",
+            "label": "History Tab",
+            "file": "HistoryTab.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/LeadActivityTimeline_vue",
+            "rel": "components/kanban1/viewLead/LeadActivityTimeline.vue",
+            "label": "Lead Activity Timeline",
+            "file": "LeadActivityTimeline.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/LeadCreatedCard_vue",
+            "rel": "components/kanban1/viewLead/LeadCreatedCard.vue",
+            "label": "Lead Created Card",
+            "file": "LeadCreatedCard.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/LeadInfoView_vue",
+            "rel": "components/kanban1/viewLead/LeadInfoView.vue",
+            "label": "Lead Info View",
+            "file": "LeadInfoView.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/MatchingPropertiesSection_vue",
+            "rel": "components/kanban1/viewLead/MatchingPropertiesSection.vue",
+            "label": "Matching Properties Section",
+            "file": "MatchingPropertiesSection.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/ResponsiblePersonSection_vue",
+            "rel": "components/kanban1/viewLead/ResponsiblePersonSection.vue",
+            "label": "Responsible Person Section",
+            "file": "ResponsiblePersonSection.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/ViewLead_vue",
+            "rel": "components/kanban1/viewLead/ViewLead.vue",
+            "label": "View Lead",
+            "file": "ViewLead.vue",
+            "shared": false
+          },
+          {
+            "id": "components/kanban1/viewLead/ViewLeadModal_vue",
+            "rel": "components/kanban1/viewLead/ViewLeadModal.vue",
+            "label": "View Lead Modal",
+            "file": "ViewLeadModal.vue",
+            "shared": false
           }
         ],
         "composables": [],
@@ -4858,78 +5622,132 @@
             "method": "GET",
             "url": "/api/v1/mobile/kanban",
             "file": "routes/api.php",
-            "line": 384
+            "line": 382
           },
           {
             "method": "POST",
             "url": "/api/v1/mobile/leads/{lead}/move",
             "file": "routes/api.php",
-            "line": 385
+            "line": 383
           },
           {
             "method": "get",
             "url": "/deals/grouped-by-stage",
             "file": "components/kanban/deals/Deals.vue",
-            "line": 731
+            "line": 587
           },
           {
             "method": "put",
             "url": "/stages/${column.stage_id}",
             "file": "components/kanban/deals/Deals.vue",
-            "line": 1123
+            "line": 979
           },
           {
             "method": "put",
             "url": "/stages/${stageForm.value.id}",
             "file": "components/kanban/deals/Deals.vue",
-            "line": 1176
+            "line": 1032
           },
           {
             "method": "post",
             "url": "/deals/${deal.id}/change-stage",
             "file": "components/kanban/deals/Deals.vue",
-            "line": 1351
+            "line": 1182
           },
           {
             "method": "get",
             "url": "/available-responsible-persons",
             "file": "components/kanban/deals/Deals.vue",
-            "line": 1673
-          },
-          {
-            "method": "get",
-            "url": "/stages",
-            "file": "components/kanban/deals/ViewDealModal.vue",
-            "line": 343
+            "line": 1437
           },
           {
             "method": "get",
             "url": "/listings/areas",
             "file": "components/kanban/deals/ViewDealModal.vue",
-            "line": 538
+            "line": 475
           },
           {
             "method": "get",
             "url": "/listings/areas",
             "file": "components/kanban/deals/ViewDealModal.vue",
-            "line": 548
+            "line": 485
           },
           {
             "method": "get",
             "url": "/listings/projects",
             "file": "components/kanban/deals/ViewDealModal.vue",
-            "line": 553
+            "line": 490
           },
           {
             "method": "get",
             "url": "/deals/${props.deal.id}",
             "file": "components/kanban/deals/ViewDealModal.vue",
-            "line": 566
+            "line": 502
           },
           {
             "method": "post",
             "url": "/api/leads/import",
             "file": "components/kanban/leadList/ImportPitrix.vue",
+            "line": 328
+          },
+          {
+            "method": "get",
+            "url": "/deals/grouped-by-stage",
+            "file": "components/kanban1/deals/Deals.vue",
+            "line": 469
+          },
+          {
+            "method": "put",
+            "url": "/stages/${column.stage_id}",
+            "file": "components/kanban1/deals/Deals.vue",
+            "line": 851
+          },
+          {
+            "method": "put",
+            "url": "/stages/${stageForm.value.id}",
+            "file": "components/kanban1/deals/Deals.vue",
+            "line": 911
+          },
+          {
+            "method": "post",
+            "url": "/deals/${deal.id}/change-stage",
+            "file": "components/kanban1/deals/Deals.vue",
+            "line": 1044
+          },
+          {
+            "method": "get",
+            "url": "/deals/${props.deal.id}/history",
+            "file": "components/kanban1/deals/ViewDealModal.vue",
+            "line": 538
+          },
+          {
+            "method": "get",
+            "url": "/listings/areas",
+            "file": "components/kanban1/deals/ViewDealModal.vue",
+            "line": 687
+          },
+          {
+            "method": "get",
+            "url": "/listings/areas",
+            "file": "components/kanban1/deals/ViewDealModal.vue",
+            "line": 697
+          },
+          {
+            "method": "get",
+            "url": "/listings/projects",
+            "file": "components/kanban1/deals/ViewDealModal.vue",
+            "line": 702
+          },
+          {
+            "method": "get",
+            "url": "/deals/${props.deal.id}",
+            "file": "components/kanban1/deals/ViewDealModal.vue",
+            "line": 714
+          },
+          {
+            "method": "post",
+            "url": "/api/leads/import",
+            "file": "components/kanban1/leadList/ImportPitrix.vue",
             "line": 328
           }
         ]
@@ -4943,6 +5761,14 @@
             "rel": "pages/listings/AllRequests.vue",
             "label": "All Requests",
             "file": "AllRequests.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
+            "id": "pages/listings/SearchBar_vue",
+            "rel": "pages/listings/SearchBar.vue",
+            "label": "Search Bar",
+            "file": "SearchBar.vue",
             "shared": false,
             "isEntry": true
           },
@@ -5015,14 +5841,6 @@
             "rel": "pages/listings/property-map.vue",
             "label": "Property Map",
             "file": "property-map.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
-            "id": "pages/listings/SearchBar_vue",
-            "rel": "pages/listings/SearchBar.vue",
-            "label": "Search Bar",
-            "file": "SearchBar.vue",
             "shared": false,
             "isEntry": true
           }
@@ -5221,6 +6039,22 @@
         "title": "Dashboard & AI home",
         "pages": [
           {
+            "id": "pages/dashboard/NFTgaming_vue",
+            "rel": "pages/dashboard/NFTgaming.vue",
+            "label": "NFTgaming",
+            "file": "NFTgaming.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
+            "id": "pages/dashboard/PosInventory_vue",
+            "rel": "pages/dashboard/PosInventory.vue",
+            "label": "Pos Inventory",
+            "file": "PosInventory.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
             "id": "pages/dashboard/ai_vue",
             "rel": "pages/dashboard/ai.vue",
             "label": "Ai",
@@ -5317,26 +6151,10 @@
             "isEntry": true
           },
           {
-            "id": "pages/dashboard/NFTgaming_vue",
-            "rel": "pages/dashboard/NFTgaming.vue",
-            "label": "NFTgaming",
-            "file": "NFTgaming.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
             "id": "pages/dashboard/podcast_vue",
             "rel": "pages/dashboard/podcast.vue",
             "label": "Podcast",
             "file": "podcast.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
-            "id": "pages/dashboard/PosInventory_vue",
-            "rel": "pages/dashboard/PosInventory.vue",
-            "label": "Pos Inventory",
-            "file": "PosInventory.vue",
             "shared": false,
             "isEntry": true
           },
@@ -5379,13 +6197,6 @@
             "shared": false
           },
           {
-            "id": "components/dashboard/Ai/propertyType_vue",
-            "rel": "components/dashboard/Ai/propertyType.vue",
-            "label": "Property Type",
-            "file": "propertyType.vue",
-            "shared": false
-          },
-          {
             "id": "components/dashboard/Ai/SalesStatistic_vue",
             "rel": "components/dashboard/Ai/SalesStatistic.vue",
             "label": "Sales Statistic",
@@ -5411,6 +6222,13 @@
             "rel": "components/dashboard/Ai/UserOverview.vue",
             "label": "User Overview",
             "file": "UserOverview.vue",
+            "shared": false
+          },
+          {
+            "id": "components/dashboard/Ai/propertyType_vue",
+            "rel": "components/dashboard/Ai/propertyType.vue",
+            "label": "Property Type",
+            "file": "propertyType.vue",
             "shared": false
           },
           {
@@ -5513,12 +6331,6 @@
           },
           {
             "method": "get",
-            "url": "/api/dashboard/property-types-with-listings",
-            "file": "components/dashboard/Ai/propertyType.vue",
-            "line": 96
-          },
-          {
-            "method": "get",
             "url": "/api/dashboard/listings-statistics?period=${selectedPeriod.value}",
             "file": "components/dashboard/Ai/SalesStatistic.vue",
             "line": 38
@@ -5540,6 +6352,12 @@
             "url": "/api/dashboard/leads-overview?timeframe=${selectedTimeframe.value}",
             "file": "components/dashboard/Ai/UserOverview.vue",
             "line": 74
+          },
+          {
+            "method": "get",
+            "url": "/api/dashboard/property-types-with-listings",
+            "file": "components/dashboard/Ai/propertyType.vue",
+            "line": 96
           }
         ]
       },
@@ -5635,6 +6453,30 @@
             "isEntry": true
           },
           {
+            "id": "pages/users/UserDetail_vue",
+            "rel": "pages/users/UserDetail.vue",
+            "label": "User Detail",
+            "file": "UserDetail.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
+            "id": "pages/users/UserForm_vue",
+            "rel": "pages/users/UserForm.vue",
+            "label": "User Form",
+            "file": "UserForm.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
+            "id": "pages/users/UsersList_vue",
+            "rel": "pages/users/UsersList.vue",
+            "label": "Users List",
+            "file": "UsersList.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
             "id": "pages/users/add-user_vue",
             "rel": "pages/users/add-user.vue",
             "label": "Add User",
@@ -5667,22 +6509,6 @@
             "isEntry": true
           },
           {
-            "id": "pages/users/UserDetail_vue",
-            "rel": "pages/users/UserDetail.vue",
-            "label": "User Detail",
-            "file": "UserDetail.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
-            "id": "pages/users/UserForm_vue",
-            "rel": "pages/users/UserForm.vue",
-            "label": "User Form",
-            "file": "UserForm.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
             "id": "pages/users/users-grid_vue",
             "rel": "pages/users/users-grid.vue",
             "label": "Users Grid",
@@ -5695,14 +6521,6 @@
             "rel": "pages/users/users-list.vue",
             "label": "Users List",
             "file": "users-list.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
-            "id": "pages/users/UsersList_vue",
-            "rel": "pages/users/UsersList.vue",
-            "label": "Users List",
-            "file": "UsersList.vue",
             "shared": false,
             "isEntry": true
           },
@@ -5836,14 +6654,6 @@
         "title": "Email",
         "pages": [
           {
-            "id": "pages/email/email_vue",
-            "rel": "pages/email/email.vue",
-            "label": "Email",
-            "file": "email.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
             "id": "pages/email/StarredEmail_vue",
             "rel": "pages/email/StarredEmail.vue",
             "label": "Starred Email",
@@ -5856,6 +6666,14 @@
             "rel": "pages/email/VeiwDetails.vue",
             "label": "Veiw Details",
             "file": "VeiwDetails.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
+            "id": "pages/email/email_vue",
+            "rel": "pages/email/email.vue",
+            "label": "Email",
+            "file": "email.vue",
             "shared": false,
             "isEntry": true
           }
@@ -5906,18 +6724,18 @@
         "title": "Developers / owners / catalog",
         "pages": [
           {
-            "id": "pages/areas/areas-list_vue",
-            "rel": "pages/areas/areas-list.vue",
-            "label": "Areas List",
-            "file": "areas-list.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
             "id": "pages/areas/BulkAreaCoordinates_vue",
             "rel": "pages/areas/BulkAreaCoordinates.vue",
             "label": "Bulk Area Coordinates",
             "file": "BulkAreaCoordinates.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
+            "id": "pages/areas/areas-list_vue",
+            "rel": "pages/areas/areas-list.vue",
+            "label": "Areas List",
+            "file": "areas-list.vue",
             "shared": false,
             "isEntry": true
           },
@@ -6441,6 +7259,14 @@
         "title": "Dev tools",
         "pages": [
           {
+            "id": "pages/dev/ProjectMapPage_vue",
+            "rel": "pages/dev/ProjectMapPage.vue",
+            "label": "Project Map Page",
+            "file": "ProjectMapPage.vue",
+            "shared": false,
+            "isEntry": true
+          },
+          {
             "id": "pages/dev/project-map/nodes/RoadmapNode_vue",
             "rel": "pages/dev/project-map/nodes/RoadmapNode.vue",
             "label": "Roadmap Node",
@@ -6517,14 +7343,6 @@
             "rel": "pages/dev/project-map/tabs/RoutesTab.vue",
             "label": "Routes Tab",
             "file": "RoutesTab.vue",
-            "shared": false,
-            "isEntry": true
-          },
-          {
-            "id": "pages/dev/ProjectMapPage_vue",
-            "rel": "pages/dev/ProjectMapPage.vue",
-            "label": "Project Map Page",
-            "file": "ProjectMapPage.vue",
             "shared": false,
             "isEntry": true
           }
@@ -6869,13 +7687,6 @@
         ],
         "components": [
           {
-            "id": "components/breadcrumb/Breadcrumb_vue",
-            "rel": "components/breadcrumb/Breadcrumb.vue",
-            "label": "Breadcrumb",
-            "file": "Breadcrumb.vue",
-            "shared": false
-          },
-          {
             "id": "components/ConfirmationModal_vue",
             "rel": "components/ConfirmationModal.vue",
             "label": "Confirmation Modal",
@@ -6887,13 +7698,6 @@
             "rel": "components/NotificationBell.vue",
             "label": "Notification Bell",
             "file": "NotificationBell.vue",
-            "shared": false
-          },
-          {
-            "id": "components/pagination/index_vue",
-            "rel": "components/pagination/index.vue",
-            "label": "Index",
-            "file": "index.vue",
             "shared": false
           },
           {
@@ -7048,6 +7852,20 @@
             "rel": "components/Table/UsersTable.vue",
             "label": "Users Table",
             "file": "UsersTable.vue",
+            "shared": false
+          },
+          {
+            "id": "components/breadcrumb/Breadcrumb_vue",
+            "rel": "components/breadcrumb/Breadcrumb.vue",
+            "label": "Breadcrumb",
+            "file": "Breadcrumb.vue",
+            "shared": false
+          },
+          {
+            "id": "components/pagination/index_vue",
+            "rel": "components/pagination/index.vue",
+            "label": "Index",
+            "file": "index.vue",
             "shared": false
           }
         ],
@@ -7480,11 +8298,193 @@
         }
       },
       {
-        "id": "f:components/alllisting/AllLsting.vue",
+        "id": "f:components/RoleAccess/AssignRole.vue",
         "type": "roadmap",
         "position": {
           "x": 200,
           "y": 360
+        },
+        "data": {
+          "group": "component",
+          "label": "Assign Role",
+          "detail": "components/RoleAccess/AssignRole.vue",
+          "rel": "components/RoleAccess/AssignRole.vue"
+        }
+      },
+      {
+        "id": "f:components/pagination/index.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 400,
+          "y": 360
+        },
+        "data": {
+          "group": "component",
+          "label": "Index",
+          "detail": "components/pagination/index.vue",
+          "rel": "components/pagination/index.vue"
+        }
+      },
+      {
+        "id": "f:components/RoleAccess/Role.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 600,
+          "y": 360
+        },
+        "data": {
+          "group": "component",
+          "label": "Role",
+          "detail": "components/RoleAccess/Role.vue",
+          "rel": "components/RoleAccess/Role.vue"
+        }
+      },
+      {
+        "id": "f:components/Settings/Currencies.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 800,
+          "y": 360
+        },
+        "data": {
+          "group": "component",
+          "label": "Currencies",
+          "detail": "components/Settings/Currencies.vue",
+          "rel": "components/Settings/Currencies.vue"
+        }
+      },
+      {
+        "id": "f:components/Settings/Languages.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 1000,
+          "y": 360
+        },
+        "data": {
+          "group": "component",
+          "label": "Languages",
+          "detail": "components/Settings/Languages.vue",
+          "rel": "components/Settings/Languages.vue"
+        }
+      },
+      {
+        "id": "f:components/Table/AreasTable.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 0,
+          "y": 450
+        },
+        "data": {
+          "group": "component",
+          "label": "Areas Table",
+          "detail": "components/Table/AreasTable.vue",
+          "rel": "components/Table/AreasTable.vue"
+        }
+      },
+      {
+        "id": "f:components/Table/TreeNode.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 200,
+          "y": 450
+        },
+        "data": {
+          "group": "component",
+          "label": "Tree Node",
+          "detail": "components/Table/TreeNode.vue",
+          "rel": "components/Table/TreeNode.vue"
+        }
+      },
+      {
+        "id": "f:components/Table/ProjectTable.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 400,
+          "y": 450
+        },
+        "data": {
+          "group": "component",
+          "label": "Project Table",
+          "detail": "components/Table/ProjectTable.vue",
+          "rel": "components/Table/ProjectTable.vue"
+        }
+      },
+      {
+        "id": "f:components/breadcrumb/Breadcrumb.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 600,
+          "y": 450
+        },
+        "data": {
+          "group": "component",
+          "label": "Breadcrumb",
+          "detail": "components/breadcrumb/Breadcrumb.vue",
+          "rel": "components/breadcrumb/Breadcrumb.vue"
+        }
+      },
+      {
+        "id": "f:components/Table/TeamTree.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 800,
+          "y": 450
+        },
+        "data": {
+          "group": "component",
+          "label": "Team Tree",
+          "detail": "components/Table/TeamTree.vue",
+          "rel": "components/Table/TeamTree.vue"
+        }
+      },
+      {
+        "id": "f:components/Table/TeamTreeNode.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 1000,
+          "y": 450
+        },
+        "data": {
+          "group": "component",
+          "label": "Team Tree Node",
+          "detail": "components/Table/TeamTreeNode.vue",
+          "rel": "components/Table/TeamTreeNode.vue"
+        }
+      },
+      {
+        "id": "f:components/Users/UserGrid.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 0,
+          "y": 540
+        },
+        "data": {
+          "group": "component",
+          "label": "User Grid",
+          "detail": "components/Users/UserGrid.vue",
+          "rel": "components/Users/UserGrid.vue"
+        }
+      },
+      {
+        "id": "f:components/Users/UserList.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 200,
+          "y": 540
+        },
+        "data": {
+          "group": "component",
+          "label": "User List",
+          "detail": "components/Users/UserList.vue",
+          "rel": "components/Users/UserList.vue"
+        }
+      },
+      {
+        "id": "f:components/alllisting/AllLsting.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 400,
+          "y": 540
         },
         "data": {
           "group": "component",
@@ -7497,8 +8497,8 @@
         "id": "f:components/alllisting/SearchBar.vue",
         "type": "roadmap",
         "position": {
-          "x": 400,
-          "y": 360
+          "x": 600,
+          "y": 540
         },
         "data": {
           "group": "component",
@@ -7508,25 +8508,11 @@
         }
       },
       {
-        "id": "f:components/breadcrumb/Breadcrumb.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 600,
-          "y": 360
-        },
-        "data": {
-          "group": "component",
-          "label": "Breadcrumb",
-          "detail": "components/breadcrumb/Breadcrumb.vue",
-          "rel": "components/breadcrumb/Breadcrumb.vue"
-        }
-      },
-      {
         "id": "f:components/alllisting/PropertyShow.vue",
         "type": "roadmap",
         "position": {
           "x": 800,
-          "y": 360
+          "y": 540
         },
         "data": {
           "group": "component",
@@ -7540,7 +8526,7 @@
         "type": "roadmap",
         "position": {
           "x": 1000,
-          "y": 360
+          "y": 540
         },
         "data": {
           "group": "component",
@@ -7554,7 +8540,7 @@
         "type": "roadmap",
         "position": {
           "x": 0,
-          "y": 450
+          "y": 630
         },
         "data": {
           "group": "component",
@@ -7568,7 +8554,7 @@
         "type": "roadmap",
         "position": {
           "x": 200,
-          "y": 450
+          "y": 630
         },
         "data": {
           "group": "component",
@@ -7582,7 +8568,7 @@
         "type": "roadmap",
         "position": {
           "x": 400,
-          "y": 450
+          "y": 630
         },
         "data": {
           "group": "component",
@@ -7596,7 +8582,7 @@
         "type": "roadmap",
         "position": {
           "x": 600,
-          "y": 450
+          "y": 630
         },
         "data": {
           "group": "component",
@@ -7610,7 +8596,7 @@
         "type": "roadmap",
         "position": {
           "x": 800,
-          "y": 450
+          "y": 630
         },
         "data": {
           "group": "component",
@@ -7624,7 +8610,7 @@
         "type": "roadmap",
         "position": {
           "x": 1000,
-          "y": 450
+          "y": 630
         },
         "data": {
           "group": "component",
@@ -7634,11 +8620,81 @@
         }
       },
       {
-        "id": "f:components/kanban/createLead/CreateLeadModal.vue",
+        "id": "f:components/kanban/Kanban.vue",
         "type": "roadmap",
         "position": {
           "x": 0,
-          "y": 540
+          "y": 720
+        },
+        "data": {
+          "group": "component",
+          "label": "Kanban",
+          "detail": "components/kanban/Kanban.vue",
+          "rel": "components/kanban/Kanban.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/Deals.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 200,
+          "y": 720
+        },
+        "data": {
+          "group": "component",
+          "label": "Deals",
+          "detail": "components/kanban/deals/Deals.vue",
+          "rel": "components/kanban/deals/Deals.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/leadList/leads.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 400,
+          "y": 720
+        },
+        "data": {
+          "group": "component",
+          "label": "Leads",
+          "detail": "components/kanban/leadList/leads.vue",
+          "rel": "components/kanban/leadList/leads.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/integration/Integration.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 600,
+          "y": 720
+        },
+        "data": {
+          "group": "component",
+          "label": "Integration",
+          "detail": "components/kanban/integration/Integration.vue",
+          "rel": "components/kanban/integration/Integration.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/leadList/LeadSearchModal.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 800,
+          "y": 720
+        },
+        "data": {
+          "group": "component",
+          "label": "Lead Search Modal",
+          "detail": "components/kanban/leadList/LeadSearchModal.vue",
+          "rel": "components/kanban/leadList/LeadSearchModal.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/createLead/CreateLeadModal.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 1000,
+          "y": 720
         },
         "data": {
           "group": "component",
@@ -7648,11 +8704,67 @@
         }
       },
       {
-        "id": "f:components/kanban/shared/ModalHeader.vue",
+        "id": "f:components/kanban/deals/CreateDealModal.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 0,
+          "y": 810
+        },
+        "data": {
+          "group": "component",
+          "label": "Create Deal Modal",
+          "detail": "components/kanban/deals/CreateDealModal.vue",
+          "rel": "components/kanban/deals/CreateDealModal.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/integration/CreateIntegrationModal.vue",
         "type": "roadmap",
         "position": {
           "x": 200,
-          "y": 540
+          "y": 810
+        },
+        "data": {
+          "group": "component",
+          "label": "Create Integration Modal",
+          "detail": "components/kanban/integration/CreateIntegrationModal.vue",
+          "rel": "components/kanban/integration/CreateIntegrationModal.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/stage/AddStageModal.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 400,
+          "y": 810
+        },
+        "data": {
+          "group": "component",
+          "label": "Add Stage Modal",
+          "detail": "components/kanban/stage/AddStageModal.vue",
+          "rel": "components/kanban/stage/AddStageModal.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/settings/SettingsHub.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 600,
+          "y": 810
+        },
+        "data": {
+          "group": "component",
+          "label": "Settings Hub",
+          "detail": "components/kanban/settings/SettingsHub.vue",
+          "rel": "components/kanban/settings/SettingsHub.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/shared/ModalHeader.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 800,
+          "y": 810
         },
         "data": {
           "group": "component",
@@ -7665,8 +8777,8 @@
         "id": "f:components/kanban/shared/StageSelector.vue",
         "type": "roadmap",
         "position": {
-          "x": 400,
-          "y": 540
+          "x": 1000,
+          "y": 810
         },
         "data": {
           "group": "component",
@@ -7679,8 +8791,8 @@
         "id": "f:components/kanban/shared/ResponsiblePersonSelector.vue",
         "type": "roadmap",
         "position": {
-          "x": 600,
-          "y": 540
+          "x": 0,
+          "y": 900
         },
         "data": {
           "group": "component",
@@ -7693,8 +8805,8 @@
         "id": "f:components/kanban/deals/CompleteStageFieldsModal.vue",
         "type": "roadmap",
         "position": {
-          "x": 800,
-          "y": 540
+          "x": 200,
+          "y": 900
         },
         "data": {
           "group": "component",
@@ -7707,8 +8819,8 @@
         "id": "f:components/kanban/deals/DocumentUpload.vue",
         "type": "roadmap",
         "position": {
-          "x": 1000,
-          "y": 540
+          "x": 400,
+          "y": 900
         },
         "data": {
           "group": "component",
@@ -7718,25 +8830,11 @@
         }
       },
       {
-        "id": "f:components/kanban/deals/CreateDealModal.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 0,
-          "y": 630
-        },
-        "data": {
-          "group": "component",
-          "label": "Create Deal Modal",
-          "detail": "components/kanban/deals/CreateDealModal.vue",
-          "rel": "components/kanban/deals/CreateDealModal.vue"
-        }
-      },
-      {
         "id": "f:components/kanban/deals/DealForm.vue",
         "type": "roadmap",
         "position": {
-          "x": 200,
-          "y": 630
+          "x": 600,
+          "y": 900
         },
         "data": {
           "group": "component",
@@ -7746,39 +8844,11 @@
         }
       },
       {
-        "id": "f:components/kanban/deals/DealActivityList.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 400,
-          "y": 630
-        },
-        "data": {
-          "group": "component",
-          "label": "Deal Activity List",
-          "detail": "components/kanban/deals/DealActivityList.vue",
-          "rel": "components/kanban/deals/DealActivityList.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/shared/DateTimePicker.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 600,
-          "y": 630
-        },
-        "data": {
-          "group": "component",
-          "label": "Date Time Picker",
-          "detail": "components/kanban/shared/DateTimePicker.vue",
-          "rel": "components/kanban/shared/DateTimePicker.vue"
-        }
-      },
-      {
         "id": "f:components/kanban/deals/DealActivitySection.vue",
         "type": "roadmap",
         "position": {
           "x": 800,
-          "y": 630
+          "y": 900
         },
         "data": {
           "group": "component",
@@ -7788,39 +8858,25 @@
         }
       },
       {
-        "id": "f:components/kanban/deals/DealCommentList.vue",
+        "id": "f:components/kanban/shared/DateTimePicker.vue",
         "type": "roadmap",
         "position": {
           "x": 1000,
-          "y": 630
+          "y": 900
         },
         "data": {
           "group": "component",
-          "label": "Deal Comment List",
-          "detail": "components/kanban/deals/DealCommentList.vue",
-          "rel": "components/kanban/deals/DealCommentList.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/shared/ProfilePopup.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 0,
-          "y": 720
-        },
-        "data": {
-          "group": "component",
-          "label": "Profile Popup",
-          "detail": "components/kanban/shared/ProfilePopup.vue",
-          "rel": "components/kanban/shared/ProfilePopup.vue"
+          "label": "Date Time Picker",
+          "detail": "components/kanban/shared/DateTimePicker.vue",
+          "rel": "components/kanban/shared/DateTimePicker.vue"
         }
       },
       {
         "id": "f:components/kanban/deals/DealHistoryPanel.vue",
         "type": "roadmap",
         "position": {
-          "x": 200,
-          "y": 720
+          "x": 0,
+          "y": 990
         },
         "data": {
           "group": "component",
@@ -7833,8 +8889,8 @@
         "id": "f:components/kanban/deals/DealHistorySearchModal.vue",
         "type": "roadmap",
         "position": {
-          "x": 400,
-          "y": 720
+          "x": 200,
+          "y": 990
         },
         "data": {
           "group": "component",
@@ -7844,17 +8900,31 @@
         }
       },
       {
-        "id": "f:components/kanban/deals/Deals.vue",
+        "id": "f:components/kanban/deals/DealSearchModal.vue",
         "type": "roadmap",
         "position": {
-          "x": 600,
-          "y": 720
+          "x": 400,
+          "y": 990
         },
         "data": {
           "group": "component",
-          "label": "Deals",
-          "detail": "components/kanban/deals/Deals.vue",
-          "rel": "components/kanban/deals/Deals.vue"
+          "label": "Deal Search Modal",
+          "detail": "components/kanban/deals/DealSearchModal.vue",
+          "rel": "components/kanban/deals/DealSearchModal.vue"
+        }
+      },
+      {
+        "id": "f:components/kanban/deals/DealFilterFieldSettingsModal.vue",
+        "type": "roadmap",
+        "position": {
+          "x": 600,
+          "y": 990
+        },
+        "data": {
+          "group": "component",
+          "label": "Deal Filter Field Settings Modal",
+          "detail": "components/kanban/deals/DealFilterFieldSettingsModal.vue",
+          "rel": "components/kanban/deals/DealFilterFieldSettingsModal.vue"
         }
       },
       {
@@ -7862,7 +8932,7 @@
         "type": "roadmap",
         "position": {
           "x": 800,
-          "y": 720
+          "y": 990
         },
         "data": {
           "group": "component",
@@ -7876,265 +8946,13 @@
         "type": "roadmap",
         "position": {
           "x": 1000,
-          "y": 720
+          "y": 990
         },
         "data": {
           "group": "component",
           "label": "Stage Change Reason Modal",
           "detail": "components/kanban/deals/StageChangeReasonModal.vue",
           "rel": "components/kanban/deals/StageChangeReasonModal.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/DealSearchModal.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 0,
-          "y": 810
-        },
-        "data": {
-          "group": "component",
-          "label": "Deal Search Modal",
-          "detail": "components/kanban/deals/DealSearchModal.vue",
-          "rel": "components/kanban/deals/DealSearchModal.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/DealFilterFieldSettingsModal.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 200,
-          "y": 810
-        },
-        "data": {
-          "group": "component",
-          "label": "Deal Filter Field Settings Modal",
-          "detail": "components/kanban/deals/DealFilterFieldSettingsModal.vue",
-          "rel": "components/kanban/deals/DealFilterFieldSettingsModal.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/InlineSectionEditor.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 400,
-          "y": 810
-        },
-        "data": {
-          "group": "component",
-          "label": "Inline Section Editor",
-          "detail": "components/kanban/deals/InlineSectionEditor.vue",
-          "rel": "components/kanban/deals/InlineSectionEditor.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/PrimaryDealForm.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 600,
-          "y": 810
-        },
-        "data": {
-          "group": "component",
-          "label": "Primary Deal Form",
-          "detail": "components/kanban/deals/PrimaryDealForm.vue",
-          "rel": "components/kanban/deals/PrimaryDealForm.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/RentalDealForm.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 800,
-          "y": 810
-        },
-        "data": {
-          "group": "component",
-          "label": "Rental Deal Form",
-          "detail": "components/kanban/deals/RentalDealForm.vue",
-          "rel": "components/kanban/deals/RentalDealForm.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/ResponsiblePersonSection.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 1000,
-          "y": 810
-        },
-        "data": {
-          "group": "component",
-          "label": "Responsible Person Section",
-          "detail": "components/kanban/deals/ResponsiblePersonSection.vue",
-          "rel": "components/kanban/deals/ResponsiblePersonSection.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/SecondaryDealForm.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 0,
-          "y": 900
-        },
-        "data": {
-          "group": "component",
-          "label": "Secondary Deal Form",
-          "detail": "components/kanban/deals/SecondaryDealForm.vue",
-          "rel": "components/kanban/deals/SecondaryDealForm.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/ViewPrimaryDeal.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 200,
-          "y": 900
-        },
-        "data": {
-          "group": "component",
-          "label": "View Primary Deal",
-          "detail": "components/kanban/deals/ViewPrimaryDeal.vue",
-          "rel": "components/kanban/deals/ViewPrimaryDeal.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/ViewSecondaryDeal.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 400,
-          "y": 900
-        },
-        "data": {
-          "group": "component",
-          "label": "View Secondary Deal",
-          "detail": "components/kanban/deals/ViewSecondaryDeal.vue",
-          "rel": "components/kanban/deals/ViewSecondaryDeal.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/ViewRentalDeal.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 600,
-          "y": 900
-        },
-        "data": {
-          "group": "component",
-          "label": "View Rental Deal",
-          "detail": "components/kanban/deals/ViewRentalDeal.vue",
-          "rel": "components/kanban/deals/ViewRentalDeal.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/DealCreatedCard.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 800,
-          "y": 900
-        },
-        "data": {
-          "group": "component",
-          "label": "Deal Created Card",
-          "detail": "components/kanban/deals/DealCreatedCard.vue",
-          "rel": "components/kanban/deals/DealCreatedCard.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/DealCommentsSection.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 1000,
-          "y": 900
-        },
-        "data": {
-          "group": "component",
-          "label": "Deal Comments Section",
-          "detail": "components/kanban/deals/DealCommentsSection.vue",
-          "rel": "components/kanban/deals/DealCommentsSection.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/deals/DealDocumentsReadonly.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 0,
-          "y": 990
-        },
-        "data": {
-          "group": "component",
-          "label": "Deal Documents Readonly",
-          "detail": "components/kanban/deals/DealDocumentsReadonly.vue",
-          "rel": "components/kanban/deals/DealDocumentsReadonly.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/integration/CreateIntegrationModal.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 200,
-          "y": 990
-        },
-        "data": {
-          "group": "component",
-          "label": "Create Integration Modal",
-          "detail": "components/kanban/integration/CreateIntegrationModal.vue",
-          "rel": "components/kanban/integration/CreateIntegrationModal.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/integration/CrmEntitiesTab.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 400,
-          "y": 990
-        },
-        "data": {
-          "group": "component",
-          "label": "Crm Entities Tab",
-          "detail": "components/kanban/integration/CrmEntitiesTab.vue",
-          "rel": "components/kanban/integration/CrmEntitiesTab.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/integration/HiddenFieldValuesTab.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 600,
-          "y": 990
-        },
-        "data": {
-          "group": "component",
-          "label": "Hidden Field Values Tab",
-          "detail": "components/kanban/integration/HiddenFieldValuesTab.vue",
-          "rel": "components/kanban/integration/HiddenFieldValuesTab.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/integration/FacebookLeadAdsTab.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 800,
-          "y": 990
-        },
-        "data": {
-          "group": "component",
-          "label": "Facebook Lead Ads Tab",
-          "detail": "components/kanban/integration/FacebookLeadAdsTab.vue",
-          "rel": "components/kanban/integration/FacebookLeadAdsTab.vue"
-        }
-      },
-      {
-        "id": "f:components/kanban/integration/OtherSettingsTab.vue",
-        "type": "roadmap",
-        "position": {
-          "x": 1000,
-          "y": 990
-        },
-        "data": {
-          "group": "component",
-          "label": "Other Settings Tab",
-          "detail": "components/kanban/integration/OtherSettingsTab.vue",
-          "rel": "components/kanban/integration/OtherSettingsTab.vue"
         }
       }
     ],
@@ -8200,6 +9018,60 @@
         "label": "imports"
       },
       {
+        "id": "im:f:components/RoleAccess/AssignRole.vue->f:components/pagination/index.vue",
+        "source": "f:components/RoleAccess/AssignRole.vue",
+        "target": "f:components/pagination/index.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/RoleAccess/Role.vue->f:components/pagination/index.vue",
+        "source": "f:components/RoleAccess/Role.vue",
+        "target": "f:components/pagination/index.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/Settings/Currencies.vue->f:components/pagination/index.vue",
+        "source": "f:components/Settings/Currencies.vue",
+        "target": "f:components/pagination/index.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/Settings/Languages.vue->f:components/pagination/index.vue",
+        "source": "f:components/Settings/Languages.vue",
+        "target": "f:components/pagination/index.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/Table/AreasTable.vue->f:components/Table/TreeNode.vue",
+        "source": "f:components/Table/AreasTable.vue",
+        "target": "f:components/Table/TreeNode.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/Table/ProjectTable.vue->f:components/breadcrumb/Breadcrumb.vue",
+        "source": "f:components/Table/ProjectTable.vue",
+        "target": "f:components/breadcrumb/Breadcrumb.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/Table/TeamTree.vue->f:components/Table/TeamTreeNode.vue",
+        "source": "f:components/Table/TeamTree.vue",
+        "target": "f:components/Table/TeamTreeNode.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/Users/UserGrid.vue->f:components/pagination/index.vue",
+        "source": "f:components/Users/UserGrid.vue",
+        "target": "f:components/pagination/index.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/Users/UserList.vue->f:components/pagination/index.vue",
+        "source": "f:components/Users/UserList.vue",
+        "target": "f:components/pagination/index.vue",
+        "label": "imports"
+      },
+      {
         "id": "im:f:components/alllisting/AllLsting.vue->f:components/alllisting/SearchBar.vue",
         "source": "f:components/alllisting/AllLsting.vue",
         "target": "f:components/alllisting/SearchBar.vue",
@@ -8254,6 +9126,60 @@
         "label": "imports"
       },
       {
+        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/deals/Deals.vue",
+        "source": "f:components/kanban/Kanban.vue",
+        "target": "f:components/kanban/deals/Deals.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/leadList/leads.vue",
+        "source": "f:components/kanban/Kanban.vue",
+        "target": "f:components/kanban/leadList/leads.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/integration/Integration.vue",
+        "source": "f:components/kanban/Kanban.vue",
+        "target": "f:components/kanban/integration/Integration.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/leadList/LeadSearchModal.vue",
+        "source": "f:components/kanban/Kanban.vue",
+        "target": "f:components/kanban/leadList/LeadSearchModal.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/createLead/CreateLeadModal.vue",
+        "source": "f:components/kanban/Kanban.vue",
+        "target": "f:components/kanban/createLead/CreateLeadModal.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/deals/CreateDealModal.vue",
+        "source": "f:components/kanban/Kanban.vue",
+        "target": "f:components/kanban/deals/CreateDealModal.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/integration/CreateIntegrationModal.vue",
+        "source": "f:components/kanban/Kanban.vue",
+        "target": "f:components/kanban/integration/CreateIntegrationModal.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/stage/AddStageModal.vue",
+        "source": "f:components/kanban/Kanban.vue",
+        "target": "f:components/kanban/stage/AddStageModal.vue",
+        "label": "imports"
+      },
+      {
+        "id": "im:f:components/kanban/Kanban.vue->f:components/kanban/settings/SettingsHub.vue",
+        "source": "f:components/kanban/Kanban.vue",
+        "target": "f:components/kanban/settings/SettingsHub.vue",
+        "label": "imports"
+      },
+      {
         "id": "im:f:components/kanban/createLead/CreateLeadModal.vue->f:components/kanban/shared/ModalHeader.vue",
         "source": "f:components/kanban/createLead/CreateLeadModal.vue",
         "target": "f:components/kanban/shared/ModalHeader.vue",
@@ -8290,21 +9216,9 @@
         "label": "imports"
       },
       {
-        "id": "im:f:components/kanban/deals/DealActivityList.vue->f:components/kanban/shared/DateTimePicker.vue",
-        "source": "f:components/kanban/deals/DealActivityList.vue",
-        "target": "f:components/kanban/shared/DateTimePicker.vue",
-        "label": "imports"
-      },
-      {
         "id": "im:f:components/kanban/deals/DealActivitySection.vue->f:components/kanban/shared/DateTimePicker.vue",
         "source": "f:components/kanban/deals/DealActivitySection.vue",
         "target": "f:components/kanban/shared/DateTimePicker.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/DealCommentList.vue->f:components/kanban/shared/ProfilePopup.vue",
-        "source": "f:components/kanban/deals/DealCommentList.vue",
-        "target": "f:components/kanban/shared/ProfilePopup.vue",
         "label": "imports"
       },
       {
@@ -8326,177 +9240,15 @@
         "label": "imports"
       },
       {
-        "id": "im:f:components/kanban/deals/Deals.vue->f:components/kanban/deals/ViewDealModal.vue",
-        "source": "f:components/kanban/deals/Deals.vue",
-        "target": "f:components/kanban/deals/ViewDealModal.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/Deals.vue->f:components/kanban/deals/StageChangeReasonModal.vue",
-        "source": "f:components/kanban/deals/Deals.vue",
-        "target": "f:components/kanban/deals/StageChangeReasonModal.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/Deals.vue->f:components/kanban/deals/CompleteStageFieldsModal.vue",
-        "source": "f:components/kanban/deals/Deals.vue",
-        "target": "f:components/kanban/deals/CompleteStageFieldsModal.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/Deals.vue->f:components/kanban/shared/ProfilePopup.vue",
-        "source": "f:components/kanban/deals/Deals.vue",
-        "target": "f:components/kanban/shared/ProfilePopup.vue",
-        "label": "imports"
-      },
-      {
         "id": "im:f:components/kanban/deals/DealSearchModal.vue->f:components/kanban/deals/DealFilterFieldSettingsModal.vue",
         "source": "f:components/kanban/deals/DealSearchModal.vue",
         "target": "f:components/kanban/deals/DealFilterFieldSettingsModal.vue",
         "label": "imports"
       },
       {
-        "id": "im:f:components/kanban/deals/InlineSectionEditor.vue->f:components/kanban/deals/DealForm.vue",
-        "source": "f:components/kanban/deals/InlineSectionEditor.vue",
-        "target": "f:components/kanban/deals/DealForm.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/PrimaryDealForm.vue->f:components/kanban/shared/ResponsiblePersonSelector.vue",
-        "source": "f:components/kanban/deals/PrimaryDealForm.vue",
-        "target": "f:components/kanban/shared/ResponsiblePersonSelector.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/RentalDealForm.vue->f:components/kanban/shared/ResponsiblePersonSelector.vue",
-        "source": "f:components/kanban/deals/RentalDealForm.vue",
-        "target": "f:components/kanban/shared/ResponsiblePersonSelector.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ResponsiblePersonSection.vue->f:components/kanban/shared/ProfilePopup.vue",
-        "source": "f:components/kanban/deals/ResponsiblePersonSection.vue",
-        "target": "f:components/kanban/shared/ProfilePopup.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/SecondaryDealForm.vue->f:components/kanban/shared/ResponsiblePersonSelector.vue",
-        "source": "f:components/kanban/deals/SecondaryDealForm.vue",
-        "target": "f:components/kanban/shared/ResponsiblePersonSelector.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/ViewPrimaryDeal.vue",
-        "source": "f:components/kanban/deals/ViewDealModal.vue",
-        "target": "f:components/kanban/deals/ViewPrimaryDeal.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/ViewSecondaryDeal.vue",
-        "source": "f:components/kanban/deals/ViewDealModal.vue",
-        "target": "f:components/kanban/deals/ViewSecondaryDeal.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/ViewRentalDeal.vue",
-        "source": "f:components/kanban/deals/ViewDealModal.vue",
-        "target": "f:components/kanban/deals/ViewRentalDeal.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/DealCreatedCard.vue",
-        "source": "f:components/kanban/deals/ViewDealModal.vue",
-        "target": "f:components/kanban/deals/DealCreatedCard.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/DealHistoryPanel.vue",
-        "source": "f:components/kanban/deals/ViewDealModal.vue",
-        "target": "f:components/kanban/deals/DealHistoryPanel.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/DealActivitySection.vue",
-        "source": "f:components/kanban/deals/ViewDealModal.vue",
-        "target": "f:components/kanban/deals/DealActivitySection.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/DealCommentsSection.vue",
-        "source": "f:components/kanban/deals/ViewDealModal.vue",
-        "target": "f:components/kanban/deals/DealCommentsSection.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/DealActivityList.vue",
-        "source": "f:components/kanban/deals/ViewDealModal.vue",
-        "target": "f:components/kanban/deals/DealActivityList.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/DealCommentList.vue",
-        "source": "f:components/kanban/deals/ViewDealModal.vue",
-        "target": "f:components/kanban/deals/DealCommentList.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewDealModal.vue->f:components/kanban/deals/ResponsiblePersonSection.vue",
-        "source": "f:components/kanban/deals/ViewDealModal.vue",
-        "target": "f:components/kanban/deals/ResponsiblePersonSection.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewPrimaryDeal.vue->f:components/kanban/deals/DealDocumentsReadonly.vue",
-        "source": "f:components/kanban/deals/ViewPrimaryDeal.vue",
-        "target": "f:components/kanban/deals/DealDocumentsReadonly.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewPrimaryDeal.vue->f:components/kanban/deals/InlineSectionEditor.vue",
-        "source": "f:components/kanban/deals/ViewPrimaryDeal.vue",
-        "target": "f:components/kanban/deals/InlineSectionEditor.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewRentalDeal.vue->f:components/kanban/deals/DealDocumentsReadonly.vue",
-        "source": "f:components/kanban/deals/ViewRentalDeal.vue",
-        "target": "f:components/kanban/deals/DealDocumentsReadonly.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewRentalDeal.vue->f:components/kanban/deals/InlineSectionEditor.vue",
-        "source": "f:components/kanban/deals/ViewRentalDeal.vue",
-        "target": "f:components/kanban/deals/InlineSectionEditor.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewSecondaryDeal.vue->f:components/kanban/deals/DealDocumentsReadonly.vue",
-        "source": "f:components/kanban/deals/ViewSecondaryDeal.vue",
-        "target": "f:components/kanban/deals/DealDocumentsReadonly.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/deals/ViewSecondaryDeal.vue->f:components/kanban/deals/InlineSectionEditor.vue",
-        "source": "f:components/kanban/deals/ViewSecondaryDeal.vue",
-        "target": "f:components/kanban/deals/InlineSectionEditor.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/integration/CreateIntegrationModal.vue->f:components/kanban/integration/CrmEntitiesTab.vue",
-        "source": "f:components/kanban/integration/CreateIntegrationModal.vue",
-        "target": "f:components/kanban/integration/CrmEntitiesTab.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/integration/CreateIntegrationModal.vue->f:components/kanban/integration/HiddenFieldValuesTab.vue",
-        "source": "f:components/kanban/integration/CreateIntegrationModal.vue",
-        "target": "f:components/kanban/integration/HiddenFieldValuesTab.vue",
-        "label": "imports"
-      },
-      {
-        "id": "im:f:components/kanban/integration/CreateIntegrationModal.vue->f:components/kanban/integration/FacebookLeadAdsTab.vue",
-        "source": "f:components/kanban/integration/CreateIntegrationModal.vue",
-        "target": "f:components/kanban/integration/FacebookLeadAdsTab.vue",
+        "id": "im:f:components/kanban/deals/Deals.vue->f:components/kanban/deals/ViewDealModal.vue",
+        "source": "f:components/kanban/deals/Deals.vue",
+        "target": "f:components/kanban/deals/ViewDealModal.vue",
         "label": "imports"
       }
     ]
@@ -9803,10 +10555,8 @@
         "components/kanban/deals/DealSearchModal.vue",
         "components/kanban/deals/Deals.vue",
         "components/kanban/deals/DocumentUpload.vue",
-        "components/kanban/deals/InlineSectionEditor.vue",
         "components/kanban/deals/PrimaryDealForm.vue",
         "components/kanban/deals/RentalDealForm.vue",
-        "components/kanban/deals/ResponsiblePersonSection.vue",
         "components/kanban/deals/SecondaryDealForm.vue",
         "components/kanban/deals/StageChangeReasonModal.vue",
         "components/kanban/deals/ViewDealModal.vue",
@@ -9851,6 +10601,62 @@
         "components/kanban/viewLead/ResponsiblePersonSection.vue",
         "components/kanban/viewLead/ViewLead.vue",
         "components/kanban/viewLead/ViewLeadModal.vue",
+        "components/kanban1/Kanban.vue",
+        "components/kanban1/KanbanSettings.vue",
+        "components/kanban1/Kanban_deal.vue",
+        "components/kanban1/LeadScoringSettings.vue",
+        "components/kanban1/createLead/CreateLeadModal.vue",
+        "components/kanban1/deals/CompleteStageFieldsModal.vue",
+        "components/kanban1/deals/CreateDealModal.vue",
+        "components/kanban1/deals/DealCreatedCard.vue",
+        "components/kanban1/deals/DealForm.vue",
+        "components/kanban1/deals/Deals.vue",
+        "components/kanban1/deals/DocumentUpload.vue",
+        "components/kanban1/deals/PrimaryDealForm.vue",
+        "components/kanban1/deals/RentalDealForm.vue",
+        "components/kanban1/deals/SecondaryDealForm.vue",
+        "components/kanban1/deals/StageChangeReasonModal.vue",
+        "components/kanban1/deals/ViewDealModal.vue",
+        "components/kanban1/deals/ViewPrimaryDeal.vue",
+        "components/kanban1/deals/ViewRentalDeal.vue",
+        "components/kanban1/deals/ViewSecondaryDeal.vue",
+        "components/kanban1/editLead/EditLead.vue",
+        "components/kanban1/integration/CreateIntegrationModal.vue",
+        "components/kanban1/integration/CrmEntitiesTab.vue",
+        "components/kanban1/integration/FacebookLeadAdsTab.vue",
+        "components/kanban1/integration/HiddenFieldValuesTab.vue",
+        "components/kanban1/integration/Integration.vue",
+        "components/kanban1/integration/OtherSettingsTab.vue",
+        "components/kanban1/leadList/ConvertLeadModal.vue",
+        "components/kanban1/leadList/DuplicateLeadsModal.vue",
+        "components/kanban1/leadList/FilterFieldSettingsModal.vue",
+        "components/kanban1/leadList/ImportPitrix.vue",
+        "components/kanban1/leadList/LeadSearchModal.vue",
+        "components/kanban1/leadList/StageChangeReasonModal.vue",
+        "components/kanban1/leadList/leads.vue",
+        "components/kanban1/settings/DealsSettings.vue",
+        "components/kanban1/settings/SettingsHub.vue",
+        "components/kanban1/shared/DateTimePicker.vue",
+        "components/kanban1/shared/ModalHeader.vue",
+        "components/kanban1/shared/ProfilePopup.vue",
+        "components/kanban1/shared/ResponsiblePersonSelector.vue",
+        "components/kanban1/shared/StageSelector.vue",
+        "components/kanban1/stage/AddStageModal.vue",
+        "components/kanban1/stage/StageVisibility.vue",
+        "components/kanban1/viewLead/ActivityList.vue",
+        "components/kanban1/viewLead/ActivitySection.vue",
+        "components/kanban1/viewLead/CommentList.vue",
+        "components/kanban1/viewLead/CommentsSection.vue",
+        "components/kanban1/viewLead/GeneralTab.vue",
+        "components/kanban1/viewLead/HistorySearchModal.vue",
+        "components/kanban1/viewLead/HistoryTab.vue",
+        "components/kanban1/viewLead/LeadActivityTimeline.vue",
+        "components/kanban1/viewLead/LeadCreatedCard.vue",
+        "components/kanban1/viewLead/LeadInfoView.vue",
+        "components/kanban1/viewLead/MatchingPropertiesSection.vue",
+        "components/kanban1/viewLead/ResponsiblePersonSection.vue",
+        "components/kanban1/viewLead/ViewLead.vue",
+        "components/kanban1/viewLead/ViewLeadModal.vue",
         "components/layout/footer/index.vue",
         "components/layout/header/index.vue",
         "components/layout/navbar/index.vue",
@@ -10047,6 +10853,51 @@
           "kind": "import"
         },
         {
+          "from": "components/RoleAccess/AssignRole.vue",
+          "to": "components/pagination/index.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/RoleAccess/Role.vue",
+          "to": "components/pagination/index.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Settings/Currencies.vue",
+          "to": "components/pagination/index.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Settings/Languages.vue",
+          "to": "components/pagination/index.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Table/AreasTable.vue",
+          "to": "components/Table/TreeNode.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Table/ProjectTable.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Table/TeamTree.vue",
+          "to": "components/Table/TeamTreeNode.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Users/UserGrid.vue",
+          "to": "components/pagination/index.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/Users/UserList.vue",
+          "to": "components/pagination/index.vue",
+          "kind": "import"
+        },
+        {
           "from": "components/alllisting/AllLsting.vue",
           "to": "components/alllisting/SearchBar.vue",
           "kind": "import"
@@ -10092,226 +10943,6 @@
           "kind": "import"
         },
         {
-          "from": "components/kanban/createLead/CreateLeadModal.vue",
-          "to": "components/kanban/shared/ModalHeader.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/createLead/CreateLeadModal.vue",
-          "to": "components/kanban/shared/StageSelector.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/createLead/CreateLeadModal.vue",
-          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/CompleteStageFieldsModal.vue",
-          "to": "components/kanban/deals/DocumentUpload.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/CompleteStageFieldsModal.vue",
-          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/CreateDealModal.vue",
-          "to": "components/kanban/deals/DealForm.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/DealActivityList.vue",
-          "to": "components/kanban/shared/DateTimePicker.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/DealActivitySection.vue",
-          "to": "components/kanban/shared/DateTimePicker.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/DealCommentList.vue",
-          "to": "components/kanban/shared/ProfilePopup.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/DealForm.vue",
-          "to": "components/kanban/deals/DocumentUpload.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/DealForm.vue",
-          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/DealHistoryPanel.vue",
-          "to": "components/kanban/deals/DealHistorySearchModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/Deals.vue",
-          "to": "components/kanban/deals/ViewDealModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/Deals.vue",
-          "to": "components/kanban/deals/StageChangeReasonModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/Deals.vue",
-          "to": "components/kanban/deals/CompleteStageFieldsModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/Deals.vue",
-          "to": "components/kanban/shared/ProfilePopup.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/DealSearchModal.vue",
-          "to": "components/kanban/deals/DealFilterFieldSettingsModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/InlineSectionEditor.vue",
-          "to": "components/kanban/deals/DealForm.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/PrimaryDealForm.vue",
-          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/RentalDealForm.vue",
-          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ResponsiblePersonSection.vue",
-          "to": "components/kanban/shared/ProfilePopup.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/SecondaryDealForm.vue",
-          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/deals/ViewPrimaryDeal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/deals/ViewSecondaryDeal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/deals/ViewRentalDeal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/deals/DealCreatedCard.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/deals/DealHistoryPanel.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/deals/DealActivitySection.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/deals/DealCommentsSection.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/deals/DealActivityList.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/deals/DealCommentList.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewDealModal.vue",
-          "to": "components/kanban/deals/ResponsiblePersonSection.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewPrimaryDeal.vue",
-          "to": "components/kanban/deals/DealDocumentsReadonly.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewPrimaryDeal.vue",
-          "to": "components/kanban/deals/InlineSectionEditor.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewRentalDeal.vue",
-          "to": "components/kanban/deals/DealDocumentsReadonly.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewRentalDeal.vue",
-          "to": "components/kanban/deals/InlineSectionEditor.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewSecondaryDeal.vue",
-          "to": "components/kanban/deals/DealDocumentsReadonly.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/deals/ViewSecondaryDeal.vue",
-          "to": "components/kanban/deals/InlineSectionEditor.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/integration/CreateIntegrationModal.vue",
-          "to": "components/kanban/integration/CrmEntitiesTab.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/integration/CreateIntegrationModal.vue",
-          "to": "components/kanban/integration/HiddenFieldValuesTab.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/integration/CreateIntegrationModal.vue",
-          "to": "components/kanban/integration/FacebookLeadAdsTab.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/integration/CreateIntegrationModal.vue",
-          "to": "components/kanban/integration/OtherSettingsTab.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/integration/Integration.vue",
-          "to": "components/kanban/integration/CreateIntegrationModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/integration/OtherSettingsTab.vue",
-          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
-          "kind": "import"
-        },
-        {
           "from": "components/kanban/Kanban.vue",
           "to": "components/kanban/deals/Deals.vue",
           "kind": "import"
@@ -10354,6 +10985,186 @@
         {
           "from": "components/kanban/Kanban.vue",
           "to": "components/kanban/settings/SettingsHub.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/createLead/CreateLeadModal.vue",
+          "to": "components/kanban/shared/ModalHeader.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/createLead/CreateLeadModal.vue",
+          "to": "components/kanban/shared/StageSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/createLead/CreateLeadModal.vue",
+          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/CompleteStageFieldsModal.vue",
+          "to": "components/kanban/deals/DocumentUpload.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/CompleteStageFieldsModal.vue",
+          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/CreateDealModal.vue",
+          "to": "components/kanban/deals/DealForm.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/DealActivitySection.vue",
+          "to": "components/kanban/shared/DateTimePicker.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/DealForm.vue",
+          "to": "components/kanban/deals/DocumentUpload.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/DealForm.vue",
+          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/DealHistoryPanel.vue",
+          "to": "components/kanban/deals/DealHistorySearchModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/DealSearchModal.vue",
+          "to": "components/kanban/deals/DealFilterFieldSettingsModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/Deals.vue",
+          "to": "components/kanban/deals/ViewDealModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/Deals.vue",
+          "to": "components/kanban/deals/StageChangeReasonModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/Deals.vue",
+          "to": "components/kanban/deals/CompleteStageFieldsModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/PrimaryDealForm.vue",
+          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/RentalDealForm.vue",
+          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/SecondaryDealForm.vue",
+          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewDealModal.vue",
+          "to": "components/kanban/deals/ViewPrimaryDeal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewDealModal.vue",
+          "to": "components/kanban/deals/ViewSecondaryDeal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewDealModal.vue",
+          "to": "components/kanban/deals/ViewRentalDeal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewDealModal.vue",
+          "to": "components/kanban/deals/DealForm.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewDealModal.vue",
+          "to": "components/kanban/deals/DealCreatedCard.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewDealModal.vue",
+          "to": "components/kanban/deals/DealHistoryPanel.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewDealModal.vue",
+          "to": "components/kanban/deals/DealActivitySection.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewDealModal.vue",
+          "to": "components/kanban/deals/DealCommentsSection.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewDealModal.vue",
+          "to": "components/kanban/deals/DealActivityList.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewDealModal.vue",
+          "to": "components/kanban/deals/DealCommentList.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewPrimaryDeal.vue",
+          "to": "components/kanban/deals/DealDocumentsReadonly.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewRentalDeal.vue",
+          "to": "components/kanban/deals/DealDocumentsReadonly.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/deals/ViewSecondaryDeal.vue",
+          "to": "components/kanban/deals/DealDocumentsReadonly.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/integration/CreateIntegrationModal.vue",
+          "to": "components/kanban/integration/CrmEntitiesTab.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/integration/CreateIntegrationModal.vue",
+          "to": "components/kanban/integration/HiddenFieldValuesTab.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/integration/CreateIntegrationModal.vue",
+          "to": "components/kanban/integration/FacebookLeadAdsTab.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/integration/CreateIntegrationModal.vue",
+          "to": "components/kanban/integration/OtherSettingsTab.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/integration/Integration.vue",
+          "to": "components/kanban/integration/CreateIntegrationModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/integration/OtherSettingsTab.vue",
+          "to": "components/kanban/shared/ResponsiblePersonSelector.vue",
           "kind": "import"
         },
         {
@@ -10407,6 +11218,16 @@
           "kind": "import"
         },
         {
+          "from": "components/kanban/leadList/LeadSearchModal.vue",
+          "to": "components/kanban/leadList/FilterFieldSettingsModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban/leadList/StageChangeReasonModal.vue",
+          "to": "components/kanban/shared/DateTimePicker.vue",
+          "kind": "import"
+        },
+        {
           "from": "components/kanban/leadList/leads.vue",
           "to": "components/kanban/viewLead/ViewLeadModal.vue",
           "kind": "import"
@@ -10429,16 +11250,6 @@
         {
           "from": "components/kanban/leadList/leads.vue",
           "to": "components/kanban/shared/ProfilePopup.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/leadList/LeadSearchModal.vue",
-          "to": "components/kanban/leadList/FilterFieldSettingsModal.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/kanban/leadList/StageChangeReasonModal.vue",
-          "to": "components/kanban/shared/DateTimePicker.vue",
           "kind": "import"
         },
         {
@@ -10592,57 +11403,452 @@
           "kind": "import"
         },
         {
+          "from": "components/kanban1/Kanban.vue",
+          "to": "components/kanban1/deals/Deals.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban.vue",
+          "to": "components/kanban1/leadList/leads.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban.vue",
+          "to": "components/kanban1/integration/Integration.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban.vue",
+          "to": "components/kanban1/leadList/LeadSearchModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban.vue",
+          "to": "components/kanban1/createLead/CreateLeadModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban.vue",
+          "to": "components/kanban1/deals/CreateDealModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban.vue",
+          "to": "components/kanban1/integration/CreateIntegrationModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban.vue",
+          "to": "components/kanban1/stage/AddStageModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban.vue",
+          "to": "components/kanban1/settings/SettingsHub.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban_deal.vue",
+          "to": "components/kanban1/deals/Deals.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban_deal.vue",
+          "to": "components/kanban1/leadList/leads.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban_deal.vue",
+          "to": "components/kanban1/integration/Integration.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban_deal.vue",
+          "to": "components/kanban1/leadList/LeadSearchModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban_deal.vue",
+          "to": "components/kanban1/createLead/CreateLeadModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban_deal.vue",
+          "to": "components/kanban1/deals/CreateDealModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban_deal.vue",
+          "to": "components/kanban1/integration/CreateIntegrationModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban_deal.vue",
+          "to": "components/kanban1/stage/AddStageModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/Kanban_deal.vue",
+          "to": "components/kanban1/settings/SettingsHub.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/createLead/CreateLeadModal.vue",
+          "to": "components/kanban1/shared/ModalHeader.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/createLead/CreateLeadModal.vue",
+          "to": "components/kanban1/shared/StageSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/createLead/CreateLeadModal.vue",
+          "to": "components/kanban1/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/CompleteStageFieldsModal.vue",
+          "to": "components/kanban1/deals/DocumentUpload.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/CompleteStageFieldsModal.vue",
+          "to": "components/kanban1/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/CreateDealModal.vue",
+          "to": "components/kanban1/deals/DealForm.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/DealForm.vue",
+          "to": "components/kanban1/deals/DocumentUpload.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/DealForm.vue",
+          "to": "components/kanban1/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/Deals.vue",
+          "to": "components/kanban1/deals/ViewDealModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/Deals.vue",
+          "to": "components/kanban1/deals/StageChangeReasonModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/Deals.vue",
+          "to": "components/kanban1/deals/CompleteStageFieldsModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/PrimaryDealForm.vue",
+          "to": "components/kanban1/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/RentalDealForm.vue",
+          "to": "components/kanban1/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/SecondaryDealForm.vue",
+          "to": "components/kanban1/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/ViewDealModal.vue",
+          "to": "components/kanban1/deals/ViewPrimaryDeal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/ViewDealModal.vue",
+          "to": "components/kanban1/deals/ViewSecondaryDeal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/ViewDealModal.vue",
+          "to": "components/kanban1/deals/ViewRentalDeal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/ViewDealModal.vue",
+          "to": "components/kanban1/deals/DealForm.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/ViewDealModal.vue",
+          "to": "components/kanban1/deals/DealCreatedCard.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/ViewDealModal.vue",
+          "to": "components/kanban1/viewLead/ActivitySection.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/ViewDealModal.vue",
+          "to": "components/kanban1/viewLead/CommentsSection.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/ViewDealModal.vue",
+          "to": "components/kanban1/viewLead/ActivityList.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/ViewDealModal.vue",
+          "to": "components/kanban1/viewLead/CommentList.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/deals/ViewDealModal.vue",
+          "to": "components/kanban1/viewLead/LeadActivityTimeline.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/integration/CreateIntegrationModal.vue",
+          "to": "components/kanban1/integration/CrmEntitiesTab.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/integration/CreateIntegrationModal.vue",
+          "to": "components/kanban1/integration/HiddenFieldValuesTab.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/integration/CreateIntegrationModal.vue",
+          "to": "components/kanban1/integration/FacebookLeadAdsTab.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/integration/CreateIntegrationModal.vue",
+          "to": "components/kanban1/integration/OtherSettingsTab.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/integration/Integration.vue",
+          "to": "components/kanban1/integration/CreateIntegrationModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/integration/OtherSettingsTab.vue",
+          "to": "components/kanban1/shared/ResponsiblePersonSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/leadList/LeadSearchModal.vue",
+          "to": "components/kanban1/leadList/FilterFieldSettingsModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/leadList/StageChangeReasonModal.vue",
+          "to": "components/kanban1/shared/DateTimePicker.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/leadList/leads.vue",
+          "to": "components/kanban1/viewLead/ViewLeadModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/leadList/leads.vue",
+          "to": "components/kanban1/leadList/DuplicateLeadsModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/leadList/leads.vue",
+          "to": "components/kanban1/leadList/StageChangeReasonModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/leadList/leads.vue",
+          "to": "components/kanban1/leadList/ConvertLeadModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/leadList/leads.vue",
+          "to": "components/kanban1/shared/ProfilePopup.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/settings/SettingsHub.vue",
+          "to": "components/kanban1/KanbanSettings.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/settings/SettingsHub.vue",
+          "to": "components/kanban1/LeadScoringSettings.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/settings/SettingsHub.vue",
+          "to": "components/kanban1/stage/StageVisibility.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/settings/SettingsHub.vue",
+          "to": "components/kanban1/settings/DealsSettings.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/stage/AddStageModal.vue",
+          "to": "components/kanban1/shared/ModalHeader.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/ActivityList.vue",
+          "to": "components/kanban1/shared/DateTimePicker.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/ActivitySection.vue",
+          "to": "components/kanban1/shared/DateTimePicker.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/CommentList.vue",
+          "to": "components/kanban1/shared/ProfilePopup.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/GeneralTab.vue",
+          "to": "components/kanban1/editLead/EditLead.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/GeneralTab.vue",
+          "to": "components/kanban1/viewLead/LeadInfoView.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/GeneralTab.vue",
+          "to": "components/kanban1/viewLead/LeadCreatedCard.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/GeneralTab.vue",
+          "to": "components/kanban1/viewLead/ActivitySection.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/GeneralTab.vue",
+          "to": "components/kanban1/viewLead/CommentsSection.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/GeneralTab.vue",
+          "to": "components/kanban1/viewLead/ActivityList.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/GeneralTab.vue",
+          "to": "components/kanban1/viewLead/CommentList.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/GeneralTab.vue",
+          "to": "components/kanban1/viewLead/LeadActivityTimeline.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/GeneralTab.vue",
+          "to": "components/kanban1/viewLead/ResponsiblePersonSection.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/HistoryTab.vue",
+          "to": "components/kanban1/viewLead/HistorySearchModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/LeadActivityTimeline.vue",
+          "to": "components/kanban1/shared/ProfilePopup.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/LeadCreatedCard.vue",
+          "to": "components/kanban1/shared/ProfilePopup.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/LeadInfoView.vue",
+          "to": "components/kanban1/viewLead/MatchingPropertiesSection.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/ResponsiblePersonSection.vue",
+          "to": "components/kanban1/shared/ProfilePopup.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/ViewLead.vue",
+          "to": "components/kanban1/shared/StageSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/ViewLead.vue",
+          "to": "components/kanban1/viewLead/GeneralTab.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/ViewLead.vue",
+          "to": "components/kanban1/viewLead/HistoryTab.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/ViewLeadModal.vue",
+          "to": "components/kanban1/shared/StageSelector.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/ViewLeadModal.vue",
+          "to": "components/kanban1/leadList/StageChangeReasonModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/ViewLeadModal.vue",
+          "to": "components/kanban1/leadList/ConvertLeadModal.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/ViewLeadModal.vue",
+          "to": "components/kanban1/viewLead/GeneralTab.vue",
+          "kind": "import"
+        },
+        {
+          "from": "components/kanban1/viewLead/ViewLeadModal.vue",
+          "to": "components/kanban1/viewLead/HistoryTab.vue",
+          "kind": "import"
+        },
+        {
           "from": "components/layout/navbar/index.vue",
           "to": "components/NotificationBell.vue",
           "kind": "import"
         },
         {
-          "from": "components/RoleAccess/AssignRole.vue",
-          "to": "components/pagination/index.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/RoleAccess/Role.vue",
-          "to": "components/pagination/index.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/Settings/Currencies.vue",
-          "to": "components/pagination/index.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/Settings/Languages.vue",
-          "to": "components/pagination/index.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/Table/AreasTable.vue",
-          "to": "components/Table/TreeNode.vue",
-          "kind": "import"
-        },
-        {
-          "from": "components/Table/ProjectTable.vue",
+          "from": "form.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         },
         {
-          "from": "components/Table/TeamTree.vue",
-          "to": "components/Table/TeamTreeNode.vue",
+          "from": "pages/Chart/column-chart.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         },
         {
-          "from": "components/Users/UserGrid.vue",
-          "to": "components/pagination/index.vue",
+          "from": "pages/Chart/line-chart.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         },
         {
-          "from": "components/Users/UserList.vue",
-          "to": "components/pagination/index.vue",
-          "kind": "import"
-        },
-        {
-          "from": "form.vue",
+          "from": "pages/Chart/pie-chart.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         },
@@ -10742,21 +11948,6 @@
           "kind": "import"
         },
         {
-          "from": "pages/Chart/column-chart.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/Chart/line-chart.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/Chart/pie-chart.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
           "from": "pages/chat/AdminChatDashboard.vue",
           "to": "components/chat/ChatWindow.vue",
           "kind": "import"
@@ -10788,6 +11979,16 @@
         },
         {
           "from": "pages/crypto-currency/wallet.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/dashboard/NFTgaming.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/dashboard/PosInventory.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         },
@@ -10997,17 +12198,7 @@
           "kind": "import"
         },
         {
-          "from": "pages/dashboard/NFTgaming.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
           "from": "pages/dashboard/podcast.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/dashboard/PosInventory.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         },
@@ -11052,21 +12243,6 @@
           "kind": "import"
         },
         {
-          "from": "pages/email/email.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/email/email.vue",
-          "to": "components/email/EmailSidebar.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/email/email.vue",
-          "to": "components/email/EmailData.vue",
-          "kind": "import"
-        },
-        {
           "from": "pages/email/StarredEmail.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
@@ -11094,6 +12270,21 @@
         {
           "from": "pages/email/VeiwDetails.vue",
           "to": "components/email/VeiwDetails.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/email/email.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/email/email.vue",
+          "to": "components/email/EmailSidebar.vue",
+          "kind": "import"
+        },
+        {
+          "from": "pages/email/email.vue",
+          "to": "components/email/EmailData.vue",
           "kind": "import"
         },
         {
@@ -11188,7 +12379,7 @@
         },
         {
           "from": "pages/kanban.vue",
-          "to": "components/kanban/kanban_deal.vue",
+          "to": "components/kanban/Kanban.vue",
           "kind": "import"
         },
         {
@@ -11237,6 +12428,11 @@
           "kind": "import"
         },
         {
+          "from": "pages/listings/SearchBar.vue",
+          "to": "components/breadcrumb/Breadcrumb.vue",
+          "kind": "import"
+        },
+        {
           "from": "pages/listings/archive.vue",
           "to": "pages/listings/SearchBar.vue",
           "kind": "import"
@@ -11269,11 +12465,6 @@
         {
           "from": "pages/listings/property-map.vue",
           "to": "components/alllisting/PropertyMap.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/listings/SearchBar.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         },
         {
@@ -11627,77 +12818,12 @@
           "kind": "import"
         },
         {
-          "from": "pages/users/add-user.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/add-user.vue",
-          "to": "components/Users/AddUser.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/user-role-permission.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/user-role-permission.vue",
-          "to": "components/Users/RolesPermission.vue",
-          "kind": "import"
-        },
-        {
           "from": "pages/users/UserDetail.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         },
         {
           "from": "pages/users/UserForm.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/users-grid.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/users-grid.vue",
-          "to": "components/Users/UserGrid.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/users-list.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/users-list.vue",
-          "to": "components/Users/UserList.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/UsersList.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/UsersList.vue",
-          "to": "components/Table/UsersTable.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/view-profile.vue",
-          "to": "components/breadcrumb/Breadcrumb.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/users/view-profile.vue",
-          "to": "components/Users/ViewProfile.vue",
-          "kind": "import"
-        },
-        {
-          "from": "pages/widgets/widgets.vue",
           "to": "components/breadcrumb/Breadcrumb.vue",
           "kind": "import"
         }

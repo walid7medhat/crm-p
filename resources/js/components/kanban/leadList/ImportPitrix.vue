@@ -15,7 +15,7 @@
                   <i class="ri-file-excel-2-line fs-4"></i>
                 </div>
                 <div>
-                  <h6 class="ui-h-mini fw-bold mb-0 text-white">Import Leads</h6>
+                  <h5 class="fw-bold mb-0 text-white">Import Leads</h5>
                   <small class="mb-0 opacity-75">Upload your lead data in bulk</small>
                 </div>
               </div>

@@ -4,7 +4,11 @@
       <div class="card-body">
         <div class="d-flex flex-wrap align-items-center justify-content-between">
           <h6 class="text-lg mb-0">Listings Statistics</h6>
-          <SearchableSelect preset="salesListingsPeriod3" v-model="selectedPeriod" :clearable="false" inline class="form-select bg-base form-select-sm w-auto radius-8" @update:model-value="fetchData" />
+          <select v-model="selectedPeriod" @change="fetchData" class="form-select bg-base form-select-sm w-auto radius-8">
+            <option value="yearly">Yearly</option>
+            <option value="monthly">Monthly</option>
+            <option value="weekly">Weekly</option>
+          </select>
         </div>
         <div id="chart" class="pt-28 apexcharts-tooltip-style-1"></div>
       </div>

@@ -7,7 +7,7 @@
         <div class="city-head">
           <div>
             <p class="eyebrow">Market Defaults</p>
-            <h6 class="ui-h-mini">{{ city.city }}</h6>
+            <h5>{{ city.city }}</h5>
           </div>
           <span class="badge-soft">{{ city.is_default ? 'Global Default' : 'Regional Profile' }}</span>
         </div>

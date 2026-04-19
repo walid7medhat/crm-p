@@ -3,10 +3,10 @@
         <div class="page-card">
             <div class="card-header">
                 <div>
-                    <h6 class="ui-h-sub">
+                    <h3>
                         <iconify-icon icon="lucide:map-pin" />
                         Bulk Area Coordinates Manager
-                    </h6>
+                    </h3>
                     <p>Add or edit coordinates for multiple areas</p>
                 </div>
                 <button class="btn-add-row" @click="addNewRow">

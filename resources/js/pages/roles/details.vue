@@ -13,7 +13,7 @@
             <div class="col-md-9">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6 class="ui-h-mini card-title mb-0">Role Information</h6>
+                        <h5 class="card-title mb-0">Role Information</h5>
                         <div class="d-flex gap-2">
                             <button v-if="role.id >= 5 && $hasPermission('roles-edit')" 
                                 class="btn btn-success btn-sm"
@@ -63,7 +63,7 @@
                 <!-- Permissions Section -->
                 <div class="card mt-4">
                     <div class="card-header">
-                        <h6 class="ui-h-mini card-title mb-0">Assigned Permissions</h6>
+                        <h5 class="card-title mb-0">Assigned Permissions</h5>
                     </div>
                     <div class="card-body">
                         <div v-if="role.permissions && role.permissions.length > 0" class="permissions-grid">
@@ -87,7 +87,7 @@
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-header">
-                        <h6 class="ui-h-mini card-title mb-0">Role Statistics</h6>
+                        <h5 class="card-title mb-0">Role Statistics</h5>
                     </div>
                     <div class="card-body">
                         <div class="stat-item text-center mb-4">

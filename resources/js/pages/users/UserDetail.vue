@@ -38,7 +38,7 @@
                             <div class="">
                                 <div class="user-info mb-3 mb-md-0">
                                     <div class="user-head">
-                                    <h6 class="ui-h-mini user-name mb-2">{{ user.name }}</h6>
+                                    <h5 class="user-name mb-2">{{ user.name }}</h5>
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-3 buttons-status">
                                         <span class="user-role">{{ user.role_name }}</span>
                                         <span class="user-status" :class="user.status">
@@ -269,7 +269,7 @@
                                         <div class="mb-3">
                                             <i class="ri-home-4-line display-1 text-muted"></i>
                                         </div>
-                                        <h6 class="ui-h-mini text-muted">No Properties Found</h6>
+                                        <h5 class="text-muted">No Properties Found</h5>
                                         <p class="text-muted">This agent doesn't have any properties assigned yet.</p>
                                     </div>
                                 </div>
@@ -283,7 +283,7 @@
             <div v-else class="card">
                 <div class="card-body text-center py-5">
                     <i class="ri-user-unfollow-line display-1 text-danger mb-3"></i>
-                    <h6 class="ui-h-mini">User Not Found</h6>
+                    <h4>User Not Found</h4>
                     <p class="text-muted mb-4">The user you're looking for doesn't exist or has been removed.</p>
                     <button class="btn btn-primary" @click="$router.push('/users')">
                         <i class="ri-arrow-left-line me-2"></i>

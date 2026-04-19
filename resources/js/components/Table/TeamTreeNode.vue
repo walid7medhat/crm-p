@@ -33,22 +33,8 @@
                             {{ node.role_name || 'Unknown Role' }}
                         </span>
                     </div>
-
-                    <div v-if="hrAttendanceMode && node.employee_id_display" class="hr-emp-id text-muted small mt-1">
-                        ID: {{ node.employee_id_display }}
-                    </div>
-
-                    <div v-if="hrAttendanceMode && node.hr_attendance" class="hr-attendance-block mt-2">
-                        <span
-                            class="hr-att-badge"
-                            :class="`hr-att-${(node.hr_attendance.status || 'absent').toLowerCase()}`"
-                        >
-                            {{ (node.hr_attendance.status || 'absent').toString() }}
-                        </span>
-                        <span class="text-muted small ms-2">{{ formatHrTime(node.hr_attendance.check_in) }} – {{ formatHrTime(node.hr_attendance.check_out) }}</span>
-                    </div>
                     
-                    <div class="user-details" v-if="!hrAttendanceMode">
+                    <div class="user-details">
                         <!-- العدد الإجمالي مرة واحدة -->
                         <div class="detail-item" v-if="totalMembersCount > 0">
                             <iconify-icon icon="lucide:users" width="12"></iconify-icon>
@@ -74,10 +60,10 @@
             </div>
 
             <!-- Horizontal Connector Line to Children -->
-                <div v-if="hasNonSalesChildren && expanded" class="connector children-connector"></div>
+            <div v-if="hasNonSalesChildren && expanded" class="connector children-connector"></div>
         </div>
 
-        <!-- Children Container - يظهر فقط الأعضاء غير السالز (أو الكل في وضع HR attendance) -->
+        <!-- Children Container - يظهر فقط الأعضاء غير السالز -->
         <div v-if="expanded && hasNonSalesChildren" class="children-container">
             <div class="scroll-wrapper" ref="scrollWrapper">
                 <div class="children-row">
@@ -86,10 +72,8 @@
                                 :node="child"
                                 :level="level + 1"
                                 :current-user-id="currentUserId"
-                                :hr-attendance-mode="hrAttendanceMode"
                                 @view-profile="$emit('view-profile', $event)"
                                 @open-sidebar="$emit('open-sidebar', $event)"
-                                @close-all-sidebars="$emit('close-all-sidebars')"
                                 :permissions="permissions" />
                 </div>
             </div>
@@ -118,10 +102,6 @@ export default {
         permissions: {
             type: Object,
             default: () => ({})
-        },
-        hrAttendanceMode: {
-            type: Boolean,
-            default: false
         }
     },
     data() {
@@ -137,12 +117,9 @@ export default {
             return this.node.children && this.node.children.length > 0;
         },
         
-        // HR: show full hierarchy including sales. Users page: hide sales from nested tree (see sidebar).
+        // الأطفال غير السالز فقط (اللي هيظهروا في الشجرة)
         nonSalesChildren() {
             if (!this.node.children) return [];
-            if (this.hrAttendanceMode) {
-                return this.node.children;
-            }
             return this.node.children.filter(child => {
                 const roleLower = child.role_name?.toLowerCase() || '';
                 return !roleLower.includes('sales');
@@ -165,7 +142,6 @@ export default {
         
         // هل عنده سالز
         hasSalesMembers() {
-            if (this.hrAttendanceMode) return false;
             return this.salesMembersCount > 0;
         },
         
@@ -177,9 +153,6 @@ export default {
         
         // هل الكارد يقدر يفتح حاجة لما يضغط عليه
         isClickable() {
-            if (this.hrAttendanceMode) {
-                return this.hasNonSalesChildren;
-            }
             return this.hasNonSalesChildren || this.hasSalesMembers;
         }
     },
@@ -189,13 +162,6 @@ export default {
         },
 
         handleCardClick() {
-    if (this.hrAttendanceMode) {
-        if (this.hasNonSalesChildren) {
-            this.toggleExpand();
-        }
-        return;
-    }
-
     // أولاً: إغلاق أي سايدبار مفتوحة حالياً
     this.$emit('close-all-sidebars');
     
@@ -269,17 +235,6 @@ export default {
 
         handleImageError(event) {
             event.target.src = this.defaultAvatar;
-        },
-
-        formatHrTime(value) {
-            if (!value) return '--';
-            try {
-                const d = new Date(value);
-                if (Number.isNaN(d.getTime())) return '--';
-                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            } catch (e) {
-                return '--';
-            }
         }
     },
     mounted() {
@@ -603,26 +558,5 @@ export default {
     .children-row {
         gap: 1rem;
     }
-}
-
-.hr-att-badge {
-    display: inline-block;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.15rem 0.45rem;
-    border-radius: 6px;
-    text-transform: capitalize;
-}
-.hr-att-present {
-    background: #d4edda;
-    color: #155724;
-}
-.hr-att-late {
-    background: #fff3cd;
-    color: #856404;
-}
-.hr-att-absent {
-    background: #f8d7da;
-    color: #721c24;
 }
 </style>

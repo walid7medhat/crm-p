@@ -210,8 +210,19 @@ class LeadUpdated implements ShouldBroadcast
 
     $user = User::find($userId);
 
-    if ($user && !$user->hasRole('sales')) {
-        $channels[] = new PrivateChannel('user.' . $userId);
+    if (!$user) {
+        return;
+    }
+
+    // Admins / super admins must always receive broadcasts (many also have `sales`; Kanban relies on Echo).
+    if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+        $channels[] = new PrivateChannel('user.'.$userId);
+
+        return;
+    }
+
+    if (!$user->hasRole('sales')) {
+        $channels[] = new PrivateChannel('user.'.$userId);
     }
 }
 }

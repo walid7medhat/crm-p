@@ -4,7 +4,12 @@
         <div class="card-body">
           <div class="d-flex align-items-center flex-wrap gap-2 justify-content-between">
             <h6 class="mb-2 fw-bold text-lg mb-0">Generated Content</h6>
-            <SearchableSelect preset="generatedContentPeriodLabels" v-model="timePeriod" :clearable="false" inline class="form-select form-select-sm w-auto bg-base border text-secondary-light radius-8" />
+            <select v-model="timePeriod" class="form-select form-select-sm w-auto bg-base border text-secondary-light radius-8">
+              <option>Today</option>
+              <option>Weekly</option>
+              <option>Monthly</option>
+              <option>Yearly</option>
+            </select>
           </div>
   
           <ul class="d-flex flex-wrap align-items-center mt-3 gap-3">

@@ -5,7 +5,14 @@
         <div class="d-flex align-items-center flex-wrap gap-2 justify-content-between mb-3">
           <h6 class="mb-0 fw-bold text-lg">Requests Overview</h6>
           <div>
-            <SearchableSelect preset="userOverviewTimeframe" v-model="selectedTimeframe" :clearable="false" inline class="form-select form-select-sm w-auto bg-base border text-secondary-light radius-8" @update:model-value="fetchData" />
+            <select 
+              class="form-select form-select-sm w-auto bg-base border text-secondary-light radius-8"
+              v-model="selectedTimeframe"
+              @change="fetchData">
+              <option value="today">Today</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
           </div>
         </div>
 

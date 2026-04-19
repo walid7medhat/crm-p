@@ -165,7 +165,7 @@
                                         </div>
                                         <div v-else class="text-center py-5">
                                             <iconify-icon icon="lucide:folder-x" width="64" class="text-muted mb-3"></iconify-icon>
-                                            <h6 class="ui-h-mini text-muted">No Documents Found</h6>
+                                            <h5 class="text-muted">No Documents Found</h5>
                                             <p class="text-muted">This owner has no uploaded documents.</p>
                                         </div>
                                     </div>
@@ -188,7 +188,7 @@
                                     <div class="mb-3">
                                         <i class="ri-home-4-line display-1 text-muted"></i>
                                     </div>
-                                    <h6 class="ui-h-mini text-muted">No Properties Found</h6>
+                                    <h5 class="text-muted">No Properties Found</h5>
                                     <p class="text-muted">This owner doesn't have any properties yet.</p>
                                 </div>
 
@@ -243,7 +243,7 @@
                                               <small class="text-muted price-unit">AED</small>
                                             </div>
                             
-                                            <h6 class="ui-h-mini property-title mb-2">{{ property.title || 'No Title' }}</h6>
+                                            <h5 class="property-title mb-2">{{ property.title || 'No Title' }}</h5>
                                             <p class="property-location mb-3">
                                               <i class="ri-map-pin-line me-1"></i>{{ getLocation(property) }}
                                             </p>
@@ -319,7 +319,7 @@
         <div v-else class="card">
             <div class="card-body text-center py-5">
                 <iconify-icon icon="lucide:user-x" class="text-muted mb-3" width="48"></iconify-icon>
-                <h6 class="ui-h-mini">Owner Not Found</h6>
+                <h5>Owner Not Found</h5>
                 <p class="text-muted">The owner you're looking for doesn't exist.</p>
                 <button class="btn btn-primary" @click="$router.push('/owners')">
                     Back to Owners List

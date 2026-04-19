@@ -3,7 +3,7 @@
         <div class="card-header">
             <div class="row">
                 <div class="col-md-6 text-start">
-                    <h6 class="ui-h-mini card-title mb-0">Users List</h6>
+                    <h5 class="card-title mb-0">Users List</h5>
                 </div>
                 <div class="col-md-6 text-end">
                     <router-link to="/team-tree" class="btn btn-primary">
@@ -20,7 +20,12 @@
 
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <div class="d-flex align-items-center gap-2">
-                        <SearchableSelect preset="perPage10_15_20" v-model="selectedShow" :clearable="false" inline class="w-auto me-10" :input-style="{ borderRadius: '10px', height: '2.4rem', minWidth: '5.5rem' }" />
+                        <select class="form-select form-select-lr w-auto rounded-3 me-10" v-model="selectedShow"
+                            style="border-radius: 10px; height: 2.4rem;">
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                        </select>
                         <span>entries per page</span>
                     </div>
                 </div>
@@ -37,14 +42,8 @@
                     <div class="icon-field d-flex align-items-center" style="padding-bottom: 5px;">
                         <span class="me-13">Search:</span>
                         <div class="position-relative" style="width: 100%; max-width: 240px;">
-                            <input
-                                type="text"
-                                class="form-control form-control-sm w-100 px-3 pe-5"
-                                :value="searchText"
-                                style="border-radius: 10px; height: 2.5rem;"
-                                placeholder="Search users…"
-                                @input="onSearchInput"
-                            />
+                            <input type="text" class="form-control form-control-sm w-100 px-3 pe-5" v-model="searchText"
+                                style="border-radius: 10px; height: 2.5rem;" placeholder="Search users..." />
                             <span class="icon position-absolute end-0 top-50 translate-middle-y me-3 text-muted"
                                 style="pointer-events: none;">
                                 <iconify-icon icon="lucide:search"></iconify-icon>
@@ -312,7 +311,6 @@ export default {
             loading: true,
             selectedShow: 10,
             searchText: '',
-            searchDebounceTimer: null,
             currentPage: 1,
             sortKey: '',
             sortAsc: true,
@@ -428,13 +426,6 @@ export default {
         this.fetchUsers();
     },
     methods: {
-        onSearchInput(e) {
-            const v = e?.target?.value ?? ''
-            clearTimeout(this.searchDebounceTimer)
-            this.searchDebounceTimer = setTimeout(() => {
-                this.searchText = v
-            }, 300)
-        },
         async updateBiometricCode(user) {
             try {
                 const token = localStorage.getItem('token');
@@ -560,31 +551,38 @@ export default {
         async fetchUsers() {
             try {
                 this.loading = true;
+                
+                const token = localStorage.getItem('token');
+                const response = await fetch(API_ENDPOINTS.USERS, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
 
-                const { data } = await api.get('/users');
-                const payload = data?.data;
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
-                // Normalize supported backend shapes:
-                // 1) { data: [...] }
-                // 2) { data: { data: [...] } } (resource collection)
-                // 3) [...]
-                if (Array.isArray(payload)) {
-                    this.users = payload;
-                } else if (Array.isArray(payload?.data)) {
-                    this.users = payload.data;
+                const data = await response.json();
+                
+                // Handle different response formats
+                if (data.data) {
+                    this.users = data.data;
                 } else if (Array.isArray(data)) {
                     this.users = data;
                 } else {
                     this.users = [];
                 }
+                
+                console.log('Users loaded:', this.users);
+                
             } catch (error) {
                 console.error('Error fetching users:', error);
                 this.users = [];
-                const message =
-                    error?.response?.data?.message ||
-                    error?.message ||
-                    'Failed to load users. Please try again.';
-                this.showNotification(message, 'error');
+                this.showNotification('Failed to load users. Please try again.', 'error');
             } finally {
                 this.loading = false;
             }
@@ -724,7 +722,7 @@ export default {
                 confirmDiv.className = `alert ${alertClass} position-fixed`;
                 confirmDiv.style.cssText = 'top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; min-width: 400px;';
                 confirmDiv.innerHTML = `
-                    <h6 class="ui-h-mini alert-heading">${title}</h6>
+                    <h5 class="alert-heading">${title}</h5>
                     <p class="mb-3">${text}</p>
                     <div class="d-flex gap-2 justify-content-end">
                         <button class="btn btn-secondary" id="confirmCancel">Cancel</button>

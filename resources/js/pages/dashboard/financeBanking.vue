@@ -35,7 +35,7 @@
                                 <div class="position-relative z-1 py-32 text-center px-3">
                                     <img src="@/assets/images/home-eleven/bg/bg-orange-gradient.png" alt=""
                                         class="position-absolute top-0 start-0 w-100 h-100 z-n1">
-                                    <h6 class="ui-h-sub text-white">$500.00</h6>
+                                    <h3 class="text-white">$500.00</h3>
                                     <span class="text-white">Your Balance</span>
                                 </div>
                             </div>

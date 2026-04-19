@@ -5,7 +5,12 @@
           <div class="d-flex align-items-center flex-wrap gap-2 justify-content-between">
             <h6 class="mb-2 fw-bold text-lg">Campaigns</h6>
             <div>
-              <SearchableSelect preset="earningPeriodLower" v-model="selectedPeriod" :clearable="false" inline class="form-select form-select-sm w-auto bg-base border text-secondary-light radius-8" />
+              <select v-model="selectedPeriod" class="form-select form-select-sm w-auto bg-base border text-secondary-light radius-8">
+                <option value="Yearly">Yearly</option>
+                <option value="Monthly">Monthly</option>
+                <option value="Weekly">Weekly</option>
+                <option value="Today">Today</option>
+              </select>
             </div>
           </div>
           

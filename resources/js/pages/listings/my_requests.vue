@@ -10,7 +10,12 @@
                     style="border-bottom: none; padding-bottom: 8px; padding-top: 1px;">
                     <div class="d-flex flex-wrap align-items-center gap-3">
                         <div class="d-flex align-items-center gap-2">
-                            <SearchableSelect preset="perPage10_15_20" v-model="selectedShow" :clearable="false" inline class="w-auto me-10" :input-style="{ borderRadius: '10px', height: '2.4rem', minWidth: '5.5rem' }" />
+                            <select class="form-select form-select-lr w-auto rounded-3 me-10" v-model="selectedShow"
+                                style="border-radius: 10px; height: 2.4rem;">
+                                <option value="10">10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                            </select>
                             <span>entries per page</span>
                         </div>
                     </div>
@@ -289,7 +294,7 @@
                     <!-- Empty State -->
                     <div v-if="!loading && filteredRequests.length === 0" class="text-center py-5">
                         <i class="ri-inbox-line" style="font-size: 64px; color: #6c757d;"></i>
-                        <h6 class="ui-h-mini mt-3">No Requests Found</h6>
+                        <h5 class="mt-3">No Requests Found</h5>
                         <p class="text-muted">You don't have any incoming access requests yet.</p>
                     </div>
 
@@ -359,7 +364,7 @@
         <div v-if="showResponseModal" class="modal-overlay" @click="showResponseModal = false">
             <div class="modal-content" @click.stop style="max-width: 500px;">
                 <div class="modal-header">
-                    <h6 class="ui-h-mini modal-title">Respond to Request</h6>
+                    <h5 class="modal-title">Respond to Request</h5>
                     <button type="button" class="btn-close" @click="showResponseModal = false"></button>
                 </div>
                 <div class="modal-body">
@@ -390,7 +395,7 @@
         <div v-if="showConvertModal" class="modal-overlay" @click="showConvertModal = false">
             <div class="modal-content" @click.stop style="max-width: 500px;">
                 <div class="modal-header">
-                    <h6 class="ui-h-mini modal-title">Mark as Sold Out</h6>
+                    <h5 class="modal-title">Mark as Sold Out</h5>
                     <button type="button" class="btn-close" @click="showConvertModal = false"></button>
                 </div>
                 <div class="modal-body">
@@ -423,7 +428,7 @@
 <div v-if="showTimeEditModal" class="modal-overlay" @click="showTimeEditModal = false">
     <div class="modal-content" @click.stop style="max-width: 500px;">
         <div class="modal-header">
-            <h6 class="ui-h-mini modal-title">Edit Viewing Time</h6>
+            <h5 class="modal-title">Edit Viewing Time</h5>
             <button type="button" class="btn-close" @click="showTimeEditModal = false"></button>
         </div>
         <div class="modal-body">
@@ -470,7 +475,7 @@
  <div v-if="showVacationModal" class="modal-overlay" @click="showVacationModal=false">
   <div class="modal-content" @click.stop style="max-width:500px">
     <div class="modal-header">
-      <h6 class="ui-h-mini modal-title">Vacation Mode</h6>
+      <h5 class="modal-title">Vacation Mode</h5>
       <button type="button" class="btn-close" @click="showVacationModal=false"></button>
     </div>
     <div class="modal-body">

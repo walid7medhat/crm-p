@@ -2,7 +2,7 @@
   <div class="search-container listing-search-transparent">
     <div class="listing-search-shell">
       <div class="listing-headline">
-        <h6 class="ui-h-section">{{ dynamicHeadline }}</h6>
+        <h2>{{ dynamicHeadline }}</h2>
         <span>{{ formattedResultCount }} listed</span>
       </div>
 

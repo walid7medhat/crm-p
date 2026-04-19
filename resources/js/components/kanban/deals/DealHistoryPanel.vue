@@ -135,7 +135,7 @@
 
       <div v-else-if="historyEntries.length === 0 && !loading" class="search-empty-state">
         <iconify-icon icon="lucide:history" />
-        <h6 class="ui-h-mini">No history entries found</h6>
+        <h4>No history entries found</h4>
         <p v-if="hasActiveFilters">No results match your search criteria.</p>
         <p v-else>No history entries available for this deal.</p>
         <button v-if="hasActiveFilters" type="button" class="btn-clear-search" @click="clearAllFilters">

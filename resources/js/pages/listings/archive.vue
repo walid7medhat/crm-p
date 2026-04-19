@@ -23,7 +23,7 @@
       <!-- Empty State -->
       <div v-else-if="filteredProperties.length === 0" class="col-12 text-center py-5">
         <i class="ri-home-4-line display-1 text-muted"></i>
-        <h6 class="ui-h-mini mt-3 text-muted">No properties found</h6>
+        <h4 class="mt-3 text-muted">No properties found</h4>
         <p class="text-muted">Try adjusting your search filters or status</p>
       </div>
 
@@ -66,7 +66,7 @@
               <small class="text-muted price-unit">AED</small>
             </div>
 
-            <h6 class="ui-h-mini property-title mb-2">{{ property.title || 'No Title' }}</h6>
+            <h5 class="property-title mb-2">{{ property.title || 'No Title' }}</h5>
             <p class="property-location mb-3">
               <i class="ri-map-pin-line me-1"></i>{{ getLocation(property) }}
             </p>

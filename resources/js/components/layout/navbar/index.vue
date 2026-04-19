@@ -55,7 +55,7 @@
               <div v-if="isProfilePanelOpen" class="profile-panel-backdrop" @click="closeProfilePanel">
                 <div ref="profilePanel" class="profile-panel" @click.stop>
                   <header class="profile-panel-header">
-                    <h6 class="ui-h-section profile-panel-title">Profile Details</h6>
+                    <h2 class="profile-panel-title">Profile Details</h2>
                     <button type="button" class="profile-panel-close" @click="closeProfilePanel" aria-label="Close">
                       <iconify-icon icon="lucide:x" class="icon"></iconify-icon>
                     </button>
@@ -103,7 +103,7 @@
 
                     <section class="profile-section profile-section-contact">
                       <div class="profile-section-head">
-                        <h6 class="ui-h-mini profile-section-title">Contact Information</h6>
+                        <h4 class="profile-section-title">Contact Information</h4>
                         <template v-if="!isPersonalInfoEditing">
                           <button type="button" class="profile-edit-icon" aria-label="Edit" @click="startPersonalInfoEdit">
                             <iconify-icon icon="lucide:pencil" class="icon"></iconify-icon>
@@ -171,7 +171,7 @@
                     </section>
                     <section class="profile-section profile-section-team">
                       <div class="profile-section-head">
-                        <h6 class="ui-h-mini profile-section-title">Your Team</h6>
+                        <h4 class="profile-section-title">Your Team</h4>
                         <span class="profile-section-badge"># TEAM</span>
                       </div>
                       <div class="profile-team-grid">

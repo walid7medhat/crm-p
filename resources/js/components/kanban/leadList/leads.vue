@@ -1015,6 +1015,8 @@ function onLeadDragEnd() {
 }
 
 const echoListeners = ref([])
+/** Debounce rapid assignment broadcasts → single board refresh */
+const leadAssignmentBoardRefreshTimer = ref(null)
 const pollingInterval = ref(null)
 const isFetching = ref(false)
 const abortController = ref(null)
@@ -1949,6 +1951,22 @@ const initializeLeadUpdates = () => {
 
 
         echoListeners.value.push(channel)
+
+        // Engine emits `lead.assignment.updated` on `private-lead-assignment` (immediate, small payload).
+        // Kanban must subscribe here — `user.{id}` may omit sales users / dual-role admins for `lead.updated`.
+        const assignmentChannel = window.Echo.private('lead-assignment')
+        assignmentChannel.listen('.lead.assignment.updated', () => {
+            if (leadAssignmentBoardRefreshTimer.value) {
+                clearTimeout(leadAssignmentBoardRefreshTimer.value)
+            }
+            leadAssignmentBoardRefreshTimer.value = setTimeout(() => {
+                leadAssignmentBoardRefreshTimer.value = null
+                if (!isFetching.value) {
+                    fetchLeads(true)
+                }
+            }, 400)
+        })
+        echoListeners.value.push(assignmentChannel)
     } catch (error) {
         startPolling()
     }
@@ -2347,12 +2365,18 @@ const cleanup = () => {
         fetchDebounceTimer.value = null
     }
     
+    if (leadAssignmentBoardRefreshTimer.value) {
+        clearTimeout(leadAssignmentBoardRefreshTimer.value)
+        leadAssignmentBoardRefreshTimer.value = null
+    }
+
     echoListeners.value.forEach((channel) => {
         if (channel) {
             try {
                 // Stop listening to specific events
                 channel.stopListening('.lead.updated')
                 channel.stopListening('.lead.assigned')
+                channel.stopListening('.lead.assignment.updated')
             } catch (error) {
                 // Silently handle errors
             }

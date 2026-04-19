@@ -12,7 +12,7 @@
         <div class="modal-body-content p-3">
             <!-- Custom Header -->
             <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom-light">
-                <h6 class="ui-h-mini modal-title-custom mb-0">Filter Field Settings</h6>
+                <h5 class="modal-title-custom mb-0">Filter Field Settings</h5>
                 <button class="close-btn-custom" @click="show = false">
                     <iconify-icon icon="lucide:x" width="20" height="20"></iconify-icon>
                 </button>
