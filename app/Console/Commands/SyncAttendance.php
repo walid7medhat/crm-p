@@ -41,8 +41,7 @@ class SyncAttendance extends Command
             $users = User::whereNotNull('biometric_code')
                 ->pluck('id', 'biometric_code');
 
-            // ✔️ today date (Egypt timezone)
-            $today = now('Africa/Cairo')->toDateString();
+            $today = now('Asia/Dubai')->toDateString();
 
             $count = 0;
 
@@ -78,10 +77,16 @@ class SyncAttendance extends Command
                 // ✔️ save daily snapshot
                 Attendance::updateOrCreate(
                     [
+                        
                         'user_id' => $userId,
                         'date' => $today,
                     ],
                     [
+                        'employee_id'=>$user?->id ??$item['emp_code'],
+                        'employee_name'=> trim(
+                                (string) ($item['first_name'] ?? '') . ' ' . (string) ($item['last_name'] ?? '')
+                            ),
+                            'status' => !empty($item['status']) ? strtolower((string) $item['status']) : null,
                         'check_in' => $checkIn,
                         'check_out' => $checkOut,
                     ]
