@@ -757,7 +757,7 @@ public function getMatchingListings(Request $request)
                 throw new \Exception('Hot deal request has been sent for approval. You will be Notified once it\'s reviewed.', 422);
             }
             // If user is admin/super_admin/manager, they can set directly
-            elseif ($user->hasRole(['super_admin', 'admin', 'manager'])) {
+            elseif ($user->hasRole(['super_admin', 'admin', 'manager','team_lead'])) {
                 $listing->update([
                     'is_hot_deal' => 'Yes',
                     'hot_deal_approved_by' => $user->id,
