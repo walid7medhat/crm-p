@@ -384,6 +384,28 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             $query->where('is_active', $request->boolean('is_active'));
             }
         }
+        
+        if ($request->has('additional_features')) {
+            $features = $request->additional_features;
+            
+            if (is_string($features)) {
+                $features = explode(',', $features);
+            }
+            
+            $features = array_values(array_filter($features, fn($v) => $v !== null && $v !== ''));
+            
+            if (!empty($features)) {
+                $query->where(function ($q) use ($features) {
+                    foreach ($features as $feature) {
+                        $feature = trim($feature);
+                        
+                        $q->orWhereRaw("JSON_EXTRACT(additional_features, '$.\"{$feature}\"') = true");
+                        
+                        $q->orWhereRaw("JSON_CONTAINS(additional_features, '\"{$feature}\"')");
+                    }
+                });
+            }
+        }
            if($request->has('agent_id')) {
                 $query->where('agent_id', $request->agent_id);
             }

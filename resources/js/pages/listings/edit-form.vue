@@ -1284,12 +1284,12 @@ const selectedProjectFloorPlan = ref(null);
 const uploadedFloorPlan = ref(null);
 
 const listingFeatureOptions = [
-  { key: 'maid', label: 'Maid' },
-  { key: 'storage', label: 'Storage' },
-  { key: 'study', label: 'Study' },
-  { key: 'store', label: 'Store' },
-  { key: 'laundry', label: 'Laundry' },
-  { key: 'driver', label: 'Driver' },
+  { key: 'maid', label: 'Maid Room' },
+  { key: 'storage', label: 'Storage Room' },
+  { key: 'study', label: 'Study Room' },
+  { key: 'store', label: 'Store Room' },
+  { key: 'laundry', label: 'Laundry Room' },
+  { key: 'driver', label: 'Driver Room' },
 ];
 const form = ref({
   title: "",

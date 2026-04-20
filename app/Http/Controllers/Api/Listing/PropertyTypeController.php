@@ -54,6 +54,9 @@ class PropertyTypeController extends Controller
                 if ($request->has('with_children')) {
                     $query->with('children');
                 }
+                if ($request->has('has_listings')) {
+                    $query->whereHas('listings');
+                }
                 
                 return $query->orderBy('parent_id', 'desc')->get();
             });

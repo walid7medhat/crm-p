@@ -129,25 +129,25 @@
             <i class="ri-arrow-down-s-line"></i>
           </button>
           <div v-if="showPropertyTypeDropdown" class="listing-property-type-popover" @click.stop>
-            <div class="listing-pop-title-sm">Property Type</div>
-            <div class="listing-tab-switch">
-              <button
-                type="button"
-                class="listing-tab-btn"
-                :class="{ active: propertyTypeTab === 'residential' }"
-                @click="propertyTypeTab = 'residential'"
-              >
-                Residential
-              </button>
-              <button
-                type="button"
-                class="listing-tab-btn"
-                :class="{ active: propertyTypeTab === 'commercial' }"
-                @click="propertyTypeTab = 'commercial'"
-              >
-                Commercial
-              </button>
-            </div>
+            <!--<div class="listing-pop-title-sm">Property Type</div>-->
+            <!--<div class="listing-tab-switch">-->
+            <!--  <button-->
+            <!--    type="button"-->
+            <!--    class="listing-tab-btn"-->
+            <!--    :class="{ active: propertyTypeTab === 'residential' }"-->
+            <!--    @click="propertyTypeTab = 'residential'"-->
+            <!--  >-->
+            <!--    Residential-->
+            <!--  </button>-->
+            <!--  <button-->
+            <!--    type="button"-->
+            <!--    class="listing-tab-btn"-->
+            <!--    :class="{ active: propertyTypeTab === 'commercial' }"-->
+            <!--    @click="propertyTypeTab = 'commercial'"-->
+            <!--  >-->
+            <!--    Commercial-->
+            <!--  </button>-->
+            <!--</div>-->
             <div class="listing-property-grid">
               <button
                 v-for="type in visiblePropertyTypes"
@@ -300,7 +300,7 @@
                   </template>
               </v-select>
               </div>
-              <div class="listing-pop-field--full"   v-if="!isMyListingPage || (isMyListingPage && isTeamLeadManager)">
+              <div class=""   v-if="!isMyListingPage || (isMyListingPage && isTeamLeadManager)">
                 <label>Agent</label>
                 <v-select
                   v-model="selectedAgent"
@@ -323,6 +323,22 @@
                        <i class="ri-close-line custom-clear"></i>                    </span>
                   </template>
               </v-select>
+              </div>
+              <!-- ✅ Additional Features Section (جديدة وموضوعة داخل More Filters) -->
+              <div class="listing-filter-section listing-pop-field--full">
+                <label class="listing-pop-label">Features </label>
+                <div class="listing-feature-grid">
+                  <button
+                    v-for="feature in listingFeatureOptions"
+                    :key="feature.key"
+                    type="button"
+                    class="listing-feature-pill"
+                    :class="{ active: isFeatureSelected(feature.key) }"
+                    @click="toggleFeature(feature.key)"
+                  >
+                    <span class="listing-feature-label">{{ feature.label }}</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -384,7 +400,7 @@
           <button class="status-btn" v-if="showStatusTabs" :class="{ active: activeStatus === 'draft' }" @click="emitStatusChange('draft')">
             <i class="fa fa-pencil-alt"></i> Draft
           </button>
-          <span class="status-sort-separator" v-if="showStatusTabs"></span>
+          <!--<span class="status-sort-separator" v-if="showStatusTabs"></span>-->
         </div>
       </div>
     </div>
@@ -424,10 +440,10 @@
               <span>Property Type</span>
               <small>{{ mobilePropertyTypeLabel }}</small>
             </summary>
-            <div class="listing-tab-switch listing-tab-switch-mobile">
-              <button type="button" class="listing-tab-btn" :class="{ active: propertyTypeTab === 'residential' }" @click="propertyTypeTab = 'residential'">Residential</button>
-              <button type="button" class="listing-tab-btn" :class="{ active: propertyTypeTab === 'commercial' }" @click="propertyTypeTab = 'commercial'">Commercial</button>
-            </div>
+            <!--<div class="listing-tab-switch listing-tab-switch-mobile">-->
+            <!--  <button type="button" class="listing-tab-btn" :class="{ active: propertyTypeTab === 'residential' }" @click="propertyTypeTab = 'residential'">Residential</button>-->
+            <!--  <button type="button" class="listing-tab-btn" :class="{ active: propertyTypeTab === 'commercial' }" @click="propertyTypeTab = 'commercial'">Commercial</button>-->
+            <!--</div>-->
             <div class="listing-property-grid listing-property-grid-mobile">
               <button
                 v-for="type in visiblePropertyTypes"
@@ -629,7 +645,8 @@ export default {
     const isMobileViewport = ref(false);
     let resizeHandler = null;
 const searchReferenceNumber = ref("");
-
+const showFeaturesDropdown = ref(false);
+const selectedFeatures = ref({});
     // Debounce timer
     const searchTimer = ref(null);
 const allAreas = ref([]);
@@ -653,6 +670,14 @@ const bathsOptions = ["1", "2", "3", "4", "5", "6+"];
       { label: "All", value: null },
       { label: "Completed", value: "Completed" },
       { label: "Under Construction", value: "Under Construction" }
+    ];
+    const listingFeatureOptions = [
+      { key: 'maid', label: 'Maid Room' },
+      { key: 'storage', label: 'Storage Room' },
+      { key: 'study', label: 'Study Room' },
+      { key: 'store', label: 'Store Room' },
+      { key: 'laundry', label: 'Laundry Room' },
+      { key: 'driver', label: 'Driver Room' },
     ];
 const typeOptions = [
   { label: "All", value: "All" },
@@ -729,7 +754,7 @@ const sortOptions = [
     const fetchPropertyTypes = async () => {
       try {
         isLoadingPropertyTypes.value = true;
-        const response = await api.get("/listings/property-types");
+        const response = await api.get("/listings/property-types/?has_listings=true");
         
         const propertyTypesData = response.data.data || response.data;
         
@@ -965,7 +990,16 @@ const isTeamLeadManager = computed(() => {
     
     return isAdminUser
 })
-
+const featuresButtonLabel = computed(() => {
+  const selectedCount = Object.values(selectedFeatures.value).filter(Boolean).length;
+  if (selectedCount === 0) return 'Features';
+  if (selectedCount === 1) {
+    const activeKey = Object.keys(selectedFeatures.value).find(key => selectedFeatures.value[key] === true);
+    const feature = listingFeatureOptions.find(f => f.key === activeKey);
+    return feature ? feature.label : '1 Feature';
+  }
+  return `${selectedCount} Features`;
+});
 
 
     const fetchAgents = async () => {
@@ -1017,6 +1051,8 @@ const isTeamLeadManager = computed(() => {
       const hasSelectedAreas = Array.isArray(selectedArea.value)
         ? selectedArea.value.length > 0
         : !!selectedArea.value;
+          const hasSelectedFeatures = Object.values(selectedFeatures.value).some(value => value === true);
+
       return selectedSaleRent.value !== "All" || 
              selectedStatus.value !== "All" || 
              hasSelectedAreas || 
@@ -1028,7 +1064,8 @@ const isTeamLeadManager = computed(() => {
              sizeFrom.value > 0 || 
              sizeTo.value < 10000 || searchReferenceNumber.value.trim() !== ""
              ||
-             selectedCompletionStatus.value !== null;
+             selectedCompletionStatus.value !== null  ||
+             hasSelectedFeatures;  
     });
     const mobileActiveFilterCount = computed(() => {
       let n = 0;
@@ -1128,7 +1165,12 @@ const isTeamLeadManager = computed(() => {
       if (filters.referenceNumber && filters.referenceNumber.trim() !== "") {
         apiFilters.reference_number = filters.referenceNumber.trim();
       }
-
+        if (filters.selectedFeatures && Object.keys(filters.selectedFeatures).length > 0) {
+            const activeFeatures = Object.keys(filters.selectedFeatures).filter(key => filters.selectedFeatures[key] === true);
+            if (activeFeatures.length > 0) {
+              apiFilters.additional_features = activeFeatures;
+            }
+          }
       // Sort
      if (filters.sort) {
           apiFilters.sort = filters.sort; 
@@ -1162,6 +1204,7 @@ const isTeamLeadManager = computed(() => {
            referenceNumber: searchReferenceNumber.value,
            baths: selectedBaths.value[0] || "",
            bathsList: selectedBaths.value,
+            selectedFeatures: selectedFeatures.value,
         };
         
         console.log("🔍 Auto-search with filters:", filters);
@@ -1245,6 +1288,42 @@ const isTeamLeadManager = computed(() => {
       updateSizeTo();
       performSearch();
     };
+    
+    
+    
+    
+    const toggleFeaturesDropdown = () => {
+          showFeaturesDropdown.value = !showFeaturesDropdown.value;
+          // إغلاق القوائم الأخرى عند الفتح (اختياري)
+          if (showFeaturesDropdown.value) {
+            showSaleRentDropdown.value = false;
+            showPropertyTypeDropdown.value = false;
+            showBedsDropdown.value = false;
+            showPriceDropdown.value = false;
+            showSortDropdown.value = false;
+          }
+        };
+        
+        const isFeatureSelected = (key) => {
+          return !!selectedFeatures.value[key];
+        };
+        
+        const toggleFeature = (key) => {
+          selectedFeatures.value = {
+            ...selectedFeatures.value,
+            [key]: !selectedFeatures.value[key]
+          };
+        };
+        
+        const resetFeaturesSelection = () => {
+          selectedFeatures.value = {};
+          // لا نريد إرسال الفلتر مباشرة، ينتظر المستخدم الضغط على "Done"
+        };
+        
+        const applyFeaturesSelection = () => {
+          showFeaturesDropdown.value = false;
+          handleFilterChange(); // استدعاء الدالة الموجودة بالفعل لتحديث البحث
+        };
 
     const applyFilters = () => {
        if (!selectedSort.value) {
@@ -1269,6 +1348,7 @@ const isTeamLeadManager = computed(() => {
         sizeTo: sizeTo.value,
         sort: selectedSort.value,
          referenceNumber: searchReferenceNumber.value ,
+          selectedFeatures: selectedFeatures.value,
            
       };
       
@@ -1331,6 +1411,11 @@ const isTeamLeadManager = computed(() => {
             areasWithNames = filters.area;
           }
         }
+         if (filters.selectedFeatures) {
+              selectedFeatures.value = { ...filters.selectedFeatures };
+            } else {
+              selectedFeatures.value = {};
+            }
             selectedArea.value = areasWithNames;
         selectedProject.value = filters.project || null;
         selectedPropertyTypes.value = Array.isArray(filters.propertyTypes)
@@ -1374,6 +1459,7 @@ const isTeamLeadManager = computed(() => {
       sizeTo.value = 5000;
       performSearch(); 
       searchReferenceNumber.value = "";
+       selectedFeatures.value = {};
     };
 
     const resetPriceRange = () => {
@@ -1614,6 +1700,9 @@ fetchProjects()
       showMobileFilterSheet,
       isMobileViewport,
       propertyTypeTab,
+       listingFeatureOptions,     
+     showFeaturesDropdown,      
+      selectedFeatures, 
       
       // Static options
       saleRentOptions,
@@ -1646,7 +1735,7 @@ fetchProjects()
       mobileActiveFilterCount,
       dynamicHeadline,
       formattedResultCount,
-      
+      featuresButtonLabel,
       // Methods
       applyFilters,
       applyMobileFilters,
@@ -1712,6 +1801,11 @@ fetchProjects()
       isFirstSelectedArea,
       isSecondSelectedArea,
       remainingSelectedAreasCount,
+      toggleFeaturesDropdown,    
+      isFeatureSelected,         
+      toggleFeature,             
+      resetFeaturesSelection,    
+      applyFeaturesSelection,
     };
   }
 };
@@ -4013,5 +4107,82 @@ fetchProjects()
 .listing-main-location .location-option.selected {
   border-radius: 0 !important;
   background: transparent !important;
+}
+/* Additional Features Styles - Matching the existing design */
+.listing-features-wrap {
+  position: relative;
+}
+
+.listing-features-btn {
+  min-width: 132px;
+  max-width: 148px;
+  justify-content: space-between;
+}
+
+.listing-features-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(580px, calc(100vw - 20px));
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  z-index: 1300;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+}
+
+.listing-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.listing-feature-pill {
+  min-height: 42px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1;
+  padding: 0 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.listing-feature-pill.active {
+  border-color: #faa300;
+  color: #b45309;
+  background: #fff7ed;
+}
+
+.listing-feature-pill:hover {
+  border-color: #faa300;
+  background: #fef9e8;
+}
+
+@media (max-width: 768px) {
+  .listing-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  
+  .listing-feature-pill {
+    min-height: 34px;
+    font-size: 11px;
+    padding: 0 10px;
+  }
+  
+  .listing-features-popover {
+    width: calc(100vw - 30px);
+    padding: 12px;
+  }
 }
 </style>

@@ -483,6 +483,9 @@ const fetchProperties = async (filters = {}, page = 1) => {
     };
 
     const encodeFiltersToQuery = (filters) => {
+        const activeFeatures = filters.selectedFeatures 
+        ? Object.keys(filters.selectedFeatures).filter(key => filters.selectedFeatures[key] === true)
+        : [];
       return {
         sale_rent: filters.saleRent || undefined,
         area_id: filters.area?.id || undefined,
@@ -505,6 +508,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
         sort: filters.sort || undefined,
         ref: filters.referenceNumber || undefined,
         completion_status: filters.completionStatus?.value || undefined,
+         additional_features: activeFeatures.length > 0 ? activeFeatures.join(',') : undefined,
       };
     };
 
@@ -519,6 +523,13 @@ const fetchProperties = async (filters = {}, page = 1) => {
       const propertyTypes = typeIds.map((id) => ({ id }));
       const bedsList = query.beds_list ? query.beds_list.split(',').filter(Boolean) : (query.beds ? [query.beds] : []);
       const bathsList = query.baths_list ? query.baths_list.split(',').filter(Boolean) : (query.baths ? [query.baths] : []);
+       const selectedFeatures = {};
+      if (query.additional_features) {
+        const features = query.additional_features.split(',');
+        features.forEach(feature => {
+          selectedFeatures[feature] = true;
+        });
+      }
       return {
         saleRent: query.sale_rent || 'All',
         area: areas.length ? areas : null,
@@ -538,6 +549,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
         completionStatus: query.completion_status
           ? { label: query.completion_status, value: query.completion_status }
           : null,
+          selectedFeatures: selectedFeatures, 
       };
     };
 
@@ -610,9 +622,9 @@ const fetchProperties = async (filters = {}, page = 1) => {
           apiFilters.number_of_bathrooms = parseInt(bathsList[0]);
         }
       }
- if (filters.completionStatus && filters.completionStatus.value) {
-    apiFilters.completion_status = filters.completionStatus.value;
-  }
+     if (filters.completionStatus && filters.completionStatus.value) {
+        apiFilters.completion_status = filters.completionStatus.value;
+      }
       // Price Range Filter
       if (filters.priceFrom > 0 || filters.priceTo < 10000000) {
         apiFilters.min_price = filters.priceFrom;
@@ -624,6 +636,14 @@ const fetchProperties = async (filters = {}, page = 1) => {
         apiFilters.min_size = filters.sizeFrom;
         apiFilters.max_size = filters.sizeTo;
       }
+       if (filters.selectedFeatures && Object.keys(filters.selectedFeatures).length > 0) {
+            const activeFeatures = Object.keys(filters.selectedFeatures).filter(
+              key => filters.selectedFeatures[key] === true
+            );
+            if (activeFeatures.length > 0) {
+              apiFilters.additional_features = activeFeatures;
+            }
+          }
 
       // Sort
       if (filters.sort) {

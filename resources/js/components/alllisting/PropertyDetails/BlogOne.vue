@@ -1815,27 +1815,27 @@ const confirmCancelRequest = async () => {
     console.log('📊 Data:', data);
     
     if (data.maid === true) {
-      features.push('Maid');
+      features.push('Maid Room');
       console.log('✅ Added Maid');
     }
     if (data.storage === true) {
-      features.push('Storage');
+      features.push('Storage Room');
       console.log('✅ Added Storage');
     }
     if (data.study === true) {
-      features.push('Study');
+      features.push('Study Room');
       console.log('✅ Added Study');
     }
     if (data.store === true) {
-      features.push('Store');
+      features.push('Store Room');
       console.log('✅ Added Store');
     }
     if (data.laundry === true) {
-      features.push('Laundry');
+      features.push('Laundry Room');
       console.log('✅ Added Laundry');
     }
     if (data.driver === true) {
-      features.push('Driver');
+      features.push('Driver Room');
       console.log('✅ Added Driver');
     }
     
@@ -3771,12 +3771,12 @@ const createSlide2 = () => {
   const additionalFeatures = property.value?.additional_features || {};
   const additionalFeaturesList = [];
   
-  if (additionalFeatures.maid) additionalFeaturesList.push('Maid');
-  if (additionalFeatures.storage) additionalFeaturesList.push('Storage');
-  if (additionalFeatures.study) additionalFeaturesList.push('Study');
-  if (additionalFeatures.store) additionalFeaturesList.push('Store');
-  if (additionalFeatures.laundry) additionalFeaturesList.push('Laundry');
-  if (additionalFeatures.driver) additionalFeaturesList.push('Driver');
+  if (additionalFeatures.maid) additionalFeaturesList.push('Maid Room');
+  if (additionalFeatures.storage) additionalFeaturesList.push('Storage Room');
+  if (additionalFeatures.study) additionalFeaturesList.push('Study Room');
+  if (additionalFeatures.store) additionalFeaturesList.push('Store Room');
+  if (additionalFeatures.laundry) additionalFeaturesList.push('Laundry Room');
+  if (additionalFeatures.driver) additionalFeaturesList.push('Driver Room');
   
   const additionalFeaturesText = additionalFeaturesList.join(', ');
 

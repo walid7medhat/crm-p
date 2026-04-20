@@ -571,7 +571,7 @@ export default {
       'sale_rent', 'area_ids', 'area_id', 'project_id', 'type_id', 'beds', 'baths',
       'type_ids', 'beds_list', 'baths_list',
       'price_from', 'price_to', 'size_from', 'size_to', 'sort', 'ref',
-      'completion_status', 'agent_id', 'agent_name'
+      'completion_status', 'agent_id', 'agent_name','additional_features'
     ];
 
     const pruneEmptyQueryValues = (obj) => {
@@ -585,6 +585,9 @@ export default {
     };
 
     const encodeFiltersToQuery = (filters) => {
+        const activeFeatures = filters.selectedFeatures 
+        ? Object.keys(filters.selectedFeatures).filter(key => filters.selectedFeatures[key] === true)
+        : [];
       return {
         sale_rent: filters.saleRent || undefined,
         // area_id: filters.area?.id || undefined,
@@ -608,6 +611,7 @@ export default {
         ref: filters.referenceNumber || undefined,
         completion_status: filters.completionStatus?.value || undefined,
         agent_id: filters.agent?.id || undefined,
+         additional_features: activeFeatures.length > 0 ? activeFeatures.join(',') : undefined,
       };
     };
 
@@ -659,6 +663,13 @@ const decodeFiltersFromQuery = async (query) => {
       const propertyTypes = typeIds.map((id) => ({ id }));
       const bedsList = query.beds_list ? query.beds_list.split(',').filter(Boolean) : (query.beds ? [query.beds] : []);
       const bathsList = query.baths_list ? query.baths_list.split(',').filter(Boolean) : (query.baths ? [query.baths] : []);
+       const selectedFeatures = {};
+  if (query.additional_features) {
+    const features = query.additional_features.split(',');
+    features.forEach(feature => {
+      selectedFeatures[feature] = true;
+    });
+  }
       return {
         saleRent: query.sale_rent || 'All',
         // area: query.area_id ? { id: Number(query.area_id) } : null,
@@ -680,6 +691,7 @@ const decodeFiltersFromQuery = async (query) => {
           ? { label: query.completion_status, value: query.completion_status }
           : null,
         agent: query.agent_id ? { id: Number(query.agent_id) } : null,
+        selectedFeatures: selectedFeatures, 
       };
     };
 
@@ -768,6 +780,15 @@ const decodeFiltersFromQuery = async (query) => {
       if (filters.sizeFrom > 0 || filters.sizeTo < 10000) {
         apiFilters.min_size = filters.sizeFrom > 0 ? filters.sizeFrom : undefined;
         apiFilters.max_size = filters.sizeTo < 10000 ? filters.sizeTo : undefined;
+      }
+      
+    if (filters.selectedFeatures && Object.keys(filters.selectedFeatures).length > 0) {
+        const activeFeatures = Object.keys(filters.selectedFeatures).filter(
+          key => filters.selectedFeatures[key] === true
+        );
+        if (activeFeatures.length > 0) {
+          apiFilters.additional_features = activeFeatures;
+        }
       }
 
       // Sort
