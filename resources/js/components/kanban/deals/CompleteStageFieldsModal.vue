@@ -1750,7 +1750,7 @@ watch(() => formData.value?.landlord_country, (newCountry, oldCountry) => {
 }
 
 .complete-fields-modal--deal-won {
-  width: min(560px, 94vw);
+  /*width: min(560px, 94vw);*/
   border: 2px solid #2ea7ef;
 }
 
