@@ -18,7 +18,7 @@
           :clear-search-on-select="false"
           :append-to-body="false"
           label="name"
-          placeholder="City, Community, Building, or Project Area"
+          placeholder="City,Area,Community,Project or Building"
           class="custom-select listing-main-location"
           @update:modelValue="handleFilterChange"
         >
@@ -397,6 +397,14 @@
           <button class="status-btn"  v-if="showStatusTabs" :class="{ active: activeStatus === 'sold' }" @click="emitStatusChange('sold')">
             <i class="ri-checkbox-circle-fill"></i> Sold Out
           </button>
+          <button 
+            class="status-btn" 
+            v-if="showStatusTabs" 
+            :class="{ active: activeStatus === 'rented' }" 
+            @click="emitStatusChange('rented')"
+        >
+            <i class="ri-home-gear-line"></i> Rented
+        </button>
           <button class="status-btn" v-if="showStatusTabs" :class="{ active: activeStatus === 'draft' }" @click="emitStatusChange('draft')">
             <i class="fa fa-pencil-alt"></i> Draft
           </button>
@@ -722,7 +730,7 @@ const sortOptions = [
     const fetchAreas = async () => {
   try {
     isLoadingAreas.value = true;
-    const response = await api.get("/listings/areas/?has_listings=true");
+    const response = await api.get("/listings/areas?has_listings=true");
     
     const areasData = response.data.data || response.data;
     
@@ -754,7 +762,7 @@ const sortOptions = [
     const fetchPropertyTypes = async () => {
       try {
         isLoadingPropertyTypes.value = true;
-        const response = await api.get("/listings/property-types/?has_listings=true");
+        const response = await api.get("/listings/property-types/?non_root_only=1");
         
         const propertyTypesData = response.data.data || response.data;
         
@@ -3549,13 +3557,15 @@ fetchProjects()
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  width: min(460px, calc(100vw - 20px));
+  /*width: min(460px, calc(100vw - 20px));*/
+  width:690px;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 14px;
   padding: 12px;
   z-index: 1300;
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+    max-width: min(680px, calc(100vw - 24px));
 }
 
 .listing-sale-rent-popover {
@@ -3572,9 +3582,8 @@ fetchProjects()
 }
 
 .listing-tab-switch-purpose {
-  border: 1px solid #dbe2ee;
-  border-radius: 10px;
   padding: 4px;
+      gap: 15px;
 }
 
 .listing-tab-switch-purpose .listing-tab-btn {
@@ -3582,7 +3591,9 @@ fetchProjects()
   border-radius: 8px;
   color: #1f2937;
   font-size: 16px;
-  padding: 10px 8px;
+  padding:  8px;
+    border: 1px solid #dbe2ee;
+    text-align:center;
 }
 
 .listing-tab-switch-purpose .listing-tab-btn.active {
@@ -3594,7 +3605,6 @@ fetchProjects()
 .listing-tab-switch {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid #e5e7eb;
   margin-bottom: 10px;
 }
 
@@ -3615,8 +3625,8 @@ fetchProjects()
 
 .listing-property-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+     gap: 10px 5px;
 }
 
 .listing-property-pill {
@@ -3625,14 +3635,14 @@ fetchProjects()
   border: 1px solid #e5e7eb;
   background: #fff;
   color: #4b5563;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   line-height: 1;
-  padding: 0 10px;
+  padding: 0 5px;
 }
 
 .listing-property-pill.active {

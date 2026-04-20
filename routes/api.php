@@ -293,6 +293,11 @@ Route::middleware('jwt.auth')->group(function () {
 Route::get('leads/integration', [LeadController::class,'storeIntegration']);
 
 Route::middleware(['jwt.auth'])->group(function () {
+      Route::get('/my-clients', [LeadController::class, 'getMyClients']);
+    
+    // أو يمكنك استخدام هذا الاسم
+    Route::get('/leads/clients', [LeadController::class, 'getClientsList']);
+    
     Route::get('/properties/map', [ListingController::class, 'map']);
     Route::get('/suggestions', [SuggestionController::class, 'index']);
     Route::post('/suggestions', [SuggestionController::class, 'store']);
@@ -502,7 +507,9 @@ Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
                 Route::patch('/{id}/mark-converted', [ListingController::class, 'markAsConverted']);
                 Route::patch('/{id}/revert-converted', [ListingController::class, 'revertFromConverted']);
                 Route::post('/{owner}/soldBy', [ListingController::class, 'changeOwner']);
-
+                // routes/api.php
+                Route::patch('/{id}/mark-rented', [ListingController::class, 'markAsRented']);
+                Route::patch('/{id}/revert-rented', [ListingController::class, 'revertFromRented']);
                 Route::post('/{property}/set-hero-image', [ListingController::class, 'setHeroImage']);
                 Route::get('/statistics/summary', [ListingController::class, 'getStatistics'])->name('listings.statistics');
                 Route::delete('/{listing}/floor-plans/{floorPlan}', [ListingController::class, 'deleteFloorPlan'])->name('floor-plans.destroy');

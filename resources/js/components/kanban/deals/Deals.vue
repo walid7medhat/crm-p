@@ -528,7 +528,7 @@ const stageForm = ref({
 })
 
 const typeTabs = [
-  { id: 'primary', name: 'Primary / Off Plan', icon: 'lucide:layout-grid' },
+  { id: 'primary', name: 'Primary', icon: 'lucide:layout-grid' },
   { id: 'secondary', name: 'Secondary', icon: 'lucide:calendar' },
   { id: 'rental', name: 'Rental', icon: 'lucide:building-2' }
 ]

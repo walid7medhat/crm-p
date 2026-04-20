@@ -435,18 +435,18 @@
               <p class="info-value mb-0">{{ val(deal.deal_commission) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Agent Share %</label>
-              <p class="info-value mb-0">{{ val(deal.agent_share) }}</p>
-            </div>
-          </div>
-          <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Company Share %</label>
-              <p class="info-value mb-0">{{ val(deal.company_share) }}</p>
-            </div>
-          </div>
+          <!--<div class="col-md-12">-->
+          <!--  <div class="info-group">-->
+          <!--    <label class="info-label">Agent Share %</label>-->
+          <!--    <p class="info-value mb-0">{{ val(deal.agent_share) }}</p>-->
+          <!--  </div>-->
+          <!--</div>-->
+          <!--<div class="col-md-12">-->
+          <!--  <div class="info-group">-->
+          <!--    <label class="info-label">Company Share %</label>-->
+          <!--    <p class="info-value mb-0">{{ val(deal.company_share) }}</p>-->
+          <!--  </div>-->
+          <!--</div>-->
         </div>
       </div>
     </div>

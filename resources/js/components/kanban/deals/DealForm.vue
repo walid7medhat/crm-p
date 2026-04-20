@@ -1056,20 +1056,20 @@
                 {{ fieldErrors.deal_commission }}
               </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Agent Share %</label>
-            <b-form-input v-model="form.agent_share" type="number" placeholder="Enter Agent Share %" class="custom-input" />
-            <div v-if="showErrors && fieldErrors.agent_share" class="invalid-feedback d-block">
-                {{ fieldErrors.agent_share }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Company Share %</label>
-            <b-form-input v-model="form.company_share" type="number" placeholder="Enter Company Share %" class="custom-input" />
-             <div v-if="showErrors && fieldErrors.company_share" class="invalid-feedback d-block">
-                {{ fieldErrors.company_share }}
-              </div>
-          </div>
+          <!--<div class="col-md-4">-->
+          <!--  <label class="form-label-custom">Agent Share %</label>-->
+          <!--  <b-form-input v-model="form.agent_share" type="number" placeholder="Enter Agent Share %" class="custom-input" />-->
+          <!--  <div v-if="showErrors && fieldErrors.agent_share" class="invalid-feedback d-block">-->
+          <!--      {{ fieldErrors.agent_share }}-->
+          <!--    </div>-->
+          <!--</div>-->
+          <!--<div class="col-md-4">-->
+          <!--  <label class="form-label-custom">Company Share %</label>-->
+          <!--  <b-form-input v-model="form.company_share" type="number" placeholder="Enter Company Share %" class="custom-input" />-->
+          <!--   <div v-if="showErrors && fieldErrors.company_share" class="invalid-feedback d-block">-->
+          <!--      {{ fieldErrors.company_share }}-->
+          <!--    </div>-->
+          <!--</div>-->
         </div>
       </div>
     </section>
@@ -1159,47 +1159,116 @@ function isDocumentEditMode(documentSectionKey) {
 }
 
 // Document type options based on requirements
-const primaryBuyerDocTypes = [
-  { id: 'national_id', name: 'National ID', required: true },
-  { id: 'passport', name: 'Passport', required: true },
-  { id: 'kyc', name: 'KYC', required: true },
-  { id: 'spa', name: 'Buyer SPA', required: false },
-  { id: 'payment_proof', name: 'Buyer Payment Proof', required: false }
-]
+// دالة لتحديد المستندات المطلوبة حسب حالة الإقامة فقط
+function getRequiredDocumentsByResidency(residencyStatus) {
+  // Citizen - يطلب Passport + National ID
+  if (residencyStatus === 'citizen') {
+    return ['passport', 'national_id']
+  }
+  
+  // مقيم (Resident) - يطلب Passport + Visa + National ID
+  if (residencyStatus === 'resident') {
+    return ['passport', 'visa', 'national_id']
+  }
+  
+  // غير مقيم / سائح (Non-resident / Tourist) - يطلب Passport فقط
+  if (residencyStatus === 'non_resident' || residencyStatus === 'tourist') {
+    return ['passport']
+  }
+  
+  // Investor - يطلب Passport + Investor Visa + National ID
+  if (residencyStatus === 'investor') {
+    return ['passport', 'visa', 'national_id']
+  }
+  
+  // Student - يطلب Passport + Student Visa + National ID
+  if (residencyStatus === 'student') {
+    return ['passport', 'visa', 'national_id']
+  }
+  
+  // الحالة الافتراضية - يطلب Passport فقط
+  return ['passport']
+}
 
-const secondaryBuyerDocTypes = [
-  { id: 'noc', name: 'NOC Letter', required: false },
-  { id: 'national_id', name: 'Buyer National ID', required: true },
-  { id: 'passport', name: 'Buyer Passport', required: true },
-  { id: 'kyc', name: 'Buyer KYC', required: true },
-  { id: 'payment_proof', name: 'Buyer Payment Proof', required: false },
-  { id: 'title_deed', name: 'New Title Deed / New SPA', required: false }
-]
+// قوائم المستندات الديناميكية حسب حالة الإقامة
+const primaryBuyerDocTypes = computed(() => {
+  const residencyStatus = form.value?.buyer_residency_status
+  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
+  
+  const allDocs = {
+    passport: { id: 'passport', name: 'Passport', required: true },
+    national_id: { id: 'national_id', name: 'National ID', required: true },
+    kyc: { id: 'kyc', name: 'KYC', required: true },
+    visa: { id: 'visa', name: 'Visa', required: true },
+    spa: { id: 'spa', name: 'Buyer SPA', required: false },
+    payment_proof: { id: 'payment_proof', name: 'Buyer Payment Proof', required: false }
+  }
+  
+  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
+})
 
-const sellerDocTypes = [
-  { id: 'national_id', name: 'Seller National ID', required: true },
-  { id: 'passport', name: 'Seller Passport', required: true },
-  { id: 'title_deed', name: 'Unit SPA / Title Deed', required: false }
-]
+const secondaryBuyerDocTypes = computed(() => {
+  const residencyStatus = form.value?.buyer_residency_status
+  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
+  
+  const allDocs = {
+    passport: { id: 'passport', name: 'Buyer Passport', required: true },
+    national_id: { id: 'national_id', name: 'Buyer National ID', required: true },
+    kyc: { id: 'kyc', name: 'Buyer KYC', required: true },
+    visa: { id: 'visa', name: 'Buyer Visa', required: true },
+    noc: { id: 'noc', name: 'NOC Letter', required: false },
+    payment_proof: { id: 'payment_proof', name: 'Buyer Payment Proof', required: false },
+    title_deed: { id: 'title_deed', name: 'New Title Deed / New SPA', required: false }
+  }
+  
+  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
+})
 
-const tenantDocTypes = [
-  { id: 'national_id', name: 'Tenant National ID', required: false },
-  { id: 'passport', name: 'Tenant Passport', required: true },
-  { id: 'kyc', name: 'Tenant KYC', required: true },
-  { id: 'visa', name: 'Tenant Visa', required: true },
-  { id: 'payment_proof', name: 'Tenant Proof of Payment', required: false },
-  { id: 'ejari', name: 'Tawtheeq/Ejari Contract', required: false },
-  { id: 'tenancy_contract', name: 'Tenancy Contract', required: true },
-  { id: 'move_in_form', name: 'Move In Form', required: true }
-]
+const sellerDocTypes = computed(() => {
+  const residencyStatus = form.value?.seller_residency_status
+  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
+  
+  const allDocs = {
+    passport: { id: 'passport', name: 'Seller Passport', required: true },
+    national_id: { id: 'national_id', name: 'Seller National ID', required: true },
+    visa: { id: 'visa', name: 'Seller Visa', required: true },
+    title_deed: { id: 'title_deed', name: 'Unit SPA / Title Deed', required: false }
+  }
+  
+  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
+})
 
-const landlordDocTypes = [
-  { id: 'title_deed', name: 'Title Deed', required: true },
-  { id: 'passport', name: 'Landlord Passport', required: true },
-  { id: 'national_id', name: 'Landlord National ID', required: true },
-  { id: 'visa', name: 'Landlord Visa', required: true }
-]
+const tenantDocTypes = computed(() => {
+  const residencyStatus = form.value?.tenant_residency_status
+  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
+  
+  const allDocs = {
+    passport: { id: 'passport', name: 'Tenant Passport', required: true },
+    national_id: { id: 'national_id', name: 'Tenant National ID', required: false },
+    kyc: { id: 'kyc', name: 'Tenant KYC', required: true },
+    visa: { id: 'visa', name: 'Tenant Visa', required: true },
+    payment_proof: { id: 'payment_proof', name: 'Tenant Proof of Payment', required: false },
+    ejari: { id: 'ejari', name: 'Tawtheeq/Ejari Contract', required: false },
+    tenancy_contract: { id: 'tenancy_contract', name: 'Tenancy Contract', required: true },
+    move_in_form: { id: 'move_in_form', name: 'Move In Form', required: true }
+  }
+  
+  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
+})
 
+const landlordDocTypes = computed(() => {
+  const residencyStatus = form.value?.landlord_residency_status
+  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
+  
+  const allDocs = {
+    passport: { id: 'passport', name: 'Landlord Passport', required: true },
+    national_id: { id: 'national_id', name: 'Landlord National ID', required: true },
+    visa: { id: 'visa', name: 'Landlord Visa', required: true },
+    title_deed: { id: 'title_deed', name: 'Title Deed', required: true }
+  }
+  
+  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
+})
 
 // Computed property for city options based on selected country
 const buyerCityOptions = computed(() => {
@@ -1492,6 +1561,51 @@ const nationalityOptions = [
   { value: 'australian', text: 'Australian' },
   { value: 'indian', text: 'Indian' },
   { value: 'pakistani', text: 'Pakistani' },
+  { value: 'bangladeshi', text: 'Bangladeshi' },
+  { value: 'filipino', text: 'Filipino' },
+  { value: 'chinese', text: 'Chinese' },
+  { value: 'japanese', text: 'Japanese' },
+  { value: 'south_korean', text: 'South Korean' },
+  { value: 'malaysian', text: 'Malaysian' },
+  { value: 'indonesian', text: 'Indonesian' },
+  { value: 'thai', text: 'Thai' },
+  { value: 'vietnamese', text: 'Vietnamese' },
+  { value: 'singaporean', text: 'Singaporean' },
+  { value: 'sri_lankan', text: 'Sri Lankan' },
+  { value: 'nepalese', text: 'Nepalese' },
+  { value: 'afghan', text: 'Afghan' },
+  { value: 'iranian', text: 'Iranian' },
+  { value: 'turkish', text: 'Turkish' },
+  { value: 'german', text: 'German' },
+  { value: 'french', text: 'French' },
+  { value: 'italian', text: 'Italian' },
+  { value: 'spanish', text: 'Spanish' },
+  { value: 'russian', text: 'Russian' },
+  { value: 'dutch', text: 'Dutch' },
+  { value: 'swiss', text: 'Swiss' },
+  { value: 'belgian', text: 'Belgian' },
+  { value: 'austrian', text: 'Austrian' },
+  { value: 'swedish', text: 'Swedish' },
+  { value: 'norwegian', text: 'Norwegian' },
+  { value: 'danish', text: 'Danish' },
+  { value: 'finnish', text: 'Finnish' },
+  { value: 'polish', text: 'Polish' },
+  { value: 'czech', text: 'Czech' },
+  { value: 'hungarian', text: 'Hungarian' },
+  { value: 'romanian', text: 'Romanian' },
+  { value: 'bulgarian', text: 'Bulgarian' },
+  { value: 'greek', text: 'Greek' },
+  { value: 'portuguese', text: 'Portuguese' },
+  { value: 'south_african', text: 'South African' },
+  { value: 'nigerian', text: 'Nigerian' },
+  { value: 'kenyan', text: 'Kenyan' },
+  { value: 'ethiopian', text: 'Ethiopian' },
+  { value: 'somali', text: 'Somali' },
+  { value: 'sudanese', text: 'Sudanese' },
+  { value: 'moroccan', text: 'Moroccan' },
+  { value: 'algerian', text: 'Algerian' },
+  { value: 'tunisian', text: 'Tunisian' },
+  { value: 'libyan', text: 'Libyan' },
   { value: 'other', text: 'Other' }
 ]
 
@@ -1504,30 +1618,205 @@ const residencyOptions = [
   { value: 'other', text: 'Other' }
 ]
 
+// قائمة كاملة بكل دول العالم (مثل صفحة Owner)
 const countryOptions = [
-  { value: 'United Arab Emirates', text: 'United Arab Emirates' },
-  { value: 'Saudi Arabia', text: 'Saudi Arabia' },
-  { value: 'Egypt', text: 'Egypt' },
-  { value: 'Jordan', text: 'Jordan' },
-  { value: 'Lebanon', text: 'Lebanon' },
-  { value: 'Syria', text: 'Syria' },
-  { value: 'Palestine', text: 'Palestine' },
-  { value: 'Iraq', text: 'Iraq' },
-  { value: 'Yemen', text: 'Yemen' },
-  { value: 'Oman', text: 'Oman' },
-  { value: 'Qatar', text: 'Qatar' },
-  { value: 'Kuwait', text: 'Kuwait' },
-  { value: 'Bahrain', text: 'Bahrain' },
-  { value: 'United Kingdom', text: 'United Kingdom' },
-  { value: 'United States', text: 'United States' },
-  { value: 'Canada', text: 'Canada' },
-  { value: 'Australia', text: 'Australia' },
-  { value: 'India', text: 'India' },
-  { value: 'Pakistan', text: 'Pakistan' },
-  { value: 'other', text: 'Other' }
+  { value: "Afghanistan", text: "Afghanistan" },
+  { value: "Albania", text: "Albania" },
+  { value: "Algeria", text: "Algeria" },
+  { value: "Andorra", text: "Andorra" },
+  { value: "Angola", text: "Angola" },
+  { value: "Antigua and Barbuda", text: "Antigua and Barbuda" },
+  { value: "Argentina", text: "Argentina" },
+  { value: "Armenia", text: "Armenia" },
+  { value: "Australia", text: "Australia" },
+  { value: "Austria", text: "Austria" },
+  { value: "Azerbaijan", text: "Azerbaijan" },
+  { value: "Bahamas", text: "Bahamas" },
+  { value: "Bahrain", text: "Bahrain" },
+  { value: "Bangladesh", text: "Bangladesh" },
+  { value: "Barbados", text: "Barbados" },
+  { value: "Belarus", text: "Belarus" },
+  { value: "Belgium", text: "Belgium" },
+  { value: "Belize", text: "Belize" },
+  { value: "Benin", text: "Benin" },
+  { value: "Bhutan", text: "Bhutan" },
+  { value: "Bolivia", text: "Bolivia" },
+  { value: "Bosnia and Herzegovina", text: "Bosnia and Herzegovina" },
+  { value: "Botswana", text: "Botswana" },
+  { value: "Brazil", text: "Brazil" },
+  { value: "Brunei", text: "Brunei" },
+  { value: "Bulgaria", text: "Bulgaria" },
+  { value: "Burkina Faso", text: "Burkina Faso" },
+  { value: "Burundi", text: "Burundi" },
+  { value: "Cabo Verde", text: "Cabo Verde" },
+  { value: "Cambodia", text: "Cambodia" },
+  { value: "Cameroon", text: "Cameroon" },
+  { value: "Canada", text: "Canada" },
+  { value: "Central African Republic", text: "Central African Republic" },
+  { value: "Chad", text: "Chad" },
+  { value: "Chile", text: "Chile" },
+  { value: "China", text: "China" },
+  { value: "Colombia", text: "Colombia" },
+  { value: "Comoros", text: "Comoros" },
+  { value: "Congo", text: "Congo" },
+  { value: "Costa Rica", text: "Costa Rica" },
+  { value: "Croatia", text: "Croatia" },
+  { value: "Cuba", text: "Cuba" },
+  { value: "Cyprus", text: "Cyprus" },
+  { value: "Czechia", text: "Czechia" },
+  { value: "Denmark", text: "Denmark" },
+  { value: "Djibouti", text: "Djibouti" },
+  { value: "Dominica", text: "Dominica" },
+  { value: "Dominican Republic", text: "Dominican Republic" },
+  { value: "Ecuador", text: "Ecuador" },
+  { value: "Egypt", text: "Egypt" },
+  { value: "El Salvador", text: "El Salvador" },
+  { value: "Equatorial Guinea", text: "Equatorial Guinea" },
+  { value: "Eritrea", text: "Eritrea" },
+  { value: "Estonia", text: "Estonia" },
+  { value: "Eswatini", text: "Eswatini" },
+  { value: "Ethiopia", text: "Ethiopia" },
+  { value: "Fiji", text: "Fiji" },
+  { value: "Finland", text: "Finland" },
+  { value: "France", text: "France" },
+  { value: "Gabon", text: "Gabon" },
+  { value: "Gambia", text: "Gambia" },
+  { value: "Georgia", text: "Georgia" },
+  { value: "Germany", text: "Germany" },
+  { value: "Ghana", text: "Ghana" },
+  { value: "Greece", text: "Greece" },
+  { value: "Grenada", text: "Grenada" },
+  { value: "Guatemala", text: "Guatemala" },
+  { value: "Guinea", text: "Guinea" },
+  { value: "Guinea-Bissau", text: "Guinea-Bissau" },
+  { value: "Guyana", text: "Guyana" },
+  { value: "Haiti", text: "Haiti" },
+  { value: "Honduras", text: "Honduras" },
+  { value: "Hungary", text: "Hungary" },
+  { value: "Iceland", text: "Iceland" },
+  { value: "India", text: "India" },
+  { value: "Indonesia", text: "Indonesia" },
+  { value: "Iran", text: "Iran" },
+  { value: "Iraq", text: "Iraq" },
+  { value: "Ireland", text: "Ireland" },
+  { value: "Israel", text: "Israel" },
+  { value: "Italy", text: "Italy" },
+  { value: "Jamaica", text: "Jamaica" },
+  { value: "Japan", text: "Japan" },
+  { value: "Jordan", text: "Jordan" },
+  { value: "Kazakhstan", text: "Kazakhstan" },
+  { value: "Kenya", text: "Kenya" },
+  { value: "Kiribati", text: "Kiribati" },
+  { value: "Kuwait", text: "Kuwait" },
+  { value: "Kyrgyzstan", text: "Kyrgyzstan" },
+  { value: "Laos", text: "Laos" },
+  { value: "Latvia", text: "Latvia" },
+  { value: "Lebanon", text: "Lebanon" },
+  { value: "Lesotho", text: "Lesotho" },
+  { value: "Liberia", text: "Liberia" },
+  { value: "Libya", text: "Libya" },
+  { value: "Liechtenstein", text: "Liechtenstein" },
+  { value: "Lithuania", text: "Lithuania" },
+  { value: "Luxembourg", text: "Luxembourg" },
+  { value: "Madagascar", text: "Madagascar" },
+  { value: "Malawi", text: "Malawi" },
+  { value: "Malaysia", text: "Malaysia" },
+  { value: "Maldives", text: "Maldives" },
+  { value: "Mali", text: "Mali" },
+  { value: "Malta", text: "Malta" },
+  { value: "Marshall Islands", text: "Marshall Islands" },
+  { value: "Mauritania", text: "Mauritania" },
+  { value: "Mauritius", text: "Mauritius" },
+  { value: "Mexico", text: "Mexico" },
+  { value: "Micronesia", text: "Micronesia" },
+  { value: "Moldova", text: "Moldova" },
+  { value: "Monaco", text: "Monaco" },
+  { value: "Mongolia", text: "Mongolia" },
+  { value: "Montenegro", text: "Montenegro" },
+  { value: "Morocco", text: "Morocco" },
+  { value: "Mozambique", text: "Mozambique" },
+  { value: "Myanmar", text: "Myanmar" },
+  { value: "Namibia", text: "Namibia" },
+  { value: "Nauru", text: "Nauru" },
+  { value: "Nepal", text: "Nepal" },
+  { value: "Netherlands", text: "Netherlands" },
+  { value: "New Zealand", text: "New Zealand" },
+  { value: "Nicaragua", text: "Nicaragua" },
+  { value: "Niger", text: "Niger" },
+  { value: "Nigeria", text: "Nigeria" },
+  { value: "North Korea", text: "North Korea" },
+  { value: "North Macedonia", text: "North Macedonia" },
+  { value: "Norway", text: "Norway" },
+  { value: "Oman", text: "Oman" },
+  { value: "Pakistan", text: "Pakistan" },
+  { value: "Palau", text: "Palau" },
+  { value: "Palestine", text: "Palestine" },
+  { value: "Panama", text: "Panama" },
+  { value: "Papua New Guinea", text: "Papua New Guinea" },
+  { value: "Paraguay", text: "Paraguay" },
+  { value: "Peru", text: "Peru" },
+  { value: "Philippines", text: "Philippines" },
+  { value: "Poland", text: "Poland" },
+  { value: "Portugal", text: "Portugal" },
+  { value: "Qatar", text: "Qatar" },
+  { value: "Romania", text: "Romania" },
+  { value: "Russia", text: "Russia" },
+  { value: "Rwanda", text: "Rwanda" },
+  { value: "Saint Kitts and Nevis", text: "Saint Kitts and Nevis" },
+  { value: "Saint Lucia", text: "Saint Lucia" },
+  { value: "Saint Vincent and the Grenadines", text: "Saint Vincent and the Grenadines" },
+  { value: "Samoa", text: "Samoa" },
+  { value: "San Marino", text: "San Marino" },
+  { value: "Sao Tome and Principe", text: "Sao Tome and Principe" },
+  { value: "Saudi Arabia", text: "Saudi Arabia" },
+  { value: "Senegal", text: "Senegal" },
+  { value: "Serbia", text: "Serbia" },
+  { value: "Seychelles", text: "Seychelles" },
+  { value: "Sierra Leone", text: "Sierra Leone" },
+  { value: "Singapore", text: "Singapore" },
+  { value: "Slovakia", text: "Slovakia" },
+  { value: "Slovenia", text: "Slovenia" },
+  { value: "Solomon Islands", text: "Solomon Islands" },
+  { value: "Somalia", text: "Somalia" },
+  { value: "South Africa", text: "South Africa" },
+  { value: "South Korea", text: "South Korea" },
+  { value: "South Sudan", text: "South Sudan" },
+  { value: "Spain", text: "Spain" },
+  { value: "Sri Lanka", text: "Sri Lanka" },
+  { value: "Sudan", text: "Sudan" },
+  { value: "Suriname", text: "Suriname" },
+  { value: "Sweden", text: "Sweden" },
+  { value: "Switzerland", text: "Switzerland" },
+  { value: "Syria", text: "Syria" },
+  { value: "Taiwan", text: "Taiwan" },
+  { value: "Tajikistan", text: "Tajikistan" },
+  { value: "Tanzania", text: "Tanzania" },
+  { value: "Thailand", text: "Thailand" },
+  { value: "Timor-Leste", text: "Timor-Leste" },
+  { value: "Togo", text: "Togo" },
+  { value: "Tonga", text: "Tonga" },
+  { value: "Trinidad and Tobago", text: "Trinidad and Tobago" },
+  { value: "Tunisia", text: "Tunisia" },
+  { value: "Turkey", text: "Turkey" },
+  { value: "Turkmenistan", text: "Turkmenistan" },
+  { value: "Tuvalu", text: "Tuvalu" },
+  { value: "Uganda", text: "Uganda" },
+  { value: "Ukraine", text: "Ukraine" },
+  { value: "United Arab Emirates", text: "United Arab Emirates" },
+  { value: "United Kingdom", text: "United Kingdom" },
+  { value: "United States", text: "United States" },
+  { value: "Uruguay", text: "Uruguay" },
+  { value: "Uzbekistan", text: "Uzbekistan" },
+  { value: "Vanuatu", text: "Vanuatu" },
+  { value: "Vatican City", text: "Vatican City" },
+  { value: "Venezuela", text: "Venezuela" },
+  { value: "Vietnam", text: "Vietnam" },
+  { value: "Yemen", text: "Yemen" },
+  { value: "Zambia", text: "Zambia" },
+  { value: "Zimbabwe", text: "Zimbabwe" }
 ];
 
-// Update citiesByCountry to use objects with value/text pairs
+// مدن كل بلد (كما هي موجودة عندك ولكن مع التأكد من وجود value/text)
 const citiesByCountry = {
   'United Arab Emirates': [
     { value: 'Abu Dhabi', text: 'Abu Dhabi' },
@@ -1660,24 +1949,94 @@ const citiesByCountry = {
     { value: 'Lahore', text: 'Lahore' },
     { value: 'Islamabad', text: 'Islamabad' },
     { value: 'Rawalpindi', text: 'Rawalpindi' }
-  ],
-  'other': []
+  ]
 };
 
+// دالة لجلب المدن حسب البلد المختار
+function getCitiesForCountry(countryValue) {
+  if (!countryValue) return [];
+  const cities = citiesByCountry[countryValue] || [];
+  return cities;
+}
+
 const languageOptions = [
-  { value: 'ar', text: 'Arabic' },
-  { value: 'en', text: 'English' },
-  { value: 'fr', text: 'French' },
-  { value: 'es', text: 'Spanish' },
-  { value: 'de', text: 'German' },
-  { value: 'it', text: 'Italian' },
-  { value: 'ru', text: 'Russian' },
-  { value: 'zh', text: 'Chinese' },
-  { value: 'hi', text: 'Hindi' },
-  { value: 'ur', text: 'Urdu' },
+  { value: 'english', text: 'English' },
+  { value: 'arabic', text: 'Arabic' },
+  { value: 'spanish', text: 'Spanish' },
+  { value: 'french', text: 'French' },
+  { value: 'german', text: 'German' },
+  { value: 'italian', text: 'Italian' },
+  { value: 'portuguese', text: 'Portuguese' },
+  { value: 'russian', text: 'Russian' },
+  { value: 'chinese', text: 'Chinese' },
+  { value: 'japanese', text: 'Japanese' },
+  { value: 'korean', text: 'Korean' },
+  { value: 'hindi', text: 'Hindi' },
+  { value: 'urdu', text: 'Urdu' },
+  { value: 'bengali', text: 'Bengali' },
+  { value: 'punjabi', text: 'Punjabi' },
+  { value: 'turkish', text: 'Turkish' },
+  { value: 'dutch', text: 'Dutch' },
+  { value: 'polish', text: 'Polish' },
+  { value: 'ukrainian', text: 'Ukrainian' },
+  { value: 'czech', text: 'Czech' },
+  { value: 'swedish', text: 'Swedish' },
+  { value: 'greek', text: 'Greek' },
+  { value: 'hebrew', text: 'Hebrew' },
+  { value: 'thai', text: 'Thai' },
+  { value: 'vietnamese', text: 'Vietnamese' },
+  { value: 'indonesian', text: 'Indonesian' },
+  { value: 'malay', text: 'Malay' },
+  { value: 'filipino', text: 'Filipino' },
+  { value: 'persian', text: 'Persian (Farsi)' },
+  { value: 'swahili', text: 'Swahili' },
+  { value: 'romanian', text: 'Romanian' },
+  { value: 'hungarian', text: 'Hungarian' },
+  { value: 'serbian', text: 'Serbian' },
+  { value: 'croatian', text: 'Croatian' },
+  { value: 'bulgarian', text: 'Bulgarian' },
+  { value: 'tamil', text: 'Tamil' },
+  { value: 'telugu', text: 'Telugu' },
+  { value: 'marathi', text: 'Marathi' },
+  { value: 'gujarati', text: 'Gujarati' },
+  { value: 'kannada', text: 'Kannada' },
+  { value: 'malayalam', text: 'Malayalam' },
+  { value: 'nepali', text: 'Nepali' },
+  { value: 'sinhala', text: 'Sinhala' },
+  { value: 'khmer', text: 'Khmer' },
+  { value: 'lao', text: 'Lao' },
+  { value: 'burmese', text: 'Burmese' },
+  { value: 'mongolian', text: 'Mongolian' },
+  { value: 'kazakh', text: 'Kazakh' },
+  { value: 'uzbek', text: 'Uzbek' },
+  { value: 'azerbaijani', text: 'Azerbaijani' },
+  { value: 'georgian', text: 'Georgian' },
+  { value: 'armenian', text: 'Armenian' },
+  { value: 'albanian', text: 'Albanian' },
+  { value: 'bosnian', text: 'Bosnian' },
+  { value: 'macedonian', text: 'Macedonian' },
+  { value: 'slovak', text: 'Slovak' },
+  { value: 'slovenian', text: 'Slovenian' },
+  { value: 'estonian', text: 'Estonian' },
+  { value: 'latvian', text: 'Latvian' },
+  { value: 'lithuanian', text: 'Lithuanian' },
+  { value: 'icelandic', text: 'Icelandic' },
+  { value: 'norwegian', text: 'Norwegian' },
+  { value: 'danish', text: 'Danish' },
+  { value: 'finnish', text: 'Finnish' },
+  { value: 'welsh', text: 'Welsh' },
+  { value: 'irish', text: 'Irish' },
+  { value: 'scottish_gaelic', text: 'Scottish Gaelic' },
+  { value: 'afrikaans', text: 'Afrikaans' },
+  { value: 'amharic', text: 'Amharic' },
+  { value: 'somali', text: 'Somali' },
+  { value: 'yoruba', text: 'Yoruba' },
+  { value: 'igbo', text: 'Igbo' },
+  { value: 'hausa', text: 'Hausa' },
+  { value: 'zulu', text: 'Zulu' },
+  { value: 'xhosa', text: 'Xhosa' },
   { value: 'other', text: 'Other' }
 ]
-
 const currencyOptions = [
   { value: 'AED', text: 'AED' },
   { value: 'USD', text: 'USD' },

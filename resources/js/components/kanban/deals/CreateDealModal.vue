@@ -158,7 +158,7 @@ const formData = ref({})
 const fieldErrors = ref({})
 
 const dealTypeTabs = [
-  { id: 'primary', name: 'Primary / Off Plan' },
+  { id: 'primary', name: 'Primary' },
   { id: 'secondary', name: 'Secondary' },
   { id: 'rental', name: 'Rental' }
 ]

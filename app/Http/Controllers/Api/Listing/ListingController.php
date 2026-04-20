@@ -302,6 +302,7 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
         if(!$request->boolean('my_listings') && !($user->hasRole('super_admin') || $user->hasRole('admin'))){
             $query->where('is_active', true)
                 ->where('status', '!=', 'converted')
+                ->where('status', '!=', 'rented')
                 ->where('status', '!=', 'draft')
                 ->where('is_archived', false);
         }
@@ -309,6 +310,7 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
         if($request->has('active') ){
               $query->where('is_active', true)
                 ->where('status', '!=', 'converted')
+                ->where('status', '!=', 'rented')
                 ->where('status', '!=', 'draft')
                 ->where('is_archived', false);
         }
@@ -378,6 +380,7 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             if($request->is_active){
                 $query->where('is_active', true)
                 ->where('status', '!=', 'converted')
+                ->where('status', '!=', 'rented')
                 ->where('status', '!=', 'draft')
                 ->where('is_archived', false);
             }else{
@@ -545,6 +548,9 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             if ($request->has('max_size')) {
                 $query->where('size_sqft', '<=', $request->max_size);
             }
+            if($request->has('rented')) {
+                    $query->where('status', 'rented');
+                }
 
             $sort = $request->get('sort', 'created_at_desc');
             switch ($sort) {
@@ -1927,16 +1933,19 @@ public function markAsConverted(Request $request, $id)
         }
 
         $request->validate([
-            'sold_by' => 'required|in:me,oia,other_company'
+            'sold_by' => 'required|in:me,oia,other_company,another_agent',
+            'agent_id' => 'required_if:sold_by,another_agent|exists:users,id'
         ]);
-
+ 
         $property->update([
             'status' => 'converted',
             'sold_by' => $request->sold_by,
             'converted_at' => Now(),
-            'converted_by' => Auth::id()
+            'converted_by' => Auth::id(),
+            'sold_by_agent_id'=> $request->agent_id??null,
         ]);
 
+        
         $this->clearCache();
 
         return ApiResponse::success(
@@ -1949,6 +1958,63 @@ public function markAsConverted(Request $request, $id)
     }
 }
 
+// دالة markAsRented جديدة
+public function markAsRented(Request $request, $id)
+{
+    try {
+        $property = Listing::findOrFail($id);
+        
+        $request->validate([
+            'rented_by' => 'required|in:me,oia,other_company,another_agent',
+            'agent_id' => 'required_if:rented_by,another_agent|exists:users,id',
+            'rented_date' => 'required|date',
+            'owner_id' => 'nullable|exists:owners,id'
+        ]);
+
+        $data = [
+            'status' => 'rented',
+            'rented_by' => $request->rented_by,
+            'rented_by_agent_id' => $request->rented_by === 'another_agent' ? $request->agent_id : Auth()->user()->id,
+            'rented_date' => $request->rented_date,
+            'rented_owner_id' => $request->owner_id,
+            'rented_date' => now(),
+        ];
+
+        $property->update($data);
+
+        return ApiResponse::success(
+            new ListingResource($property->fresh()),
+            'Property marked as rented successfully'
+        );
+
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to mark as rented: ' . $e->getMessage());
+    }
+}
+
+// تعديل دالة revert من الإيجار
+public function revertFromRented($id)
+{
+    try {
+        $property = Listing::findOrFail($id);
+        
+        $property->update([
+            'status' => 'active',
+            'rented_by' => null,
+            'rented_by_agent_id' => null,
+            'rented_date' => null,
+            'rented_owner_id' => null
+        ]);
+
+        return ApiResponse::success(
+            new ListingResource($property->fresh()),
+            'Property reverted from rented successfully'
+        );
+
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to revert: ' . $e->getMessage());
+    }
+}
 public function revertFromConverted($id)
 {
     try {

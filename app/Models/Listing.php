@@ -33,6 +33,15 @@ class Listing extends Model
         
 
     ];
+    
+    public function soldByAgent()
+        {
+            return $this->belongsTo(User::class, 'sold_by_agent_id');
+        }
+         public function rentByAgent()
+        {
+            return $this->belongsTo(User::class, 'rented_owner_id');
+        }
  public function getFloorPlansSourcesAttribute()
     {
         $sources = [

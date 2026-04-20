@@ -64,7 +64,7 @@ class LeadUpdated implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'lead'        => new \App\Http\Resources\Lead\LeadResource($this->lead),
+            'lead'        => new \App\Http\Resources\Lead\PusherLeadResource($this->lead),
             'action_type' => $this->actionType,
             'user_id'     => $this->userId,
             'user_name'   => $this->getActorName(),

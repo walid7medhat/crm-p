@@ -140,36 +140,66 @@ class DealStageValidator
                 }
             }
 
-            // Documents
-            foreach ($requirements['documents'] ?? [] as $partyType => $docs) {
-                $party = $parties[$partyType] ?? null;
+          // Documents
+        foreach ($requirements['documents'] ?? [] as $partyType => $docs) {
+            $party = $parties[$partyType] ?? null;
+            
+            // الحصول على حالة الإقامة والجنسية للطرف (إذا كان موجود)
+            $residencyStatus = null;
+            $nationality = null;
+            
+            if ($party) {
+                // محاولة الحصول على حالة الإقامة من الـ party
+                $residencyStatus = $party->residency_status ?? null;
+                $nationality = $party->nationality ?? null;
+            } else {
+                // إذا لم يكن الطرف موجوداً، نحاول الحصول من الـ deal
+                $residencyStatus = $deal->{"{$partyType}_residency_status"} ?? null;
+                $nationality = $deal->{"{$partyType}_nationality"} ?? null;
+            }
+            
+            // الحصول على المستندات المطلوبة حسب حالة الإقامة
+            $requiredDocs = $this->getRequiredDocumentsByResidency($party, $residencyStatus, $nationality);
+            
+            foreach ($docs as $docType) {
+                // فقط تحقق من المستند إذا كان مطلوباً حسب حالة الإقامة
+                if (!in_array($docType, $requiredDocs)) {
+                    Log::info('Skipping document not required for residency', [
+                        'partyType' => $partyType,
+                        'docType' => $docType,
+                        'residencyStatus' => $residencyStatus,
+                        'nationality' => $nationality,
+                        'requiredDocs' => $requiredDocs
+                    ]);
+                    continue;
+                }
                 
-                foreach ($docs as $docType) {
-                    $hasDoc = false;
+                $hasDoc = false;
+                
+                // لو فيه party، نتأكد من وجود المستند
+                if ($party) {
+                    $hasDoc = $deal->documents()
+                        ->where('deal_party_id', $party->id)
+                        ->where('document_type', $docType)
+                        ->exists();
+                }
+                
+                // لو المستند مش موجود (حتى لو party مش موجود، نعتبره ناقص)
+                if (!$hasDoc) {
+                    $key = "{$partyType}_document_{$docType}";
+                    $stageMissing[] = $key;
+                    $missingFields[] = $key;
                     
-                    // لو فيه party، نتأكد من وجود المستند
-                    if ($party) {
-                        $hasDoc = $deal->documents()
-                            ->where('deal_party_id', $party->id)
-                            ->where('document_type', $docType)
-                            ->exists();
-                    }
-                    
-                    // لو المستند مش موجود (حتى لو party مش موجود، نعتبره ناقص)
-                    if (!$hasDoc) {
-                        $key = "{$partyType}_document_{$docType}";
-                        $stageMissing[] = $key;
-                        $missingFields[] = $key;
-                        
-                        Log::info('Document missing', [
-                            'partyType' => $partyType,
-                            'docType' => $docType,
-                            'party_exists' => $party ? 'yes' : 'no',
-                            'key' => $key
-                        ]);
-                    }
+                    Log::info('Document missing', [
+                        'partyType' => $partyType,
+                        'docType' => $docType,
+                        'party_exists' => $party ? 'yes' : 'no',
+                        'residencyStatus' => $residencyStatus,
+                        'key' => $key
+                    ]);
                 }
             }
+        }
 
             if (!empty($stageMissing)) {
                 $missingByStage[] = [
@@ -219,6 +249,13 @@ public function getRequiredFieldsForStage(Deal $deal, int $targetStageId, string
     
     if (!$requirements) return [];
     
+    // تحميل الأطراف
+    $deal->loadMissing(['parties']);
+    $parties = [];
+    foreach ($deal->parties as $party) {
+        $parties[$party->party_type] = $party;
+    }
+    
     $requiredFields = [];
     
     foreach ($requirements['fields'] ?? [] as $field) {
@@ -232,8 +269,27 @@ public function getRequiredFieldsForStage(Deal $deal, int $targetStageId, string
     }
     
     foreach ($requirements['documents'] ?? [] as $partyType => $docs) {
+        $party = $parties[$partyType] ?? null;
+        
+        $residencyStatus = null;
+        $nationality = null;
+        
+        if ($party) {
+            $residencyStatus = $party->residency_status ?? null;
+            $nationality = $party->nationality ?? null;
+        } else {
+            $residencyStatus = $deal->{"{$partyType}_residency_status"} ?? null;
+            $nationality = $deal->{"{$partyType}_nationality"} ?? null;
+        }
+        
+        // الحصول على المستندات المطلوبة حسب حالة الإقامة
+        $requiredDocs = $this->getRequiredDocumentsByResidency($party, $residencyStatus, $nationality);
+        
         foreach ($docs as $docType) {
-            $requiredFields[] = "{$partyType}_document_{$docType}";
+            // فقط أضف المستند إذا كان مطلوباً حسب حالة الإقامة
+            if (in_array($docType, $requiredDocs)) {
+                $requiredFields[] = "{$partyType}_document_{$docType}";
+            }
         }
     }
     
@@ -517,4 +573,38 @@ public function getRequiredFieldsForStage(Deal $deal, int $targetStageId, string
         
         return $meta;
     }
+    
+   
+protected function getRequiredDocumentsByResidency($party, $residencyStatus, $nationality): array
+{
+    // مقيم (Resident) - يطلب Passport + Visa + National ID
+    if ($residencyStatus === 'resident') {
+        return ['passport', 'visa', 'national_id'];
+    }
+    
+    // غير مقيم / سائح (Non-resident / Tourist) - يطلب Passport فقط
+    if ($residencyStatus === 'non_resident' || $residencyStatus === 'tourist') {
+        return ['passport'];
+    }
+    
+    // Investor - يطلب Passport + Investor Visa + National ID
+    if ($residencyStatus === 'investor') {
+        return ['passport', 'visa', 'national_id'];
+    }
+    
+    // Student - يطلب Passport + Student Visa + National ID
+    if ($residencyStatus === 'student') {
+        return ['passport', 'visa', 'national_id'];
+    }
+    
+    // Citizen - يطلب Passport + National ID
+    if ($residencyStatus === 'citizen') {
+        return ['passport', 'national_id'];
+    }
+    
+    // الحالة الافتراضية - يطلب Passport فقط
+    return ['passport'];
+}
+    
+    
 }

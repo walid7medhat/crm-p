@@ -66,6 +66,9 @@
                   <span v-if="property.status === 'converted'" class="badge-sold">
                     <i class="ri-checkbox-circle-fill me-1"></i>Sold Out
                   </span>
+                     <span v-if="property.status === 'rented'" class="badge-sold">
+                    <i class="ri-home-gear-line me-1"></i>Rented
+                </span>
                   <span v-else-if="property.status === 'draft'" class="badge-sold">
                     <i class="ri-checkbox-circle-fill me-1"></i>draft
                   </span>
@@ -282,9 +285,13 @@ export default {
         case 'all':
           return properties.value;
         case 'active':
-          return properties.value.filter(property => property.is_active && !property.is_archived && property.status !== 'converted' && property.status !== 'converted' && property.status !== 'draft');
+          return properties.value.filter(property => property.is_active && !property.is_archived && property.status !== 'converted' &&
+              property.status !== 'rented' &&
+              property.status !== 'converted' && property.status !== 'draft');
         case 'inactive':
-          return properties.value.filter(property => !property.is_active && !property.is_archived && property.status !== 'converted' && property.status !== 'draft');
+          return properties.value.filter(property => !property.is_active && !property.is_archived && property.status !== 'converted' &&
+              property.status !== 'rented' &&
+              property.status !== 'draft');
         case 'archived':
           return properties.value.filter(property => property.is_archived);
         case 'off_plan':
@@ -293,15 +300,17 @@ export default {
           return properties.value.filter(property => property.status === 'draft');
        case 'sold':
           return properties.value.filter(p => p.status === 'converted');
+        case 'rented': 
+           return properties.value.filter(property => property.status === 'rented');
 
-    case 'draft':
-      return properties.value.filter(
-        p => !p.is_active && !p.is_archived
-      );
-        default:
-          return properties.value;
-      }
-    });
+        case 'draft':
+          return properties.value.filter(
+            p => !p.is_active && !p.is_archived
+          );
+            default:
+              return properties.value;
+          }
+        });
 
     // Status toggle functions
     const setStatus = (status) => {
@@ -417,6 +426,9 @@ const fetchProperties = async (filters = {}, page = 1) => {
         break;
       case 'sold':
         params.converted = true;
+        break;
+      case 'rented': 
+        params.status = 'rented';
         break;
       case 'active':
         params.is_active = true;

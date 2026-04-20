@@ -722,7 +722,7 @@
                     
                               <!-- Mark as Converted (Sold Out) -->
                               <button 
-                                v-if="canMarkAsConverted && property.status !== 'converted'"
+                                v-if="canMarkAsConverted && property.status !== 'converted' && property.listing_status === 'sale'"
                                 class="dropdown-item success"
                                 @click="openSoldOutModal"
                               >
@@ -732,13 +732,33 @@
                     
                               <!-- Revert from Sold Out -->
                               <button 
-                                v-if="canMarkAsConverted && property.status === 'converted'"
+                                v-if="canMarkAsConverted && property.status === 'converted' && property.listing_status === 'sale'"
                                 class="dropdown-item warning"
                                 @click="revertFromConverted"
                               >
                                 <i class="ri-arrow-go-back-line"></i>
                                 Revert from Sold Out
                               </button>
+                              
+                              <!-- Mark as Rented - only for RENT -->
+                            <button 
+                                v-if="canMarkAsConverted && property.status !== 'rented' && property.listing_status === 'rent'"
+                                class="dropdown-item success"
+                                @click="openRentedModal"
+                            >
+                                <i class="ri-home-gear-line"></i>
+                                Mark as Rented
+                            </button>
+                            
+                            <!-- Revert from Rented -->
+                            <button 
+                                v-if="canMarkAsConverted && property.status === 'rented' && property.listing_status === 'rent'"
+                                class="dropdown-item warning"
+                                @click="revertFromRented"
+                            >
+                                <i class="ri-arrow-go-back-line"></i>
+                                Revert from Rented
+                            </button>
                               <!-- Viewing -->
             
                     <div v-if="!isPropertyOwner && property?.completion_status=='Completed'" class="dropdown-item-btn">
@@ -1202,8 +1222,59 @@
               <i class="ri-arrow-right-s-line"></i>
             </div>
           </div>
+          
+          
+               <!-- NEW OPTION: Sold by Another Agent -->
+        <div class="option-card" @click="selectSoldBy('another_agent')">
+            <div class="option-icon">
+                <i class="ri-user-shared-line"></i>
+            </div>
+            <div class="option-content">
+                <h6>Sold by Another Agent</h6>
+                <p>Another agent from Oia closed this deal</p>
+            </div>
+            <div class="option-arrow">
+                <i class="ri-arrow-right-s-line"></i>
+            </div>
+        </div>
+        
+        
         </div>
       </template>
+      <template v-else-if="soldByChoice === 'another_agent'">
+    <div class="sold-out-add-owner-step">
+        <p class="sold-out-step-text">
+            Select the agent who sold this property, then add the new owner.
+        </p>
+        
+        <!-- v-select for agents -->
+        <div class="form-group mb-3">
+            <label class="form-label">Select Agent *</label>
+            <v-select 
+                v-model="selectedSoldByAgent"
+                :options="availableAgentsForSoldBy"
+                placeholder="Choose an agent..."
+                label="name"
+                :reduce="agent => agent.id"
+                :loading="loadingAgentsForSoldBy"
+            >
+                <template #option="agent">
+                    {{ agent.name }}
+                </template>
+            </v-select>
+        </div>
+         <button 
+            type="button" 
+            class="btn-modal btn-modal-primary" 
+            @click="markAsSold('another_agent', selectedSoldByAgent)"
+            :disabled="!selectedSoldByAgent"
+        >
+            <i class="ri-checkbox-circle-line me-2"></i>
+            Confirm Sold by Agent
+        </button>
+   
+    </div>
+</template>
 
       <!-- Step 2: Add new owner (for Sold by Me / Sold by Oia) -->
       <template v-else>
@@ -1211,7 +1282,7 @@
           <p class="sold-out-step-text">
             Add the new owner details before marking as sold. You can then mark the property as sold.
           </p>
-          <button type="button" class="btn-modal btn-modal-primary btn-add-owner-inline" @click="openAddOwnerModal">
+          <button type="button" class="btn-modal btn-modal-primary btn-add-owner-inline" @click="openAddOwnerModal('owner')">
             <i class="ri-user-add-line me-2"></i>
             Add New Owner
           </button>
@@ -1229,7 +1300,114 @@
     </div>
   </div>
 </div>
+<!-- Mark as Rented Modal -->
+<div v-if="showRentedModal" class="modal-overlay" @click="closeRentedModal">
+    <div class="modal-content sold-out-modal-content" @click.stop>
+        <div class="modal-header sold-out-modal-header">
+            <div class="sold-out-header-inner">
+                <h4 class="sold-out-modal-title">
+                    <i class="ri-home-gear-line me-2"></i>
+                    Mark as Rented
+                </h4>
+                <p class="sold-out-modal-subtitle">
+                    {{ !rentedByChoice ? 'Choose who rented this property' : 'Add the new tenant for this property' }}
+                </p>
+            </div>
+            <button type="button" class="modal-close" @click="closeRentedModal">
+                <i class="ri-close-line"></i>
+            </button>
+        </div>
 
+        <div class="modal-body sold-out-modal-body">
+            <!-- Step 1: Choose option -->
+            <template v-if="!rentedByChoice">
+                <div class="sold-out-options">
+                    <div class="option-card" @click="selectRentedBy('me')">
+                        <div class="option-icon"><i class="ri-user-star-line"></i></div>
+                        <div class="option-content">
+                            <h6>Rented by Me</h6>
+                            <p>You closed this deal</p>
+                        </div>
+                        <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
+                    </div>
+                    <div class="option-card" @click="selectRentedBy('oia')">
+                        <div class="option-icon"><i class="ri-award-line"></i></div>
+                        <div class="option-content">
+                            <h6>Rented by Oia</h6>
+                            <p>Another Oia agent closed this deal</p>
+                        </div>
+                        <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
+                    </div>
+                    <div class="option-card" @click="selectRentedBy('other_company')">
+                        <div class="option-icon"><i class="ri-forbid-line"></i></div>
+                        <div class="option-content">
+                            <h6>Rented by Other Company</h6>
+                            <p>Rented by an external company</p>
+                        </div>
+                        <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
+                    </div>
+                    <div class="option-card" @click="selectRentedBy('another_agent')">
+                        <div class="option-icon"><i class="ri-user-shared-line"></i></div>
+                        <div class="option-content">
+                            <h6>Rented by Another Agent</h6>
+                            <p>Another agent from Oia closed this deal</p>
+                        </div>
+                        <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
+                    </div>
+                </div>
+            </template>
+            
+            <!-- Step 2: Select Agent + Rented Date -->
+            <template v-else-if="rentedByChoice === 'another_agent'">
+                <div class="sold-out-add-owner-step">
+                    <p class="sold-out-step-text">Select the agent who rented this property, then add the new tenant.</p>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Select Agent *</label>
+                        <v-select v-model="selectedRentedByAgent" :options="availableAgentsForRentedBy" 
+                            placeholder="Choose an agent..." label="name" :reduce="agent => agent.id"
+                            :loading="loadingAgentsForRentedBy" />
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Rented Date *</label>
+                        <input type="date" v-model="rentedDate" class="form-control" required />
+                    </div>
+                       <button 
+                        type="button" 
+                        class="btn-modal btn-modal-primary" 
+                        @click="markAsRented('another_agent', selectedRentedByAgent)"
+                        :disabled="!selectedRentedByAgent || !rentedDate"
+                    >
+                        <i class="ri-checkbox-circle-line me-2"></i>
+                        Confirm Rented by Agent
+                    </button>
+                
+                </div>
+            </template>
+
+            <!-- Step 2b: Add new tenant (for other options) -->
+            <template v-else>
+                <div class="sold-out-add-owner-step">
+                    <p class="sold-out-step-text">Add the new tenant details before marking as rented.</p>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Rented Date *</label>
+                        <input type="date" v-model="rentedDate" class="form-control" required />
+                    </div>
+                    <button type="button" class="btn-modal btn-modal-primary btn-add-owner-inline" 
+                        @click="openAddOwnerModal('tenant')">
+                        <i class="ri-user-add-line me-2"></i> Add New Tenant
+                    </button>
+                </div>
+            </template>
+        </div>
+
+        <div class="modal-footer sold-out-modal-footer">
+            <button v-if="rentedByChoice" type="button" class="btn-modal btn-modal-secondary" @click="rentedByChoice = null">Back</button>
+            <button type="button" class="btn-modal btn-modal-secondary" @click="closeRentedModal">Cancel</button>
+        </div>
+    </div>
+</div>
 <!-- Add New Owner Modal (for Sold by Me / Oia) -->
 <div v-if="showAddOwnerModal" class="modal-overlay add-owner-modal-overlay" @click="showAddOwnerModal = false">
   <div class="modal-content add-owner-modal-content" style="max-width: 1200px; width: 95%; max-height: 95vh; overflow-y: auto;" @click.stop>
@@ -1237,7 +1415,7 @@
       <div class="sold-out-header-inner">
         <h4 class="sold-out-modal-title">
           <i class="ri-user-add-line me-2"></i>
-          Add New Owner
+          Add New {{ addPersonType === 'tenant' ? 'Tenant' : 'Owner' }}
         </h4>
         <p class="sold-out-modal-subtitle">Enter the new owner details for this property</p>
       </div>
@@ -1709,8 +1887,18 @@ const locationIcon  =  '/assets/images/Location.png';
     const assigningAgent = ref(false);
     const availableAgents = ref([]);
     
-  
- 
+  const selectedSoldByAgent = ref(null);
+const availableAgentsForSoldBy = ref([]);
+const loadingAgentsForSoldBy = ref(false);
+ // في setup()
+const isAnotherAgentSelected = computed(() => {
+    // للبيع
+    if (soldByChoice.value === 'another_agent') return true;
+    // للإيجار
+    if (rentedByChoice.value === 'another_agent') return true;
+    return false;
+});
+
 const confirmCancelViewingRequest = async () => {
   if (!cancelReason.value.trim()) {
     proxy.$showNotification('Please provide a cancellation reason', 'warning');
@@ -2370,24 +2558,339 @@ const newOwner = ref({
 const openSoldOutModal = () => {
   showSoldOutModal.value = true;
   soldByChoice.value = null;
+  selectedSoldByAgent.value = null; 
   closeActionsDropdown();
 };
 
 const closeSoldOutModal = () => {
   showSoldOutModal.value = false;
   soldByChoice.value = null;
+    selectedSoldByAgent.value = null; 
 };
 
-const selectSoldBy = (soldBy) => {
-  if (soldBy === 'other_company') {
-    markAsSold('other_company');
-    return;
-  }
-  soldByChoice.value = soldBy;
+const selectSoldBy = async (soldBy) => {
+    if (soldBy === 'other_company') {
+        await markAsSold('other_company');
+        return;
+    }
+    
+    if (soldBy === 'another_agent') {
+        await fetchAvailableAgentsForSoldBy();
+        soldByChoice.value = 'another_agent';
+        return;
+    }
+    
+    soldByChoice.value = soldBy;
 };
 
-const openAddOwnerModal = () => {
-  showAddOwnerModal.value = true;
+const fetchAvailableAgentsForSoldBy = async () => {
+    try {
+        loadingAgentsForSoldBy.value = true;
+        const response = await api.get('/listings/agents');
+        if (response.data.status) {
+            availableAgentsForSoldBy.value = response.data.data;
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to load agents');
+    } finally {
+        loadingAgentsForSoldBy.value = false;
+    }
+};
+// في setup()
+const showRentedModal = ref(false);
+const rentedByChoice = ref(null);
+const selectedRentedByAgent = ref(null);
+const rentedDate = ref('');
+const availableAgentsForRentedBy = ref([]);
+const loadingAgentsForRentedBy = ref(false);
+const addPersonType = ref('owner');
+const closeRentedModal = () => {
+    showRentedModal.value = false;
+    rentedByChoice.value = null;
+    selectedRentedByAgent.value = null;
+    rentedDate.value = '';
+};
+// دالة فتح مودال الإيجار
+const openRentedModal = () => {
+    showRentedModal.value = true;
+    rentedByChoice.value = null;
+    selectedRentedByAgent.value = null;
+    rentedDate.value = new Date().toISOString().split('T')[0];
+    closeActionsDropdown();
+};
+
+// دالة جلب الأجنت للإيجار
+const fetchAvailableAgentsForRentedBy = async () => {
+    try {
+        loadingAgentsForRentedBy.value = true;
+        const response = await api.get('/listings/agents');
+        if (response.data.status) {
+            availableAgentsForRentedBy.value = response.data.data;
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to load agents');
+    } finally {
+        loadingAgentsForRentedBy.value = false;
+    }
+};
+
+// دالة اختيار نوع الإيجار
+const selectRentedBy = async (rentedBy) => {
+    if (rentedBy === 'other_company') {
+      showRentedModal.value = false; 
+        await markAsRented('other_company');
+        return;
+    }
+    
+    if (rentedBy === 'another_agent') {
+        await fetchAvailableAgentsForRentedBy();
+        rentedByChoice.value = 'another_agent';
+        return;
+    }
+    
+    rentedByChoice.value = rentedBy;
+};
+
+// دالة تنفيذ الإيجار
+const markAsRented = async (rentedBy, agentId = null, ownerId = null) => {
+    const rentedByText = rentedBy === 'oia' ? 'Oia' : 
+                        rentedBy === 'other_company' ? 'Other Company' :
+                        rentedBy === 'another_agent' ? 'Another Agent' : 
+                        'you';
+      showRentedModal.value = false;
+    if (rentedBy === 'another_agent' && !agentId) {
+        proxy.$showNotification('Please select an agent', 'warning');
+        return;
+    }
+
+    const result = await Swal.fire({
+        title: `Mark as Rented by ${rentedByText}?`,
+        text: rentedBy === 'another_agent' 
+            ? `This property will be marked as rented by the selected agent.`
+            : `This property will be marked as rented by ${rentedByText}.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: `Yes, Mark as Rented`,
+        cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const payload = { 
+            rented_by: rentedBy,
+            rented_date: rentedDate.value
+        };
+        
+        if (rentedBy === 'another_agent' && agentId) {
+            payload.agent_id = agentId;
+        }
+        
+        if (ownerId) {
+            payload.owner_id = ownerId;
+        }
+        
+        const response = await api.patch(`/listings/properties/${property.value.id}/mark-rented`, payload);
+        
+        if (response.data.status) {
+            property.value.status = 'rented';
+            property.value.rented_by = rentedBy;
+            property.value.rented_date = rentedDate.value;
+            if (rentedBy === 'another_agent') {
+                property.value.rented_by_agent_id = agentId;
+                const selectedAgent = availableAgentsForRentedBy.value.find(a => a.id === agentId);
+                property.value.rented_by_agent_name = selectedAgent?.name;
+            }
+            proxy.$showNotification(`Property marked as rented by ${rentedByText}!`, 'success');
+            showRentedModal.value = false;
+            selectedRentedByAgent.value = null;
+            rentedDate.value = '';
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to mark as rented');
+    }
+};
+
+const submitNewOwnerAndMarkSold = async () => {
+    if (!newOwner.value.first_name?.trim() || !newOwner.value.last_name?.trim() || 
+        !newOwner.value.phone_number?.trim() || !newOwner.value.salutation) {
+        proxy.$showNotification('Please fill required fields: Salutation, First name, Last name, Phone', 'warning');
+        return;
+    }
+    
+    // تحديد نوع العملية (بيع أم إيجار)
+    const isRent = addPersonType.value === 'tenant';
+    const typeChoice = isRent ? rentedByChoice.value : soldByChoice.value;
+    const selectedAgent = isRent ? selectedRentedByAgent.value : selectedSoldByAgent.value;
+    
+    if (!typeChoice || !property.value?.id) return;
+
+    try {
+        isSubmittingOwner.value = true;
+        const formData = new FormData();
+        
+        // إضافة جميع الحقول (نفس الكود)
+        if (newOwner.value.salutation) formData.append('salutation', newOwner.value.salutation);
+        formData.append('first_name', newOwner.value.first_name.trim());
+        formData.append('last_name', newOwner.value.last_name.trim());
+        if (newOwner.value.email?.trim()) formData.append('email', newOwner.value.email.trim());
+        formData.append('phone_number', newOwner.value.phone_number.trim());
+        if (newOwner.value.whatsapp_number?.trim()) formData.append('whatsapp_number', newOwner.value.whatsapp_number.trim());
+        if (newOwner.value.second_phone_number?.trim()) formData.append('second_phone_number', newOwner.value.second_phone_number.trim());
+        if (newOwner.value.nationality) formData.append('nationality', newOwner.value.nationality);
+        if (newOwner.value.residency_status) formData.append('residency_status', newOwner.value.residency_status);
+        if (newOwner.value.location_id) formData.append('location_id', newOwner.value.location_id);
+        if (newOwner.value.notes?.trim()) formData.append('notes', newOwner.value.notes.trim());
+        
+        // رفع الملفات
+        if (newOwner.value.id_front instanceof File) formData.append('id_front', newOwner.value.id_front);
+        if (newOwner.value.id_back instanceof File) formData.append('id_back', newOwner.value.id_back);
+        if (newOwner.value.visa_copy instanceof File) formData.append('visa_copy', newOwner.value.visa_copy);
+        if (newOwner.value.passport_copy instanceof File) formData.append('passport_copy', newOwner.value.passport_copy);
+        
+        if (newOwner.value.additionalDocuments && newOwner.value.additionalDocuments.length > 0) {
+            newOwner.value.additionalDocuments.forEach((item, index) => {
+                const file = item.file || item;
+                if (file instanceof File) {
+                    formData.append(`additional_documents[${index}]`, file);
+                }
+            });
+        }
+
+        // إنشاء المالك في قاعدة البيانات
+        const createRes = await api.post('/listings/owners', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        const createdOwner = createRes.data?.data || createRes.data;
+        if (!createdOwner?.id) throw new Error('Owner created but no ID returned');
+
+        // ========== هنا الفرق بين البيع والإيجار ==========
+        if (isRent) {
+            // ✅ حالة الإيجار - تذهب إلى API mark-rented
+            const payload = { 
+                rented_by: typeChoice, 
+                rented_date: rentedDate.value 
+            };
+            if (typeChoice === 'another_agent' && selectedAgent) {
+                payload.agent_id = selectedAgent;
+            }
+            payload.owner_id = createdOwner.id;
+            
+            const response = await api.patch(`/listings/properties/${property.value.id}/mark-rented`, payload);
+            
+            if (response.data?.data || response.data?.status !== false) {
+                property.value.status = 'rented';
+                property.value.rented_by = typeChoice;
+                property.value.rented_date = rentedDate.value;
+                if (typeChoice === 'another_agent' && selectedAgent) {
+                    property.value.rented_by_agent_id = selectedAgent;
+                    const selectedAgentData = availableAgentsForRentedBy.value.find(a => a.id === selectedAgent);
+                    property.value.rented_by_agent_name = selectedAgentData?.name;
+                }
+                property.value.rented_owner_id = createdOwner.id;
+                proxy.$showNotification('New tenant added and property marked as rented!', 'success');
+            }
+            showRentedModal.value = false;  // إغلاق مودال الإيجار
+        } else {
+            // ✅ حالة البيع - تذهب إلى API mark-converted
+            await api.post(`/listings/properties/${property.value.id}/soldBy`, {
+                owner_id: createdOwner.id
+            });
+            
+            const payload = { sold_by: typeChoice };
+            if (typeChoice === 'another_agent' && selectedAgent) {
+                payload.agent_id = selectedAgent;
+            }
+            
+            const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, payload);
+            
+            if (response.data?.data || response.data?.status !== false) {
+                property.value.status = 'converted';
+                property.value.sold_by = typeChoice;
+                if (typeChoice === 'another_agent' && selectedAgent) {
+                    property.value.sold_by_agent_id = selectedAgent;
+                    const selectedAgentData = availableAgentsForSoldBy.value.find(a => a.id === selectedAgent);
+                    property.value.sold_by_agent_name = selectedAgentData?.name;
+                }
+                property.value.owner_id = createdOwner.id;
+                proxy.$showNotification('New owner added and property marked as sold!', 'success');
+            }
+            showSoldOutModal.value = false; // إغلاق مودال البيع
+        }
+        
+        // تنظيف البيانات
+        showAddOwnerModal.value = false;
+        if (isRent) {
+            rentedByChoice.value = null;
+            selectedRentedByAgent.value = null;
+            rentedDate.value = '';
+        } else {
+            soldByChoice.value = null;
+            selectedSoldByAgent.value = null;
+        }
+        resetNewOwnerForm();
+        
+    } catch (error) {
+        handleApiError(error, 'Failed to add owner or mark as ' + (isRent ? 'rented' : 'sold'));
+    } finally {
+        isSubmittingOwner.value = false;
+    }
+};
+const revertFromRented = async () => {
+    const result = await Swal.fire({
+        title: 'Revert from Rented?',
+        text: 'This property will be reverted from rented status.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ffc107',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, Revert',
+        cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const response = await api.patch(`/listings/properties/${property.value.id}/revert-rented`);
+        
+        if (response.data.status) {
+            property.value.status = 'active';
+            property.value.rented_by = null;
+            property.value.rented_date = null;
+            property.value.rented_by_agent_id = null;
+            property.value.rented_owner_id = null;
+            proxy.$showNotification('Property reverted from rented status successfully!', 'success');
+            closeActionsDropdown();
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to revert from rented');
+    }
+};
+const openAddOwnerModal = (type = 'owner') => {
+    addPersonType.value = type;
+    
+    if (type === 'tenant') {
+        // حالة الإيجار
+        if (rentedByChoice.value === 'another_agent' && !selectedRentedByAgent.value) {
+            proxy.$showNotification('Please select an agent first', 'warning');
+            return;
+        }
+        if (!rentedDate.value) {
+            proxy.$showNotification('Please select rented date', 'warning');
+            return;
+        }
+    } else {
+        // حالة البيع
+        if (soldByChoice.value === 'another_agent' && !selectedSoldByAgent.value) {
+            proxy.$showNotification('Please select an agent first', 'warning');
+            return;
+        }
+    }
+    
+    resetNewOwnerForm();
+    showAddOwnerModal.value = true;
 };
 
 const resetNewOwnerForm = () => {
@@ -2512,113 +3015,58 @@ const handleOwnerFileUpload = (event, field) => {
   }
 };
 
-const submitNewOwnerAndMarkSold = async () => {
-  if (!newOwner.value.first_name?.trim() || !newOwner.value.last_name?.trim() || !newOwner.value.phone_number?.trim() || !newOwner.value.salutation) {
-    proxy.$showNotification('Please fill required fields: Salutation, First name, Last name, Phone', 'warning');
-    return;
-  }
-  const soldBy = soldByChoice.value;
-  if (!soldBy || !property.value?.id) return;
 
-  try {
-    isSubmittingOwner.value = true;
-    const formData = new FormData();
+
+const markAsSold = async (soldBy, agentId = null) => {
+    const soldByText = soldBy === 'oia' ? 'Oia' : 
+                      soldBy === 'other_company' ? 'Other Company' :
+                      soldBy === 'another_agent' ? 'Another Agent' : 
+                      'you';
     
-    // Append all form fields
-    if (newOwner.value.salutation) formData.append('salutation', newOwner.value.salutation);
-    formData.append('first_name', newOwner.value.first_name.trim());
-    formData.append('last_name', newOwner.value.last_name.trim());
-    if (newOwner.value.email?.trim()) formData.append('email', newOwner.value.email.trim());
-    formData.append('phone_number', newOwner.value.phone_number.trim());
-    if (newOwner.value.whatsapp_number?.trim()) formData.append('whatsapp_number', newOwner.value.whatsapp_number.trim());
-    if (newOwner.value.second_phone_number?.trim()) formData.append('second_phone_number', newOwner.value.second_phone_number.trim());
-    if (newOwner.value.nationality) formData.append('nationality', newOwner.value.nationality);
-    if (newOwner.value.residency_status) formData.append('residency_status', newOwner.value.residency_status);
-    if (newOwner.value.location_id) formData.append('location_id', newOwner.value.location_id);
-    if (newOwner.value.notes?.trim()) formData.append('notes', newOwner.value.notes.trim());
-    
-    // Append document files
-    if (newOwner.value.id_front instanceof File) formData.append('id_front', newOwner.value.id_front);
-    if (newOwner.value.id_back instanceof File) formData.append('id_back', newOwner.value.id_back);
-    if (newOwner.value.visa_copy instanceof File) formData.append('visa_copy', newOwner.value.visa_copy);
-    if (newOwner.value.passport_copy instanceof File) formData.append('passport_copy', newOwner.value.passport_copy);
-    
-    // Append additional documents
-    if (newOwner.value.additionalDocuments && newOwner.value.additionalDocuments.length > 0) {
-      newOwner.value.additionalDocuments.forEach((item, index) => {
-        const file = item.file || item;
-        if (file instanceof File) {
-          formData.append(`additional_documents[${index}]`, file);
-        }
-      });
-    }
-
-    const createRes = await api.post('/listings/owners', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    const createdOwner = createRes.data?.data || createRes.data;
-    if (!createdOwner?.id) throw new Error('Owner created but no ID returned');
-
-    await api.post(`/listings/properties/${property.value.id}/soldBy`, {
-      owner_id: createdOwner.id
-    }, { headers: { 'Content-Type': 'application/json' } });
-
-    const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, {
-      sold_by: soldBy
-    });
-    if (response.data?.data || response.data?.status !== false) {
-      property.value.status = 'converted';
-      property.value.sold_by = soldBy;
-      property.value.owner_id = createdOwner.id;
-      if (property.value.owner) property.value.owner = createdOwner;
-      else property.value.owner = { id: createdOwner.id, full_name: `${createdOwner.first_name} ${createdOwner.last_name}` };
-      proxy.$showNotification('New owner added and property marked as sold!', 'success');
-    }
-    showAddOwnerModal.value = false;
     showSoldOutModal.value = false;
-    soldByChoice.value = null;
-    resetNewOwnerForm();
-  } catch (error) {
-    handleApiError(error, 'Failed to add owner or mark as sold');
-  } finally {
-    isSubmittingOwner.value = false;
-  }
-};
-
-const markAsSold = async (soldBy) => {
-  const soldByText = soldBy === 'oia' ? 'Oia' : 
-                    soldBy === 'other_company' ? 'Other Company' : 
-                    'you';
-  showSoldOutModal.value = false;
-  soldByChoice.value = null;
-
-  const result = await Swal.fire({
-    title: `Mark as Sold by ${soldByText}?`,
-    text: `This property will be marked as sold by ${soldByText}.`,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonColor: '#28a745',
-    cancelButtonColor: '#6c757d',
-    confirmButtonText: `Yes, Mark as Sold`,
-    cancelButtonText: 'Cancel'
-  });
-
-  if (!result.isConfirmed) return;
-
-  try {
-    const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, {
-      sold_by: soldBy
-    });
     
-    if (response.data.status) {
-      property.value.status = 'converted';
-      property.value.sold_by = soldBy;
-      proxy.$showNotification(`Property marked as sold by ${soldByText}!`, 'success');
-      showSoldOutModal.value = false;
+    if (soldBy === 'another_agent' && !agentId) {
+        proxy.$showNotification('Please select an agent', 'warning');
+        return;
     }
-  } catch (error) {
-    handleApiError(error, 'Failed to mark as sold');
-  }
+
+    const result = await Swal.fire({
+        title: `Mark as Sold by ${soldByText}?`,
+        text: soldBy === 'another_agent' 
+            ? `This property will be marked as sold by the selected agent.`
+            : `This property will be marked as sold by ${soldByText}.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: `Yes, Mark as Sold`,
+        cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const payload = { sold_by: soldBy };
+        if (soldBy === 'another_agent' && agentId) {
+            payload.agent_id = agentId;
+        }
+        
+        const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, payload);
+        
+        if (response.data.status) {
+            property.value.status = 'converted';
+            property.value.sold_by = soldBy;
+            if (soldBy === 'another_agent') {
+                property.value.sold_by_agent_id = agentId;
+                const selectedAgent = availableAgentsForSoldBy.value.find(a => a.id === agentId);
+                property.value.sold_by_agent_name = selectedAgent?.name;
+            }
+            proxy.$showNotification(`Property marked as sold by ${soldByText}!`, 'success');
+            selectedSoldByAgent.value = null;
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to mark as sold');
+    }
 };
 
 const revertFromConverted = async () => {
@@ -4837,7 +5285,24 @@ const openDriveLink = () => {
   handleCancelViewingClick ,
    openDriveLink,
    hasAdditionalFeatures,
-   additionalFeaturesList
+   additionalFeaturesList,
+   
+       selectedSoldByAgent,
+    availableAgentsForSoldBy,
+    loadingAgentsForSoldBy,
+    
+      showRentedModal,
+    rentedByChoice,
+    selectedRentedByAgent,
+    rentedDate,
+    availableAgentsForRentedBy,
+    loadingAgentsForRentedBy,
+    openRentedModal,
+    closeRentedModal,
+    selectRentedBy,
+    markAsRented,
+        addPersonType,
+   revertFromRented
     };
   },
 
@@ -7795,5 +8260,11 @@ ease;
 }
 .additional-field span{
 margin: 0 2px;
+}
+.modal-header h4{
+    font-size:20px !important;
+}
+.option-content h6{
+        font-size:20px !important;
 }
 </style>

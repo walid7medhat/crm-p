@@ -63,6 +63,9 @@
                   <span v-if="property.status === 'converted'" class="badge-sold">
                     <i class="ri-checkbox-circle-fill me-1"></i>Sold Out
                   </span>
+                      <span v-if="property.status === 'rented'" class="badge-sold">
+                    <i class="ri-home-gear-line me-1"></i>Rented
+                </span>
                   <span v-else-if="property.status === 'draft'" class="badge-sold">
                     <i class="ri-checkbox-circle-fill me-1"></i>draft
                   </span>
@@ -87,6 +90,7 @@
                   <span v-if="property.occupancy_status && property.completion_status != 'Under Construction'" class="badge-occupancy_status">
                     {{property.occupancy_status}}
                   </span>
+              
                   
                 </div>
 
@@ -356,18 +360,22 @@ export default {
             property.is_active && 
             !property.is_archived && 
             property.status !== 'converted' &&  
+            property.status !== 'rented' &&
             property.status !== 'draft'
           );
         case 'inactive':
           return properties.value.filter(property => 
             !property.is_active && 
             !property.is_archived && 
-            property.status !== 'converted'
+            property.status !== 'converted' &&
+            property.status !== 'rented' 
           );
         case 'archived':
           return properties.value.filter(property => property.is_archived);
         case 'sold':
           return properties.value.filter(property => property.status === 'converted');
+        case 'rented': 
+           return properties.value.filter(property => property.status === 'rented');
         case 'draft':
           return properties.value.filter(property => property.status === 'draft');
         case 'off_plan':
@@ -491,6 +499,9 @@ export default {
             case 'sold':
               params.status = 'converted';
               break;
+            case 'rented': 
+                params.status = 'rented';
+                break;
             case 'active':
               params.is_active = true;
               params.is_archived = false;

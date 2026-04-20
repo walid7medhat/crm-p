@@ -433,6 +433,12 @@
           @search-projects="(v) => emit('search-projects', v)"
         />
         <div v-else class="row g-3">
+             <div class="col-md-12">
+            <div class="info-group">
+              <label class="info-label">Deal Total Amount</label>
+              <p class="info-value mb-0">{{ val(deal.deal_total_amount) }}</p>
+            </div>
+          </div>
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Deal Total Amount And Currency</label>
@@ -445,18 +451,18 @@
               <p class="info-value mb-0">{{ val(deal.deal_commission) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Agent Share %</label>
-              <p class="info-value mb-0">{{ val(deal.agent_share) }}</p>
-            </div>
-          </div>
-          <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Company Share %</label>
-              <p class="info-value mb-0">{{ val(deal.company_share) }}</p>
-            </div>
-          </div>
+          <!--<div class="col-md-12">-->
+          <!--  <div class="info-group">-->
+          <!--    <label class="info-label">Agent Share %</label>-->
+          <!--    <p class="info-value mb-0">{{ val(deal.agent_share) }}</p>-->
+          <!--  </div>-->
+          <!--</div>-->
+          <!--<div class="col-md-12">-->
+          <!--  <div class="info-group">-->
+          <!--    <label class="info-label">Company Share %</label>-->
+          <!--    <p class="info-value mb-0">{{ val(deal.company_share) }}</p>-->
+          <!--  </div>-->
+          <!--</div>-->
         </div>
       </div>
     </div>

@@ -27,7 +27,7 @@ class LeadRequest extends FormRequest
             
             // Contact Details
             'whatsapp_number' => 'nullable|string|max:20',
-          'work_phone' => [
+            'work_phone' => [
                 'required',
                 'max:20',
                 'regex:/^\+?[0-9]+$/'
@@ -37,7 +37,7 @@ class LeadRequest extends FormRequest
                 'max:20',
                 'regex:/^\+?[0-9]+$/'
             ],
-            'secondary_email'=>'nullable|email',
+            'secondary_email' => 'nullable|email',
             'email' => 'nullable|email',
             'website' => 'nullable|url',
             'messenger' => 'nullable|string|max:255',
@@ -61,6 +61,13 @@ class LeadRequest extends FormRequest
             'ad_id' => 'nullable|string|max:255',
             'available_to_everyone' => 'boolean',
             
+            // ========== الحقول الجديدة للعميل المحيل (Referral) ==========
+            'source_client_name' => 'nullable|string|max:255|required_if:lead_source,referral',
+            'source_client_phone' => 'nullable|string|max:20|required_if:lead_source,referral',
+            'source_client_email' => 'nullable|email|max:255',
+            'source_relation' => 'nullable|string|max:255',
+            // ============================================================
+            
             // Status
             'status_lead' => 'nullable|string|max:255',
             'status_unit' => 'nullable|string|max:255',
@@ -75,8 +82,7 @@ class LeadRequest extends FormRequest
             'additional_services' => 'nullable|string',
             
             // Sales & Management
-            // 'sales_id' => 'nullable|exists:users,id', // Sales person (optional)
-            'responsible_person_id' => 'required|exists:users,id', // Manager (required)
+            'responsible_person_id' => 'required|exists:users,id',
             
             // Relationships
             'participants' => 'nullable|array',
@@ -91,17 +97,15 @@ class LeadRequest extends FormRequest
             'budget' => 'nullable|numeric|min:0|max:999999999.99',
             'budget_from' => 'nullable|numeric|min:0|max:999999999.99',
             'budget_to' => 'nullable|numeric|min:0|max:999999999.99',
-            'lead_type'=>'nullable',
-            'property_status'=>'nullable',
+            'lead_type' => 'nullable|string|in:sale,rent',
+            'property_status' => 'nullable|string|in:ready,off_plan,both',
             'currency' => 'nullable',
              
             'area_id' => 'nullable|exists:areas,id',
             'property_type_id' => 'nullable|exists:property_types,id',
 
-            'status_lead' => 'nullable|string|max:50',  
             'available_date' => 'nullable|date',
             'branch' => 'nullable|string|max:100',
-            'why_lost_lead' => 'nullable|string|max:255',
         ];
 
         if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
@@ -123,14 +127,19 @@ class LeadRequest extends FormRequest
     }
 
     public function attributes(): array
-{
-    return [
-        'work_phone' => 'Primary Phone',
-        'work_phone_2' => 'Secondary Phone',
-        'email' => 'Primary Email',
-        'secondary_email' => 'Secondary Email',
-    ];
-}
+    {
+        return [
+            'work_phone' => 'Primary Phone',
+            'work_phone_2' => 'Secondary Phone',
+            'email' => 'Primary Email',
+            'secondary_email' => 'Secondary Email',
+            // الحقول الجديدة
+            'source_client_name' => 'Source Client Name',
+            'source_client_phone' => 'Source Client Phone',
+            'source_client_email' => 'Source Client Email',
+            'source_relation' => 'Relation with Client',
+        ];
+    }
 
     public function messages(): array
     {
@@ -139,6 +148,10 @@ class LeadRequest extends FormRequest
             'responsible_person_id.exists' => 'The selected responsible manager does not exist.',
             'work_phone.regex' => 'Primary Phone number must contain digits only.',
             'work_phone_2.regex' => 'Secondary Phone number must contain digits only.',
+            // رسائل التحقق للحقول الجديدة
+            'source_client_name.required_if' => 'Source client name is required when source is Referral',
+            'source_client_phone.required_if' => 'Source client phone is required when source is Referral',
+            'source_client_email.email' => 'Please enter a valid email address for the source client',
         ];
     }
 }

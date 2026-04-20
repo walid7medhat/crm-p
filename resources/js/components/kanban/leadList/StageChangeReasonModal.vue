@@ -624,7 +624,7 @@ const showFields = computed(() => {
 const leadTypeOptions = [
     { value: 'sale', text: 'Sale' },
     { value: 'rent', text: 'Rent' },
-     { value: 'both', text: 'Both' },
+    //  { value: 'both', text: 'Both' },
 ]
 
 const propertyStatusOptions = [

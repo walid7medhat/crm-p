@@ -14,7 +14,7 @@
                                 <img :src="primaryIcon" alt="Primary / Off Plan" width="32" height="32">
                             </div>
                             <input type="radio" name="dealType" value="primary" v-model="form.deal_type" class="deal-type-radio">
-                            <span class="deal-type-label">Primary / Off Plan</span>
+                            <span class="deal-type-label">Primary</span>
                             <span class="selected-mark" :class="{ show: form.deal_type === 'primary' }">
                                 <img :src="checkIcon" alt="✓" >
                             </span>

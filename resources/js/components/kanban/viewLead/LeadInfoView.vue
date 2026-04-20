@@ -1349,7 +1349,7 @@ const clientReqBudgetToDisplay = ref('')
 const clientReqLeadTypeOptions = [
     { value: 'sale', text: 'Sale' },
     { value: 'rent', text: 'Rent' },
-    { value: 'both', text: 'Both' },
+    // { value: 'both', text: 'Both' },
 ]
 
 const clientReqPropertyStatusOptions = [

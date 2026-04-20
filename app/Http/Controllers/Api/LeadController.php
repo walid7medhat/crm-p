@@ -25,6 +25,7 @@ use App\Http\Resources\Lead\LeadHistoryResource;
 use App\Models\LeadHistory;
 use App\Models\LeadComment;
 use Illuminate\Support\Str;
+use Auth;
 class LeadController extends Controller
 {
     public function __construct()
@@ -171,6 +172,12 @@ class LeadController extends Controller
           if(!$request->stage_id){
               $leadData['stage_id']=Stage::orderBy('order','asc')->first()->id;
           }
+           if ($request->input('lead_source') === 'referral') {
+            $leadData['source_client_name'] = $request->input('source_client_name');
+            $leadData['source_client_phone'] = $request->input('source_client_phone');
+            $leadData['source_client_email'] = $request->input('source_client_email');
+            $leadData['source_relation'] = $request->input('source_relation');
+        }
             $lead = Lead::create($leadData);
        if (!empty($initialComment)) {
                 $comment = LeadComment::create([
@@ -1112,6 +1119,117 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             );
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve lead: ' . $e->getMessage());
+        }
+    }
+    
+      public function getMyClients(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            // جلب جميع الـ Leads التي أضافها المستخدم أو المسؤول عنها
+            $clients = Lead::where('added_by', $user->id)
+                ->orWhere('responsible_person_id', $user->id)
+                ->select(
+                    'id',
+                    'lead_name as name',
+                    'first_name',
+                    'last_name',
+                    'email',
+                    'work_phone as phone',
+                    'work_phone_2',
+                    'secondary_email',
+                    'salutation',
+                    'area_id',
+                    'property_type_id',
+                    'lead_source',
+                    'stage_id',
+                    'created_at'
+                )
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($lead) {
+                    // تنسيق الاسم الكامل
+                    if (!$lead->name && $lead->first_name) {
+                        $lead->name = trim($lead->first_name . ' ' . ($lead->last_name ?? ''));
+                    }
+                    if (!$lead->name && $lead->lead_name) {
+                        $lead->name = $lead->lead_name;
+                    }
+                    return $lead;
+                });
+            
+            return ApiResponse::success($clients, 'Clients retrieved successfully');
+            
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to retrieve clients: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * جلب قائمة العملاء مع إمكانية البحث والتصفية
+     */
+    public function getClientsList(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            $query = Lead::where(function ($q) use ($user) {
+                $q->where('added_by', $user->id)
+                  ->orWhere('responsible_person_id', $user->id);
+            });
+            
+            // بحث باسم العميل
+            if ($request->has('search') && $request->search) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('lead_name', 'like', "%{$search}%")
+                      ->orWhere('first_name', 'like', "%{$search}%")
+                      ->orWhere('last_name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('work_phone', 'like', "%{$search}%");
+                });
+            }
+            
+            // تصفية حسب المرحلة
+            if ($request->has('stage_id') && $request->stage_id) {
+                $query->where('stage_id', $request->stage_id);
+            }
+            
+            $clients = $query->select(
+                'id',
+                'lead_name as name',
+                'first_name',
+                'last_name',
+                'email',
+                'work_phone as phone',
+                'work_phone_2',
+                'secondary_email',
+                'salutation',
+                'area_id',
+                'property_type_id',
+                'lead_source',
+                'stage_id',
+                'created_at'
+            )
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->get('per_page', 20));
+            
+            // تنسيق الاسم لكل عميل
+            $clients->getCollection()->transform(function ($lead) {
+                if (!$lead->name && $lead->first_name) {
+                    $lead->name = trim($lead->first_name . ' ' . ($lead->last_name ?? ''));
+                }
+                if (!$lead->name && $lead->lead_name) {
+                    $lead->name = $lead->lead_name;
+                }
+                return $lead;
+            });
+            
+            return ApiResponse::success($clients, 'Clients retrieved successfully');
+            
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to retrieve clients: ' . $e->getMessage(), 500);
         }
     }
 }
