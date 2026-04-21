@@ -57,6 +57,12 @@
               <span>HR</span>
             </router-link>
           </li>
+            <li v-if="isSuperAdmin">
+            <router-link to="/logs" :class="{ 'active-page': isActive('/hr') }">
+              <iconify-icon icon="lucide:users-round" class="menu-icon" />
+              <span>Logs</span>
+            </router-link>
+          </li>
         <!-- Listings Dropdown -->
         <li v-if="filteredTableItems.length > 0" :class="{ 
           dropdown: true, 
