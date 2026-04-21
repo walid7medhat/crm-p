@@ -37,7 +37,7 @@ class Deal extends Model
         'responsible_person_id',
         'created_by',
         'updated_by',
-        'metadata','subcommunity_id','lost_reason'
+        'metadata','subcommunity_id','lost_reason','listing_id'
     ];
 
     protected $casts = [

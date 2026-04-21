@@ -488,7 +488,7 @@ public function getRequiredFieldsForStage(Deal $deal, int $targetStageId, string
             'deal_name' => ['section' => 'Property Details', 'label' => 'Deal Name', 'type' => 'text'],
             'unit_no' => ['section' => 'Property Details', 'label' => 'Unit No', 'type' => 'text'],
             'property_type_id' => ['section' => 'Property Details', 'label' => 'Property Type', 'type' => 'select'],
-            'subcommunity_id' => ['section' => 'Property Details', 'label' => 'Sub Community', 'type' => 'select'],
+            // 'subcommunity_id' => ['section' => 'Property Details', 'label' => 'Sub Community', 'type' => 'select'],
             'area_id' => ['section' => 'Property Details', 'label' => 'Area', 'type' => 'select'],
             'responsible_person_id' => ['section' => 'Property Details', 'label' => 'Responsible Person', 'type' => 'select'],
             'bedrooms' => ['section' => 'Property Details', 'label' => 'Bedrooms', 'type' => 'select'],

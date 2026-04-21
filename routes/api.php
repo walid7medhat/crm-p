@@ -294,7 +294,7 @@ Route::get('leads/integration', [LeadController::class,'storeIntegration']);
 
 Route::middleware(['jwt.auth'])->group(function () {
       Route::get('/my-clients', [LeadController::class, 'getMyClients']);
-    
+    Route::get('/logs', [DashboardController::class, 'index'])->name('logs');
     // أو يمكنك استخدام هذا الاسم
     Route::get('/leads/clients', [LeadController::class, 'getClientsList']);
     

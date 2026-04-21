@@ -10,9 +10,22 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Spatie\Permission\Traits\HasRoles;
-
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 class User extends Authenticatable implements JWTSubject, CanResetPasswordContract
 {
+
+ use HasFactory;
+   use LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        // use $listing->activities
+        return LogOptions::defaults()
+            ->logOnlyDirty() 
+            ->logAll()       
+            ->useLogName('user');
+    }
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use CanResetPassword;
     use HasFactory, Notifiable, HasRoles;

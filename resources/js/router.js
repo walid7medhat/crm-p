@@ -101,11 +101,11 @@ import ImportPitrix from './components/kanban/leadList/ImportPitrix.vue'
 
 
 import  BulkAreaCoordinates from './pages/areas/BulkAreaCoordinates.vue'
-
+import Logs from './pages/logs/index.vue'
 const baseRoutes = [
     { path: '/import-pitrix', component: ImportPitrix, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/area-coordinates', component: BulkAreaCoordinates, meta: { requiresAuth: true, requiresAdmin: true } },
-    
+      { path: '/logs', component: Logs, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // Kanban Route (super_admin only — see meta.requiresSuperAdmin)
   { path: '/kanban', component: Kanban, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/kanban_deal', component: kanban_deal },

@@ -4,9 +4,21 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 class Area extends Model
 {
+     use HasFactory;
+   use LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        // use $listing->activities
+        return LogOptions::defaults()
+            ->logOnlyDirty() 
+            ->logAll()       
+            ->useLogName('area');
+    }
     //
     use HasFactory;
     protected $guarded = [];

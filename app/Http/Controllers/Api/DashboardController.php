@@ -18,8 +18,36 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Auth;
 use App\Models\HotDealRequest;
+use Spatie\Activitylog\Models\Activity;
 class DashboardController extends Controller
 {
+
+public function index(Request $request)
+{
+    $query = Activity::query()->with('causer');
+    // Filter by model (log_name)
+    if ($request->model) {
+        $query->where('log_name', $request->model);
+    }
+    
+    // Filter by date range
+    if ($request->date_from) {
+        $query->whereDate('created_at', '>=', $request->date_from);
+    }
+    
+    if ($request->date_to) {
+        $query->whereDate('created_at', '<=', $request->date_to);
+    }
+    
+    // Filter by user
+    if ($request->user_id) {
+        $query->where('causer_id', $request->user_id);
+    }
+    
+    $logs = $query->latest()->get();
+    
+    return response()->json($logs);
+}
     public function getStats()
     {
         $thirtyDaysAgo = Carbon::now()->subDays(30);

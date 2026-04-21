@@ -6,9 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 class Project extends Model
 {
+   use LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        // use $listing->activities
+        return LogOptions::defaults()
+            ->logOnlyDirty() 
+            ->logAll()       
+            ->useLogName('project');
+    }
     protected $fillable = [
         'title',
         'developer_id',
