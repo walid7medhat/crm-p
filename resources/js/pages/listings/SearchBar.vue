@@ -15,7 +15,7 @@
           :multiple="true"
           :clearable="false"
           :close-on-select="false"
-          :clear-search-on-select="false"
+          :clear-search-on-select="true"
           :append-to-body="false"
           label="name"
           placeholder="City,Area,Community,Project or Building"

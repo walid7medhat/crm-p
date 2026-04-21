@@ -22,6 +22,7 @@ class UpdateDealRequest extends FormRequest
             'unit_size' => 'nullable|numeric',
             'project_id' => 'nullable|exists:projects,id',
             'area_id' => 'nullable|exists:areas,id',
+            'listing_id' => 'nullable|exists:listings,id',
             'developer_id' => 'nullable|exists:developers,id',
             'deal_total_amount' => 'nullable|numeric',
             'responsible_person_id' => 'nullable|exists:users,id',

@@ -510,7 +510,7 @@ async function loadLeadData() {
       deal_name: lead.lead_name,
       unit_no: lead.unit_no || '',
       property_type_id: lead.property_type_id,
-      subcommunity_id: lead.subcommunity_id,
+      // subcommunity_id: lead.subcommunity_id,
       bedrooms: lead.bedrooms,
       unit_size: lead.unit_size || '',
       project_id: lead.project_id,
@@ -579,10 +579,10 @@ function validateForm() {
     errors.push('Property type is required')
     fieldErrorsObj.property_type_id = 'Property type is required'
   }
-  if (!formData.value.subcommunity_id) {
-    errors.push('Subcommunity is required')
-    fieldErrorsObj.subcommunity_id = 'Subcommunity is required'
-  }
+  // if (!formData.value.subcommunity_id) {
+  //   errors.push('Subcommunity is required')
+  //   fieldErrorsObj.subcommunity_id = 'Subcommunity is required'
+  // }
   if (!formData.value.responsible_person_id) {
     errors.push('Responsible person is required')
     fieldErrorsObj.responsible_person_id = 'Responsible person is required'
@@ -870,6 +870,7 @@ function resetFormData() {
     bedrooms: null,
     unit_size: '',
     project_id: null,
+    listing_id: null,
     developer_id: null,
     area_id: null,
     property_link: '',

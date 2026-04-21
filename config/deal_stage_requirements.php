@@ -17,7 +17,7 @@ return [
                 ],
             ],
             3 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id', 'responsible_person_id', 'bedrooms', 'area_id'],
+                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'responsible_person_id', 'bedrooms', 'area_id'],
                 'parties' => [
                     'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
                 ],
@@ -26,7 +26,7 @@ return [
                 ],
             ],
             4 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id', 'responsible_person_id', 'bedrooms', 'area_id', 'unit_size'],
+                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'responsible_person_id', 'bedrooms', 'area_id', 'unit_size'],
                 'parties' => [
                     'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
                 ],
@@ -36,7 +36,7 @@ return [
             ],
             5 => [
                 // , 'agent_share', 'company_share'
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id', 'responsible_person_id', 'bedrooms', 'area_id', 'unit_size', 'deal_total_amount', 'deal_commission'],
+                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'responsible_person_id', 'bedrooms', 'area_id', 'unit_size', 'deal_total_amount', 'deal_commission'],
                 'parties' => [
                     'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language', 'amount'],
                 ],
@@ -64,7 +64,7 @@ return [
                 ],
             ],
             3 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id', 'bedrooms', 'area_id'],
+                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'bedrooms', 'area_id'],
                 'parties' => [
                     'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
                     'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
@@ -75,7 +75,7 @@ return [
                 ],
             ],
             4 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id', 'bedrooms', 'area_id', 'unit_size'],
+                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'bedrooms', 'area_id', 'unit_size'],
                 'parties' => [
                     'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
                     'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
@@ -98,7 +98,7 @@ return [
             ],
             6 => [
                 // , 'agent_share', 'company_share'
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id', 'deal_total_amount', 'deal_commission'],
+                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'deal_total_amount', 'deal_commission'],
                 'parties' => [
                     'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language', 'amount'],
                     'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
@@ -117,7 +117,7 @@ return [
 
         'rental' => [
             2 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id', 'responsible_person_id'],
+                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'responsible_person_id'],
                 'parties' => [
                     'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'city', 'language'],
                     'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
@@ -150,7 +150,8 @@ return [
                 ],
             ],
             5 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id', 'responsible_person_id', 'bedrooms', 'area_id', 'unit_size'],
+                
+                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'responsible_person_id', 'bedrooms', 'area_id', 'unit_size'],
                 'parties' => [
                     'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'city', 'language'],
                     'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
@@ -162,7 +163,7 @@ return [
             ],
             6 => [
                 // , 'agent_share', 'company_share'
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id', 'deal_total_amount', 'deal_commission'],
+                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'deal_total_amount', 'deal_commission'],
                 'parties' => [
                     'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'city', 'language', 'amount'],
                     'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],

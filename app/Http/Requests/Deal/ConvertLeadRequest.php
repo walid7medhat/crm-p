@@ -20,8 +20,10 @@ class ConvertLeadRequest extends FormRequest
             'unit_no' => 'required|string',
             'source' => 'required|string',
             'deal_name' => 'required|string',
+            'listing_id' => 'nullable|exists:listings,id',
+
             'property_type_id' => 'required|exists:property_types,id',
-            'subcommunity_id' => 'required|exists:areas,id',
+            // 'subcommunity_id' => 'required|exists:areas,id',
             'responsible_person_id' => 'required|exists:users,id',
             
             // Optional fields

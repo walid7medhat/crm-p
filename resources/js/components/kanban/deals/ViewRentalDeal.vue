@@ -374,12 +374,12 @@
               <p class="info-value mb-0">{{ tagsDisplay(deal.areas) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <!-- <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Sub Community</label>
               <p class="info-value mb-0">{{ tagsDisplay(deal.sub_communities) }}</p>
             </div>
-          </div>
+          </div> -->
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Building / Project Name</label>

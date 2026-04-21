@@ -299,7 +299,7 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
                    
                 }
 
-        if(!$request->boolean('my_listings') && !($user->hasRole('super_admin') || $user->hasRole('admin'))){
+        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') || $user->hasRole('admin'))){
             $query->where('is_active', true)
                 ->where('status', '!=', 'converted')
                 ->where('status', '!=', 'rented')
@@ -550,8 +550,33 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             }
             if($request->has('rented')) {
                     $query->where('status', 'rented');
-                }
+             }
+            if ($request->has('sold_by_agent_id')) {
+                $agentId = $request->sold_by_agent_id;
+                
+                $query->where(function($q) use ($agentId) {
+                    $q->where(function($sub) use ($agentId) {
+                        $sub->where('sold_by', 'another_agent')
+                            ->where('sold_by_agent_id', $agentId);
+                    })
+                    ->orWhere(function($sub) use ($agentId) {
+                        $sub->where('rented_by', 'another_agent')
+                            ->where('rented_by_agent_id', $agentId);
+                    });
+                });
+            }
 
+            //    if ($request->has('status_in')) {
+            //             $statuses = $request->status_in;
+                        
+            //             if (is_string($statuses)) {
+            //                 $statuses = explode(',', $statuses);
+            //             }
+                        
+            //             if (is_array($statuses) && !empty($statuses)) {
+            //                 $query->whereIn('status', $statuses);
+            //             }
+            //         }
             $sort = $request->get('sort', 'created_at_desc');
             switch ($sort) {
                 case 'price_asc': $query->orderBy('price', 'asc'); break;

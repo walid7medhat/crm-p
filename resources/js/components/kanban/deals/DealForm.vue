@@ -835,11 +835,72 @@
       </div>
     </section>
 
-    <!-- Property Details (Common for all) -->
+   <!-- Property Details Section -->
     <section v-if="isSectionVisible('property_details')" class="form-section">
       <h6 class="section-title mb-3">Property Details</h6>
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
+          
+          <!-- Area (Location) - Required -->
+          <div class="col-md-6">
+            <label class="form-label-custom">Location <span class="text-danger">*</span></label>
+            <v-select 
+              v-model="form.area_id" 
+              :options="areas" 
+              :reduce="item => item.id" 
+              label="name" 
+              placeholder="Select Location..." 
+              class="custom-v-select"
+              :filterable="true"
+              :searchable="true"
+              :clearable="true"
+              @update:modelValue="onAreaSelected"
+              @open="() => $emit('search-areas', '')"  
+              @search="(search) => $emit('search-areas', search)" 
+              :class="{ 'is-invalid': showErrors && !form.area_id }"
+            >
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.area_id" class="invalid-feedback d-block">
+              {{ fieldErrors.area_id }}
+            </div>
+          </div>
+
+          <!-- Select Listing (Unit) - يظهر بعد اختيار المنطقة -->
+          <div class="col-md-6" v-if="availableListings.length > 0">
+            <label class="form-label-custom">Select Unit <span class="text-danger">*</span></label>
+            <v-select 
+              v-model="selectedListing" 
+              :options="availableListings" 
+              :reduce="item => item" 
+              label="display_name" 
+              placeholder="Select a unit..." 
+              class="custom-v-select"
+              @update:modelValue="onListingSelected"
+            >
+              <template #option="option">
+                <div>
+                  <strong>{{ option.unit_number || 'No Unit' }}</strong>
+                  <span class="text-muted ms-2">- {{ option.property_type?.name || 'N/A' }}</span>
+                  <div class="small text-muted">{{ option.bedrooms_text }} | {{ option.size_sqft || 'N/A' }} sqft</div>
+                </div>
+              </template>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+              </template>
+            </v-select>
+            <div class="small text-muted mt-1">
+              <i class="ri-information-line"></i> Showing available units in this location
+            </div>
+          </div>
+
+          <!-- Unit No - يتم تعبئته تلقائياً من الـ Listing -->
           <div class="col-md-4">
             <label class="form-label-custom">Unit No <span class="text-danger">*</span></label>
             <b-form-input 
@@ -847,11 +908,14 @@
               placeholder="Enter Unit No" 
               class="custom-input"
               :class="{ 'is-invalid': showErrors && !form.unit_no }"
+              
             />
             <div v-if="showErrors && fieldErrors.unit_no" class="invalid-feedback d-block">
-                {{ fieldErrors.unit_no }}
-              </div>
+              {{ fieldErrors.unit_no }}
+            </div>
           </div>
+
+          <!-- Property Type - يتم تعبئته تلقائياً -->
           <div class="col-md-4">
             <label class="form-label-custom">Property Type <span class="text-danger">*</span></label>
             <v-select 
@@ -862,72 +926,20 @@
               placeholder="Select Property Type" 
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.property_type_id }"
-             >
-               <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-          
+              
+            >
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+              </template>
             </v-select>
-             <div v-if="showErrors && fieldErrors.property_type_id" class="invalid-feedback d-block">
-                {{ fieldErrors.property_type_id }}
-              </div>
-          </div>
-         <div class="col-md-4">
-              <label class="form-label-custom">Subcommunity <span class="text-danger">*</span></label>
-              <v-select 
-                v-model="form.subcommunity_id" 
-                :options="areas" 
-                :reduce="item => item.id" 
-                label="name" 
-                placeholder="Select Subcommunity..." 
-                class="custom-v-select"
-                :filterable="true" 
-                :searchable="true" 
-                :clearable="true"
-                @open="() => $emit('search-areas', '', form.area_id)"  
-                @search="(search) => $emit('search-areas', search, form.area_id)" 
-                :class="{ 'is-invalid': showErrors && !form.subcommunity_id }"
-              >
-             <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-            
-             </v-select>
-              <div v-if="showErrors && fieldErrors.subcommunity_id" class="invalid-feedback d-block">
-                {{ fieldErrors.subcommunity_id }}
-              </div>
-         </div>
-          <div class="col-md-4">
-                  <label class="form-label-custom">Area <span class="text-danger">*</span></label>
-                  <v-select 
-                    v-model="form.area_id" 
-                    :options="areas" 
-                    :reduce="item => item.id" 
-                    label="name" 
-                    placeholder="Select Area..." 
-                    class="custom-v-select"
-                    :filterable="true"
-                    :searchable="true"
-                    :clearable="true"
-                    @open="() => $emit('search-areas', '')"  
-                    @search="(search) => $emit('search-areas', search)" 
-                    :class="{ 'is-invalid': showErrors && !form.area_id }"
-                  >
-                   <template #open-indicator="{ attributes }">
-                      <span v-bind="attributes">
-                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                      </span>
-                    </template>
-                
-                 </v-select>
-                  <div v-if="showErrors && fieldErrors.area_id" class="invalid-feedback d-block">
-                    {{ fieldErrors.area_id }}
-                  </div>
+            <div v-if="showErrors && fieldErrors.property_type_id" class="invalid-feedback d-block">
+              {{ fieldErrors.property_type_id }}
             </div>
+          </div>
+
+          <!-- Bedrooms - يتم تعبئته تلقائياً -->
           <div class="col-md-4">
             <label class="form-label-custom">Bedrooms</label>
             <v-select 
@@ -936,19 +948,35 @@
               :reduce="o => o.value" 
               label="text" 
               placeholder="Select Bedroom" 
-              class="custom-v-select" 
+              class="custom-v-select"
+              
             >
               <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-          
-           </v-select>
-             <div v-if="showErrors && fieldErrors.bedrooms" class="invalid-feedback d-block">
-                {{ fieldErrors.bedrooms }}
-              </div>
+                <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.bedrooms" class="invalid-feedback d-block">
+              {{ fieldErrors.bedrooms }}
+            </div>
           </div>
+
+          <!-- Unit Size - يتم تعبئته تلقائياً -->
+          <div class="col-md-4">
+            <label class="form-label-custom">Unit Size (sq.ft)</label>
+            <b-form-input 
+              v-model="form.unit_size" 
+              placeholder="Enter Unit Size" 
+              class="custom-input"
+              
+            />
+            <div v-if="showErrors && fieldErrors.unit_size" class="invalid-feedback d-block">
+              {{ fieldErrors.unit_size }}
+            </div>
+          </div>
+
+          <!-- Project Name - يتم تعبئته تلقائياً -->
           <div class="col-md-4">
             <label class="form-label-custom">Project Name</label>
             <v-select 
@@ -958,21 +986,22 @@
               label="name" 
               placeholder="Search Project..." 
               class="custom-v-select"
-              :filterable="false"
-              @search="searchProjects"
-                @open="() => searchProjects('')"         >
-              
-               <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-              
-              </v-select>
+              :filterable="true"
+                :searchable="true"
+                @search="searchProjects"
+            >
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+              </template>
+            </v-select>
             <div v-if="showErrors && fieldErrors.project_id" class="invalid-feedback d-block">
-                {{ fieldErrors.project_id }}
-              </div>
+              {{ fieldErrors.project_id }}
+            </div>
           </div>
+
+          <!-- Developer - يتم تعبئته تلقائياً -->
           <div class="col-md-4">
             <label class="form-label-custom">Developer</label>
             <v-select 
@@ -981,41 +1010,32 @@
               :reduce="item => item.id" 
               label="name" 
               placeholder="Select Developer" 
-              class="custom-v-select" 
+              class="custom-v-select"
+              
             >
-          
-            
-            <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-          </v-select>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+              </template>
+            </v-select>
             <div v-if="showErrors && fieldErrors.developer_id" class="invalid-feedback d-block">
-                {{ fieldErrors.developer_id }}
-              </div>
+              {{ fieldErrors.developer_id }}
+            </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Unit Size</label>
-            <b-form-input v-model="form.unit_size" placeholder="Enter Unit Size (sq. ft)" class="custom-input" />
-            <div v-if="showErrors && fieldErrors.unit_size" class="invalid-feedback d-block">
-                {{ fieldErrors.unit_size }}
-              </div>
-          </div>
-          <div class="col-md-4">
+
+          <!-- Property Link - مخفي حالياً -->
+          <!-- <div class="col-md-4">
             <label class="form-label-custom">Property Link</label>
             <b-form-input v-model="form.property_link" placeholder="Enter Property Link" class="custom-input" />
-            <div v-if="showErrors && fieldErrors.property_link" class="invalid-feedback d-block">
-                {{ fieldErrors.property_link }}
-              </div>
-          </div>
-          <div class="col-md-4">
+          </div> -->
+
+          <!-- Property Reference - مخفي حالياً -->
+          <!-- <div class="col-md-4">
             <label class="form-label-custom">Property Reference</label>
             <b-form-input v-model="form.property_reference" placeholder="Enter Reference" class="custom-input" />
-             <div v-if="showErrors && fieldErrors.property_reference" class="invalid-feedback d-block">
-                {{ fieldErrors.property_reference }}
-              </div>
-          </div>
+          </div> -->
+
         </div>
       </div>
     </section>
@@ -1090,14 +1110,16 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed,onMounted } from 'vue'
 import { BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import DocumentUpload from './DocumentUpload.vue'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue' 
 import api from '@/plugins/axios'
+import { getCurrentInstance } from 'vue'
 
+const { proxy } = getCurrentInstance()
 const props = defineProps({
   modelValue: { type: Object, default: () => ({}) },
   dealType: { type: String, default: 'primary' },
@@ -1197,9 +1219,9 @@ const primaryBuyerDocTypes = computed(() => {
   
   const allDocs = {
     passport: { id: 'passport', name: 'Passport', required: true },
-    national_id: { id: 'national_id', name: 'National ID', required: true },
-    kyc: { id: 'kyc', name: 'KYC', required: true },
-    visa: { id: 'visa', name: 'Visa', required: true },
+    national_id: { id: 'national_id', name: 'National ID', required: false },
+    kyc: { id: 'kyc', name: 'KYC', required: false },
+    visa: { id: 'visa', name: 'Visa', required: false },
     spa: { id: 'spa', name: 'Buyer SPA', required: false },
     payment_proof: { id: 'payment_proof', name: 'Buyer Payment Proof', required: false }
   }
@@ -1214,8 +1236,8 @@ const secondaryBuyerDocTypes = computed(() => {
   const allDocs = {
     passport: { id: 'passport', name: 'Buyer Passport', required: true },
     national_id: { id: 'national_id', name: 'Buyer National ID', required: true },
-    kyc: { id: 'kyc', name: 'Buyer KYC', required: true },
-    visa: { id: 'visa', name: 'Buyer Visa', required: true },
+    kyc: { id: 'kyc', name: 'Buyer KYC', required: false },
+    visa: { id: 'visa', name: 'Buyer Visa', required: false },
     noc: { id: 'noc', name: 'NOC Letter', required: false },
     payment_proof: { id: 'payment_proof', name: 'Buyer Payment Proof', required: false },
     title_deed: { id: 'title_deed', name: 'New Title Deed / New SPA', required: false }
@@ -1245,12 +1267,12 @@ const tenantDocTypes = computed(() => {
   const allDocs = {
     passport: { id: 'passport', name: 'Tenant Passport', required: true },
     national_id: { id: 'national_id', name: 'Tenant National ID', required: false },
-    kyc: { id: 'kyc', name: 'Tenant KYC', required: true },
-    visa: { id: 'visa', name: 'Tenant Visa', required: true },
+    kyc: { id: 'kyc', name: 'Tenant KYC', required: false },
+    visa: { id: 'visa', name: 'Tenant Visa', required: false },
     payment_proof: { id: 'payment_proof', name: 'Tenant Proof of Payment', required: false },
     ejari: { id: 'ejari', name: 'Tawtheeq/Ejari Contract', required: false },
-    tenancy_contract: { id: 'tenancy_contract', name: 'Tenancy Contract', required: true },
-    move_in_form: { id: 'move_in_form', name: 'Move In Form', required: true }
+    tenancy_contract: { id: 'tenancy_contract', name: 'Tenancy Contract', required: false },
+    move_in_form: { id: 'move_in_form', name: 'Move In Form', required: false }
   }
   
   return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
@@ -1518,6 +1540,18 @@ async function searchProjects(search) {
     console.error('Error searching projects:', e)
   }
 }
+watch(() => form.value.project_id, async (newProjectId) => {
+  if (newProjectId && !projects.value.some(p => p.id === newProjectId)) {
+    try {
+      const response = await api.get(`/listings/projects/${newProjectId}`)
+      if (response.data) {
+        projects.value.push(response.data)
+      }
+    } catch (error) {
+      console.error('Error fetching specific project:', error)
+    }
+  }
+}, { immediate: true })
 watch(() => props.fieldErrors, (newVal) => {
   dlog('fieldErrors in DealForm:', newVal)
 }, { deep: true, immediate: true })
@@ -1525,6 +1559,21 @@ watch(() => props.fieldErrors, (newVal) => {
 watch(() => props.showErrors, (newVal) => {
   dlog('showErrors in DealForm:', newVal)
 }, { immediate: true })
+const fetchProjects = async () => {
+  try {
+    const response = await api.get('/listings/projects', { 
+      params: { per_page: 1000 } 
+    })
+    projects.value = response.data?.data ?? response.data ?? []
+    console.log(`Loaded ${projects.value.length} projects`)
+  } catch (error) {
+    console.error('Error loading projects:', error)
+  }
+}
+onMounted(() => {
+  fetchProjects()
+  getCurrentUser()
+})
 
 function onSearchAreas(search) {
   emit('search-areas', search)
@@ -1533,7 +1582,110 @@ function onSearchAreas(search) {
 function onSearchSubCommunities(search) {
   emit('search-subcommunities', search)
 }
+const availableListings = ref([])
+const selectedListing = ref(null)
+const isLoadingListings = ref(false)
+const currentUser = ref(null)
 
+// جلب بيانات المستخدم الحالي
+const getCurrentUser = () => {
+  try {
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      currentUser.value = JSON.parse(userData)
+    }
+  } catch (error) {
+    console.error('Error getting user:', error)
+  }
+}
+
+// دالة جلب الـ Listings المتاحة (التي باعها أو أجرها الـ Agent الحالي)
+const fetchAvailableListings = async (areaId) => {
+  if (!areaId) {
+    availableListings.value = []
+    return
+  }
+  
+  // التأكد من وجود المستخدم
+  if (!currentUser.value?.id) {
+    getCurrentUser()
+    if (!currentUser.value?.id) return
+  }
+  
+  try {
+    isLoadingListings.value = true
+    
+    const params = {
+      area_id: areaId,
+      sold_by_agent_id: currentUser.value.id,  // التي قام بها هذا الـ Agent
+      per_page: 100
+    }
+    
+    const response = await api.get('/listings/properties', { params })
+    
+    const listings = response.data.data || []
+    availableListings.value = listings.map(listing => ({
+      id: listing.id,
+      unit_number: listing.unit_number,
+      property_type: listing.property_type,
+      property_type_id: listing.property_type_id,
+      bedrooms: listing.number_of_bedrooms,
+      bedrooms_text: listing.number_of_bedrooms === 0 ? 'Studio' : `${listing.number_of_bedrooms} Bed`,
+      bathrooms: listing.number_of_bathrooms,
+      size_sqft: listing.size_sqft,
+      project_id: listing.project_id,
+      project_name: listing.project?.title,
+      developer_id: listing.developer_id,
+      developer_name: listing.developer?.name,
+      status: listing.status, // 'converted' or 'rented'
+      display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type?.name || 'Property'} (${listing.status === 'converted' ? 'Sold' : 'Rented'})`
+    }))
+    
+    if (availableListings.value.length === 0) {
+      proxy.$showNotification('No sold or rented units found for you in this location', 'info')
+    }
+    
+  } catch (error) {
+    console.error('Error fetching listings:', error)
+    proxy.$showNotification('Failed to load available units', 'error')
+  } finally {
+    isLoadingListings.value = false
+  }
+}
+
+// دالة عند اختيار المنطقة
+const onAreaSelected = (areaId) => {
+  // إعادة تعيين الـ listing المختار
+  selectedListing.value = null
+  // إعادة تعيين بيانات العقار
+  if (form.value) {
+    form.value.unit_no = ''
+    form.value.property_type_id = null
+    form.value.bedrooms = null
+    form.value.unit_size = ''
+    form.value.project_id = null
+    form.value.developer_id = null
+  }
+  // جلب الـ Listings المتاحة
+  fetchAvailableListings(areaId)
+}
+
+// دالة عند اختيار Listing
+const onListingSelected = (listing) => {
+  if (!listing) return
+  
+  // تعبئة بيانات Property Details من الـ Listing المختار
+  form.value.unit_no = listing.unit_number || ''
+  form.value.property_type_id = listing.property_type_id
+  form.value.bedrooms = listing.bedrooms === 0 ? 'studio' : String(listing.bedrooms)
+  form.value.unit_size = listing.size_sqft || ''
+  form.value.project_id = listing.project_id
+  form.value.developer_id = listing.developer_id
+  
+  // يمكن إضافة listing_id إلى الـ form لربط الديل بالـ listing
+  form.value.listing_id = listing.id
+  form.value.listing_status = listing.status // 'converted' or 'rented'
+}
 // Expose functions to parent
 defineExpose({
   clearAllDocuments,
