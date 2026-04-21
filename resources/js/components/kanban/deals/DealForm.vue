@@ -1326,10 +1326,24 @@ const dlog = (...args) => {
 // Clear all documents function
 function clearAllDocuments() {
   dlog('Clearing all documents...')
-  if (buyerDocUploadRef.value) buyerDocUploadRef.value.clearAllFiles()
-  if (sellerDocUploadRef.value) sellerDocUploadRef.value.clearAllFiles()
-  if (tenantDocUploadRef.value) tenantDocUploadRef.value.clearAllFiles()
-  if (landlordDocUploadRef.value) landlordDocUploadRef.value.clearAllFiles()
+  // Reset model arrays first (DocumentUpload is v-model driven).
+  form.value.buyer_documents = []
+  form.value.seller_documents = []
+  form.value.tenant_documents = []
+  form.value.landlord_documents = []
+
+  // Backward-compatible guard if child component exposes a clear method.
+  const refs = [
+    buyerDocUploadRef.value,
+    sellerDocUploadRef.value,
+    tenantDocUploadRef.value,
+    landlordDocUploadRef.value,
+  ]
+  refs.forEach((r) => {
+    if (r && typeof r.clearAllFiles === 'function') {
+      r.clearAllFiles()
+    }
+  })
 }
 
 // Validation function
@@ -1360,10 +1374,6 @@ function validateForm() {
   if (!form.value.property_type_id) {
     errors.push('Property type is required')
     fieldErrorsObj.property_type_id = 'Property type is required'
-  }
-  if (!form.value.subcommunity_id) {
-    errors.push('Subcommunity is required')
-    fieldErrorsObj.subcommunity_id = 'Subcommunity is required'
   }
   if (!form.value.responsible_person_id) {
     errors.push('Responsible person is required')

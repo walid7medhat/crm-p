@@ -87,8 +87,7 @@
               :developers="developers"
               :areas="areas"
               @search-areas="searchAreas"        
-              @search-communities="searchCommunities"
-              @search-sub-communities="searchSubCommunities" 
+              @search-subcommunities="searchSubCommunities" 
                @search-projects="searchProjects" 
               :show-errors="showFieldErrors"     
               :field-errors="fieldErrors"           
@@ -152,6 +151,7 @@ const developers = ref([])
 const areas = ref([])
 const communities = ref([])
 const subCommunities = ref([])
+const projects = ref([])
 
 // Form data
 const formData = ref({})

@@ -349,7 +349,14 @@ class LeadConversionController extends Controller
                 $deal->id,
                 ['action' => 'created']
             );
-        broadcast(new DealUpdated($deal, 'created'));
+            try {
+                broadcast(new DealUpdated($deal, 'created'));
+            } catch (\Throwable $e) {
+                Log::warning('Broadcast failed during deal create/store (Pusher may be unreachable)', [
+                    'deal_id' => $deal->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
 
             DB::commit();

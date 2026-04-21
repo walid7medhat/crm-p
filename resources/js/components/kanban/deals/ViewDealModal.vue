@@ -258,6 +258,8 @@ const emit = defineEmits(['update:modelValue', 'deal-updated', 'stage-change-req
 
 const show = ref(props.modelValue)
 const dealType = ref('primary')
+const hydratedDeal = ref(null)
+const deal = computed(() => hydratedDeal.value || props.deal || null)
 const selectedStageIndex = ref(0)
 const activeTab = ref('general')
 const activeViewTab = ref('activity')
@@ -283,13 +285,13 @@ const editHydrationRequestId = ref(0)
 const { updateAndChangeStage } = useStageTransition()
 
 const dealTitle = computed(() => {
-  if (!props.deal) return 'View Deal'
-  const name = props.deal.project_name || props.deal.project || props.deal.deal_name
+  if (!deal.value) return 'View Deal'
+  const name = deal.value.project_name || deal.value.project || deal.value.deal_name
   if (name) return `Deal Done From "${name}"`
-  return props.deal.id ? `Deal #${props.deal.id}` : 'View Deal'
+  return deal.value.id ? `Deal #${deal.value.id}` : 'View Deal'
 })
 
-const dealEntityId = computed(() => props.deal?.id ?? null)
+const dealEntityId = computed(() => deal.value?.id ?? null)
 
 const selectedDealTypeName = computed(() => {
   const tab = dealTypeTabs.find(t => t.id === dealType.value)
@@ -308,12 +310,12 @@ function handleActivityCreated(newActivity) {
 }
 
 function handlePersonUpdated(updatedPerson) {
-  if (!props.deal) return
+  if (!deal.value) return
   emit('deal-updated', {
-    ...props.deal,
-    responsible_person_id: updatedPerson?.id ?? props.deal?.responsible_person_id,
+    ...deal.value,
+    responsible_person_id: updatedPerson?.id ?? deal.value?.responsible_person_id,
     responsible_person: {
-      ...(props.deal?.responsible_person || {}),
+      ...(deal.value?.responsible_person || {}),
       ...(updatedPerson || {}),
     },
   })
@@ -392,7 +394,7 @@ function getDefaultColor(order) {
   return colors[(order || 0) % colors.length] || '#3B82F6'
 }
 const currentStageIndex = computed(() => {
-  const d = props.deal
+  const d = deal.value
   if (!d) return 0
   
   const stages = currentStages.value
@@ -416,12 +418,12 @@ const currentStageIndex = computed(() => {
   return idx >= 0 ? idx : 0
 })
 function selectStage(index) {
-  if (!props.deal) return
+  if (!deal.value) return
   const targetStage = currentStages.value[index]
   const currentStage = currentStages.value[selectedStageIndex.value]
   if (!targetStage) return
 
-  const originalStageId = props.deal.stage_id ?? props.deal.stage?.id ?? props.deal.stageId ?? currentStage?.id
+  const originalStageId = deal.value.stage_id ?? deal.value.stage?.id ?? deal.value.stageId ?? currentStage?.id
   const targetStageId = targetStage.id
   if (String(originalStageId) === String(targetStageId)) return
 
@@ -429,13 +431,27 @@ function selectStage(index) {
     if (!activeEditSection.value) {
 
       emit('stage-change-request', {
-        dealId: props.deal.id,
+        dealId: deal.value.id,
         originalStageId,
         targetStageId,
         targetStageName: targetStage.name,
-        dealData: props.deal,
+        dealData: deal.value,
       })
     }
+}
+async function hydrateDealForView() {
+  if (!show.value || !props.deal?.id) return
+  try {
+    const response = await axios.get(`/deals/${props.deal.id}`)
+    const fullDeal = response.data?.data ?? response.data
+    hydratedDeal.value = fullDeal || null
+    if (fullDeal?.deal_type) {
+      dealType.value = fullDeal.deal_type
+    }
+  } catch (error) {
+    console.error('Error hydrating deal for view:', error)
+    hydratedDeal.value = null
+  }
 }
 async function loadDealForEdit() {
     if (!props.deal?.id) return
@@ -445,6 +461,7 @@ async function loadDealForEdit() {
     try {
         const response = await axios.get(`/deals/${props.deal.id}`)
         const dealData = response.data?.data || response.data
+        hydratedDeal.value = dealData || hydratedDeal.value
         // Ignore stale async responses when user switches deals quickly.
         if (editHydrationRequestId.value !== requestId) return
         editFormData.value = dealToFormData(dealData)
@@ -623,7 +640,7 @@ async function editSearchProjects(search) {
 }
 
 async function startEditDeal(sectionKey = null) {
-  if (!props.deal?.id) return
+  if (!deal.value?.id) return
   activeEditSection.value = sectionKey
   isEditingDeal.value = true
   editLoading.value = true
@@ -670,11 +687,11 @@ async function hydrateAutoEditSection() {
 }
 
 async function saveEditDeal() {
-  if (!props.deal?.id) return
+  if (!deal.value?.id) return
   const stageId =
-    props.deal.stage_id ??
-    props.deal.stage?.id ??
-    props.deal.stageId ??
+    deal.value.stage_id ??
+    deal.value.stage?.id ??
+    deal.value.stageId ??
     editFormData.value?.stage_id ??
     editFormData.value?.stageId ??
     currentStages.value[selectedStageIndex.value]?.id ??
@@ -726,9 +743,17 @@ watch(() => props.modelValue, async (val) => {
   show.value = val
   if (val && props.deal?.deal_type) {
     dealType.value = props.deal.deal_type
+    await hydrateDealForView()
     await fetchStagesFromAPI(props.deal.deal_type)
     selectedStageIndex.value = currentStageIndex.value
   }
+})
+
+watch(() => props.deal?.id, async (newId, oldId) => {
+  if (!show.value || !newId || newId === oldId) return
+  hydratedDeal.value = null
+  await hydrateDealForView()
+  selectedStageIndex.value = currentStageIndex.value
 })
 
 watch(
@@ -758,6 +783,7 @@ watch(dealType, async (newType) => {
 watch(show, (val) => {
   if (val && props.deal) selectedStageIndex.value = currentStageIndex.value
   if (!val) {
+    hydratedDeal.value = null
     editHydrationRequestId.value = 0
     isEditingDeal.value = false
     activeEditSection.value = null

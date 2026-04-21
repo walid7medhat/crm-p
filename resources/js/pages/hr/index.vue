@@ -31,7 +31,7 @@
               <button
                 v-for="item in headerTabMenus[tab]"
                 :key="item"
-                type="button"
+                type="button" 
                 class="hr-tab-menu-item"
                 @click="onHeaderMenuSelect(tab, item)"
               >
@@ -73,12 +73,18 @@
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Employees'">
-            <button type="button" class="hr-generate-btn">
+            <button type="button" class="hr-generate-btn" @click="showAddEmployeeModal = true">
               Add Employee
               <iconify-icon icon="lucide:plus" />
             </button>
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
+          </template>
+          <template v-else-if="activeTab === 'Employee Details'">
+            <button type="button" class="employee-detail-action-chip">Activity</button>
+            <button type="button" class="employee-detail-action-chip">Deactivate</button>
+            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:pencil" /></button>
+            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:trash-2" /></button>
           </template>
           <template v-else>
             <button type="button" class="hr-generate-btn">
@@ -208,17 +214,17 @@
                       </span>
                     </td>
                     <td class="employee-row-action-cell col-action">
-                      <button type="button" class="row-action-btn" @click.stop="toggleEmployeeRowMenu(row.id)">
+                      <button type="button" class="row-action-btn" @click.stop="toggleEmployeeRowMenu(row.id, $event)">
                         <iconify-icon icon="lucide:more-vertical" />
                       </button>
-                      <div v-if="openEmployeeRowMenuId === row.id" class="employee-row-menu">
-                        <button type="button" class="employee-row-menu-item">
+                      <div v-if="openEmployeeRowMenuId === row.id" class="employee-row-menu" :style="employeeRowMenuStyle">
+                        <button type="button" class="employee-row-menu-item" @click.stop="openEditEmployee(row)">
                           <iconify-icon icon="lucide:pencil" /> Edit Employee
                         </button>
-                        <button type="button" class="employee-row-menu-item active">
+                        <button type="button" class="employee-row-menu-item active" @click.stop="openEmployeeDetails(row)">
                           <iconify-icon icon="lucide:eye" /> View Detail
                         </button>
-                        <button type="button" class="employee-row-menu-item danger">
+                        <button type="button" class="employee-row-menu-item danger" @click.stop="confirmDeleteEmployee(row)">
                           <iconify-icon icon="lucide:trash-2" /> Delete Employee
                         </button>
                       </div>
@@ -230,6 +236,111 @@
             <div class="hr-footer">
               <span>Showing {{ filteredEmployeeRows.length }} Entries</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hr-content-card" v-else-if="activeTab === 'Employee Details'">
+        <div class="hr-content-shell employee-detail-page" v-if="selectedEmployeeDetail">
+          <div class="employee-detail-breadcrumb">Employee <iconify-icon icon="lucide:chevron-right" /> Manage Employee <iconify-icon icon="lucide:chevron-right" /> {{ selectedEmployeeDetail.name }}</div>
+          <h6 class="overview-section-title mb-2">Employee Details</h6>
+          <div class="employee-detail-layout">
+            <aside class="employee-detail-side">
+              <div class="employee-detail-user-head">
+                <img :src="selectedEmployeeDetail.avatar" :alt="selectedEmployeeDetail.name" />
+                <div>
+                  <strong>{{ selectedEmployeeDetail.name }}</strong>
+                  <p>ID : #EMP-{{ selectedEmployeeDetail.id }}</p>
+                </div>
+                <button type="button" class="mini-edit-btn" @click="openSectionEdit('profile')"><iconify-icon icon="lucide:pencil" /></button>
+              </div>
+              <div class="employee-detail-side-list">
+                <p><span>Gmail</span><strong>{{ selectedEmployeeDetail.email }}</strong></p>
+                <p><span>Phone</span><strong>{{ selectedEmployeeDetail.phone }}</strong></p>
+                <p><span>Date Of Birth</span><strong>{{ selectedEmployeeDetail.dob }}</strong></p>
+                <p><span>Address</span><strong>{{ selectedEmployeeDetail.address }}</strong></p>
+                <p><span>Nationality</span><strong>{{ selectedEmployeeDetail.nationality }}</strong></p>
+                <p><span>Salary Type</span><strong>{{ selectedEmployeeDetail.salary_type }}</strong></p>
+                <p><span>Salary</span><strong>{{ selectedEmployeeDetail.salary }} AED</strong></p>
+              </div>
+            </aside>
+            <section class="employee-detail-main">
+              <div class="employee-detail-tabs">
+                <button type="button" :class="{active: employeeDetailTab === 'company'}" @click="employeeDetailTab = 'company'">Company Details</button>
+                <button type="button" :class="{active: employeeDetailTab === 'documents'}" @click="employeeDetailTab = 'documents'">Document Details</button>
+                <button type="button" :class="{active: employeeDetailTab === 'bank'}" @click="employeeDetailTab = 'bank'">Bank Account Details</button>
+                <button type="button" :class="{active: employeeDetailTab === 'assets'}" @click="employeeDetailTab = 'assets'">Asset Details</button>
+                <button type="button" :class="{active: employeeDetailTab === 'insurance'}" @click="employeeDetailTab = 'insurance'">Insurance Details</button>
+              </div>
+
+              <div class="employee-detail-section" v-if="employeeDetailTab === 'company'">
+                <div class="employee-detail-section-head">
+                  <h6>Company Details</h6>
+                  <button type="button" class="mini-edit-btn" @click="openSectionEdit('company')"><iconify-icon icon="lucide:pencil" /></button>
+                </div>
+                <div class="employee-mini-grid">
+                  <p><span>Branch</span><strong>{{ selectedEmployeeDetail.branch }}</strong></p>
+                  <p><span>Designation</span><strong>{{ selectedEmployeeDetail.designation }}</strong></p>
+                  <p><span>Department</span><strong>{{ selectedEmployeeDetail.department }}</strong></p>
+                  <p><span>Supervisor</span><strong>{{ selectedEmployeeDetail.supervisor }}</strong></p>
+                  <p><span>Joining Date</span><strong>{{ selectedEmployeeDetail.joiningDate }}</strong></p>
+                  <p><span>Visa Validity</span><strong>{{ selectedEmployeeDetail.visaValidity }}</strong></p>
+                </div>
+              </div>
+
+              <div class="employee-detail-section" v-if="employeeDetailTab === 'documents'">
+                <div class="employee-detail-section-head">
+                  <h6>Document Details</h6>
+                  <button type="button" class="mini-edit-btn" @click="openSectionEdit('documents')"><iconify-icon icon="lucide:pencil" /></button>
+                </div>
+                <div class="employee-mini-grid">
+                  <p><span>Emirates ID</span><strong>{{ selectedEmployeeDetail.emiratesId }}</strong></p>
+                  <p><span>Labor Card</span><strong>{{ selectedEmployeeDetail.laborCard }}</strong></p>
+                  <p><span>Passport</span><strong>{{ selectedEmployeeDetail.passportNumber }}</strong></p>
+                  <p><span>Visa</span><strong>{{ selectedEmployeeDetail.visaNumber }}</strong></p>
+                  <p><span>Attested Certificate</span><strong>{{ selectedEmployeeDetail.attestedCertificate }}</strong></p>
+                </div>
+              </div>
+
+              <div class="employee-detail-section" v-if="employeeDetailTab === 'bank'">
+                <div class="employee-detail-section-head">
+                  <h6>Bank Account Details</h6>
+                  <button type="button" class="mini-edit-btn" @click="openSectionEdit('bank')"><iconify-icon icon="lucide:pencil" /></button>
+                </div>
+                <div class="employee-mini-grid">
+                  <p><span>Account Holder Name</span><strong>{{ selectedEmployeeDetail.account_holder_name }}</strong></p>
+                  <p><span>Bank Name</span><strong>{{ selectedEmployeeDetail.bank_name }}</strong></p>
+                  <p><span>Bank Branch</span><strong>{{ selectedEmployeeDetail.branch_location }}</strong></p>
+                  <p><span>Account Number</span><strong>{{ selectedEmployeeDetail.account_number }}</strong></p>
+                  <p><span>IBAN Number</span><strong>{{ selectedEmployeeDetail.iban_number }}</strong></p>
+                  <p><span>SWIFT Code</span><strong>{{ selectedEmployeeDetail.swift_code }}</strong></p>
+                </div>
+              </div>
+
+              <div class="employee-detail-section" v-if="employeeDetailTab === 'assets'">
+                <div class="employee-detail-section-head"><h6>Asset Details</h6></div>
+                <div class="employee-mini-grid">
+                  <p><span>HP Laptop</span><strong>ASSET ID : AST-001</strong></p>
+                  <p><span>Laptop Charger</span><strong>ASSET ID : AST-002</strong></p>
+                  <p><span>Company SIM</span><strong>ASSET ID : AST-004</strong></p>
+                  <p><span>Company Name Badge</span><strong>ASSET ID : AST-006</strong></p>
+                </div>
+              </div>
+
+              <div class="employee-detail-section" v-if="employeeDetailTab === 'insurance'">
+                <div class="employee-detail-section-head">
+                  <h6>Insurance Details</h6>
+                  <button type="button" class="mini-edit-btn" @click="openSectionEdit('insurance')"><iconify-icon icon="lucide:pencil" /></button>
+                </div>
+                <div class="employee-mini-grid">
+                  <p><span>Insurance Provider</span><strong>{{ selectedEmployeeDetail.insurance_provider }}</strong></p>
+                  <p><span>Policy Number</span><strong>{{ selectedEmployeeDetail.policy_number }}</strong></p>
+                  <p><span>Insurance Type</span><strong>{{ selectedEmployeeDetail.policy_type }}</strong></p>
+                  <p><span>Start Date</span><strong>{{ selectedEmployeeDetail.insurance_start_date }}</strong></p>
+                  <p><span>Expiry Date</span><strong>{{ selectedEmployeeDetail.insurance_expiry_date }}</strong></p>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -504,6 +615,234 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showAddEmployeeModal" class="edit-overlay add-employee-overlay" @click.self="closeAddEmployeeModal">
+      <div class="add-employee-modal">
+        <div class="add-employee-head">
+          <h6>{{ isEditEmployeeMode ? 'Edit Employee Details' : 'Create New Employee' }}</h6>
+          <button type="button" class="add-employee-close" @click="closeAddEmployeeModal">
+            <iconify-icon icon="lucide:x" />
+          </button>
+        </div>
+
+        <div class="add-employee-body">
+          <section class="add-employee-section">
+            <h6>Profile Details</h6>
+            <div class="add-employee-profile-grid">
+              <div class="profile-photo-block">
+                <div class="profile-photo-avatar">
+                  <img v-if="addEmployeeProfilePreview" :src="addEmployeeProfilePreview" alt="Profile preview" />
+                  <iconify-icon v-else icon="lucide:user-round" />
+                </div>
+                <button type="button" class="profile-photo-edit-btn" @click="triggerProfileImageUpload">
+                  <iconify-icon icon="lucide:camera" />
+                </button>
+                <input ref="profileImageInputRef" type="file" class="d-none" accept="image/*" @change="handleProfileImageChange" />
+                <span>Profile Photo</span>
+              </div>
+
+              <div class="profile-form-grid">
+                <div class="add-field">
+                  <label>Full Name *</label>
+                  <input v-model="addEmployeeForm.full_name" type="text" placeholder="Enter Employee Full Name" />
+                </div>
+                <div class="add-field">
+                  <label>Nationality *</label>
+                  <SearchableSelect v-model="addEmployeeForm.nationality" :options="nationalityOptions" placeholder="Not Selected" />
+                </div>
+                <div class="add-field">
+                  <label>Phone Number *</label>
+                  <input v-model="addEmployeeForm.phone" type="text" placeholder="Enter Phone Number" />
+                </div>
+                <div class="add-field">
+                  <label>Salary Type *</label>
+                  <SearchableSelect v-model="addEmployeeForm.salary_type" :options="salaryTypeOptions" placeholder="Not Selected" />
+                </div>
+                <div class="add-field">
+                  <label>Email *</label>
+                  <input v-model="addEmployeeForm.email" type="email" placeholder="Enter Your Email" />
+                </div>
+                <div class="add-field">
+                  <label>Salary *</label>
+                  <div class="salary-input-group">
+                    <input v-model="addEmployeeForm.salary" type="text" placeholder="Enter Amount" />
+                    <span>UAE Dirham</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="add-employee-section">
+            <h6>Company Details</h6>
+            <div class="add-grid-two">
+              <div class="add-field">
+                <label>Branch *</label>
+                <SearchableSelect v-model="addEmployeeForm.branch" :options="branchOptions" placeholder="Not Selected" />
+              </div>
+              <div class="add-field">
+                <label>Designation *</label>
+                <SearchableSelect v-model="addEmployeeForm.designation" :options="designationOptions" placeholder="Not Selected" />
+              </div>
+              <div class="add-field">
+                <label>Department *</label>
+                <SearchableSelect v-model="addEmployeeForm.department" :options="departmentOptions" placeholder="Not Selected" />
+              </div>
+              <div class="add-field">
+                <label>Supervisor *</label>
+                <SearchableSelect v-model="addEmployeeForm.supervisor" :options="supervisorOptions" placeholder="Not Selected" />
+              </div>
+              <div class="add-field">
+                <label>Joining Date *</label>
+                <input v-model="addEmployeeForm.joining_date" type="date" />
+              </div>
+              <div class="add-field">
+                <label>Visa Validity *</label>
+                <input v-model="addEmployeeForm.visa_validity" type="date" />
+              </div>
+            </div>
+          </section>
+
+          <section class="add-employee-section">
+            <h6>Upload Employee Documents</h6>
+            <div class="doc-chip-row">
+              <button
+                v-for="doc in employeeDocumentTypes"
+                :key="doc"
+                type="button"
+                class="doc-chip"
+                :class="{ active: selectedDocumentType === doc }"
+                @click="selectedDocumentType = doc"
+              >
+                {{ doc }}
+              </button>
+            </div>
+            <div class="add-field">
+              <label>Emirates ID Number *</label>
+              <input v-model="addEmployeeForm.emirates_id_number" type="text" placeholder="Enter Emirates ID Number" />
+            </div>
+            <div class="upload-dropzone">
+              <div>
+                <strong>Drag and drop your files</strong>
+                <small>JPEG, PNG and PDF formats, up to 50MB</small>
+              </div>
+              <label class="select-file-btn">
+                Select File
+                <input type="file" class="d-none" @change="handleAddEmployeeFileChange" />
+              </label>
+            </div>
+            <div v-if="addEmployeeUploadedFile" class="uploaded-doc-card">
+              <iconify-icon icon="lucide:file-text" />
+              <div>
+                <p>{{ addEmployeeUploadedFile.name }}</p>
+                <small>{{ `${Math.max(1, Math.round(addEmployeeUploadedFile.size / 1024))}KB` }}</small>
+              </div>
+              <button type="button" @click="removeAddEmployeeFile">
+                <iconify-icon icon="lucide:x-circle" />
+              </button>
+            </div>
+          </section>
+
+          <section class="add-employee-section">
+            <h6>Bank Account Details</h6>
+            <div class="add-grid-two">
+              <div class="add-field"><label>Account Holder Name</label><input v-model="addEmployeeForm.account_holder_name" type="text" placeholder="Enter Account Holder Name" /></div>
+              <div class="add-field"><label>Bank Name</label><SearchableSelect v-model="addEmployeeForm.bank_name" :options="bankNameOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Branch Location</label><input v-model="addEmployeeForm.branch_location" type="text" placeholder="Enter Bank branch location" /></div>
+              <div class="add-field"><label>Account Number</label><input v-model="addEmployeeForm.account_number" type="text" placeholder="Enter Bank account number" /></div>
+              <div class="add-field"><label>IBAN Number</label><input v-model="addEmployeeForm.iban_number" type="text" placeholder="Enter IBAN Number" /></div>
+              <div class="add-field"><label>SWIFT Code</label><input v-model="addEmployeeForm.swift_code" type="text" placeholder="Enter SWIFT Code" /></div>
+            </div>
+          </section>
+
+          <section class="add-employee-section">
+            <h6>Insurance Details</h6>
+            <div class="add-grid-two">
+              <div class="add-field"><label>Policy Type *</label><SearchableSelect v-model="addEmployeeForm.policy_type" :options="policyTypeOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Insurance Provider *</label><input v-model="addEmployeeForm.insurance_provider" type="text" placeholder="Enter Insurance Provider Name" /></div>
+              <div class="add-field"><label>Policy Number *</label><input v-model="addEmployeeForm.policy_number" type="text" placeholder="Enter Policy Number" /></div>
+              <div class="add-field"><label>Start Date *</label><input v-model="addEmployeeForm.insurance_start_date" type="date" /></div>
+              <div class="add-field"><label>Expiry Date *</label><input v-model="addEmployeeForm.insurance_expiry_date" type="date" /></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="add-employee-footer">
+          <button type="button" class="add-employee-clear-btn" @click="resetAddEmployeeForm">{{ isEditEmployeeMode ? 'Cancel' : 'Clear' }}</button>
+          <button type="button" class="add-employee-save-btn" @click="saveEmployeeForm">{{ isEditEmployeeMode ? 'Save' : 'Save' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showSectionEditModal" class="edit-overlay" @click.self="showSectionEditModal = false">
+      <div class="employee-filter-modal section-edit-modal">
+        <button type="button" class="employee-filter-close" @click="showSectionEditModal = false">
+          <iconify-icon icon="lucide:x" />
+        </button>
+        <div class="employee-filter-right w-100">
+          <h6 class="mb-2">{{ sectionEditTitle }}</h6>
+          <template v-if="editingSection === 'company'">
+            <div class="add-grid-two">
+              <div class="add-field"><label>Branch *</label><SearchableSelect v-model="sectionEditForm.branch" :options="branchOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Designation *</label><SearchableSelect v-model="sectionEditForm.designation" :options="designationOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Department *</label><SearchableSelect v-model="sectionEditForm.department" :options="departmentOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Supervisor *</label><SearchableSelect v-model="sectionEditForm.supervisor" :options="supervisorOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Joining Date *</label><input v-model="sectionEditForm.joiningDate" type="date" /></div>
+              <div class="add-field"><label>Visa Validity *</label><input v-model="sectionEditForm.visaValidity" type="date" /></div>
+            </div>
+          </template>
+          <template v-else-if="editingSection === 'bank'">
+            <div class="add-grid-two">
+              <div class="add-field"><label>Account Holder Name *</label><input v-model="sectionEditForm.account_holder_name" type="text" /></div>
+              <div class="add-field"><label>Bank Name *</label><SearchableSelect v-model="sectionEditForm.bank_name" :options="bankNameOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Branch Location</label><input v-model="sectionEditForm.branch_location" type="text" /></div>
+              <div class="add-field"><label>Account Number *</label><input v-model="sectionEditForm.account_number" type="text" /></div>
+              <div class="add-field"><label>IBAN Number *</label><input v-model="sectionEditForm.iban_number" type="text" /></div>
+              <div class="add-field"><label>SWIFT Code</label><input v-model="sectionEditForm.swift_code" type="text" /></div>
+            </div>
+          </template>
+          <template v-else-if="editingSection === 'insurance'">
+            <div class="add-grid-two">
+              <div class="add-field"><label>Policy Type *</label><SearchableSelect v-model="sectionEditForm.policy_type" :options="policyTypeOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Insurance Provider *</label><input v-model="sectionEditForm.insurance_provider" type="text" /></div>
+              <div class="add-field"><label>Policy Number *</label><input v-model="sectionEditForm.policy_number" type="text" /></div>
+              <div class="add-field"><label>Start Date *</label><input v-model="sectionEditForm.insurance_start_date" type="date" /></div>
+              <div class="add-field"><label>Expiry Date *</label><input v-model="sectionEditForm.insurance_expiry_date" type="date" /></div>
+            </div>
+          </template>
+          <template v-else-if="editingSection === 'documents'">
+            <div class="add-grid-two">
+              <div class="add-field"><label>Emirates ID Number *</label><input v-model="sectionEditForm.emiratesId" type="text" /></div>
+              <div class="add-field"><label>Attested Certificate *</label><SearchableSelect v-model="sectionEditForm.attestedCertificate" :options="['Yes','No']" placeholder="Not Selected" /></div>
+            </div>
+            <div class="upload-dropzone mt-2">
+              <div>
+                <strong>Drag and drop your files</strong>
+                <small>JPEG, PNG and PDF formats, up to 50MB</small>
+              </div>
+              <label class="select-file-btn">
+                Select File
+                <input type="file" class="d-none" @change="handleAddEmployeeFileChange" />
+              </label>
+            </div>
+          </template>
+          <template v-else>
+            <div class="add-grid-two">
+              <div class="add-field"><label>Full Name *</label><input v-model="sectionEditForm.name" type="text" /></div>
+              <div class="add-field"><label>Phone Number *</label><input v-model="sectionEditForm.phone" type="text" /></div>
+              <div class="add-field"><label>Email *</label><input v-model="sectionEditForm.email" type="email" /></div>
+              <div class="add-field"><label>Nationality *</label><SearchableSelect v-model="sectionEditForm.nationality" :options="nationalityOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Salary Type *</label><SearchableSelect v-model="sectionEditForm.salary_type" :options="salaryTypeOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Basic Salary *</label><input v-model="sectionEditForm.salary" type="text" /></div>
+            </div>
+          </template>
+          <div class="employee-filter-actions mt-2">
+            <button type="button" class="employee-filter-btn ghost" @click="showSectionEditModal = false">Cancel</button>
+            <button type="button" class="employee-filter-btn primary" @click="saveSectionEdit">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -560,6 +899,20 @@ const perPage = 10
 const openEmployeeFilters = ref(false)
 const openEmployeeRowMenuId = ref(null)
 const selectedFilterChip = ref('Marketing')
+const showAddEmployeeModal = ref(false)
+const isEditEmployeeMode = ref(false)
+const editingEmployeeId = ref(null)
+const profileImageInputRef = ref(null)
+const addEmployeeProfilePreview = ref('')
+const addEmployeeProfileFile = ref(null)
+const employeeRowMenuStyle = ref({})
+const selectedEmployeeDetail = ref(null)
+const employeeDetailTab = ref('company')
+const showSectionEditModal = ref(false)
+const editingSection = ref('')
+const sectionEditForm = ref({})
+const selectedDocumentType = ref('Emirates ID')
+const addEmployeeUploadedFile = ref(null)
 const employeeFilters = ref({
   name: '',
   department: '',
@@ -609,6 +962,50 @@ const designationOptions = [
   'Payroll Manager',
 ]
 const statusOptions = ['Active', 'In Active']
+const nationalityOptions = ['UAE', 'Egypt', 'India', 'Pakistan', 'Morocco', 'Jordan']
+const salaryTypeOptions = ['Daily', 'Monthly', 'Yearly']
+const branchOptions = ['Dubai HQ', 'Abu Dhabi', 'Sharjah', 'Ajman']
+const supervisorOptions = ['Mohammad Othman', 'Ahmad Al Daghash', 'Maria Guan', 'Tarek Mahmoud']
+const bankNameOptions = ['Emirates NBD', 'ADCB', 'Mashreq', 'FAB', 'RAKBANK']
+const policyTypeOptions = ['Basic Health', 'Standard Health', 'Premium Health', 'Life Insurance']
+const employeeDocumentTypes = ['Emirates ID', 'Labor Card', 'Passport', 'Visa', 'Attested Certificates']
+const defaultAddEmployeeForm = () => ({
+  full_name: '',
+  nationality: '',
+  phone: '',
+  salary_type: '',
+  email: '',
+  salary: '',
+  branch: '',
+  designation: '',
+  department: '',
+  supervisor: '',
+  joining_date: '',
+  visa_validity: '',
+  emirates_id_number: '',
+  account_holder_name: '',
+  bank_name: '',
+  branch_location: '',
+  account_number: '',
+  iban_number: '',
+  swift_code: '',
+  policy_type: '',
+  insurance_provider: '',
+  policy_number: '',
+  insurance_start_date: '',
+  insurance_expiry_date: '',
+})
+const addEmployeeForm = ref(defaultAddEmployeeForm())
+const sectionEditTitle = computed(() => {
+  const titles = {
+    profile: 'Edit Profile Details',
+    company: 'Edit Company Details',
+    documents: 'Edit Document Details',
+    bank: 'Bank Account Details',
+    insurance: 'Edit Insurance Details',
+  }
+  return titles[editingSection.value] || 'Edit Details'
+})
 
 const filteredOverviewEmployees = computed(() => {
   const keyword = overviewSearch.value.trim().toLowerCase()
@@ -902,8 +1299,19 @@ function onDocumentClick(event) {
   openEmployeeRowMenuId.value = null
 }
 
-function toggleEmployeeRowMenu(id) {
-  openEmployeeRowMenuId.value = openEmployeeRowMenuId.value === id ? null : id
+function toggleEmployeeRowMenu(id, event) {
+  if (openEmployeeRowMenuId.value === id) {
+    openEmployeeRowMenuId.value = null
+    return
+  }
+  const rect = event?.currentTarget?.getBoundingClientRect?.()
+  if (rect) {
+    employeeRowMenuStyle.value = {
+      top: `${rect.bottom + 8}px`,
+      left: `${Math.max(12, rect.left - 250)}px`,
+    }
+  }
+  openEmployeeRowMenuId.value = id
 }
 
 function resetEmployeeFilters() {
@@ -915,6 +1323,184 @@ function resetEmployeeFilters() {
     visaValidity: '',
     status: '',
   }
+}
+
+function handleAddEmployeeFileChange(event) {
+  const file = event?.target?.files?.[0]
+  if (!file) return
+  addEmployeeUploadedFile.value = file
+}
+
+function triggerProfileImageUpload() {
+  profileImageInputRef.value?.click()
+}
+
+function handleProfileImageChange(event) {
+  const file = event?.target?.files?.[0]
+  if (!file) return
+  addEmployeeProfileFile.value = file
+  addEmployeeProfilePreview.value = URL.createObjectURL(file)
+}
+
+function removeAddEmployeeFile() {
+  addEmployeeUploadedFile.value = null
+}
+
+function resetAddEmployeeForm() {
+  addEmployeeForm.value = defaultAddEmployeeForm()
+  addEmployeeUploadedFile.value = null
+  addEmployeeProfileFile.value = null
+  addEmployeeProfilePreview.value = ''
+  selectedDocumentType.value = 'Emirates ID'
+}
+
+function mapRowToEmployeeForm(row) {
+  return {
+    ...defaultAddEmployeeForm(),
+    full_name: row.name || '',
+    nationality: row.nationality || '',
+    phone: row.phone || '+971 56125 4568',
+    salary_type: row.salary_type || 'Monthly',
+    email: row.email || '',
+    salary: row.salary || '2000.00',
+    branch: row.branch || 'Abu Dhabi Head Office',
+    designation: row.designation || '',
+    department: row.department || '',
+    supervisor: row.supervisor || 'Khalid Al Mazrouei',
+    joining_date: normalizeDateInput(row.joiningDate),
+    visa_validity: normalizeDateInput(row.visaValidity),
+    emirates_id_number: row.emiratesId || '784-1990-1234567-1',
+    account_holder_name: row.account_holder_name || row.name || '',
+    bank_name: row.bank_name || 'Abu Dhabi Commercial Bank (ADCB)',
+    branch_location: row.branch_location || 'Abu Dhabi - Madeena zayd',
+    account_number: row.account_number || '009876543210',
+    iban_number: row.iban_number || 'AE89 203 000456789123456',
+    swift_code: row.swift_code || 'ADCBAEAA456',
+    policy_type: row.policy_type || 'Health Insurance',
+    insurance_provider: row.insurance_provider || 'Daman Insurance',
+    policy_number: row.policy_number || 'DAM-2024-123456',
+    insurance_start_date: normalizeDateInput(row.insurance_start_date) || '2024-02-17',
+    insurance_expiry_date: normalizeDateInput(row.insurance_expiry_date) || '2025-02-17',
+  }
+}
+
+function normalizeDateInput(value) {
+  if (!value) return ''
+  const asDate = new Date(value)
+  if (!Number.isNaN(asDate.getTime())) {
+    return `${asDate.getFullYear()}-${String(asDate.getMonth() + 1).padStart(2, '0')}-${String(asDate.getDate()).padStart(2, '0')}`
+  }
+  const parsed = String(value).match(/^(\d{2})\s([A-Za-z]{3})\s(\d{4})$/)
+  if (!parsed) return ''
+  const months = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' }
+  return `${parsed[3]}-${months[parsed[2]] || '01'}-${parsed[1]}`
+}
+
+function enrichEmployeeDetail(row) {
+  return {
+    ...row,
+    phone: row.phone || '+971 56125 4568',
+    dob: row.dob || '14 Jan 1997',
+    address: row.address || 'Al Wahda, Near Bus Station, Abu Dhabi, United Arab Emirates',
+    salary_type: row.salary_type || 'Monthly',
+    salary: row.salary || '2000.00',
+    branch: row.branch || 'Abu Dhabi Head Office',
+    supervisor: row.supervisor || 'Khalid Al Mazrouei',
+    emiratesId: row.emiratesId || '784-1990-1234567-1',
+    laborCard: row.laborCard || '321654987012',
+    visaNumber: row.visaNumber || '401/2024/9988776',
+    attestedCertificate: row.attestedCertificate || 'No',
+    account_holder_name: row.account_holder_name || row.name,
+    bank_name: row.bank_name || 'Abu Dhabi Commercial Bank (ADCB)',
+    branch_location: row.branch_location || 'Abu Dhabi - Madeena zayd',
+    account_number: row.account_number || '009876543210',
+    iban_number: row.iban_number || 'AE89 203 000456789123456',
+    swift_code: row.swift_code || 'ADCBAEAA456',
+    policy_type: row.policy_type || 'Health Insurance',
+    insurance_provider: row.insurance_provider || 'Daman Insurance',
+    policy_number: row.policy_number || 'DAM-2024-123456',
+    insurance_start_date: row.insurance_start_date || '17 Feb 2024',
+    insurance_expiry_date: row.insurance_expiry_date || '17 Feb 2025',
+  }
+}
+
+function openEditEmployee(row) {
+  isEditEmployeeMode.value = true
+  editingEmployeeId.value = row.id
+  addEmployeeForm.value = mapRowToEmployeeForm(enrichEmployeeDetail(row))
+  addEmployeeProfilePreview.value = row.avatar || ''
+  showAddEmployeeModal.value = true
+  openEmployeeRowMenuId.value = null
+}
+
+function openEmployeeDetails(row) {
+  selectedEmployeeDetail.value = enrichEmployeeDetail(row)
+  employeeDetailTab.value = 'company'
+  activeTab.value = 'Employee Details'
+  openEmployeeRowMenuId.value = null
+}
+
+function saveEmployeeForm() {
+  if (isEditEmployeeMode.value && editingEmployeeId.value) {
+    const idx = overviewEmployees.value.findIndex((e) => String(e.id) === String(editingEmployeeId.value))
+    if (idx >= 0) {
+      overviewEmployees.value[idx] = {
+        ...overviewEmployees.value[idx],
+        name: addEmployeeForm.value.full_name,
+        email: addEmployeeForm.value.email,
+        designation: addEmployeeForm.value.designation,
+        department: addEmployeeForm.value.department,
+        nationality: addEmployeeForm.value.nationality,
+        salary_type: addEmployeeForm.value.salary_type,
+        salary: addEmployeeForm.value.salary,
+        branch: addEmployeeForm.value.branch,
+        supervisor: addEmployeeForm.value.supervisor,
+        joiningDate: formatDate(addEmployeeForm.value.joining_date),
+        visaValidity: formatDate(addEmployeeForm.value.visa_validity),
+        avatar: addEmployeeProfilePreview.value || overviewEmployees.value[idx].avatar,
+        ...addEmployeeForm.value,
+      }
+      if (selectedEmployeeDetail.value && String(selectedEmployeeDetail.value.id) === String(editingEmployeeId.value)) {
+        selectedEmployeeDetail.value = enrichEmployeeDetail(overviewEmployees.value[idx])
+      }
+    }
+  }
+  closeAddEmployeeModal()
+}
+
+function closeAddEmployeeModal() {
+  showAddEmployeeModal.value = false
+  isEditEmployeeMode.value = false
+  editingEmployeeId.value = null
+  resetAddEmployeeForm()
+}
+
+function confirmDeleteEmployee(row) {
+  const shouldDelete = window.confirm(`Are you sure you want to delete employee "${row.name}"?`)
+  if (!shouldDelete) return
+  overviewEmployees.value = overviewEmployees.value.filter((employee) => String(employee.id) !== String(row.id))
+  if (selectedEmployeeDetail.value && String(selectedEmployeeDetail.value.id) === String(row.id)) {
+    selectedEmployeeDetail.value = null
+    activeTab.value = 'Employees'
+  }
+  openEmployeeRowMenuId.value = null
+}
+
+function openSectionEdit(sectionKey) {
+  if (!selectedEmployeeDetail.value) return
+  editingSection.value = sectionKey
+  sectionEditForm.value = { ...selectedEmployeeDetail.value }
+  showSectionEditModal.value = true
+}
+
+function saveSectionEdit() {
+  if (!selectedEmployeeDetail.value) return
+  selectedEmployeeDetail.value = { ...selectedEmployeeDetail.value, ...sectionEditForm.value }
+  const idx = overviewEmployees.value.findIndex((e) => String(e.id) === String(selectedEmployeeDetail.value.id))
+  if (idx >= 0) {
+    overviewEmployees.value[idx] = { ...overviewEmployees.value[idx], ...sectionEditForm.value, name: sectionEditForm.value.name || selectedEmployeeDetail.value.name }
+  }
+  showSectionEditModal.value = false
 }
 
 function syncMobileViewport() {
@@ -1047,6 +1633,15 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
 }
+.employee-detail-action-chip {
+  border: 1px solid #e8eaf1;
+  background: #fff;
+  color: #111827;
+  border-radius: 999px;
+  height: 36px;
+  padding: 0 14px;
+  font-size: 12px;
+}
 
 .hr-content-card {
   margin-top: 12px;
@@ -1154,19 +1749,16 @@ onBeforeUnmount(() => {
 }
 .emp-status-pill.active { color: #15803d; }
 .emp-status-pill.inactive { color: #b91c1c; }
-.employee-row-action-cell { position: relative; }
+.employee-row-action-cell { position: relative; overflow: visible; }
 .employee-row-menu {
-  position: absolute;
-  right: 18px;
-  top: 50%;
-  transform: translateY(-10%);
+  position: fixed;
   width: 250px;
   background: #fff;
   border: 1px solid #e7eaf1;
   border-radius: 14px;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
   padding: 10px;
-  z-index: 9999;
+  z-index: 20000;
 }
 .employee-row-menu-item {
   width: 100%;
@@ -1192,6 +1784,119 @@ onBeforeUnmount(() => {
   grid-template-columns: 170px minmax(0, 1fr);
   overflow: hidden;
   position: relative;
+}
+.section-edit-modal {
+  width: min(720px, 96vw);
+  min-height: auto;
+  display: block;
+}
+.employee-detail-page {
+  background: linear-gradient(135deg, #0c1b88 0%, #0d3ea4 55%, #0a60b8 100%);
+  border: 1px solid rgba(191, 213, 255, 0.6);
+}
+.employee-detail-breadcrumb {
+  color: #d1dcff;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.employee-detail-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 12px;
+}
+.employee-detail-side,
+.employee-detail-main {
+  border: 1px solid #dce7ff;
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+}
+.employee-detail-user-head {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 22px;
+  gap: 8px;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf1f6;
+}
+.employee-detail-user-head img {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+.employee-detail-user-head strong { font-size: 20px; color: #111827; }
+.employee-detail-user-head p { margin: 2px 0 0; font-size: 12px; color: #6b7280; }
+.mini-edit-btn {
+  border: none;
+  background: #fff8e8;
+  color: #d39b1a;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.employee-detail-side-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+.employee-detail-side-list p,
+.employee-mini-grid p {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+}
+.employee-detail-side-list span,
+.employee-mini-grid span { font-size: 12px; color: #6b7280; }
+.employee-detail-side-list strong,
+.employee-mini-grid strong { font-size: 13px; color: #111827; font-weight: 600; }
+.employee-detail-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.employee-detail-tabs button {
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+  color: #4b5563;
+  font-size: 12px;
+  padding: 6px 12px;
+}
+.employee-detail-tabs button.active {
+  background: #040a53;
+  border-color: #040a53;
+  color: #fff;
+}
+.employee-detail-section {
+  border: 1px solid #edf1f6;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+.employee-detail-section + .employee-detail-section { margin-top: 10px; }
+.employee-detail-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.employee-detail-section-head h6 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+.employee-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 14px;
 }
 .employee-filter-close {
   position: absolute;
@@ -1315,6 +2020,267 @@ onBeforeUnmount(() => {
 }
 .employee-filter-btn.primary {
   background: #0b1020;
+  color: #fff;
+}
+.add-employee-overlay {
+  align-items: flex-start;
+  padding: 16px 0;
+  overflow-y: auto;
+}
+.add-employee-modal {
+  width: min(1320px, 96vw);
+  max-height: calc(100vh - 32px);
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e6eaf2;
+  display: flex;
+  flex-direction: column;
+}
+.add-employee-head {
+  padding: 12px 18px;
+  border-bottom: 1px solid #edf1f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.add-employee-modal h6,
+.add-employee-head h6 {
+  margin: 0;
+  font-size: 15px !important;
+  line-height: 1.25 !important;
+  font-weight: 600;
+  color: #111827;
+}
+.add-employee-close {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+}
+.add-employee-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+}
+.add-employee-section {
+  border: 1px solid #edf1f6;
+  border-radius: 10px;
+  padding: 12px;
+}
+.add-employee-section h6 {
+  margin: 0 0 10px;
+  font-size: 15px !important;
+  line-height: 1.25 !important;
+  font-weight: 600;
+  color: #111827;
+}
+.add-employee-profile-grid {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 14px;
+}
+.profile-photo-block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.profile-photo-avatar {
+  width: 110px;
+  height: 110px;
+  border-radius: 999px;
+  background: #eff2f6;
+  color: #b8c0cc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44px;
+  overflow: hidden;
+}
+.profile-photo-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-photo-edit-btn {
+  position: absolute;
+  right: 6px;
+  bottom: 28px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff7e8;
+  color: #f59e0b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.profile-photo-block span {
+  font-size: 12px;
+  color: #6b7280;
+}
+.profile-form-grid,
+.add-grid-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+.add-field label {
+  display: block;
+  margin: 0 0 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+}
+.add-field input {
+  width: 100%;
+  height: 36px;
+  border: 1px solid #d9dee7;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: #4b5563;
+}
+.add-field input::placeholder,
+.add-field :deep(.vs__search::placeholder),
+.add-field :deep(.vs__selected),
+.add-field :deep(.vs__dropdown-option) {
+  font-size: 11px;
+  color: #9ca3af;
+}
+.add-field :deep(.vs__dropdown-toggle) {
+  height: 36px;
+  min-height: 36px;
+  border: 1px solid #d9dee7;
+  border-radius: 8px;
+}
+.salary-input-group {
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+.salary-input-group span {
+  border: 1px solid #d9dee7;
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  color: #6b7280;
+  background: #fff;
+}
+.salary-input-group input {
+  border-radius: 8px 0 0 8px;
+}
+.doc-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.doc-chip {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-size: 11px;
+  color: #6b7280;
+}
+.doc-chip.active {
+  background: #02014f;
+  border-color: #02014f;
+  color: #fff;
+}
+.upload-dropzone {
+  margin-top: 8px;
+  border: 1px dashed #d9dee7;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.upload-dropzone strong {
+  display: block;
+  font-size: 13px;
+  color: #111827;
+  font-weight: 500;
+}
+.upload-dropzone small {
+  font-size: 11px;
+  color: #9ca3af;
+}
+.select-file-btn {
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #111827;
+  background: #fff;
+  cursor: pointer;
+}
+.uploaded-doc-card {
+  margin-top: 10px;
+  width: 130px;
+  border: 1px solid #edf1f6;
+  border-radius: 10px;
+  padding: 10px;
+  position: relative;
+}
+.uploaded-doc-card > svg {
+  font-size: 20px;
+  color: #f59e0b;
+}
+.uploaded-doc-card p {
+  margin: 6px 0 2px;
+  font-size: 12px;
+  color: #111827;
+}
+.uploaded-doc-card small {
+  color: #9ca3af;
+  font-size: 11px;
+}
+.uploaded-doc-card button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  padding: 0;
+}
+.add-employee-footer {
+  padding: 12px 16px 14px;
+  border-top: 1px solid #edf1f6;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.add-employee-clear-btn,
+.add-employee-save-btn {
+  min-width: 90px;
+  height: 36px;
+  border-radius: 999px;
+  border: none;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  text-align: center;
+  padding: 0 16px;
+}
+.add-employee-clear-btn {
+  background: #f3f4f6;
+  color: #111827;
+}
+.add-employee-save-btn {
+  background: #02014f;
   color: #fff;
 }
 .overview-shell {
@@ -2125,6 +3091,21 @@ onBeforeUnmount(() => {
     border-bottom: 1px solid #eef2f7;
     flex-direction: row;
     flex-wrap: wrap;
+  }
+  .add-employee-modal {
+    width: 96vw;
+  }
+  .profile-form-grid,
+  .add-grid-two,
+  .add-employee-profile-grid {
+    grid-template-columns: 1fr;
+  }
+  .profile-photo-block {
+    align-items: flex-start;
+  }
+  .employee-detail-layout,
+  .employee-mini-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
