@@ -100,7 +100,7 @@
                 :class="{ active: selectedSaleRent === 'Sale' }"
                 @click="selectSaleRentOption('Sale')"
               >
-                Buy
+                Sale
               </button>
               <button
                 type="button"

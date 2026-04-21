@@ -1198,18 +1198,18 @@
               <i class="ri-arrow-right-s-line"></i>
             </div>
           </div>
-          <div class="option-card" @click="selectSoldBy('oia')">
-            <div class="option-icon">
-              <i class="ri-award-line"></i>
-            </div>
-            <div class="option-content">
-              <h6>Sold Out by Oia</h6>
-              <p>Another Oia agent closed this deal</p>
-            </div>
-            <div class="option-arrow">
-              <i class="ri-arrow-right-s-line"></i>
-            </div>
-          </div>
+          <!--<div class="option-card" @click="selectSoldBy('oia')">-->
+          <!--  <div class="option-icon">-->
+          <!--    <i class="ri-award-line"></i>-->
+          <!--  </div>-->
+          <!--  <div class="option-content">-->
+          <!--    <h6>Sold Out by Oia</h6>-->
+          <!--    <p>Another Oia agent closed this deal</p>-->
+          <!--  </div>-->
+          <!--  <div class="option-arrow">-->
+          <!--    <i class="ri-arrow-right-s-line"></i>-->
+          <!--  </div>-->
+          <!--</div>-->
           <div class="option-card" @click="selectSoldBy('other_company')">
             <div class="option-icon">
               <i class="ri-forbid-line"></i>
@@ -1330,14 +1330,14 @@
                         </div>
                         <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
                     </div>
-                    <div class="option-card" @click="selectRentedBy('oia')">
-                        <div class="option-icon"><i class="ri-award-line"></i></div>
-                        <div class="option-content">
-                            <h6>Rented by Oia</h6>
-                            <p>Another Oia agent closed this deal</p>
-                        </div>
-                        <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
-                    </div>
+                    <!--<div class="option-card" @click="selectRentedBy('oia')">-->
+                    <!--    <div class="option-icon"><i class="ri-award-line"></i></div>-->
+                    <!--    <div class="option-content">-->
+                    <!--        <h6>Rented by Oia</h6>-->
+                    <!--        <p>Another Oia agent closed this deal</p>-->
+                    <!--    </div>-->
+                    <!--    <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>-->
+                    <!--</div>-->
                     <div class="option-card" @click="selectRentedBy('other_company')">
                         <div class="option-icon"><i class="ri-forbid-line"></i></div>
                         <div class="option-content">
