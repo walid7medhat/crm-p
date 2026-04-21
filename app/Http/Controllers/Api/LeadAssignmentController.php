@@ -99,6 +99,9 @@ class LeadAssignmentController extends Controller
             return ApiResponse::error('New stage not found', 422);
         }
 
+        $totalInNew = (int) Lead::query()->where('stage_id', $newStageId)->count();
+
+        // Cap list payload for UI performance; total is returned in meta for the headline count.
         $leads = Lead::query()
             ->with(['stage:id,name', 'responsiblePerson:id,name'])
             ->where('stage_id', $newStageId)
@@ -117,7 +120,10 @@ class LeadAssignmentController extends Controller
             ];
         });
 
-        return ApiResponse::success($payload, 'Queue loaded');
+        return ApiResponse::success($payload, 'Queue loaded', 200, [
+            'total_in_new' => $totalInNew,
+            'preview_limit' => 75,
+        ]);
     }
 
     public function logs(Request $request): JsonResponse

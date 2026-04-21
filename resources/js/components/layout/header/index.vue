@@ -51,36 +51,6 @@
               <span>Kanban</span>
             </router-link>
           </li>
-          <li  v-if="isSuperAdmin" >
-            <router-link to="/lead-reports" :class="{ 'active-page': isActive('/lead-reports') }">
-              <iconify-icon icon="lucide:bar-chart-2" class="menu-icon" />
-              <span>Lead Reports</span>
-            </router-link>
-          </li>
-          <li v-if="isSuperAdmin">
-            <router-link to="/sales-intelligence" :class="{ 'active-page': isActive('/sales-intelligence') }">
-              <iconify-icon icon="lucide:sparkles" class="menu-icon" />
-              <span>Sales Intelligence</span>
-            </router-link>
-          </li>
-          <li  v-if="isAdmin">
-            <router-link to="/settings/lead-scoring" :class="{ 'active-page': isActive('/settings/lead-scoring') }">
-              <iconify-icon icon="lucide:target" class="menu-icon" />
-              <span>Lead Scoring</span>
-            </router-link>
-          </li>
-          <li v-if="isSuperAdmin">
-            <router-link to="/investment-analysis"  :class="{ 'active-page': isActive('/investment-analysis') }">
-              <iconify-icon icon="lucide:line-chart" class="menu-icon" />
-              <span>Investment Analysis</span>
-            </router-link>
-          </li>
-          <li  v-if="isSuperAdmin">
-            <router-link to="/settings/city-investments" :class="{ 'active-page': isActive('/settings/city-investments') }">
-              <iconify-icon icon="lucide:landmark" class="menu-icon" />
-              <span>City Investments</span>
-            </router-link>
-          </li>
           <li v-if="isSuperAdmin">
             <router-link to="/hr" :class="{ 'active-page': isActive('/hr') }">
               <iconify-icon icon="lucide:users-round" class="menu-icon" />
@@ -392,6 +362,28 @@
             <iconify-icon icon="lucide:lightbulb" class="menu-icon" />
             <span>Suggestion</span>
           </router-link>
+        </li>
+        <li v-if="filteredMainMenuItems.length > 0" :class="{ 
+          dropdown: true, 
+          open: activeDropdown === 'main_menu',
+          'active-parent': isMainMenuActive 
+        }">
+          <a href="javascript:void(0)" @click="toggleDropdown('main_menu')" :class="{ active: isMainMenuActive }">
+            <iconify-icon icon="lucide:layout-grid" class="menu-icon" />
+            <span>Insights</span>
+            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'main_menu' }"></span>
+          </a>
+          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
+            @leave="leave" @after-leave="afterLeave">
+            <ul v-show="activeDropdown === 'main_menu'" class="sidebar-submenu">
+              <li v-for="item in filteredMainMenuItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
+                <router-link :to="item.path">
+                  <iconify-icon :icon="item.icon" class="menu-icon" />
+                  <span>{{ item.label }}</span>
+                </router-link>
+              </li>
+            </ul>
+          </transition>
         </li>
       </ul>
     </div>
@@ -732,6 +724,29 @@ const filteredUsersItems = computed(() => {
     return proxy.$hasPermission(item.permission); 
   });
 });
+
+const mainMenuItems = computed(() => {
+  const items = [];
+
+  if (isSuperAdmin.value) {
+    items.push({ path: '/lead-reports', label: 'Lead Reports', icon: 'lucide:bar-chart-2' });
+    items.push({ path: '/sales-intelligence', label: 'Sales Intelligence', icon: 'lucide:sparkles' });
+    items.push({ path: '/investment-analysis', label: 'Investment Analysis', icon: 'lucide:line-chart' });
+    items.push({ path: '/settings/city-investments', label: 'City Investments', icon: 'lucide:landmark' });
+  }
+
+  if (isAdmin.value) {
+    items.push({ path: '/settings/lead-scoring', label: 'Lead Scoring', icon: 'lucide:target' });
+  }
+
+  return items;
+});
+
+const filteredMainMenuItems = computed(() => mainMenuItems.value.filter((item) => !!item.path));
+
+const isMainMenuActive = computed(() =>
+  filteredMainMenuItems.value.some((item) => isActive(item.path))
+);
 
 const isTableActive = computed(() => 
   filteredTableItems.value.some(item => isActive(item.path))

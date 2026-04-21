@@ -276,6 +276,7 @@ const editLookup = ref({
   developers: [],
   areas: []
 })
+const editHydrationRequestId = ref(0)
 
 
 
@@ -436,21 +437,16 @@ function selectStage(index) {
       })
     }
 }
-watch(() => props.autoEditSection, (newSection) => {
-    if (newSection && show.value && props.deal && props.deal.deal_type !='rental') {
-        activeEditSection.value = newSection
-        if (!editFormData.value || Object.keys(editFormData.value).length === 0) {
-            loadDealForEdit()
-        }
-    }
-}, { immediate: true })
 async function loadDealForEdit() {
     if (!props.deal?.id) return
-    
+    const requestId = Date.now()
+    editHydrationRequestId.value = requestId
     editLoading.value = true
     try {
         const response = await axios.get(`/deals/${props.deal.id}`)
         const dealData = response.data?.data || response.data
+        // Ignore stale async responses when user switches deals quickly.
+        if (editHydrationRequestId.value !== requestId) return
         editFormData.value = dealToFormData(dealData)
         await fetchEditLookups()
     } catch (error) {
@@ -555,7 +551,7 @@ function dealToFormData(deal) {
     landlord_country: landlord.country ?? '',
     landlord_language: landlord.language ?? '',
     landlord_documents: mapPartyDocuments(landlord, 'landlord'),
-    responsible_person:responsible_person
+    responsible_person: deal.responsible_person ?? null,
   }
 }
 
@@ -660,6 +656,19 @@ function cancelEditDeal() {
   editFormData.value = {}
 }
 
+async function hydrateAutoEditSection() {
+  const section = props.autoEditSection
+  if (!show.value || !props.deal?.id || !section) return
+
+  // Always rehydrate on open/deal change to avoid stale previous form data.
+  activeEditSection.value = section
+  isEditingDeal.value = true
+  editShowErrors.value = false
+  editFieldErrors.value = {}
+  editFormData.value = {}
+  await loadDealForEdit()
+}
+
 async function saveEditDeal() {
   if (!props.deal?.id) return
   const stageId =
@@ -722,6 +731,20 @@ watch(() => props.modelValue, async (val) => {
   }
 })
 
+watch(
+  [show, () => props.deal?.id, () => props.autoEditSection],
+  async ([isOpen, dealId, section], [prevOpen, prevDealId, prevSection]) => {
+    if (!isOpen || !dealId || !section) return
+    const dealChanged = dealId !== prevDealId
+    const justOpened = isOpen && !prevOpen
+    const sectionChanged = section !== prevSection
+    if (dealChanged || justOpened || sectionChanged) {
+      await hydrateAutoEditSection()
+    }
+  },
+  { immediate: true },
+)
+
 watch(() => props.deal?.stageId, () => {
   if (show.value && props.deal) selectedStageIndex.value = currentStageIndex.value
 })
@@ -735,8 +758,12 @@ watch(dealType, async (newType) => {
 watch(show, (val) => {
   if (val && props.deal) selectedStageIndex.value = currentStageIndex.value
   if (!val) {
+    editHydrationRequestId.value = 0
     isEditingDeal.value = false
     activeEditSection.value = null
+    editFormData.value = {}
+    editFieldErrors.value = {}
+    editShowErrors.value = false
   }
   emit('update:modelValue', val)
 })

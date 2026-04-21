@@ -454,12 +454,12 @@ const openDealModal = async (dealData) => {
     
     console.log('Selected deal set, opening modal:', selectedDeal.value)
     
-    // 3. فتح المودال
+    // 3. فتح المودال (converted lead flow -> open directly in buyer edit)
+    autoEditSection.value = 'buyer_details'
     await nextTick()
     showViewDealModal.value = true
     
     console.log('Modal should be open, showViewDealModal =', showViewDealModal.value)
-     autoEditSection.value = 'buyer_details'
     
 }
 const handleDealCreated = (createdDeal) => {
@@ -1744,7 +1744,8 @@ async function handleCompleteFieldsSave({ payload, documents, stage_id }) {
     showNotification(err.response?.data?.message || 'Failed to update deal', 'error')
     throw err
   }
-}function openDealById(dealId) {
+}
+function openDealById(dealId) {
   const deal = pendingCompleteFields.value?.dealData || columns.value.flatMap(c => c.deals || []).find(d => d.id === dealId)
   if (deal) {
     selectedDeal.value = {
@@ -1753,6 +1754,8 @@ async function handleCompleteFieldsSave({ payload, documents, stage_id }) {
       stageId: deal.stage_id,
       deal_type: activeTypeTab.value
     }
+    // Normal card/open flow should never auto-enter edit mode.
+    autoEditSection.value = null
     showViewDealModal.value = true
   }
   clearPendingCompleteFields()
@@ -2024,8 +2027,14 @@ function viewDeal(deal, column) {
     stageId: column?.stage_id,
     deal_type: activeTypeTab.value
   }
+  // Normal card open -> view mode only.
+  autoEditSection.value = null
   showViewDealModal.value = true
 }
+
+watch(showViewDealModal, (isOpen) => {
+  if (!isOpen) autoEditSection.value = null
+})
 
 // Notification helper
 const showNotification = (message, type = 'info') => {

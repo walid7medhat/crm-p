@@ -121,7 +121,7 @@
           <div class="lae-live-block lae-live-queue">
             <h6 class="ui-h-section lae-mini-h">New queue</h6>
             <div v-if="queueLoading" class="lae-mini-skel" />
-            <p v-else class="lae-big-num">{{ queue.length }}</p>
+            <p v-else class="lae-big-num">{{ queueTotal }}</p>
             <p class="lae-desc">leads in New stage</p>
           </div>
           <div class="lae-live-block">
@@ -350,7 +350,10 @@
 
       <section class="lae-panel">
         <h6 class="ui-h-section">New leads queue</h6>
-        <p class="lae-desc">Leads currently in the first “New” stage.</p>
+        <p class="lae-desc">
+          Leads currently in the first “New” stage. Table lists the {{ queuePreviewLimit }} most recent; total
+          <strong>{{ queueTotal }}</strong> is shown above.
+        </p>
         <div v-if="queueLoading" class="lae-mini-skel" />
         <div v-else class="lae-table-wrap">
           <table class="lae-table">
@@ -506,6 +509,9 @@ const stages = ref([])
 const revertStageId = ref(null)
 
 const queue = ref([])
+/** Full count in New stage (API meta); queue[] is capped for performance */
+const queueTotal = ref(0)
+const queuePreviewLimit = ref(75)
 const logs = ref([])
 const attendanceRows = ref([])
 const statsData = ref(null)
@@ -720,7 +726,14 @@ const loadQueue = async () => {
   queueLoading.value = true
   try {
     const res = await api.get('/lead-assignment/queue')
-    queue.value = res?.data?.data || []
+    const rows = res?.data?.data || []
+    queue.value = Array.isArray(rows) ? rows : []
+    const meta = res?.data?.meta
+    const total = meta?.total_in_new
+    queueTotal.value = total != null ? Number(total) : queue.value.length
+    if (meta?.preview_limit != null) {
+      queuePreviewLimit.value = Number(meta.preview_limit)
+    }
   } finally {
     queueLoading.value = false
   }
