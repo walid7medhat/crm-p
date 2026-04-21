@@ -1,3 +1,4 @@
+
 <template>
     <div class="dashboard-main-body">
         <Breadcrumb 
@@ -10,7 +11,7 @@
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Add New Developer</h5>
+                <h6 class="ui-h-mini card-title mb-0">Add New Developer</h6>
                 <button class="btn btn-outline-secondary" @click="$router.back()">
                     <iconify-icon icon="lucide:arrow-left" class="me-2"></iconify-icon>
                     Back
