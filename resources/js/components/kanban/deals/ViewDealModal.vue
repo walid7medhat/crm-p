@@ -250,7 +250,8 @@ import axios from '@/plugins/axios'
 import { useStageTransition } from '@/composables/useStageTransition'
 const props = defineProps({
   modelValue: Boolean,
-  deal: { type: Object, default: null }
+  deal: { type: Object, default: null },
+  autoEditSection: { type: String, default: null } 
 })
 
 const emit = defineEmits(['update:modelValue', 'deal-updated', 'stage-change-request'])
@@ -275,6 +276,9 @@ const editLookup = ref({
   developers: [],
   areas: []
 })
+
+
+
 const { updateAndChangeStage } = useStageTransition()
 
 const dealTitle = computed(() => {
@@ -432,7 +436,29 @@ function selectStage(index) {
       })
     }
 }
-
+watch(() => props.autoEditSection, (newSection) => {
+    if (newSection && show.value && props.deal && props.deal.deal_type !='rental') {
+        activeEditSection.value = newSection
+        if (!editFormData.value || Object.keys(editFormData.value).length === 0) {
+            loadDealForEdit()
+        }
+    }
+}, { immediate: true })
+async function loadDealForEdit() {
+    if (!props.deal?.id) return
+    
+    editLoading.value = true
+    try {
+        const response = await axios.get(`/deals/${props.deal.id}`)
+        const dealData = response.data?.data || response.data
+        editFormData.value = dealToFormData(dealData)
+        await fetchEditLookups()
+    } catch (error) {
+        console.error('Error loading deal for edit:', error)
+    } finally {
+        editLoading.value = false
+    }
+}
 // --- Edit deal ---
 function getParty(deal, type) {
   const parties = deal?.parties || []

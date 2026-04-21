@@ -768,6 +768,8 @@ import Swal from 'sweetalert2'
 
 // Import Bootstrap
 import * as bootstrap from 'bootstrap'
+const emit = defineEmits(['deal-created'])
+
 
 const showStageChangeModal = ref(false)
 
@@ -1495,7 +1497,7 @@ function handleLeadConverted(deal) {
 
     $showNotification('Lead converted to deal successfully', 'success')
     fetchLeads(true)
-
+ emit('deal-created', deal)
     selectedLeadForConversion.value = null
     selectedLeadData.value = null
 }

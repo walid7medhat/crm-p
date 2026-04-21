@@ -255,6 +255,7 @@
       :deal="selectedDeal"
       @deal-updated="handleDealUpdatedFromModal"
       @stage-change-request="handleStageChangeFromModal"
+        :auto-edit-section="autoEditSection"
     />
 
     <div
@@ -425,9 +426,46 @@ const props = defineProps({
     default: () => ({})
   }
 })
-
+const viewDealModalRef = ref(null)
+const autoEditSection = ref(null)
 // تعريف emit مرة واحدة فقط مع جميع الأحداث
 const emit = defineEmits(['update:deals', 'deal-moved', 'deal-type-change'])
+const openDealModal = async (dealData) => {
+    console.log('🎯 Opening deal modal with data:', dealData)
+    
+    // 1. تغيير التاب النشط إلى نوع الديل الجديد
+    const newDealType = dealData.deal_type || 'primary'
+    
+    if (activeTypeTab.value !== newDealType) {
+        console.log(`Switching from ${activeTypeTab.value} to ${newDealType}`)
+        activeTypeTab.value = newDealType
+        // انتظر تحميل البيانات
+        await fetchDeals(true)
+    }
+    
+    // 2. تجهيز بيانات الديل للمودال
+    selectedDeal.value = {
+        ...dealData,
+        deal_type: newDealType,
+        stageId: dealData.stage_id,
+        stageTitle: dealData.stage?.name,
+        stage: dealData.stage
+    }
+    
+    console.log('Selected deal set, opening modal:', selectedDeal.value)
+    
+    // 3. فتح المودال
+    await nextTick()
+    showViewDealModal.value = true
+    
+    console.log('Modal should be open, showViewDealModal =', showViewDealModal.value)
+     autoEditSection.value = 'buyer_details'
+    
+}
+const handleDealCreated = (createdDeal) => {
+    console.log('Deal created event received in deals component:', createdDeal)
+    openDealModal(createdDeal)
+}
 const {
   checkStageRequirements,
   changeStage,
@@ -2048,7 +2086,9 @@ watch(() => props.filters, () => {
 // Expose methods
 defineExpose({
   fetchDeals,
-  currentDealType: activeTypeTab
+  currentDealType: activeTypeTab,
+    openDealModal,      
+    handleDealCreated  
 })
 </script>
 

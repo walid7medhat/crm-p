@@ -63,8 +63,8 @@
                 </template>
 
                 <!-- Tab Content -->
-                <Deals v-if="tab.id === 'deals'" ref="dealsRef" />
-                <Leads v-else-if="tab.id === 'leads'" ref="leadsRef" />
+                <Deals v-if="tab.id === 'deals'" ref="dealsRef"    @deal-created="(deal) => dealsRef?.openDealModal?.(deal)"/>
+                <Leads v-else-if="tab.id === 'leads'" ref="leadsRef"  @deal-created="handleDealCreatedFromLeads" />
                 <Integration v-else-if="tab.id === 'integration'" ref="integrationRef" />
             </b-tab>
 
@@ -229,7 +229,27 @@ const syncActiveTabWithRoute = () => {
 function updateKanbanMobileBreakpoint() {
     kanbanIsMobile.value = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
 }
-
+const handleDealCreatedFromLeads = (createdDeal) => {
+    console.log('📦 New deal created from leads:', createdDeal)
+    
+    activeTab.value = 'deals'
+    
+    setTimeout(() => {
+        if (dealsRef.value) {
+            const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+            if (dealsComponent && typeof dealsComponent.openDealModal === 'function') {
+                dealsComponent.openDealModal(createdDeal)
+            } else {
+                console.warn('openDealModal not found, retrying...')
+                setTimeout(() => {
+                    if (dealsComponent && typeof dealsComponent.openDealModal === 'function') {
+                        dealsComponent.openDealModal(createdDeal)
+                    }
+                }, 100)
+            }
+        }
+    }, 200)
+}
 provide('kanbanIsMobile', kanbanIsMobile)
 provide('kanbanOpenCreateLead', () => {
     activeTab.value = 'leads'
