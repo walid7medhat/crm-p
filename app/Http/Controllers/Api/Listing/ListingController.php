@@ -1869,7 +1869,10 @@ public function assignAgent(Request $request, $id)
         if (! $currentUser->hasRole(['admin','super_admin','team_lead','manager'])) {
             return ApiResponse::error('Access denied', 403);
         }
-
+        if(auth()->user()->id==$request->agent_id){
+             return ApiResponse::error('You canNot assign an agent to Your self', 403);
+        }
+            
         // جلب property
         $property = Listing::with(['agent'])->findOrFail($id);
 
