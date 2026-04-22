@@ -38,7 +38,7 @@
             </div>
 
             <!-- Time Picker -->
-            <div class="time-picker-container">
+            <div v-if="!dateOnly" class="time-picker-container">
                 <div class="time-dropdown-wrapper">
                     <select v-model="selectedHour" class="time-dropdown">
                         <option v-for="h in hours" :key="h" :value="h">{{ String(h).padStart(2, '0') }}</option>
@@ -84,6 +84,10 @@ const props = defineProps({
     modelValue: {
         type: Date,
         default: null
+    },
+    dateOnly: {
+        type: Boolean,
+        default: false
     }
 })
 
@@ -234,6 +238,10 @@ const handleApply = () => {
         hours24 += 12
     } else if (selectedAmPm.value === 'AM' && hours24 === 12) {
         hours24 = 0
+    }
+    if (props.dateOnly) {
+        hours24 = 0
+        selectedMinute.value = 0
     }
     
     const finalDate = new Date(

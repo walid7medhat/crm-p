@@ -50,6 +50,7 @@
         "vue3-apexcharts": "^1.10.0",
         "vue3-carousel": "^0.17.0",
         "vue3-select": "^0.1.2",
-        "vuedraggable": "^4.1.0"
+        "vuedraggable": "^4.1.0",
+        "xlsx": "^0.18.5"
     }
 }
