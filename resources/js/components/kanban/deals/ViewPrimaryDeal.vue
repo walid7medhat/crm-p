@@ -58,12 +58,7 @@
               <p class="info-value mb-0">{{ deal.deal_name }}</p>
             </div>
           </div>
-          <div class="col-md-12" v-if="deal.project">
-            <div class="info-group">
-              <label class="info-label">Project</label>
-              <p class="info-value mb-0">{{ deal.project?.name }}</p>
-            </div>
-          </div>
+        
           <div class="col-md-12" v-if="deal.createdBy">
             <div class="info-group">
               <label class="info-label">Created By</label>
@@ -273,19 +268,19 @@
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Project Name</label>
-              <p class="info-value mb-0">{{ projectDisplay }}</p>
+              <p class="info-value mb-0">{{ deal.project?.name  }}</p>
             </div>
           </div>
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Developer</label>
-              <p class="info-value mb-0">{{ tagsDisplay(deal.developers) }}</p>
+              <p class="info-value mb-0">{{ deal.developer?.name }}</p>
             </div>
           </div>
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Area</label>
-              <p class="info-value mb-0">{{ tagsDisplay(deal.areas) }}</p>
+              <p class="info-value mb-0">{{ deal.area?.name }}</p>
             </div>
           </div>
           <!-- <div class="col-md-12">

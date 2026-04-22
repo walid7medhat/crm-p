@@ -860,10 +860,26 @@
               :class="{ 'is-invalid': showErrors && !form.area_id }"
             >
               <template #open-indicator="{ attributes }">
-                <span v-bind="attributes">
-                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                </span>
-              </template>
+                      <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                      </span>
+                  </template>
+                  <template #option="option">
+                      <div class="location-option">
+                          <i class="ri-map-pin-line location-option-icon"></i>
+                          <div class="location-option-text">
+                              <span class="location-option-name">{{ locationFirstLine(option) }}</span>
+                              <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
+                          </div>
+                      </div>
+                  </template>
+
+                  <template #selected-option="option">
+                      <div v-if="option" class="location-selected">
+                          <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
+                          <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
+                      </div>
+                  </template>
             </v-select>
             <div v-if="showErrors && fieldErrors.area_id" class="invalid-feedback d-block">
               {{ fieldErrors.area_id }}
@@ -1154,7 +1170,13 @@ const responsiblePerson = computed(() => {
 
 const projects = ref([])
 const subCommunities = ref([])
-
+const locationFirstLine = (area) => {
+      return area.name || ''
+  }
+  
+  const locationSecondLine = (area) => {
+      return area.area_parents_title || ''
+  }
 const missingFieldLabels = computed(() => {
   if (!Array.isArray(props.missingFields) || !props.missingFields.length) return []
   return props.missingFields.map((k) => String(k).replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
@@ -2271,6 +2293,8 @@ watch(() => form.value?.landlord_country, (newCountry, oldCountry) => {
     }
   }
 })
+
+
 </script>
 
 <style scoped>
@@ -2285,7 +2309,7 @@ watch(() => form.value?.landlord_country, (newCountry, oldCountry) => {
 .input-group-custom { display: flex; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
 .input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 8px 0 0 8px !important; }
 :deep(.custom-v-select) { font-size: 13px; }
-:deep(.custom-v-select .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 13px; padding: 2px 8px; }
+:deep(.custom-v-select .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 13px; padding: 2px 8px;overflow: hidden; }
 :deep(.custom-v-select.is-invalid .vs__dropdown-toggle) { border-color: #dc3545 !important; }
 :deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 13px; }
 :deep(.custom-v-select .vs__search::placeholder) { font-size: 11px !important; color: #9ca3af; }
@@ -2341,4 +2365,47 @@ watch(() => form.value?.landlord_country, (newCountry, oldCountry) => {
 :deep(.custom-v-select svg) {
     vertical-align: middle !important;
 }
+  /* Location dropdown options: 2 lines with icon (like image) */
+    .location-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 4px 0;
+      min-height: 40px;
+    }
+    
+    .location-option-icon {
+      font-size: 1.1rem;
+      color: #64748b;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    
+    .location-option-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .location-option-name {
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: #01062d;
+      line-height: 1.2;
+    }
+    
+    .location-option-subtitle {
+      font-size: 0.65rem;
+      color: #64748b;
+      line-height: 1.2;
+    }
+    
+    /* Location dropdown list: wider */
+    :deep(.location-select + .vs__dropdown-menu),
+    :deep(.location-select .vs__dropdown-menu) {
+      min-width: 320px !important;
+      width: 100% !important;
+      max-width: 400px;
+    }
+    
 </style>

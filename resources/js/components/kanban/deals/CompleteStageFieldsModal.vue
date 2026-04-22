@@ -721,105 +721,187 @@
             </section>
 
             <!-- Property Details Section -->
-            <section v-if="hasPropertyFields()" class="form-section">
-              <h6 class="section-title mb-3">Property Details</h6>
-              <div class="form-card p-3 radius-12">
-                <div class="row g-3">
-                  <div class="col-md-6" v-if="hasField('unit_no')">
-                    <label class="form-label-custom">Unit No <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.unit_no" placeholder="Enter Unit No" class="custom-input" />
-                  </div>
-                  
-                  <div class="col-md-6" v-if="hasField('property_type_id')">
-                    <label class="form-label-custom">Property Type <span class="text-danger">*</span></label>
-                    <v-select
- append-to-body 
-                      v-model="formData.property_type_id" 
-                      :options="propertyTypes" 
-                      :reduce="item => item.id" 
-                      label="name" 
-                      placeholder="Select Property Type" 
-                      class="custom-v-select"
-                    >
-                      <template #open-indicator="{ attributes }">
-                          <span v-bind="attributes">
-                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                          </span>
-                        </template>
-                  
-                     </v-select>
-                  </div>
-                  
-                  <div class="col-md-6" v-if="hasField('subcommunity_id')">
-                    <label class="form-label-custom">Subcommunity <span class="text-danger">*</span></label>
-                    <v-select
-                        append-to-body 
-                      v-model="formData.subcommunity_id" 
-                      :options="areas" 
-                      :reduce="item => item.id" 
-                      label="name" 
-                      placeholder="Search Subcommunity..." 
-                      class="custom-v-select"
-                      :filterable="true"
-                      @search="onSearchAreas"
-                    >
+        <section v-if="hasPropertyFields()" class="form-section">
+          <h6 class="section-title mb-3">Property Details</h6>
+          <div class="form-card p-3 radius-12">
+            <div class="row g-3">
+              
+              <!-- Area (Location) -->
+              <div class="col-md-6" v-if="hasField('area_id')">
+                <label class="form-label-custom">Location <span class="text-danger">*</span></label>
+                <v-select
+                  append-to-body 
+                  v-model="formData.area_id" 
+                  :options="areas" 
+                  :reduce="item => item.id" 
+                  label="name" 
+                  placeholder="Select Location..." 
+                  class="custom-v-select"
+                  :filterable="true"
+                  :searchable="true"
+                  :clearable="true"
+                  @update:modelValue="onAreaSelected"
+                  @search="onSearchAreas"
+                >
                    <template #open-indicator="{ attributes }">
-                        <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                        </span>
-                      </template>
-                  
+                              <span v-bind="attributes">
+                                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                              </span>
+                          </template>
+                          <template #option="option">
+                              <div class="location-option">
+                                  <i class="ri-map-pin-line location-option-icon"></i>
+                                  <div class="location-option-text">
+                                      <span class="location-option-name">{{ locationFirstLine(option) }}</span>
+                                      <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
+                                  </div>
+                              </div>
+                          </template>
+
+                          <template #selected-option="option">
+                              <div v-if="option" class="location-selected">
+                                  <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
+                                  <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
+                              </div>
+                          </template>
                     </v-select>
-                  </div>
-                  
-                  <div class="col-md-6" v-if="hasField('bedrooms')">
-                    <label class="form-label-custom">Bedrooms</label>
-                    <v-select
-                        append-to-body 
-                      v-model="formData.bedrooms" 
-                      :options="bedroomOptions" 
-                      :reduce="o => o.value" 
-                      label="text" 
-                      placeholder="Select Bedroom" 
-                      class="custom-v-select" 
-                    >
-                   <template #open-indicator="{ attributes }">
-                      <span v-bind="attributes">
-                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                      </span>
-                    </template>
-                   </v-select>
-                  </div>
-                  
-                  <div class="col-md-6" v-if="hasField('area_id')">
-                    <label class="form-label-custom">Area</label>
-                    <v-select
-                        append-to-body 
-                      v-model="formData.area_id" 
-                      :options="areas" 
-                      :reduce="item => item.id" 
-                      label="name" 
-                      placeholder="Select Area" 
-                      :filterable="true"
-                      class="custom-v-select" 
-                        @search="onSearchAreas"
-                    >
-                  
-                   <template #open-indicator="{ attributes }">
-                      <span v-bind="attributes">
-                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                      </span>
-                    </template>
-                   </v-select>
-                  </div>
-                  
-                  <div class="col-md-6" v-if="hasField('unit_size')">
-                    <label class="form-label-custom">Unit Size</label>
-                    <b-form-input v-model="formData.unit_size" placeholder="Enter Unit Size (sq. ft)" class="custom-input" />
-                  </div>
+              </div>
+
+              <!-- Select Listing (Unit) - يظهر بعد اختيار المنطقة -->
+              <div class="col-md-6" v-if="hasField('area_id') && availableListings.length > 0">
+                <label class="form-label-custom">Select Unit <span class="text-danger">*</span></label>
+                <v-select
+                  append-to-body 
+                  v-model="selectedListing" 
+                  :options="availableListings" 
+                  :reduce="item => item" 
+                  label="display_name" 
+                  placeholder="Select a unit..." 
+                  class="custom-v-select"
+                  @update:modelValue="onListingSelected"
+                  :disabled="isLoadingListings"
+                >
+                  <template #option="option">
+                    <div>
+                      <strong>{{ option.unit_number || 'No Unit' }}</strong>
+                      <span class="text-muted ms-2">- {{ option.property_type?.name || 'N/A' }}</span>
+                      <div class="small text-muted">{{ option.bedrooms_text }} | {{ option.size_sqft || 'N/A' }} sqft</div>
+                    </div>
+                  </template>
+                  <template #open-indicator="{ attributes }">
+                    <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                    </span>
+                  </template>
+                </v-select>
+                <div class="small text-muted mt-1" v-if="!isLoadingListings">
+                  <iconify-icon icon="lucide:info" class="me-1"></iconify-icon>
+                  Showing available units in this location
+                </div>
+                <div class="small text-muted mt-1" v-else>
+                  <b-spinner small></b-spinner> Loading units...
                 </div>
               </div>
-            </section>
+
+              <!-- Unit No - يتم تعبئته تلقائياً -->
+              <div class="col-md-6" v-if="hasField('unit_no')">
+                <label class="form-label-custom">Unit No <span class="text-danger">*</span></label>
+                <b-form-input v-model="formData.unit_no" placeholder="Enter Unit No" class="custom-input" />
+              </div>
+              
+              <!-- Property Type - يتم تعبئته تلقائياً -->
+              <div class="col-md-6" v-if="hasField('property_type_id')">
+                <label class="form-label-custom">Property Type <span class="text-danger">*</span></label>
+                <v-select
+                  append-to-body 
+                  v-model="formData.property_type_id" 
+                  :options="propertyTypes" 
+                  :reduce="item => item.id" 
+                  label="name" 
+                  placeholder="Select Property Type" 
+                  class="custom-v-select"
+                 
+                >
+                  <template #open-indicator="{ attributes }">
+                    <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                    </span>
+                  </template>
+                </v-select>
+              </div>
+              
+              <!-- Bedrooms - يتم تعبئته تلقائياً -->
+              <div class="col-md-6" v-if="hasField('bedrooms')">
+                <label class="form-label-custom">Bedrooms</label>
+                <v-select
+                  append-to-body 
+                  v-model="formData.bedrooms" 
+                  :options="bedroomOptions" 
+                  :reduce="o => o.value" 
+                  label="text" 
+                  placeholder="Select Bedroom" 
+                  class="custom-v-select"
+                 
+                >
+                  <template #open-indicator="{ attributes }">
+                    <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                    </span>
+                  </template>
+                </v-select>
+              </div>
+              
+              <!-- Unit Size - يتم تعبئته تلقائياً -->
+              <div class="col-md-6" v-if="hasField('unit_size')">
+                <label class="form-label-custom">Unit Size (sq.ft)</label>
+                <b-form-input v-model="formData.unit_size" placeholder="Enter Unit Size" class="custom-input" />
+              </div>
+
+              <!-- Project Name - يتم تعبئته تلقائياً -->
+              <div class="col-md-6" v-if="hasField('project_id')">
+                <label class="form-label-custom">Project Name</label>
+                <v-select
+                  append-to-body 
+                  v-model="formData.project_id" 
+                  :options="projects" 
+                  :reduce="item => item.id" 
+                  label="name" 
+                  placeholder="Project Name" 
+                  class="custom-v-select"
+                 
+                >
+                  <template #open-indicator="{ attributes }">
+                    <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                    </span>
+                  </template>
+                </v-select>
+              </div>
+
+              <!-- Developer - يتم تعبئته تلقائياً -->
+              <div class="col-md-6" v-if="hasField('developer_id')">
+                <label class="form-label-custom">Developer</label>
+                <v-select
+                  append-to-body 
+                  v-model="formData.developer_id" 
+                  :options="developers" 
+                  :reduce="item => item.id" 
+                  label="name" 
+                  placeholder="Developer" 
+                  class="custom-v-select"
+                 
+                >
+                  <template #open-indicator="{ attributes }">
+                    <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                    </span>
+                  </template>
+                </v-select>
+              </div>
+              
+            </div>
+          </div>
+        </section>
 
             <!-- Deal Financials Section -->
             <section v-if="hasFinancialFields()" class="form-section">
@@ -927,7 +1009,77 @@ const buyerDocUploadRef = ref(null)
 const sellerDocUploadRef = ref(null)
 const tenantDocUploadRef = ref(null)
 const landlordDocUploadRef = ref(null)
-// دالة لتحديد المستندات المطلوبة حسب حالة الإقامة والجنسية
+
+const availableListings = ref([])
+const selectedListing = ref(null)
+const isLoadingListings = ref(false)
+const currentUser = ref(null)
+
+const locationFirstLine = (area) => {
+    return area.name || ''
+}
+
+const locationSecondLine = (area) => {
+    return area.area_parents_title || ''
+}
+const getCurrentUser = () => {
+  try {
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      currentUser.value = JSON.parse(userData)
+    }
+  } catch (error) {
+    console.error('Error getting user:', error)
+  }
+}
+// دالة جلب الـ Listings المتاحة (التي باعها أو أجرها الـ Agent الحالي)
+const fetchAvailableListings = async (areaId) => {
+  if (!areaId) {
+    availableListings.value = []
+    return
+  }
+  
+  if (!currentUser.value?.id) {
+    getCurrentUser()
+    if (!currentUser.value?.id) return
+  }
+  
+  try {
+    isLoadingListings.value = true
+    
+    const params = {
+      area_id: areaId,
+      sold_by_agent_id: currentUser.value.id,
+      per_page: 100
+    }
+    
+    const response = await api.get('/listings/properties', { params })
+    
+    const listings = response.data.data || []
+    availableListings.value = listings.map(listing => ({
+      id: listing.id,
+      unit_number: listing.unit_number,
+      property_type: listing.property_type,
+      property_type_id: listing.property_type_id,
+      bedrooms: listing.number_of_bedrooms,
+      bedrooms_text: listing.number_of_bedrooms === 0 ? 'Studio' : `${listing.number_of_bedrooms} Bed`,
+      bathrooms: listing.number_of_bathrooms,
+      size_sqft: listing.size_sqft,
+      project_id: listing.project_id,
+      project_name: listing.project?.title,
+      developer_id: listing.developer_id,
+      developer_name: listing.developer?.name,
+      status: listing.status,
+      display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type?.name || 'Property'} (${listing.status === 'converted' ? 'Sold' : 'Rented'})`
+    }))
+    
+  } catch (error) {
+    console.error('Error fetching listings:', error)
+  } finally {
+    isLoadingListings.value = false
+  }
+}
+
 function getRequiredDocumentsByResidency(residencyStatus, nationality) {
 
   // مقيم (Resident) - يطلب Passport + Visa + National ID
@@ -1149,16 +1301,66 @@ const isLostReasonOnly = computed(() => {
   const keys = props.missingFields || []
   return keys.length === 1 && keys[0] === 'lost_reason'
 })
-
+async function fetchDevelopers() {
+  try {
+    const response = await api.get('/listings/developers')
+    developers.value = response.data?.data || response.data || []
+  } catch (error) {
+    console.error('Error fetching developers:', error)
+  }
+}
+const fetchProjects = async () => {
+  try {
+    const response = await api.get('/listings/projects', { 
+      params: { per_page: 1000 } 
+    })
+    projects.value = response.data?.data ?? response.data ?? []
+    console.log(`Loaded ${projects.value.length} projects`)
+  } catch (error) {
+    console.error('Error loading projects:', error)
+  }
+}
 // Load initial data
 onMounted(async () => {
   await Promise.all([
     fetchUsers(),
     fetchSources(),
-    fetchPropertyTypes()
+    fetchPropertyTypes(),
+     fetchDevelopers() ,
+      fetchProjects() 
   ])
+  getCurrentUser()
 })
+// دالة عند اختيار المنطقة
+const onAreaSelected = (areaId) => {
+  selectedListing.value = null
+  
+  // إعادة تعيين بيانات العقار
+  if (formData.value) {
+    formData.value.unit_no = ''
+    formData.value.property_type_id = null
+    formData.value.bedrooms = null
+    formData.value.unit_size = ''
+    formData.value.project_id = null
+    formData.value.developer_id = null
+  }
+  
+  fetchAvailableListings(areaId)
+}
 
+// دالة عند اختيار Listing
+const onListingSelected = (listing) => {
+  if (!listing) return
+  
+  formData.value.unit_no = listing.unit_number || ''
+  formData.value.property_type_id = listing.property_type_id
+  formData.value.bedrooms = listing.bedrooms === 0 ? 'studio' : String(listing.bedrooms)
+  formData.value.unit_size = listing.size_sqft || ''
+  formData.value.project_id = listing.project_id
+  formData.value.developer_id = listing.developer_id
+  formData.value.listing_id = listing.id
+  formData.value.listing_status = listing.status
+}
 // Watch for modal open
 const isInitialized = ref(false)
 watch(() => formData.value.buyer_documents, (newVal) => {
@@ -1271,7 +1473,12 @@ async function fetchAreas(search = '') {
     console.error('Error fetching areas:', error)
   }
 }
-
+watch(() => formData.value.developer_id, (newId) => {
+  if (newId && developers.value.length) {
+    const dev = developers.value.find(d => d.id === newId)
+    console.log('Developer found:', dev)
+  }
+})
 // Search areas
 function onSearchAreas(search) {
   fetchAreas(search)
@@ -2465,6 +2672,7 @@ watch(() => formData.value?.landlord_country, (newCountry, oldCountry) => {
   min-height: 40px !important;
   height: 40px !important;
   font-size: 12px;
+  overflow: hidden;
 }
 
 :deep(.custom-v-select .vs__search::placeholder) {
@@ -2577,5 +2785,48 @@ watch(() => formData.value?.landlord_country, (newCountry, oldCountry) => {
     margin: 6px;
 
 }
+  /* Location dropdown options: 2 lines with icon (like image) */
+    .location-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 4px 0;
+      min-height: 40px;
+    }
+    
+    .location-option-icon {
+      font-size: 1.1rem;
+      color: #64748b;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    
+    .location-option-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .location-option-name {
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: #01062d;
+      line-height: 1.2;
+    }
+    
+    .location-option-subtitle {
+      font-size: 0.65rem;
+      color: #64748b;
+      line-height: 1.2;
+    }
+    
+    /* Location dropdown list: wider */
+    :deep(.location-select + .vs__dropdown-menu),
+    :deep(.location-select .vs__dropdown-menu) {
+      min-width: 320px !important;
+      width: 100% !important;
+      max-width: 400px;
+    }
+    
 
 </style>

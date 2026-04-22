@@ -534,9 +534,9 @@ const isSuperAdmin = computed(() => {
 
 const tableItems = computed(() => {
   const items = [
-    { path: '/alllisting', label: 'All Listing', colorClass: 'text-warning-main w-auto', count: 0 },
+    { path: '/alllisting', label: 'All Listing', colorClass: 'text-warning-main w-auto', count: 0,permission: 'listings-list' },
     { path: '/property-form', label: 'Create Listing', colorClass: 'text-info-main w-auto', permission: 'listings-create', count: 0 },
-    { path: '/notify-me', label: 'Notify me', colorClass: 'text-info-main w-auto', count: 0 },
+    { path: '/notify-me', label: 'Notify me', colorClass: 'text-info-main w-auto', count: 0 ,permission: 'listings-list'},
   ]
 
   if (!isAdmin.value) {
@@ -559,8 +559,8 @@ const requestsItems = computed(() => {
     ]
   } else {
     const items = [
-      { path: '/my-requests', label: 'Inbound Request', colorClass: 'text-white w-auto', count: 0 },
-      { path: '/my-orders', label: 'Outbound Request', colorClass: 'text-white w-auto', count: 0 },
+      { path: '/my-requests', label: 'Inbound Request', colorClass: 'text-white w-auto', count: 0 ,permission: 'listings-list'},
+      { path: '/my-orders', label: 'Outbound Request', colorClass: 'text-white w-auto', count: 0,permission: 'listings-list' },
     ];
     
     // Only show hot deal requests for listing team members
