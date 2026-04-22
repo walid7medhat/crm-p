@@ -866,7 +866,6 @@ const fetchProperties = async (filters = {}, page = 1) => {
     };
 
     const toCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-<<<<<<< HEAD
 // Add this inside setup() function, after your refs
 const canSeeSensitiveData = computed(() => {
   try {
@@ -922,54 +921,11 @@ const exportActiveListingsToExcel = async () => {
     // Define headers based on user permission
     const headers = canSeeSensitiveData.value
       ? [
-=======
-
-    const exportActiveListingsToExcel = async () => {
-      try {
-        isExporting.value = true;
-
-        const baseFilters = convertFiltersToAPI(currentFilters.value || {});
-        const rows = [];
-        let page = 1;
-        let lastPage = 1;
-
-        do {
-          const params = {
-            ...baseFilters,
-            page,
-            per_page: 200,
-            my_listings: true,
-            is_active: true,
-          };
-
-          delete params.is_archived;
-          delete params.converted;
-
-          const response = await api.get('/listings/properties', { params });
-          const data = Array.isArray(response?.data?.data) ? response.data.data : [];
-          const meta = response?.data?.meta || {};
-          lastPage = Number(meta.last_page || 1);
-
-          const onlyActiveRows = data.filter((property) =>
-            property?.is_active &&
-            !property?.is_archived &&
-            property?.status !== 'converted' &&
-            property?.status !== 'rented' &&
-            property?.status !== 'draft'
-          );
-
-          rows.push(...onlyActiveRows);
-          page += 1;
-        } while (page <= lastPage);
-
-        const headers = [
->>>>>>> 809e6aa7 (fix my-listing export owner fields)
           'Project name',
           'Unit number',
           'Size per sqft',
           'Selling price',
           'Status',
-<<<<<<< HEAD
           'Owner name',
           'Owner mobile number',
           'Bedroom',
@@ -1040,55 +996,6 @@ const exportActiveListingsToExcel = async () => {
     isExporting.value = false;
   }
 };
-=======
-          'owner name',
-          'owner mobile number',
-          'bedroom',
-          'type',
-          'created at',
-        ];
-
-        const lines = await Promise.all(rows.map(async (property) => {
-          const projectName = property?.project?.name || property?.project_name || property?.title || '-';
-          const unitNumber = property?.unit_number || property?.reference_number || '-';
-          const sizePerSqft = property?.size_sqft || '-';
-          const sellingPrice = property?.price || 0;
-          const status = property?.is_active ? 'Active' : 'Inactive';
-          const { ownerName, ownerMobileNumber } = await resolveOwnerFieldsForExport(property);
-          const createdAt = property?.created_at ? formatDate(property.created_at) : '-';
-          const bedroom = getBedroomLabel(property);
-          const type = getPropertyType(property);
-
-          return [
-            toCell(projectName),
-            toCell(unitNumber),
-            toCell(sizePerSqft),
-            toCell(sellingPrice),
-            toCell(status),
-            toCell(ownerName),
-            toCell(ownerMobileNumber),
-            toCell(bedroom),
-            toCell(type),
-            toCell(createdAt),
-          ].join(',');
-        }));
-
-        const csv = [headers.map(toCell).join(','), ...lines].join('\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `my-active-listings-${new Date().toISOString().slice(0, 10)}.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
-      } catch (error) {
-        console.error('❌ Error exporting active listings:', error?.response || error);
-        alert('Failed to export active listings. Please try again.');
-      } finally {
-        isExporting.value = false;
-      }
-    };
->>>>>>> 809e6aa7 (fix my-listing export owner fields)
 
     // Fetch initial properties on component mount
     onMounted(() => {
