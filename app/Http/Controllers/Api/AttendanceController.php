@@ -390,28 +390,32 @@ class AttendanceController extends Controller
             $totalDeductionPercent = 0;
             $daysWithDeduction = 0;
 
-            foreach ($attendances as $attendance) {
-                $checkIn = $attendance->check_in ? Carbon::parse($attendance->check_in) : null;
+            $workingDays = $this->getWorkingDaysInRange($startDate, $endDate);
+
+                // map attendance by date
+                $attendanceMap = $attendances->keyBy(function ($a) {
+                    return Carbon::parse($a->date)->format('Y-m-d');
+                });
                 
-                // Get deduction for this specific day (0-100)
-                $dayDeductionPercent = $this->calculateDayDeduction($checkIn);
+                foreach ($workingDays as $date) {
                 
-                // Count attendance status
-                if (!$checkIn) {
-                    $absent++;
-                    // Absent days already have 100% deduction
-                    $totalDeductionPercent += $dayDeductionPercent;
-                    if ($dayDeductionPercent > 0) {
+                    $attendance = $attendanceMap->get($date);
+                    $checkIn = $attendance?->check_in ? Carbon::parse($attendance->check_in) : null;
+                
+                    $dayDeductionPercent = $this->calculateDayDeduction($checkIn);
+                
+                    if (!$attendance) {
+                        $absent++;
+                        $totalDeductionPercent += 100;
+                        $daysWithDeduction++;
+                    } elseif ($dayDeductionPercent == 0) {
+                        $present++;
+                    } else {
+                        $late++;
+                        $totalDeductionPercent += $dayDeductionPercent;
                         $daysWithDeduction++;
                     }
-                } elseif ($dayDeductionPercent == 0) {
-                    $present++;
-                } else {
-                    $late++;
-                    $totalDeductionPercent += $dayDeductionPercent;
-                    $daysWithDeduction++;
                 }
-            }
 
             // Calculate average deduction percentage for the month
             $avgDeductionPercent = $daysWithDeduction > 0 
@@ -490,8 +494,8 @@ class AttendanceController extends Controller
         $current = $startDate->copy();
         
         while ($current <= $endDate) {
-            // Skip weekends (Friday = 5, Saturday = 6 in Carbon)
-            if (!$current->isFriday() && !$current->isSaturday()) {
+            if (!$current->isSaturday() && !$current->isSunday())
+            {
                 $workingDays++;
             }
             $current->addDay();
@@ -499,7 +503,20 @@ class AttendanceController extends Controller
         
         return $workingDays;
     }
-
+    private function getWorkingDaysInRange(Carbon $startDate, Carbon $endDate): array
+    {
+        $days = [];
+        $current = $startDate->copy();
+    
+        while ($current <= $endDate) {
+            if (!$current->isSaturday() && !$current->isSunday()) {
+                $days[] = $current->format('Y-m-d');
+            }
+            $current->addDay();
+        }
+    
+        return $days;
+    }
     // Keep old method for backward compatibility
     public function generateMonthlyReport($month = null)
     {

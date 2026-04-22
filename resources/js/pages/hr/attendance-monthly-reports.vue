@@ -252,7 +252,7 @@ export default {
           const day = new Date(`${date}T00:00:00`).getDay()
           // Sunday is OFF and excluded completely.
           // Monday-Saturday are working days.
-          return day !== 0
+          return day !== 6 && day !== 0
         })
     },
     workingDaysCountInRange() {
@@ -282,7 +282,7 @@ export default {
 
         const date = this.normalizeDate(dateRaw)
         const checkInMinutes = this.toMinutes(checkInRaw)
-        if (!employeeName || !date || checkInMinutes === null) continue
+        if (!employeeName || !date) continue
         if (!this.isInDateRange(date)) continue
 
         if (!grouped.has(employeeName)) grouped.set(employeeName, new Map())
