@@ -12,6 +12,12 @@
           :active-status="activeStatus"
         />
       </div>
+      <div class="top-export-col">
+        <button type="button" class="export-active-btn" :disabled="isExporting" @click="exportActiveListingsToExcel">
+          <i class="ri-file-excel-2-line me-1"></i>
+          {{ isExporting ? 'Exporting...' : 'Export Active Listings' }}
+        </button>
+      </div>
     </div>
     
     <!-- Properties Grid -->
@@ -270,6 +276,7 @@ export default {
     const isLoading = ref(false);
     const currentFilters = ref({});
     const pagination = ref(null);
+    const isExporting = ref(false);
     const activeStatus = ref('all'); // 'all', 'active', 'inactive'
     const initialFilters = ref(null);
    const propertyIcon = '/assets/icons/property-icon.svg';
@@ -726,6 +733,270 @@ const fetchProperties = async (filters = {}, page = 1) => {
       return 'Unknown Agent';
     };
 
+    const getValueByFlexibleKeys = (source, keys) => {
+      if (!source || typeof source !== 'object') return '';
+      const entries = Object.entries(source);
+      const normalize = (value) => String(value || '').toLowerCase().replace(/[\s_-]/g, '');
+      for (const key of keys) {
+        const direct = source[key];
+        if (direct !== undefined && direct !== null && String(direct).trim() !== '') return direct;
+        const normalizedKey = normalize(key);
+        const found = entries.find(([existingKey]) => normalize(existingKey) === normalizedKey);
+        if (found && found[1] !== undefined && found[1] !== null && String(found[1]).trim() !== '') return found[1];
+      }
+      return '';
+    };
+
+    const parseOwnerInfo = (ownerInfo) => {
+      if (!ownerInfo) return {};
+      if (typeof ownerInfo === 'string') {
+        try {
+          const parsed = JSON.parse(ownerInfo);
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (error) {
+          return {};
+        }
+      }
+      return typeof ownerInfo === 'object' ? ownerInfo : {};
+    };
+
+    const deepFindByKey = (source, candidateKeys) => {
+      const normalize = (value) => String(value || '').toLowerCase().replace(/[\s_-]/g, '');
+      const wanted = candidateKeys.map((k) => normalize(k));
+      const queue = [source];
+      const seen = new Set();
+
+      while (queue.length) {
+        const node = queue.shift();
+        if (!node || typeof node !== 'object' || seen.has(node)) continue;
+        seen.add(node);
+
+        for (const [k, v] of Object.entries(node)) {
+          const normalizedKey = normalize(k);
+          if (wanted.includes(normalizedKey) && v !== null && v !== undefined && String(v).trim() !== '') {
+            return v;
+          }
+          if (v && typeof v === 'object') queue.push(v);
+        }
+      }
+
+      return '';
+    };
+
+    const getOwnerName = (property) => {
+      const ownerInfo = parseOwnerInfo(property?.ownerinformation || property?.owner_information || property?.ownerInfo);
+      const ownerName =
+        getValueByFlexibleKeys(ownerInfo, ['name', 'full_name', 'owner_name', 'owner-name']) ||
+        deepFindByKey(ownerInfo, ['owner_name', 'owner-name', 'name', 'full_name']) ||
+        getValueByFlexibleKeys(property?.owner || {}, ['name', 'full_name']) ||
+        deepFindByKey(property?.owner || {}, ['name', 'full_name', 'owner_name']) ||
+        getValueByFlexibleKeys(property || {}, ['owner_name', 'owner-name', 'landlord_name']);
+      return ownerName || '-';
+    };
+
+    const getOwnerMobileNumber = (property) => {
+      const ownerInfo = parseOwnerInfo(property?.ownerinformation || property?.owner_information || property?.ownerInfo);
+      const ownerMobile =
+        getValueByFlexibleKeys(ownerInfo, [
+          'mobile',
+          'mobile_number',
+          'owner_mobile',
+          'phone',
+          'phone_number',
+          'primary_phone',
+          'Primary Phone',
+        ]) ||
+        deepFindByKey(ownerInfo, [
+          'mobile',
+          'mobile_number',
+          'owner_mobile',
+          'phone',
+          'phone_number',
+          'primary_phone',
+          'primaryphone',
+        ]) ||
+        getValueByFlexibleKeys(property?.owner || {}, ['mobile', 'phone', 'phone_number', 'primary_phone']) ||
+        deepFindByKey(property?.owner || {}, ['mobile', 'phone', 'phone_number', 'primary_phone']) ||
+        getValueByFlexibleKeys(property || {}, ['owner_mobile', 'owner_phone', 'primary_phone', 'Primary Phone']);
+      return ownerMobile || '-';
+    };
+
+    const getOwnerFieldsFromProperty = (property) => ({
+      ownerName: getOwnerName(property),
+      ownerMobileNumber: getOwnerMobileNumber(property),
+    });
+
+    const resolveOwnerFieldsForExport = async (property) => {
+      const initial = getOwnerFieldsFromProperty(property);
+      const hasOwnerName = initial.ownerName && initial.ownerName !== '-';
+      const hasOwnerMobile = initial.ownerMobileNumber && initial.ownerMobileNumber !== '-';
+      if ((hasOwnerName && hasOwnerMobile) || !property?.id) return initial;
+
+      const endpointCandidates = [
+        `/listings/properties/${property.id}`,
+        `/listings/properties/show/${property.id}`,
+      ];
+
+      for (const endpoint of endpointCandidates) {
+        try {
+          const response = await api.get(endpoint);
+          const payload =
+            response?.data?.data?.property ||
+            response?.data?.data ||
+            response?.data?.property ||
+            response?.data ||
+            {};
+          const merged = { ...property, ...payload };
+          const resolved = getOwnerFieldsFromProperty(merged);
+          const resolvedName = resolved.ownerName && resolved.ownerName !== '-';
+          const resolvedMobile = resolved.ownerMobileNumber && resolved.ownerMobileNumber !== '-';
+          if (resolvedName || resolvedMobile) return resolved;
+        } catch (error) {
+          // Try the next endpoint shape.
+        }
+      }
+
+      return initial;
+    };
+
+    const getBedroomLabel = (property) => {
+      const value = property?.number_of_bedrooms;
+      if (value === null || value === undefined || value === '') return '-';
+      return Number(value) === 0 ? 'Studio' : String(value);
+    };
+
+    const toCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+// Add this inside setup() function, after your refs
+const canSeeSensitiveData = computed(() => {
+  try {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return false;
+    const user = JSON.parse(userStr);
+    
+    // Check if user is Team Lead (admin_parent_name exists OR role_name is team_lead)
+    return  user.role_name != 'Team Lead' && user.role_name != 'Manager' && user.role_name != 'Admin';
+  } catch (error) {
+    console.error('Error checking user permissions:', error);
+    return false;
+  }
+});
+const exportActiveListingsToExcel = async () => {
+  try {
+    isExporting.value = true;
+
+    const baseFilters = convertFiltersToAPI(currentFilters.value || {});
+    const rows = [];
+    let page = 1;
+    let lastPage = 1;
+
+    do {
+      const params = {
+        ...baseFilters,
+        page,
+        per_page: 200,
+        my_listings: true,
+        is_active: true,
+      };
+
+      delete params.is_archived;
+      delete params.converted;
+
+      const response = await api.get('/listings/properties', { params });
+      const data = Array.isArray(response?.data?.data) ? response.data.data : [];
+      const meta = response?.data?.meta || {};
+      lastPage = Number(meta.last_page || 1);
+
+      const onlyActiveRows = data.filter((property) =>
+        property?.is_active &&
+        !property?.is_archived &&
+        property?.status !== 'converted' &&
+        property?.status !== 'rented' &&
+        property?.status !== 'draft'
+      );
+
+      rows.push(...onlyActiveRows);
+      page += 1;
+    } while (page <= lastPage);
+
+    // Define headers based on user permission
+    const headers = canSeeSensitiveData.value
+      ? [
+          'Project name',
+          'Unit number',
+          'Size per sqft',
+          'Selling price',
+          'Status',
+          'Owner name',
+          'Owner mobile number',
+          'Bedroom',
+          'Type',
+          'Created at',
+        ]
+      : [
+          'Project name',
+          'Size per sqft',
+          'Selling price',
+          'Status',
+          'Bedroom',
+          'Type',
+          'Created at',
+        ];
+
+    const lines = await Promise.all(rows.map(async (property) => {
+      const projectName = property?.project?.name || property?.project_name || property?.title || '-';
+      const unitNumber = property?.unit_number || property?.reference_number || '-';
+      const sizePerSqft = property?.size_sqft || '-';
+      const sellingPrice = property?.price || 0;
+      const status = property?.is_active ? 'Active' : 'Inactive';
+      const { ownerName, ownerMobileNumber } = await resolveOwnerFieldsForExport(property);
+      const createdAt = property?.created_at ? formatDate(property.created_at) : '-';
+      const bedroom = getBedroomLabel(property);
+      const type = getPropertyType(property);
+
+      if (canSeeSensitiveData.value) {
+        //  - sees all data including sensitive
+        return [
+          toCell(projectName),
+          toCell(unitNumber),
+          toCell(sizePerSqft),
+          toCell(sellingPrice),
+          toCell(status),
+          toCell(ownerName),
+          toCell(ownerMobileNumber),
+          toCell(bedroom),
+          toCell(type),
+          toCell(createdAt),
+        ].join(',');
+      } else {
+        // Regular user - NO unit number, NO owner details
+        return [
+          toCell(projectName),
+          toCell(sizePerSqft),
+          toCell(sellingPrice),
+          toCell(status),
+          toCell(bedroom),
+          toCell(type),
+          toCell(createdAt),
+        ].join(',');
+      }
+    }));
+
+    const csv = [headers.map(toCell).join(','), ...lines].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `my-listings-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Error exporting listings:', error?.response || error);
+    alert('Failed to export listings. Please try again.');
+  } finally {
+    isExporting.value = false;
+  }
+};
+
     // Fetch initial properties on component mount
     onMounted(() => {
       const hasQuery = Object.keys(route.query).length > 0;
@@ -749,6 +1020,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
       sqftIcon,
       isLoading,
       pagination,
+      isExporting,
       activeStatus,
       initialFilters,
       showingFrom,
@@ -765,6 +1037,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
       getPropertyType,
       getAreaUnit,
       getAgentName,
+      exportActiveListingsToExcel,
       handleImageLoad,
       handleImageError
     };
@@ -778,6 +1051,28 @@ const fetchProperties = async (filters = {}, page = 1) => {
   transition: transform 0.4s ease;
   /* opacity: 0; */
   transition: opacity 0.3s ease;
+}
+
+.top-export-col {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.export-active-btn {
+  border: 1px solid #0d6efd;
+  background: #0d6efd;
+  color: #fff;
+  border-radius: 10px;
+  height: 40px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.export-active-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .property-image img.loaded {
