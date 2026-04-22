@@ -253,7 +253,17 @@ Route::middleware('jwt.auth')->group(function () {
 
     Route::get('/attendance/today', [AttendanceController::class, 'today']);
     Route::get('/attendance', [AttendanceController::class, 'index']);
-    
+    Route::prefix('attendance')->group(function () {
+
+            // 🔹 sync الشهر اللي فات
+            Route::get('/sync-last-month', [AttendanceController::class, 'syncLastMonth']);
+
+            // 🔹 monthly report
+            Route::get('/monthly-report', [AttendanceController::class, 'generateMonthlyReport']);
+            Route::get('/period-report', [AttendanceController::class, 'generatePeriodReport']);
+
+
+        });
     // === Lead Conversion API ===
     Route::post('/leads/convert/to-deal', [LeadConversionController::class, 'convert']);
     Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);

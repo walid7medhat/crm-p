@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Helpers\ApiResponse;
 
 class AttendanceController extends Controller
 {
@@ -276,5 +277,241 @@ class AttendanceController extends Controller
         } catch (\Throwable $e) {
             return 'present';
         }
+    }
+     public function syncLastMonth()
+{
+ 
+    // $this->info('Syncing last month attendance...');
+
+    try {
+       $from = now('Asia/Dubai')->startOfMonth()->toDateString();
+        $to = now('Asia/Dubai')->toDateString();
+
+        $url = "https://oiahead.fortidyndns.com/api/attendance/range?from={$from}&to={$to}";
+
+        $response = Http::withBasicAuth('admin', 'admin1234')
+            ->withHeaders([
+                'x-api-key' => 'zkbio_secure_2026',
+                'Accept' => 'application/json',
+            ])
+            ->withoutVerifying()
+            ->timeout(60)
+            ->get($url);
+
+        if (!$response->successful()) {
+            $this->error('API Error: ' . $response->status());
+            return;
+        }
+
+        $data = $response->json() ?? [];
+
+        \Log::info('Monthly Attendance API', ['count' => count($data)]);
+
+        // ✔️ users map
+        $users = User::whereNotNull('biometric_code')
+            ->pluck('id', 'biometric_code');
+
+        $count = 0;
+
+        foreach ($data as $item) {
+
+            $date = $item['attendance_date'] ?? null;
+
+            if (!$date) continue;
+
+            if (empty($item['emp_code'])) continue;
+
+            $userId = $users[$item['emp_code']] ?? null;
+
+            if (!$userId) {
+                // $this->warn('User not found: ' . $item['emp_code']);
+                continue;
+            }
+
+            $checkIn = !empty($item['first_checkin'])
+                ? Carbon::parse($item['first_checkin'])
+                : null;
+
+            $checkOut = !empty($item['last_checkout'])
+                ? Carbon::parse($item['last_checkout'])
+                : null;
+
+            Attendance::updateOrCreate(
+                [
+                    'user_id' => $userId,
+                    'date' => $date,
+                ],
+                [
+                    'employee_id' => $item['emp_code'],
+                    'employee_name' => trim(
+                        ($item['first_name'] ?? '') . ' ' . ($item['last_name'] ?? '')
+                    ),
+                    'status' => !empty($item['status'])
+                        ? strtolower($item['status'])
+                        : null,
+                    'check_in' => $checkIn,
+                    'check_out' => $checkOut,
+                ]
+            );
+
+            $count++;
+        }
+
+        // $this->info("Last month synced: {$count} records.");
+
+    } catch (\Exception $e) {
+        dd($e->getMessage());
+        // $this->error($e->getMessage());
+    }
+}
+
+ public function generatePeriodReport(Request $request)
+    {
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $startDate = $request->start_date ? Carbon::parse($request->start_date) : Carbon::now('Asia/Dubai')->startOfMonth();
+        $endDate = $request->end_date ? Carbon::parse($request->end_date) : Carbon::now('Asia/Dubai')->endOfMonth();
+
+        // Get all active users
+        $users = User::where('status', 'active')->get();
+        $reports = [];
+
+        foreach ($users as $user) {
+            $attendances = Attendance::where('user_id', $user->id)
+                ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+                ->get();
+
+            $present = 0;
+            $late = 0;
+            $absent = 0;
+            $totalDeductionPercent = 0;
+            $daysWithDeduction = 0;
+
+            foreach ($attendances as $attendance) {
+                $checkIn = $attendance->check_in ? Carbon::parse($attendance->check_in) : null;
+                
+                // Get deduction for this specific day (0-100)
+                $dayDeductionPercent = $this->calculateDayDeduction($checkIn);
+                
+                // Count attendance status
+                if (!$checkIn) {
+                    $absent++;
+                    // Absent days already have 100% deduction
+                    $totalDeductionPercent += $dayDeductionPercent;
+                    if ($dayDeductionPercent > 0) {
+                        $daysWithDeduction++;
+                    }
+                } elseif ($dayDeductionPercent == 0) {
+                    $present++;
+                } else {
+                    $late++;
+                    $totalDeductionPercent += $dayDeductionPercent;
+                    $daysWithDeduction++;
+                }
+            }
+
+            // Calculate average deduction percentage for the month
+            $avgDeductionPercent = $daysWithDeduction > 0 
+                ? round($totalDeductionPercent / $daysWithDeduction, 2)
+                : 0;
+
+            $reports[] = [
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'period_start' => $startDate->format('Y-m-d'),
+                'period_end' => $endDate->format('Y-m-d'),
+                'present' => $present,
+                'late' => $late,
+                'absent' => $absent,
+                'total_deduction_percent' => $avgDeductionPercent, // عرض متوسط الخصم
+                'total_deduction_amount' => $totalDeductionPercent, // إجمالي الخصم التراكمي
+                'days_with_deduction' => $daysWithDeduction,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $reports,
+            'meta' => [
+                'start_date' => $startDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
+                'total_employees' => count($reports),
+                'generated_at' => Carbon::now('Asia/Dubai')->format('Y-m-d H:i:s')
+            ]
+        ]);
+    }
+
+    /**
+     * Calculate deduction percentage for a single day
+     * Returns percentage value (0-100) for that specific day only
+     */
+    private function calculateDayDeduction($checkIn = null): float
+    {
+        // If no check-in, full day deduction
+        if (!$checkIn) {
+            return 100;
+        }
+
+        $time = $checkIn->format('H:i');
+
+        // Before 09:16 - No deduction
+        if ($time < '09:16') {
+            return 0;
+        }
+        
+        // Between 09:16 and 10:00 - 10% deduction for this day
+        if ($time >= '09:16' && $time <= '10:00') {
+            return 10;
+        }
+
+        // Between 10:01 and 12:00 - 25% deduction for this day
+        if ($time >= '10:01' && $time <= '12:00') {
+            return 25;
+        }
+
+        // After 12:01 - Full day deduction
+        if ($time >= '12:01') {
+            return 100;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Get total working days in date range
+     */
+    private function getWorkingDaysCount(Carbon $startDate, Carbon $endDate): int
+    {
+        $workingDays = 0;
+        $current = $startDate->copy();
+        
+        while ($current <= $endDate) {
+            // Skip weekends (Friday = 5, Saturday = 6 in Carbon)
+            if (!$current->isFriday() && !$current->isSaturday()) {
+                $workingDays++;
+            }
+            $current->addDay();
+        }
+        
+        return $workingDays;
+    }
+
+    // Keep old method for backward compatibility
+    public function generateMonthlyReport($month = null)
+    {
+        $month = $month ?? now('Asia/Dubai')->subMonth()->format('Y-m');
+        $startDate = Carbon::parse($month . '-01');
+        $endDate = $startDate->copy()->endOfMonth();
+        
+        $request = new Request([
+            'start_date' => $startDate->format('Y-m-d'),
+            'end_date' => $endDate->format('Y-m-d')
+        ]);
+        
+        return $this->generatePeriodReport($request);
     }
 }

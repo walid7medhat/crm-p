@@ -63,6 +63,12 @@
               <span>Logs</span>
             </router-link>
           </li>
+          <li v-if="isSuperAdmin">
+            <router-link to="/attendance-monthly-reports" :class="{ 'active-page': isActive('/attendance-monthly-reports') }">
+              <iconify-icon icon="lucide:users-round" class="menu-icon" />
+              <span>Reports</span>
+            </router-link>
+          </li>
         <!-- Listings Dropdown -->
         <li v-if="filteredTableItems.length > 0" :class="{ 
           dropdown: true, 
