@@ -1049,6 +1049,7 @@ onMounted(() => {
   color: #334155;
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   outline: none;
+  align-items: center;
 }
 
 .close-btn {

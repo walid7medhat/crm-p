@@ -556,11 +556,11 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
                 
                 $query->where(function($q) use ($agentId) {
                     $q->where(function($sub) use ($agentId) {
-                        $sub->where('sold_by', 'another_agent')
+                        $sub->whereIn('sold_by', ['another_agent','me'])
                             ->where('sold_by_agent_id', $agentId);
                     })
                     ->orWhere(function($sub) use ($agentId) {
-                        $sub->where('rented_by', 'another_agent')
+                        $sub->whereIn('rented_by', ['another_agent','me'])
                             ->where('rented_by_agent_id', $agentId);
                     });
                 });

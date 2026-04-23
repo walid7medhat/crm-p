@@ -1,5 +1,5 @@
 <template>
-  <div class="document-upload-container deal-figma-ui">
+  <div class="document-upload-container deal-figma-ui"   ref="filesSection" >
     <!-- Document Type Tabs with Required Indicator -->
     <div class="doc-tabs d-flex gap-2 mb-3 flex-wrap">
       <button 
@@ -22,7 +22,8 @@
     </div>
 
     <!-- Upload Area (show if max files not reached for required types) -->
-    <div 
+    <div
+   
       v-if="canUploadMoreForType(selectedType)"
       class="upload-zone border rounded"
       @dragenter.prevent
@@ -124,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount ,nextTick} from 'vue'
 import axios from 'axios'
 
 const props = defineProps({
@@ -145,7 +146,7 @@ const openFileMenuKey = ref(null)
 const pendingReplace = ref(null)
 const isHydratingFromModel = ref(false)
 const previewModal = ref({ open: false, url: '', kind: 'file' })
-
+const filesSection = ref(null)
 // =========================
 // INIT
 // =========================
@@ -329,6 +330,12 @@ async function removeFile(typeId, fileId) {
     filesByType.value[typeId].filter(f => f.id !== fileId)
 
   $showNotification('File deleted successfully', 'success')
+   nextTick(() => {
+    filesSection.value?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    })
+  })
 }
 
 // =========================

@@ -1310,7 +1310,7 @@ public function deleteDocument($id)
 {
     try {
         $document = DealDocument::find($id);
-
+         $deal=$document->deal;
         if (!$document) {
             return response()->json([
                 'success' => false,
@@ -1318,14 +1318,13 @@ public function deleteDocument($id)
             ], 404);
         }
 
-        // حذف من storage
         if (\Storage::disk('public')->exists($document->file_path)) {
             \Storage::disk('public')->delete($document->file_path);
         }
 
         // حذف من DB
         $document->delete();
-
+   broadcast(new DealUpdated($deal->fresh(), 'updated'));
         return response()->json([
             'success' => true,
             'message' => 'Document deleted successfully'
