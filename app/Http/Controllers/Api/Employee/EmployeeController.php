@@ -39,6 +39,7 @@ class EmployeeController extends Controller
                 'roles',
                 'parent',
                 'employeeProfile.designation',
+                'employeeProfile.department',
                 'employeeProfile.documents'
             ])->whereHas('employeeProfile');
             
@@ -131,9 +132,18 @@ class EmployeeController extends Controller
                 'user_id' => $user->id,
                 'employee_code' => EmployeeProfile::generateEmployeeCode(),
                 'designation_id' => $request->designation_id,
+                'department_id' => $request->department_id,
+                'company_branch_id' => $request->company_branch_id, // NEW
                 'joining_date' => $request->joining_date,
                 'contract_end_date' => $request->contract_end_date,
                 'emirates_id_number' => $request->emirates_id_number,
+                
+                'passport_number' => $request->passport_number,
+                'passport_expiry_date' => $request->passport_expiry_date,
+                'labor_card_number' => $request->labor_card_number,
+                'labor_card_expiry_date' => $request->labor_card_expiry_date,
+                'iloe_expiry_date' => $request->iloe_expiry_date,
+                
                 'bank_account_holder_name' => $request->bank_account_holder_name,
                 'bank_name' => $request->bank_name,
                 'bank_account_number' => $request->bank_account_number,
@@ -151,7 +161,8 @@ class EmployeeController extends Controller
                 'certificate_name' => $request->certificate_name,
                 'employment_status' => $request->employment_status ?? 'active',
             ];
-            
+
+
             $employeeProfile = EmployeeProfile::create($employeeData);
             
             // 3. Upload Documents
@@ -202,6 +213,7 @@ class EmployeeController extends Controller
                 'parent',
                 'children',
                 'employeeProfile.designation',
+                'employeeProfile.department',
                 'employeeProfile.documents'
             ])->findOrFail($id);
             
@@ -251,13 +263,35 @@ class EmployeeController extends Controller
             // Update Employee Profile
             if ($user->employeeProfile) {
                 $employeeData = $request->only([
-                    'designation_id', 'joining_date', 'contract_end_date', 'emirates_id_number',
-                    'bank_account_holder_name', 'bank_name', 'bank_account_number',
-                    'branch_location', 'swift_code', 'iban_number',
-                    'insurance_policy_type', 'insurance_policy_number', 'insurance_provider',
-                    'insurance_start_date', 'insurance_expiry_date',
-                    'emissary_id_number', 'emissary_id_pad', 'notification_provider',
-                    'certificate_name', 'employment_status'
+                    'designation_id',
+                    'department_id',
+                    'company_branch_id', 
+                    'joining_date',
+                    'contract_end_date',
+                    'emirates_id_number',
+                    
+                    'passport_number',
+                    'passport_expiry_date',
+                    'labor_card_number',
+                    'labor_card_expiry_date',
+                    'iloe_expiry_date',
+                    
+                    'bank_account_holder_name',
+                    'bank_name',
+                    'bank_account_number',
+                    'branch_location',
+                    'swift_code',
+                    'iban_number',
+                    'insurance_policy_type',
+                    'insurance_policy_number',
+                    'insurance_provider',
+                    'insurance_start_date',
+                    'insurance_expiry_date',
+                    'emissary_id_number',
+                    'emissary_id_pad',
+                    'notification_provider',
+                    'certificate_name',
+                    'employment_status'
                 ]);
                 
                 $user->employeeProfile->update($employeeData);

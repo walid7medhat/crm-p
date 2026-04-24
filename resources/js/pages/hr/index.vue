@@ -1397,12 +1397,69 @@ const {
 } = useHrDashboard()
 
 const route = useRoute()
-/** True in Vite dev, when `VITE_HR_PIPELINE_DEBUG=1` (rebuild), or `?hr_debug=1` in the URL. */
 const hrDebugUi = computed(() => {
   void route.fullPath
   return hrPipelineDebugEnabled()
 })
 
+// ========== EMPLOYEES DATA FROM API ==========
+const employeesDirectory = ref([])
+const loadingEmployees = ref(false)
+
+// Fetch real employees from API
+const fetchRealEmployees = async () => {
+  loadingEmployees.value = true
+  try {
+    const response = await api.get('/employees', {
+      params: {
+        per_page: 1000
+      }
+    })
+    
+    if (response.data && response.data.data) {
+      employeesDirectory.value = response.data.data.map(emp => ({
+        id: emp.id,
+        name: emp.name,
+        email: emp.email,
+        phone: emp.phone || '-',
+        avatar: emp.avatar || `https://i.pravatar.cc/80?img=${emp.id % 70}`,
+        designation: emp.employee_profile?.designation?.name || emp.designation_name || '-',
+        department: emp.employee_profile?.department?.name || emp.department_name || '-',
+        branch: emp.employee_profile?.branch_name || emp.branch_name || '-',
+        joiningDate: emp.employee_profile?.joining_date || '-',
+        visaValidity: emp.employee_profile?.contract_end_date || '-',
+        passportNumber: emp.employee_profile?.passport_number || '-',
+        emiratesId: emp.employee_profile?.emirates_id_number || '-',
+        employment_status: emp.employee_profile?.employment_status || 'active',
+        status: emp.status || 'active',
+        statusText: emp.status === 'active' ? 'Active' : emp.status === 'in_active' ? 'In Active' : 'Blocked',
+        statusType: emp.status === 'active' ? 'active' : 'inactive',
+        nationality: emp.nationality || '-',
+        salary: emp.salary || '-',
+        salary_type: emp.salary_type || 'Monthly',
+        supervisor: emp.parent?.name || '-',
+        role_name: emp.role_name || '-',
+        employee_code: emp.employee_profile?.employee_code || `EMP-${emp.id}`,
+        email_work: emp.email,
+        email_personal: emp.personal_email || '-',
+        phone_company: emp.company_mobile || '-',
+        phone_personal: emp.phone || '-',
+        gender: emp.gender || '-',
+        birth_date: emp.birth_date || '-',
+        marital_status: emp.marital_status || '-',
+      }))
+      
+      console.log('Employees loaded from API:', employeesDirectory.value.length)
+    }
+  } catch (error) {
+    console.error('Error fetching employees:', error)
+    employeesDirectory.value = []
+  } finally {
+    loadingEmployees.value = false
+  }
+}
+
+// ========== UI State ==========
 const headerTabs = ['Overview', 'Employees', 'Payroll', 'Leave / Attendance', 'Career', 'Assets']
 const activeTab = ref('Overview')
 const openHeaderMenu = ref(null)
@@ -1523,6 +1580,7 @@ const assetEditForm = ref({
   status: '',
 })
 const hrSectionTab = ref('attendance')
+
 const headerTabMenus = {
   Employees: ['Manage Employees', 'Employee Assets'],
   Payroll: ['Manage Salary', 'Manage Pay Slip'],
@@ -1531,44 +1589,135 @@ const headerTabMenus = {
   Assets: ['Asset Directory', 'Asset Requests'],
 }
 
-const overviewEmployees = ref([
-  { id: 340, name: 'Maria Guan', designation: 'Senior Accountant', email: 'mariagaun@gmail.com', department: 'Finance', status: 'Present', attendanceType: 'present', avatar: 'https://i.pravatar.cc/80?img=47' },
-  { id: 123, name: 'Ahmad Al Daghash', designation: 'UI/UX Designer', email: 'ahmadaldagash@gmail.com', department: 'Marketing', status: 'On Leave', attendanceType: 'leave', avatar: 'https://i.pravatar.cc/80?img=12' },
-  { id: 112, name: 'Omar Moraden', designation: 'Backend Developer', email: 'omarmordan@gmail.com', department: 'Marketing', status: 'Present', attendanceType: 'present', avatar: 'https://i.pravatar.cc/80?img=15' },
-  { id: 150, name: 'Ahmad Al Adaway', designation: 'Sales Manager', email: 'ahamdaladaway@gmail.com', department: 'Sales', status: 'Present', attendanceType: 'present', avatar: 'https://i.pravatar.cc/80?img=11' },
-  { id: 175, name: 'Tarek Mahmoud', designation: 'Electrical Engineer', email: 'tarak.mahmmed@gmail.com', department: 'Operations', status: 'Present', attendanceType: 'present', avatar: 'https://i.pravatar.cc/80?img=20' },
-  { id: 182, name: 'Hadi Zain', designation: 'HR Manager', email: 'hadizainoia@gmail.com', department: 'HR', status: 'On Holiday', attendanceType: 'holiday', avatar: 'https://i.pravatar.cc/80?img=32' },
-  { id: 185, name: 'Karim Haddad', designation: 'Sales Agent', email: 'karimhaddad@gmail.com', department: 'Sales', status: 'Present', attendanceType: 'present', avatar: 'https://i.pravatar.cc/80?img=67' },
-  { id: 186, name: 'Omar Al Kaabi', designation: 'Sales Agent', email: 'omaralkaabi@gmail.com', department: 'Sales', status: 'Present', attendanceType: 'present', avatar: 'https://i.pravatar.cc/80?img=68' },
-  { id: 188, name: 'Khalid Al Mazrouei', designation: 'Graphic Designer', email: 'khalidalmazrouei@gmail.com', department: 'Marketing', status: 'Others', attendanceType: 'other', avatar: 'https://i.pravatar.cc/80?img=69' },
-  { id: 189, name: 'Abdullah Al Falasi', designation: 'Frontend Developer', email: 'abdullahalfalasi@gmail.com', department: 'Marketing', status: 'Present', attendanceType: 'present', avatar: 'https://i.pravatar.cc/80?img=70' },
-  { id: 190, name: 'Rashed Nasser', designation: 'Operations Specialist', email: 'rashednasser@gmail.com', department: 'Operations', status: 'On Leave', attendanceType: 'leave', avatar: 'https://i.pravatar.cc/80?img=21' },
-  { id: 191, name: 'Noura Salem', designation: 'Payroll Executive', email: 'nourasalem@gmail.com', department: 'Finance', status: 'Present', attendanceType: 'present', avatar: 'https://i.pravatar.cc/80?img=44' },
-])
+// ========== OVERVIEW EMPLOYEES (from API data) ==========
+const overviewEmployees = computed(() => {
+  if (employeesDirectory.value.length > 0) {
+    return employeesDirectory.value.map(emp => ({
+      id: emp.id,
+      name: emp.name,
+      designation: emp.designation,
+      email: emp.email,
+      department: emp.department,
+      status: emp.employment_status === 'active' ? 'Present' : emp.employment_status === 'on_leave' ? 'On Leave' : 'Others',
+      attendanceType: emp.employment_status === 'active' ? 'present' : emp.employment_status === 'on_leave' ? 'leave' : 'other',
+      avatar: emp.avatar,
+    }))
+  }
+  return []
+})
 
-const employeeFilterChips = ['Finance', 'Marketing', 'HR Department', 'Sales', 'Operations', 'Active', 'In Active']
-const departmentOptions = ['Finance', 'Marketing', 'HR Department', 'Sales', 'Operations']
-const designationOptions = [
-  'Junior Accountant',
-  'Accountant',
-  'Senior Accountant',
-  'Financial Analyst',
-  'Cost Accountant',
-  'Tax Executive',
-  'Payroll Executive',
-  'Treasury Analyst',
-  'Accounts Manager',
-  'Billing Executive',
-  'Payroll Manager',
-]
-const statusOptions = ['Active', 'In Active']
-const nationalityOptions = ['UAE', 'Egypt', 'India', 'Pakistan', 'Morocco', 'Jordan']
+// ========== FILTERED EMPLOYEES FOR TABLE ==========
+const filteredEmployeeRows = computed(() => {
+  const rows = employeesDirectory.value
+  
+  return rows.filter((row) => {
+    const nameOk = !employeeFilters.value.name || (row.name && row.name.toLowerCase().includes(employeeFilters.value.name.toLowerCase()))
+    const depOk = !employeeFilters.value.department || row.department === employeeFilters.value.department
+    const desigOk = !employeeFilters.value.designation || row.designation === employeeFilters.value.designation
+    const statusOk = !employeeFilters.value.status || row.statusText === employeeFilters.value.status
+    return nameOk && depOk && desigOk && statusOk
+  })
+})
+
+// ========== STATS ==========
+const overviewStats = computed(() => {
+  const total = employeesDirectory.value.length
+  const active = employeesDirectory.value.filter(e => e.employment_status === 'active' || e.status === 'active').length
+  
+  return [
+    { key: 'employees', label: 'Total Employees', value: total, icon: 'lucide:users', bgColor: '#ebf4ff', iconColor: '#2f65f6' },
+    { key: 'applications', label: 'Job Applications', value: 352, icon: 'lucide:file-text', bgColor: '#f4e8ff', iconColor: '#9333ea' },
+    { key: 'new-employees', label: 'New Employees', value: 56, icon: 'lucide:user-round-plus', bgColor: '#e8f8ed', iconColor: '#16a34a' },
+    { key: 'attendance', label: 'Todays Attendance', value: active, icon: 'lucide:calendar-check-2', bgColor: '#e8fbff', iconColor: '#0ea5e9' },
+  ]
+})
+
+const employeeStats = computed(() => {
+  const total = employeesDirectory.value.length
+  const active = employeesDirectory.value.filter(e => e.status === 'active').length
+  const inactive = employeesDirectory.value.filter(e => e.status === 'in_active').length
+  
+  return [
+    { key: 'employees', label: 'Total Employees', value: total, icon: 'lucide:users', bgColor: '#ebf4ff', iconColor: '#2f65f6' },
+    { key: 'applications', label: 'New Employees', value: 25, icon: 'lucide:file-text', bgColor: '#f4e8ff', iconColor: '#9333ea' },
+    { key: 'new-employees', label: 'Resigned Employees', value: 5, icon: 'lucide:user-round-plus', bgColor: '#e8f8ed', iconColor: '#16a34a' },
+    { key: 'attendance', label: 'Active Employees', value: active, icon: 'lucide:calendar-check-2', bgColor: '#e8fbff', iconColor: '#0ea5e9' },
+  ]
+})
+
+// ========== DEPARTMENT SERIES ==========
+const departmentSeries = computed(() => {
+  const deptMap = {}
+  employeesDirectory.value.forEach(emp => {
+    const dept = emp.department
+    if (dept && dept !== '-') {
+      deptMap[dept] = (deptMap[dept] || 0) + 1
+    }
+  })
+  
+  const total = employeesDirectory.value.length
+  return Object.entries(deptMap).map(([dept, count]) => ({
+    department: dept,
+    value: Math.round((count / total) * 100)
+  })).slice(0, 5)
+})
+
+// ========== ATTENDANCE LEGEND ==========
+const attendanceLegend = computed(() => {
+  const tally = { present: 0, onLeave: 0, holiday: 0, others: 0 }
+  overviewEmployees.value.forEach((employee) => {
+    if (employee.attendanceType === 'present') tally.present += 1
+    else if (employee.attendanceType === 'leave') tally.onLeave += 1
+    else if (employee.attendanceType === 'holiday') tally.holiday += 1
+    else tally.others += 1
+  })
+  return tally
+})
+
+// ========== FILTERED OVERVIEW EMPLOYEES ==========
+const filteredOverviewEmployees = computed(() => {
+  const keyword = overviewSearch.value.trim().toLowerCase()
+  return overviewEmployees.value.filter((employee) => {
+    const matchSearch = !keyword ||
+      employee.name.toLowerCase().includes(keyword) ||
+      employee.department.toLowerCase().includes(keyword) ||
+      employee.designation.toLowerCase().includes(keyword)
+    return matchSearch
+  })
+})
+
+// ========== OPTIONS FOR FILTERS ==========
+const departmentOptions = computed(() => {
+  const depts = new Set()
+  employeesDirectory.value.forEach(emp => {
+    if (emp.department && emp.department !== '-') depts.add(emp.department)
+  })
+  return Array.from(depts)
+})
+
+const designationOptions = computed(() => {
+  const desigs = new Set()
+  employeesDirectory.value.forEach(emp => {
+    if (emp.designation && emp.designation !== '-') desigs.add(emp.designation)
+  })
+  return Array.from(desigs)
+})
+
+const supervisorOptions = computed(() => {
+  const sups = new Set()
+  employeesDirectory.value.forEach(emp => {
+    if (emp.supervisor && emp.supervisor !== '-') sups.add(emp.supervisor)
+  })
+  return Array.from(sups)
+})
+
+const branchOptions = ['Dubai HQ', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Saadiyat', 'Reem', 'Main']
+const nationalityOptions = ['UAE', 'Egypt', 'India', 'Pakistan', 'Morocco', 'Jordan', 'Philippines']
 const salaryTypeOptions = ['Daily', 'Monthly', 'Yearly']
-const branchOptions = ['Dubai HQ', 'Abu Dhabi', 'Sharjah', 'Ajman']
-const supervisorOptions = ['Mohammad Othman', 'Ahmad Al Daghash', 'Maria Guan', 'Tarek Mahmoud']
 const bankNameOptions = ['Emirates NBD', 'ADCB', 'Mashreq', 'FAB', 'RAKBANK']
 const policyTypeOptions = ['Basic Health', 'Standard Health', 'Premium Health', 'Life Insurance']
 const employeeDocumentTypes = ['Emirates ID', 'Labor Card', 'Passport', 'Visa', 'Attested Certificates']
+const statusOptions = ['Active', 'In Active', 'Blocked']
 const leaveTypeOptions = [
   'Annual Leave (Paid Leave)',
   'Sick Leave (2/10)',
@@ -1602,21 +1751,62 @@ const defaultApplyLeaveForm = () => ({
 const applyLeaveForm = ref(defaultApplyLeaveForm())
 const applyLeaveAttachment = ref(null)
 const applyLeaveEmployeeOptions = computed(() =>
-  overviewEmployees.value.map((employee) => `#EMP-${employee.id} ${employee.name}`),
+  employeesDirectory.value.map((employee) => `#${employee.employee_code} ${employee.name}`),
 )
+
+// ========== LEAVE ROWS (Mock for now, can be replaced with API) ==========
 const leaveRows = ref([
   { id: 1, empId: '#EMPO01', employeeName: 'Maria Guan', avatar: 'https://i.pravatar.cc/80?img=47', designation: 'Senior Accountant', leaveType: 'Annual', startDate: '05 Feb 2026', endDate: '05 Feb 2026', days: '25', reason: 'Family Trip', appliedDate: '15 Jan 2026', status: 'Approved', approvedBy: 'HR Manager' },
   { id: 2, empId: '#EMPO02', employeeName: 'Ahmad Al Daghash', avatar: 'https://i.pravatar.cc/80?img=12', designation: 'UI/UX Designer', leaveType: 'Sick', startDate: '10 Feb 2026', endDate: '11 Feb 2026', days: '02', reason: 'Fever', appliedDate: '10 Feb 2026', status: 'Approved', approvedBy: 'HR Manager' },
-  { id: 3, empId: '#EMPO03', employeeName: 'Omar Moraden', avatar: 'https://i.pravatar.cc/80?img=15', designation: 'Backend Developer', leaveType: 'Casual', startDate: '28 Jan 2026', endDate: '28 Jan 2026', days: '01', reason: 'Personal Work', appliedDate: '25 Jan 2026', status: 'Pending', approvedBy: '--' },
-  { id: 4, empId: '#EMPO04', employeeName: 'Ahmad Al Adaway', avatar: 'https://i.pravatar.cc/80?img=11', designation: 'Sales Manager', leaveType: 'Annual', startDate: '27 Jan 2026', endDate: '12 Feb 2026', days: '17', reason: 'Vacation', appliedDate: '01 Jan 2026', status: 'Pending', approvedBy: '--' },
-  { id: 5, empId: '#EMPO05', employeeName: 'Tarek Mahmoud', avatar: 'https://i.pravatar.cc/80?img=20', designation: 'Electrical Engineer', leaveType: 'Sick', startDate: '25 Jan 2026', endDate: '27 Jan 2026', days: '03', reason: 'Medical Rest', appliedDate: '25 Jan 2026', status: 'Approved', approvedBy: 'HR Manager' },
-  { id: 6, empId: '#EMPO06', employeeName: 'Hadi Zain', avatar: 'https://i.pravatar.cc/80?img=32', designation: 'HR Manager', leaveType: 'Sick', startDate: '20 Jan 2026', endDate: '21 Jan 2026', days: '01', reason: 'Fever', appliedDate: '20 Jan 2026', status: 'Approved', approvedBy: 'HR Manager' },
-  { id: 7, empId: '#EMPO07', employeeName: 'Karim Haddad', avatar: 'https://i.pravatar.cc/80?img=67', designation: 'Sales Agent', leaveType: 'Casual', startDate: '12 Jan 2026', endDate: '15 Jan 2026', days: '04', reason: 'Family Function', appliedDate: '05 Dec 2025', status: 'Approved', approvedBy: 'HR Manager' },
-  { id: 8, empId: '#EMPO08', employeeName: 'Omar Al Kaabi', avatar: 'https://i.pravatar.cc/80?img=68', designation: 'Sales Agent', leaveType: 'Sick', startDate: '10 Jan 2026', endDate: '10 Jan 2026', days: '01', reason: 'Fever', appliedDate: '10 Jan 2026', status: 'Rejected', approvedBy: '--' },
-  { id: 9, empId: '#EMPO09', employeeName: 'Khalid Al Mazrouei', avatar: 'https://i.pravatar.cc/80?img=69', designation: 'Graphic Designer', leaveType: 'Sick', startDate: '25 Dec 2025', endDate: '25 Dec 2025', days: '01', reason: '--', appliedDate: '25 Dec 2025', status: 'Rejected', approvedBy: '--' },
-  { id: 10, empId: '#EMPO10', employeeName: 'Abdullah Al Falasi', avatar: 'https://i.pravatar.cc/80?img=70', designation: 'Frontend Developer', leaveType: 'Sick', startDate: '28 Aug 2025', endDate: '28 Aug 2025', days: '01', reason: '--', appliedDate: '28 Aug 2025', status: 'Approved', approvedBy: 'HR Manager' },
 ])
 
+// ========== ASSETS ROWS ==========
+const assetsRows = ref([
+  { id: 1, assetId: '#AST-001', type: 'Laptop', assetName: 'Dell Laptop', userName: 'Maria Guan', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=47', handoverDate: '05 Feb 2023', rValue: '--', brand: 'Dell', category: 'IT Equipment', handoverTo: 'Maria Guan', serial: 'DL-ASS-001', status: 'Assigned' },
+  { id: 2, assetId: '#AST-002', type: 'Charger', assetName: 'Laptop Charger HP', userName: 'Omar Moradan', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=15', handoverDate: '10 Feb 2023', rValue: '--', brand: 'HP', category: 'Accessory', handoverTo: 'Omar Moradan', serial: 'HP-CHR-002', status: 'Assigned' },
+])
+
+const defaultAddEmployeeForm = () => ({
+  full_name: '',
+  nationality: '',
+  phone: '',
+  salary_type: '',
+  email: '',
+  salary: '',
+  branch: '',
+  designation: '',
+  department: '',
+  supervisor: '',
+  joining_date: '',
+  visa_validity: '',
+  emirates_id_number: '',
+  account_holder_name: '',
+  bank_name: '',
+  branch_location: '',
+  account_number: '',
+  iban_number: '',
+  swift_code: '',
+  policy_type: '',
+  insurance_provider: '',
+  policy_number: '',
+  insurance_start_date: '',
+  insurance_expiry_date: '',
+})
+
+const addEmployeeForm = ref(defaultAddEmployeeForm())
+
+const sectionEditTitle = computed(() => {
+  const titles = {
+    profile: 'Edit Profile Details',
+    company: 'Edit Company Details',
+    documents: 'Edit Document Details',
+    bank: 'Bank Account Details',
+    insurance: 'Edit Insurance Details',
+  }
+  return titles[editingSection.value] || 'Edit Details'
+})
+
+// ========== HELPER FUNCTIONS ==========
 function toDateValue(value) {
   if (!value) return null
   if (value instanceof Date) return value
@@ -1702,104 +1892,8 @@ function handleDatePickerApply(date) {
   setFieldValueByPath(targetPath, toIsoDate(date))
   if (targetPath === 'dateFilter') onAttendanceDateChange()
 }
-const assetsRows = ref([
-  { id: 1, assetId: '#AST-001', type: 'Laptop', assetName: 'Dell Laptop', userName: 'Maria Guan', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=47', handoverDate: '05 Feb 2023', rValue: '--', brand: 'Dell', category: 'IT Equipment', handoverTo: 'Maria Guan', serial: 'DL-ASS-001', status: 'Assigned' },
-  { id: 2, assetId: '#AST-002', type: 'Charger', assetName: 'Laptop Charger HP', userName: 'Omar Moradan', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=15', handoverDate: '10 Feb 2023', rValue: '--', brand: 'HP', category: 'Accessory', handoverTo: 'Omar Moradan', serial: 'HP-CHR-002', status: 'Assigned' },
-  { id: 3, assetId: '#AST-003', type: 'Printer', assetName: 'HP Printer', userName: 'Omar Moradan', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=15', handoverDate: '15 Mar 2023', rValue: '--', brand: 'HP', category: 'Office Device', handoverTo: 'Operations Team', serial: 'HP-PRN-003', status: 'In Use' },
-  { id: 4, assetId: '#AST-004', type: 'Laptop', assetName: 'HP Laptop', userName: 'Ahmad Al Adaway', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=11', handoverDate: '18 Mar 2023', rValue: '--', brand: 'HP', category: 'IT Equipment', handoverTo: 'Ahmad Al Adaway', serial: 'HP-LTP-004', status: 'Assigned' },
-  { id: 5, assetId: '#AST-006', type: 'Phone', assetName: 'Company Phone', userName: 'Tarek Mahmoud', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=20', handoverDate: '22 Apr 2023', rValue: '--', brand: 'Apple', category: 'Mobile', handoverTo: 'Tarek Mahmoud', serial: 'PH-CPY-006', status: 'Assigned' },
-  { id: 6, assetId: '#AST-010', type: 'SIM', assetName: 'Company SIM', userName: 'Hadi Zain', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=32', handoverDate: '25 Oct 2023', rValue: '--', brand: 'Etisalat', category: 'Telecom', handoverTo: 'Hadi Zain', serial: 'SIM-010', status: 'Assigned' },
-  { id: 7, assetId: '#AST-011', type: 'Laptop', assetName: 'HP Laptop', userName: 'Karim Haddad', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=67', handoverDate: '22 Nov 2023', rValue: '--', brand: 'HP', category: 'IT Equipment', handoverTo: 'Karim Haddad', serial: 'HP-LTP-011', status: 'Assigned' },
-  { id: 8, assetId: '#AST-012', type: 'Phone', assetName: 'Company Phone', userName: 'Omar Al Kaabi', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=68', handoverDate: '15 Jan 2024', rValue: '--', brand: 'Samsung', category: 'Mobile', handoverTo: 'Omar Al Kaabi', serial: 'PH-CPY-012', status: 'Assigned' },
-  { id: 9, assetId: '#EMP-015', type: 'Laptop', assetName: 'Acer Laptop', userName: 'Khalid Al Mazrouei', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=69', handoverDate: '25 May 2025', rValue: '--', brand: 'Acer', category: 'IT Equipment', handoverTo: 'Khalid Al Mazrouei', serial: 'AC-LTP-015', status: 'Assigned' },
-  { id: 10, assetId: '#EMP-016', type: 'DeskTop', assetName: 'Asus Desktop', userName: 'Abdullah Al Falasi', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=70', handoverDate: '28 Aug 2025', rValue: '--', brand: 'Asus', category: 'IT Equipment', handoverTo: 'Abdullah Al Falasi', serial: 'AS-DTP-016', status: 'Assigned' },
-])
-const defaultAddEmployeeForm = () => ({
-  full_name: '',
-  nationality: '',
-  phone: '',
-  salary_type: '',
-  email: '',
-  salary: '',
-  branch: '',
-  designation: '',
-  department: '',
-  supervisor: '',
-  joining_date: '',
-  visa_validity: '',
-  emirates_id_number: '',
-  account_holder_name: '',
-  bank_name: '',
-  branch_location: '',
-  account_number: '',
-  iban_number: '',
-  swift_code: '',
-  policy_type: '',
-  insurance_provider: '',
-  policy_number: '',
-  insurance_start_date: '',
-  insurance_expiry_date: '',
-})
-const addEmployeeForm = ref(defaultAddEmployeeForm())
-const sectionEditTitle = computed(() => {
-  const titles = {
-    profile: 'Edit Profile Details',
-    company: 'Edit Company Details',
-    documents: 'Edit Document Details',
-    bank: 'Bank Account Details',
-    insurance: 'Edit Insurance Details',
-  }
-  return titles[editingSection.value] || 'Edit Details'
-})
 
-const filteredOverviewEmployees = computed(() => {
-  const keyword = overviewSearch.value.trim().toLowerCase()
-  return overviewEmployees.value.filter((employee) => {
-    const matchSearch =
-      !keyword ||
-      employee.name.toLowerCase().includes(keyword) ||
-      employee.department.toLowerCase().includes(keyword) ||
-      employee.designation.toLowerCase().includes(keyword)
-    return matchSearch
-  })
-})
-
-const employeesDirectory = computed(() =>
-  overviewEmployees.value.map((employee, index) => ({
-    ...employee,
-    joiningDate: ['05 Feb 2023', '10 Feb 2027', '15 Mar 2025', '18 Mar 2025', '22 Apr 2025', '25 Oct 2023', '22 Nov 2027', '15 Jan 2026', '25 May 2026', '28 Aug 2027'][index % 10],
-    visaValidity: ['05 Feb 2025', '10 Feb 2027', '15 Mar 2027', '18 Mar 2025', '22 Apr 2027', '25 Oct 2027', '22 Nov 2027', '15 Jan 2026', '25 May 2027', '28 Aug 2027'][index % 10],
-    nationality: ['Indian', 'Egypt', 'Pakistan', 'Morocco', 'Indian', 'Indian', 'Egypt', 'Egypt', 'Indian', 'Russian'][index % 10],
-    passportNumber: ['KER405321', 'EJY987454', 'PA456784', 'MS75751D', 'PA8548644', 'KABG4624', 'EQ7747V415', 'EC7778581', 'TH4584512', 'RS8405548'][index % 10],
-    statusText: ['Active', 'Active', 'In Active', 'In Active', 'Active', 'Active', 'Active', 'In Active', 'In Active', 'Active'][index % 10],
-    statusType: ['active', 'active', 'inactive', 'inactive', 'active', 'active', 'active', 'inactive', 'inactive', 'active'][index % 10],
-  })),
-)
-
-const overviewStats = computed(() => [
-  { key: 'employees', label: 'Total Employees', value: 245, icon: 'lucide:users', bgColor: '#ebf4ff', iconColor: '#2f65f6' },
-  { key: 'applications', label: 'Job Applications', value: 352, icon: 'lucide:file-text', bgColor: '#f4e8ff', iconColor: '#9333ea' },
-  { key: 'new-employees', label: 'New Employees', value: 56, icon: 'lucide:user-round-plus', bgColor: '#e8f8ed', iconColor: '#16a34a' },
-  { key: 'attendance', label: 'Todays Attendance', value: 182, icon: 'lucide:calendar-check-2', bgColor: '#e8fbff', iconColor: '#0ea5e9' },
-])
-
-const employeeStats = computed(() => [
-  { key: 'employees', label: 'Total Employees', value: 245, icon: 'lucide:users', bgColor: '#ebf4ff', iconColor: '#2f65f6' },
-  { key: 'applications', label: 'New Employees', value: 25, icon: 'lucide:file-text', bgColor: '#f4e8ff', iconColor: '#9333ea' },
-  { key: 'new-employees', label: 'Resigned Employees', value: 56, icon: 'lucide:user-round-plus', bgColor: '#e8f8ed', iconColor: '#16a34a' },
-  { key: 'attendance', label: 'Active Employees', value: 182, icon: 'lucide:calendar-check-2', bgColor: '#e8fbff', iconColor: '#0ea5e9' },
-])
-
-const filteredEmployeeRows = computed(() => {
-  return employeesDirectory.value.filter((row) => {
-    const nameOk = !employeeFilters.value.name || row.name.toLowerCase().includes(employeeFilters.value.name.toLowerCase())
-    const depOk = !employeeFilters.value.department || row.department === employeeFilters.value.department
-    const desigOk = !employeeFilters.value.designation || row.designation === employeeFilters.value.designation
-    const statusOk = !employeeFilters.value.status || row.statusText === employeeFilters.value.status
-    return nameOk && depOk && desigOk && statusOk
-  })
-})
-
+// ========== FILTERED ASSETS ==========
 const filteredAssetsRows = computed(() => {
   const keyword = assetsSearch.value.trim().toLowerCase()
   return assetsRows.value.filter((asset) => {
@@ -1823,12 +1917,6 @@ const filteredAssetsRows = computed(() => {
     if (f.serialNumber && !String(asset.serial || '').toLowerCase().includes(f.serialNumber.toLowerCase())) return false
     if (f.assetUser && String(asset.userName) !== String(f.assetUser)) return false
     if (f.status && String(asset.status) !== String(f.status)) return false
-    if (f.branchLocation && !String(asset.branchLocation || '').toLowerCase().includes(f.branchLocation.toLowerCase())) return false
-    if (f.department && !String(asset.department || '').toLowerCase().includes(f.department.toLowerCase())) return false
-    if (f.createdOn && !String(asset.createdOn || '').toLowerCase().includes(f.createdOn.toLowerCase())) return false
-    if (f.purchaseDate && !String(asset.purchaseDate || '').toLowerCase().includes(f.purchaseDate.toLowerCase())) return false
-    if (f.supplierName && !String(asset.supplierName || '').toLowerCase().includes(f.supplierName.toLowerCase())) return false
-    if (f.condition && String(asset.condition || '').toLowerCase() !== f.condition.toLowerCase()) return false
 
     if (selectedAssetSearchChip.value && !['Assigned', 'Not Assigned', 'New', 'Used', 'Working'].includes(selectedAssetSearchChip.value)) {
       if (!String(asset.branchLocation || '').toLowerCase().includes(selectedAssetSearchChip.value.toLowerCase())) return false
@@ -1836,21 +1924,11 @@ const filteredAssetsRows = computed(() => {
       if (String(asset.status || '').toLowerCase() !== selectedAssetSearchChip.value.toLowerCase()) return false
     }
 
-    const values = [
-      asset.assetId,
-      asset.type,
-      asset.assetName,
-      asset.userName,
-      asset.handoverDate,
-      asset.brand,
-      asset.category,
-      asset.serial,
-      asset.status,
-    ]
-    return values.some((value) => String(value || '').toLowerCase().includes(keyword)) || !keyword
+    return true
   })
 })
 
+// ========== LEAVE FUNCTIONS ==========
 const leaveEmployeeOptions = computed(() =>
   leaveRows.value.map((row) => `${row.empId} ${row.employeeName}`),
 )
@@ -1864,7 +1942,6 @@ const filteredLeaveRows = computed(() => {
     if (f.employee && !`${row.empId} ${row.employeeName}`.toLowerCase().includes(String(f.employee).toLowerCase())) return false
     if (f.leaveType && String(row.leaveType).toLowerCase() !== String(f.leaveType).toLowerCase()) return false
     if (f.status && String(row.status).toLowerCase() !== String(f.status).toLowerCase()) return false
-    if (f.appliedDate && String(row.appliedDate).toLowerCase() !== String(formatDate(f.appliedDate)).toLowerCase()) return false
     if (search) {
       const values = [row.empId, row.employeeName, row.leaveType, row.reason, row.appliedDate, row.status, row.approvedBy]
       return values.some((v) => String(v || '').toLowerCase().includes(search))
@@ -1942,34 +2019,7 @@ const assetsPaginationItems = computed(() => {
   return items
 })
 
-const departmentSeries = [
-  { department: 'HR', value: 34 },
-  { department: 'Sales', value: 86 },
-  { department: 'Marketing', value: 52 },
-  { department: 'Finance', value: 16 },
-  { department: 'Operations', value: 70 },
-]
-
-const attendanceLegend = computed(() => {
-  const tally = { present: 0, onLeave: 0, holiday: 0, others: 0 }
-  filteredOverviewEmployees.value.forEach((employee) => {
-    if (employee.attendanceType === 'present') tally.present += 1
-    if (employee.attendanceType === 'leave') tally.onLeave += 1
-    if (employee.attendanceType === 'holiday') tally.holiday += 1
-    if (employee.attendanceType === 'other') tally.others += 1
-  })
-  return tally
-})
-
-function selectAllOverviewEmployees() {
-  selectedOverviewEmployee.value = null
-  activeTab.value = 'Employees'
-  openHeaderMenu.value = null
-}
-
-function selectOverviewEmployee(employee) {
-  selectedOverviewEmployee.value = employee
-}
+// ========== ATTENDANCE FUNCTIONS ==========
 const filteredRows = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase()
   if (!keyword) return employees.value
@@ -1988,8 +2038,6 @@ const pagedRows = computed(() => {
 })
 const startEntry = computed(() => (filteredRows.value.length ? (page.value - 1) * perPage + 1 : 0))
 const endEntry = computed(() => Math.min(page.value * perPage, filteredRows.value.length))
-
-/** Standard work minutes before we treat extra time as OT (8h). */
 const STANDARD_WORK_DAY_MINUTES = 8 * 60
 
 const paginationItems = computed(() => {
@@ -2037,7 +2085,6 @@ watch([selectedLeaveSearchChip, () => leaveSearchFilters.value.employee, () => l
 watch(leaveTotalPages, (tp) => {
   if (leavePage.value > tp) leavePage.value = tp
 })
-
 
 const chartOptions = computed(() => ({
   chart: { toolbar: { show: false } },
@@ -2704,10 +2751,10 @@ function openEmployeeDetails(row) {
 
 function saveEmployeeForm() {
   if (isEditEmployeeMode.value && editingEmployeeId.value) {
-    const idx = overviewEmployees.value.findIndex((e) => String(e.id) === String(editingEmployeeId.value))
+    const idx = employeesDirectory.value.findIndex((e) => String(e.id) === String(editingEmployeeId.value))
     if (idx >= 0) {
-      overviewEmployees.value[idx] = {
-        ...overviewEmployees.value[idx],
+      employeesDirectory.value[idx] = {
+        ...employeesDirectory.value[idx],
         name: addEmployeeForm.value.full_name,
         email: addEmployeeForm.value.email,
         designation: addEmployeeForm.value.designation,
@@ -2719,11 +2766,10 @@ function saveEmployeeForm() {
         supervisor: addEmployeeForm.value.supervisor,
         joiningDate: formatDate(addEmployeeForm.value.joining_date),
         visaValidity: formatDate(addEmployeeForm.value.visa_validity),
-        avatar: addEmployeeProfilePreview.value || overviewEmployees.value[idx].avatar,
-        ...addEmployeeForm.value,
+        avatar: addEmployeeProfilePreview.value || employeesDirectory.value[idx].avatar,
       }
       if (selectedEmployeeDetail.value && String(selectedEmployeeDetail.value.id) === String(editingEmployeeId.value)) {
-        selectedEmployeeDetail.value = enrichEmployeeDetail(overviewEmployees.value[idx])
+        selectedEmployeeDetail.value = enrichEmployeeDetail(employeesDirectory.value[idx])
       }
     }
   }
@@ -2740,7 +2786,7 @@ function closeAddEmployeeModal() {
 function confirmDeleteEmployee(row) {
   const shouldDelete = window.confirm(`Are you sure you want to delete employee "${row.name}"?`)
   if (!shouldDelete) return
-  overviewEmployees.value = overviewEmployees.value.filter((employee) => String(employee.id) !== String(row.id))
+  employeesDirectory.value = employeesDirectory.value.filter((employee) => String(employee.id) !== String(row.id))
   if (selectedEmployeeDetail.value && String(selectedEmployeeDetail.value.id) === String(row.id)) {
     selectedEmployeeDetail.value = null
     activeTab.value = 'Employees'
@@ -2758,9 +2804,9 @@ function openSectionEdit(sectionKey) {
 function saveSectionEdit() {
   if (!selectedEmployeeDetail.value) return
   selectedEmployeeDetail.value = { ...selectedEmployeeDetail.value, ...sectionEditForm.value }
-  const idx = overviewEmployees.value.findIndex((e) => String(e.id) === String(selectedEmployeeDetail.value.id))
+  const idx = employeesDirectory.value.findIndex((e) => String(e.id) === String(selectedEmployeeDetail.value.id))
   if (idx >= 0) {
-    overviewEmployees.value[idx] = { ...overviewEmployees.value[idx], ...sectionEditForm.value, name: sectionEditForm.value.name || selectedEmployeeDetail.value.name }
+    employeesDirectory.value[idx] = { ...employeesDirectory.value[idx], ...sectionEditForm.value, name: sectionEditForm.value.name || selectedEmployeeDetail.value.name }
   }
   showSectionEditModal.value = false
 }
@@ -2772,10 +2818,15 @@ function syncMobileViewport() {
   }
 }
 
+// ========== ON MOUNTED ==========
 onMounted(async () => {
   console.log('BASE URL:', api.defaults.baseURL)
   const d = new Date()
   dateFilter.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  
+  // Fetch real employees first
+  await fetchRealEmployees()
+  
   await Promise.all([loadAttendance(), loadAgentData()])
   syncMobileViewport()
   window.addEventListener('resize', syncMobileViewport)

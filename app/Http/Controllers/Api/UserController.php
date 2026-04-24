@@ -48,33 +48,33 @@ class UserController extends Controller
             });
             if(!$request->has('agents') && !$request->has('chat')){
             
-            // Apply hierarchical filtering based on user role
-            if ($user->hasRole('sales')) {
-                // Sales agents can only see themselves and their team members
-                $query->where(function($q) use ($user) {
-                    $q->where('id', $user->id)
-                      ->orWhere('parent_id', $user->id);
-                });
-            } elseif ($user->hasRole('team_lead')) {
-                // Team leaders can see their team and themselves
-                $query->where(function($q) use ($user) {
-                    $q->where('id', $user->id)
-                      ->orWhere('parent_id', $user->id)
-                      ->orWhereHas('parent', function($parentQuery) use ($user) {
-                          $parentQuery->where('id', $user->id);
-                      });
-                });
-            } elseif ($user->hasRole('manager')) {
-                // Sales managers can see their entire hierarchy
-                $query->where(function($q) use ($user) {
-                    $q->where('id', $user->id)
-                      ->orWhere('parent_id', $user->id)
-                      ->orWhereHas('parent', function($parentQuery) use ($user) {
-                          $parentQuery->where('parent_id', $user->id);
-                      });
-                });
-            }
-        }
+                    // Apply hierarchical filtering based on user role
+                    if ($user->hasRole('sales')) {
+                        // Sales agents can only see themselves and their team members
+                        $query->where(function($q) use ($user) {
+                            $q->where('id', $user->id)
+                            ->orWhere('parent_id', $user->id);
+                        });
+                    } elseif ($user->hasRole('team_lead')) {
+                        // Team leaders can see their team and themselves
+                        $query->where(function($q) use ($user) {
+                            $q->where('id', $user->id)
+                            ->orWhere('parent_id', $user->id)
+                            ->orWhereHas('parent', function($parentQuery) use ($user) {
+                                $parentQuery->where('id', $user->id);
+                            });
+                        });
+                    } elseif ($user->hasRole('manager')) {
+                        // Sales managers can see their entire hierarchy
+                        $query->where(function($q) use ($user) {
+                            $q->where('id', $user->id)
+                            ->orWhere('parent_id', $user->id)
+                            ->orWhereHas('parent', function($parentQuery) use ($user) {
+                                $parentQuery->where('parent_id', $user->id);
+                            });
+                        });
+                    }
+                }
             if($request->has('parent_id')){
                 $parent=$request->parent_id;
                 $query->where(function($q) use ($parent) {

@@ -77,7 +77,7 @@ class AttendanceController extends Controller
         $statusFilter = strtolower((string) $request->query('status', 'all'));
         $employeeIdFilter = $request->query('employee_id');
 
-        $defaultDate = Carbon::today('Africa/Cairo')->toDateString();
+        $defaultDate = Carbon::today('Asia/Dubai')->toDateString();
         $targetDate = $todayOnly
             ? ($date ? Carbon::parse($date)->toDateString() : $defaultDate)
             : ($date ?: $defaultDate);
@@ -130,8 +130,8 @@ class AttendanceController extends Controller
                     'status' => null,
                     'check_in' => $attendance->check_in,
                 ]),
-                'check_in' => $attendance->check_in,
-                'check_out' => $attendance->check_out,
+                'check_in' => $attendance->check_in?->timezone('Asia/Dubai')->toDateTimeString(),
+                'check_out' => $attendance->check_out?->timezone('Asia/Dubai')->toDateTimeString(),
                 'date' => $attendance->date ? Carbon::parse($attendance->date)->toDateString() : null,
                 'department' => data_get($attendance->user, 'department'),
                 'email' => $attendance->user?->email,
@@ -270,7 +270,7 @@ class AttendanceController extends Controller
         }
 
         try {
-            $checkIn = Carbon::parse($checkInRaw);
+            $checkIn = Carbon::parse($checkInRaw, 'Asia/Dubai');
             $lateBoundary = Carbon::parse($checkIn->toDateString() . ' 09:15:00');
 
             return $checkIn->gt($lateBoundary) ? 'late' : 'present';
@@ -284,7 +284,7 @@ class AttendanceController extends Controller
     // $this->info('Syncing last month attendance...');
 
     try {
-       $from = now('Asia/Dubai')->startOfMonth()->toDateString();
+      $from = now('Asia/Dubai')->startOfMonth()->toDateString();
         $to = now('Asia/Dubai')->toDateString();
 
         $url = "https://oiahead.fortidyndns.com/api/attendance/range?from={$from}&to={$to}";
@@ -329,11 +329,11 @@ class AttendanceController extends Controller
             }
 
             $checkIn = !empty($item['first_checkin'])
-                ? Carbon::parse($item['first_checkin'])
+                ? Carbon::parse($item['first_checkin'], 'Asia/Dubai')
                 : null;
-
+            
             $checkOut = !empty($item['last_checkout'])
-                ? Carbon::parse($item['last_checkout'])
+                ? Carbon::parse($item['last_checkout'], 'Asia/Dubai')
                 : null;
 
             Attendance::updateOrCreate(
@@ -365,170 +365,231 @@ class AttendanceController extends Controller
     }
 }
 
- public function generatePeriodReport(Request $request)
-    {
-        $request->validate([
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-        ]);
+public function generatePeriodReport(Request $request)
+{
+    $request->validate([
+        'start_date' => 'nullable|date',
+        'end_date' => 'nullable|date|after_or_equal:start_date',
+    ]);
 
-        $startDate = $request->start_date ? Carbon::parse($request->start_date) : Carbon::now('Asia/Dubai')->startOfMonth();
-        $endDate = $request->end_date ? Carbon::parse($request->end_date) : Carbon::now('Asia/Dubai')->endOfMonth();
+    $startDate = $request->start_date ? Carbon::parse($request->start_date) : Carbon::now('Asia/Dubai')->startOfMonth();
+    $endDate = $request->end_date ? Carbon::parse($request->end_date) : Carbon::now('Asia/Dubai')->endOfMonth();
 
-        // Get all active users
-        $users = User::where('status', 'active')->get();
-        $reports = [];
+    // Get all active users
+    $users = User::where('status', 'active')->get();
+    $reports = [];
 
-        foreach ($users as $user) {
-            $attendances = Attendance::where('user_id', $user->id)
-                ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-                ->get();
+    foreach ($users as $user) {
+        $attendances = Attendance::where('user_id', $user->id)
+            ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->get();
 
-            $present = 0;
-            $late = 0;
-            $absent = 0;
-            $totalDeductionPercent = 0;
-            $daysWithDeduction = 0;
+        $present = 0;
+        $late = 0;
+        $absent = 0;
+        $totalDeductionPercent = 0;
+        $daysWithDeduction = 0;
 
-            $workingDays = $this->getWorkingDaysInRange($startDate, $endDate);
+        $workingDays = $this->getWorkingDaysInRange($startDate, $endDate);
+        $dailyBreakdown = []; // Array for daily details
 
-                // map attendance by date
-                $attendanceMap = $attendances->keyBy(function ($a) {
-                    return Carbon::parse($a->date)->format('Y-m-d');
-                });
-                
-                foreach ($workingDays as $date) {
-                
-                    $attendance = $attendanceMap->get($date);
-                    $checkIn = $attendance?->check_in ? Carbon::parse($attendance->check_in) : null;
-                
-                    $dayDeductionPercent = $this->calculateDayDeduction($checkIn);
-                
-                    if (!$attendance) {
-                        $absent++;
-                        $totalDeductionPercent += 100;
-                        $daysWithDeduction++;
-                    } elseif ($dayDeductionPercent == 0) {
-                        $present++;
-                    } else {
-                        $late++;
-                        $totalDeductionPercent += $dayDeductionPercent;
-                        $daysWithDeduction++;
-                    }
+        // map attendance by date
+        $attendanceMap = $attendances->keyBy(function ($a) {
+            return Carbon::parse($a->date)->format('Y-m-d');
+        });
+
+        foreach ($workingDays as $date) {
+            $attendance = $attendanceMap->get($date);
+            
+            // Parse check_in and check_out with correct timezone
+            $checkIn = null;
+            $checkOut = null;
+            $checkInTime = null;
+            $checkOutTime = null;
+            
+            if ($attendance) {
+                if ($attendance->check_in) {
+                    $checkIn = Carbon::parse($attendance->check_in)->timezone('Asia/Dubai');
+                    $checkInTime = $checkIn->format('H:i:s');
                 }
+                if ($attendance->check_out) {
+                    $checkOut = Carbon::parse($attendance->check_out)->timezone('Asia/Dubai');
+                    $checkOutTime = $checkOut->format('H:i:s');
+                }
+            }
 
-            // Calculate average deduction percentage for the month
-            $avgDeductionPercent = $daysWithDeduction > 0 
-                ? round($totalDeductionPercent / $daysWithDeduction, 2)
-                : 0;
+            $dayDeductionPercent = $this->calculateDayDeduction($checkIn);
+            $status = $this->getDayStatus($attendance, $dayDeductionPercent);
 
-            $reports[] = [
-                'user_id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'period_start' => $startDate->format('Y-m-d'),
-                'period_end' => $endDate->format('Y-m-d'),
-                'present' => $present,
-                'late' => $late,
-                'absent' => $absent,
-                'total_deduction_percent' => $avgDeductionPercent, // عرض متوسط الخصم
-                'total_deduction_amount' => $totalDeductionPercent, // إجمالي الخصم التراكمي
-                'days_with_deduction' => $daysWithDeduction,
+            // Build daily breakdown
+            $dailyBreakdown[] = [
+                'date' => $date,
+                'check_in' => $checkInTime,
+                'check_out' => $checkOutTime,
+                'status' => $status,
+                'deduction_percent' => !$attendance ? 100 : $dayDeductionPercent,
             ];
+
+            // Calculate summary statistics
+            if (!$attendance) {
+                $absent++;
+                $totalDeductionPercent += 100;
+                $daysWithDeduction++;
+            } elseif ($dayDeductionPercent == 0) {
+                $present++;
+            } else {
+                $late++;
+                $totalDeductionPercent += $dayDeductionPercent;
+                $daysWithDeduction++;
+            }
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $reports,
-            'meta' => [
-                'start_date' => $startDate->format('Y-m-d'),
-                'end_date' => $endDate->format('Y-m-d'),
-                'total_employees' => count($reports),
-                'generated_at' => Carbon::now('Asia/Dubai')->format('Y-m-d H:i:s')
-            ]
-        ]);
+        // Calculate average deduction percentage for the period
+        $avgDeductionPercent = $daysWithDeduction > 0 
+            ? round($totalDeductionPercent / $daysWithDeduction, 2)
+            : 0;
+
+        $reports[] = [
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'employee_id' => $user->employee_id ?? null,
+            'period_start' => $startDate->format('Y-m-d'),
+            'period_end' => $endDate->format('Y-m-d'),
+            'present' => $present,
+            'late' => $late,
+            'absent' => $absent,
+            'total_deduction_percent' => $avgDeductionPercent,
+            'total_deduction_amount' => $totalDeductionPercent,
+            'days_with_deduction' => $daysWithDeduction,
+            'daily_breakdown' => $dailyBreakdown, // Include daily details
+        ];
     }
 
-    /**
-     * Calculate deduction percentage for a single day
-     * Returns percentage value (0-100) for that specific day only
-     */
-    private function calculateDayDeduction($checkIn = null): float
-    {
-        // If no check-in, full day deduction
-        if (!$checkIn) {
+    return response()->json([
+        'success' => true,
+        'data' => $reports,
+        'meta' => [
+            'start_date' => $startDate->format('Y-m-d'),
+            'end_date' => $endDate->format('Y-m-d'),
+            'total_employees' => count($reports),
+            'generated_at' => Carbon::now('Asia/Dubai')->format('Y-m-d H:i:s')
+        ]
+    ]);
+}
+
+/**
+ * Get day status based on attendance and deduction
+ */
+private function getDayStatus($attendance, float $deductionPercent): string
+{
+    if (!$attendance) {
+        return 'Absent';
+    }
+    
+    if ($deductionPercent == 0) {
+        return 'Present';
+    }
+    
+    return 'Late';
+}
+
+/**
+ * Calculate deduction percentage for a single day
+ * Returns percentage value (0-100) for that specific day only
+ */
+private function calculateDayDeduction($checkIn = null): float
+{
+    // If no check-in, full day deduction
+    if (!$checkIn) {
+        return 100;
+    }
+
+    // Ensure $checkIn is Carbon instance
+    if (!($checkIn instanceof \Carbon\Carbon)) {
+        try {
+            $checkIn = Carbon::parse($checkIn)->timezone('Asia/Dubai');
+        } catch (\Exception $e) {
             return 100;
         }
+    }
 
-        $time = $checkIn->format('H:i');
+    $time = $checkIn->format('H:i');
 
-        // Before 09:16 - No deduction
-        if ($time < '09:16') {
-            return 0;
-        }
-        
-        // Between 09:16 and 10:00 - 10% deduction for this day
-        if ($time >= '09:16' && $time <= '10:00') {
-            return 10;
-        }
-
-        // Between 10:01 and 12:00 - 25% deduction for this day
-        if ($time >= '10:01' && $time <= '12:00') {
-            return 25;
-        }
-
-        // After 12:01 - Full day deduction
-        if ($time >= '12:01') {
-            return 100;
-        }
-
+    // Before 09:16 - No deduction
+    if ($time < '09:16') {
         return 0;
     }
+    
+    // Between 09:16 and 10:00 - 10% deduction for this day
+    if ($time >= '09:16' && $time <= '10:00') {
+        return 10;
+    }
 
-    /**
-     * Get total working days in date range
-     */
-    private function getWorkingDaysCount(Carbon $startDate, Carbon $endDate): int
-    {
-        $workingDays = 0;
-        $current = $startDate->copy();
-        
-        while ($current <= $endDate) {
-            if (!$current->isSaturday() && !$current->isSunday())
-            {
-                $workingDays++;
-            }
-            $current->addDay();
-        }
-        
-        return $workingDays;
+    // Between 10:01 and 12:00 - 25% deduction for this day
+    if ($time >= '10:01' && $time <= '12:00') {
+        return 25;
     }
-    private function getWorkingDaysInRange(Carbon $startDate, Carbon $endDate): array
-    {
-        $days = [];
-        $current = $startDate->copy();
+
+    // After 12:01 - Full day deduction
+    if ($time >= '12:01') {
+        return 100;
+    }
+
+    return 0;
+}
+
+/**
+ * Get total working days in date range
+ */
+private function getWorkingDaysCount(Carbon $startDate, Carbon $endDate): int
+{
+    $workingDays = 0;
+    $current = $startDate->copy();
     
-        while ($current <= $endDate) {
-            if (!$current->isSaturday() && !$current->isSunday()) {
-                $days[] = $current->format('Y-m-d');
-            }
-            $current->addDay();
+    while ($current <= $endDate) {
+        if (!$current->isSaturday() && !$current->isSunday()) {
+            $workingDays++;
         }
+        $current->addDay();
+    }
     
-        return $days;
+    return $workingDays;
+}
+
+/**
+ * Get array of working days in date range (Monday to Friday only)
+ */
+private function getWorkingDaysInRange(Carbon $startDate, Carbon $endDate): array
+{
+    $days = [];
+    $current = $startDate->copy();
+
+    while ($current <= $endDate) {
+        // Monday (1) to Friday (5) only, skip Saturday (6) and Sunday (0)
+        if (!$current->isSaturday() && !$current->isSunday()) {
+            $days[] = $current->format('Y-m-d');
+        }
+        $current->addDay();
     }
-    // Keep old method for backward compatibility
-    public function generateMonthlyReport($month = null)
-    {
-        $month = $month ?? now('Asia/Dubai')->subMonth()->format('Y-m');
-        $startDate = Carbon::parse($month . '-01');
-        $endDate = $startDate->copy()->endOfMonth();
-        
-        $request = new Request([
-            'start_date' => $startDate->format('Y-m-d'),
-            'end_date' => $endDate->format('Y-m-d')
-        ]);
-        
-        return $this->generatePeriodReport($request);
-    }
+
+    return $days;
+}
+
+/**
+ * Keep old method for backward compatibility
+ */
+public function generateMonthlyReport($month = null)
+{
+    $month = $month ?? now('Asia/Dubai')->subMonth()->format('Y-m');
+    $startDate = Carbon::parse($month . '-01');
+    $endDate = $startDate->copy()->endOfMonth();
+    
+    $request = new Request([
+        'start_date' => $startDate->format('Y-m-d'),
+        'end_date' => $endDate->format('Y-m-d')
+    ]);
+    
+    return $this->generatePeriodReport($request);
+}
 }

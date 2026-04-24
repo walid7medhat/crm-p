@@ -80,6 +80,10 @@
                                 <th scope="col"  v-if="$hasPermission('users-code')">Biometric Code</th>
                                 <th scope="col">Role</th>
                                 <th scope="col">Manager</th>
+                                <th scope="col">Branch</th>
+                                <th scope="col">Position</th>
+                                 <th scope="col">Department</th>
+                                
                                 <th scope="col">Active/Inactive</th>
                                 <th scope="col" @click="sortBy('last_login_at')" class="sortable">
                                     Last Login
@@ -151,7 +155,15 @@
                                     <p v-else class="text-muted">-</p>
                                     <span class="text-muted" v-if="user.admin_parent_name && user.parent_id != user.admin_parent_id">{{ user.admin_parent_name }}</span>
                                 </td>
-                             
+                             <td>
+                                <span class="">{{ user.branch}}</span>
+                            </td>
+                            <td>
+                                <span class="">{{ user.position }}</span>
+                            </td>
+                            <td>
+                                <span class="">{{ user.department}}</span>
+                            </td>
                              <td>
                                     <div class="status-toggle" v-if="(hasAdminRole() || hasSuperAdminRole()) && user.id != 1">
                                         <label class="toggle-switch">

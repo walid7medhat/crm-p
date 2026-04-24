@@ -53,6 +53,9 @@ use App\Http\Controllers\Api\Mobile\MobileKanbanController;
 use App\Http\Controllers\Api\Mobile\MobileLeadMoveController;
 use App\Http\Controllers\Api\Employee\EmployeeController;
 use App\Http\Controllers\Api\Employee\DesignationController;
+use App\Http\Controllers\Api\Employee\DepartmentController;
+use App\Http\Controllers\Api\Employee\CompanyBranchController;
+use App\Http\Controllers\Api\Employee\EmployeeExcelImportController;
 
 Route::get('/test-email', function () {
     try {
@@ -208,6 +211,20 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
     Route::get('/visibility/settings', [StageController::class, 'getStageVisibilitySettings']);
     Route::post('/visibility/settings', [StageController::class, 'updateStageVisibility']);
 });
+Route::prefix('company-branches')->group(function () {
+    Route::get('/', [CompanyBranchController::class, 'index']);
+    Route::post('/', [CompanyBranchController::class, 'store']);
+    Route::get('/{id}', [CompanyBranchController::class, 'show']);
+    Route::put('/{id}', [CompanyBranchController::class, 'update']);
+    Route::delete('/{id}', [CompanyBranchController::class, 'destroy']);
+    
+    // Extra routes
+    Route::get('/{id}/employees', [CompanyBranchController::class, 'getEmployees']);
+    Route::patch('/{id}/toggle-status', [CompanyBranchController::class, 'toggleStatus']);
+    Route::post('/bulk-delete', [CompanyBranchController::class, 'bulkDelete']);
+    Route::get('/cities/list', [CompanyBranchController::class, 'getCities']);
+    Route::get('/statistics/summary', [CompanyBranchController::class, 'getStatistics']);
+});
   Route::prefix('designations')->group(function () {
         Route::get('/', [DesignationController::class, 'index']);           
         Route::post('/', [DesignationController::class, 'store']);          
@@ -219,6 +236,19 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
         Route::get('/{id}/employees', [DesignationController::class, 'getEmployees']);  
         Route::patch('/{id}/toggle-status', [DesignationController::class, 'toggleStatus']); 
         Route::post('/bulk-delete', [DesignationController::class, 'bulkDelete']);  
+    });
+
+      Route::prefix('departments')->group(function () {
+        Route::get('/', [DepartmentController::class, 'index']);           
+        Route::post('/', [DepartmentController::class, 'store']);          
+        Route::get('/{id}', [DepartmentController::class, 'show']);        
+        Route::put('/{id}', [DepartmentController::class, 'update']);      
+        Route::delete('/{id}', [DepartmentController::class, 'destroy']);  
+        
+        // Extra routes
+        Route::get('/{id}/employees', [DepartmentController::class, 'getEmployees']);  
+        Route::patch('/{id}/toggle-status', [DepartmentController::class, 'toggleStatus']); 
+        Route::post('/bulk-delete', [DepartmentController::class, 'bulkDelete']);  
     });
     
     // ========== EMPLOYEE ROUTES ==========
@@ -234,6 +264,8 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
         Route::get('/{id}/documents', [EmployeeController::class, 'getDocuments']);           
         Route::delete('/documents/{documentId}', [EmployeeController::class, 'deleteDocument']); 
     });
+    Route::post('/admin/employees/import-excel', [EmployeeExcelImportController::class, 'import']);
+
 Route::get('/teams-with-leads', [StageController::class, 'getTeamsWithLeads'])->middleware('jwt.auth');
 
 Route::middleware('jwt.auth')->group(function () {

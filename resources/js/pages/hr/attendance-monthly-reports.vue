@@ -10,9 +10,9 @@
           <label>Month</label>
           <input v-model="selectedMonth" type="month" @change="applyMonthSelection" />
           <label>From</label>
-          <input v-model="startDate" type="date" />
+          <input v-model="startDate" type="date" :max="maxDate" @change="validateDateRange"/>
           <label>To</label>
-          <input v-model="endDate" type="date" />
+          <input v-model="endDate" type="date" :max="maxDate" @change="validateDateRange"/>
         </div>
         <label class="btn upload-btn">
           Upload CSV/JSON
@@ -112,10 +112,11 @@
             <th>Total Days</th>
             <th>Present Days</th>
             <th>Absent Days</th>
+            <th>Weekend Days</th>
             <th>10% Days Count</th>
             <th>25% Days Count</th>
             <th>100% Days Count</th>
-            <th>Total Deduction %</th>
+            <th>View</th>
           </tr>
         </thead>
         <tbody>
@@ -131,19 +132,18 @@
               </button>
             </td>
             <td class="center">{{ row.totalDays }}</td>
-            <td class="center">{{ row.noDeductionDays }}</td>
+            <td class="center">{{ row.presentDays }}</td>
             <td class="center">{{ row.absentDays }}</td>
+            <td class="center">{{ row.weekendDays }}</td>
             <td class="center deduction-10">{{ row.d10 }}</td>
             <td class="center deduction-25">{{ row.d25 }}</td>
             <td class="center deduction-100">{{ row.d100 }}</td>
             <td class="center">
-              <span class="total-badge" :class="riskBadgeClass(row)">
-                {{ row.totalDeductionPercent.toFixed(1) }}%
-              </span>
+              <button class="btn btn-view-attendance" @click="openEmployeeProfile(row)">View</button>
             </td>
           </tr>
           <tr v-if="!processedRows.length">
-            <td colspan="9" class="empty-cell">No data found for selected date range.</td>
+            <td colspan="10" class="empty-cell">No data found for selected date range.</td>
           </tr>
         </tbody>
       </table>
@@ -162,40 +162,34 @@
         <div class="profile-stats">
           <div class="chip green">0% days: {{ selectedEmployee.noDeductionDays }}</div>
           <div class="chip slate">Absent days: {{ selectedEmployee.absentDays }}</div>
+          <div class="chip sky">Weekend days: {{ selectedEmployee.weekendDays }}</div>
           <div class="chip yellow">10% days: {{ selectedEmployee.d10 }}</div>
           <div class="chip orange">25% days: {{ selectedEmployee.d25 }}</div>
           <div class="chip red">100% days: {{ selectedEmployee.d100 }}</div>
         </div>
         <div class="profile-meta">
-          <p><strong>Present Days:</strong> {{ selectedEmployee.noDeductionDays }}</p>
+          <p><strong>Present Days:</strong> {{ selectedEmployee.presentDays }}</p>
           <p><strong>Absent Days:</strong> {{ selectedEmployee.absentDays }}</p>
+          <p><strong>Weekend Days:</strong> {{ selectedEmployee.weekendDays }}</p>
           <p><strong>Validation:</strong> {{ selectedEmployee.presentDays }} + {{ selectedEmployee.absentDays }} = {{ selectedEmployee.totalDays }}</p>
           <p><strong>Total Deduction %:</strong> {{ selectedEmployee.totalDeductionPercent.toFixed(1) }}%</p>
         </div>
-        <div class="profile-actions">
-          <button class="btn primary" @click="openDailyBreakdown">Daily Breakdown</button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="showDailyBreakdownModal && selectedEmployee" class="modal-overlay no-print" @click.self="showDailyBreakdownModal = false">
-      <div class="breakdown-modal">
-        <button class="modal-close" @click="showDailyBreakdownModal = false">×</button>
-        <h4>Daily Breakdown - {{ selectedEmployee.employeeName }}</h4>
-        <div class="breakdown-table-shell">
+        <div class="breakdown-table-shell mt-3">
           <table class="breakdown-table">
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Check-in</th>
+                <th>Punch In</th>
+                <th>Punch Out</th>
                 <th>Status</th>
                 <th>Deduction</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in selectedEmployee.dailyBreakdown" :key="`${item.date}-${item.checkInMinutes}`">
+              <tr v-for="item in selectedEmployee.dailyBreakdown" :key="`${item.date}-${item.checkInMinutes}-${item.checkOutMinutes}`">
                 <td>{{ item.date }}</td>
                 <td>{{ formatMinutes(item.checkInMinutes) }}</td>
+                <td>{{ formatMinutes(item.checkOutMinutes) }}</td>
                 <td>{{ item.status }}</td>
                 <td>
                   <span class="chip" :class="deductionClass(item.deduction, item.status)">
@@ -215,8 +209,8 @@
 import axios from 'axios'
 
 const START_10 = 9 * 60 + 16
-const END_10 = 10 * 60
-const START_25 = 10 * 60 + 1
+const END_10 = 9 * 60 + 59
+const START_25 = 10 * 60
 const END_25 = 12 * 60
 const START_100 = 12 * 60 + 1
 
@@ -229,7 +223,6 @@ export default {
       selectedMonth: '',
       rawRows: [],
       selectedEmployee: null,
-      showDailyBreakdownModal: false,
       searchQuery: '',
       riskFilter: 'all',
       employeeFilter: 'all',
@@ -245,15 +238,41 @@ export default {
     this.fetchReport()
   },
   computed: {
+       maxDate() {
+            const today = new Date()
+            return this.formatDate(today)
+          },
+    calendarDatesInRange() {
+      if (!this.startDate || !this.endDate || !this.selectedMonth) return []
+
+      const normalizeDate = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
+      const startDate = normalizeDate(new Date(`${this.startDate}T00:00:00`))
+      const endDate = normalizeDate(new Date(`${this.endDate}T00:00:00`))
+      const month = `${this.selectedMonth}-01`
+
+      if (
+        Number.isNaN(startDate.getTime())
+        || Number.isNaN(endDate.getTime())
+        || startDate > endDate
+      ) {
+        return []
+      }
+
+      const selected = new Date(month)
+      const selectedMonth = selected.getMonth()
+      const selectedYear = selected.getFullYear()
+      const dates = []
+      let current = new Date(startDate)
+      while (current <= endDate) {
+        const date = normalizeDate(new Date(current))
+        const isSameMonth = date.getMonth() === selectedMonth && date.getFullYear() === selectedYear
+        if (isSameMonth) dates.push(new Date(date))
+        current.setDate(current.getDate() + 1)
+      }
+      return dates
+    },
     workingDatesInRange() {
-      return this
-        .getDateRange(this.startDate, this.endDate)
-        .filter((date) => {
-          const day = new Date(`${date}T00:00:00`).getDay()
-          // Sunday is OFF and excluded completely.
-          // Monday-Saturday are working days.
-          return day !== 6 && day !== 0
-        })
+      return this.calendarDatesInRange.filter((date) => date.getDay() >= 1 && date.getDay() <= 5)
     },
     workingDaysCountInRange() {
       return this.workingDatesInRange.length
@@ -262,8 +281,20 @@ export default {
       return [...new Set(this.processedRows.map((row) => row.employeeName))].sort((a, b) => a.localeCompare(b))
     },
     processedRows() {
+      const start = this.normalizeDateObject(this.startDate)
+      const end = this.normalizeDateObject(this.endDate)
+      console.log('FILTER RANGE:', start, end)
+
+      const filteredRecords = this.rawRows.filter((record) => {
+        const recordDateRaw = this.pickField(record, ['Date', 'date', 'attendance_date', 'day'])
+        const recordDate = this.normalizeDateObject(recordDateRaw)
+        const inRange = !!recordDate && (!start || recordDate >= start) && (!end || recordDate <= end)
+        console.log('Record:', recordDate, inRange)
+        return inRange
+      })
+
       const grouped = new Map()
-      for (const row of this.rawRows) {
+      for (const row of filteredRecords) {
         const employeeName = this.pickField(row, [
           'Employee Name',
           'employee_name',
@@ -279,19 +310,45 @@ export default {
           'checkin',
           'time_in',
         ])
+        const checkOutRaw = this.pickField(row, [
+          'Check-out Time',
+          'check_out_time',
+          'check_out',
+          'checkout',
+          'time_out',
+        ])
 
         const date = this.normalizeDate(dateRaw)
         const checkInMinutes = this.toMinutes(checkInRaw)
+        const checkOutMinutes = this.toMinutes(checkOutRaw)
         if (!employeeName || !date) continue
-        if (!this.isInDateRange(date)) continue
 
         if (!grouped.has(employeeName)) grouped.set(employeeName, new Map())
         const byDate = grouped.get(employeeName)
         const current = byDate.get(date)
-        if (current === undefined || checkInMinutes < current) byDate.set(date, checkInMinutes)
+
+        if (current === undefined) {
+          byDate.set(date, { checkInMinutes, checkOutMinutes })
+        } else {
+          const next = { ...current }
+          if (next.checkInMinutes === null || next.checkInMinutes === undefined) {
+            next.checkInMinutes = checkInMinutes
+          } else if (checkInMinutes !== null && checkInMinutes !== undefined && checkInMinutes < next.checkInMinutes) {
+            next.checkInMinutes = checkInMinutes
+          }
+
+          if (next.checkOutMinutes === null || next.checkOutMinutes === undefined) {
+            next.checkOutMinutes = checkOutMinutes
+          } else if (checkOutMinutes !== null && checkOutMinutes !== undefined && checkOutMinutes > next.checkOutMinutes) {
+            next.checkOutMinutes = checkOutMinutes
+          }
+
+          byDate.set(date, next)
+        }
       }
 
-      const rangeDates = this.workingDatesInRange
+      const rangeDates = this.calendarDatesInRange
+      const totalWorkingDays = this.workingDaysCountInRange
       const rows = []
       for (const [employeeName, byDate] of grouped.entries()) {
         let d10 = 0
@@ -299,34 +356,39 @@ export default {
         let d100 = 0
         let noDeductionDays = 0
         let absentDays = 0
+        let weekendDays = 0
         let weightedDeduction = 0
         const dailyBreakdown = []
-        const totalDays = this.workingDaysCountInRange
+        const totalDays = totalWorkingDays
 
         for (const date of rangeDates) {
+          const dateKey = this.formatDate(date)
           // 1) Day type first
-          const dayIndex = new Date(`${date}T00:00:00`).getDay()
-          const minutes = byDate.get(date)
+          const dayIndex = date.getDay()
+          const record = byDate.get(dateKey)
+          const minutes = record?.checkInMinutes
+          const checkOutMinutes = record?.checkOutMinutes ?? null
 
-          // Saturday is ALWAYS present with no deduction (WFH),
-          // even if there is no check-in record.
-          if (dayIndex === 6) {
-            noDeductionDays += 1
+          // Weekend is handled separately and never counted as absent.
+          if (dayIndex === 0 || dayIndex === 6) {
+            weekendDays += 1
             dailyBreakdown.push({
-              date,
+              date: dateKey,
               checkInMinutes: minutes ?? null,
-              deduction: 0,
-              status: 'Present',
+              checkOutMinutes,
+              deduction: null,
+              status: 'Weekend',
             })
             continue
           }
 
           // 2) Attendance check for weekdays (Mon-Fri)
-          if (minutes === undefined) {
+          if (minutes === undefined || minutes === null) {
             absentDays += 1
             dailyBreakdown.push({
-              date,
+              date: dateKey,
               checkInMinutes: null,
+              checkOutMinutes: null,
               deduction: null,
               status: 'Absent',
             })
@@ -342,8 +404,9 @@ export default {
           else noDeductionDays += 1
 
           dailyBreakdown.push({
-            date,
+            date: dateKey,
             checkInMinutes: minutes,
+            checkOutMinutes,
             deduction,
             status: deduction === 0 ? 'Present' : 'Late',
           })
@@ -358,6 +421,7 @@ export default {
           noDeductionDays,
           absentDays,
           presentDays,
+          weekendDays,
           d10,
           d25,
           d100,
@@ -394,7 +458,7 @@ export default {
           acc.totalTenPercentDays += row.d10
           acc.totalTwentyFivePercentDays += row.d25
           acc.totalHundredPercentDays += row.d100
-          acc.totalPresentDays += row.noDeductionDays
+          acc.totalPresentDays += row.presentDays
           acc.totalDeductionPercent += row.totalDeductionPercent
           return acc
         },
@@ -444,14 +508,42 @@ export default {
     },
   },
   methods: {
+ 
+    validateDateRange() {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      const start = new Date(this.startDate)
+      const end = new Date(this.endDate)
+      
+      if (start > today) {
+        this.startDate = this.formatDate(today)
+        alert('Start date cannot be in the future')
+      }
+      
+      if (end > today) {
+        this.endDate = this.formatDate(today)
+        alert('End date cannot be in the future')
+      }
+      
+      if (start > end) {
+        this.endDate = this.startDate
+        alert('Start date cannot be after end date')
+      }
+    },
     applyMonthSelection() {
       if (!this.selectedMonth) return
       const [year, month] = this.selectedMonth.split('-').map(Number)
       if (!year || !month) return
+      
       const from = new Date(year, month - 1, 1)
+      
       const to = new Date(year, month, 0)
+      
       this.startDate = this.formatDate(from)
       this.endDate = this.formatDate(to)
+      
+      this.fetchReport()
     },
     async handleFileUpload(event) {
       const file = event?.target?.files?.[0]
@@ -490,50 +582,21 @@ export default {
     },
     async fetchReport() {
       try {
+              this.validateDateRange()
         const params = {}
         if (this.startDate) params.start_date = this.startDate
         if (this.endDate) params.end_date = this.endDate
 
         const res = await axios.get('/api/attendance/period-report', { params })
         const payload = Array.isArray(res?.data?.data) ? res.data.data : []
-
-        // Accept both raw attendance rows and already-aggregated API rows.
-        if (payload.length && payload[0]?.present !== undefined && payload[0]?.late !== undefined) {
-          const generated = []
-          const rangeDates = this.workingDatesInRange
-
-          for (const item of payload) {
-            const name = item.name || item.employee_name || item.employee || 'Unknown'
-            const presentCount = Number(item.present || 0)
-            const lateCount = Number(item.late || 0)
-            const absentCount = Number(item.absent || 0)
-            const totalCount = presentCount + lateCount
-            const fallbackDate = this.startDate || this.formatDate(new Date())
-            const attendanceDates = rangeDates.length
-              ? Array.from({ length: totalCount }, (_, index) => rangeDates[index % rangeDates.length])
-              : Array.from({ length: totalCount }, () => fallbackDate)
-            const absentDates = rangeDates.length
-              ? Array.from({ length: absentCount }, (_, index) => rangeDates[(totalCount + index) % rangeDates.length])
-              : Array.from({ length: absentCount }, () => fallbackDate)
-            let dateIndex = 0
-
-            for (let i = 0; i < presentCount; i += 1) {
-              generated.push({ 'Employee Name': name, Date: attendanceDates[dateIndex], 'Check-in Time': '09:10 AM' })
-              dateIndex += 1
-            }
-            for (let i = 0; i < lateCount; i += 1) {
-              generated.push({ 'Employee Name': name, Date: attendanceDates[dateIndex], 'Check-in Time': '09:35 AM' })
-              dateIndex += 1
-            }
-            // Keep absent weekday dates as explicit no-punch records so they are counted correctly.
-            for (const absentDate of absentDates) {
-              generated.push({ 'Employee Name': name, Date: absentDate, 'Check-in Time': '' })
-            }
-          }
-          this.rawRows = generated
-        } else {
-          this.rawRows = payload
-        }
+            this.rawRows = payload.flatMap(user =>
+              (user.daily_breakdown || []).map(day => ({
+                'Employee Name': user.name,
+                Date: day.date,
+                'Check-in Time': day.check_in,
+                'Check-out Time': day.check_out,
+              }))
+            )
       } catch (error) {
         console.error('Error fetching attendance data:', error)
         this.rawRows = []
@@ -577,7 +640,10 @@ export default {
       })
     },
     formatDate(date) {
-      return date.toISOString().split('T')[0]
+      const y = date.getFullYear()
+      const m = String(date.getMonth() + 1).padStart(2, '0')
+      const d = String(date.getDate()).padStart(2, '0')
+      return `${y}-${m}-${d}`
     },
     pickField(row, keys) {
       for (const key of keys) {
@@ -589,11 +655,35 @@ export default {
     },
     normalizeDate(value) {
       if (!value) return ''
-      if (value instanceof Date && !Number.isNaN(value.getTime())) return this.formatDate(value)
-      const str = String(value).trim()
-      const date = new Date(str)
-      if (!Number.isNaN(date.getTime())) return this.formatDate(date)
+      const normalized = this.normalizeDateObject(value)
+      if (normalized) return this.formatDate(normalized)
       return ''
+    },
+    normalizeDateObject(value) {
+      if (!value) return null
+
+      if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return new Date(value.getFullYear(), value.getMonth(), value.getDate())
+      }
+
+      const str = String(value).trim()
+      if (!str) return null
+
+      // ISO date without time
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+        const [year, month, day] = str.split('-').map(Number)
+        return new Date(year, month - 1, day)
+      }
+
+      // ISO datetime
+      if (/^\d{4}-\d{2}-\d{2}T/.test(str)) {
+        const [year, month, day] = str.slice(0, 10).split('-').map(Number)
+        return new Date(year, month - 1, day)
+      }
+
+      const parsed = new Date(str)
+      if (Number.isNaN(parsed.getTime())) return null
+      return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
     },
     toMinutes(value) {
       if (!value) return null
@@ -623,10 +713,15 @@ export default {
       if (minutes >= START_100) return 100
       return 0
     },
-    isInDateRange(dateString) {
-      if (!this.startDate && !this.endDate) return true
-      if (this.startDate && dateString < this.startDate) return false
-      if (this.endDate && dateString > this.endDate) return false
+    isInDateRange(dateValue) {
+      const recordDate = this.normalizeDateObject(dateValue)
+      if (!recordDate) return false
+
+      const start = this.normalizeDateObject(this.startDate)
+      const end = this.normalizeDateObject(this.endDate)
+      if (!start && !end) return true
+      if (start && recordDate < start) return false
+      if (end && recordDate > end) return false
       return true
     },
     riskClass(row) {
@@ -641,6 +736,7 @@ export default {
     },
     deductionClass(value, status = '') {
       if (status === 'Absent') return 'slate'
+      if (status === 'Weekend') return 'sky'
       if (value === 0) return 'green'
       if (value === 10) return 'yellow'
       if (value === 25) return 'orange'
@@ -671,21 +767,17 @@ export default {
     },
     openEmployeeProfile(row) {
       this.selectedEmployee = row
-      this.showDailyBreakdownModal = false
     },
     closeEmployeeProfile() {
       this.selectedEmployee = null
-      this.showDailyBreakdownModal = false
-    },
-    openDailyBreakdown() {
-      this.showDailyBreakdownModal = true
     },
     exportReport() {
       const exportRows = this.processedRows.map((row) => ({
         'Employee Name': row.employeeName,
         'Total Working Days': row.totalDays,
-        'Present Days': row.noDeductionDays,
+        'Present Days': row.presentDays,
         'Absent Days': row.absentDays,
+        'Weekend Days': row.weekendDays,
         '10% Days Count': row.d10,
         '25% Days Count': row.d25,
         '100% Days Count': row.d100,
@@ -929,6 +1021,12 @@ th {
   padding: 0;
 }
 
+.btn-view-attendance {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
 .deduction-10 { color: #d97706; font-weight: 700; }
 .deduction-25 { color: #ea580c; font-weight: 700; }
 .deduction-100 { color: #dc2626; font-weight: 700; }
@@ -1038,6 +1136,7 @@ tr.risk-low { background: #f6fff8; }
 .chip.orange { background: #ffedd5; color: #c2410c; }
 .chip.red { background: #fee2e2; color: #b91c1c; }
 .chip.slate { background: #e5e7eb; color: #374151; }
+.chip.sky { background: #e0f2fe; color: #075985; }
 
 .profile-meta {
   margin-top: 12px;

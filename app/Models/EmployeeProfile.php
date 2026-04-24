@@ -10,14 +10,19 @@ class EmployeeProfile extends Model
      protected $table = 'employee_profiles';
     
     protected $fillable = [
-        'user_id', 'employee_code', 'designation_id', 'joining_date', 'contract_end_date',
+        'user_id', 'employee_code', 'designation_id','department_id', 'joining_date', 'contract_end_date',
         'emirates_id_number',
         'bank_account_holder_name', 'bank_name', 'bank_account_number', 
         'branch_location', 'swift_code', 'iban_number',
         'insurance_policy_type', 'insurance_policy_number', 'insurance_provider',
         'insurance_start_date', 'insurance_expiry_date',
         'emissary_id_number', 'emissary_id_pad', 'notification_provider', 
-        'employment_status', 'certificate_name'
+        'employment_status', 'certificate_name',   
+        'company_branch_id',  'passport_number',       
+        'passport_expiry_date',   
+        'iloe_expiry_date',        
+        'labor_card_number',       
+        'labor_card_expiry_date',  
     ];
     
     protected $casts = [
@@ -27,7 +32,7 @@ class EmployeeProfile extends Model
         'insurance_expiry_date' => 'date',
     ];
     
-    public function user(): BelongsTo
+    public function user()
     {
         return $this->belongsTo(User::class);
     }
@@ -36,6 +41,17 @@ class EmployeeProfile extends Model
     {
         return $this->belongsTo(Designation::class);
     }
+    
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+     public function companyBranch()
+    {
+        return $this->belongsTo(CompanyBranch::class);
+    }
+
     
     public function documents()
     {

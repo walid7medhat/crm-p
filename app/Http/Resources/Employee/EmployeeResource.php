@@ -16,6 +16,7 @@ class EmployeeResource extends JsonResource
             'phone' => $this->phone,
             'avatar' => $this->avatar ? asset('storage/' . $this->avatar) : null,
             'status' => $this->status,
+            'biometric_code' => $this->biometric_code,
             
             'role' => $this->roles->first() ? [
                 'id' => $this->roles->first()->id,
@@ -36,10 +37,27 @@ class EmployeeResource extends JsonResource
                 'certificate_name' => $this->employeeProfile->certificate_name,
                 'employment_status' => $this->employeeProfile->employment_status,
                 
+                // NEW FIELDS
+                'passport_number' => $this->employeeProfile->passport_number,
+                'passport_expiry_date' => $this->employeeProfile->passport_expiry_date,
+                'labor_card_number' => $this->employeeProfile->labor_card_number,
+                'labor_card_expiry_date' => $this->employeeProfile->labor_card_expiry_date,
+                'iloe_expiry_date' => $this->employeeProfile->iloe_expiry_date,
+                
+                // Branch (Company Branch)
+                'company_branch_id' => $this->employeeProfile->company_branch_id,
+                'branch_name' => $this->employeeProfile->companyBranch?->name,
+                'branch_code' => $this->employeeProfile->companyBranch?->code,
+                
                 'designation' => $this->employeeProfile->designation ? [
                     'id' => $this->employeeProfile->designation->id,
                     'name' => $this->employeeProfile->designation->name,
                     'description' => $this->employeeProfile->designation->description,
+                ] : null,
+                
+                'department' => $this->employeeProfile->department ? [
+                    'id' => $this->employeeProfile->department->id,
+                    'name' => $this->employeeProfile->department->name,
                 ] : null,
                 
                 'bank_details' => [

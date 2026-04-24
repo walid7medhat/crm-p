@@ -858,7 +858,7 @@ const sortOptions = [
     });
 
     const saleRentButtonLabel = computed(() => {
-      if (selectedSaleRent.value === "Sale") return "Buy";
+      if (selectedSaleRent.value === "Sale") return "Sale";
       if (selectedSaleRent.value === "Rent") return "Rent";
       return "Purpose";
     });

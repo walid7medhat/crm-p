@@ -26,9 +26,18 @@ class UpdateEmployeeRequest extends FormRequest
             'status' => 'sometimes|in:active,in_active,blocked',
             
             'designation_id' => 'nullable|exists:designations,id',
+            'department_id' => 'nullable|exists:departments,id',
+            'company_branch_id' => 'nullable|exists:company_branches,id', // NEW
             'joining_date' => 'nullable|date',
             'contract_end_date' => 'nullable|date|after:joining_date',
             'emirates_id_number' => ['nullable', 'string', Rule::unique('employee_profiles', 'emirates_id_number')->ignore($userId, 'user_id')],
+            
+            // NEW FIELDS
+            'passport_number' => 'nullable|string|max:255',
+            'passport_expiry_date' => 'nullable|date',
+            'labor_card_number' => 'nullable|string|max:255',
+            'labor_card_expiry_date' => 'nullable|date',
+            'iloe_expiry_date' => 'nullable|date',
             
             'bank_account_holder_name' => 'nullable|string|max:255',
             'bank_name' => 'nullable|string|max:255',
