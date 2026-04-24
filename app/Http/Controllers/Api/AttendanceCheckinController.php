@@ -136,7 +136,7 @@ class AttendanceCheckinController extends Controller
             return response()->json(['success' => false, 'message' => 'Invalid code'], 422);
         }
 
-        $timezone = config('app.timezone', 'UTC');
+        $timezone = config('app.timezone', 'Asia/Dubai');
         $now = Carbon::now($timezone);
         $todayDate = $now->toDateString();
 
@@ -168,21 +168,9 @@ class AttendanceCheckinController extends Controller
 
     private function isSuperAdmin($user): bool
     {
-        if (!$user) return false;
-        if (method_exists($user, 'hasRole') && $user->hasRole('super_admin')) return true;
+          if (!$user) return false;
 
-        $roleName = strtolower((string) data_get($user, 'role_name', ''));
-        if (in_array($roleName, ['super_admin', 'super admin'], true)) return true;
-
-        $roles = data_get($user, 'roles', []);
-        if (is_iterable($roles)) {
-            foreach ($roles as $role) {
-                $name = strtolower((string) data_get($role, 'name', (string) $role));
-                if (in_array($name, ['super_admin', 'super admin'], true)) return true;
-            }
-        }
-
-        return false;
+          return $user->hasRole(['super_admin', 'super admin', 'Super Admin']);
     }
 
     private function buildStatusPayload(int $userId): array
@@ -463,28 +451,13 @@ class AttendanceCheckinController extends Controller
 
     private function isSuperAdminByUserId(int $userId): bool
     {
-        if (!Schema::hasTable('users')) {
+        $user = \App\Models\User::find($userId);
+    
+        if (!$user) {
             return false;
         }
-
-        $roleName = strtolower((string) DB::table('users')->where('id', $userId)->value('role_name'));
-        if (in_array($roleName, ['super_admin', 'super admin'], true)) {
-            return true;
-        }
-
-        if (!Schema::hasTable('model_has_roles') || !Schema::hasTable('roles')) {
-            return false;
-        }
-
-        $roleNames = DB::table('model_has_roles')
-            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
-            ->where('model_has_roles.model_id', $userId)
-            ->where('model_has_roles.model_type', 'App\\Models\\User')
-            ->pluck('roles.name')
-            ->map(fn ($name) => strtolower((string) $name))
-            ->all();
-
-        return in_array('super_admin', $roleNames, true) || in_array('super admin', $roleNames, true);
+    
+        return $user->hasRole('super_admin');
     }
 }
 
