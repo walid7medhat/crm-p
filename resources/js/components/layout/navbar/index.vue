@@ -238,6 +238,7 @@ import NotificationBell from '@/components/NotificationBell.vue';
 const userPlaceholder = '/assets/images/user.png';
 const { isMobileOpen, openMobileSidebar } = useSidebar();
 import api from '@/plugins/axios';
+import Swal from 'sweetalert2';
 
 const { theme, toggleTheme } = useTheme();
 const router = useRouter();
@@ -366,24 +367,142 @@ function cancelPersonalInfoEdit() {
   isPersonalInfoEditing.value = false;
 }
 
-function savePersonalInfoEdit() {
+async function savePersonalInfoEdit() {
   const u = user.value;
-  if (!u) return;
-  const first = (personalInfoEdit.value.first_name || '').trim();
-  const last = (personalInfoEdit.value.last_name || '').trim();
-  const fullName = [first, last].filter(Boolean).join(' ') || u.name;
-  user.value = {
-    ...u,
-    name: fullName,
-    email: (personalInfoEdit.value.email || '').trim() || u.email,
-    phone: (personalInfoEdit.value.phone || '').trim() || u.phone,
-  };
-  try {
-    localStorage.setItem('user', JSON.stringify(user.value));
-  } catch (e) {
-    console.warn('Could not persist user to localStorage', e);
+  if (!u || !u.id) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'User data not found',
+      confirmButtonColor: '#3085d6'
+    });
+    return;
   }
-  isPersonalInfoEditing.value = false;
+
+  try {
+    // Get form values
+    const first = (personalInfoEdit.value.first_name || '').trim();
+    const last = (personalInfoEdit.value.last_name || '').trim();
+    const email = (personalInfoEdit.value.email || '').trim();
+    const phone = (personalInfoEdit.value.phone || '').trim();
+
+    // Basic validation
+    if (!first || !email) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'Please fill in all required fields (First Name and Email)',
+        confirmButtonColor: '#3085d6'
+      });
+      return;
+    }
+
+    // Email domain validation - must be @oiaproperties.com
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@oiaproperties\.com$/;
+    if (!emailPattern.test(email)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid Email',
+        text: 'Email must be from @oiaproperties.com domain',
+        confirmButtonColor: '#3085d6'
+      });
+      return;
+    }
+
+    // Create FormData
+    const formData = new FormData();
+    const fullName = [first, last].filter(Boolean).join(' ');
+    
+    formData.append('name', fullName);
+    formData.append('email', email);
+    if (phone) {
+      formData.append('phone', phone);
+    }
+    formData.append('_method', 'PUT'); // For Laravel/PHP backend
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Authentication Error',
+        text: 'Authentication token not found',
+        confirmButtonColor: '#3085d6'
+      });
+      return;
+    }
+
+    const url = `${import.meta.env.VITE_API_URL || '/api'}/users/${u.id}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      },
+      body: formData
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      const updatedUser = result.data || result.user || result;
+      
+      // Update local user data
+      user.value = {
+        ...u,
+        name: fullName,
+        email: email,
+        phone: phone,
+        ...updatedUser
+      };
+      
+      // Persist to localStorage
+      try {
+        localStorage.setItem('user', JSON.stringify(user.value));
+      } catch (e) {
+        console.warn('Could not persist user to localStorage', e);
+      }
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: 'Profile information updated successfully!',
+        confirmButtonColor: '#3085d6',
+        timer: 2000,
+        showConfirmButton: true
+      });
+      
+      isPersonalInfoEditing.value = false;
+    } else {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { message: errorText };
+      }
+
+      if (errorData.errors) {
+        const errorMessages = Object.values(errorData.errors).flat().join(', ');
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: errorMessages,
+          confirmButtonColor: '#3085d6'
+        });
+      } else {
+        throw new Error(errorData.message || `Failed to update profile: ${response.status}`);
+      }
+    }
+
+  } catch (error) {
+    console.error("Error saving user profile:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: `Failed to update profile: ${error.message}`,
+      confirmButtonColor: '#3085d6'
+    });
+  }
 }
 
 function teamMemberDisplayName(member) {
