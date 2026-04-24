@@ -490,13 +490,16 @@ public function respond(Request $request, ListingAccessRequest $accessRequest): 
         if (!$request) {
             return true;
         }
-
-        if ($request->status === 'pending' || $request->status === 'approved') {
-            if($request->status === 'approved' && $request->request_type=='viewing' && $request->review != null){
+            if($request->request_type=='viewing' ){
                 return true;
             }
-            return false;
-        }
+
+        // if ($request->status === 'pending' || $request->status === 'approved') {
+            // if($request->status === 'approved' && $request->request_type=='viewing' && $request->review != null){
+            //     return true;
+            // }
+        //     return false;
+        // }
 
         if ($request->status === 'cancelled') {
             // if ($request->cancelled_at) {
