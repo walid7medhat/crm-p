@@ -866,136 +866,133 @@ const fetchProperties = async (filters = {}, page = 1) => {
     };
 
     const toCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-// Add this inside setup() function, after your refs
-const canSeeSensitiveData = computed(() => {
-  try {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) return false;
-    const user = JSON.parse(userStr);
-    
-    // Check if user is Team Lead (admin_parent_name exists OR role_name is team_lead)
-    return  user.role_name != 'Team Lead' && user.role_name != 'Manager' && user.role_name != 'Admin';
-  } catch (error) {
-    console.error('Error checking user permissions:', error);
-    return false;
-  }
-});
-const exportActiveListingsToExcel = async () => {
-  try {
-    isExporting.value = true;
 
-    const baseFilters = convertFiltersToAPI(currentFilters.value || {});
-    const rows = [];
-    let page = 1;
-    let lastPage = 1;
-
-    do {
-      const params = {
-        ...baseFilters,
-        page,
-        per_page: 200,
-        my_listings: true,
-        is_active: true,
-      };
-
-      delete params.is_archived;
-      delete params.converted;
-
-      const response = await api.get('/listings/properties', { params });
-      const data = Array.isArray(response?.data?.data) ? response.data.data : [];
-      const meta = response?.data?.meta || {};
-      lastPage = Number(meta.last_page || 1);
-
-      const onlyActiveRows = data.filter((property) =>
-        property?.is_active &&
-        !property?.is_archived &&
-        property?.status !== 'converted' &&
-        property?.status !== 'rented' &&
-        property?.status !== 'draft'
-      );
-
-      rows.push(...onlyActiveRows);
-      page += 1;
-    } while (page <= lastPage);
-
-    // Define headers based on user permission
-    const headers = canSeeSensitiveData.value
-      ? [
-          'Project name',
-          'Unit number',
-          'Size per sqft',
-          'Selling price',
-          'Status',
-          'Owner name',
-          'Owner mobile number',
-          'Bedroom',
-          'Type',
-          'Created at',
-        ]
-      : [
-          'Project name',
-          'Size per sqft',
-          'Selling price',
-          'Status',
-          'Bedroom',
-          'Type',
-          'Created at',
-        ];
-
-    const lines = await Promise.all(rows.map(async (property) => {
-      const projectName = property?.project?.name || property?.project_name || property?.title || '-';
-      const unitNumber = property?.unit_number || property?.reference_number || '-';
-      const sizePerSqft = property?.size_sqft || '-';
-      const sellingPrice = property?.price || 0;
-      const status = property?.is_active ? 'Active' : 'Inactive';
-      const { ownerName, ownerMobileNumber } = await resolveOwnerFieldsForExport(property);
-      const createdAt = property?.created_at ? formatDate(property.created_at) : '-';
-      const bedroom = getBedroomLabel(property);
-      const type = getPropertyType(property);
-
-      if (canSeeSensitiveData.value) {
-        //  - sees all data including sensitive
-        return [
-          toCell(projectName),
-          toCell(unitNumber),
-          toCell(sizePerSqft),
-          toCell(sellingPrice),
-          toCell(status),
-          toCell(ownerName),
-          toCell(ownerMobileNumber),
-          toCell(bedroom),
-          toCell(type),
-          toCell(createdAt),
-        ].join(',');
-      } else {
-        // Regular user - NO unit number, NO owner details
-        return [
-          toCell(projectName),
-          toCell(sizePerSqft),
-          toCell(sellingPrice),
-          toCell(status),
-          toCell(bedroom),
-          toCell(type),
-          toCell(createdAt),
-        ].join(',');
+    const canSeeSensitiveData = computed(() => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (!userStr) return false;
+        const user = JSON.parse(userStr);
+        const privilegedRoles = ['Team Lead', 'Manager', 'Admin'];
+        return privilegedRoles.includes(user.role_name);
+      } catch (error) {
+        console.error('Error checking user permissions:', error);
+        return false;
       }
-    }));
+    });
 
-    const csv = [headers.map(toCell).join(','), ...lines].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `my-listings-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('Error exporting listings:', error?.response || error);
-    alert('Failed to export listings. Please try again.');
-  } finally {
-    isExporting.value = false;
-  }
-};
+    const exportActiveListingsToExcel = async () => {
+      try {
+        isExporting.value = true;
+
+        const baseFilters = convertFiltersToAPI(currentFilters.value || {});
+        const rows = [];
+        let page = 1;
+        let lastPage = 1;
+
+        do {
+          const params = {
+            ...baseFilters,
+            page,
+            per_page: 200,
+            my_listings: true,
+            is_active: true,
+          };
+
+          delete params.is_archived;
+          delete params.converted;
+
+          const response = await api.get('/listings/properties', { params });
+          const data = Array.isArray(response?.data?.data) ? response.data.data : [];
+          const meta = response?.data?.meta || {};
+          lastPage = Number(meta.last_page || 1);
+
+          const onlyActiveRows = data.filter((property) =>
+            property?.is_active &&
+            !property?.is_archived &&
+            property?.status !== 'converted' &&
+            property?.status !== 'rented' &&
+            property?.status !== 'draft'
+          );
+
+          rows.push(...onlyActiveRows);
+          page += 1;
+        } while (page <= lastPage);
+
+        const headers = canSeeSensitiveData.value
+          ? [
+              'Project name',
+              'Unit number',
+              'Size per sqft',
+              'Selling price',
+              'Status',
+              'Owner name',
+              'Owner mobile number',
+              'Bedroom',
+              'Type',
+              'Created at',
+            ]
+          : [
+              'Project name',
+              'Size per sqft',
+              'Selling price',
+              'Status',
+              'Bedroom',
+              'Type',
+              'Created at',
+            ];
+
+        const lines = await Promise.all(rows.map(async (property) => {
+          const projectName = property?.project?.name || property?.project_name || property?.title || '-';
+          const unitNumber = property?.unit_number || property?.reference_number || '-';
+          const sizePerSqft = property?.size_sqft || '-';
+          const sellingPrice = property?.price || 0;
+          const status = property?.is_active ? 'Active' : 'Inactive';
+          const { ownerName, ownerMobileNumber } = await resolveOwnerFieldsForExport(property);
+          const createdAt = property?.created_at ? formatDate(property.created_at) : '-';
+          const bedroom = getBedroomLabel(property);
+          const type = getPropertyType(property);
+
+          if (canSeeSensitiveData.value) {
+            return [
+              toCell(projectName),
+              toCell(unitNumber),
+              toCell(sizePerSqft),
+              toCell(sellingPrice),
+              toCell(status),
+              toCell(ownerName),
+              toCell(ownerMobileNumber),
+              toCell(bedroom),
+              toCell(type),
+              toCell(createdAt),
+            ].join(',');
+          }
+
+          return [
+            toCell(projectName),
+            toCell(sizePerSqft),
+            toCell(sellingPrice),
+            toCell(status),
+            toCell(bedroom),
+            toCell(type),
+            toCell(createdAt),
+          ].join(',');
+        }));
+
+        const csv = [headers.map(toCell).join(','), ...lines].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `my-listings-${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Error exporting listings:', error?.response || error);
+        alert('Failed to export listings. Please try again.');
+      } finally {
+        isExporting.value = false;
+      }
+    };
 
     // Fetch initial properties on component mount
     onMounted(() => {

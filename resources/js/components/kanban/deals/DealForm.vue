@@ -140,10 +140,11 @@
             <label class="form-label-custom">Buyer Residency Status <span class="text-danger">*</span></label>
             <v-select 
               v-model="form.buyer_residency_status" 
-              :options="residencyOptions" 
+              :options="buyerResidencyOptions" 
               :reduce="item => item.value" 
               label="text" 
-              placeholder="Select Status" 
+              placeholder="Resident or Non Resident" 
+              :clearable="false"
               class="custom-v-select"
               :class="{ 'is-invalid': showErrors && !form.buyer_residency_status }"
             >
@@ -257,6 +258,7 @@
             v-model="form.buyer_documents"
             category="buyer"
             :document-types="primaryBuyerDocTypes"
+            :compact="inlineMode"
             :show-errors="showErrors"
             ref="buyerDocUploadRef"
           />
@@ -265,6 +267,7 @@
             v-model="form.buyer_documents"
             category="buyer"
             :document-types="secondaryBuyerDocTypes"
+            :compact="inlineMode"
             :show-errors="showErrors"
             ref="buyerDocUploadRef"
           />
@@ -453,6 +456,7 @@
             v-model="form.seller_documents"
             category="seller"
             :document-types="sellerDocTypes"
+            :compact="inlineMode"
             :show-errors="showErrors"
             ref="sellerDocUploadRef"
           />
@@ -637,6 +641,7 @@
             v-model="form.tenant_documents"
             category="tenant"
             :document-types="tenantDocTypes"
+            :compact="inlineMode"
             :show-errors="showErrors"
             ref="tenantDocUploadRef"
           />
@@ -828,6 +833,7 @@
             v-model="form.landlord_documents"
             category="landlord"
             :document-types="landlordDocTypes"
+            :compact="inlineMode"
             :show-errors="showErrors"
             ref="landlordDocUploadRef"
           />
@@ -1149,6 +1155,7 @@ const props = defineProps({
   showErrors: { type: Boolean, default: false },
     fieldErrors: { type: Object, default: () => ({}) },
       selectedStageId: { type: [Number, String], default: null },
+  selectedStageName: { type: String, default: '' },
   missingFields: { type: Array, default: () => [] }
   ,
   activeEditSection: { type: String, default: null },
@@ -1202,70 +1209,94 @@ function isDocumentEditMode(documentSectionKey) {
   return props.activeEditSection === documentSectionKey
 }
 
-// Document type options based on requirements
-// دالة لتحديد المستندات المطلوبة حسب حالة الإقامة فقط
+// Normalize historical values to the two supported states.
+function normalizeResidencyStatus(status) {
+  if (!status) return 'non_resident'
+  const value = String(status).toLowerCase()
+  if (value === 'resident') return 'resident'
+  if (value === 'non_resident' || value === 'non-resident') return 'non_resident'
+  if (value === 'citizen' || value === 'investor' || value === 'student') return 'resident'
+  return 'non_resident'
+}
+
 function getRequiredDocumentsByResidency(residencyStatus) {
-  // Citizen - يطلب Passport + National ID
-  if (residencyStatus === 'citizen') {
-    return ['passport', 'national_id']
-  }
-  
-  // مقيم (Resident) - يطلب Passport + Visa + National ID
-  if (residencyStatus === 'resident') {
-    return ['passport', 'visa', 'national_id']
-  }
-  
-  // غير مقيم / سائح (Non-resident / Tourist) - يطلب Passport فقط
-  if (residencyStatus === 'non_resident' || residencyStatus === 'tourist') {
-    return ['passport']
-  }
-  
-  // Investor - يطلب Passport + Investor Visa + National ID
-  if (residencyStatus === 'investor') {
-    return ['passport', 'visa', 'national_id']
-  }
-  
-  // Student - يطلب Passport + Student Visa + National ID
-  if (residencyStatus === 'student') {
-    return ['passport', 'visa', 'national_id']
-  }
-  
-  // الحالة الافتراضية - يطلب Passport فقط
-  return ['passport']
+  return normalizeResidencyStatus(residencyStatus) === 'resident'
+    ? ['passport', 'visa', 'national_id']
+    : ['passport']
+}
+
+const isSpaStageOrLater = computed(() => {
+  const stageName = String(props.selectedStageName || '').toLowerCase()
+  return (
+    stageName.includes('spa signed') ||
+    stageName.includes('deal done') ||
+    stageName.includes('deal won') ||
+    stageName.includes('transfer') ||
+    stageName.includes('handover') ||
+    stageName.includes('closed')
+  )
+})
+
+const isEoiStageOrLater = computed(() => {
+  const stageName = String(props.selectedStageName || '').toLowerCase()
+  return stageName.includes('eoi') || isSpaStageOrLater.value
+})
+
+function hasDocumentFile(docs, type) {
+  return Array.isArray(docs) && docs.some(
+    (doc) => doc?.document_type === type && (doc?.file || doc?.url || doc?.file_url),
+  )
 }
 
 // قوائم المستندات الديناميكية حسب حالة الإقامة
 const primaryBuyerDocTypes = computed(() => {
   const residencyStatus = form.value?.buyer_residency_status
-  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
-  
-  const allDocs = {
-    passport: { id: 'passport', name: 'Passport', required: true },
-    national_id: { id: 'national_id', name: 'National ID', required: false },
-    kyc: { id: 'kyc', name: 'KYC', required: false },
-    visa: { id: 'visa', name: 'Visa', required: false },
-    spa: { id: 'spa', name: 'Buyer SPA', required: false },
-    payment_proof: { id: 'payment_proof', name: 'Buyer Payment Proof', required: false }
+  const requiredResidencyDocs = getRequiredDocumentsByResidency(residencyStatus)
+  const docs = []
+
+  if (requiredResidencyDocs.includes('passport')) {
+    docs.push({ id: 'passport', name: 'Passport', required: true })
   }
-  
-  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
+  if (requiredResidencyDocs.includes('visa')) {
+    docs.push({ id: 'visa', name: 'Visa', required: true })
+  }
+  if (requiredResidencyDocs.includes('national_id')) {
+    docs.push({ id: 'national_id', name: 'National ID', required: true })
+  }
+
+  docs.push(
+    { id: 'kyc', name: 'KYC', required: isSpaStageOrLater.value },
+    { id: 'spa', name: 'Buyer SPA', required: isSpaStageOrLater.value },
+    { id: 'payment_proof', name: 'Buyer Payment Proof', required: isEoiStageOrLater.value },
+  )
+
+  return docs
 })
 
 const secondaryBuyerDocTypes = computed(() => {
   const residencyStatus = form.value?.buyer_residency_status
-  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
-  
-  const allDocs = {
-    passport: { id: 'passport', name: 'Buyer Passport', required: true },
-    national_id: { id: 'national_id', name: 'Buyer National ID', required: true },
-    kyc: { id: 'kyc', name: 'Buyer KYC', required: false },
-    visa: { id: 'visa', name: 'Buyer Visa', required: false },
-    noc: { id: 'noc', name: 'NOC Letter', required: false },
-    payment_proof: { id: 'payment_proof', name: 'Buyer Payment Proof', required: false },
-    title_deed: { id: 'title_deed', name: 'New Title Deed / New SPA', required: false }
+  const requiredResidencyDocs = getRequiredDocumentsByResidency(residencyStatus)
+  const docs = []
+
+  if (requiredResidencyDocs.includes('passport')) {
+    docs.push({ id: 'passport', name: 'Buyer Passport', required: true })
   }
-  
-  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
+  if (requiredResidencyDocs.includes('visa')) {
+    docs.push({ id: 'visa', name: 'Buyer Visa', required: true })
+  }
+  if (requiredResidencyDocs.includes('national_id')) {
+    docs.push({ id: 'national_id', name: 'Buyer National ID', required: true })
+  }
+
+  docs.push(
+    { id: 'kyc', name: 'Buyer KYC', required: isSpaStageOrLater.value },
+    { id: 'spa', name: 'Buyer SPA', required: isSpaStageOrLater.value },
+    { id: 'payment_proof', name: 'Buyer Payment Proof', required: isEoiStageOrLater.value },
+    { id: 'noc', name: 'NOC Letter', required: false },
+    { id: 'title_deed', name: 'New Title Deed / New SPA', required: false },
+  )
+
+  return docs
 })
 
 const sellerDocTypes = computed(() => {
@@ -1440,6 +1471,16 @@ function validateForm() {
       errors.push('Buyer language is required')
       fieldErrorsObj.buyer_language = 'Language is required'
     }
+
+    const buyerDocs = form.value.buyer_documents || []
+    const requiredBuyerDocs = (props.dealType === 'primary' ? primaryBuyerDocTypes.value : secondaryBuyerDocTypes.value)
+      .filter((doc) => doc.required)
+      .map((doc) => doc.id)
+    requiredBuyerDocs.forEach((docType) => {
+      if (!hasDocumentFile(buyerDocs, docType)) {
+        errors.push(`Buyer ${docType.replaceAll('_', ' ')} document is required`)
+      }
+    })
   }
   
   if (props.dealType === 'secondary') {
@@ -1800,6 +1841,10 @@ const residencyOptions = [
   { value: 'tourist', text: 'Tourist' },
   { value: 'student', text: 'Student' },
   { value: 'other', text: 'Other' }
+]
+const buyerResidencyOptions = [
+  { value: 'resident', text: 'Resident' },
+  { value: 'non_resident', text: 'Non Resident' },
 ]
 
 // قائمة كاملة بكل دول العالم (مثل صفحة Owner)
@@ -2304,7 +2349,7 @@ watch(() => form.value?.landlord_country, (newCountry, oldCountry) => {
 .radius-12 { border-radius: 8px; }
 .form-label-custom { font-size: 12px !important; font-weight: 500; color: var(--deal-text-muted, #64748b); margin-bottom: 4px; display: block; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .custom-input { height: 42px !important; min-height: 42px; border-radius: 8px !important; border: 1px solid #e5e7eb !important; font-size: 13px !important; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
-.custom-input::placeholder { font-size: 11px !important; color: #9ca3af; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.custom-input::placeholder { font-size: 10px !important; color: #9ca3af; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .custom-input.is-invalid { border-color: #dc3545 !important; }
 .input-group-custom { display: flex; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
 .input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 8px 0 0 8px !important; }
@@ -2312,13 +2357,13 @@ watch(() => form.value?.landlord_country, (newCountry, oldCountry) => {
 :deep(.custom-v-select .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 13px; padding: 2px 8px;overflow: hidden; }
 :deep(.custom-v-select.is-invalid .vs__dropdown-toggle) { border-color: #dc3545 !important; }
 :deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 13px; }
-:deep(.custom-v-select .vs__search::placeholder) { font-size: 11px !important; color: #9ca3af; }
-:deep(.custom-v-select .vs__placeholder) { font-size: 11px !important; color: #9ca3af; }
+:deep(.custom-v-select .vs__search::placeholder) { font-size: 10px !important; color: #9ca3af; }
+:deep(.custom-v-select .vs__placeholder) { font-size: 10px !important; color: #9ca3af; }
 :deep(.custom-v-select-inline) { min-width: 120px; }
 :deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border: none; border-left: 1px solid #e5e7eb; border-radius: 0 8px 8px 0; font-size: 11px; }
 :deep(.custom-v-select-inline .vs__selected) { font-size: 11px; font-weight: 500; color: #64748b; }
-:deep(.custom-v-select-inline .vs__search::placeholder) { font-size: 10px !important; color: #9ca3af; }
-:deep(.custom-v-select-inline .vs__placeholder) { font-size: 10px !important; color: #9ca3af; }
+:deep(.custom-v-select-inline .vs__search::placeholder) { font-size: 9px !important; color: #9ca3af; }
+:deep(.custom-v-select-inline .vs__placeholder) { font-size: 9px !important; color: #9ca3af; }
 .doc-tabs { gap: 8px; }
 .doc-tab { height: 32px; min-height: 32px; padding: 0 14px; border-radius: 100px; border: 1px solid #E2E8F0; background: #fff; font-size: 12px; font-weight: 500; color: #64748B; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .doc-tab.active { background: #0F172A; color: #fff; border-color: #0F172A; }

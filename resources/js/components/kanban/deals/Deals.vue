@@ -321,7 +321,7 @@
     <CompleteStageFieldsModal
       :show="showCompleteFieldsModal"
       :deal-id="pendingCompleteFields?.dealId"
-      :deal-type="activeTypeTab"
+      :deal-type="pendingCompleteFields?.dealData?.deal_type || activeTypeTab"
       :target-stage-id="pendingCompleteFields?.targetStageId"
       :target-stage-name="pendingCompleteFields?.targetStageName"
       :missing-fields="pendingCompleteFields?.missingFields || []"

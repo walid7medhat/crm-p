@@ -972,23 +972,83 @@
           <section class="add-employee-section">
             <h6>User Details</h6>
             <div class="add-grid-two">
-              <div class="add-field"><label>Asset User</label><SearchableSelect v-model="assetCreateForm.assetUser" :options="assetUserOptions" placeholder="Not Selected" /></div>
-              <div class="add-field"><label>Date Of Handover</label><input :value="formatDateDisplay(assetCreateForm.handoverDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('assetCreateForm.handoverDate')" /></div>
+              <div ref="assetUserPickerRef" class="add-field asset-user-picker-field">
+                <label>Asset User</label>
+                <button type="button" class="asset-user-trigger" @click.stop="toggleAssetUserPicker">
+                  <span>{{ selectedAssetResponsiblePerson?.name || 'Not Selected' }}</span>
+                  <iconify-icon icon="lucide:chevron-down" />
+                </button>
+                <div v-if="showAssetUserPicker" class="asset-user-dropdown" @click.stop>
+                  <div class="asset-user-dropdown-head">
+                    <span>Person</span>
+                    <button type="button" class="asset-user-close-btn" @click="closeAssetUserPicker">
+                      <iconify-icon icon="lucide:x" />
+                    </button>
+                  </div>
+                  <div class="search-input-wrapper mb-2">
+                    <input v-model="assetUserSearchQuery" type="text" class="asset-user-search-input" placeholder="Search Responsible Person" />
+                    <iconify-icon icon="lucide:search" class="search-icon" />
+                  </div>
+                  <div class="asset-user-list-scroll">
+                    <button
+                      v-for="person in filteredAssetResponsiblePersons"
+                      :key="person.id"
+                      type="button"
+                      class="asset-user-item"
+                      :class="{ selected: Number(assetCreateForm.assetUser) === Number(person.id) }"
+                      @click="selectAssetResponsiblePerson(person)"
+                    >
+                      <img :src="person.avatar || defaultPersonAvatar" class="asset-user-avatar" alt="user avatar" />
+                      <div class="asset-user-info">
+                        <div class="asset-user-head">
+                          <span class="asset-user-name">{{ person.name }}</span>
+                          <span v-if="person.role_name" class="user-position-badge">{{ person.role_name }}</span>
+                        </div>
+                        <div class="user-item-meta-line">
+                          <span class="meta-value">{{ person.parent_name || person.team_lead_name || '—' }}</span>
+                          <span class="meta-divider">|</span>
+                          <span class="meta-value">{{ person.branch_name || person.office_name || '—' }}</span>
+                        </div>
+                      </div>
+                    </button>
+                    <div v-if="!filteredAssetResponsiblePersons.length" class="text-center text-muted py-2">No persons found</div>
+                  </div>
+                </div>
+              </div>
+              <div class="add-field"><label>Date Of Handover</label><input :value="formatDateDisplay(assetCreateForm.handoverDate)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('assetCreateForm.handoverDate')" /></div>
               <div class="add-field"><label>Branch Location</label><SearchableSelect v-model="assetCreateForm.branchLocation" :options="branchOptions" placeholder="Not Selected" /></div>
               <div class="add-field"><label>Department</label><SearchableSelect v-model="assetCreateForm.department" :options="departmentOptions" placeholder="Not Selected" /></div>
               <div class="add-field"><label>Status *</label><SearchableSelect v-model="assetCreateForm.status" :options="assetStatusOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Date Of Return</label><input :value="formatDateDisplay(assetCreateForm.returnDate)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('assetCreateForm.returnDate')" /></div>
             </div>
           </section>
 
           <section class="add-employee-section">
             <h6>Purchase Details</h6>
             <div class="add-grid-two">
-              <div class="add-field"><label>Purchase Date *</label><input :value="formatDateDisplay(assetCreateForm.purchaseDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('assetCreateForm.purchaseDate')" /></div>
+              <div class="add-field"><label>Purchase Date *</label><input :value="formatDateDisplay(assetCreateForm.purchaseDate)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('assetCreateForm.purchaseDate')" /></div>
               <div class="add-field"><label>Supplier Name</label><input v-model="assetCreateForm.supplierName" type="text" placeholder="Enter Supplier Name" /></div>
-              <div class="add-field"><label>Warranty Date</label><input :value="formatDateDisplay(assetCreateForm.warrantyDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('assetCreateForm.warrantyDate')" /></div>
+              <div class="add-field"><label>Warranty Date</label><input :value="formatDateDisplay(assetCreateForm.warrantyDate)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('assetCreateForm.warrantyDate')" /></div>
               <div class="add-field"><label>Condition *</label><SearchableSelect v-model="assetCreateForm.condition" :options="assetConditionOptions" placeholder="Not Selected" /></div>
-              <div class="add-field"><label>Unit Price</label><input v-model="assetCreateForm.unitPrice" type="text" placeholder="Enter Amount" /></div>
-              <div class="add-field"><label>QTY *</label><input v-model="assetCreateForm.qty" type="number" min="1" placeholder="Enter item quantity" /></div>
+              <div class="add-field">
+                <label>Unit Price</label>
+                <div class="asset-price-group">
+                  <input v-model="assetCreateForm.unitPrice" type="text" placeholder="Enter Amount" />
+                  <select v-model="assetCreateForm.currency">
+                    <option value="UAE Dirham">UAE Dirham</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                  </select>
+                </div>
+              </div>
+              <div class="add-field">
+                <label>QTY *</label>
+                <div class="asset-qty-group">
+                  <input v-model.number="assetCreateForm.qty" type="number" min="1" placeholder="Enter item quantity" />
+                  <button type="button" class="asset-qty-btn" @click="decrementAssetQty">-</button>
+                  <button type="button" class="asset-qty-btn" @click="incrementAssetQty">+</button>
+                </div>
+              </div>
             </div>
           </section>
         </div>
@@ -1545,6 +1605,11 @@ const assetTypeOptions = ['Laptop', 'Phone', 'Printer', 'SIM', 'Charger', 'DeskT
 const assetStatusOptions = ['Assigned', 'Not Assigned', 'Working', 'In Repair', 'Used', 'New']
 const assetConditionOptions = ['New', 'Used', 'Working']
 const assetUserOptions = computed(() => Array.from(new Set(assetsRows.value.map((row) => row.userName))).filter(Boolean))
+const assetResponsiblePersons = ref([])
+const showAssetUserPicker = ref(false)
+const assetUserSearchQuery = ref('')
+const assetUserPickerRef = ref(null)
+const defaultPersonAvatar = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
 const defaultAssetCreateForm = () => ({
   assetType: '',
   assetName: '',
@@ -1553,8 +1618,9 @@ const defaultAssetCreateForm = () => ({
   rdpNumber: '',
   remarks: '',
   description: '',
-  assetUser: '',
+  assetUser: null,
   handoverDate: '',
+  returnDate: '',
   branchLocation: '',
   department: '',
   status: '',
@@ -1563,9 +1629,21 @@ const defaultAssetCreateForm = () => ({
   warrantyDate: '',
   condition: '',
   unitPrice: '',
-  qty: '',
+  currency: 'UAE Dirham',
+  qty: 1,
 })
 const assetCreateForm = ref(defaultAssetCreateForm())
+const selectedAssetResponsiblePerson = computed(() =>
+  assetResponsiblePersons.value.find((person) => Number(person.id) === Number(assetCreateForm.value.assetUser)) || null,
+)
+const filteredAssetResponsiblePersons = computed(() => {
+  const query = assetUserSearchQuery.value.trim().toLowerCase()
+  if (!query) return assetResponsiblePersons.value
+  return assetResponsiblePersons.value.filter((person) =>
+    String(person.name || '').toLowerCase().includes(query) ||
+    String(person.email || '').toLowerCase().includes(query),
+  )
+})
 const assetEditForm = ref({
   assetId: '',
   type: '',
@@ -1850,6 +1928,7 @@ function getFieldValueByPath(path) {
   if (path === 'assetSearchFilters.createdOn') return assetSearchFilters.value.createdOn
   if (path === 'assetSearchFilters.purchaseDate') return assetSearchFilters.value.purchaseDate
   if (path === 'assetCreateForm.handoverDate') return assetCreateForm.value.handoverDate
+  if (path === 'assetCreateForm.returnDate') return assetCreateForm.value.returnDate
   if (path === 'assetCreateForm.purchaseDate') return assetCreateForm.value.purchaseDate
   if (path === 'assetCreateForm.warrantyDate') return assetCreateForm.value.warrantyDate
   if (path === 'applyLeaveForm.startDate') return applyLeaveForm.value.startDate
@@ -1873,6 +1952,7 @@ function setFieldValueByPath(path, value) {
   else if (path === 'assetSearchFilters.createdOn') assetSearchFilters.value.createdOn = value
   else if (path === 'assetSearchFilters.purchaseDate') assetSearchFilters.value.purchaseDate = value
   else if (path === 'assetCreateForm.handoverDate') assetCreateForm.value.handoverDate = value
+  else if (path === 'assetCreateForm.returnDate') assetCreateForm.value.returnDate = value
   else if (path === 'assetCreateForm.purchaseDate') assetCreateForm.value.purchaseDate = value
   else if (path === 'assetCreateForm.warrantyDate') assetCreateForm.value.warrantyDate = value
   else if (path === 'applyLeaveForm.startDate') applyLeaveForm.value.startDate = value
@@ -2076,6 +2156,10 @@ watch(assetsSearch, () => {
 
 watch(assetsTotalPages, (tp) => {
   if (assetsPage.value > tp) assetsPage.value = tp
+})
+
+watch(showAssetCreateModal, (visible) => {
+  if (visible) fetchAssetResponsiblePersons()
 })
 
 watch([selectedLeaveSearchChip, () => leaveSearchFilters.value.employee, () => leaveSearchFilters.value.leaveType, () => leaveSearchFilters.value.appliedDate, () => leaveSearchFilters.value.status], () => {
@@ -2294,6 +2378,9 @@ function onDocumentClick(event) {
   if (!topbarTabsRef.value) return
   if (!topbarTabsRef.value.contains(event.target)) {
     openHeaderMenu.value = null
+  }
+  if (assetUserPickerRef.value && !assetUserPickerRef.value.contains(event.target)) {
+    closeAssetUserPicker()
   }
   openEmployeeRowMenuId.value = null
   openAssetRowMenuId.value = null
@@ -2529,22 +2616,83 @@ function closeAssetCreateModal() {
 
 function resetAssetCreateForm() {
   assetCreateForm.value = defaultAssetCreateForm()
+  closeAssetUserPicker()
+}
+
+function decrementAssetQty() {
+  const current = Number(assetCreateForm.value.qty) || 1
+  assetCreateForm.value.qty = Math.max(1, current - 1)
+}
+
+function incrementAssetQty() {
+  const current = Number(assetCreateForm.value.qty) || 1
+  assetCreateForm.value.qty = current + 1
+}
+
+function closeAssetUserPicker() {
+  showAssetUserPicker.value = false
+  assetUserSearchQuery.value = ''
+}
+
+async function toggleAssetUserPicker() {
+  if (!showAssetUserPicker.value) {
+    await fetchAssetResponsiblePersons()
+  }
+  showAssetUserPicker.value = !showAssetUserPicker.value
+}
+
+function selectAssetResponsiblePerson(person) {
+  assetCreateForm.value.assetUser = Number(person.id)
+  handleAssetResponsiblePersonSelected(person)
+  closeAssetUserPicker()
+}
+
+function handleAssetResponsiblePersonSelected(person) {
+  if (!person) return
+  if (!assetCreateForm.value.department && person.department_name) {
+    assetCreateForm.value.department = person.department_name
+  }
+  if (!assetCreateForm.value.branchLocation) {
+    assetCreateForm.value.branchLocation =
+      person.branch_name || person.branch?.name || person.office_name || person.office?.name || ''
+  }
+}
+
+async function fetchAssetResponsiblePersons() {
+  if (assetResponsiblePersons.value.length) return
+  try {
+    const response = await api.get('/available-responsible-persons')
+    const rawPersons = response?.data?.data || response?.data || []
+    assetResponsiblePersons.value = Array.isArray(rawPersons)
+      ? rawPersons.map((person) => ({
+          ...person,
+          id: Number(person.id),
+          name: person.name || person.full_name || '-',
+          email: person.email || '',
+        }))
+      : []
+  } catch (error) {
+    console.error('Failed to load responsible persons for asset picker', error)
+  }
 }
 
 function saveAssetCreate() {
+  const selectedUser = selectedAssetResponsiblePerson.value
+  const selectedUserName = selectedUser?.name || selectedUser?.full_name || '-'
   const nextId = assetsRows.value.length ? Math.max(...assetsRows.value.map((row) => Number(row.id) || 0)) + 1 : 1
   assetsRows.value.unshift({
     id: nextId,
     assetId: `#AST-${String(nextId).padStart(3, '0')}`,
     type: assetCreateForm.value.assetType || '-',
     assetName: assetCreateForm.value.assetName || '-',
-    userName: assetCreateForm.value.assetUser || '-',
+    userName: selectedUserName,
     userRef: String(nextId).padStart(6, '0'),
     userAvatar: 'https://i.pravatar.cc/80?img=68',
     handoverDate: assetCreateForm.value.handoverDate || '-',
+    returnDate: assetCreateForm.value.returnDate || '-',
     brand: assetCreateForm.value.modelNumber || '-',
     category: assetCreateForm.value.condition || '-',
-    handoverTo: assetCreateForm.value.assetUser || '-',
+    handoverTo: selectedUserName,
     serial: assetCreateForm.value.serialNumber || '-',
     status: assetCreateForm.value.status || 'Not Assigned',
     branchLocation: assetCreateForm.value.branchLocation || '',
@@ -2553,6 +2701,9 @@ function saveAssetCreate() {
     purchaseDate: assetCreateForm.value.purchaseDate || '',
     supplierName: assetCreateForm.value.supplierName || '',
     condition: assetCreateForm.value.condition || '',
+    unitPrice: assetCreateForm.value.unitPrice || '',
+    currency: assetCreateForm.value.currency || 'UAE Dirham',
+    qty: Number(assetCreateForm.value.qty) || 1,
   })
   assetsPage.value = 1
   closeAssetCreateModal()
@@ -3532,6 +3683,132 @@ onBeforeUnmount(() => {
   height: 12px;
   line-height: 1;
   color: #9ca3af;
+}
+.asset-create-modal .asset-user-picker-field {
+  position: relative;
+}
+.asset-create-modal .asset-user-trigger {
+  width: 100%;
+  height: 38px;
+  border: 1px solid #d9dee7;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 10px 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #4b5563;
+}
+.asset-create-modal .asset-user-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  padding: 10px;
+}
+.asset-create-modal .asset-user-dropdown-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+.asset-create-modal .asset-user-close-btn {
+  background: transparent;
+  border: none;
+  color: #0f172a;
+  font-size: 18px;
+}
+.asset-create-modal .asset-user-search-input {
+  width: 100%;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  padding: 0 38px 0 14px;
+  font-size: 12px;
+}
+.asset-create-modal .asset-user-list-scroll {
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.asset-create-modal .asset-user-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  border-radius: 8px;
+  padding: 8px;
+}
+.asset-create-modal .asset-user-item:hover {
+  background: #f8fafc;
+}
+.asset-create-modal .asset-user-item.selected {
+  background: #fff7e6;
+}
+.asset-create-modal .asset-user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+.asset-create-modal .asset-user-info {
+  min-width: 0;
+}
+.asset-create-modal .asset-user-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.asset-create-modal .asset-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.asset-create-modal .asset-price-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px;
+}
+.asset-create-modal .asset-price-group input {
+  border-radius: 8px 0 0 8px;
+}
+.asset-create-modal .asset-price-group select {
+  border: 1px solid #d9dee7;
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #4b5563;
+  background: #fff;
+}
+.asset-create-modal .asset-qty-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px 24px;
+  gap: 4px;
+  align-items: center;
+}
+.asset-create-modal .asset-qty-btn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #d9dee7;
+  border-radius: 6px;
+  background: #fff;
+  color: #6b7280;
+  line-height: 1;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .leave-apply-modal {
   width: min(760px, 94vw);

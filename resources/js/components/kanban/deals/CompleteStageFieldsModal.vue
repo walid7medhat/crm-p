@@ -2,7 +2,7 @@
   <Teleport to="body">
     <div v-if="show" class="complete-fields-overlay" @click.self="closeModal">
       <div
-        class="complete-fields-modal deal-figma-ui"
+        class="complete-fields-modal complete-stage-modal deal-figma-ui"
         :class="{
           'complete-fields-modal--compact': isCompactStageModal,
           'complete-fields-modal--deal-won': isDealWonStage,
@@ -136,7 +136,7 @@
                     <b-form-input 
                       v-model="formData.buyer_last_name" 
                       placeholder="Enter Last Name" 
-                      class="custom-input"
+                      class="custom-input compact-placeholder-field"
                     />
                   </div>
                   
@@ -182,16 +182,20 @@
                    </v-select>
                   </div>
                   
-                  <!-- Buyer Residency Status -->
-                  <div class="col-md-6" v-if="hasField('buyer_residency_status')">
+                  <!-- Buyer Residency Status (show when missing or when buyer documents are shown for primary/secondary) -->
+                  <div
+                    class="col-md-6"
+                    v-if="hasField('buyer_residency_status') || (documentTypesByParty.buyer.length > 0 && ['primary', 'secondary'].includes(effectiveDealTypeForDocs))"
+                  >
                     <label class="form-label-custom">Buyer Residency Status <span class="text-danger">*</span></label>
                     <v-select
- append-to-body 
-                      v-model="formData.buyer_residency_status" 
-                      :options="residencyOptions" 
+                      append-to-body
+                      v-model="formData.buyer_residency_status"
+                      :options="buyerResidencyOptions"
                       :reduce="item => item.value" 
                       label="text" 
-                      placeholder="Select Status" 
+                      placeholder="Resident or Non Resident" 
+                      :clearable="false"
                       class="custom-v-select"
                     >
                   
@@ -297,12 +301,17 @@
 
                
               </div>
-               <!-- Buyer Documents -->
-                <div class="mt-3" v-if="documentTypesByParty.buyer.length > 0">
+               <!-- Buyer Documents (always show card when docs are required; buyer party fields may be absent from missing list) -->
+                <div
+                  v-if="documentTypesByParty.buyer.length > 0"
+                  class="form-card p-3 radius-12"
+                  :class="hasPartyFields('buyer') ? 'mt-3' : 'mt-0'"
+                >
                   <label class="form-label-custom">Buyer Documents</label>
                   <DocumentUpload
                     v-model="formData.buyer_documents"
                     category="buyer"
+                    compact
                     :document-types="documentTypesByParty.buyer"
                     ref="buyerDocUploadRef"
                   />
@@ -435,6 +444,7 @@
                   <DocumentUpload
                     v-model="formData.seller_documents"
                     category="seller"
+                    compact
                     :document-types="documentTypesByParty.seller"
                     ref="sellerDocUploadRef"
                   />
@@ -577,6 +587,7 @@
                   <DocumentUpload
                     v-model="formData.tenant_documents"
                     category="tenant"
+                    compact
                     :document-types="documentTypesByParty.tenant"
                     ref="tenantDocUploadRef"
                   />
@@ -714,6 +725,7 @@
                   <DocumentUpload
                     v-model="formData.landlord_documents"
                     category="landlord"
+                    compact
                     :document-types="documentTypesByParty.landlord"
                     ref="landlordDocUploadRef"
                   />
@@ -806,7 +818,7 @@
               <!-- Unit No - يتم تعبئته تلقائياً -->
               <div class="col-md-6" v-if="hasField('unit_no')">
                 <label class="form-label-custom">Unit No <span class="text-danger">*</span></label>
-                <b-form-input v-model="formData.unit_no" placeholder="Enter Unit No" class="custom-input" />
+                <b-form-input v-model="formData.unit_no" placeholder="Enter Unit No" class="custom-input compact-placeholder-field" />
               </div>
               
               <!-- Property Type - يتم تعبئته تلقائياً -->
@@ -854,7 +866,7 @@
               <!-- Unit Size - يتم تعبئته تلقائياً -->
               <div class="col-md-6" v-if="hasField('unit_size')">
                 <label class="form-label-custom">Unit Size (sq.ft)</label>
-                <b-form-input v-model="formData.unit_size" placeholder="Enter Unit Size" class="custom-input" />
+                <b-form-input v-model="formData.unit_size" placeholder="Enter Unit Size" class="custom-input compact-placeholder-field" />
               </div>
 
               <!-- Project Name - يتم تعبئته تلقائياً -->
@@ -920,7 +932,7 @@
                   
                   <div class="col-md-4" v-if="hasField('deal_commission')">
                     <label class="form-label-custom">Deal Commission %</label>
-                    <b-form-input v-model="formData.deal_commission" type="number" placeholder="Enter Commission %" class="custom-input" />
+                    <b-form-input v-model="formData.deal_commission" type="number" placeholder="Enter Commission %" class="custom-input compact-placeholder-field" />
                   </div>
                   
                   <div class="col-md-4" v-if="hasField('agent_share')">
@@ -989,6 +1001,34 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['save', 'closed', 'open-deal'])
+
+/** Align API / deal payload values with primary | secondary | rental for document UI */
+function normalizeDealTypeForDocuments(raw) {
+  const s = String(raw ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_')
+  if (!s) return 'primary'
+  if (s.includes('secondary') || s.includes('resale')) return 'secondary'
+  if (s.includes('rental') || s.includes('lease')) return 'rental'
+  if (
+    s.includes('primary')
+    || s.includes('off_plan')
+    || s.includes('offplan')
+    || s.includes('off-plan')
+    || s === 'sale'
+  ) {
+    return 'primary'
+  }
+  if (s === 'primary' || s === 'secondary' || s === 'rental') return s
+  return 'primary'
+}
+
+const effectiveDealTypeForDocs = computed(() =>
+  normalizeDealTypeForDocuments(
+    props.deal?.deal_type ?? props.deal?.type ?? props.dealType,
+  ),
+)
 
 // State
 const formData = ref({})
@@ -1080,31 +1120,39 @@ const fetchAvailableListings = async (areaId) => {
   }
 }
 
-function getRequiredDocumentsByResidency(residencyStatus, nationality) {
-
-  // مقيم (Resident) - يطلب Passport + Visa + National ID
-  if (residencyStatus === 'resident') {
-    return ['passport', 'visa', 'national_id']
-  }
-  
-  // غير مقيم / سائح (Non-resident / Tourist) - يطلب Passport فقط
-  if (residencyStatus === 'non_resident' || residencyStatus === 'tourist') {
-    return ['passport']
-  }
-  
-  // Investor - يطلب Passport + Investor Visa + National ID
-  if (residencyStatus === 'investor') {
-    return ['passport', 'visa', 'national_id']
-  }
-  
-  // Student - يطلب Passport + Student Visa + National ID
-  if (residencyStatus === 'student') {
-    return ['passport', 'visa', 'national_id']
-  }
-  
-  // الحالة الافتراضية - يطلب Passport فقط
-  return ['passport']
+function normalizeResidencyStatus(status) {
+  if (!status) return 'non_resident'
+  const value = String(status).toLowerCase()
+  if (value === 'resident') return 'resident'
+  if (value === 'non_resident' || value === 'non-resident') return 'non_resident'
+  if (value === 'citizen' || value === 'investor' || value === 'student') return 'resident'
+  return 'non_resident'
 }
+
+function getRequiredDocumentsByResidency(residencyStatus) {
+  return normalizeResidencyStatus(residencyStatus) === 'resident'
+    ? ['passport', 'visa', 'national_id']
+    : ['passport']
+}
+
+const isKycRequiredFromSpaStage = computed(() => {
+  const stageName = String(props.targetStageName || '').toLowerCase()
+  return (
+    stageName.includes('spa signed') ||
+    stageName.includes('deal done') ||
+    stageName.includes('deal won') ||
+    stageName.includes('transfer') ||
+    stageName.includes('handover') ||
+    stageName.includes('closed')
+  )
+})
+
+const isSpaRequiredFromSpaStage = computed(() => isKycRequiredFromSpaStage.value)
+
+const isPaymentProofRequiredFromEoiStage = computed(() => {
+  const stageName = String(props.targetStageName || '').toLowerCase()
+  return stageName.includes('eoi') || isKycRequiredFromSpaStage.value
+})
 // ================ حساب document types مرة واحدة فقط ================
 // ================ حساب document types حسب حالة الإقامة ================
 // ================ حساب document types حسب حالة الإقامة (ديناميكي) ================
@@ -1123,37 +1171,39 @@ const documentTypesByParty = computed(() => {
   const landlordResidency = formData.value?.landlord_residency_status
   
   // تحديد المستندات المطلوبة حسب حالة الإقامة فقط (بدون الاعتماد على missingFields)
-  const getDocsForResidency = (residencyStatus) => {
-    if (residencyStatus === 'citizen') {
-      return ['passport', 'national_id']
-    }
-    if (residencyStatus === 'resident') {
-      return ['passport', 'visa', 'national_id']
-    }
-    if (residencyStatus === 'investor') {
-      return ['passport', 'visa', 'national_id']
-    }
-    if (residencyStatus === 'student') {
-      return ['passport', 'visa', 'national_id']
-    }
-    // non_resident, tourist, other, أو أي شيء آخر
-    return ['passport']
-  }
+  const getDocsForResidency = (residencyStatus) => getRequiredDocumentsByResidency(residencyStatus)
   
-  // إضافة المستندات لـ buyer إذا كان موجود في missingFields أو إذا كان residency محدد
-  if (props.missingFields?.some(f => f.startsWith('buyer_document_')) || buyerResidency) {
-    const requiredDocs = getDocsForResidency(buyerResidency)
-    requiredDocs.forEach(docType => {
+  // Always show buyer documents for primary/secondary stage moves (use deal payload + tab).
+  // This prevents cases where moving from New to later stages hides required docs.
+  if (
+    ['primary', 'secondary'].includes(effectiveDealTypeForDocs.value)
+    || hasEffectiveMissingPrefix('buyer_document_')
+    || buyerResidency
+  ) {
+    const buyerDocDefinitions = [
+      { id: 'passport', name: 'Passport' },
+      { id: 'visa', name: 'Visa' },
+      { id: 'national_id', name: 'National ID' },
+      { id: 'kyc', name: 'KYC' },
+      { id: 'spa', name: 'Buyer SPA' },
+      { id: 'payment_proof', name: 'Buyer Payment Proof' },
+    ]
+    const requiredBuyerResidencyDocs = getDocsForResidency(buyerResidency)
+    buyerDocDefinitions.forEach((doc) => {
+      // Match DealForm.vue: residency controls passport/visa/national ID; stage controls KYC/SPA/payment proof.
+      const isCoreBuyerDoc = requiredBuyerResidencyDocs.includes(doc.id)
+      const isKycRequiredByStage = doc.id === 'kyc' && isKycRequiredFromSpaStage.value
+      const isSpaRequiredByStage = doc.id === 'spa' && isSpaRequiredFromSpaStage.value
+      const isPaymentProofRequiredByStage = doc.id === 'payment_proof' && isPaymentProofRequiredFromEoiStage.value
       result.buyer.push({
-        id: docType,
-        name: docType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        required: true
+        ...doc,
+        required: isCoreBuyerDoc || isKycRequiredByStage || isSpaRequiredByStage || isPaymentProofRequiredByStage,
       })
     })
   }
   
-  // نفس الشيء لـ seller
-  if (props.missingFields?.some(f => f.startsWith('seller_document_')) || sellerResidency) {
+  // نفس الشيء لـ seller (always offer seller docs on secondary deals)
+  if (effectiveDealTypeForDocs.value === 'secondary' || hasEffectiveMissingPrefix('seller_document_') || sellerResidency) {
     const requiredDocs = getDocsForResidency(sellerResidency)
     requiredDocs.forEach(docType => {
       result.seller.push({
@@ -1164,8 +1214,8 @@ const documentTypesByParty = computed(() => {
     })
   }
   
-  // نفس الشيء لـ tenant
-  if (props.missingFields?.some(f => f.startsWith('tenant_document_')) || tenantResidency) {
+  // نفس الشيء لـ tenant (rental deals: show tenant docs even when not yet in missingFields)
+  if (effectiveDealTypeForDocs.value === 'rental' || hasEffectiveMissingPrefix('tenant_document_') || tenantResidency) {
     const requiredDocs = getDocsForResidency(tenantResidency)
     requiredDocs.forEach(docType => {
       result.tenant.push({
@@ -1177,7 +1227,7 @@ const documentTypesByParty = computed(() => {
   }
   
   // نفس الشيء لـ landlord
-  if (props.missingFields?.some(f => f.startsWith('landlord_document_')) || landlordResidency) {
+  if (effectiveDealTypeForDocs.value === 'rental' || hasEffectiveMissingPrefix('landlord_document_') || landlordResidency) {
     const requiredDocs = getDocsForResidency(landlordResidency)
     requiredDocs.forEach(docType => {
       result.landlord.push({
@@ -1203,7 +1253,101 @@ const groupedMissingSections = computed(() => {
   return []
 })
 
+const groupedSectionFieldKeys = computed(() => {
+  const keys = []
+  groupedMissingSections.value.forEach((section) => {
+    ;(section.fields || []).forEach((field) => {
+      const key = typeof field === 'string' ? field : field?.key || field?.field || ''
+      if (key) keys.push(key)
+    })
+  })
+  return keys
+})
+
+function extractFieldKeysFromStageEntry(stageEntry) {
+  const fields = stageEntry?.fields || stageEntry?.missing_fields || []
+  if (!Array.isArray(fields)) return []
+  return fields
+    .map((field) => (typeof field === 'string' ? field : field?.key || field?.field || ''))
+    .filter(Boolean)
+}
+
+function normalizeStageLabel(label) {
+  return String(label || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]/g, '')
+}
+
+const effectiveMissingFields = computed(() => {
+  const direct = Array.isArray(props.missingFields) ? props.missingFields : []
+  const byStage = props.groupedMissing?.by_stage
+    || props.missingFieldsGroupedByStage?.stages
+    || []
+
+  if (!Array.isArray(byStage) || byStage.length === 0) {
+    return Array.from(new Set([...direct, ...groupedSectionFieldKeys.value]))
+  }
+
+  const targetStageId = String(props.targetStageId ?? '')
+  const targetStageName = String(props.targetStageName || '').toLowerCase().trim()
+  const targetStageNameNormalized = normalizeStageLabel(targetStageName)
+  const targetStageNumber = Number((targetStageName.match(/\d+/) || [])[0] || NaN)
+
+  const normalized = byStage.map((stage, idx) => {
+    const stageId = String(stage?.stage_id ?? stage?.id ?? '')
+    const stageName = String(stage?.stage_name ?? stage?.name ?? stage?.title ?? '').toLowerCase().trim()
+    const stageNameNormalized = normalizeStageLabel(stageName)
+    const stageNumber = Number((stageName.match(/\d+/) || [])[0] || NaN)
+    const orderRaw = stage?.order ?? stage?.stage_order ?? stage?.position ?? null
+    const order = Number.isFinite(Number(orderRaw)) ? Number(orderRaw) : idx
+    const isMatchById = !!targetStageId && stageId === targetStageId
+    const isMatchByName = !!targetStageName && stageName === targetStageName
+    const isMatchByNormalizedName = !!targetStageNameNormalized && stageNameNormalized === targetStageNameNormalized
+    const isMatchByStageNumber = Number.isFinite(targetStageNumber) && Number.isFinite(stageNumber) && targetStageNumber === stageNumber
+    return {
+      idx,
+      order,
+      fields: extractFieldKeysFromStageEntry(stage),
+      isTargetMatch: isMatchById || isMatchByName || isMatchByNormalizedName || isMatchByStageNumber,
+    }
+  })
+
+  const orderedStages = [...normalized].sort((a, b) => {
+    if (a.order === b.order) return a.idx - b.idx
+    return a.order - b.order
+  })
+
+  const targetStageIndex = orderedStages.findIndex((entry) => entry.isTargetMatch)
+
+  if (targetStageIndex === -1) {
+    const union = new Set([...direct, ...groupedSectionFieldKeys.value])
+    orderedStages.forEach((entry) => entry.fields.forEach((key) => union.add(key)))
+    return Array.from(union)
+  }
+
+  const cumulative = new Set()
+  orderedStages
+    .slice(0, targetStageIndex + 1)
+    .forEach((entry) => entry.fields.forEach((key) => cumulative.add(key)))
+
+  if (!cumulative.size) {
+    direct.forEach((key) => cumulative.add(key))
+  }
+  groupedSectionFieldKeys.value.forEach((key) => cumulative.add(key))
+  return Array.from(cumulative)
+})
+
+function hasEffectiveMissingPrefix(prefix) {
+  return effectiveMissingFields.value.some((field) => String(field).startsWith(prefix))
+}
+
 const missingFieldLabels = computed(() => {
+  if (effectiveMissingFields.value.length) {
+    return effectiveMissingFields.value.map((k) =>
+      String(k).replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+    )
+  }
   const labels = []
   groupedMissingSections.value.forEach((section) => {
     ;(section.fields || []).forEach((field) => {
@@ -1221,7 +1365,7 @@ const unresolvedMissingLabels = computed(() => {
 
 const unresolvedMissingKeys = computed(() => {
   const unresolved = []
-  const missingKeys = props.missingFields || []
+  const missingKeys = effectiveMissingFields.value || []
 
   missingKeys.forEach((key) => {
     if (!key) return
@@ -1230,6 +1374,11 @@ const unresolvedMissingKeys = computed(() => {
 
     if (key.includes('_document_')) {
       const [partyType, docType] = key.split('_document_')
+
+      // Buyer docs for primary/secondary: rules are applied explicitly below (match DealForm).
+      if (partyType === 'buyer' && ['primary', 'secondary'].includes(effectiveDealTypeForDocs.value)) {
+        return
+      }
       
       // التحقق من حالة الإقامة لهذا الطرف
       let residencyStatus = null
@@ -1258,19 +1407,19 @@ const unresolvedMissingKeys = computed(() => {
       if (!residencyStatus) {
         if (docType === 'passport') {
           const docs = formData.value?.[`${partyType}_documents`] || []
-          const hasDoc = Array.isArray(docs) && docs.some((doc) => doc?.file && doc?.document_type === docType)
+          const hasDoc = Array.isArray(docs) && docs.some((doc) => (doc?.file || doc?.url || doc?.file_url) && doc?.document_type === docType)
           if (!hasDoc) unresolved.push(key)
         }
         return
       }
       
       // الحصول على المستندات المطلوبة حسب حالة الإقامة
-      const requiredDocs = getRequiredDocumentsByResidency(residencyStatus, nationality)
+      const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
       
       // فقط تحقق من المستند إذا كان مطلوباً حسب حالة الإقامة
       if (requiredDocs.includes(docType)) {
         const docs = formData.value?.[`${partyType}_documents`] || []
-        const hasDoc = Array.isArray(docs) && docs.some((doc) => doc?.file && doc?.document_type === docType)
+        const hasDoc = Array.isArray(docs) && docs.some((doc) => (doc?.file || doc?.url || doc?.file_url) && doc?.document_type === docType)
         if (!hasDoc) unresolved.push(key)
       }
       return
@@ -1281,6 +1430,56 @@ const unresolvedMissingKeys = computed(() => {
     if (isEmpty) unresolved.push(key)
   })
 
+  if (['primary', 'secondary'].includes(effectiveDealTypeForDocs.value)) {
+    const hasKycInCumulativeMissing = missingKeys.includes('buyer_document_kyc')
+    const hasSpaInCumulativeMissing = missingKeys.includes('buyer_document_spa')
+    const hasPaymentProofInCumulativeMissing = missingKeys.includes('buyer_document_payment_proof')
+
+    if (isKycRequiredFromSpaStage.value || hasKycInCumulativeMissing) {
+      const buyerDocs = formData.value?.buyer_documents || []
+      const hasBuyerKyc = Array.isArray(buyerDocs) && buyerDocs.some(
+        (doc) => doc?.document_type === 'kyc' && (doc?.file || doc?.url || doc?.file_url),
+      )
+      if (!hasBuyerKyc && !unresolved.includes('buyer_document_kyc')) {
+        unresolved.push('buyer_document_kyc')
+      }
+    }
+
+    {
+      const buyerDocs = formData.value?.buyer_documents || []
+      const requiredFromStart = getRequiredDocumentsByResidency(formData.value?.buyer_residency_status)
+      requiredFromStart.forEach((docType) => {
+        const hasDoc = Array.isArray(buyerDocs) && buyerDocs.some(
+          (doc) => doc?.document_type === docType && (doc?.file || doc?.url || doc?.file_url),
+        )
+        const key = `buyer_document_${docType}`
+        if (!hasDoc && !unresolved.includes(key)) {
+          unresolved.push(key)
+        }
+      })
+    }
+
+    if (isSpaRequiredFromSpaStage.value || hasSpaInCumulativeMissing) {
+      const buyerDocs = formData.value?.buyer_documents || []
+      const hasBuyerSpa = Array.isArray(buyerDocs) && buyerDocs.some(
+        (doc) => doc?.document_type === 'spa' && (doc?.file || doc?.url || doc?.file_url),
+      )
+      if (!hasBuyerSpa && !unresolved.includes('buyer_document_spa')) {
+        unresolved.push('buyer_document_spa')
+      }
+    }
+
+    if (isPaymentProofRequiredFromEoiStage.value || hasPaymentProofInCumulativeMissing) {
+      const buyerDocs = formData.value?.buyer_documents || []
+      const hasBuyerPaymentProof = Array.isArray(buyerDocs) && buyerDocs.some(
+        (doc) => doc?.document_type === 'payment_proof' && (doc?.file || doc?.url || doc?.file_url),
+      )
+      if (!hasBuyerPaymentProof && !unresolved.includes('buyer_document_payment_proof')) {
+        unresolved.push('buyer_document_payment_proof')
+      }
+    }
+  }
+
   return unresolved
 })
 
@@ -1289,7 +1488,7 @@ const canSubmit = computed(() => {
 })
 
 const isCompactStageModal = computed(() => {
-  const count = (props.missingFields || []).length
+  const count = (effectiveMissingFields.value || []).length
   return count > 0 && count <= 4
 })
 
@@ -1298,7 +1497,7 @@ const isDealWonStage = computed(() => {
 })
 
 const isLostReasonOnly = computed(() => {
-  const keys = props.missingFields || []
+  const keys = effectiveMissingFields.value || []
   return keys.length === 1 && keys[0] === 'lost_reason'
 })
 async function fetchDevelopers() {
@@ -1385,7 +1584,7 @@ watch(() => props.show, async (val) => {
 async function initializeForm() {
   loading.value = true
   try {
-    const missingFieldKeys = props.missingFields || []
+    const missingFieldKeys = effectiveMissingFields.value || []
     console.log('Initializing form with missing fields:', missingFieldKeys)
     
     const initial = {}
@@ -1407,6 +1606,14 @@ async function initializeForm() {
         key.startsWith(`${party}_document_`)
       )
       if (partyDocs.length > 0) {
+        formData.value[`${party}_documents`] = []
+      }
+    })
+
+    // Primary/secondary/rental can show document UI without *_document_* keys in missingFields — ensure v-model arrays exist.
+    const docTypes = documentTypesByParty.value
+    parties.forEach((party) => {
+      if (docTypes[party]?.length && formData.value[`${party}_documents`] === undefined) {
         formData.value[`${party}_documents`] = []
       }
     })
@@ -1516,12 +1723,12 @@ function getInitialValue(key) {
 
 // التحقق من وجود حقل معين
 function hasField(fieldKey) {
-  return props.missingFields?.includes(fieldKey) || false
+  return effectiveMissingFields.value.includes(fieldKey)
 }
 
 // التحقق من وجود حقول طرف معين
 function hasPartyFields(partyType) {
-  if (!props.missingFields || props.missingFields.length === 0) return false
+  if (!effectiveMissingFields.value.length) return false
   
   const possibleFields = [
     `${partyType}_first_name`,
@@ -1537,7 +1744,7 @@ function hasPartyFields(partyType) {
     `${partyType}_amount`,
   ]
   
-  return possibleFields.some(field => props.missingFields.includes(field))
+  return possibleFields.some(field => effectiveMissingFields.value.includes(field))
 }
 
 // التحقق من وجود حقول property
@@ -1815,6 +2022,10 @@ const residencyOptions = [
   { value: 'tourist', text: 'Tourist' },
   { value: 'student', text: 'Student' },
   { value: 'other', text: 'Other' }
+]
+const buyerResidencyOptions = [
+  { value: 'resident', text: 'Resident' },
+  { value: 'non_resident', text: 'Non Resident' },
 ]
 
 // قائمة كاملة بكل دول العالم (مثل صفحة Owner)
@@ -2426,6 +2637,7 @@ watch(() => formData.value?.landlord_country, (newCountry, oldCountry) => {
 }
 
 .lost-reason-textarea::placeholder {
+  font-size: 10px;
   color: #9ca3af;
 }
 
@@ -2636,7 +2848,7 @@ watch(() => formData.value?.landlord_country, (newCountry, oldCountry) => {
 }
 
 .custom-input::placeholder {
-  font-size: 12px;
+  font-size: 10px;
   color: #9ca3af;
 }
 
@@ -2676,8 +2888,33 @@ watch(() => formData.value?.landlord_country, (newCountry, oldCountry) => {
 }
 
 :deep(.custom-v-select .vs__search::placeholder) {
-  font-size: 12px;
+  font-size: 10px;
   color: #9ca3af;
+}
+
+:deep(.custom-v-select .vs__placeholder) {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+/* Keep all placeholders compact in this modal (scoped to modal root) */
+.complete-fields-modal input::placeholder,
+.complete-fields-modal textarea::placeholder {
+  font-size: 10px !important;
+}
+
+.complete-fields-modal :deep(.vs__search::placeholder),
+.complete-fields-modal :deep(.vs__placeholder) {
+  font-size: 10px !important;
+  color: #9ca3af;
+}
+
+.compact-placeholder-field {
+  font-size: 11px !important;
+}
+
+.compact-placeholder-field::placeholder {
+  font-size: 9px !important;
 }
 
 :deep(.custom-v-select .vs__open-indicator),

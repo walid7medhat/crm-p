@@ -13,6 +13,7 @@
         :developers="lookup.developers || []"
         :areas="lookup.areas || []"
         :selected-stage-id="selectedStageId"
+        :selected-stage-name="selectedStageName || ''"
         :show-errors="showErrors"
         :field-errors="fieldErrors"
         @search-areas="$emit('search-areas', $event)"
@@ -40,6 +41,7 @@ const props = defineProps({
   dealType: { type: String, default: 'primary' },
   lookup: { type: Object, default: () => ({}) },
   selectedStageId: { type: [Number, String], default: null },
+  selectedStageName: { type: String, default: '' },
   showErrors: { type: Boolean, default: false },
   fieldErrors: { type: Object, default: () => ({}) },
   saving: { type: Boolean, default: false },

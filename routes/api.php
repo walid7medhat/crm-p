@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\Deal\DealController;
 use App\Http\Controllers\Api\Deal\LeadConversionController;
 use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\AttendanceCheckinController;
 use App\Http\Controllers\Api\SuggestionController;
 use App\Http\Controllers\Api\Deal\DealActivityController;
 use App\Http\Controllers\Api\ReportController;
@@ -286,6 +287,11 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/attendance/today', [AttendanceController::class, 'today']);
     Route::get('/attendance', [AttendanceController::class, 'index']);
     Route::prefix('attendance')->group(function () {
+            Route::get('/status', [AttendanceCheckinController::class, 'status']);
+            Route::get('/departments', [AttendanceCheckinController::class, 'departments']);
+            Route::get('/settings', [AttendanceCheckinController::class, 'settings']);
+            Route::put('/settings', [AttendanceCheckinController::class, 'updateSettings']);
+            Route::post('/check-in', [AttendanceCheckinController::class, 'checkIn']);
 
             // 🔹 sync الشهر اللي فات
             Route::get('/sync-last-month', [AttendanceController::class, 'syncLastMonth']);
