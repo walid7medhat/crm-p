@@ -384,16 +384,21 @@ export default {
 
           // 2) Attendance check for weekdays (Mon-Fri)
           if (minutes === undefined || minutes === null) {
-            absentDays += 1
-            dailyBreakdown.push({
-              date: dateKey,
-              checkInMinutes: null,
-              checkOutMinutes: null,
-              deduction: null,
-              status: 'Absent',
-            })
-            continue
-          }
+              absentDays += 1
+            
+              weightedDeduction += 100 // ✅ مهم جدا
+            
+              d100 += 1 // ✅ لو عايز تحسبه ضمن 100%
+            
+              dailyBreakdown.push({
+                date: dateKey,
+                checkInMinutes: null,
+                checkOutMinutes: null,
+                deduction: 100, // بدل null
+                status: 'Absent',
+              })
+              continue
+            }
 
           // 3) Deduction only for actual attendance days
           const deduction = this.getDeduction(minutes)
@@ -413,7 +418,9 @@ export default {
         }
         dailyBreakdown.sort((a, b) => a.date.localeCompare(b.date))
         const presentDays = noDeductionDays + d10 + d25 + d100
-        const totalDeductionPercent = presentDays ? Math.min(100, weightedDeduction / presentDays) : 0
+        const totalDeductionPercent = totalDays
+          ? Math.min(100, weightedDeduction / totalDays)
+          : 0
         const avgDeductionPerDay = totalDeductionPercent
         rows.push({
           employeeName,

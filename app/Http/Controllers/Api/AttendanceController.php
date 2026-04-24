@@ -376,7 +376,7 @@ public function generatePeriodReport(Request $request)
     $endDate = $request->end_date ? Carbon::parse($request->end_date) : Carbon::now('Asia/Dubai')->endOfMonth();
 
     // Get all active users
-    $users = User::where('status', 'active')->get();
+    $users = User::get();
     $reports = [];
 
     foreach ($users as $user) {
@@ -387,11 +387,11 @@ public function generatePeriodReport(Request $request)
         $present = 0;
         $late = 0;
         $absent = 0;
-        $totalDeductionPercent = 0;
-        $daysWithDeduction = 0;
+        $totalDeductionPercent = 0;  // مجموع نسب الخصم لجميع الأيام
+        $daysWithDeduction = 0;      // عدد الأيام التي تم فيها خصم (غياب + تأخير)
 
         $workingDays = $this->getWorkingDaysInRange($startDate, $endDate);
-        $dailyBreakdown = []; // Array for daily details
+        $dailyBreakdown = [];
 
         // map attendance by date
         $attendanceMap = $attendances->keyBy(function ($a) {
@@ -401,11 +401,12 @@ public function generatePeriodReport(Request $request)
         foreach ($workingDays as $date) {
             $attendance = $attendanceMap->get($date);
             
-            // Parse check_in and check_out with correct timezone
             $checkIn = null;
             $checkOut = null;
             $checkInTime = null;
             $checkOutTime = null;
+            $dayDeductionPercent = 0;
+            $status = '';
             
             if ($attendance) {
                 if ($attendance->check_in) {
@@ -416,10 +417,26 @@ public function generatePeriodReport(Request $request)
                     $checkOut = Carbon::parse($attendance->check_out)->timezone('Asia/Dubai');
                     $checkOutTime = $checkOut->format('H:i:s');
                 }
+                
+                // حساب الخصم بناءً على وقت الحضور (لليوم فقط)
+                $dayDeductionPercent = $this->calculateDayDeduction($checkIn);
+                
+                if ($dayDeductionPercent == 0) {
+                    $status = 'Present';
+                    $present++;
+                } else {
+                    $status = 'Late';
+                    $late++;
+                    $totalDeductionPercent += $dayDeductionPercent;
+                    $daysWithDeduction++;
+                }
+            } else {
+                $status = 'Absent';
+                $absent++;
+                $dayDeductionPercent = 100;
+                $totalDeductionPercent += 100;
+                $daysWithDeduction++;
             }
-
-            $dayDeductionPercent = $this->calculateDayDeduction($checkIn);
-            $status = $this->getDayStatus($attendance, $dayDeductionPercent);
 
             // Build daily breakdown
             $dailyBreakdown[] = [
@@ -427,26 +444,19 @@ public function generatePeriodReport(Request $request)
                 'check_in' => $checkInTime,
                 'check_out' => $checkOutTime,
                 'status' => $status,
-                'deduction_percent' => !$attendance ? 100 : $dayDeductionPercent,
+                'deduction_percent' => $dayDeductionPercent,
             ];
-
-            // Calculate summary statistics
-            if (!$attendance) {
-                $absent++;
-                $totalDeductionPercent += 100;
-                $daysWithDeduction++;
-            } elseif ($dayDeductionPercent == 0) {
-                $present++;
-            } else {
-                $late++;
-                $totalDeductionPercent += $dayDeductionPercent;
-                $daysWithDeduction++;
-            }
         }
 
-        // Calculate average deduction percentage for the period
+        // حساب متوسط الخصم اليومي (على الأيام التي تم خصم منها فقط)
         $avgDeductionPercent = $daysWithDeduction > 0 
             ? round($totalDeductionPercent / $daysWithDeduction, 2)
+            : 0;
+        
+        // حساب إجمالي الخصم المئوي (على إجمالي أيام العمل)
+        $totalWorkingDays = count($workingDays);
+        $overallDeductionPercent = $totalWorkingDays > 0
+            ? round(($totalDeductionPercent / $totalWorkingDays), 2)
             : 0;
 
         $reports[] = [
@@ -459,10 +469,12 @@ public function generatePeriodReport(Request $request)
             'present' => $present,
             'late' => $late,
             'absent' => $absent,
-            'total_deduction_percent' => $avgDeductionPercent,
-            'total_deduction_amount' => $totalDeductionPercent,
+            'total_working_days' => $totalWorkingDays,
+            'avg_deduction_percent' => $avgDeductionPercent,      // متوسط الخصم في الأيام المخصومة
+            'total_deduction_percent' => $overallDeductionPercent, // إجمالي الخصم على كل أيام العمل
+            'total_deduction_sum' => $totalDeductionPercent,       // مجموع نسب الخصم (قد يتجاوز 100)
             'days_with_deduction' => $daysWithDeduction,
-            'daily_breakdown' => $dailyBreakdown, // Include daily details
+            'daily_breakdown' => $dailyBreakdown,
         ];
     }
 
