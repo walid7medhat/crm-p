@@ -117,49 +117,49 @@
                   <span v-else>Save</span>
                 </button>
               </div>
-              <div class="attendance-checkin-card mt-16">
-                <h6 class="text-md mb-8">Daily Attendance Check-in</h6>
-                <div class="d-flex align-items-center gap-2 mb-8">
-                  <span class="status-badge" :class="checkinBadgeClass">{{ attendanceStatus.status || 'Closed' }}</span>
-                  <small class="text-secondary-light">{{ attendanceStatus.window_label || 'Not configured' }}</small>
-                </div>
+              <!--<div class="attendance-checkin-card mt-16">-->
+              <!--  <h6 class="text-md mb-8">Daily Attendance Check-in</h6>-->
+              <!--  <div class="d-flex align-items-center gap-2 mb-8">-->
+              <!--    <span class="status-badge" :class="checkinBadgeClass">{{ attendanceStatus.status || 'Closed' }}</span>-->
+              <!--    <small class="text-secondary-light">{{ attendanceStatus.window_label || 'Not configured' }}</small>-->
+              <!--  </div>-->
 
-                <p v-if="attendanceStatus.status === 'Closed'" class="text-secondary-light mb-8">
-                  {{ attendanceStatus.is_department_active ? 'Check-in not available' : 'Check-in is not required for your department' }}
-                </p>
-                <small
-                  v-if="attendanceStatus.status !== 'Not Checked In'"
-                  class="text-secondary-light d-block mb-8"
-                >
-                  Department rule:
-                  <strong>{{ attendanceStatus.is_department_active ? 'Check-in enabled for your department' : 'Check-in disabled for your department' }}</strong>
-                </small>
+              <!--  <p v-if="attendanceStatus.status === 'Closed'" class="text-secondary-light mb-8">-->
+              <!--    {{ attendanceStatus.is_department_active ? 'Check-in not available' : 'Check-in is not required for your department' }}-->
+              <!--  </p>-->
+              <!--  <small-->
+              <!--    v-if="attendanceStatus.status !== 'Not Checked In'"-->
+              <!--    class="text-secondary-light d-block mb-8"-->
+              <!--  >-->
+              <!--    Department rule:-->
+              <!--    <strong>{{ attendanceStatus.is_department_active ? 'Check-in enabled for your department' : 'Check-in disabled for your department' }}</strong>-->
+              <!--  </small>-->
 
-                <p v-if="attendanceStatus.status === 'Checked In'" class="text-success mb-8">
-                  You have already checked in today at {{attendanceStatus.check_in_at}}
-                </p>
+              <!--  <p v-if="attendanceStatus.status === 'Checked In'" class="text-success mb-8">-->
+              <!--    You have already checked in today at {{attendanceStatus.check_in_at}}-->
+              <!--  </p>-->
 
-                <div v-if="attendanceStatus.status === 'Not Checked In'" class="d-flex flex-column gap-8">
-                  <small class="text-secondary-light">Today's Code: <strong>{{ attendanceStatus.today_code || '----' }}</strong></small>
-                  <input
-                    type="text"
-                    class="form-control radius-8"
-                    maxlength="4"
-                    v-model="checkinCode"
-                    placeholder="Enter 4-char code"
-                    :disabled="checkinSubmitting"
-                  />
-                  <button
-                    type="button"
-                    class="btn btn-primary text-md px-12 py-6 radius-8 align-self-start"
-                    :disabled="checkinSubmitting || !isCheckinCodeComplete"
-                    @click="submitCheckin"
-                  >
-                    <span v-if="checkinSubmitting">Checking in...</span>
-                    <span v-else>Check In</span>
-                  </button>
-                </div>
-              </div>
+              <!--  <div v-if="attendanceStatus.status === 'Not Checked In'" class="d-flex flex-column gap-8">-->
+              <!--    <small class="text-secondary-light">Today's Code: <strong>{{ attendanceStatus.today_code || '----' }}</strong></small>-->
+              <!--    <input-->
+              <!--      type="text"-->
+              <!--      class="form-control radius-8"-->
+              <!--      maxlength="4"-->
+              <!--      v-model="checkinCode"-->
+              <!--      placeholder="Enter 4-char code"-->
+              <!--      :disabled="checkinSubmitting"-->
+              <!--    />-->
+              <!--    <button-->
+              <!--      type="button"-->
+              <!--      class="btn btn-primary text-md px-12 py-6 radius-8 align-self-start"-->
+              <!--      :disabled="checkinSubmitting || !isCheckinCodeComplete"-->
+              <!--      @click="submitCheckin"-->
+              <!--    >-->
+              <!--      <span v-if="checkinSubmitting">Checking in...</span>-->
+              <!--      <span v-else>Check In</span>-->
+              <!--    </button>-->
+              <!--  </div>-->
+              <!--</div>-->
             </div>
           </div>
         </div>
