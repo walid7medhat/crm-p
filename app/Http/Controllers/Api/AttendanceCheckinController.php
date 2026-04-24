@@ -128,7 +128,7 @@ class AttendanceCheckinController extends Controller
             return response()->json(['success' => false, 'message' => 'Check-in not available now'], 422);
         }
         if ($payload['already_checked_in']) {
-            return response()->json(['success' => false, 'message' => 'Already checked in today'], 422);
+            return response()->json(['success' => false, 'message' => 'Already checked in today at '.$payload['check_in_at']], 422);
         }
 
         $providedCode = strtoupper((string) $request->input('code'));
@@ -140,14 +140,18 @@ class AttendanceCheckinController extends Controller
         $now = Carbon::now($timezone);
         $todayDate = $now->toDateString();
 
-        $duplicate = DB::table('attendance_checkins')
-            ->where('user_id', $userId)
-            ->whereDate($this->checkinDateColumn(), $todayDate)
-            ->exists();
+       $duplicate = DB::table('attendance_checkins')
+        ->where('user_id', $userId)
+        ->whereDate($this->checkinDateColumn(), $todayDate)
+            ->first();
+        
         if ($duplicate) {
-            return response()->json(['success' => false, 'message' => 'Already checked in today'], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Already checked in today at '.$duplicate->checked_in_at,
+                'checked_in_at' => $duplicate->checked_in_at,
+            ], 422);
         }
-
         DB::table('attendance_checkins')->insert([
             'user_id' => $userId,
             $this->checkinDateColumn() => $todayDate,
@@ -226,10 +230,14 @@ class AttendanceCheckinController extends Controller
 
         $alreadyCheckedIn = false;
         if (Schema::hasTable('attendance_checkins')) {
-            $alreadyCheckedIn = DB::table('attendance_checkins')
+          
+                $checkinRecord = DB::table('attendance_checkins')
                 ->where('user_id', $userId)
                 ->whereDate($this->checkinDateColumn(), $todayDate)
-                ->exists();
+                ->first();
+            
+            $alreadyCheckedIn = $checkinRecord ? true : false;
+            $checkedInAt = $checkinRecord->checked_in_at ?? null;
         }
 
         $status = $alreadyCheckedIn
@@ -246,6 +254,7 @@ class AttendanceCheckinController extends Controller
             'is_department_active' => $isDepartmentActive,
             'is_within_time_window' => $isWithinTimeWindow,
             'already_checked_in' => $alreadyCheckedIn,
+            'check_in_at'=>$checkedInAt,
             'status' => $status,
             'window_label' => "{$dayLabel} • {$startLabel} - {$endLabel}",
             'today_code' => $this->generateCodeForDate($now),

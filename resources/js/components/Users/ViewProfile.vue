@@ -136,7 +136,7 @@
                 </small>
 
                 <p v-if="attendanceStatus.status === 'Checked In'" class="text-success mb-8">
-                  You have already checked in today.
+                  You have already checked in today at {{attendanceStatus.check_in_at}}
                 </p>
 
                 <div v-if="attendanceStatus.status === 'Not Checked In'" class="d-flex flex-column gap-8">
@@ -464,6 +464,7 @@ export default {
       already_checked_in: false,
       status: 'Closed',
       window_label: 'Not configured',
+      check_in_at:'',
       today_code: '',
     });
     const departmentOptions = ref([]);
@@ -897,6 +898,7 @@ export default {
         attendanceStatus.is_department_active = response.data?.is_department_active !== false;
         attendanceStatus.is_within_time_window = !!response.data?.is_within_time_window;
         attendanceStatus.already_checked_in = !!response.data?.already_checked_in;
+        attendanceStatus.check_in_at=response.data?.check_in_at,
         attendanceStatus.status = response.data?.status || 'Closed';
         attendanceStatus.window_label = response.data?.window_label || 'Not configured';
         attendanceStatus.today_code = response.data?.today_code || '';
