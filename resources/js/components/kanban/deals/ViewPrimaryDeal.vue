@@ -40,6 +40,7 @@
           deal-type="primary"
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
+          :selected-stage-name="selectedStageName || ''"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -92,6 +93,7 @@
           deal-type="primary"
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
+          :selected-stage-name="selectedStageName || ''"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -203,6 +205,7 @@
           deal-type="primary"
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
+          :selected-stage-name="selectedStageName || ''"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -235,6 +238,7 @@
           deal-type="primary"
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
+          :selected-stage-name="selectedStageName || ''"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -316,6 +320,7 @@
           deal-type="primary"
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
+          :selected-stage-name="selectedStageName || ''"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -376,6 +381,7 @@ const props = defineProps({
   inlineEditSaving: { type: Boolean, default: false },
   inlineEditLoading: { type: Boolean, default: false },
   selectedStageId: { type: [Number, String], default: null },
+  selectedStageName: { type: String, default: '' },
 })
 const emit = defineEmits(['edit-section', 'update:inline-edit-data', 'inline-edit-save', 'inline-edit-cancel', 'search-areas', 'search-subcommunities', 'search-projects'])
 

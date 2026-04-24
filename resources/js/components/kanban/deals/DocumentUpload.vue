@@ -1,97 +1,63 @@
 <template>
-  <div class="document-upload-container deal-figma-ui"   ref="filesSection" >
-    <!-- Document Type Tabs with Required Indicator -->
-    <div class="doc-tabs d-flex gap-2 mb-3 flex-wrap">
-      <button 
-        v-for="type in documentTypes" 
+  <div class="document-upload-container deal-figma-ui" :class="{ 'is-compact': compact }" ref="filesSection">
+    <div class="document-upload-head">
+      <div class="document-upload-title">
+        <iconify-icon icon="lucide:file-text" />
+        <span>Document Upload</span>
+      </div>
+      <span class="document-upload-pill">Optional</span>
+    </div>
+
+    <div class="document-box-grid">
+      <button
+        v-for="type in documentTypes"
         :key="type.id"
-        class="doc-tab" 
-        :class="{ 
-          active: selectedType === type.id,
-          required: type.required,
-          'has-files': hasFilesForType(type.id)
-        }" 
-        @click="selectedType = type.id"
+        type="button"
+        class="document-box"
+        :class="{ required: type.required, uploaded: hasFilesForType(type.id) }"
+        @click="triggerFileInput(type.id)"
       >
-        {{ type.name }}
-        <span v-if="type.required" class="text-danger ms-1">*</span>
-        <span v-if="hasFilesForType(type.id)" class="file-count-badge ms-1">
-          {{ getFileCountForType(type.id) }}
-        </span>
-      </button>
-    </div>
-
-    <!-- Upload Area (show if max files not reached for required types) -->
-    <div
-   
-      v-if="canUploadMoreForType(selectedType)"
-      class="upload-zone border rounded"
-      @dragenter.prevent
-      @dragover.prevent
-      @drop.prevent="handleDrop"
-      @click="triggerFileInput"
-    >
-      <div class="upload-left">
-        <iconify-icon icon="lucide:file-text" class="upload-icon"></iconify-icon>
-        <div class="upload-copy">
-          <p class="upload-text mb-1">Drag and drop your files</p>
-          <p class="upload-hint text-muted small mb-0">JPEG, PNG and PDF formats, up to 50MB</p>
+        <div class="document-box-label">
+          {{ type.name }}
+          <span v-if="type.required" class="text-danger">*</span>
         </div>
-      </div>
-      <button type="button" class="btn-upload-file" @click.stop="triggerFileInput">
-        Select File
-      </button>
-      <input 
-        ref="fileInput"
-        type="file" 
-        class="d-none" 
-        multiple
-        @change="handleFileSelect"
-        accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
-      />
-      <input
-        ref="replaceFileInput"
-        type="file"
-        class="d-none"
-        accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
-        @change="handleReplaceFileSelect"
-      />
-    </div>
 
-    <!-- Uploaded Files List -->
-    <div v-if="selectedTypeFiles.length > 0" class="uploaded-files-list mt-3">
-      <div class="file-group mb-3">
-        <div class="file-grid">
-          <div v-for="file in selectedTypeFiles" :key="file.id" class="file-item border rounded mb-2">
-            <button type="button" class="file-actions-btn" @click.stop="toggleFileMenu(selectedType, file.id)">
-              <iconify-icon icon="lucide:more-vertical" />
-            </button>
-            <div
-              v-if="isFileMenuOpen(selectedType, file.id)"
-              class="file-actions-menu"
-              @click.stop
-            >
-              <button type="button" class="file-action-item" @click="viewFile(file)">
-                <iconify-icon icon="lucide:eye" />
-                <span>View document</span>
-              </button>
-              <button type="button" class="file-action-item delete" @click="removeFile(selectedType, file.id)">
-                <iconify-icon icon="lucide:trash-2" />
-                <span>Delete</span>
-              </button>
-            </div>
-            <div class="file-item-content">
-              <iconify-icon 
-                :icon="getFileIcon(file.type)" 
-                class="file-icon"
-              />
-              <span class="file-name">{{ file.name }}</span>
-              <span class="file-size text-muted small">{{ formatFileSize(file.size) }}</span>
-            </div>
+        <template v-if="getPrimaryFileForType(type.id)">
+          <img
+            v-if="isImageFile(getPrimaryFileForType(type.id))"
+            :src="resolveViewTarget(getPrimaryFileForType(type.id))"
+            alt="uploaded preview"
+            class="document-box-preview"
+          />
+          <iconify-icon
+            v-else
+            :icon="getFileIcon(getPrimaryFileForType(type.id)?.type || getPrimaryFileForType(type.id)?.mime_type)"
+            class="document-box-icon uploaded-icon"
+          />
+          <div class="document-box-uploaded-name">
+            {{ getPrimaryFileForType(type.id)?.name || 'Uploaded' }}
           </div>
-        </div>
-      </div>
+          <div class="document-box-actions">
+            <button type="button" class="document-box-action-btn" @click.stop="viewFile(getPrimaryFileForType(type.id))">View</button>
+            <button type="button" class="document-box-action-btn danger" @click.stop="removeFile(type.id, getPrimaryFileForType(type.id)?.id)">Delete</button>
+          </div>
+        </template>
+
+        <template v-else>
+          <iconify-icon icon="lucide:upload" class="document-box-icon" />
+          <div class="document-box-upload-text">Upload {{ type.name }}</div>
+          <div class="document-box-upload-hint">Max 10MB · JPG, PNG, PDF</div>
+        </template>
+      </button>
     </div>
+
+    <input
+      ref="fileInput"
+      type="file"
+      class="d-none"
+      @change="handleFileSelect"
+      accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+    />
     
     <!-- Required Documents Warning -->
     <div v-if="missingRequiredDocs.length > 0" class="alert alert-warning mt-3 small p-2">
@@ -131,15 +97,16 @@ import axios from 'axios'
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
   category: { type: String, default: 'buyer' },
-  documentTypes: { type: Array, default: () => [] }
+  documentTypes: { type: Array, default: () => [] },
+  compact: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])
 import Swal from 'sweetalert2'
 const fileInput = ref(null)
-const replaceFileInput = ref(null)
 
 const selectedType = ref(null) // ✅ FIX 1 (was causing crash)
+const pendingUploadType = ref(null)
 
 const filesByType = ref({})
 const openFileMenuKey = ref(null)
@@ -168,7 +135,8 @@ watch(
 
     initializeFilesByType()
 
-    if (!selectedType.value) {
+    const hasSelectedType = types.some((type) => type.id === selectedType.value)
+    if (!selectedType.value || !hasSelectedType) {
       selectedType.value = types[0].id
     }
 
@@ -190,13 +158,10 @@ function hydrateFilesFromModelValue(model) {
     next[type.id] = []
   })
 
-  const fallbackType = props.documentTypes?.[0]?.id
-
   list.forEach((doc, idx) => {
-    const typeId =
-      (doc.document_type && next[doc.document_type])
-        ? doc.document_type
-        : fallbackType
+    const typeId = (doc.document_type && next[doc.document_type])
+      ? doc.document_type
+      : null
 
     if (!typeId || !next[typeId]) return
 
@@ -223,10 +188,6 @@ function hydrateFilesFromModelValue(model) {
 // =========================
 // COMPUTED
 // =========================
-const selectedTypeFiles = computed(() => {
-  return filesByType.value?.[selectedType.value] || []
-})
-
 const missingRequiredDocs = computed(() => {
   const missing = []
   props.documentTypes.forEach(type => {
@@ -251,6 +212,16 @@ function getFileCountForType(typeId) {
   return filesByType.value?.[typeId]?.length || 0
 }
 
+function getPrimaryFileForType(typeId) {
+  const files = filesByType.value?.[typeId] || []
+  return files.length ? files[0] : null
+}
+
+function isImageFile(file) {
+  const mimeType = (file?.mime_type || file?.type || '').toLowerCase()
+  return mimeType.includes('image')
+}
+
 function canUploadMoreForType(typeId) {
   if (!typeId) return false
   return true
@@ -259,13 +230,19 @@ function canUploadMoreForType(typeId) {
 // =========================
 // FILE ACTIONS
 // =========================
-function triggerFileInput() {
+function triggerFileInput(typeId = null) {
+  if (typeId) {
+    pendingUploadType.value = typeId
+    selectedType.value = typeId
+  }
   fileInput.value?.click()
 }
 
 function handleFileSelect(event) {
   const selectedFiles = Array.from(event.target.files || [])
-  addFiles(selectedFiles)
+  const targetType = pendingUploadType.value || selectedType.value
+  addFiles(selectedFiles, targetType)
+  pendingUploadType.value = null
   event.target.value = ''
 }
 
@@ -274,22 +251,25 @@ function handleDrop(event) {
   addFiles(droppedFiles)
 }
 
-function addFiles(newFiles) {
-  if (!selectedType.value) return
+function addFiles(newFiles, targetType = null) {
+  const typeId = targetType || selectedType.value
+  if (!typeId) return
 
-  if (!filesByType.value[selectedType.value]) {
-    filesByType.value[selectedType.value] = []
+  if (!filesByType.value[typeId]) {
+    filesByType.value[typeId] = []
   }
 
+  // Keep one primary file per document box.
+  filesByType.value[typeId] = []
   newFiles.forEach(file => {
-    filesByType.value[selectedType.value].push({
+    filesByType.value[typeId].push({
       id: Date.now() + Math.random(),
       file,
       name: file.name,
       size: file.size,
       type: file.type,
       mime_type: file.type,
-      document_type: selectedType.value,
+      document_type: typeId,
       category: props.category,
       party_type: props.category,
       status: 'pending'
@@ -456,6 +436,182 @@ defineExpose({
 
 
 <style scoped>
+.document-upload-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.document-upload-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.document-upload-pill {
+  background: #f6c453;
+  color: #3d2d00;
+  border-radius: 999px;
+  font-size: 12px;
+  padding: 2px 10px;
+  font-weight: 600;
+}
+
+.document-box-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.document-box {
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  min-height: 152px;
+  padding: 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+
+.document-box.required {
+  border-color: #f59e0b;
+}
+
+.document-box.uploaded {
+  border-style: solid;
+  border-color: #8ab5ff;
+  background: #f8fbff;
+}
+
+.document-box-label {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.document-box-icon {
+  font-size: 28px;
+  color: #6b7280;
+}
+
+.document-box-preview {
+  width: 100%;
+  max-height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.document-box-uploaded-name {
+  font-size: 12px;
+  color: #334155;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.document-box-upload-text {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.document-box-upload-hint {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.document-box-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.document-box-action-btn {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  border-radius: 8px;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.document-box-action-btn.danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.document-upload-container.is-compact .document-upload-head {
+  margin-bottom: 6px;
+}
+
+.document-upload-container.is-compact .document-upload-title {
+  font-size: 13px;
+}
+
+.document-upload-container.is-compact .document-upload-pill {
+  font-size: 10px;
+  padding: 1px 6px;
+}
+
+.document-upload-container.is-compact .document-box-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.document-upload-container.is-compact .document-box {
+  min-height: 118px;
+  padding: 8px;
+}
+
+.document-upload-container.is-compact .document-box-label {
+  font-size: 10px;
+  top: 6px;
+  left: 7px;
+  right: 7px;
+}
+
+.document-upload-container.is-compact .document-box-icon {
+  font-size: 20px;
+}
+
+.document-upload-container.is-compact .document-box-preview {
+  max-height: 52px;
+}
+
+.document-upload-container.is-compact .document-box-upload-text {
+  font-size: 10px;
+}
+
+.document-upload-container.is-compact .document-box-upload-hint {
+  font-size: 9px;
+}
+
+.document-upload-container.is-compact .document-box-uploaded-name {
+  font-size: 9px;
+}
+
+.document-upload-container.is-compact .document-box-actions {
+  gap: 6px;
+}
+
+.document-upload-container.is-compact .document-box-action-btn {
+  font-size: 9px;
+  padding: 1px 6px;
+}
+
 /* Match create / edit deal forms: pill tabs, navy active */
 .doc-tab {
   height: 30px;

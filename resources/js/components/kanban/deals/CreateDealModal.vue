@@ -92,6 +92,7 @@
               :show-errors="showFieldErrors"     
               :field-errors="fieldErrors"           
               :selected-stage-id="selectedStageId"  
+              :selected-stage-name="selectedStage?.name || ''"
             />
       </div>
 
@@ -201,6 +202,9 @@ const selectedStageIndex = computed(() => {
   return currentStages.value.findIndex(
     stage => stage.id === selectedStageId.value
   )
+})
+const selectedStage = computed(() => {
+  return currentStages.value.find((stage) => stage.id === selectedStageId.value) || null
 })
 
 // Watch for modal visibility

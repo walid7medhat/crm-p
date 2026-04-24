@@ -53,6 +53,113 @@
                   <span class="w-60 text-secondary-light fw-medium">: {{ user.admin_parent_name }}</span>
                 </li>
               </ul>
+              <div v-if="isSuperAdmin" class="attendance-settings-card mt-16">
+                <h6 class="text-md mb-12">Attendance Settings</h6>
+                <div class="mb-12">
+                  <label class="form-label fw-semibold text-primary-light text-sm mb-6">Day of week</label>
+                  <select class="form-select radius-8" v-model.number="attendanceSettings.day_of_week" :disabled="attendanceSettingsLoading || attendanceSettingsSaving">
+                    <option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option>
+                  </select>
+                </div>
+                <div class="row">
+                  <div class="col-6 mb-12">
+                    <label class="form-label fw-semibold text-primary-light text-sm mb-6">From</label>
+                    <input type="time" class="form-control radius-8" v-model="attendanceSettings.start_time" :disabled="attendanceSettingsLoading || attendanceSettingsSaving" />
+                  </div>
+                  <div class="col-6 mb-12">
+                    <label class="form-label fw-semibold text-primary-light text-sm mb-6">To</label>
+                    <input type="time" class="form-control radius-8" v-model="attendanceSettings.end_time" :disabled="attendanceSettingsLoading || attendanceSettingsSaving" />
+                  </div>
+                </div>
+                <div class="mb-12">
+                  <label class="form-label fw-semibold text-primary-light text-sm mb-6">Departments (required check-in)</label>
+                  <div class="attendance-department-picker" :class="{ 'is-disabled': attendanceSettingsLoading || attendanceSettingsSaving }">
+                    <div class="attendance-department-selected mb-8">
+                      <template v-if="selectedDepartmentLabels.length">
+                        <span
+                          v-for="label in selectedDepartmentLabels"
+                          :key="label"
+                          class="attendance-department-chip"
+                        >
+                          {{ label }}
+                        </span>
+                      </template>
+                      <span v-else class="text-secondary-light text-sm">All departments selected</span>
+                    </div>
+                    <div class="attendance-department-list">
+                      <label
+                        v-for="dept in departmentOptions"
+                        :key="dept.value"
+                        class="attendance-department-item"
+                      >
+                        <input
+                          type="checkbox"
+                          :value="dept.value"
+                          :checked="attendanceSettings.department_ids.includes(dept.value)"
+                          :disabled="attendanceSettingsLoading || attendanceSettingsSaving"
+                          @change="toggleDepartmentSelection(dept.value)"
+                        />
+                        <span>{{ dept.label }}</span>
+                      </label>
+                    </div>
+                  </div>
+                  <small class="text-secondary-light d-block mt-6">
+                    Select one or more departments. Leave empty to apply to all departments.
+                  </small>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-primary text-md px-12 py-6 radius-8"
+                  :disabled="attendanceSettingsLoading || attendanceSettingsSaving"
+                  @click="saveAttendanceSettings"
+                >
+                  <span v-if="attendanceSettingsSaving">Saving...</span>
+                  <span v-else>Save</span>
+                </button>
+              </div>
+              <div class="attendance-checkin-card mt-16">
+                <h6 class="text-md mb-8">Daily Attendance Check-in</h6>
+                <div class="d-flex align-items-center gap-2 mb-8">
+                  <span class="status-badge" :class="checkinBadgeClass">{{ attendanceStatus.status || 'Closed' }}</span>
+                  <small class="text-secondary-light">{{ attendanceStatus.window_label || 'Not configured' }}</small>
+                </div>
+
+                <p v-if="attendanceStatus.status === 'Closed'" class="text-secondary-light mb-8">
+                  {{ attendanceStatus.is_department_active ? 'Check-in not available' : 'Check-in is not required for your department' }}
+                </p>
+                <small
+                  v-if="attendanceStatus.status !== 'Not Checked In'"
+                  class="text-secondary-light d-block mb-8"
+                >
+                  Department rule:
+                  <strong>{{ attendanceStatus.is_department_active ? 'Check-in enabled for your department' : 'Check-in disabled for your department' }}</strong>
+                </small>
+
+                <p v-if="attendanceStatus.status === 'Checked In'" class="text-success mb-8">
+                  You have already checked in today.
+                </p>
+
+                <div v-if="attendanceStatus.status === 'Not Checked In'" class="d-flex flex-column gap-8">
+                  <small class="text-secondary-light">Today's Code: <strong>{{ attendanceStatus.today_code || '----' }}</strong></small>
+                  <input
+                    type="text"
+                    class="form-control radius-8"
+                    maxlength="4"
+                    v-model="checkinCode"
+                    placeholder="Enter 4-char code"
+                    :disabled="checkinSubmitting"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-primary text-md px-12 py-6 radius-8 align-self-start"
+                    :disabled="checkinSubmitting || !isCheckinCodeComplete"
+                    @click="submitCheckin"
+                  >
+                    <span v-if="checkinSubmitting">Checking in...</span>
+                    <span v-else>Check In</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -342,6 +449,35 @@ export default {
     const defaultAvatarImg = ref(defaultAvatar);
     
     const vacationLoading = ref(false);
+    const attendanceSettingsLoading = ref(false);
+    const attendanceSettingsSaving = ref(false);
+    const attendanceSettings = reactive({
+      day_of_week: 6,
+      start_time: '09:00',
+      end_time: '10:00',
+      department_ids: [],
+    });
+    const attendanceStatus = reactive({
+      is_active_day: false,
+      is_department_active: true,
+      is_within_time_window: false,
+      already_checked_in: false,
+      status: 'Closed',
+      window_label: 'Not configured',
+      today_code: '',
+    });
+    const departmentOptions = ref([]);
+    const checkinSubmitting = ref(false);
+    const checkinCode = ref('');
+    const dayOptions = [
+      { value: 0, label: 'Sunday' },
+      { value: 1, label: 'Monday' },
+      { value: 2, label: 'Tuesday' },
+      { value: 3, label: 'Wednesday' },
+      { value: 4, label: 'Thursday' },
+      { value: 5, label: 'Friday' },
+      { value: 6, label: 'Saturday' },
+    ];
     const agentsList = ref([]);
     const vacationData = reactive({
       active: false,
@@ -474,6 +610,27 @@ export default {
     const currentDelegate = computed(() => {
       if (!vacationData.delegate_id) return null;
       return agentsList.value.find(agent => agent.id == vacationData.delegate_id);
+    });
+    const isSuperAdmin = computed(() => {
+      const roleName = String(user.value?.role_name || '').toLowerCase();
+      if (roleName === 'super_admin' || roleName === 'super admin') return true;
+      const roles = Array.isArray(user.value?.roles) ? user.value.roles : [];
+      return roles.some((role) => {
+        const name = String(role?.name || role || '').toLowerCase();
+        return name === 'super_admin' || name === 'super admin';
+      });
+    });
+    const isCheckinCodeComplete = computed(() => String(checkinCode.value || '').trim().length === 4);
+    const selectedDepartmentLabels = computed(() => {
+      const selectedIds = attendanceSettings.department_ids.map((id) => Number(id));
+      return departmentOptions.value
+        .filter((dept) => selectedIds.includes(Number(dept.value)))
+        .map((dept) => dept.label);
+    });
+    const checkinBadgeClass = computed(() => {
+      if (attendanceStatus.status === 'Checked In') return 'bg-success text-white';
+      if (attendanceStatus.status === 'Not Checked In') return 'bg-warning text-dark';
+      return 'bg-secondary text-white';
     });
     
     const currentPasswordVisible = ref(false);
@@ -676,11 +833,159 @@ export default {
       loadUserData();
       showNotification('Form reset to original values', 'info');
     };
+
+    const loadAttendanceSettings = async () => {
+      if (!isSuperAdmin.value) return;
+      attendanceSettingsLoading.value = true;
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const response = await axios.get('/api/attendance/settings', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        attendanceSettings.day_of_week = Number.isInteger(response.data?.day_of_week) ? response.data.day_of_week : 6;
+        attendanceSettings.start_time = String(response.data?.start_time || '09:00:00').slice(0, 5);
+        attendanceSettings.end_time = String(response.data?.end_time || '10:00:00').slice(0, 5);
+        attendanceSettings.department_ids = Array.isArray(response.data?.department_ids)
+          ? response.data.department_ids.map((id) => Number(id)).filter((id) => Number.isInteger(id))
+          : [];
+      } catch (error) {
+        console.error('Error loading attendance settings:', error);
+      } finally {
+        attendanceSettingsLoading.value = false;
+      }
+    };
+
+    const loadDepartmentOptions = async () => {
+      if (!isSuperAdmin.value) return;
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const response = await axios.get('/api/attendance/departments', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+        const rows = Array.isArray(response.data) ? response.data : [];
+
+        departmentOptions.value = rows
+          .map((dept) => ({
+            value: Number(dept?.id),
+            label: String(dept?.name || `Department #${dept?.id || ''}`)
+          }))
+          .filter((dept) => Number.isInteger(dept.value));
+      } catch (error) {
+        console.error('Error loading department options:', error);
+        departmentOptions.value = [];
+      }
+    };
+
+    const loadAttendanceStatus = async () => {
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const response = await axios.get('/api/attendance/status', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        attendanceStatus.is_active_day = !!response.data?.is_active_day;
+        attendanceStatus.is_department_active = response.data?.is_department_active !== false;
+        attendanceStatus.is_within_time_window = !!response.data?.is_within_time_window;
+        attendanceStatus.already_checked_in = !!response.data?.already_checked_in;
+        attendanceStatus.status = response.data?.status || 'Closed';
+        attendanceStatus.window_label = response.data?.window_label || 'Not configured';
+        attendanceStatus.today_code = response.data?.today_code || '';
+      } catch (error) {
+        console.error('Error loading attendance status:', error);
+      }
+    };
+
+    const saveAttendanceSettings = async () => {
+      if (!isSuperAdmin.value) return;
+      attendanceSettingsSaving.value = true;
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const response = await axios.put('/api/attendance/settings', {
+          day_of_week: Number(attendanceSettings.day_of_week),
+          start_time: attendanceSettings.start_time,
+          end_time: attendanceSettings.end_time,
+          department_ids: attendanceSettings.department_ids.map((id) => Number(id)).filter((id) => Number.isInteger(id)),
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.data?.success) {
+          showNotification('Attendance settings saved successfully!', 'success');
+          await loadAttendanceStatus();
+        }
+      } catch (error) {
+        showNotification(error?.response?.data?.message || 'Failed to save attendance settings', 'error');
+      } finally {
+        attendanceSettingsSaving.value = false;
+      }
+    };
+
+    const toggleDepartmentSelection = (departmentId) => {
+      const id = Number(departmentId);
+      if (!Number.isInteger(id)) return;
+
+      const current = attendanceSettings.department_ids.map((item) => Number(item)).filter((item) => Number.isInteger(item));
+      const exists = current.includes(id);
+      attendanceSettings.department_ids = exists
+        ? current.filter((item) => item !== id)
+        : [...current, id];
+    };
+
+    const submitCheckin = async () => {
+      if (checkinSubmitting.value || !isCheckinCodeComplete.value) return;
+      checkinSubmitting.value = true;
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const response = await axios.post('/api/attendance/check-in', {
+          code: String(checkinCode.value || '').trim().toUpperCase(),
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.data?.success) {
+          showNotification(response.data?.message || 'Checked in successfully', 'success');
+          checkinCode.value = '';
+          await loadAttendanceStatus();
+        } else {
+          showNotification(response.data?.message || 'Check-in failed', 'error');
+        }
+      } catch (error) {
+        showNotification(error?.response?.data?.message || 'Check-in failed', 'error');
+      } finally {
+        checkinSubmitting.value = false;
+      }
+    };
     
     onMounted(() => {
       loadUserData();
       loadVacationData();
+      loadAttendanceStatus();
     });
+
+    watch(isSuperAdmin, (value) => {
+      if (value) {
+        loadDepartmentOptions();
+        loadAttendanceSettings();
+      }
+    }, { immediate: true });
     
     watch(() => vacationData.active, (newVal) => {
       if (newVal && agentsList.value.length === 0) {
@@ -700,6 +1005,18 @@ export default {
       loading,
       passwordLoading,
       vacationLoading,
+      attendanceSettingsLoading,
+      attendanceSettingsSaving,
+      attendanceSettings,
+      attendanceStatus,
+      departmentOptions,
+      checkinSubmitting,
+      checkinCode,
+      dayOptions,
+      isSuperAdmin,
+      isCheckinCodeComplete,
+      selectedDepartmentLabels,
+      checkinBadgeClass,
       currentPasswordVisible,
       newPasswordVisible,
       confirmPasswordVisible,
@@ -709,6 +1026,9 @@ export default {
       onImageChange,
       loadVacationData,
       saveVacationMode,
+      saveAttendanceSettings,
+      toggleDepartmentSelection,
+      submitCheckin,
       currentDelegate,
       formatDate
     };
@@ -808,5 +1128,59 @@ export default {
   }
   .border-avatar{
       border-radius:20px;
+  }
+  .attendance-settings-card{
+    border:1px solid #E5E7EB;
+    border-radius:12px;
+    padding:12px;
+    background:#F9FAFB;
+  }
+  .attendance-checkin-card{
+    border:1px solid #E5E7EB;
+    border-radius:12px;
+    padding:12px;
+    background:#FFFFFF;
+  }
+  .attendance-department-picker{
+    border:1px solid #D1D5DB;
+    border-radius:8px;
+    background:#FFFFFF;
+    padding:10px;
+  }
+  .attendance-department-picker.is-disabled{
+    opacity:0.7;
+    pointer-events:none;
+  }
+  .attendance-department-selected{
+    min-height:32px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    align-items:center;
+  }
+  .attendance-department-chip{
+    background:#EEF2FF;
+    color:#1E3A8A;
+    border-radius:999px;
+    padding:3px 10px;
+    font-size:12px;
+    font-weight:600;
+  }
+  .attendance-department-list{
+    max-height:170px;
+    overflow:auto;
+    border-top:1px solid #E5E7EB;
+    padding-top:8px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .attendance-department-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    color:#111827;
+    cursor:pointer;
   }
   </style>

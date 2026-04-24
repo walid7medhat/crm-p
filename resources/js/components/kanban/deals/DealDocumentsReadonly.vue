@@ -12,28 +12,23 @@
         :key="doc.key" 
         
       >
-        <label class="info-label">{{ doc.categoryLabel }}</label>
-        <div class="document-card">
-            <div class="document-preview">
-            
-              <div 
-              
-                class="preview-placeholder"
-                @click="previewDocument(doc)"
-              >
-                <iconify-icon :icon="fileIcon(doc)" class="placeholder-icon" />
-              </div>
-            </div>
-            
-            <div class="document-info">
-              <div class="document-name">{{ doc.displayName }}</div>
-              <div class="document-meta">
-                <span v-if="doc.sizeLabel" class="document-size">{{ doc.sizeLabel }}</span>
-              </div>
-            </div>
-            
-   
+        <div class="document-box" @click="previewDocument(doc)">
+          <label class="document-box-label">{{ doc.categoryLabel }}</label>
+          <img
+            v-if="isImage(doc) && doc.url"
+            :src="doc.url"
+            :alt="doc.name"
+            class="document-box-preview"
+          />
+          <div v-else class="document-box-preview-placeholder">
+            <iconify-icon :icon="fileIcon(doc)" class="placeholder-icon" />
           </div>
+          <div class="document-box-name">{{ doc.displayName }}</div>
+          <div class="document-box-meta">
+            <span v-if="doc.sizeLabel" class="document-size">{{ doc.sizeLabel }}</span>
+            <button type="button" class="document-view-btn" @click.stop="previewDocument(doc)">View</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -275,90 +270,94 @@ function deleteDocument(doc) {
 
 /* Documents Grid */
 .documents-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.document-box {
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  min-height: 180px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.document-card {
-  display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: #FFFFFF;
-  border: 1px solid #F1F5F9;
-  border-radius: 12px;
-  transition: all 0.2s ease;
+  justify-content: center;
+  gap: 8px;
   position: relative;
-}
-
-.document-card:hover {
-  border-color: #E2E8F0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-/* Document Preview */
-.document-preview {
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #F8FAFC;
   cursor: pointer;
 }
 
-.preview-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.document-box:hover {
+  border-color: #a9bddb;
+  background: #f8fbff;
 }
 
-.preview-placeholder {
+.document-box-label {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  right: 10px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.document-box-preview {
   width: 100%;
-  height: 100%;
+  max-height: 88px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.document-box-preview-placeholder {
+  width: 100%;
+  max-width: 160px;
+  height: 84px;
+  border-radius: 8px;
+  background: #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #F1F5F9;
 }
 
 .placeholder-icon {
-  font-size: 24px;
+  font-size: 26px;
   color: #64748B;
 }
 
-/* Document Info */
-.document-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.document-name {
+.document-box-name {
   font-size: 12px;
-  font-weight: 500;
-  color: #0F172A;
-  margin-bottom: 4px;
-  line-height: 1.4;
+  font-weight: 600;
+  color: #0f172a;
+  max-width: 100%;
+  text-align: center;
+  word-break: break-word;
 }
 
-.document-meta {
+.document-box-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  width: 100%;
   font-size: 11px;
-}
-
-.document-type {
-  color: #3B82F6;
-  background: #EFF6FF;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: 500;
+  gap: 8px;
 }
 
 .document-size {
   color: #94A3B8;
+}
+
+.document-view-btn {
+  border: 1px solid #dbe4ef;
+  background: #fff;
+  color: #334155;
+  border-radius: 8px;
+  font-size: 11px;
+  padding: 2px 10px;
 }
 
 /* Document Actions */
