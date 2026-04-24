@@ -1407,7 +1407,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
   font-weight: 500;
 }
 .badge-off_plan {
-  background: #faa300;
+  background: #B60F1C;
   color: white;
   padding: 4px 8px;
   border-radius: 6px;

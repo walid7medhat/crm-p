@@ -1213,7 +1213,7 @@ const decodeFiltersFromQuery = async (query) => {
     gap:2px
 }
 .badge-off_plan {
-  background: #faa300;
+  background: #B60F1C;
   color: white;
   padding: 4px 8px;
   border-radius: 6px;
