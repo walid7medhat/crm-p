@@ -20,7 +20,7 @@ class UpdateDealRequest extends FormRequest
             'property_type_id' => 'nullable|exists:property_types,id',
             'bedrooms' => 'nullable|string',
             'unit_size' => 'nullable|numeric',
-            'project_id' => 'nullable|exists:projects,id',
+            // 'project_id' => 'nullable|exists:projects,id',
             'area_id' => 'nullable|exists:areas,id',
             'listing_id' => 'nullable|exists:listings,id',
             'developer_id' => 'nullable|exists:developers,id',

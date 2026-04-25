@@ -307,7 +307,7 @@
                   class="form-card p-3 radius-12"
                   :class="hasPartyFields('buyer') ? 'mt-3' : 'mt-0'"
                 >
-                  <label class="form-label-custom">Buyer Documents</label>
+                  <label class="section-title">Buyer Documents</label>
                   <DocumentUpload
                     v-model="formData.buyer_documents"
                     category="buyer"
@@ -440,7 +440,7 @@
               </div>
                <!-- Seller Documents -->
                 <div class="mt-3" v-if="documentTypesByParty.seller.length > 0">
-                  <label class="form-label-custom">Seller Documents</label>
+                  <label class="section-title">Seller Documents</label>
                   <DocumentUpload
                     v-model="formData.seller_documents"
                     category="seller"
@@ -583,7 +583,7 @@
               </div>
               <!-- Tenant Documents -->
                 <div class="mt-3" v-if="documentTypesByParty.tenant.length > 0">
-                  <label class="form-label-custom">Tenant Documents</label>
+                  <label class="section-title">Tenant Documents</label>
                   <DocumentUpload
                     v-model="formData.tenant_documents"
                     category="tenant"
@@ -721,7 +721,7 @@
               </div>
                <!-- Landlord Documents -->
                 <div class="mt-3" v-if="documentTypesByParty.landlord.length > 0">
-                  <label class="form-label-custom">Landlord Documents</label>
+                  <label class="section-title">Landlord Documents</label>
                   <DocumentUpload
                     v-model="formData.landlord_documents"
                     category="landlord"
@@ -870,7 +870,7 @@
               </div>
 
               <!-- Project Name - يتم تعبئته تلقائياً -->
-              <div class="col-md-6" v-if="hasField('project_id')">
+              <!-- <div class="col-md-6" v-if="hasField('project_id')">
                 <label class="form-label-custom">Project Name</label>
                 <v-select
                   append-to-body 
@@ -888,7 +888,7 @@
                     </span>
                   </template>
                 </v-select>
-              </div>
+              </div> -->
 
               <!-- Developer - يتم تعبئته تلقائياً -->
               <div class="col-md-6" v-if="hasField('developer_id')">
@@ -1042,7 +1042,7 @@ const sources = ref([])
 const propertyTypes = ref([])
 const developers = ref([])
 const areas = ref([])
-const projects = ref([])
+// const projects = ref([])
 
 // Document upload refs
 const buyerDocUploadRef = ref(null)
@@ -1105,8 +1105,8 @@ const fetchAvailableListings = async (areaId) => {
       bedrooms_text: listing.number_of_bedrooms === 0 ? 'Studio' : `${listing.number_of_bedrooms} Bed`,
       bathrooms: listing.number_of_bathrooms,
       size_sqft: listing.size_sqft,
-      project_id: listing.project_id,
-      project_name: listing.project?.title,
+      // project_id: listing.project_id,
+      // project_name: listing.project?.title,
       developer_id: listing.developer_id,
       developer_name: listing.developer?.name,
       status: listing.status,
@@ -1182,8 +1182,8 @@ const documentTypesByParty = computed(() => {
   ) {
     const buyerDocDefinitions = [
       { id: 'passport', name: 'Passport' },
-      { id: 'visa', name: 'Visa' },
-      { id: 'national_id', name: 'National ID' },
+      { id: 'visa', name: 'Residence  Visa' },
+      { id: 'national_id', name: 'Emirates ID' },
       { id: 'kyc', name: 'KYC' },
       { id: 'spa', name: 'Buyer SPA' },
       { id: 'payment_proof', name: 'Buyer Payment Proof' },
@@ -1508,15 +1508,42 @@ async function fetchDevelopers() {
     console.error('Error fetching developers:', error)
   }
 }
-const fetchProjects = async () => {
+// const fetchProjects = async () => {
+//   try {
+//     const response = await api.get('/listings/projects', { 
+//       params: { per_page: 1000 } 
+//     })
+//     projects.value = response.data?.data ?? response.data ?? []
+//     console.log(`Loaded ${projects.value.length} projects`)
+//   } catch (error) {
+//     console.error('Error loading projects:', error)
+//   }
+// }
+
+const fetchAllAreas = async () => {
   try {
-    const response = await api.get('/listings/projects', { 
-      params: { per_page: 1000 } 
-    })
-    projects.value = response.data?.data ?? response.data ?? []
-    console.log(`Loaded ${projects.value.length} projects`)
+      const response = await api.get('/listings/areas')
+    
+    // معالجة البيانات
+    const responseData = response.data
+    let areasData = []
+    
+    if (responseData?.data?.data) {
+      areasData = responseData.data.data
+    } else if (responseData?.data && Array.isArray(responseData.data)) {
+      areasData = responseData.data
+    } else if (Array.isArray(responseData)) {
+      areasData = responseData
+    } else {
+      areasData = []
+    }
+     props.areas = areasData
+     emit('update:areas', areasData)
+   
+    
+    console.log(`Loaded ${props.areas.length} areas`)
   } catch (error) {
-    console.error('Error loading projects:', error)
+    console.error('Error loading areas:', error)
   }
 }
 // Load initial data
@@ -1526,7 +1553,8 @@ onMounted(async () => {
     fetchSources(),
     fetchPropertyTypes(),
      fetchDevelopers() ,
-      fetchProjects() 
+      // fetchProjects() 
+      fetchAllAreas(),
   ])
   getCurrentUser()
 })
@@ -1540,7 +1568,7 @@ const onAreaSelected = (areaId) => {
     formData.value.property_type_id = null
     formData.value.bedrooms = null
     formData.value.unit_size = ''
-    formData.value.project_id = null
+    // formData.value.project_id = null
     formData.value.developer_id = null
   }
   
@@ -1555,7 +1583,7 @@ const onListingSelected = (listing) => {
   formData.value.property_type_id = listing.property_type_id
   formData.value.bedrooms = listing.bedrooms === 0 ? 'studio' : String(listing.bedrooms)
   formData.value.unit_size = listing.size_sqft || ''
-  formData.value.project_id = listing.project_id
+  // formData.value.project_id = listing.project_id
   formData.value.developer_id = listing.developer_id
   formData.value.listing_id = listing.id
   formData.value.listing_status = listing.status

@@ -55,28 +55,28 @@ class DealResource extends JsonResource
                 'color' => $this->stage->color,
             ],
             
-            'property_type' => $this->whenLoaded('propertyType', fn() => [
-                'id' => $this->propertyType->id,
-                'name' => $this->propertyType->name,
-            ]),
+            'property_type' =>[
+                'id' => $this->propertyType?->id,
+                'name' => $this->propertyType?->name,
+            ],
             
-            'project' => $this->whenLoaded('project', fn() => [
-                'id' => $this->project->id,
-                'name' => $this->project->title,
-            ]),
-            'subcommunity' => $this->whenLoaded('subcommunity', fn() => [
-                'id' => $this->subcommunity->id,
-                'name' => $this->subcommunity->name,
-            ]),
-            'area' => $this->whenLoaded('area', fn() => [
-                'id' => $this->area->id,
-                'name' => $this->area->name,
-            ]),
+            // 'project' => $this->whenLoaded('project', fn() => [
+            //     'id' => $this->project->id,
+            //     'name' => $this->project->title,
+            // ]),
+            // 'subcommunity' => $this->whenLoaded('subcommunity', fn() => [
+            //     'id' => $this->subcommunity->id,
+            //     'name' => $this->subcommunity->name,
+            // ]),
+            'area' => [
+                'id' => $this->area?->id,
+                'name' => $this->area?->name,
+            ],
             
-            'developer' => $this->whenLoaded('developer', fn() => [
-                'id' => $this->developer->id,
-                'name' => $this->developer->name,
-            ]),
+            'developer' => [
+                'id' => $this->developer?->id,
+                'name' => $this->developer?->name,
+            ],
             'responsible_person_id' => $this->responsible_person_id,
             
                'responsible_person' => new UserResource($this->responsiblePerson),

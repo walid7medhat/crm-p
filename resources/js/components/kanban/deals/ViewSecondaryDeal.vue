@@ -24,7 +24,7 @@
     </div>
 
     <!-- Deal Information (from card) -->
-    <div class="col-12" v-if="deal.createdBy || deal.source || deal.project">
+    <div class="col-12" v-if="deal.createdBy || deal.source ">
       
       <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'deal_information' }">
         <div class="section-head mb-3">
@@ -50,7 +50,6 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
-          @search-projects="(v) => emit('search-projects', v)"
         />
         <div v-else class="row g-3">
            <div class="col-md-12" v-if="deal.deal_name">
@@ -103,7 +102,6 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
-          @search-projects="(v) => emit('search-projects', v)"
         />
         <div v-else class="row g-3">
           
@@ -198,7 +196,6 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
-          @search-projects="(v) => emit('search-projects', v)"
         />
         <DealDocumentsReadonly v-else :documents="buyerDocuments" />
       </div>
@@ -231,9 +228,14 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
-          @search-projects="(v) => emit('search-projects', v)"
         />
         <div v-else class="row g-3">
+          <div class="col-md-12">
+            <div class="info-group">
+              <label class="info-label">Property Location</label>
+              <p class="info-value mb-0">{{ getAreaName()}}</p>
+            </div>
+          </div>
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Unit No</label>
@@ -259,22 +261,17 @@
               <p class="info-value mb-0">{{ tagsDisplay(deal.sub_communities) }}</p>
             </div>
           </div> -->
-          <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Area</label>
-              <p class="info-value mb-0">{{ deal.area?.name  }}</p>
-            </div>
-          </div>
-           <div class="col-md-12">
+         
+           <!-- <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Project Name</label>
               <p class="info-value mb-0">{{ deal.project?.name  }}</p>
             </div>
-          </div>
+          </div> -->
            <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Developer</label>
-              <p class="info-value mb-0">{{ deal.developer?.name }}</p>
+              <p class="info-value mb-0">{{ getDeveloperName() }}</p>
             </div>
           </div>
           <div class="col-md-12">
@@ -314,7 +311,6 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
-          @search-projects="(v) => emit('search-projects', v)"
         />
         <div v-else class="row g-3">
           <div class="col-md-12">
@@ -396,7 +392,6 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
-          @search-projects="(v) => emit('search-projects', v)"
         />
         <DealDocumentsReadonly v-else :documents="sellerDocuments" />
       </div>
@@ -429,7 +424,6 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
-          @search-projects="(v) => emit('search-projects', v)"
         />
         <div v-else class="row g-3">
           <div class="col-md-12">
@@ -481,7 +475,7 @@ const props = defineProps({
   selectedStageId: { type: [Number, String], default: null },
   selectedStageName: { type: String, default: '' },
 })
-const emit = defineEmits(['edit-section', 'update:inline-edit-data', 'inline-edit-save', 'inline-edit-cancel', 'search-areas', 'search-subcommunities', 'search-projects'])
+const emit = defineEmits(['edit-section', 'update:inline-edit-data', 'inline-edit-save', 'inline-edit-cancel', 'search-areas', 'search-subcommunities'])
 
 function requestEdit(sectionKey) {
   emit('edit-section', sectionKey)
@@ -548,13 +542,7 @@ function tagsDisplay(arr) {
   return arr.join(', ')
 }
 
-const projectDisplay = computed(() => {
-  const d = props.deal
-  if (!d) return '----'
-  if (d.project) return d.project
-  if (Array.isArray(d.project_names) && d.project_names.length) return d.project_names.join(', ')
-  return '----'
-})
+
 
 const amountCurrency = computed(() => {
   const d = props.deal
@@ -591,7 +579,23 @@ const missingSummary = computed(() => {
 
   return { count: labels.length, labels }
 })
+const getAreaName = () => {
+  if (props.deal?.area?.name) return props.deal.area.name
+  if (props.deal?.area_id && props.inlineEditLookup?.areas) {
+    const area = props.inlineEditLookup.areas.find(a => a.id === props.deal.area_id)
+    return area?.name || '----'
+  }
+  return '----'
+}
 
+const getDeveloperName = () => {
+  if (props.deal?.developer?.name) return props.deal.developer.name
+  if (props.deal?.developer_id && props.inlineEditLookup?.developers) {
+    const dev = props.inlineEditLookup.developers.find(d => d.id === props.deal.developer_id)
+    return dev?.name || '----'
+  }
+  return '----'
+}
 </script>
 
 <style scoped>

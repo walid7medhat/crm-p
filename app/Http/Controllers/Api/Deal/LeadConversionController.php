@@ -133,7 +133,7 @@ class LeadConversionController extends Controller
                 'source' => $lead->lead_source ?? $lead->source,
                 'deal_name' => $lead->lead_name,
 
-                'deal_total_amount' => $lead->budget,
+                // 'deal_total_amount' => $lead->budget,
                 'currency' => $lead->currency ?? 'AED',
                
                 'unit_no' => $unitNo,

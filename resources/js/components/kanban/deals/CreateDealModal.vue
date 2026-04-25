@@ -88,7 +88,6 @@
               :areas="areas"
               @search-areas="searchAreas"        
               @search-subcommunities="searchSubCommunities" 
-               @search-projects="searchProjects" 
               :show-errors="showFieldErrors"     
               :field-errors="fieldErrors"           
               :selected-stage-id="selectedStageId"  
@@ -152,7 +151,7 @@ const developers = ref([])
 const areas = ref([])
 const communities = ref([])
 const subCommunities = ref([])
-const projects = ref([])
+// const projects = ref([])
 
 // Form data
 const formData = ref({})
@@ -414,36 +413,36 @@ async function searchAreas(search = '', parentId = null) {
     return []
   }
 }
-async function searchProjects(search = '') {
-  try {
-    const params = {}
+// async function searchProjects(search = '') {
+//   try {
+//     const params = {}
     
-    // لو في search نضيفه، لو مفيش هات كل المشاريع
-    if (search) {
-      params.search = search
-    }
+//     // لو في search نضيفه، لو مفيش هات كل المشاريع
+//     if (search) {
+//       params.search = search
+//     }
     
-    const response = await api.get('/listings/projects', { params })
+//     const response = await api.get('/listings/projects', { params })
     
-    let projectsData = []
-    const responseData = response.data
+//     let projectsData = []
+//     const responseData = response.data
     
-    if (responseData?.data?.data) {
-      projectsData = responseData.data.data
-    } else if (responseData?.data && Array.isArray(responseData.data)) {
-      projectsData = responseData.data
-    } else if (Array.isArray(responseData)) {
-      projectsData = responseData
-    }
+//     if (responseData?.data?.data) {
+//       projectsData = responseData.data.data
+//     } else if (responseData?.data && Array.isArray(responseData.data)) {
+//       projectsData = responseData.data
+//     } else if (Array.isArray(responseData)) {
+//       projectsData = responseData
+//     }
     
-    projects.value = projectsData
-    return projectsData
+//     projects.value = projectsData
+//     return projectsData
     
-  } catch (error) {
-    console.error('Error fetching projects:', error)
-    return []
-  }
-}
+//   } catch (error) {
+//     console.error('Error fetching projects:', error)
+//     return []
+//   }
+// }
 
 
 // أيضاً أضف دالة searchSubCommunities المفقودة:
@@ -517,7 +516,7 @@ async function loadLeadData() {
       // subcommunity_id: lead.subcommunity_id,
       bedrooms: lead.bedrooms,
       unit_size: lead.unit_size || '',
-      project_id: lead.project_id,
+      // project_id: lead.project_id,
       area_id: lead.area_id,
       developer_id: lead.developer_id,
       responsible_person_id: lead.responsible_person_id,
@@ -873,7 +872,7 @@ function resetFormData() {
     subcommunity_id: null,
     bedrooms: null,
     unit_size: '',
-    project_id: null,
+    // project_id: null,
     listing_id: null,
     developer_id: null,
     area_id: null,

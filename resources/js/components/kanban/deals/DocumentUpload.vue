@@ -5,7 +5,7 @@
         <iconify-icon icon="lucide:file-text" />
         <span>Document Upload</span>
       </div>
-      <span class="document-upload-pill">Optional</span>
+      <span class="document-upload-pill" v-if="missingRequiredDocs.length > 0">Required documents missing: {{ missingRequiredDocs.join(', ') }}</span>
     </div>
 
     <div class="document-box-grid">
@@ -13,14 +13,16 @@
         v-for="type in documentTypes"
         :key="type.id"
         type="button"
-        class="document-box"
+       
         :class="{ required: type.required, uploaded: hasFilesForType(type.id) }"
         @click="triggerFileInput(type.id)"
       >
-        <div class="document-box-label">
+      <div class="document-box-label">
           {{ type.name }}
           <span v-if="type.required" class="text-danger">*</span>
         </div>
+      <div  class="document-box">
+        
 
         <template v-if="getPrimaryFileForType(type.id)">
           <img
@@ -48,6 +50,7 @@
           <div class="document-box-upload-text">Upload {{ type.name }}</div>
           <div class="document-box-upload-hint">Max 10MB · JPG, PNG, PDF</div>
         </template>
+        </div>
       </button>
     </div>
 
@@ -60,10 +63,10 @@
     />
     
     <!-- Required Documents Warning -->
-    <div v-if="missingRequiredDocs.length > 0" class="alert alert-warning mt-3 small p-2">
+    <!-- <div v-if="missingRequiredDocs.length > 0" class="alert alert-warning mt-3 small p-2">
       <iconify-icon icon="lucide:alert-triangle" class="me-1"></iconify-icon>
       Required documents missing: {{ missingRequiredDocs.join(', ') }}
-    </div>
+    </div> -->
 
     <div v-if="previewModal.open" class="doc-preview-backdrop" @click.self="closePreview">
       <div class="doc-preview-modal">
@@ -447,8 +450,8 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 400;
   color: #1f2937;
 }
 
@@ -456,7 +459,7 @@ defineExpose({
   background: #f6c453;
   color: #3d2d00;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   padding: 2px 10px;
   font-weight: 600;
 }
@@ -493,14 +496,16 @@ defineExpose({
 }
 
 .document-box-label {
-  position: absolute;
-  top: 8px;
+  /* position: absolute; */
+  /* top: 8px;
   left: 8px;
-  right: 8px;
+  right: 8px; */
   text-align: left;
   font-size: 12px;
   font-weight: 600;
   color: #334155;
+  margin-bottom: 5px;
+  margin-left: 5px;
 }
 
 .document-box-icon {

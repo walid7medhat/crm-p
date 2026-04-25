@@ -252,7 +252,7 @@
 
         <!-- Buyer Documents -->
         <div class="mt-3">
-          <label class="form-label-custom">Buyer Documents</label>
+          <label class="section-title">Buyer Documents</label>
           <DocumentUpload
             v-if="dealType === 'primary'"
             v-model="form.buyer_documents"
@@ -451,7 +451,7 @@
 
         <!-- Seller Documents -->
         <div class="mt-3">
-          <label class="form-label-custom">Seller Documents</label>
+          <label class="section-title">Seller Documents</label>
           <DocumentUpload 
             v-model="form.seller_documents"
             category="seller"
@@ -636,7 +636,7 @@
 
         <!-- Tenant Documents -->
         <div class="mt-3">
-          <label class="form-label-custom">Tenant Documents</label>
+          <label class="section-title">Tenant Documents</label>
           <DocumentUpload 
             v-model="form.tenant_documents"
             category="tenant"
@@ -828,7 +828,7 @@
 
         <!-- Landlord Documents -->
         <div class="mt-3">
-          <label class="form-label-custom">Landlord Documents</label>
+          <label class="section-title">Landlord Documents</label>
           <DocumentUpload 
             v-model="form.landlord_documents"
             category="landlord"
@@ -849,7 +849,7 @@
           
           <!-- Area (Location) - Required -->
           <div class="col-md-6">
-            <label class="form-label-custom">Location <span class="text-danger">*</span></label>
+            <label class="form-label-custom"> Property Location <span class="text-danger">*</span></label>
             <v-select 
               v-model="form.area_id" 
               :options="areas" 
@@ -999,7 +999,7 @@
           </div>
 
           <!-- Project Name - يتم تعبئته تلقائياً -->
-          <div class="col-md-4">
+          <!-- <div class="col-md-4">
             <label class="form-label-custom">Project Name</label>
             <v-select 
               v-model="form.project_id" 
@@ -1021,7 +1021,7 @@
             <div v-if="showErrors && fieldErrors.project_id" class="invalid-feedback d-block">
               {{ fieldErrors.project_id }}
             </div>
-          </div>
+          </div> -->
 
           <!-- Developer - يتم تعبئته تلقائياً -->
           <div class="col-md-4">
@@ -1175,7 +1175,7 @@ const responsiblePerson = computed(() => {
   return props.users.find(u => u.id === id) || null
 })
 
-const projects = ref([])
+// const projects = ref([])
 const subCommunities = ref([])
 const locationFirstLine = (area) => {
       return area.name || ''
@@ -1258,10 +1258,10 @@ const primaryBuyerDocTypes = computed(() => {
     docs.push({ id: 'passport', name: 'Passport', required: true })
   }
   if (requiredResidencyDocs.includes('visa')) {
-    docs.push({ id: 'visa', name: 'Visa', required: true })
+    docs.push({ id: 'visa', name: 'Residence Visa', required: false })
   }
   if (requiredResidencyDocs.includes('national_id')) {
-    docs.push({ id: 'national_id', name: 'National ID', required: true })
+    docs.push({ id: 'national_id', name: 'Emirates ID', required: true })
   }
 
   docs.push(
@@ -1282,10 +1282,10 @@ const secondaryBuyerDocTypes = computed(() => {
     docs.push({ id: 'passport', name: 'Buyer Passport', required: true })
   }
   if (requiredResidencyDocs.includes('visa')) {
-    docs.push({ id: 'visa', name: 'Buyer Visa', required: true })
+    docs.push({ id: 'visa', name: 'Buyer Residence  Visa', required: false })
   }
   if (requiredResidencyDocs.includes('national_id')) {
-    docs.push({ id: 'national_id', name: 'Buyer National ID', required: true })
+    docs.push({ id: 'national_id', name: 'Buyer Emirates ID', required: true })
   }
 
   docs.push(
@@ -1305,8 +1305,8 @@ const sellerDocTypes = computed(() => {
   
   const allDocs = {
     passport: { id: 'passport', name: 'Seller Passport', required: true },
-    national_id: { id: 'national_id', name: 'Seller National ID', required: true },
-    visa: { id: 'visa', name: 'Seller Visa', required: true },
+    national_id: { id: 'national_id', name: 'Seller Emirates ID', required: true },
+    visa: { id: 'visa', name: 'Seller Residence  Visa', required: false },
     title_deed: { id: 'title_deed', name: 'Unit SPA / Title Deed', required: false }
   }
   
@@ -1319,9 +1319,9 @@ const tenantDocTypes = computed(() => {
   
   const allDocs = {
     passport: { id: 'passport', name: 'Tenant Passport', required: true },
-    national_id: { id: 'national_id', name: 'Tenant National ID', required: false },
+    national_id: { id: 'national_id', name: 'Tenant Emirates ID', required: false },
     kyc: { id: 'kyc', name: 'Tenant KYC', required: false },
-    visa: { id: 'visa', name: 'Tenant Visa', required: false },
+    visa: { id: 'visa', name: 'Tenant Residence Visa', required: false },
     payment_proof: { id: 'payment_proof', name: 'Tenant Proof of Payment', required: false },
     ejari: { id: 'ejari', name: 'Tawtheeq/Ejari Contract', required: false },
     tenancy_contract: { id: 'tenancy_contract', name: 'Tenancy Contract', required: false },
@@ -1337,8 +1337,8 @@ const landlordDocTypes = computed(() => {
   
   const allDocs = {
     passport: { id: 'passport', name: 'Landlord Passport', required: true },
-    national_id: { id: 'national_id', name: 'Landlord National ID', required: true },
-    visa: { id: 'visa', name: 'Landlord Visa', required: true },
+    national_id: { id: 'national_id', name: 'Landlord Emairates ID', required: true },
+    visa: { id: 'visa', name: 'Landlord Residence  Visa', required: false },
     title_deed: { id: 'title_deed', name: 'Title Deed', required: true }
   }
   
@@ -1600,31 +1600,31 @@ function validateForm() {
 }
 
 // Search functions
-function onSearchProjects(search) {
-  dlog('Searching projects with term:', search)
-  emit('search-projects', search)
-}
-async function searchProjects(search) {
-  if (!search) return
-  try {
-    const response = await api.get('/listings/projects', { params: { search } })
-    projects.value = response.data?.data ?? response.data ?? []
-  } catch (e) {
-    console.error('Error searching projects:', e)
-  }
-}
-watch(() => form.value.project_id, async (newProjectId) => {
-  if (newProjectId && !projects.value.some(p => p.id === newProjectId)) {
-    try {
-      const response = await api.get(`/listings/projects/${newProjectId}`)
-      if (response.data) {
-        projects.value.push(response.data)
-      }
-    } catch (error) {
-      console.error('Error fetching specific project:', error)
-    }
-  }
-}, { immediate: true })
+// function onSearchProjects(search) {
+//   dlog('Searching projects with term:', search)
+//   emit('search-projects', search)
+// }
+// async function searchProjects(search) {
+//   if (!search) return
+//   try {
+//     const response = await api.get('/listings/projects', { params: { search } })
+//     projects.value = response.data?.data ?? response.data ?? []
+//   } catch (e) {
+//     console.error('Error searching projects:', e)
+//   }
+// }
+// watch(() => form.value.project_id, async (newProjectId) => {
+//   if (newProjectId && !projects.value.some(p => p.id === newProjectId)) {
+//     try {
+//       const response = await api.get(`/listings/projects/${newProjectId}`)
+//       if (response.data) {
+//         projects.value.push(response.data)
+//       }
+//     } catch (error) {
+//       console.error('Error fetching specific project:', error)
+//     }
+//   }
+// }, { immediate: true })
 watch(() => props.fieldErrors, (newVal) => {
   dlog('fieldErrors in DealForm:', newVal)
 }, { deep: true, immediate: true })
@@ -1632,20 +1632,51 @@ watch(() => props.fieldErrors, (newVal) => {
 watch(() => props.showErrors, (newVal) => {
   dlog('showErrors in DealForm:', newVal)
 }, { immediate: true })
-const fetchProjects = async () => {
+// const fetchProjects = async () => {
+//   try {
+//     const response = await api.get('/listings/projects', { 
+//       params: { per_page: 1000 } 
+//     })
+//     projects.value = response.data?.data ?? response.data ?? []
+//     console.log(`Loaded ${projects.value.length} projects`)
+//   } catch (error) {
+//     console.error('Error loading projects:', error)
+//   }
+// }
+
+
+// دالة جديدة لتحميل جميع المناطق
+const fetchAllAreas = async () => {
   try {
-    const response = await api.get('/listings/projects', { 
-      params: { per_page: 1000 } 
-    })
-    projects.value = response.data?.data ?? response.data ?? []
-    console.log(`Loaded ${projects.value.length} projects`)
+      const response = await api.get('/listings/areas', { params })
+    
+    // معالجة البيانات
+    const responseData = response.data
+    let areasData = []
+    
+    if (responseData?.data?.data) {
+      areasData = responseData.data.data
+    } else if (responseData?.data && Array.isArray(responseData.data)) {
+      areasData = responseData.data
+    } else if (Array.isArray(responseData)) {
+      areasData = responseData
+    } else {
+      areasData = []
+    }
+     props.areas = areasData
+     emit('update:areas', areasData)
+   
+    
+    console.log(`Loaded ${props.areas.length} areas`)
   } catch (error) {
-    console.error('Error loading projects:', error)
+    console.error('Error loading areas:', error)
   }
 }
 onMounted(() => {
-  fetchProjects()
+  // fetchProjects()
   getCurrentUser()
+    fetchAllAreas()
+
 })
 
 function onSearchAreas(search) {
@@ -1706,8 +1737,8 @@ const fetchAvailableListings = async (areaId) => {
       bedrooms_text: listing.number_of_bedrooms === 0 ? 'Studio' : `${listing.number_of_bedrooms} Bed`,
       bathrooms: listing.number_of_bathrooms,
       size_sqft: listing.size_sqft,
-      project_id: listing.project_id,
-      project_name: listing.project?.title,
+      // project_id: listing.project_id,
+      // project_name: listing.project?.title,
       developer_id: listing.developer_id,
       developer_name: listing.developer?.name,
       status: listing.status, // 'converted' or 'rented'
@@ -1736,7 +1767,7 @@ const onAreaSelected = (areaId) => {
     form.value.property_type_id = null
     form.value.bedrooms = null
     form.value.unit_size = ''
-    form.value.project_id = null
+    // form.value.project_id = null
     form.value.developer_id = null
   }
   // جلب الـ Listings المتاحة
@@ -1752,7 +1783,7 @@ const onListingSelected = (listing) => {
   form.value.property_type_id = listing.property_type_id
   form.value.bedrooms = listing.bedrooms === 0 ? 'studio' : String(listing.bedrooms)
   form.value.unit_size = listing.size_sqft || ''
-  form.value.project_id = listing.project_id
+  // form.value.project_id = listing.project_id
   form.value.developer_id = listing.developer_id
   
   // يمكن إضافة listing_id إلى الـ form لربط الديل بالـ listing

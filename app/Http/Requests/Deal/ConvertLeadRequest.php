@@ -29,7 +29,7 @@ class ConvertLeadRequest extends FormRequest
             // Optional fields
             'bedrooms' => 'nullable|string',
             'unit_size' => 'nullable|numeric',
-            'project_id' => 'nullable|exists:projects,id',
+            // 'project_id' => 'nullable|exists:projects,id',
             'area_id' => 'nullable|exists:areas,id',
             'developer_id' => 'nullable|exists:developers,id',
             'deal_total_amount' => 'nullable|numeric',
