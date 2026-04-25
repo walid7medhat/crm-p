@@ -10,9 +10,15 @@ class DealDocumentResource extends JsonResource
 {
     public function toArray($request)
     {
+         $category = match ($this->document_type) {
+        'national_id' => 'emirates_id',
+        'visa' => 'residence_visa',
+        default => $this->document_type,
+    };
         return [
             'id' => $this->id,
             'document_category' => $this->document_category,
+            'document_label' => $category,
             'document_type' => $this->document_type,
             'document_type_name' => $this->document_type_name,
             'file_name' => $this->file_name,

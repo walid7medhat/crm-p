@@ -116,6 +116,10 @@ function extractCategory(doc) {
   if (typeof doc === 'string') return 'documents'
   return doc.document_type || doc.type_name || doc.label || doc.category || 'documents'
 }
+function extractLabelCategory(doc) {
+  if (typeof doc === 'string') return 'documents'
+  return doc.document_label || doc.type_name || doc.label || doc.category || 'documents'
+}
 
 function formatCategoryLabel(category) {
   if (!category) return 'Document'
@@ -153,6 +157,7 @@ const normalizedDocs = computed(() => {
     const name = extractName(doc, i)
     const url = extractUrl(doc)
     const category = extractCategory(doc)
+    const label = extractLabelCategory(doc)
     const mime = extractMime(doc)
     const size = extractSize(doc)
     
@@ -165,7 +170,7 @@ const normalizedDocs = computed(() => {
       displayName: name,
       url: url,
       category: category,
-      categoryLabel: formatCategoryLabel(category),
+      categoryLabel: formatCategoryLabel(label),
       mime: mime,
       size: size,
       sizeLabel: formatSize(size),
