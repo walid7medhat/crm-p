@@ -870,11 +870,11 @@
               <h6 class="section-title mb-3">Property Details</h6>
               <div class="form-card p-3 radius-12">
                 <div class="row g-3">
-                  <div class="col-md-6" v-if="hasField('area_id')">
+                  <div class="col-md-6" v-if="hasLocationField()">
                     <label class="form-label-custom">Location <span class="text-danger">*</span></label>
                     <v-select
                       append-to-body 
-                      v-model="formData.area_id" 
+                      v-model="locationSelectModel" 
                       :options="areas" 
                       :reduce="item => item.id" 
                       label="name" 
@@ -883,8 +883,7 @@
                       :filterable="true"
                       :searchable="true"
                       :clearable="true"
-                      :class="{ 'is-invalid': isFieldInvalid('area_id') }"
-                      @update:modelValue="onAreaSelected"
+                      :class="{ 'is-invalid': isFieldInvalid('area_id') || isFieldInvalid('subcommunity_id') }"
                       @search="onSearchAreas"
                     >
                       <template #open-indicator="{ attributes }">
@@ -910,7 +909,7 @@
                     </v-select>
                   </div>
 
-                  <div class="col-md-6" v-if="hasField('area_id') && availableListings.length > 0">
+                  <div class="col-md-6" v-if="hasLocationField() && availableListings.length > 0">
                     <label class="form-label-custom">Select Unit <span class="text-danger">*</span></label>
                     <v-select
                       append-to-body 
@@ -1267,6 +1266,13 @@ const getCurrentUser = () => {
   }
 }
 
+function normalizeLocationId(value) {
+  if (value === null || value === undefined || value === '') return null
+  if (typeof value === 'number') return value
+  const asNumber = Number(value)
+  return Number.isFinite(asNumber) ? asNumber : value
+}
+
 async function initializeForm() {
   loading.value = true
   try {
@@ -1308,6 +1314,14 @@ async function initializeForm() {
           })
         }
       })
+
+      // Hydrate location IDs from nested deal objects when direct ids are missing.
+      if ((initial.area_id === null || initial.area_id === undefined || initial.area_id === '') && deal.area?.id) {
+        initial.area_id = deal.area.id
+      }
+      if ((initial.subcommunity_id === null || initial.subcommunity_id === undefined || initial.subcommunity_id === '') && deal.subcommunity?.id) {
+        initial.subcommunity_id = deal.subcommunity.id
+      }
     }
     
     // Then override with any missing fields that might have default values
@@ -1318,6 +1332,8 @@ async function initializeForm() {
     })
     
     formData.value = { ...initial }
+    formData.value.area_id = normalizeLocationId(formData.value.area_id)
+    formData.value.subcommunity_id = normalizeLocationId(formData.value.subcommunity_id)
     if (!formData.value.currency) formData.value.currency = 'AED'
     
     // Initialize document arrays with existing documents
@@ -1340,7 +1356,7 @@ async function initializeForm() {
       }
     })
     
-    if (missingFieldKeys.includes('subcommunity_id')) {
+    if (missingFieldKeys.includes('subcommunity_id') || missingFieldKeys.includes('area_id')) {
       await fetchAreas()
     }
     
@@ -1413,15 +1429,26 @@ const fetchAvailableListings = async (areaId) => {
 }
 function isFieldInvalid(fieldKey) {
   if (!fieldKey) return false
-  if (invalidFields.value.has(fieldKey)) return true
   
-  // For document fields, check if the document type is missing
+  // Check if this field is required for the current stage
+  const isRequired = effectiveMissingFields.value.includes(fieldKey)
+  
+  // If not required, no need to show error
+  if (!isRequired) return false
+  
+  // For document fields
   if (fieldKey.includes('_document_')) {
     const [partyType, docType] = fieldKey.split('_document_')
     return missingDocumentTypesByParty.value[partyType]?.includes(docType) || false
   }
   
-  return false
+  // For regular fields: check if value is empty
+  const value = formData.value?.[fieldKey]
+  const isEmpty = value === null || value === undefined || value === '' || 
+                  (typeof value === 'string' && value.trim() === '')
+  
+  // Field is invalid if it's required AND empty
+  return isEmpty
 }
 
 // Add this function to mark fields as valid when they're filled
@@ -2088,6 +2115,27 @@ function getInitialValue(key) {
 }
 
 function hasValueForField(fieldKey) {
+  if (fieldKey === 'area_id' || fieldKey === 'subcommunity_id') {
+    const ownValue = formData.value?.[fieldKey]
+    if (ownValue !== null && ownValue !== undefined && ownValue !== '') return true
+
+    const alternateKey = fieldKey === 'area_id' ? 'subcommunity_id' : 'area_id'
+    const alternateValue = formData.value?.[alternateKey]
+    if (alternateValue !== null && alternateValue !== undefined && alternateValue !== '') return true
+
+    const dealDirect = props.deal?.[fieldKey]
+    if (dealDirect !== null && dealDirect !== undefined && dealDirect !== '') return true
+    const dealAlternate = props.deal?.[alternateKey]
+    if (dealAlternate !== null && dealAlternate !== undefined && dealAlternate !== '') return true
+
+    const dealAreaId = props.deal?.area?.id
+    if (dealAreaId !== null && dealAreaId !== undefined && dealAreaId !== '') return true
+    const dealSubcommunityId = props.deal?.subcommunity?.id
+    if (dealSubcommunityId !== null && dealSubcommunityId !== undefined && dealSubcommunityId !== '') return true
+
+    return false
+  }
+
   const value = formData.value?.[fieldKey]
   if (Array.isArray(value)) return value.length > 0
   if (typeof value === 'string') return value.trim() !== ''
@@ -2098,7 +2146,56 @@ function hasAnyValueInFields(fields) {
   return fields.some((field) => hasValueForField(field))
 }
 
+/** Stages may require `area_id` (primary / many steps) or `subcommunity_id` (secondary early stages) — same Area picker. */
+const locationFormKey = computed(() => {
+  const req = effectiveMissingFields.value || []
+  if (req.includes('subcommunity_id')) return 'subcommunity_id'
+  if (req.includes('area_id')) return 'area_id'
+  if (hasValueForField('subcommunity_id')) return 'subcommunity_id'
+  if (hasValueForField('area_id')) return 'area_id'
+  return 'area_id'
+})
 
+const locationSelectModel = computed({
+  get() {
+    const key = locationFormKey.value
+    const preferred = normalizeLocationId(formData.value?.[key])
+    if (preferred !== null && preferred !== undefined && preferred !== '') return preferred
+    const areaValue = normalizeLocationId(formData.value?.area_id)
+    if (areaValue !== null && areaValue !== undefined && areaValue !== '') return areaValue
+    const subcommunityValue = normalizeLocationId(formData.value?.subcommunity_id)
+    if (subcommunityValue !== null && subcommunityValue !== undefined && subcommunityValue !== '') return subcommunityValue
+    return null
+  },
+  set(val) {
+    if (!formData.value) return
+    const normalizedVal = normalizeLocationId(val)
+    const req = effectiveMissingFields.value || []
+    if (req.includes('subcommunity_id')) formData.value.subcommunity_id = normalizedVal
+    if (req.includes('area_id')) formData.value.area_id = normalizedVal
+    if (!req.includes('subcommunity_id') && !req.includes('area_id')) {
+      formData.value[locationFormKey.value] = normalizedVal
+    }
+    onAreaSelected(normalizedVal)
+  },
+})
+
+function hasLocationField() {
+  return hasField('area_id') || hasField('subcommunity_id')
+}
+
+watch(
+  () => [formData.value?.area_id, formData.value?.subcommunity_id],
+  ([areaId, subcommunityId]) => {
+    if (!formData.value) return
+    if ((areaId === null || areaId === undefined || areaId === '') && subcommunityId) {
+      formData.value.area_id = subcommunityId
+    } else if ((subcommunityId === null || subcommunityId === undefined || subcommunityId === '') && areaId) {
+      formData.value.subcommunity_id = areaId
+    }
+  },
+  { immediate: true },
+)
 
 function hasField(fieldKey) {
   const allRequired = effectiveMissingFields.value || []
@@ -2121,7 +2218,7 @@ function hasPartyFields(partyType) {
 
 function hasPropertyFields() {
   const requiredFields = effectiveMissingFields.value || []
-  const propertyFields = ['unit_no', 'property_type_id', 'bedrooms', 'area_id', 'unit_size', 'developer_name', 'developer_phone']
+  const propertyFields = ['unit_no', 'property_type_id', 'bedrooms', 'area_id', 'subcommunity_id', 'unit_size', 'developer_name', 'developer_phone']
   return (
     propertyFields.some(field => requiredFields.includes(field)) ||
     hasAnyValueInFields(propertyFields)

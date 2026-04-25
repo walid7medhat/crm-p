@@ -134,7 +134,7 @@ return [
                     'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
                 ],
                 'documents' => [
-                    'tenant' => ['passport', 'visa', 'kyc'],
+                    'tenant' => ['passport',  'kyc'],
                     'landlord' => ['passport', 'national_id', 'title_deed'],
                 ],
             ],
@@ -145,7 +145,7 @@ return [
                     'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
                 ],
                 'documents' => [
-                    'tenant' => ['passport', 'visa', 'kyc', 'ejari'],
+                    'tenant' => ['passport',  'kyc', 'ejari'],
                     'landlord' => ['passport', 'national_id', 'title_deed'],
                 ],
             ],
@@ -157,7 +157,7 @@ return [
                     'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
                 ],
                 'documents' => [
-                    'tenant' => ['passport', 'visa', 'kyc', 'ejari', 'tenancy_contract', 'move_in_form'],
+                    'tenant' => ['passport', 'kyc', 'ejari', 'tenancy_contract', 'move_in_form'],
                     'landlord' => ['passport', 'national_id', 'title_deed'],
                 ],
             ],
@@ -169,7 +169,7 @@ return [
                     'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
                 ],
                 'documents' => [
-                    'tenant' => ['passport', 'visa', 'kyc', 'ejari', 'tenancy_contract', 'move_in_form', 'payment_proof'],
+                    'tenant' => ['passport',  'kyc', 'ejari', 'tenancy_contract', 'move_in_form', 'payment_proof'],
                     'landlord' => ['passport', 'national_id', 'title_deed'],
                 ],
             ],
