@@ -58,6 +58,15 @@
 
           <!-- Form Sections -->
           <div v-else class="complete-fields-form">
+            <!-- <div v-if="missingFieldLabels.length > 0" class="alert alert-info py-2 mb-3">
+              <div class="small fw-semibold mb-1">Missing required data:</div>
+              <div class="small">
+                {{ missingFieldLabels.join(' • ') }}
+              </div>
+            </div>
+            <div>
+              {{ unresolvedMissingLabels.join(' • ') }}
+            </div> -->
             <!-- Source and Deal Name Section -->
             <section v-if="hasSourceAndDealNameFields()" class="form-section">
               <h6 class="section-title mb-3">Source and Deal Name</h6>
@@ -1881,6 +1890,8 @@ const fetchAllAreas = async () => {
       areasData = []
     }
      props.areas = areasData
+         areas.value = areasData
+
      emit('update:areas', areasData)
    
     
@@ -1891,13 +1902,13 @@ const fetchAllAreas = async () => {
 }
 // Load initial data
 onMounted(async () => {
+        fetchAllAreas()
   await Promise.all([
     fetchUsers(),
     fetchSources(),
     fetchPropertyTypes(),
      fetchDevelopers() ,
       // fetchProjects() 
-      fetchAllAreas(),
   ])
   getCurrentUser()
 })
@@ -1973,6 +1984,9 @@ watch(() => formData.value.buyer_documents, (newVal) => {
 watch(() => props.show, async (val) => {
   if (val && !isInitialized.value) {
     isInitialized.value = true
+     if (areas.value.length === 0) {
+      await fetchAllAreas()
+    }
     await initializeForm()
     console.log('Missing fields:', props.missingFields)
   } else if (!val) {
@@ -2073,94 +2087,63 @@ function getInitialValue(key) {
   return ''
 }
 
+function hasValueForField(fieldKey) {
+  const value = formData.value?.[fieldKey]
+  if (Array.isArray(value)) return value.length > 0
+  if (typeof value === 'string') return value.trim() !== ''
+  return value !== null && value !== undefined
+}
+
+function hasAnyValueInFields(fields) {
+  return fields.some((field) => hasValueForField(field))
+}
+
 
 
 function hasField(fieldKey) {
-  const allRequired = getCurrentStageRequiredFields()
-  return allRequired.includes(fieldKey)
+  const allRequired = effectiveMissingFields.value || []
+  return allRequired.includes(fieldKey) || hasValueForField(fieldKey)
 }
 
 function hasPartyFields(partyType) {
-  const requiredFields = getCurrentStageRequiredFields()
+  const requiredFields = effectiveMissingFields.value || []
   const possibleFields = [
     `${partyType}_first_name`, `${partyType}_last_name`, `${partyType}_phone`,
     `${partyType}_email`, `${partyType}_nationality`, `${partyType}_dob`,
     `${partyType}_residency_status`, `${partyType}_city`, `${partyType}_country`,
     `${partyType}_language`, `${partyType}_amount`,
   ]
-  return possibleFields.some(field => requiredFields.includes(field))
+  return (
+    possibleFields.some(field => requiredFields.includes(field)) ||
+    hasAnyValueInFields(possibleFields)
+  )
 }
 
 function hasPropertyFields() {
-  const requiredFields = getCurrentStageRequiredFields()
+  const requiredFields = effectiveMissingFields.value || []
   const propertyFields = ['unit_no', 'property_type_id', 'bedrooms', 'area_id', 'unit_size', 'developer_name', 'developer_phone']
-  return propertyFields.some(field => requiredFields.includes(field))
+  return (
+    propertyFields.some(field => requiredFields.includes(field)) ||
+    hasAnyValueInFields(propertyFields)
+  )
 }
 
 function hasFinancialFields() {
-  const requiredFields = getCurrentStageRequiredFields()
+  const requiredFields = effectiveMissingFields.value || []
   const financialFields = ['deal_total_amount', 'deal_commission', 'agent_share', 'company_share']
-  return financialFields.some(field => requiredFields.includes(field))
+  return (
+    financialFields.some(field => requiredFields.includes(field)) ||
+    hasAnyValueInFields(financialFields)
+  )
 }
 
 function hasSourceAndDealNameFields() {
-  const requiredFields = getCurrentStageRequiredFields()
+  const requiredFields = effectiveMissingFields.value || []
   const fields = ['source', 'deal_name']
-  return fields.some(field => requiredFields.includes(field))
-}
-// Add this function before hasField
-function getCurrentStageRequiredFields() {
-  const byStage = props.groupedMissing?.by_stage || props.missingFieldsGroupedByStage?.stages || []
-  
-  console.log('byStage:', byStage)
-  console.log('targetStageId:', props.targetStageId)
-  console.log('targetStageName:', props.targetStageName)
-  
-  if (!byStage.length) {
-    console.log('No byStage, returning missingFields:', props.missingFields)
-    return props.missingFields || []
-  }
-  
-  // البحث عن المرحلة الحالية
-  const targetId = String(props.targetStageId ?? '')
-  const targetName = String(props.targetStageName || '').toLowerCase()
-  
-  let currentStage = null
-  
-  // محاولة البحث بالـ ID أولاً
-  if (targetId) {
-    currentStage = byStage.find(stage => {
-      const stageId = String(stage?.stage_id ?? stage?.id ?? '')
-      return stageId === targetId
-    })
-  }
-  
-  // إذا لم نجد، نبحث بالاسم
-  if (!currentStage && targetName) {
-    currentStage = byStage.find(stage => {
-      const stageName = String(stage?.stage_name ?? stage?.name ?? '').toLowerCase()
-      return stageName === targetName || stageName.includes(targetName)
-    })
-  }
-  
-  // إذا لم نجد المرحلة، نرجع جميع الحقول من جميع المراحل
-  if (!currentStage) {
-    console.log('Current stage not found, returning all fields from all stages')
-    const allFields = new Set()
-    byStage.forEach(stage => {
-      const fields = extractFieldKeysFromStageEntry(stage)
-      fields.forEach(f => allFields.add(f))
-    })
-    // Also add direct missingFields
-    if (props.missingFields) {
-      props.missingFields.forEach(f => allFields.add(f))
-    }
-    return Array.from(allFields)
-  }
-  
-  const stageFields = extractFieldKeysFromStageEntry(currentStage)
-  console.log('Found current stage fields:', stageFields)
-  return stageFields
+  return (
+    fields.some(field => requiredFields.includes(field)) ||
+    hasAnyValueInFields(fields)
+  )
 }
 // Get deal type name
 function getDealTypeName(type) {

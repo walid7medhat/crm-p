@@ -19,7 +19,7 @@ return [
             3 => [
                 'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'responsible_person_id', 'bedrooms', 'area_id', 'unit_size','developer_name','developer_phone', 'deal_total_amount', 'deal_commission'],
                 'parties' => [
-                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language', 'deal_total_amount', 'deal_commission'],
+                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
                 ],
                 'documents' => [
                     'buyer' => ['national_id', 'passport','payment_proof'],
