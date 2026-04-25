@@ -18,7 +18,7 @@
           :clear-search-on-select="true"
           :append-to-body="false"
           label="name"
-          placeholder="City,Area,Community,Project or Building"
+          placeholder="City, Area, Community, Project or Building"
           class="custom-select listing-main-location"
           @update:modelValue="handleFilterChange"
         >
@@ -808,20 +808,124 @@ const sortOptions = [
       selectedPropertyType.value = selectedPropertyTypes.value[0] || null;
     };
 
-    const propertyTypeButtonLabel = computed(() => {
-      if (!selectedPropertyTypes.value.length) return "Property Type";
-      if (selectedPropertyTypes.value.length === 1) return selectedPropertyTypes.value[0].name;
-      return `${selectedPropertyTypes.value.length} Property Types`;
-    });
+    
 
-    const bedsBathsButtonLabel = computed(() => {
-      const bedsCount = selectedBeds.value.length;
-      const bathsCount = selectedBaths.value.length;
-      if (!bedsCount && !bathsCount) return "Beds & Baths";
-      if (bedsCount && bathsCount) return `${bedsCount} Beds, ${bathsCount} Baths`;
-      if (bedsCount) return `${bedsCount} Beds`;
-      return `${bathsCount} Baths`;
-    });
+  // Helper function to format a list of numbers/ranges, preserving special values like 'Studio' and '8+'
+const formatRanges = (items) => {
+  if (items.length === 0) return null;
+  
+  // Helper to get numeric value for sorting only
+  const getNumericValue = (val) => {
+    if (val === 'Studio') return 0;
+    if (val === '8+') return 8.5;
+    return parseFloat(val);
+  };
+
+  // Helper to check if an item is a "range-able" number (consecutive integer)
+  const isRangeableNumber = (val) => {
+    if (val === 'Studio' || val === '8+') return false;
+    const num = parseFloat(val);
+    return !isNaN(num) && Number.isInteger(num);
+  };
+
+  const sorted = [...items].sort((a, b) => getNumericValue(a) - getNumericValue(b));
+  const ranges = [];
+  let i = 0;
+
+  while (i < sorted.length) {
+    const current = sorted[i];
+    
+    // Handle special non-numeric items like 'Studio' or '8+'
+    if (!isRangeableNumber(current)) {
+      ranges.push(current);  // Keep 'Studio' and '8+' as they are
+      i++;
+      continue;
+    }
+    
+    // Handle numeric ranges (1, 2, 3, 4, etc.)
+    let start = current;
+    let end = current;
+    let j = i + 1;
+    
+    while (j < sorted.length && isRangeableNumber(sorted[j])) {
+      const currentNum = parseFloat(sorted[j]);
+      const prevNum = parseFloat(end);
+      if (currentNum === prevNum + 1) {
+        end = sorted[j];
+        j++;
+      } else {
+        break;
+      }
+    }
+    
+    // Push the range
+    if (start === end) {
+      ranges.push(start);
+    } else {
+      ranges.push(`${start}-${end}`);
+    }
+    i = j;
+  }
+  
+  return ranges.join(', ');
+};
+
+// 1. REPLACE the existing 'bedsBathsButtonLabel' computed property
+const bedsBathsButtonLabel = computed(() => {
+  const beds = selectedBeds.value;
+  const baths = selectedBaths.value;
+
+  const bedsText = formatRanges(beds);
+  const bathsText = formatRanges(baths);
+  
+  const hasBeds = bedsText !== null;
+  const hasBaths = bathsText !== null;
+
+  if (!hasBeds && !hasBaths) return "Beds & Baths";
+  if (hasBeds && hasBaths) return `${bedsText} beds & ${bathsText} baths`;
+  if (hasBeds) return `${bedsText} beds`;
+  return `${bathsText} baths`;
+});
+
+// 2. REPLACE the existing 'mobileBedsBathsLabel' computed property
+const mobileBedsBathsLabel = computed(() => {
+  const beds = selectedBeds.value;
+  const baths = selectedBaths.value;
+
+  const bedsText = formatRanges(beds);
+  const bathsText = formatRanges(baths);
+  
+  const hasBeds = bedsText !== null;
+  const hasBaths = bathsText !== null;
+
+  if (!hasBeds && !hasBaths) return "Any";
+  if (hasBeds && hasBaths) return `${bedsText} beds, ${bathsText} baths`;
+  if (hasBeds) return `${bedsText} beds`;
+  return `${bathsText} baths`;
+});
+
+
+
+// 3. REPLACE the existing 'propertyTypeButtonLabel' computed property
+const propertyTypeButtonLabel = computed(() => {
+  const types = selectedPropertyTypes.value;
+  if (!types.length) return "Property Type";
+  if (types.length === 1) return types[0].name;
+  
+  // Show first 2-3 characters of each selected type
+  const abbreviations = types.map(type => {
+    // Split by space and take first word, then first 3 chars
+    const firstWord = type.name.split(' ')[0];
+    return firstWord.substring(0, 3);
+  });
+  
+  // Join with commas and limit to a reasonable length to avoid overflow
+  let label = abbreviations.join(', ');
+  if (label.length > 30) {
+    label = label.substring(0, 27) + '...';
+  }
+  return label;
+});
 
     const quickSortLabel = computed(() => {
       const row = quickSortSelectOptions.find((item) => item.value === selectedSort.value);
@@ -836,13 +940,7 @@ const sortOptions = [
       if (!count) return "Any";
       return count === 1 ? selectedPropertyTypes.value[0]?.name || "1 selected" : `${count} selected`;
     });
-    const mobileBedsBathsLabel = computed(() => {
-      const b = selectedBeds.value.length;
-      const ba = selectedBaths.value.length;
-      if (!b && !ba) return "Any";
-      if (b && ba) return `${b} beds, ${ba} baths`;
-      return b ? `${b} beds` : `${ba} baths`;
-    });
+
     const mobilePriceLabel = computed(() => {
       if ((priceFrom.value || 0) <= 0 && (priceTo.value || 10000000) >= 10000000) return "Any";
       return `${formatThousandsDisplay(priceFrom.value) || 0} - ${formatThousandsDisplay(priceTo.value) || "Any"}`;
@@ -3340,7 +3438,7 @@ fetchProjects()
   color: rgb(207, 219, 236);
 }
 .listing-chip-grid button{
-  font-weight: 400;
+  font-weight: 500;
     font-size: 13px;
 }
 
@@ -3558,14 +3656,14 @@ fetchProjects()
   top: calc(100% + 8px);
   left: 0;
   /*width: min(460px, calc(100vw - 20px));*/
-  width:690px;
+  width:390px;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 14px;
   padding: 12px;
   z-index: 1300;
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
-    max-width: min(680px, calc(100vw - 24px));
+    max-width: min(380px, calc(100vw - 24px));
 }
 
 .listing-sale-rent-popover {
@@ -3625,7 +3723,7 @@ fetchProjects()
 
 .listing-property-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
      gap: 10px 5px;
 }
 
@@ -3635,7 +3733,7 @@ fetchProjects()
   border: 1px solid #e5e7eb;
   background: #fff;
   color: #4b5563;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
