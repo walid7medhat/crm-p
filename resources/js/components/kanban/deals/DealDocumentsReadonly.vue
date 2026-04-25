@@ -12,8 +12,9 @@
         :key="doc.key" 
         
       >
+                <label class="document-box-label">{{ doc.categoryLabel }}</label>
+
         <div class="document-box" @click="previewDocument(doc)">
-          <label class="document-box-label">{{ doc.categoryLabel }}</label>
           <img
             v-if="isImage(doc) && doc.url"
             :src="doc.url"
@@ -301,10 +302,10 @@ function deleteDocument(doc) {
 }
 
 .document-box-label {
-  position: absolute;
+  /* position: absolute;
   top: 8px;
   left: 10px;
-  right: 10px;
+  right: 10px; */
   text-align: left;
   font-size: 12px;
   font-weight: 600;
@@ -471,7 +472,7 @@ function deleteDocument(doc) {
 }
 
 .modal-header h3 {
-  font-size: 18px;
+  font-size: 18px !important;
   font-weight: 600;
   color: #0F172A;
   margin: 0;

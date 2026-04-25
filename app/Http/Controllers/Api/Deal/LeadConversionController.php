@@ -323,6 +323,8 @@ class LeadConversionController extends Controller
                 'subcommunity_id' => $request->subcommunity_id,
                 'area_id' => $request->area_id,
                 'developer_id' => $request->developer_id,
+                'developer_name' => $request->developer_name,
+                'developer_phone' => $request->developer_phone,
                 
                 'responsible_person_id' => $request->responsible_person_id ?? $lead->responsible_person_id ??1,
                 

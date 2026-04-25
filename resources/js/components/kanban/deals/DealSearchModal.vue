@@ -264,7 +264,7 @@
                   </template>
               </v-select>
               </div>
-              <div v-if="fieldSettings.property_developer" class="col-md-6">
+              <!-- <div v-if="fieldSettings.property_developer" class="col-md-6">
                 <label class="form-label-custom">Developer</label>
                 <v-select
                   v-model="form.developer_id"
@@ -283,7 +283,7 @@
                       </span>
                   </template>
               </v-select>
-              </div>
+              </div> -->
               <div v-if="fieldSettings.property_area" class="col-md-6">
                 <label class="form-label-custom">Area</label>
                 <v-select
@@ -653,7 +653,7 @@ const form = ref({
   property_type_id: null,
   bedrooms: null,
   project_id: null,
-  developer_id: null,
+  // developer_id: null,
   area_id: null,
   subcommunity_id: null,
   unit_size: '',
@@ -815,7 +815,7 @@ const resetForm = () => {
     property_type_id: null,
     bedrooms: null,
     project_id: null,
-    developer_id: null,
+    // developer_id: null,
     area_id: null,
     subcommunity_id: null,
     unit_size: '',

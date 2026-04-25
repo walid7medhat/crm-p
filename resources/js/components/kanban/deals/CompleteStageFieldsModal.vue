@@ -30,7 +30,7 @@
           </div>
         </div>
 
-        <!-- Stage progress (same chrome as View Deal modal) -->
+        <!-- Stage progress -->
         <div class="deal-progress-wrapper py-2 px-3" v-if="targetStageName">
           <div class="deal-progress-label">Pipeline</div>
           <div class="deal-progress-bar">
@@ -58,17 +58,6 @@
 
           <!-- Form Sections -->
           <div v-else class="complete-fields-form">
-            <!-- <div v-if="missingFieldLabels.length > 0" class="alert alert-info py-2 mb-3">
-              <div class="small fw-semibold mb-1">Missing required data:</div>
-              <div class="small">
-                {{ missingFieldLabels.join(' • ') }}
-              </div>
-            </div>
-            <div>
-              {{ unresolvedMissingLabels.join(' • ') }}
-            </div>
-             -->
-
             <!-- Source and Deal Name Section -->
             <section v-if="hasSourceAndDealNameFields()" class="form-section">
               <h6 class="section-title mb-3">Source and Deal Name</h6>
@@ -83,13 +72,14 @@
                       :reduce="item => item.name" 
                       label="name" 
                       placeholder="Select Source" 
-                      class="custom-v-select" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('source') }"
                     >
-                     <template #open-indicator="{ attributes }">
-                      <span v-bind="attributes">
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
                           <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                      </span>
-                    </template>
+                        </span>
+                      </template>
                     </v-select>
                   </div>
                   <div class="col-md-6" v-if="hasField('deal_name')">
@@ -98,59 +88,62 @@
                       v-model="formData.deal_name" 
                       placeholder="Enter Deal Name" 
                       class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('deal_name') }"
                     />
                   </div>
-                 
                 </div>
               </div>
             </section>
+
+            <!-- Lost Reason Section -->
             <section v-if="hasField('lost_reason')" class="form-section">
               <div class="form-card p-3 radius-12">
                 <label class="form-label-custom">Enter Reason For Deal Lost</label>
                 <textarea
                   v-model="formData.lost_reason"
                   class="lost-reason-textarea"
+                  :class="{ 'is-invalid': isFieldInvalid('lost_reason') }"
                   placeholder="Text Here"
                   rows="4"
                 ></textarea>
               </div>
             </section>
+
             <!-- Buyer Section -->
             <section v-if="hasPartyFields('buyer') || documentTypesByParty.buyer.length > 0" class="form-section">
               <h6 class="section-title mb-3" v-if="hasPartyFields('buyer')">Buyer Details</h6>
               <div class="form-card p-3 radius-12" v-if="hasPartyFields('buyer')">
                 <div class="row g-3">
-                  <!-- Buyer First Name -->
                   <div class="col-md-6" v-if="hasField('buyer_first_name')">
                     <label class="form-label-custom">Buyer First Name <span class="text-danger">*</span></label>
                     <b-form-input 
                       v-model="formData.buyer_first_name" 
                       placeholder="Enter First Name" 
                       class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('buyer_first_name') }"
                     />
                   </div>
                   
-                  <!-- Buyer Last Name -->
                   <div class="col-md-6" v-if="hasField('buyer_last_name')">
                     <label class="form-label-custom">Buyer Last Name <span class="text-danger">*</span></label>
                     <b-form-input 
                       v-model="formData.buyer_last_name" 
                       placeholder="Enter Last Name" 
                       class="custom-input compact-placeholder-field"
+                      :class="{ 'is-invalid': isFieldInvalid('buyer_last_name') }"
                     />
                   </div>
                   
-                  <!-- Buyer Phone -->
                   <div class="col-md-6" v-if="hasField('buyer_phone')">
                     <label class="form-label-custom">Buyer Phone Number <span class="text-danger">*</span></label>
                     <b-form-input 
                       v-model="formData.buyer_phone" 
                       placeholder="Enter Phone Number" 
                       class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('buyer_phone') }"
                     />
                   </div>
                   
-                  <!-- Buyer Email -->
                   <div class="col-md-6" v-if="hasField('buyer_email')">
                     <label class="form-label-custom">Buyer Email <span class="text-danger">*</span></label>
                     <b-form-input 
@@ -158,35 +151,31 @@
                       type="email" 
                       placeholder="Enter Your Email" 
                       class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('buyer_email') }"
                     />
                   </div>
                   
-                  <!-- Buyer Nationality -->
                   <div class="col-md-6" v-if="hasField('buyer_nationality')">
                     <label class="form-label-custom">Buyer Nationality <span class="text-danger">*</span></label>
                     <v-select
- append-to-body 
+                      append-to-body 
                       v-model="formData.buyer_nationality" 
                       :options="nationalityOptions" 
                       :reduce="item => item.value" 
                       label="text" 
                       placeholder="Select Nationality" 
                       class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('buyer_nationality') }"
                     >
-                   <template #open-indicator="{ attributes }">
-                      <span v-bind="attributes">
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
                           <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                      </span>
-                    </template>
-                  
-                   </v-select>
+                        </span>
+                      </template>
+                    </v-select>
                   </div>
                   
-                  <!-- Buyer Residency Status (show when missing or when buyer documents are shown for primary/secondary) -->
-                  <div
-                    class="col-md-6"
-                    v-if="hasField('buyer_residency_status') || (documentTypesByParty.buyer.length > 0 && ['primary', 'secondary'].includes(effectiveDealTypeForDocs))"
-                  >
+                  <div class="col-md-6" v-if="hasField('buyer_residency_status') || (documentTypesByParty.buyer.length > 0 && ['primary', 'secondary'].includes(effectiveDealTypeForDocs))">
                     <label class="form-label-custom">Buyer Residency Status <span class="text-danger">*</span></label>
                     <v-select
                       append-to-body
@@ -197,100 +186,102 @@
                       placeholder="Resident or Non Resident" 
                       :clearable="false"
                       class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('buyer_residency_status') }"
                     >
-                  
                       <template #open-indicator="{ attributes }">
                         <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                         </span>
                       </template>
-                   </v-select>
+                    </v-select>
                   </div>
                   
-                  <!-- Buyer Country -->
                   <div class="col-md-6" v-if="hasField('buyer_country')">
                     <label class="form-label-custom">Buyer Country Of Residence <span class="text-danger">*</span></label>
                     <v-select
- append-to-body 
+                      append-to-body 
                       v-model="formData.buyer_country" 
                       :options="countryOptions" 
                       :reduce="item => item.value" 
                       label="text" 
                       placeholder="Select Country" 
                       class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('buyer_country') }"
                     >
-                     <template #open-indicator="{ attributes }">
+                      <template #open-indicator="{ attributes }">
                         <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                         </span>
                       </template>
-                  
                     </v-select>
                   </div>
                   
-                  <!-- Buyer City -->
-                <div class="col-md-6" v-if="hasField('buyer_city')">
-                  <label class="form-label-custom">Buyer City Of Residence <span class="text-danger">*</span></label>
-                  <v-select
-                    append-to-body 
-                    v-model="formData.buyer_city" 
-                    :options="buyerCityOptions" 
-                    :reduce="item => item.value" 
-                    label="text" 
-                    placeholder="Select City" 
-                    class="custom-v-select"
-                  >
-                    <template #open-indicator="{ attributes }">
-                      <span v-bind="attributes">
-                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                      </span>
-                    </template>
-                  </v-select>
-                </div>
+                  <div class="col-md-6" v-if="hasField('buyer_city')">
+                    <label class="form-label-custom">Buyer City Of Residence <span class="text-danger">*</span></label>
+                    <v-select
+                      append-to-body 
+                      v-model="formData.buyer_city" 
+                      :options="buyerCityOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select City" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('buyer_city') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
+                  </div>
 
-                  <!-- Buyer Date of Birth -->
                   <div class="col-md-6" v-if="hasField('buyer_dob')">
                     <label class="form-label-custom">Buyer Date Of Birth <span class="text-danger">*</span></label>
                     <b-form-input 
                       v-model="formData.buyer_dob" 
                       type="date" 
                       class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('buyer_dob') }"
                     />
                   </div>
 
-                  <!-- Buyer Language -->
                   <div class="col-md-6" v-if="hasField('buyer_language')">
                     <label class="form-label-custom">Buyer Language <span class="text-danger">*</span></label>
                     <v-select
- append-to-body 
+                      append-to-body 
                       v-model="formData.buyer_language" 
                       :options="languageOptions" 
                       :reduce="item => item.value" 
                       label="text" 
                       placeholder="Select Language" 
                       class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('buyer_language') }"
                     >
-                  
-                        <template #open-indicator="{ attributes }">
-                            <span v-bind="attributes">
-                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                            </span>
-                          </template>
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
                     </v-select>
                   </div>
                   
-                  <!-- Buyer Amount -->
                   <div class="col-md-4" v-if="hasField('buyer_amount')">
                     <label class="form-label-custom">Amount</label>
                     <div class="input-group-custom">
-                      <b-form-input v-model="formData.buyer_amount" type="number" placeholder="Enter Amount" class="custom-input" />
+                      <b-form-input 
+                        v-model="formData.buyer_amount" 
+                        type="number" 
+                        placeholder="Enter Amount" 
+                        class="custom-input"
+                        :class="{ 'is-invalid': isFieldInvalid('buyer_amount') }"
+                      />
                       <div class="currency-fixed-display">
                         {{ formData.currency || 'AED' }}
                       </div>
-                  </div>
+                    </div>
                   </div>
                   
-                  <!-- Buyer Party Missing -->
                   <div class="col-12" v-if="hasField('buyer_party')">
                     <div class="alert alert-warning py-2 mb-0">
                       <iconify-icon icon="lucide:alert-triangle" class="me-2"></iconify-icon>
@@ -298,24 +289,25 @@
                     </div>
                   </div>
                 </div>
-
-               
               </div>
-               <!-- Buyer Documents (always show card when docs are required; buyer party fields may be absent from missing list) -->
-                <div
-                  v-if="documentTypesByParty.buyer.length > 0"
-                  class="form-card p-3 radius-12"
-                  :class="hasPartyFields('buyer') ? 'mt-3' : 'mt-0'"
-                >
-                  <label class="section-title">Buyer Documents</label>
-                  <DocumentUpload
-                    v-model="formData.buyer_documents"
-                    category="buyer"
-                    compact
-                    :document-types="documentTypesByParty.buyer"
-                    ref="buyerDocUploadRef"
-                  />
-                </div>
+              
+              <!-- Buyer Documents -->
+              <div
+                v-if="documentTypesByParty.buyer.length > 0"
+                class="form-card p-3 radius-12"
+                :class="hasPartyFields('buyer') ? 'mt-3' : 'mt-0'"
+              >
+                <label class="section-title">Buyer Documents</label>
+                <DocumentUpload
+                  v-model="formData.buyer_documents"
+                  category="buyer"
+                  compact
+                  :document-types="documentTypesByParty.buyer"
+                  :show-errors="true"
+                  :missing-document-types="missingDocumentTypesByParty.buyer"
+                  ref="buyerDocUploadRef"
+                />
+              </div>
             </section>
 
             <!-- Seller Section -->
@@ -323,111 +315,157 @@
               <h6 class="section-title mb-3" v-if="hasPartyFields('seller')">Seller Details</h6>
               <div class="form-card p-3 radius-12" v-if="hasPartyFields('seller')">
                 <div class="row g-3">
-                  <!-- Seller First Name -->
                   <div class="col-md-4" v-if="hasField('seller_first_name')">
                     <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.seller_first_name" placeholder="Enter First Name" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.seller_first_name" 
+                      placeholder="Enter First Name" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('seller_first_name') }"
+                    />
                   </div>
                   
-                  <!-- Seller Last Name -->
                   <div class="col-md-4" v-if="hasField('seller_last_name')">
                     <label class="form-label-custom">Last Name <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.seller_last_name" placeholder="Enter Last Name" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.seller_last_name" 
+                      placeholder="Enter Last Name" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('seller_last_name') }"
+                    />
                   </div>
                   
-                  <!-- Seller Date of Birth -->
                   <div class="col-md-4" v-if="hasField('seller_dob')">
                     <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.seller_dob" type="date" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.seller_dob" 
+                      type="date" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('seller_dob') }"
+                    />
                   </div>
                   
-                  <!-- Seller Phone -->
                   <div class="col-md-4" v-if="hasField('seller_phone')">
                     <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.seller_phone" placeholder="Enter Phone" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.seller_phone" 
+                      placeholder="Enter Phone" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('seller_phone') }"
+                    />
                   </div>
                   
-                  <!-- Seller Email -->
                   <div class="col-md-4" v-if="hasField('seller_email')">
                     <label class="form-label-custom">Email <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.seller_email" type="email" placeholder="Enter Email" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.seller_email" 
+                      type="email" 
+                      placeholder="Enter Email" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('seller_email') }"
+                    />
                   </div>
                   
-                  <!-- Seller Nationality -->
                   <div class="col-md-4" v-if="hasField('seller_nationality')">
                     <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
                     <v-select
-                      append-to-body v-model="formData.seller_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" >
+                      append-to-body 
+                      v-model="formData.seller_nationality" 
+                      :options="nationalityOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select Nationality" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('seller_nationality') }"
+                    >
                       <template #open-indicator="{ attributes }">
                         <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                         </span>
                       </template>
-                     </v-select>
+                    </v-select>
                   </div>
                   
-                  <!-- Seller Residency Status -->
                   <div class="col-md-4" v-if="hasField('seller_residency_status')">
                     <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
                     <v-select
-                        append-to-body v-model="formData.seller_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select">
-                      
-                       <template #open-indicator="{ attributes }">
-                          <span v-bind="attributes">
-                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                          </span>
-                        </template>
-                      </v-select>
+                      append-to-body 
+                      v-model="formData.seller_residency_status" 
+                      :options="residencyOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select Status" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('seller_residency_status') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
                   </div>
                   
-               
-                  
-                  <!-- Seller Country -->
                   <div class="col-md-4" v-if="hasField('seller_country')">
                     <label class="form-label-custom">Country Of Residence</label>
                     <v-select
-                        append-to-body v-model="formData.seller_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" >
-                    
-                             <template #open-indicator="{ attributes }">
-                              <span v-bind="attributes">
-                                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                              </span>
-                            </template>
-                      </v-select>
+                      append-to-body 
+                      v-model="formData.seller_country" 
+                      :options="countryOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select Country" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('seller_country') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
                   </div>
-                  <!-- Seller City -->
-                    <div class="col-md-4" v-if="hasField('seller_city')">
-                      <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-                      <v-select
-                        append-to-body 
-                        v-model="formData.seller_city" 
-                        :options="sellerCityOptions" 
-                        :reduce="item => item.value" 
-                        label="text" 
-                        placeholder="Select City" 
-                        class="custom-v-select"
-                      >
-                        <template #open-indicator="{ attributes }">
-                          <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                          </span>
-                        </template>
-                      </v-select>
-                    </div>
-                  <!-- Seller Language -->
+                  
+                  <div class="col-md-4" v-if="hasField('seller_city')">
+                    <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+                    <v-select
+                      append-to-body 
+                      v-model="formData.seller_city" 
+                      :options="sellerCityOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select City" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('seller_city') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
+                  </div>
+                  
                   <div class="col-md-4" v-if="hasField('seller_language')">
                     <label class="form-label-custom">Language <span class="text-danger">*</span></label>
                     <v-select
-                        append-to-body v-model="formData.seller_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" >
-                        <template #open-indicator="{ attributes }">
-                          <span v-bind="attributes">
-                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                          </span>
-                        </template>
-                      </v-select>
+                      append-to-body 
+                      v-model="formData.seller_language" 
+                      :options="languageOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select Language" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('seller_language') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
                   </div>
                   
-                  <!-- Seller Party Missing -->
                   <div class="col-12" v-if="hasField('seller_party')">
                     <div class="alert alert-warning py-2 mb-0">
                       <iconify-icon icon="lucide:alert-triangle" class="me-2"></iconify-icon>
@@ -435,20 +473,21 @@
                     </div>
                   </div>
                 </div>
-
-               
               </div>
-               <!-- Seller Documents -->
-                <div class="mt-3" v-if="documentTypesByParty.seller.length > 0">
-                  <label class="section-title">Seller Documents</label>
-                  <DocumentUpload
-                    v-model="formData.seller_documents"
-                    category="seller"
-                    compact
-                    :document-types="documentTypesByParty.seller"
-                    ref="sellerDocUploadRef"
-                  />
-                </div>
+              
+              <!-- Seller Documents -->
+              <div class="mt-3" v-if="documentTypesByParty.seller.length > 0">
+                <label class="section-title">Seller Documents</label>
+                <DocumentUpload
+                  v-model="formData.seller_documents"
+                  category="seller"
+                  compact
+                  :document-types="documentTypesByParty.seller"
+                  :show-errors="true"
+                  :missing-document-types="missingDocumentTypesByParty.seller"
+                  ref="sellerDocUploadRef"
+                />
+              </div>
             </section>
 
             <!-- Tenant Section -->
@@ -456,121 +495,163 @@
               <h6 class="section-title mb-3" v-if="hasPartyFields('tenant')">Tenant Details</h6>
               <div class="form-card p-3 radius-12" v-if="hasPartyFields('tenant')">
                 <div class="row g-3">
-                  <!-- Tenant First Name -->
                   <div class="col-md-4" v-if="hasField('tenant_first_name')">
                     <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.tenant_first_name" placeholder="Enter First Name" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.tenant_first_name" 
+                      placeholder="Enter First Name" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('tenant_first_name') }"
+                    />
                   </div>
                   
-                  <!-- Tenant Last Name -->
                   <div class="col-md-4" v-if="hasField('tenant_last_name')">
                     <label class="form-label-custom">Last Name <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.tenant_last_name" placeholder="Enter Last Name" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.tenant_last_name" 
+                      placeholder="Enter Last Name" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('tenant_last_name') }"
+                    />
                   </div>
                   
-                  <!-- Tenant Phone -->
                   <div class="col-md-4" v-if="hasField('tenant_phone')">
                     <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.tenant_phone" placeholder="Enter Phone" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.tenant_phone" 
+                      placeholder="Enter Phone" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('tenant_phone') }"
+                    />
                   </div>
                   
-                  <!-- Tenant Email -->
                   <div class="col-md-4" v-if="hasField('tenant_email')">
                     <label class="form-label-custom">Email <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.tenant_email" type="email" placeholder="Enter Email" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.tenant_email" 
+                      type="email" 
+                      placeholder="Enter Email" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('tenant_email') }"
+                    />
                   </div>
                   
-                  <!-- Tenant Nationality -->
                   <div class="col-md-4" v-if="hasField('tenant_nationality')">
                     <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
                     <v-select
-                          append-to-body v-model="formData.tenant_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" >
-                         <template #open-indicator="{ attributes }">
-                              <span v-bind="attributes">
-                                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                              </span>
-                            </template>
-                        
-                    </v-select>
-                  </div>
-                  
-                  <!-- Tenant Residency Status -->
-                  <div class="col-md-4" v-if="hasField('tenant_residency_status')">
-                    <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
-                    <v-select
-                          append-to-body v-model="formData.tenant_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" >
-                    
-                     <template #open-indicator="{ attributes }">
+                      append-to-body 
+                      v-model="formData.tenant_nationality" 
+                      :options="nationalityOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select Nationality" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('tenant_nationality') }"
+                    >
+                      <template #open-indicator="{ attributes }">
                         <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                         </span>
                       </template>
                     </v-select>
                   </div>
                   
-                
+                  <div class="col-md-4" v-if="hasField('tenant_residency_status')">
+                    <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
+                    <v-select
+                      append-to-body 
+                      v-model="formData.tenant_residency_status" 
+                      :options="residencyOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select Status" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('tenant_residency_status') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
+                  </div>
                   
-                  <!-- Tenant Country -->
                   <div class="col-md-4" v-if="hasField('tenant_country')">
                     <label class="form-label-custom">Country Of Residence</label>
                     <v-select
-                        append-to-body v-model="formData.tenant_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" >
-                       
-                         <template #open-indicator="{ attributes }">
-                            <span v-bind="attributes">
-                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                            </span>
-                          </template>
-                    
-                      </v-select>
+                      append-to-body 
+                      v-model="formData.tenant_country" 
+                      :options="countryOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select Country" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('tenant_country') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
                   </div>
-                  <!-- Tenant City -->
-                    <div class="col-md-4" v-if="hasField('tenant_city')">
-                      <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-                      <v-select
-                        append-to-body 
-                        v-model="formData.tenant_city" 
-                        :options="tenantCityOptions" 
-                        :reduce="item => item.value" 
-                        label="text" 
-                        placeholder="Select City" 
-                        class="custom-v-select"
-                      >
-                        <template #open-indicator="{ attributes }">
-                          <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                          </span>
-                        </template>
-                      </v-select>
-                    </div>
                   
-                  <!-- Tenant Language -->
+                  <div class="col-md-4" v-if="hasField('tenant_city')">
+                    <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+                    <v-select
+                      append-to-body 
+                      v-model="formData.tenant_city" 
+                      :options="tenantCityOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select City" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('tenant_city') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
+                  </div>
+                  
                   <div class="col-md-4" v-if="hasField('tenant_language')">
                     <label class="form-label-custom">Language <span class="text-danger">*</span></label>
                     <v-select
-                        append-to-body v-model="formData.tenant_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" >
-                       
-                         <template #open-indicator="{ attributes }">
-                            <span v-bind="attributes">
-                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                            </span>
-                          </template>
-                    
-                      </v-select>
+                      append-to-body 
+                      v-model="formData.tenant_language" 
+                      :options="languageOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select Language" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('tenant_language') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
                   </div>
                   
-                  <!-- Tenant Amount -->
                   <div class="col-md-4" v-if="hasField('tenant_amount')">
                     <label class="form-label-custom">Amount</label>
                     <div class="input-group-custom">
-                      <b-form-input v-model="formData.tenant_amount" type="number" placeholder="Enter Amount" class="custom-input" />
+                      <b-form-input 
+                        v-model="formData.tenant_amount" 
+                        type="number" 
+                        placeholder="Enter Amount" 
+                        class="custom-input"
+                        :class="{ 'is-invalid': isFieldInvalid('tenant_amount') }"
+                      />
                       <div class="currency-fixed-display">
-                          {{ formData.currency || 'AED' }}
-                        </div>
+                        {{ formData.currency || 'AED' }}
+                      </div>
                     </div>
                   </div>
                   
-                  <!-- Tenant Party Missing -->
                   <div class="col-12" v-if="hasField('tenant_party')">
                     <div class="alert alert-warning py-2 mb-0">
                       <iconify-icon icon="lucide:alert-triangle" class="me-2"></iconify-icon>
@@ -578,20 +659,21 @@
                     </div>
                   </div>
                 </div>
-
-                
               </div>
+              
               <!-- Tenant Documents -->
-                <div class="mt-3" v-if="documentTypesByParty.tenant.length > 0">
-                  <label class="section-title">Tenant Documents</label>
-                  <DocumentUpload
-                    v-model="formData.tenant_documents"
-                    category="tenant"
-                    compact
-                    :document-types="documentTypesByParty.tenant"
-                    ref="tenantDocUploadRef"
-                  />
-                </div>
+              <div class="mt-3" v-if="documentTypesByParty.tenant.length > 0">
+                <label class="section-title">Tenant Documents</label>
+                <DocumentUpload
+                  v-model="formData.tenant_documents"
+                  category="tenant"
+                  compact
+                  :document-types="documentTypesByParty.tenant"
+                  :show-errors="true"
+                  :missing-document-types="missingDocumentTypesByParty.tenant"
+                  ref="tenantDocUploadRef"
+                />
+              </div>
             </section>
 
             <!-- Landlord Section -->
@@ -599,116 +681,157 @@
               <h6 class="section-title mb-3" v-if="hasPartyFields('landlord')">Landlord Details</h6>
               <div class="form-card p-3 radius-12" v-if="hasPartyFields('landlord')">
                 <div class="row g-3">
-                  <!-- Landlord First Name -->
                   <div class="col-md-4" v-if="hasField('landlord_first_name')">
                     <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.landlord_first_name" placeholder="Enter First Name" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.landlord_first_name" 
+                      placeholder="Enter First Name" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('landlord_first_name') }"
+                    />
                   </div>
                   
-                  <!-- Landlord Last Name -->
                   <div class="col-md-4" v-if="hasField('landlord_last_name')">
                     <label class="form-label-custom">Last Name <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.landlord_last_name" placeholder="Enter Last Name" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.landlord_last_name" 
+                      placeholder="Enter Last Name" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('landlord_last_name') }"
+                    />
                   </div>
                   
-                  <!-- Landlord Date of Birth -->
                   <div class="col-md-4" v-if="hasField('landlord_dob')">
                     <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.landlord_dob" type="date" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.landlord_dob" 
+                      type="date" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('landlord_dob') }"
+                    />
                   </div>
                   
-                  <!-- Landlord Phone -->
                   <div class="col-md-4" v-if="hasField('landlord_phone')">
                     <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.landlord_phone" placeholder="Enter Phone" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.landlord_phone" 
+                      placeholder="Enter Phone" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('landlord_phone') }"
+                    />
                   </div>
                   
-                  <!-- Landlord Email -->
                   <div class="col-md-4" v-if="hasField('landlord_email')">
                     <label class="form-label-custom">Email <span class="text-danger">*</span></label>
-                    <b-form-input v-model="formData.landlord_email" type="email" placeholder="Enter Email" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.landlord_email" 
+                      type="email" 
+                      placeholder="Enter Email" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('landlord_email') }"
+                    />
                   </div>
                   
-                  <!-- Landlord Nationality -->
                   <div class="col-md-4" v-if="hasField('landlord_nationality')">
                     <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
                     <v-select
-                            append-to-body v-model="formData.landlord_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" >
-                     <template #open-indicator="{ attributes }">
+                      append-to-body 
+                      v-model="formData.landlord_nationality" 
+                      :options="nationalityOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select Nationality" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('landlord_nationality') }"
+                    >
+                      <template #open-indicator="{ attributes }">
                         <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                         </span>
                       </template>
-                    
                     </v-select>
                   </div>
                   
-                  <!-- Landlord Residency Status -->
                   <div class="col-md-4" v-if="hasField('landlord_residency_status')">
                     <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
                     <v-select
-                            append-to-body v-model="formData.landlord_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" >
-                    
-                     <template #open-indicator="{ attributes }">
+                      append-to-body 
+                      v-model="formData.landlord_residency_status" 
+                      :options="residencyOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select Status" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('landlord_residency_status') }"
+                    >
+                      <template #open-indicator="{ attributes }">
                         <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                         </span>
                       </template>
                     </v-select>
                   </div>
                   
-                  
-                  
-                  <!-- Landlord Country -->
                   <div class="col-md-4" v-if="hasField('landlord_country')">
                     <label class="form-label-custom">Country Of Residence</label>
                     <v-select
-                      append-to-body v-model="formData.landlord_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" >
-                       
-                       <template #open-indicator="{ attributes }">
+                      append-to-body 
+                      v-model="formData.landlord_country" 
+                      :options="countryOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select Country" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('landlord_country') }"
+                    >
+                      <template #open-indicator="{ attributes }">
                         <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                         </span>
                       </template>
-                    
                     </v-select>
                   </div>
-                  <!-- Landlord City -->
-                    <div class="col-md-4" v-if="hasField('landlord_city')">
-                      <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-                      <v-select
-                        append-to-body 
-                        v-model="formData.landlord_city" 
-                        :options="landlordCityOptions" 
-                        :reduce="item => item.value" 
-                        label="text" 
-                        placeholder="Select City" 
-                        class="custom-v-select"
-                      >
-                        <template #open-indicator="{ attributes }">
-                          <span v-bind="attributes">
-                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                          </span>
-                        </template>
-                      </v-select>
-                    </div>
                   
-                  <!-- Landlord Language -->
+                  <div class="col-md-4" v-if="hasField('landlord_city')">
+                    <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+                    <v-select
+                      append-to-body 
+                      v-model="formData.landlord_city" 
+                      :options="landlordCityOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select City" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('landlord_city') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
+                  </div>
+                  
                   <div class="col-md-4" v-if="hasField('landlord_language')">
                     <label class="form-label-custom">Language <span class="text-danger">*</span></label>
                     <v-select
-                      append-to-body v-model="formData.landlord_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" >
-                       
-                       <template #open-indicator="{ attributes }">
-                          <span v-bind="attributes">
-                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                          </span>
-                        </template>
-                    
+                      append-to-body 
+                      v-model="formData.landlord_language" 
+                      :options="languageOptions" 
+                      :reduce="item => item.value" 
+                      label="text" 
+                      placeholder="Select Language" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('landlord_language') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
                     </v-select>
                   </div>
                   
-                  <!-- Landlord Party Missing -->
                   <div class="col-12" v-if="hasField('landlord_party')">
                     <div class="alert alert-warning py-2 mb-0">
                       <iconify-icon icon="lucide:alert-triangle" class="me-2"></iconify-icon>
@@ -716,204 +839,187 @@
                     </div>
                   </div>
                 </div>
-
-               
               </div>
-               <!-- Landlord Documents -->
-                <div class="mt-3" v-if="documentTypesByParty.landlord.length > 0">
-                  <label class="section-title">Landlord Documents</label>
-                  <DocumentUpload
-                    v-model="formData.landlord_documents"
-                    category="landlord"
-                    compact
-                    :document-types="documentTypesByParty.landlord"
-                    ref="landlordDocUploadRef"
-                  />
-                </div>
+              
+              <!-- Landlord Documents -->
+              <div class="mt-3" v-if="documentTypesByParty.landlord.length > 0">
+                <label class="section-title">Landlord Documents</label>
+                <DocumentUpload
+                  v-model="formData.landlord_documents"
+                  category="landlord"
+                  compact
+                  :document-types="documentTypesByParty.landlord"
+                  :show-errors="true"
+                  :missing-document-types="missingDocumentTypesByParty.landlord"
+                  ref="landlordDocUploadRef"
+                />
+              </div>
             </section>
 
             <!-- Property Details Section -->
-        <section v-if="hasPropertyFields()" class="form-section">
-          <h6 class="section-title mb-3">Property Details</h6>
-          <div class="form-card p-3 radius-12">
-            <div class="row g-3">
-              
-              <!-- Area (Location) -->
-              <div class="col-md-6" v-if="hasField('area_id')">
-                <label class="form-label-custom">Location <span class="text-danger">*</span></label>
-                <v-select
-                  append-to-body 
-                  v-model="formData.area_id" 
-                  :options="areas" 
-                  :reduce="item => item.id" 
-                  label="name" 
-                  placeholder="Select Location..." 
-                  class="custom-v-select"
-                  :filterable="true"
-                  :searchable="true"
-                  :clearable="true"
-                  @update:modelValue="onAreaSelected"
-                  @search="onSearchAreas"
-                >
-                   <template #open-indicator="{ attributes }">
-                              <span v-bind="attributes">
-                                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                              </span>
-                          </template>
-                          <template #option="option">
-                              <div class="location-option">
-                                  <i class="ri-map-pin-line location-option-icon"></i>
-                                  <div class="location-option-text">
-                                      <span class="location-option-name">{{ locationFirstLine(option) }}</span>
-                                      <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
-                                  </div>
-                              </div>
-                          </template>
-
-                          <template #selected-option="option">
-                              <div v-if="option" class="location-selected">
-                                  <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
-                                  <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
-                              </div>
-                          </template>
+            <section v-if="hasPropertyFields()" class="form-section">
+              <h6 class="section-title mb-3">Property Details</h6>
+              <div class="form-card p-3 radius-12">
+                <div class="row g-3">
+                  <div class="col-md-6" v-if="hasField('area_id')">
+                    <label class="form-label-custom">Location <span class="text-danger">*</span></label>
+                    <v-select
+                      append-to-body 
+                      v-model="formData.area_id" 
+                      :options="areas" 
+                      :reduce="item => item.id" 
+                      label="name" 
+                      placeholder="Select Location..." 
+                      class="custom-v-select"
+                      :filterable="true"
+                      :searchable="true"
+                      :clearable="true"
+                      :class="{ 'is-invalid': isFieldInvalid('area_id') }"
+                      @update:modelValue="onAreaSelected"
+                      @search="onSearchAreas"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                      <template #option="option">
+                        <div class="location-option">
+                          <i class="ri-map-pin-line location-option-icon"></i>
+                          <div class="location-option-text">
+                            <span class="location-option-name">{{ locationFirstLine(option) }}</span>
+                            <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
+                          </div>
+                        </div>
+                      </template>
+                      <template #selected-option="option">
+                        <div v-if="option" class="location-selected">
+                          <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
+                          <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
+                        </div>
+                      </template>
                     </v-select>
-              </div>
+                  </div>
 
-              <!-- Select Listing (Unit) - يظهر بعد اختيار المنطقة -->
-              <div class="col-md-6" v-if="hasField('area_id') && availableListings.length > 0">
-                <label class="form-label-custom">Select Unit <span class="text-danger">*</span></label>
-                <v-select
-                  append-to-body 
-                  v-model="selectedListing" 
-                  :options="availableListings" 
-                  :reduce="item => item" 
-                  label="display_name" 
-                  placeholder="Select a unit..." 
-                  class="custom-v-select"
-                  @update:modelValue="onListingSelected"
-                  :disabled="isLoadingListings"
-                >
-                  <template #option="option">
-                    <div>
-                      <strong>{{ option.unit_number || 'No Unit' }}</strong>
-                      <span class="text-muted ms-2">- {{ option.property_type?.name || 'N/A' }}</span>
-                      <div class="small text-muted">{{ option.bedrooms_text }} | {{ option.size_sqft || 'N/A' }} sqft</div>
+                  <div class="col-md-6" v-if="hasField('area_id') && availableListings.length > 0">
+                    <label class="form-label-custom">Select Unit <span class="text-danger">*</span></label>
+                    <v-select
+                      append-to-body 
+                      v-model="selectedListing" 
+                      :options="availableListings" 
+                      :reduce="item => item" 
+                      label="display_name" 
+                      placeholder="Select a unit..." 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('listing_id') }"
+                      @update:modelValue="onListingSelected"
+                      :disabled="isLoadingListings"
+                    >
+                      <template #option="option">
+                        <div>
+                          <strong>{{ option.unit_number || 'No Unit' }}</strong>
+                          <span class="text-muted ms-2">- {{ option.property_type?.name || 'N/A' }}</span>
+                          <div class="small text-muted">{{ option.bedrooms_text }} | {{ option.size_sqft || 'N/A' }} sqft</div>
+                        </div>
+                      </template>
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
+                    <div class="small text-muted mt-1" v-if="!isLoadingListings">
+                      <iconify-icon icon="lucide:info" class="me-1"></iconify-icon>
+                      Showing available units in this location
                     </div>
-                  </template>
-                  <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
-                  </template>
-                </v-select>
-                <div class="small text-muted mt-1" v-if="!isLoadingListings">
-                  <iconify-icon icon="lucide:info" class="me-1"></iconify-icon>
-                  Showing available units in this location
+                    <div class="small text-muted mt-1" v-else>
+                      <b-spinner small></b-spinner> Loading units...
+                    </div>
+                  </div>
+
+                  <div class="col-md-6" v-if="hasField('unit_no')">
+                    <label class="form-label-custom">Unit No <span class="text-danger">*</span></label>
+                    <b-form-input 
+                      v-model="formData.unit_no" 
+                      placeholder="Enter Unit No" 
+                      class="custom-input compact-placeholder-field"
+                      :class="{ 'is-invalid': isFieldInvalid('unit_no') }"
+                    />
+                  </div>
+                  
+                  <div class="col-md-6" v-if="hasField('property_type_id')">
+                    <label class="form-label-custom">Property Type <span class="text-danger">*</span></label>
+                    <v-select
+                      append-to-body 
+                      v-model="formData.property_type_id" 
+                      :options="propertyTypes" 
+                      :reduce="item => item.id" 
+                      label="name" 
+                      placeholder="Select Property Type" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('property_type_id') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
+                  </div>
+                  
+                  <div class="col-md-6" v-if="hasField('bedrooms')">
+                    <label class="form-label-custom">Bedrooms</label>
+                    <v-select
+                      append-to-body 
+                      v-model="formData.bedrooms" 
+                      :options="bedroomOptions" 
+                      :reduce="o => o.value" 
+                      label="text" 
+                      placeholder="Select Bedroom" 
+                      class="custom-v-select"
+                      :class="{ 'is-invalid': isFieldInvalid('bedrooms') }"
+                    >
+                      <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                      </template>
+                    </v-select>
+                  </div>
+                  
+                  <div class="col-md-6" v-if="hasField('unit_size')">
+                    <label class="form-label-custom">Unit Size (sq.ft)</label>
+                    <b-form-input 
+                      v-model="formData.unit_size" 
+                      placeholder="Enter Unit Size" 
+                      class="custom-input compact-placeholder-field"
+                      :class="{ 'is-invalid': isFieldInvalid('unit_size') }"
+                    />
+                  </div>
+
+                  <div class="col-md-6" v-if="hasField('developer_name')">
+                    <label class="form-label-custom">Developer sales person name</label>
+                    <b-form-input 
+                      v-model="formData.developer_name" 
+                      placeholder="Enter Developer Name" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('developer_name') }"
+                    />
+                  </div>
+
+                  <div class="col-md-6" v-if="hasField('developer_phone')">
+                    <label class="form-label-custom">Developer sales person phone</label>
+                    <b-form-input 
+                      v-model="formData.developer_phone" 
+                      type="tel"
+                      placeholder="Enter Developer Phone Number" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('developer_phone') }"
+                    />
+                  </div>
                 </div>
-                <div class="small text-muted mt-1" v-else>
-                  <b-spinner small></b-spinner> Loading units...
-                </div>
               </div>
-
-              <!-- Unit No - يتم تعبئته تلقائياً -->
-              <div class="col-md-6" v-if="hasField('unit_no')">
-                <label class="form-label-custom">Unit No <span class="text-danger">*</span></label>
-                <b-form-input v-model="formData.unit_no" placeholder="Enter Unit No" class="custom-input compact-placeholder-field" />
-              </div>
-              
-              <!-- Property Type - يتم تعبئته تلقائياً -->
-              <div class="col-md-6" v-if="hasField('property_type_id')">
-                <label class="form-label-custom">Property Type <span class="text-danger">*</span></label>
-                <v-select
-                  append-to-body 
-                  v-model="formData.property_type_id" 
-                  :options="propertyTypes" 
-                  :reduce="item => item.id" 
-                  label="name" 
-                  placeholder="Select Property Type" 
-                  class="custom-v-select"
-                 
-                >
-                  <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
-                  </template>
-                </v-select>
-              </div>
-              
-              <!-- Bedrooms - يتم تعبئته تلقائياً -->
-              <div class="col-md-6" v-if="hasField('bedrooms')">
-                <label class="form-label-custom">Bedrooms</label>
-                <v-select
-                  append-to-body 
-                  v-model="formData.bedrooms" 
-                  :options="bedroomOptions" 
-                  :reduce="o => o.value" 
-                  label="text" 
-                  placeholder="Select Bedroom" 
-                  class="custom-v-select"
-                 
-                >
-                  <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
-                  </template>
-                </v-select>
-              </div>
-              
-              <!-- Unit Size - يتم تعبئته تلقائياً -->
-              <div class="col-md-6" v-if="hasField('unit_size')">
-                <label class="form-label-custom">Unit Size (sq.ft)</label>
-                <b-form-input v-model="formData.unit_size" placeholder="Enter Unit Size" class="custom-input compact-placeholder-field" />
-              </div>
-
-              <!-- Project Name - يتم تعبئته تلقائياً -->
-              <!-- <div class="col-md-6" v-if="hasField('project_id')">
-                <label class="form-label-custom">Project Name</label>
-                <v-select
-                  append-to-body 
-                  v-model="formData.project_id" 
-                  :options="projects" 
-                  :reduce="item => item.id" 
-                  label="name" 
-                  placeholder="Project Name" 
-                  class="custom-v-select"
-                 
-                >
-                  <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
-                  </template>
-                </v-select>
-              </div> -->
-
-              <!-- Developer - يتم تعبئته تلقائياً -->
-              <div class="col-md-6" v-if="hasField('developer_id')">
-                <label class="form-label-custom">Developer</label>
-                <v-select
-                  append-to-body 
-                  v-model="formData.developer_id" 
-                  :options="developers" 
-                  :reduce="item => item.id" 
-                  label="name" 
-                  placeholder="Developer" 
-                  class="custom-v-select"
-                 
-                >
-                  <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
-                  </template>
-                </v-select>
-              </div>
-              
-            </div>
-          </div>
-        </section>
+            </section>
 
             <!-- Deal Financials Section -->
             <section v-if="hasFinancialFields()" class="form-section">
@@ -923,37 +1029,63 @@
                   <div class="col-md-4" v-if="hasField('deal_total_amount')">
                     <label class="form-label-custom">Deal Total Amount</label>
                     <div class="input-group-custom">
-                      <b-form-input v-model="formData.deal_total_amount" type="number" placeholder="Enter Amount" class="custom-input" />
+                      <b-form-input 
+                        v-model="formData.deal_total_amount" 
+                        type="number" 
+                        placeholder="Enter Amount" 
+                        class="custom-input"
+                        :class="{ 'is-invalid': isFieldInvalid('deal_total_amount') }"
+                      />
                       <div class="currency-fixed-display">
                         {{ formData.currency || 'AED' }}
                       </div>
-                      </div>
+                    </div>
                   </div>
                   
                   <div class="col-md-4" v-if="hasField('deal_commission')">
                     <label class="form-label-custom">Deal Commission %</label>
-                    <b-form-input v-model="formData.deal_commission" type="number" placeholder="Enter Commission %" class="custom-input compact-placeholder-field" />
+                    <b-form-input 
+                      v-model="formData.deal_commission" 
+                      type="number" 
+                      placeholder="Enter Commission %" 
+                      class="custom-input compact-placeholder-field"
+                      :class="{ 'is-invalid': isFieldInvalid('deal_commission') }"
+                    />
                   </div>
                   
                   <div class="col-md-4" v-if="hasField('agent_share')">
                     <label class="form-label-custom">Agent Share %</label>
-                    <b-form-input v-model="formData.agent_share" type="number" placeholder="Enter Agent Share %" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.agent_share" 
+                      type="number" 
+                      placeholder="Enter Agent Share %" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('agent_share') }"
+                    />
                   </div>
                   
                   <div class="col-md-4" v-if="hasField('company_share')">
                     <label class="form-label-custom">Company Share %</label>
-                    <b-form-input v-model="formData.company_share" type="number" placeholder="Enter Company Share %" class="custom-input" />
+                    <b-form-input 
+                      v-model="formData.company_share" 
+                      type="number" 
+                      placeholder="Enter Company Share %" 
+                      class="custom-input"
+                      :class="{ 'is-invalid': isFieldInvalid('company_share') }"
+                    />
                   </div>
                 </div>
               </div>
             </section>
-              <!-- Responsible Person -->
-              <div class="col-12 mt-3" v-if="hasField('responsible_person_id')">
-                <ResponsiblePersonSelector 
-                  v-model="formData.responsible_person_id" 
-                  :users="users" 
-                />
-              </div>
+            
+            <!-- Responsible Person -->
+            <div class="col-12 mt-3" v-if="hasField('responsible_person_id')">
+              <ResponsiblePersonSelector 
+                v-model="formData.responsible_person_id" 
+                :users="users" 
+                :class="{ 'is-invalid': isFieldInvalid('responsible_person_id') }"
+              />
+            </div>
           </div>
         </div>
 
@@ -1001,7 +1133,59 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['save', 'closed', 'open-deal'])
+// Add this function to get existing data from the deal
+function getExistingFieldValue(key) {
+  const deal = props.deal
+  if (!deal) return ''
+  
+  // Handle direct fields
+  if (deal[key] !== undefined && deal[key] !== null) return deal[key]
+  
+  // Handle party fields (buyer, seller, tenant, landlord)
+  const partyTypes = ['buyer', 'seller', 'tenant', 'landlord']
+  for (const partyType of partyTypes) {
+    if (key.startsWith(partyType + '_') && !key.includes('_document_')) {
+      const party = deal.parties?.find(p => p.party_type === partyType)
+      if (!party) return ''
+      
+      const field = key.replace(partyType + '_', '')
+      // Map field names to party object properties
+      if (field === 'first_name') return party.first_name || ''
+      if (field === 'last_name') return party.last_name || ''
+      if (field === 'phone') return party.phone || ''
+      if (field === 'email') return party.email || ''
+      if (field === 'nationality') return party.nationality || ''
+      if (field === 'dob') return party.date_of_birth || ''
+      if (field === 'residency_status') return party.residency_status || ''
+      if (field === 'city') return party.city || ''
+      if (field === 'country') return party.country || ''
+      if (field === 'language') return party.language || ''
+      if (field === 'amount') return party.amount || ''
+      return party[field] || ''
+    }
+  }
+  
+  return ''
+}
 
+// Add this function to get existing documents from the deal
+function getExistingDocuments(partyType) {
+  if (!props.deal?.parties) return []
+  
+  const party = props.deal.parties.find(p => p.party_type === partyType)
+  if (!party?.documents) return []
+  
+  return party.documents.map(doc => ({
+    file: doc.file || doc.url || null,
+    url: doc.url || null,
+    document_type: doc.document_type,
+    name: doc.name || doc.document_type,
+    size: doc.size || 0,
+    isUploading: false,
+    uploaded: true,
+    existing: true
+  }))
+}
 /** Align API / deal payload values with primary | secondary | rental for document UI */
 function normalizeDealTypeForDocuments(raw) {
   const s = String(raw ?? '')
@@ -1035,6 +1219,7 @@ const formData = ref({})
 const submitting = ref(false)
 const loading = ref(false)
 let submitResetTimer = null
+const invalidFields = ref(new Set())
 
 // Data from API
 const users = ref([])
@@ -1072,6 +1257,105 @@ const getCurrentUser = () => {
     console.error('Error getting user:', error)
   }
 }
+
+async function initializeForm() {
+  loading.value = true
+  try {
+    const missingFieldKeys = effectiveMissingFields.value || []
+    console.log('Initializing form with missing fields:', missingFieldKeys)
+    
+    const initial = {}
+    
+    // For ALL fields that exist in the deal (not just missing ones)
+    // First, get all possible field keys from the deal
+    const deal = props.deal
+    if (deal) {
+      // Add direct fields
+      Object.keys(deal).forEach(key => {
+        if (deal[key] !== null && deal[key] !== undefined && 
+            !key.includes('parties') && !key.includes('documents') &&
+            typeof deal[key] !== 'object') {
+          initial[key] = deal[key]
+        }
+      })
+      
+      // Add party fields
+      const partyTypes = ['buyer', 'seller', 'tenant', 'landlord']
+      partyTypes.forEach(partyType => {
+        const party = deal.parties?.find(p => p.party_type === partyType)
+        if (party) {
+          // Add all party fields
+          const partyFields = ['first_name', 'last_name', 'phone', 'email', 'nationality', 
+                               'date_of_birth', 'residency_status', 'city', 'country', 
+                               'language', 'amount']
+          partyFields.forEach(field => {
+            const key = `${partyType}_${field}`
+            let value = party[field]
+            if (field === 'date_of_birth') value = party.date_of_birth
+            if (value !== null && value !== undefined && value !== '') {
+              initial[key] = value
+              console.log(`Setting ${key} to ${value}`)
+            }
+          })
+        }
+      })
+    }
+    
+    // Then override with any missing fields that might have default values
+    missingFieldKeys.forEach(key => {
+      if (!key.includes('_document_') && initial[key] === undefined) {
+        initial[key] = getExistingFieldValue(key)
+      }
+    })
+    
+    formData.value = { ...initial }
+    if (!formData.value.currency) formData.value.currency = 'AED'
+    
+    // Initialize document arrays with existing documents
+    const parties = ['buyer', 'seller', 'tenant', 'landlord']
+    parties.forEach(party => {
+      const existingDocs = getExistingDocuments(party)
+      if (existingDocs.length > 0) {
+        formData.value[`${party}_documents`] = existingDocs
+        console.log(`Loaded ${existingDocs.length} existing documents for ${party}`)
+      } else {
+        formData.value[`${party}_documents`] = []
+      }
+    })
+
+    // Ensure document arrays exist for all parties
+    const docTypes = documentTypesByParty.value
+    parties.forEach((party) => {
+      if (docTypes[party]?.length && formData.value[`${party}_documents`] === undefined) {
+        formData.value[`${party}_documents`] = []
+      }
+    })
+    
+    if (missingFieldKeys.includes('subcommunity_id')) {
+      await fetchAreas()
+    }
+    
+    console.log('Form initialized with existing data:', formData.value)
+    console.log('Form data keys with values:', Object.keys(formData.value))
+    
+    // Mark fields that are already filled as valid
+    missingFieldKeys.forEach(key => {
+      if (!key.includes('_document_')) {
+        const value = formData.value[key]
+        const hasValue = value !== null && value !== undefined && value !== '' && 
+                        (typeof value !== 'string' || value.trim() !== '')
+        if (hasValue && invalidFields.value.has(key)) {
+          invalidFields.value.delete(key)
+        }
+      }
+    })
+    
+  } catch (error) {
+    console.error('Error initializing form:', error)
+  } finally {
+    loading.value = false
+  }
+}
 // دالة جلب الـ Listings المتاحة (التي باعها أو أجرها الـ Agent الحالي)
 const fetchAvailableListings = async (areaId) => {
   if (!areaId) {
@@ -1107,8 +1391,7 @@ const fetchAvailableListings = async (areaId) => {
       size_sqft: listing.size_sqft,
       // project_id: listing.project_id,
       // project_name: listing.project?.title,
-      developer_id: listing.developer_id,
-      developer_name: listing.developer?.name,
+      // developer_id: listing.developer_id,
       status: listing.status,
       display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type?.name || 'Property'} (${listing.status === 'converted' ? 'Sold' : 'Rented'})`
     }))
@@ -1119,7 +1402,25 @@ const fetchAvailableListings = async (areaId) => {
     isLoadingListings.value = false
   }
 }
+function isFieldInvalid(fieldKey) {
+  if (!fieldKey) return false
+  if (invalidFields.value.has(fieldKey)) return true
+  
+  // For document fields, check if the document type is missing
+  if (fieldKey.includes('_document_')) {
+    const [partyType, docType] = fieldKey.split('_document_')
+    return missingDocumentTypesByParty.value[partyType]?.includes(docType) || false
+  }
+  
+  return false
+}
 
+// Add this function to mark fields as valid when they're filled
+function markFieldValid(fieldKey) {
+  if (invalidFields.value.has(fieldKey)) {
+    invalidFields.value.delete(fieldKey)
+  }
+}
 function normalizeResidencyStatus(status) {
   if (!status) return 'non_resident'
   const value = String(status).toLowerCase()
@@ -1146,7 +1447,21 @@ const isKycRequiredFromSpaStage = computed(() => {
     stageName.includes('closed')
   )
 })
-
+const missingDocumentTypesByParty = computed(() => {
+  const result = { buyer: [], seller: [], tenant: [], landlord: [] }
+  const missingKeys = effectiveMissingFields.value || []
+  
+  missingKeys.forEach(key => {
+    if (key.includes('_document_')) {
+      const [partyType, docType] = key.split('_document_')
+      if (result[partyType]) {
+        result[partyType].push(docType)
+      }
+    }
+  })
+  
+  return result
+})
 const isSpaRequiredFromSpaStage = computed(() => isKycRequiredFromSpaStage.value)
 
 const isPaymentProofRequiredFromEoiStage = computed(() => {
@@ -1408,7 +1723,12 @@ const unresolvedMissingKeys = computed(() => {
         if (docType === 'passport') {
           const docs = formData.value?.[`${partyType}_documents`] || []
           const hasDoc = Array.isArray(docs) && docs.some((doc) => (doc?.file || doc?.url || doc?.file_url) && doc?.document_type === docType)
-          if (!hasDoc) unresolved.push(key)
+          if (!hasDoc) {
+            unresolved.push(key)
+            if (!invalidFields.value.has(key)) invalidFields.value.add(key)
+          } else {
+            if (invalidFields.value.has(key)) invalidFields.value.delete(key)
+          }
         }
         return
       }
@@ -1420,17 +1740,28 @@ const unresolvedMissingKeys = computed(() => {
       if (requiredDocs.includes(docType)) {
         const docs = formData.value?.[`${partyType}_documents`] || []
         const hasDoc = Array.isArray(docs) && docs.some((doc) => (doc?.file || doc?.url || doc?.file_url) && doc?.document_type === docType)
-        if (!hasDoc) unresolved.push(key)
+        if (!hasDoc) {
+          unresolved.push(key)
+          if (!invalidFields.value.has(key)) invalidFields.value.add(key)
+        } else {
+          if (invalidFields.value.has(key)) invalidFields.value.delete(key)
+        }
       }
       return
     }
 
     const value = formData.value?.[key]
     const isEmpty = value === null || value === undefined || value === ''
-    if (isEmpty) unresolved.push(key)
+    if (isEmpty) {
+      unresolved.push(key)
+      if (!invalidFields.value.has(key)) invalidFields.value.add(key)
+    } else {
+      if (invalidFields.value.has(key)) invalidFields.value.delete(key)
+    }
   })
 
   if (['primary', 'secondary'].includes(effectiveDealTypeForDocs.value)) {
+    const missingKeys = effectiveMissingFields.value || []
     const hasKycInCumulativeMissing = missingKeys.includes('buyer_document_kyc')
     const hasSpaInCumulativeMissing = missingKeys.includes('buyer_document_spa')
     const hasPaymentProofInCumulativeMissing = missingKeys.includes('buyer_document_payment_proof')
@@ -1442,6 +1773,9 @@ const unresolvedMissingKeys = computed(() => {
       )
       if (!hasBuyerKyc && !unresolved.includes('buyer_document_kyc')) {
         unresolved.push('buyer_document_kyc')
+        if (!invalidFields.value.has('buyer_document_kyc')) invalidFields.value.add('buyer_document_kyc')
+      } else if (hasBuyerKyc && invalidFields.value.has('buyer_document_kyc')) {
+        invalidFields.value.delete('buyer_document_kyc')
       }
     }
 
@@ -1455,6 +1789,9 @@ const unresolvedMissingKeys = computed(() => {
         const key = `buyer_document_${docType}`
         if (!hasDoc && !unresolved.includes(key)) {
           unresolved.push(key)
+          if (!invalidFields.value.has(key)) invalidFields.value.add(key)
+        } else if (hasDoc && invalidFields.value.has(key)) {
+          invalidFields.value.delete(key)
         }
       })
     }
@@ -1466,6 +1803,9 @@ const unresolvedMissingKeys = computed(() => {
       )
       if (!hasBuyerSpa && !unresolved.includes('buyer_document_spa')) {
         unresolved.push('buyer_document_spa')
+        if (!invalidFields.value.has('buyer_document_spa')) invalidFields.value.add('buyer_document_spa')
+      } else if (hasBuyerSpa && invalidFields.value.has('buyer_document_spa')) {
+        invalidFields.value.delete('buyer_document_spa')
       }
     }
 
@@ -1476,6 +1816,9 @@ const unresolvedMissingKeys = computed(() => {
       )
       if (!hasBuyerPaymentProof && !unresolved.includes('buyer_document_payment_proof')) {
         unresolved.push('buyer_document_payment_proof')
+        if (!invalidFields.value.has('buyer_document_payment_proof')) invalidFields.value.add('buyer_document_payment_proof')
+      } else if (hasBuyerPaymentProof && invalidFields.value.has('buyer_document_payment_proof')) {
+        invalidFields.value.delete('buyer_document_payment_proof')
       }
     }
   }
@@ -1570,6 +1913,7 @@ const onAreaSelected = (areaId) => {
     formData.value.unit_size = ''
     // formData.value.project_id = null
     formData.value.developer_id = null
+
   }
   
   fetchAvailableListings(areaId)
@@ -1584,11 +1928,44 @@ const onListingSelected = (listing) => {
   formData.value.bedrooms = listing.bedrooms === 0 ? 'studio' : String(listing.bedrooms)
   formData.value.unit_size = listing.size_sqft || ''
   // formData.value.project_id = listing.project_id
-  formData.value.developer_id = listing.developer_id
+  // formData.value.developer_id = listing.developer_id
   formData.value.listing_id = listing.id
   formData.value.listing_status = listing.status
 }
 // Watch for modal open
+watch(() => formData.value, (newVal) => {
+  // Check each missing field to see if it's now filled
+  effectiveMissingFields.value.forEach(fieldKey => {
+    if (fieldKey.includes('_document_')) {
+      // Skip document fields here - handled separately
+      return
+    }
+    
+    const value = newVal[fieldKey]
+    const isEmpty = value === null || value === undefined || value === '' || (typeof value === 'string' && value.trim() === '')
+    
+    if (isEmpty) {
+      if (!invalidFields.value.has(fieldKey)) {
+        invalidFields.value.add(fieldKey)
+      }
+    } else {
+      if (invalidFields.value.has(fieldKey)) {
+        invalidFields.value.delete(fieldKey)
+      }
+    }
+  })
+}, { deep: true })
+watch(() => props, (newVal) => {
+  console.log('Props received by modal:', {
+    show: newVal.show,
+    dealId: newVal.dealId,
+    targetStageId: newVal.targetStageId,
+    targetStageName: newVal.targetStageName,
+    missingFields: newVal.missingFields,
+    groupedMissing: newVal.groupedMissing,
+    deal: newVal.deal
+  })
+}, { deep: true, immediate: true })
 const isInitialized = ref(false)
 watch(() => formData.value.buyer_documents, (newVal) => {
   console.log('buyer_documents changed:', newVal)
@@ -1608,57 +1985,6 @@ watch(() => props.show, async (val) => {
   }
 })
 
-// Initialize form with missing fields
-async function initializeForm() {
-  loading.value = true
-  try {
-    const missingFieldKeys = effectiveMissingFields.value || []
-    console.log('Initializing form with missing fields:', missingFieldKeys)
-    
-    const initial = {}
-    
-    // Initialize each missing field (except document fields)
-    missingFieldKeys.forEach(key => {
-      if (!key.includes('_document_')) {
-        initial[key] = getInitialValue(key)
-      }
-    })
-    
-    formData.value = { ...initial }
-    if (!formData.value.currency) formData.value.currency = 'AED'
-    
-    // Initialize document arrays for each party
-    const parties = ['buyer', 'seller', 'tenant', 'landlord']
-    parties.forEach(party => {
-      const partyDocs = missingFieldKeys.filter(key => 
-        key.startsWith(`${party}_document_`)
-      )
-      if (partyDocs.length > 0) {
-        formData.value[`${party}_documents`] = []
-      }
-    })
-
-    // Primary/secondary/rental can show document UI without *_document_* keys in missingFields — ensure v-model arrays exist.
-    const docTypes = documentTypesByParty.value
-    parties.forEach((party) => {
-      if (docTypes[party]?.length && formData.value[`${party}_documents`] === undefined) {
-        formData.value[`${party}_documents`] = []
-      }
-    })
-    
-    if (missingFieldKeys.includes('subcommunity_id')) {
-      await fetchAreas()
-    }
-    
-    console.log('Form initialized:', formData.value)
-    console.log('Form data keys:', Object.keys(formData.value))
-    
-  } catch (error) {
-    console.error('Error initializing form:', error)
-  } finally {
-    loading.value = false
-  }
-}
 
 // Fetch users
 async function fetchUsers() {
@@ -1747,58 +2073,95 @@ function getInitialValue(key) {
   return ''
 }
 
-// ================ دوال التحقق ================
 
-// التحقق من وجود حقل معين
+
 function hasField(fieldKey) {
-  return effectiveMissingFields.value.includes(fieldKey)
+  const allRequired = getCurrentStageRequiredFields()
+  return allRequired.includes(fieldKey)
 }
 
-// التحقق من وجود حقول طرف معين
 function hasPartyFields(partyType) {
-  if (!effectiveMissingFields.value.length) return false
-  
+  const requiredFields = getCurrentStageRequiredFields()
   const possibleFields = [
-    `${partyType}_first_name`,
-    `${partyType}_last_name`,
-    `${partyType}_phone`,
-    `${partyType}_email`,
-    `${partyType}_nationality`,
-    `${partyType}_dob`,
-    `${partyType}_residency_status`,
-    `${partyType}_city`,
-    `${partyType}_country`,
-    `${partyType}_language`,
-    `${partyType}_amount`,
+    `${partyType}_first_name`, `${partyType}_last_name`, `${partyType}_phone`,
+    `${partyType}_email`, `${partyType}_nationality`, `${partyType}_dob`,
+    `${partyType}_residency_status`, `${partyType}_city`, `${partyType}_country`,
+    `${partyType}_language`, `${partyType}_amount`,
   ]
-  
-  return possibleFields.some(field => effectiveMissingFields.value.includes(field))
+  return possibleFields.some(field => requiredFields.includes(field))
 }
 
-// التحقق من وجود حقول property
 function hasPropertyFields() {
-  const propertyFields = [
-    'unit_no', 'property_type_id', 'subcommunity_id', 
-    'bedrooms', 'area_id', 'unit_size'
-  ]
-  return propertyFields.some(field => hasField(field))
+  const requiredFields = getCurrentStageRequiredFields()
+  const propertyFields = ['unit_no', 'property_type_id', 'bedrooms', 'area_id', 'unit_size', 'developer_name', 'developer_phone']
+  return propertyFields.some(field => requiredFields.includes(field))
 }
 
-// التحقق من وجود حقول financial
 function hasFinancialFields() {
-  const financialFields = [
-    'deal_total_amount', 'deal_commission', 
-    'agent_share', 'company_share'
-  ]
-  return financialFields.some(field => hasField(field))
+  const requiredFields = getCurrentStageRequiredFields()
+  const financialFields = ['deal_total_amount', 'deal_commission', 'agent_share', 'company_share']
+  return financialFields.some(field => requiredFields.includes(field))
 }
 
-// التحقق من وجود source and deal name
 function hasSourceAndDealNameFields() {
+  const requiredFields = getCurrentStageRequiredFields()
   const fields = ['source', 'deal_name']
-  return fields.some(field => hasField(field))
+  return fields.some(field => requiredFields.includes(field))
 }
-
+// Add this function before hasField
+function getCurrentStageRequiredFields() {
+  const byStage = props.groupedMissing?.by_stage || props.missingFieldsGroupedByStage?.stages || []
+  
+  console.log('byStage:', byStage)
+  console.log('targetStageId:', props.targetStageId)
+  console.log('targetStageName:', props.targetStageName)
+  
+  if (!byStage.length) {
+    console.log('No byStage, returning missingFields:', props.missingFields)
+    return props.missingFields || []
+  }
+  
+  // البحث عن المرحلة الحالية
+  const targetId = String(props.targetStageId ?? '')
+  const targetName = String(props.targetStageName || '').toLowerCase()
+  
+  let currentStage = null
+  
+  // محاولة البحث بالـ ID أولاً
+  if (targetId) {
+    currentStage = byStage.find(stage => {
+      const stageId = String(stage?.stage_id ?? stage?.id ?? '')
+      return stageId === targetId
+    })
+  }
+  
+  // إذا لم نجد، نبحث بالاسم
+  if (!currentStage && targetName) {
+    currentStage = byStage.find(stage => {
+      const stageName = String(stage?.stage_name ?? stage?.name ?? '').toLowerCase()
+      return stageName === targetName || stageName.includes(targetName)
+    })
+  }
+  
+  // إذا لم نجد المرحلة، نرجع جميع الحقول من جميع المراحل
+  if (!currentStage) {
+    console.log('Current stage not found, returning all fields from all stages')
+    const allFields = new Set()
+    byStage.forEach(stage => {
+      const fields = extractFieldKeysFromStageEntry(stage)
+      fields.forEach(f => allFields.add(f))
+    })
+    // Also add direct missingFields
+    if (props.missingFields) {
+      props.missingFields.forEach(f => allFields.add(f))
+    }
+    return Array.from(allFields)
+  }
+  
+  const stageFields = extractFieldKeysFromStageEntry(currentStage)
+  console.log('Found current stage fields:', stageFields)
+  return stageFields
+}
 // Get deal type name
 function getDealTypeName(type) {
   const types = {
@@ -3093,5 +3456,35 @@ watch(() => formData.value?.landlord_country, (newCountry, oldCountry) => {
       max-width: 400px;
     }
     
+.complete-fields-modal input.is-invalid,
+.complete-fields-modal textarea.is-invalid {
+  border-color: #dc3545 !important;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linecap='round' d='M6 3v3'/%3e%3cpath stroke-linecap='round' d='M6 9.5v.01'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right calc(0.375em + 0.1875rem) center;
+  background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+  padding-right: calc(1.5em + 0.75rem) !important;
+}
 
+:deep(.custom-v-select.is-invalid .vs__dropdown-toggle) {
+  border-color: #dc3545 !important;
+}
+
+:deep(.responsible-person-selector.is-invalid) {
+  border-color: #dc3545 !important;
+}
+
+/* Document upload error styling */
+:deep(.document-upload-container.has-error) {
+  border-color: #dc3545 !important;
+}
+
+:deep(.document-upload-container .document-tile.missing) {
+  border-color: #dc3545 !important;
+  background-color: rgba(220, 53, 69, 0.05);
+}
+
+:deep(.document-upload-container .document-tile.missing .document-status-icon) {
+  color: #dc3545;
+}
 </style>

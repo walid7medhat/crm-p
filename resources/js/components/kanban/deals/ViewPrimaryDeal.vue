@@ -279,8 +279,14 @@
           </div> -->
           <div class="col-md-12">
             <div class="info-group">
-              <label class="info-label">Developer</label>
-              <p class="info-value mb-0">{{ getDeveloperName() }}</p>
+              <label class="info-label">Developer sales person name</label>
+              <p class="info-value mb-0">{{  val(deal.developer_name)}}</p>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="info-group">
+              <label class="info-label">Developer sales person phone</label>
+              <p class="info-value mb-0">{{  val(deal.developer_phone)}}</p>
             </div>
           </div>
        

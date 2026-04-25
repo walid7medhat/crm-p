@@ -1024,7 +1024,7 @@
           </div> -->
 
           <!-- Developer - يتم تعبئته تلقائياً -->
-          <div class="col-md-4">
+          <!-- <div class="col-md-4">
             <label class="form-label-custom">Developer</label>
             <v-select 
               v-model="form.developer_id" 
@@ -1044,8 +1044,31 @@
             <div v-if="showErrors && fieldErrors.developer_id" class="invalid-feedback d-block">
               {{ fieldErrors.developer_id }}
             </div>
+          </div> -->
+        <div class="col-md-4">
+            <label class="form-label-custom">Developer sales person name</label>
+            <b-form-input 
+              v-model="form.developer_name" 
+              placeholder="Enter Developer Name" 
+              class="custom-input"
+            />
+            <div v-if="showErrors && fieldErrors.developer_name" class="invalid-feedback d-block">
+              {{ fieldErrors.developer_name }}
+            </div>
           </div>
 
+          <div class="col-md-4">
+            <label class="form-label-custom">Developer sales person phone</label>
+            <b-form-input 
+              v-model="form.developer_phone" 
+              type="tel"
+              placeholder="Enter Developer Phone Number" 
+              class="custom-input"
+            />
+            <div v-if="showErrors && fieldErrors.developer_phone" class="invalid-feedback d-block">
+              {{ fieldErrors.developer_phone }}
+            </div>
+          </div>
           <!-- Property Link - مخفي حالياً -->
           <!-- <div class="col-md-4">
             <label class="form-label-custom">Property Link</label>
@@ -1648,7 +1671,7 @@ watch(() => props.showErrors, (newVal) => {
 // دالة جديدة لتحميل جميع المناطق
 const fetchAllAreas = async () => {
   try {
-      const response = await api.get('/listings/areas', { params })
+      const response = await api.get('/listings/areas')
     
     // معالجة البيانات
     const responseData = response.data
@@ -1739,7 +1762,7 @@ const fetchAvailableListings = async (areaId) => {
       size_sqft: listing.size_sqft,
       // project_id: listing.project_id,
       // project_name: listing.project?.title,
-      developer_id: listing.developer_id,
+      // developer_id: listing.developer_id,
       developer_name: listing.developer?.name,
       status: listing.status, // 'converted' or 'rented'
       display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type?.name || 'Property'} (${listing.status === 'converted' ? 'Sold' : 'Rented'})`
@@ -1769,6 +1792,8 @@ const onAreaSelected = (areaId) => {
     form.value.unit_size = ''
     // form.value.project_id = null
     form.value.developer_id = null
+    form.value.developer_name = ''
+    form.value.developer_phone = ''
   }
   // جلب الـ Listings المتاحة
   fetchAvailableListings(areaId)
@@ -1784,7 +1809,7 @@ const onListingSelected = (listing) => {
   form.value.bedrooms = listing.bedrooms === 0 ? 'studio' : String(listing.bedrooms)
   form.value.unit_size = listing.size_sqft || ''
   // form.value.project_id = listing.project_id
-  form.value.developer_id = listing.developer_id
+  // form.value.developer_id = listing.developer_id
   
   // يمكن إضافة listing_id إلى الـ form لربط الديل بالـ listing
   form.value.listing_id = listing.id
@@ -2483,5 +2508,7 @@ watch(() => form.value?.landlord_country, (newCountry, oldCountry) => {
       width: 100% !important;
       max-width: 400px;
     }
-    
+    .document-upload-container.is-compact .all-boxes-grid{
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 </style>

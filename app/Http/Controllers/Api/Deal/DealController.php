@@ -890,7 +890,7 @@ public function updateStage(Request $request, $id)
             'subcommunity_id', 'bedrooms', 'unit_size', 'area_id',
             'deal_total_amount', 'deal_commission', 'agent_share', 
             'company_share', 'currency', 'responsible_person_id',
-            'amount', 'property_link', 'property_reference','lost_reason','project_id','listing_id','developer_id'
+            'amount', 'property_link', 'property_reference','lost_reason','project_id','listing_id','developer_id','developer_name','developer_phone'
         ];
 
         $dealData = [];
@@ -1062,7 +1062,7 @@ public function updateAndChangeStage(Request $request, $id)
             'subcommunity_id', 'bedrooms', 'unit_size', 'area_id',
             'deal_total_amount', 'deal_commission', 'agent_share', 
             'company_share', 'currency', 'responsible_person_id',
-            'property_link', 'property_reference','lost_reason','listing_id','project_id','developer_id'
+            'property_link', 'property_reference','lost_reason','listing_id','project_id','developer_id','developer_name','developer_phone'
         ];
         
         foreach ($dealFields as $field) {
