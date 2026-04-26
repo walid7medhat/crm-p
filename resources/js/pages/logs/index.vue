@@ -140,7 +140,7 @@
                     </td>
                     <td>
                       <div class="event-cell">
-                        <span class="event-title">{{ getAction(log) }}</span>
+                        <span class="event-title">{{ getAction(log) }} - {{ getSubjectName(log) }}</span>
                         <small class="event-sub">{{ getLogMessage(log) }}</small>
                       </div>
                     </td>
@@ -245,6 +245,7 @@ export default {
     availableLevels() {
       return ['info', 'success', 'warning', 'error']
     },
+  
     levelSelectOptions() {
       return [
         { value: '', label: 'All Levels' },
@@ -415,6 +416,19 @@ export default {
     },
     getNewValue(log, field) {
       return this.getAttributes(log)?.[field]
+    },
+      getSubjectName(log) {
+      if (log.subject?.name) return log.subject.name
+
+      const attrs = this.getAttributes(log)
+
+      return (
+        attrs.name ||
+        attrs.title ||
+        attrs.full_name ||
+        attrs.email ||
+        `#${log.subject_id || '-'}`
+      )
     },
     getOldValue(log, field) {
       return this.getOld(log)?.[field]
