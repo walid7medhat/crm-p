@@ -58,6 +58,7 @@ use App\Http\Controllers\Api\Employee\DepartmentController;
 use App\Http\Controllers\Api\Employee\CompanyBranchController;
 use App\Http\Controllers\Api\Employee\EmployeeExcelImportController;
 use App\Http\Controllers\Api\Employee\DocumentRequestController;
+use App\Http\Controllers\Api\Employee\AssetController;
 
 Route::get('/test-email', function () {
     try {
@@ -234,6 +235,31 @@ Route::middleware(['role:super_admin|hr'])->prefix('document-types')->group(func
     Route::post('/', [DocumentRequestController::class, 'storeDocumentType']);
     Route::put('/{id}', [DocumentRequestController::class, 'updateDocumentType']);
     Route::delete('/{id}', [DocumentRequestController::class, 'destroyDocumentType']);
+});
+// Asset Types CRUD
+Route::prefix('asset-types')->middleware(['auth:api'])->group(function () {
+    Route::get('/', [AssetController::class, 'getAssetTypes']);
+    Route::post('/', [AssetController::class, 'storeAssetType']);
+    Route::put('/{id}', [AssetController::class, 'updateAssetType']);
+    Route::delete('/{id}', [AssetController::class, 'destroyAssetType']);
+});
+
+// Assets Management
+Route::prefix('assets')->middleware(['auth:api'])->group(function () {
+    Route::get('/get/statistics', [AssetController::class, 'statistics']);
+    Route::get('/', [AssetController::class, 'index']);
+    Route::post('/store/new', [AssetController::class, 'store']);
+    Route::get('/{id}', [AssetController::class, 'show']);
+    Route::put('/{id}', [AssetController::class, 'update']);
+    Route::delete('/{id}', [AssetController::class, 'destroy']);
+    
+    // Assignment
+    Route::post('/{id}/assign', [AssetController::class, 'assignAsset']);
+    Route::post('/{id}/return', [AssetController::class, 'returnAsset']);
+    Route::get('/{id}/history', [AssetController::class, 'getAssetHistory']);
+    
+    // Employee Assets
+    Route::get('/employee/{userId}/assets', [AssetController::class, 'getEmployeeAssets']);
 });
 
 // Document Requests
