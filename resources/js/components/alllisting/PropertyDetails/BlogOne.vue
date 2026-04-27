@@ -313,7 +313,7 @@
                 </div>
               </div>
             </div>
-              <div class="comment-container">
+              <div class="comment-container" v-if="!onlyShow">
                 <!-- Comments Section -->
                 <div class="comments-section " v-if="property">
                   <div class="card">
@@ -368,7 +368,7 @@
                 </div>
                 
                 <!-- Comments List -->
-                <div class="comments-list">
+                <div class="comments-list" v-if="!onlyShow">
                   <div v-if="loadingComments" class="text-center py-4">
                     <div class="spinner-border text-primary" role="status">
                       <span class="visually-hidden">Loading comments...</span>
@@ -561,7 +561,7 @@
           />
           <div class="agent-sidebar-info">
             <h5 class="agent-sidebar-name">{{ property.agent.name || 'Agent Name' }}</h5>
-            <button 
+            <button v-if="!onlyShow"
               class="btn-show-agent-details" 
               @click="goToAgentDetails(property.agent.id)"
             >
@@ -573,7 +573,7 @@
 
          
 
-            <div class="sidebar-section" v-if="isPropertyOwner">
+            <div class="sidebar-section" v-if="isPropertyOwner || !onlyShow">
                 <br>
               <div class="request-actions-grid">
                 <!-- Unit Number Info -->
@@ -648,7 +648,7 @@
               </div>
             </div>
            <!-- Property Actions Dropdown -->
-            <div class="sidebar-section">
+            <div class="sidebar-section " v-if="!onlyShow">
               <div class="property-actions-dropdown-wrapper">
                 <div class="property-actions-dropdown">
                   <button 
@@ -661,7 +661,7 @@
                   <div class="dropdown-container" :class="{ expanded: showActionsDropdown }">
                     <div class="dropdown-menu" :class="{ show: showActionsDropdown }">
                           <!-- Create Offer -->
-                              <button 
+                              <button  
                                 class="dropdown-item"
                                 @click="generatePDF"
                               >
@@ -2286,7 +2286,11 @@ const canUsePropertyChat = computed(() => {
 
 });
 
+const onlyShow = computed(() => {
+  const userRoles = Array.isArray(getCurrentUser()?.roles) ? getCurrentUser().roles : [];
+  return userRoles.includes('only show listings') ;
 
+});
 const canMarkAsConverted = computed(() => {
   return canEditProperty.value;
 });
@@ -5225,6 +5229,7 @@ const openDriveLink = () => {
         availableAgents,
         canAssignAgent,
         canUsePropertyChat,
+        onlyShow,
         canMarkAsConverted,
         toggleActionsDropdown,
         closeActionsDropdown,

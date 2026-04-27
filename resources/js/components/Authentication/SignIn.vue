@@ -150,8 +150,12 @@ try {
     }));
     
     console.log("✅ User data saved:", userData);
-    
+    const isAdminUser = userData.roles?.includes('only show listings');
+    if(!isAdminUser){
     window.location.href = '/';
+    }else{
+        window.location.href = '/alllisting';
+    }
     
     // this.router.push('/');
              

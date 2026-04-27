@@ -36,8 +36,9 @@
     <!-- Menu -->
     <div class="sidebar-menu-area">
       <ul class="sidebar-menu">
-        <li>
-          <router-link to="/" :class="{ active: isActive('/') }">
+        <li >
+          <router-link  :to="isShowOnlyListing ? '/alllisting' : '/'"
+                    :class="{ active: isActive(isShowOnlyListing ? '/alllisting' : '/') }">
             <!--<iconify-icon icon="solar:home-smile-angle-outline" class="menu-icon" />-->
             <img :src="dashboardIcon" class="imgicon"/>
             <span>Dashboard</span>
@@ -70,7 +71,7 @@
             </router-link>
           </li>
         <!-- Listings Dropdown -->
-        <li v-if="filteredTableItems.length > 0" :class="{ 
+        <li v-if="filteredTableItems.length > 0 && !isShowOnlyListing" :class="{ 
           dropdown: true, 
           open: activeDropdown === 'table',
           'active-parent': isTableActive 
@@ -119,7 +120,7 @@
           </transition>
         </li>
         <!-- Requests & Orders Dropdown -->
-        <li v-if="filteredRequestsItems.length > 0" :class="{ 
+        <li v-if="filteredRequestsItems.length > 0 && !isShowOnlyListing" :class="{ 
           dropdown: true, 
           open: activeDropdown === 'requests',
           'active-parent': isRequestsActive 
@@ -369,7 +370,7 @@
         </li>
 
         <!-- Suggestion -->
-        <li>
+        <li v-if="!isShowOnlyListing">
           <router-link to="/suggestion" :class="{ 'active-page': isActive('/suggestion') }">
             <iconify-icon icon="lucide:lightbulb" class="menu-icon" />
             <span>Suggestion</span>
@@ -515,6 +516,14 @@ const isAdmin = computed(() => {
   const isAdminUser = user.value.roles?.includes('super_admin') || 
                      user.value.roles?.includes('admin') ||
                      proxy.$hasPermission('admin');
+  
+  return isAdminUser;
+});
+
+const isShowOnlyListing = computed(() => {
+  if (!user.value) return false;
+  
+  const isAdminUser = user.value.roles?.includes('only show listings');
   
   return isAdminUser;
 });

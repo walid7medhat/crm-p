@@ -14,7 +14,7 @@
 
       <div class="navbar-header-right">
         <router-link 
-          v-if="showCreatePropertyButton"
+          v-if="showCreatePropertyButton && !isShowOnlyListing"
           to="/property-form" 
           class="btn btn-primary btn-sm create-property-btn navbar-create-listing d-flex align-items-center gap-1"
         >
@@ -86,7 +86,7 @@
                         <div class="profile-summary-info">
                           <h6 class="profile-summary-name">{{ user ? user.name : 'User' }}</h6>
                           <p class="profile-summary-email">{{ user && user.email ? user.email : '—' }}</p>
-                          <p class="profile-summary-role">{{ user && user.role_name ? user.role_name : 'User' }}</p>
+                          <p class="profile-summary-role" v-if="!isShowOnlyListing">{{ user && user.role_name ? user.role_name : 'User' }}</p>
                         </div>
                       </div>
                       <div class="profile-summary-right">
@@ -126,7 +126,7 @@
                           >
                           <span v-else class="profile-contact-value">{{ firstName }}</span>
                         </div>
-                        <div class="profile-contact-item">
+                        <div class="profile-contact-item" v-if="!isShowOnlyListing">
                           <span class="profile-contact-label">Departments</span>
                           <span class="profile-contact-value profile-contact-readonly">{{ user && user.role_name ? user.role_name : '—' }}</span>
                         </div>
@@ -169,7 +169,7 @@
                         </div>
                       </div>
                     </section>
-                    <section class="profile-section profile-section-team">
+                    <section class="profile-section profile-section-team" v-if="!isShowOnlyListing">
                       <div class="profile-section-head">
                         <h4 class="profile-section-title">Your Team</h4>
                         <span class="profile-section-badge"># TEAM</span>
@@ -210,7 +210,7 @@
                     </section>
 
                     <div class="profile-panel-actions">
-                      <router-link to="/view-profile" class="profile-action-link" @click="closeProfilePanel">
+                      <router-link v-if="!isShowOnlyListing" to="/view-profile" class="profile-action-link" @click="closeProfilePanel">
                         <iconify-icon icon="solar:user-linear" class="icon"></iconify-icon>
                         My Profile
                       </router-link>
@@ -581,6 +581,16 @@ const teamMembersList = computed(() => {
   return [];
 });
 
+
+
+
+const isShowOnlyListing = computed(() => {
+  if (!user.value) return false;
+  
+  const isAdminUser = user.value.roles?.includes('only show listings');
+  
+  return isAdminUser;
+});
 const teamPageSize = 6;
 const visibleTeamCount = ref(teamPageSize);
 
