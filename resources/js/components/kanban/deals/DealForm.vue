@@ -1796,8 +1796,10 @@ const onAreaSelected = (areaId) => {
     form.value.developer_phone = ''
   }
   if (props.dealType === 'secondary' || props.dealType === 'rental' ) {
-  // جلب الـ Listings المتاحة
   fetchAvailableListings(areaId)
+  }
+  else {
+    availableListings.value = []
   }
 }
 
