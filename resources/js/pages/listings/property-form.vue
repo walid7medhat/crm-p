@@ -194,7 +194,7 @@
         </div>
         <div class="card-body">
           <div class="row gy-3">
-            <div class="col-md-3">
+            <div class="col-md-3" v-if="!isPlotOrLand">
               <label class="form-label">Number of Bedrooms</label>
               <v-select
                 v-model="form.number_of_bedrooms"
@@ -205,7 +205,7 @@
               />
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-3" v-if="!isPlotOrLand">
               <label class="form-label">Number of Bathrooms</label>
               <v-select
                 v-model="form.number_of_bathrooms"
@@ -1709,6 +1709,17 @@ const handleProjectFloorPlanSelection = (selectedPlans) => {
 const selectedProjectFloorPlan = ref(null);
 
 // Computed property
+// Add this to your computed properties section
+const isPlotOrLand = computed(() => {
+  const plotTypes = ['Plot', 'Land', 'Residential Plot', 'Commercial Plot'];
+  if (!form.value.property_type) return false;
+  
+  const propertyTypeName = form.value.property_type.name || form.value.property_type;
+  return plotTypes.some(type => 
+    propertyTypeName.toLowerCase().includes(type.toLowerCase())
+  );
+});
+
 const customFloorPlansCount = computed(() => {
   return form.value.floorPlans.filter(fp => !fp.fromProject).length;
 });
