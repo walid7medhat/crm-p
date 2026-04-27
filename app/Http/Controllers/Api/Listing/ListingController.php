@@ -779,10 +779,8 @@ public function getMatchingListings(Request $request)
         if ($newHotDealStatus == $oldHotDealStatus) {
             return;
         }
-
         $user = Auth::user();
                         \Log::info('Creating listing with data', [$newHotDealStatus,$oldHotDealStatus,$user->hasRole('sales') && $user->isListingTeam]);
-
         // If trying to mark as hot deal
         if ($newHotDealStatus == 'Yes' ) {
             // Check if user is sales agent under listing team
@@ -811,6 +809,7 @@ public function getMatchingListings(Request $request)
             }
             // If user is admin/super_admin/manager, they can set directly
             elseif ($user->hasRole(['super_admin', 'admin', 'manager','team_lead'])) {
+               
                 $listing->update([
                     'is_hot_deal' => 'Yes',
                     'hot_deal_approved_by' => $user->id,
@@ -819,6 +818,8 @@ public function getMatchingListings(Request $request)
             }else if ($user->hasRole('sales') && !$user->isListingTeam ) {
                 $listing->update([
                     'is_hot_deal' => 'Yes',
+                    'hot_deal_approved_by' => $user->id,
+                    'hot_deal_approved_at' => Now()
                     ]);
                 
             }
@@ -1150,13 +1151,15 @@ public function update(ListingRequest $request, $listingId): JsonResponse
   
             $oldHotDealStatus = $listing->is_hot_deal;
             $newHotDealStatus = $request->has('is_hot_deal') ? $request->is_hot_deal : $oldHotDealStatus;
+            // dd($newHotDealStatus !== $oldHotDealStatus,$newHotDealStatus);
             
             // Handle hot deal status change first
             if ($newHotDealStatus !== $oldHotDealStatus) {
                 $this->handleHotDealStatus($listing, $newHotDealStatus, $oldHotDealStatus);
+
             }
         $data = $request->validated();
-        unset($data['agent_id']); 
+        unset($data['agent_id']);
 
 
         // Handle listing status based on action
