@@ -57,6 +57,7 @@ use App\Http\Controllers\Api\Employee\DesignationController;
 use App\Http\Controllers\Api\Employee\DepartmentController;
 use App\Http\Controllers\Api\Employee\CompanyBranchController;
 use App\Http\Controllers\Api\Employee\EmployeeExcelImportController;
+use App\Http\Controllers\Api\Employee\DocumentRequestController;
 
 Route::get('/test-email', function () {
     try {
@@ -167,6 +168,7 @@ Route::prefix('settings')->middleware(['jwt.auth'])->group(function () {
     Route::post('/kanban/card-fields', [KanbanSettingsController::class, 'updateCardFields']);
     Route::post('/kanban/revert-hours', [KanbanSettingsController::class, 'updateRevertHours']);
 });
+
 Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/scoring-settings', [LeadScoringSettingController::class, 'show']);
     Route::post('/scoring-settings', [LeadScoringSettingController::class, 'store']);
@@ -225,6 +227,25 @@ Route::prefix('company-branches')->group(function () {
     Route::post('/bulk-delete', [CompanyBranchController::class, 'bulkDelete']);
     Route::get('/cities/list', [CompanyBranchController::class, 'getCities']);
     Route::get('/statistics/summary', [CompanyBranchController::class, 'getStatistics']);
+});
+// Document Types CRUD
+Route::middleware(['role:super_admin|hr'])->prefix('document-types')->group(function () {
+    Route::get('/', [DocumentRequestController::class, 'getDocumentTypes']);
+    Route::post('/', [DocumentRequestController::class, 'storeDocumentType']);
+    Route::put('/{id}', [DocumentRequestController::class, 'updateDocumentType']);
+    Route::delete('/{id}', [DocumentRequestController::class, 'destroyDocumentType']);
+});
+
+// Document Requests
+Route::middleware(['auth:api'])->prefix('document-requests')->group(function () {
+    Route::get('/statistics', [DocumentRequestController::class, 'statistics']);
+    Route::get('/', [DocumentRequestController::class, 'index']);
+    Route::get('/{id}', [DocumentRequestController::class, 'show']);
+    Route::post('/store/new', [DocumentRequestController::class, 'store']);
+    Route::put('/{id}', [DocumentRequestController::class, 'update']);  
+    Route::delete('/{id}', [DocumentRequestController::class, 'destroy']);
+    Route::post('/{id}/approve', [DocumentRequestController::class, 'approve']);
+    Route::post('/{id}/reject', [DocumentRequestController::class, 'reject']);
 });
   Route::prefix('designations')->group(function () {
         Route::get('/', [DesignationController::class, 'index']);           

@@ -428,4 +428,14 @@ public function getEmployeeDocumentsAttribute()
     {
         return $this->hasMany(AgentScore::class);
     }
+    
+        public function documentRequests()
+    {
+        return $this->hasMany(DocumentRequest::class, 'user_id');
+    }
+    
+    public function handledDocumentRequests()
+    {
+        return $this->hasMany(DocumentRequest::class, 'hr_user_id');
+    }
 }
