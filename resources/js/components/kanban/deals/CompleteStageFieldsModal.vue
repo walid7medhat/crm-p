@@ -1954,7 +1954,10 @@ const onAreaSelected = (areaId) => {
 
   }
   
+  if (props.dealType === 'secondary' || props.dealType === 'rental' ) {
+  // جلب الـ Listings المتاحة
   fetchAvailableListings(areaId)
+  }
 }
 
 // دالة عند اختيار Listing
