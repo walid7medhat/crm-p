@@ -59,6 +59,7 @@ use App\Http\Controllers\Api\Employee\CompanyBranchController;
 use App\Http\Controllers\Api\Employee\EmployeeExcelImportController;
 use App\Http\Controllers\Api\Employee\DocumentRequestController;
 use App\Http\Controllers\Api\Employee\AssetController;
+use App\Http\Controllers\Api\Employee\LeaveController;
 
 Route::get('/test-email', function () {
     try {
@@ -260,6 +261,39 @@ Route::prefix('assets')->middleware(['auth:api'])->group(function () {
     
     // Employee Assets
     Route::get('/employee/{userId}/assets', [AssetController::class, 'getEmployeeAssets']);
+});
+
+// ==================== Leave Management Routes ====================
+Route::middleware(['auth:api'])->prefix('leaves')->group(function () {
+
+    // Leave Types CRUD (Admin/HR only)
+    Route::prefix('types')->group(function () {
+        Route::get('/', [LeaveController::class, 'getLeaveTypes']);
+        Route::post('/', [LeaveController::class, 'storeLeaveType']);
+        Route::put('/{id}', [LeaveController::class, 'updateLeaveType']);
+        Route::delete('/{id}', [LeaveController::class, 'destroyLeaveType']);
+    });
+
+    // Leave Balance
+    Route::get('/my-balance', [LeaveController::class, 'getMyBalance']);
+    Route::get('/balance/{userId}', [LeaveController::class, 'getEmployeeBalance'])
+        ->middleware('permission:view-employee-balance');
+
+    // Leave Requests
+    Route::get('/statistics', [LeaveController::class, 'statistics']);
+    Route::get('/', [LeaveController::class, 'index']);
+    Route::post('/', [LeaveController::class, 'store']);
+    Route::get('/{id}', [LeaveController::class, 'show']);
+    Route::put('/{id}', [LeaveController::class, 'update']);
+    Route::delete('/{id}', [LeaveController::class, 'cancel']);
+
+    // Approve/Reject by Parent (Team Lead)
+    Route::post('/{id}/approve-parent', [LeaveController::class, 'approveByParent']);
+    Route::post('/{id}/reject-parent', [LeaveController::class, 'rejectByParent']);
+
+    // Approve/Reject by HR
+    Route::post('/{id}/approve-hr', [LeaveController::class, 'approveByHr']);
+    Route::post('/{id}/reject-hr', [LeaveController::class, 'rejectByHr']);
 });
 
 // Document Requests
