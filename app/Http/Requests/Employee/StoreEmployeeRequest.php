@@ -17,6 +17,7 @@ class StoreEmployeeRequest extends FormRequest
         return [
             // ========== USER BASIC INFO ==========
             'name' => 'required|string|max:255',
+            'employee_name'=>'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:8',
@@ -84,6 +85,35 @@ class StoreEmployeeRequest extends FormRequest
             'documents.attested_certificate.*' => 'file|mimes:jpg,jpeg,png,pdf|max:51200',
             'documents.other' => 'nullable|array',
             'documents.other.*' => 'file|mimes:jpg,jpeg,png,pdf|max:51200',
+
+                // NEW: Personal Information
+                'father_name' => 'nullable|string|max:255',
+                'mother_name' => 'nullable|string|max:255',
+                'religion' => 'nullable|string|max:100',
+                'emergency_contact_name' => 'nullable|string|max:255',
+                'emergency_email' => 'nullable|email',
+                'emergency_phone' => 'nullable|string|max:20',
+                'address_inside_uae' => 'nullable|string',
+                'address_outside_uae' => 'nullable|string',
+                'home_country_phone' => 'nullable|string|max:20',
+                
+                // NEW: Company Details
+                'sponsor' => 'nullable|string|max:255',
+                'visa_quota' => 'nullable|string|max:255',
+                'vehicle' => 'nullable|string|max:255',
+                'probation_end_date' => 'nullable|date',
+                'visa_validity' => 'nullable|date',
+                'contract_joining_date' => 'nullable|date',
+                'gratuity_termination' => 'nullable|date',
+                
+                // NEW: Salary Info (in users table)
+                'nationality' => 'nullable|string|max:100',
+                'salary_type' => 'nullable|in:daily,monthly,yearly',
+                'salary_amount' => 'nullable|numeric|min:0',
+                'personal_phone' => 'nullable|string|max:20',
+                'home_country_phone_number' => 'nullable|string|max:20',
+                
+       
         ];
     }
 

@@ -248,18 +248,18 @@ class EmployeeExcelImportController extends Controller
             if ($user) {
                 // UPDATE existing user
                 $updateData = [];
-                if (!empty($row['agent_name'])) $updateData['name'] = $row['agent_name'];
-                if (!empty($row['personal_mobile_number'])) $updateData['phone'] = $row['personal_mobile_number'];
-                if (!empty($row['company_mobile_number'])) $updateData['company_mobile'] = $row['company_mobile_number'];
-                if (!empty($row['gender'])) $updateData['gender'] = $this->mapGender($row['gender']);
-                if (!empty($row['birthdate'])) $updateData['birth_date'] = $this->parseDate($row['birthdate']);
-                if (!empty($row['marital_status'])) $updateData['marital_status'] = $this->mapMaritalStatus($row['marital_status']);
-                if (!empty($row['personal_email'])) $updateData['personal_email'] = $row['personal_email'];
+                // if (!empty($row['agent_name'])) $updateData['name'] = $row['agent_name'];
+                // if (!empty($row['personal_mobile_number'])) $updateData['phone'] = $row['personal_mobile_number'];
+                // if (!empty($row['company_mobile_number'])) $updateData['company_mobile'] = $row['company_mobile_number'];
+                // if (!empty($row['gender'])) $updateData['gender'] = $this->mapGender($row['gender']);
+                // if (!empty($row['birthdate'])) $updateData['birth_date'] = $this->parseDate($row['birthdate']);
+                // if (!empty($row['marital_status'])) $updateData['marital_status'] = $this->mapMaritalStatus($row['marital_status']);
+                // if (!empty($row['personal_email'])) $updateData['personal_email'] = $row['personal_email'];
                 
-                if (!empty($updateData)) {
-                    $updateData['updated_at'] = now();
-                    $user->update($updateData);
-                }
+                // if (!empty($updateData)) {
+                //     $updateData['updated_at'] = now();
+                //     $user->update($updateData);
+                // }
             } else {
                 // CREATE new user
                 $user = User::create([
@@ -283,6 +283,7 @@ class EmployeeExcelImportController extends Controller
             
             // 6. Update or create Employee Profile
             $profileData = [
+                'employee_name' => $row['agent_name'] ?? 'Unknown',
                 'employee_code' => $row['employee_number'],
                 'designation_id' => $designationId,
                 'department_id' => $departmentId,
