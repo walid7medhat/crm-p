@@ -24,7 +24,11 @@ class DashboardController extends Controller
 
 public function index(Request $request)
 {
-    $query = Activity::query()->with('causer');
+    $query = Activity::query()->with(['causer','subject' => function ($morphTo) {
+            $morphTo->morphWith([
+                Listing::class => ['area'], 
+            ]);
+        }]);
     // Filter by model (log_name)
     if ($request->model) {
         $query->where('log_name', $request->model);

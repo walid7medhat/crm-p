@@ -147,7 +147,7 @@
                     <td>
                       <div class="user-cell">
                         <span>{{ log.causer?.name || 'System' }}</span>
-                        <small>{{ userRole(log.causer_id) || 'No role' }}</small>
+                        <!--<small>{{ userRole(log.causer_id) || 'No role' }}</small>-->
                       </div>
                     </td>
                     <td>{{ getModelName(log.subject_type) }}</td>
@@ -417,19 +417,27 @@ export default {
     getNewValue(log, field) {
       return this.getAttributes(log)?.[field]
     },
-      getSubjectName(log) {
-      if (log.subject?.name) return log.subject.name
-
-      const attrs = this.getAttributes(log)
-
-      return (
-        attrs.name ||
-        attrs.title ||
-        attrs.full_name ||
-        attrs.email ||
-        `#${log.subject_id || '-'}`
-      )
-    },
+     getSubjectName(log) {
+          const subject = log.subject
+        
+          if (!subject) return `#${log.subject_id}`
+        
+          // لو Listing وعنده area
+          if (subject.area?.name) {
+            return `${subject.area.name}`
+          }
+        
+          return (
+            subject.name ||
+            subject.title ||
+             subject.first_name ||
+            subject.deal_name ||
+            subject.full_name ||
+            
+            subject.email ||
+            `#${log.subject_id}`
+          )
+        },
     getOldValue(log, field) {
       return this.getOld(log)?.[field]
     },
