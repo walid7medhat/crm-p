@@ -303,10 +303,11 @@
               <!-- Buyer Documents -->
               <div
                 v-if="documentTypesByParty.buyer.length > 0"
-                class="form-card p-3 radius-12"
+               
                 :class="hasPartyFields('buyer') ? 'mt-3' : 'mt-0'"
               >
-                <label class="section-title">Buyer Documents</label>
+                <label class="section-title  mb-3">Buyer Documents</label>
+                
                 <DocumentUpload
                   v-model="formData.buyer_documents"
                   category="buyer"
@@ -315,6 +316,7 @@
                   :show-errors="true"
                   :missing-document-types="missingDocumentTypesByParty.buyer"
                   ref="buyerDocUploadRef"
+                   class="form-card p-3 radius-12"
                 />
               </div>
             </section>
@@ -486,7 +488,7 @@
               
               <!-- Seller Documents -->
               <div class="mt-3" v-if="documentTypesByParty.seller.length > 0">
-                <label class="section-title">Seller Documents</label>
+                <label class="section-title  mb-3">Seller Documents</label>
                 <DocumentUpload
                   v-model="formData.seller_documents"
                   category="seller"
@@ -495,6 +497,7 @@
                   :show-errors="true"
                   :missing-document-types="missingDocumentTypesByParty.seller"
                   ref="sellerDocUploadRef"
+                   class="form-card p-3 radius-12"
                 />
               </div>
             </section>
@@ -672,7 +675,7 @@
               
               <!-- Tenant Documents -->
               <div class="mt-3" v-if="documentTypesByParty.tenant.length > 0">
-                <label class="section-title">Tenant Documents</label>
+                <label class="section-title mb-3">Tenant Documents</label>
                 <DocumentUpload
                   v-model="formData.tenant_documents"
                   category="tenant"
@@ -681,6 +684,7 @@
                   :show-errors="true"
                   :missing-document-types="missingDocumentTypesByParty.tenant"
                   ref="tenantDocUploadRef"
+                   class="form-card p-3 radius-12"
                 />
               </div>
             </section>
@@ -852,7 +856,7 @@
               
               <!-- Landlord Documents -->
               <div class="mt-3" v-if="documentTypesByParty.landlord.length > 0">
-                <label class="section-title">Landlord Documents</label>
+                <label class="section-title mb-3">Landlord Documents</label>
                 <DocumentUpload
                   v-model="formData.landlord_documents"
                   category="landlord"
@@ -861,6 +865,7 @@
                   :show-errors="true"
                   :missing-document-types="missingDocumentTypesByParty.landlord"
                   ref="landlordDocUploadRef"
+                   class="form-card p-3 radius-12"
                 />
               </div>
             </section>
@@ -1954,12 +1959,7 @@ const onAreaSelected = (areaId) => {
 
   }
   
-  if (props.dealType === 'secondary' || props.dealType === 'rental' ) {
   fetchAvailableListings(areaId)
-  }
-  else {
-    availableListings.value = []
-  }
 }
 
 // دالة عند اختيار Listing
