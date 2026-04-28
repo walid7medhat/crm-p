@@ -100,6 +100,18 @@ return Application::configure(basePath: dirname(__DIR__))
       $schedule->command('announcements:send-notifications')
          ->dailyAt('08:00')
          ->timezone('Asia/Dubai');
+       
+    $schedule->command('visa:check-expiry --days=30')
+            ->dailyAt('09:30')
+            ->timezone('Asia/Dubai')
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/visa-expiry.log'));
+    
+    $schedule->command('visa:check-expiry --days=7')
+            ->everySixHours()
+            ->timezone('Asia/Dubai')
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/visa-expiry-urgent.log'));
         // ==================== TEST COMMANDS ====================
         // $schedule->command('activities:send-reminders --timeframe=today --test')
         //     ->dailyAt('10:00')
