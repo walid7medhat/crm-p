@@ -762,7 +762,7 @@ const sortOptions = [
     const fetchPropertyTypes = async () => {
       try {
         isLoadingPropertyTypes.value = true;
-        const response = await api.get("/listings/property-types/?non_root_only=1");
+        const response = await api.get("/listings/property-types/?non_root_only=1&resdintial=true");
         
         const propertyTypesData = response.data.data || response.data;
         
@@ -771,9 +771,10 @@ const sortOptions = [
           return {
             id: type.id,
             name,
-            category: inferPropertyCategory(name)
           };
         });
+        
+       
         
         console.log("✅ Property types loaded:", propertyTypes.value.length);
         
@@ -790,10 +791,29 @@ const sortOptions = [
       };
     });
 
-    const visiblePropertyTypes = computed(() => {
-      return propertyTypesByTab.value[propertyTypeTab.value] || [];
+   const visiblePropertyTypes = computed(() => {
+      // نسخة من قائمة أنواع العقارات
+      const types = [...propertyTypes.value];
+      
+      // إيجاد مواقع Residential Plot و Commercial Plots
+      const residentialPlotIndex = types.findIndex(t => t.name === 'Residential Plot');
+      const commercialPlotsIndex = types.findIndex(t => t.name === 'Commercial Plots');
+      
+      // إذا كان الـ Commercial Plots موجود ومتفرق عن Residential Plot
+      if (residentialPlotIndex !== -1 && commercialPlotsIndex !== -1) {
+        // إذا كان Commercial Plots بعيد عن Residential Plot
+        if (Math.abs(residentialPlotIndex - commercialPlotsIndex) > 1) {
+          // إزالة Commercial Plots من مكانه الحالي
+          const commercialPlots = types.splice(commercialPlotsIndex, 1)[0];
+          
+          // إعادة إدراجه بعد Residential Plot مباشرة
+          const newPosition = residentialPlotIndex + 1;
+          types.splice(newPosition, 0, commercialPlots);
+        }
+      }
+      
+      return types;
     });
-
     const isPropertyTypeSelected = (type) => {
       return selectedPropertyTypes.value.some((item) => Number(item.id) === Number(type.id));
     };

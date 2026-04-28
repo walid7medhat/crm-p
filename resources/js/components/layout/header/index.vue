@@ -52,7 +52,7 @@
               <span>Kanban</span>
             </router-link>
           </li>
-          <li v-if="isSuperAdmin">
+          <li v-if="isSuperAdmin   || user.id === 186">
             <router-link to="/hr" :class="{ 'active-page': isActive('/hr') }">
               <iconify-icon icon="lucide:users-round" class="menu-icon" />
               <span>HR</span>
