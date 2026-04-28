@@ -749,6 +749,8 @@ const filteredUsersItems = computed(() => {
 const mainMenuItems = computed(() => {
   const items = [];
 
+  items.push({ path: '/payment-breakdown', label: 'Breakdown', icon: 'lucide:receipt-text' });
+
   if (isSuperAdmin.value) {
     items.push({ path: '/lead-reports', label: 'Lead Reports', icon: 'lucide:bar-chart-2' });
     items.push({ path: '/sales-intelligence', label: 'Sales Intelligence', icon: 'lucide:sparkles' });
