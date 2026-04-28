@@ -61,6 +61,8 @@ use App\Http\Controllers\Api\Employee\DocumentRequestController;
 use App\Http\Controllers\Api\Employee\AssetController;
 use App\Http\Controllers\Api\Employee\LeaveController;
 use App\Http\Controllers\Api\Employee\AnnouncementController;
+use App\Http\Controllers\Api\Employee\RecruitmentController;
+
 
 Route::get('/test-email', function () {
     try {
@@ -166,6 +168,12 @@ Route::prefix('auth')->group(function () {
         Route::delete('notifications/{id}', [AuthController::class, 'deleteNotification']);
      });
 });
+Route::prefix('recruitment')->group(function () {
+    Route::get('/jobs', [RecruitmentController::class, 'getPublicJobs']);
+    Route::get('/jobs/{id}', [RecruitmentController::class, 'getPublicJob']);
+    Route::post('/jobs/{jobId}/apply', [RecruitmentController::class, 'apply']);
+});
+
 Route::prefix('settings')->middleware(['jwt.auth'])->group(function () {
   Route::get('/kanban', [KanbanSettingsController::class, 'getSettings']);
     Route::post('/kanban/card-fields', [KanbanSettingsController::class, 'updateCardFields']);
@@ -353,7 +361,30 @@ Route::middleware(['auth:api'])->prefix('document-requests')->group(function () 
         Route::patch('/{id}/toggle-status', [DepartmentController::class, 'toggleStatus']); 
         Route::post('/bulk-delete', [DepartmentController::class, 'bulkDelete']);  
     });
+    // ==================== Recruitment Routes ====================
+
+
+Route::middleware(['auth:api'])->prefix('recruitment/admin')->group(function () {
+    // Jobs
+    Route::get('/jobs', [RecruitmentController::class, 'getJobs']);
+    Route::get('/jobs/{id}', [RecruitmentController::class, 'getJob']);
+    Route::post('/jobs', [RecruitmentController::class, 'storeJob']);
+    Route::put('/jobs/{id}', [RecruitmentController::class, 'updateJob']);
+    Route::delete('/jobs/{id}', [RecruitmentController::class, 'deleteJob']);
     
+    // Applicants
+    Route::get('/applicants', [RecruitmentController::class, 'getApplicants']);
+    Route::get('/applicants/{id}', [RecruitmentController::class, 'getApplicant']);
+    Route::put('/applicants/{id}/status', [RecruitmentController::class, 'updateApplicantStatus']);
+    
+    // Interviews
+    Route::get('/interviews', [RecruitmentController::class, 'getInterviews']);
+    Route::post('/interviews', [RecruitmentController::class, 'scheduleInterview']);
+    Route::put('/interviews/{id}', [RecruitmentController::class, 'updateInterview']);
+    
+    // Statistics
+    Route::get('/statistics', [RecruitmentController::class, 'statistics']);
+});
     // ========== EMPLOYEE ROUTES ==========
     Route::prefix('employees')->group(function () {
         Route::get('/', [EmployeeController::class, 'index']);                    

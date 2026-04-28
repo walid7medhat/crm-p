@@ -112,6 +112,13 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone('Asia/Dubai')
             ->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/visa-expiry-urgent.log'));
+    $schedule->command('interviews:send-reminders --hours=24')
+    ->dailyAt('09:00')
+    ->timezone('Asia/Dubai');
+
+    $schedule->command('interviews:send-reminders --hours=1')
+        ->everyMinute()
+        ->timezone('Asia/Dubai');
         // ==================== TEST COMMANDS ====================
         // $schedule->command('activities:send-reminders --timeframe=today --test')
         //     ->dailyAt('10:00')
