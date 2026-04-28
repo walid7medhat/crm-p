@@ -573,7 +573,7 @@
 
          
 
-            <div class="sidebar-section" v-if="isPropertyOwner || !onlyShow">
+            <div class="sidebar-section" v-if="isPropertyOwner ">
                 <br>
               <div class="request-actions-grid">
                 <!-- Unit Number Info -->
@@ -602,7 +602,7 @@
               <!-- Note for owner -->
             
             </div>
-            <div class="sidebar-section" v-if="requestStatus?.owner_info_status === 'approved' || requestStatus?.unit_number_status === 'approved' ">
+            <div class="sidebar-section" v-if="(requestStatus?.owner_info_status === 'approved' || requestStatus?.unit_number_status === 'approved') &&  !onlyShow">
               <h6 class="sidebar-title">Request Access
                 <span v-if="loadingRequest" class="loading-spinner-small"></span>
               </h6>

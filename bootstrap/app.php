@@ -97,6 +97,9 @@ return Application::configure(basePath: dirname(__DIR__))
             ->dailyAt('02:15')
             ->withoutOverlapping()
             ->runInBackground();
+      $schedule->command('announcements:send-notifications')
+         ->dailyAt('08:00')
+         ->timezone('Asia/Dubai');
         // ==================== TEST COMMANDS ====================
         // $schedule->command('activities:send-reminders --timeframe=today --test')
         //     ->dailyAt('10:00')

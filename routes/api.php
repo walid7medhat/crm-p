@@ -60,6 +60,7 @@ use App\Http\Controllers\Api\Employee\EmployeeExcelImportController;
 use App\Http\Controllers\Api\Employee\DocumentRequestController;
 use App\Http\Controllers\Api\Employee\AssetController;
 use App\Http\Controllers\Api\Employee\LeaveController;
+use App\Http\Controllers\Api\Employee\AnnouncementController;
 
 Route::get('/test-email', function () {
     try {
@@ -295,7 +296,27 @@ Route::middleware(['auth:api'])->prefix('leaves')->group(function () {
     Route::post('/{id}/approve-hr', [LeaveController::class, 'approveByHr']);
     Route::post('/{id}/reject-hr', [LeaveController::class, 'rejectByHr']);
 });
-
+Route::middleware(['auth:api'])->prefix('announcements')->group(function () {
+    
+    // Statistics & Reports (HR/Admin only)
+    Route::get('/statistics', [AnnouncementController::class, 'statistics'])
+        ->middleware('permission:announcements-list');
+    
+    // User-specific routes (employees)
+    Route::get('/active', [AnnouncementController::class, 'getActiveAnnouncements']);
+    Route::get('/unread', [AnnouncementController::class, 'getUnreadAnnouncements']);
+    Route::post('/mark-all-read', [AnnouncementController::class, 'markAllAsRead']);
+    
+    // Standard CRUD routes
+    Route::get('/', [AnnouncementController::class, 'index']);
+    Route::post('/', [AnnouncementController::class, 'store'])
+        ->middleware('permission:announcements-create');
+    Route::get('/{id}', [AnnouncementController::class, 'show']);
+    Route::put('/{id}', [AnnouncementController::class, 'update'])
+        ->middleware('permission:announcements-edit');
+    Route::delete('/{id}', [AnnouncementController::class, 'destroy'])
+        ->middleware('permission:announcements-delete');
+});
 // Document Requests
 Route::middleware(['auth:api'])->prefix('document-requests')->group(function () {
     Route::get('/statistics', [DocumentRequestController::class, 'statistics']);
