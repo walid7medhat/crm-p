@@ -94,9 +94,21 @@
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
           </template>
+          <template v-else-if="activeTab === 'Leave / Attendance'">
+            <button type="button" class="hr-generate-btn" @click="openLeaveAttendancePrimaryAction">
+              {{ leaveSectionMode === 'attendance' ? 'Create Attendance' : leaveSectionMode === 'announcements' ? 'Add Announcements' : 'Generate Leave' }}
+              <iconify-icon icon="lucide:plus" />
+            </button>
+            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
+            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
+          </template>
+          <template v-else-if="activeTab === 'Career'">
+            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
+            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
+          </template>
           <template v-else>
-            <button type="button" class="hr-generate-btn" @click="showApplyLeaveModal = true">
-              Generate Leave
+            <button type="button" class="hr-generate-btn">
+              Generate
               <iconify-icon icon="lucide:plus" />
             </button>
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
@@ -251,9 +263,17 @@
       </div>
 
       <div class="hr-content-card" v-else-if="activeTab === 'Employee Details'">
-        <div class="hr-content-shell employee-detail-page" v-if="selectedEmployeeDetail">
-          <div class="employee-detail-breadcrumb">Employee <iconify-icon icon="lucide:chevron-right" /> Manage Employee <iconify-icon icon="lucide:chevron-right" /> {{ selectedEmployeeDetail.name }}</div>
-          <h6 class="overview-section-title mb-2">Employee Details</h6>
+        <div class="hr-content-shell employee-detail-page" v-if="selectedEmployeeDetail && employeeDetailView === 'details'">
+          <div class="employee-detail-breadcrumb-row">
+            <div class="employee-detail-breadcrumb">Employee <iconify-icon icon="lucide:chevron-right" /> Manage Employee <iconify-icon icon="lucide:chevron-right" /> {{ selectedEmployeeDetail.name }}</div>
+            <button type="button" class="employee-detail-action-chip employee-detail-action-chip--light" @click="employeeDetailView = 'requested-documents'">
+              <span class="request-doc-btn-text">Requested Documents</span>
+              <iconify-icon icon="lucide:file-text" />
+            </button>
+          </div>
+          <div class="employee-detail-title-row mb-2">
+            <h6 class="overview-section-title employee-detail-page-title mb-0">Employee Details</h6>
+          </div>
           <div class="employee-detail-layout">
             <aside class="employee-detail-side">
               <div class="employee-detail-user-head">
@@ -265,13 +285,15 @@
                 <button type="button" class="mini-edit-btn" @click="openSectionEdit('profile')"><iconify-icon icon="lucide:pencil" /></button>
               </div>
               <div class="employee-detail-side-list">
-                <p><span>Gmail</span><strong>{{ selectedEmployeeDetail.email }}</strong></p>
-                <p><span>Phone</span><strong>{{ selectedEmployeeDetail.phone }}</strong></p>
+                <p><span>Email</span><strong>{{ selectedEmployeeDetail.email_personal || selectedEmployeeDetail.email }}</strong></p>
+                <p><span>Phone Number</span><strong>{{ selectedEmployeeDetail.phone_company || selectedEmployeeDetail.phone }}</strong></p>
+                <p><span>Phone Country Phone Number</span><strong>{{ selectedEmployeeDetail.phone_personal || selectedEmployeeDetail.phone }}</strong></p>
                 <p><span>Date Of Birth</span><strong>{{ selectedEmployeeDetail.dob }}</strong></p>
-                <p><span>Address</span><strong>{{ selectedEmployeeDetail.address }}</strong></p>
+                <p><span>Address Inside UAE</span><strong>{{ selectedEmployeeDetail.address_inside_uae || selectedEmployeeDetail.address }}</strong></p>
+                <p><span>Address Outside UAE</span><strong>{{ selectedEmployeeDetail.address_outside_uae || selectedEmployeeDetail.address }}</strong></p>
                 <p><span>Nationality</span><strong>{{ selectedEmployeeDetail.nationality }}</strong></p>
                 <p><span>Salary Type</span><strong>{{ selectedEmployeeDetail.salary_type }}</strong></p>
-                <p><span>Salary</span><strong>{{ selectedEmployeeDetail.salary }} AED</strong></p>
+                <p><span>Basic Salary</span><strong>{{ selectedEmployeeDetail.salary }} AED</strong></p>
               </div>
             </aside>
             <section ref="employeeDetailMainRef" class="employee-detail-main">
@@ -351,6 +373,59 @@
                 </div>
               </div>
             </section>
+          </div>
+        </div>
+
+        <div class="hr-content-shell employee-detail-page" v-else-if="selectedEmployeeDetail && employeeDetailView === 'requested-documents'">
+          <div class="employee-detail-breadcrumb-row">
+            <div class="employee-detail-breadcrumb">
+              Employee <iconify-icon icon="lucide:chevron-right" /> Manage Employee <iconify-icon icon="lucide:chevron-right" /> {{ selectedEmployeeDetail.name }} <iconify-icon icon="lucide:chevron-right" /> Requested Documents
+            </div>
+            <button type="button" class="employee-detail-action-chip employee-detail-action-chip--light" @click="openRequestDocumentModal">
+              Request New Document
+              <iconify-icon icon="lucide:file-plus-2" />
+            </button>
+          </div>
+          <div class="employee-detail-title-row mb-2">
+            <h6 class="overview-section-title mb-0">Requested Documents</h6>
+          </div>
+          <div class="requested-documents-card">
+            <h6>My Documents</h6>
+            <div class="requested-document-list">
+              <div v-for="doc in requestedDocuments" :key="doc.id" class="requested-document-row">
+                <div>
+                  <strong>{{ doc.documentType }}</strong>
+                  <small>Document Name</small>
+                </div>
+                <div>
+                  <strong>{{ doc.description || '--' }}</strong>
+                  <small>Description</small>
+                </div>
+                <div>
+                  <strong>{{ doc.requestedDate }}</strong>
+                  <small>Requested On</small>
+                </div>
+                <div>
+                  <strong :class="`doc-status-${String(doc.status).toLowerCase()}`">{{ doc.status }}</strong>
+                  <small>Status</small>
+                </div>
+                <div>
+                  <strong>{{ doc.rejectionReason || '--' }}</strong>
+                  <small>Rejection Reason</small>
+                </div>
+                <div class="requested-document-actions">
+                  <button type="button" class="row-action-btn" @click="openDocumentDetail(doc)">
+                    <iconify-icon icon="lucide:eye" />
+                  </button>
+                  <button v-if="doc.status === 'Pending'" type="button" class="row-action-btn" @click="openEditDocumentRequest(doc)">
+                    <iconify-icon icon="lucide:pencil" />
+                  </button>
+                  <button type="button" class="row-action-btn" @click="deleteRequestedDocument(doc)">
+                    <iconify-icon icon="lucide:trash-2" />
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -460,6 +535,88 @@
             </div>
           </template>
 
+          <template v-else-if="leaveSectionMode === 'announcements'">
+            <div class="employee-overview-card leave-overview-card announcement-overview-card">
+              <div class="employee-overview-head">
+                <h6 class="overview-section-title">Manage Announcements</h6>
+                <div class="employee-overview-actions">
+                  <button type="button" class="employee-export-btn" @click="exportAnnouncements">
+                    Export Excel
+                    <iconify-icon icon="lucide:file-down" />
+                  </button>
+                </div>
+              </div>
+
+              <div class="leave-table-wrap announcement-table-wrap">
+                <table class="table leave-table align-middle mb-0 announcement-table">
+                  <thead>
+                    <tr>
+                      <th class="checkbox-col"><input type="checkbox" /></th>
+                      <th>Title</th>
+                      <th>Start Date</th>
+                      <th>End Date</th>
+                      <th>Branch</th>
+                      <th>Department</th>
+                      <th class="announcement-description-col">Description</th>
+                      <th class="col-action sticky-action-col">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in pagedAnnouncementRows" :key="`announcement-row-${item.id}`">
+                      <td class="checkbox-col"><input type="checkbox" /></td>
+                      <td>{{ item.title }}</td>
+                      <td>{{ item.startDate }}</td>
+                      <td>{{ item.endDate || '--' }}</td>
+                      <td>{{ item.branch }}</td>
+                      <td>{{ item.department }}</td>
+                      <td class="announcement-description-col">{{ item.description }}</td>
+                      <td class="col-action sticky-action-col">
+                        <button type="button" class="row-action-btn" @click.stop="toggleAnnouncementRowMenu(item.id, $event)">
+                          <iconify-icon icon="lucide:more-vertical" />
+                        </button>
+                        <teleport to="body">
+                          <div
+                            v-if="openAnnouncementRowMenuId === item.id"
+                            class="leave-row-menu announcement-row-menu"
+                            :style="announcementRowMenuStyle"
+                            @click.stop
+                          >
+                            <button type="button" class="leave-row-menu-item" @click.stop="openEditAnnouncement(item)">
+                              <iconify-icon icon="lucide:pencil" /> Edit
+                            </button>
+                            <button type="button" class="leave-row-menu-item danger" @click.stop="deleteAnnouncement(item)">
+                              <iconify-icon icon="lucide:trash-2" /> Delete
+                            </button>
+                          </div>
+                        </teleport>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="hr-footer">
+                <span>Showing {{ announcementsStartEntry }} to {{ announcementsEndEntry }} of {{ filteredAnnouncementRows.length }} Entries</span>
+                <div class="hr-pagination">
+                  <button type="button" class="page-btn" :disabled="announcementsPage === 1" @click="announcementsPage = Math.max(1, announcementsPage - 1)">Previous</button>
+                  <template v-for="(item, idx) in announcementsPaginationItems" :key="item.type === 'page' ? `anp-${item.n}` : `and-${idx}`">
+                    <span v-if="item.type === 'dots'" class="page-dots">...</span>
+                    <button
+                      v-else
+                      type="button"
+                      class="page-number"
+                      :class="{ active: announcementsPage === item.n }"
+                      @click="announcementsPage = item.n"
+                    >
+                      {{ item.n }}
+                    </button>
+                  </template>
+                  <button type="button" class="page-btn" :disabled="announcementsPage >= announcementsTotalPages" @click="announcementsPage = Math.min(announcementsTotalPages, announcementsPage + 1)">Next</button>
+                </div>
+              </div>
+            </div>
+          </template>
+
           <template v-else-if="leaveSectionMode === 'attendance'">
           <div class="hr-content-head">
             <h6 class="hr-heading">Manage Attendance</h6>
@@ -479,10 +636,13 @@
               <div class="hr-search-wrap">
                 <iconify-icon icon="lucide:plus" />
                 <input
-                  v-model="searchKeyword"
+                  :value="attendanceSearchSummary"
                   type="text"
                   class="hr-search-input"
                   placeholder="Filter and search Attendance"
+                  readonly
+                  @click="showAttendanceSearchModal = true"
+                  @focus="showAttendanceSearchModal = true"
                 />
                 <iconify-icon icon="lucide:search" />
               </div>
@@ -537,7 +697,7 @@
                   <th>Check In &amp; Check Out</th>
                   <th>Break</th>
                   <th>OT</th>
-                  <th>Action</th>
+                  <th class="col-action sticky-action-col">Action</th>
                 </tr>
               </thead>
 
@@ -585,10 +745,25 @@
                   </td>
                   <td class="text-muted break-col">{{ formatBreakDisplay(row) }}</td>
                   <td class="text-muted ot-col">{{ formatOtDisplay(row) }}</td>
-                  <td>
-                    <button type="button" class="row-action-btn" @click="openEdit(row)">
+                  <td class="attendance-row-action-cell col-action sticky-action-col">
+                    <button type="button" class="row-action-btn" @click.stop="toggleAttendanceRowMenu(attendanceRowKey(row), row, $event)">
                       <iconify-icon icon="lucide:more-vertical" />
                     </button>
+                    <teleport to="body">
+                      <div
+                        v-if="openAttendanceRowMenuId === attendanceRowKey(row)"
+                        class="attendance-row-menu"
+                        :style="attendanceRowMenuStyle"
+                        @click.stop
+                      >
+                        <button type="button" class="attendance-row-menu-item" @click.stop="openAttendanceEdit(row)">
+                          <iconify-icon icon="lucide:pencil" /> Edit Leave
+                        </button>
+                        <button type="button" class="attendance-row-menu-item active" @click.stop="openAttendanceDetails(row)">
+                          <iconify-icon icon="lucide:eye" /> View Details
+                        </button>
+                      </div>
+                    </teleport>
                   </td>
                 </tr>
               </tbody>
@@ -736,6 +911,217 @@
         </div>
       </div>
 
+      <div class="hr-content-card" v-else-if="activeTab === 'Career'">
+        <div class="hr-content-shell overview-shell">
+          <div class="hr-summary-row career-summary-row">
+            <div class="hr-stat-card">
+              <strong>245</strong>
+              <span>Total Applicants</span>
+            </div>
+            <div class="hr-stat-card">
+              <strong>25</strong>
+              <span>Active Job Openings</span>
+            </div>
+            <div class="hr-stat-card">
+              <strong>56</strong>
+              <span>Hired Candidates</span>
+            </div>
+            <div class="hr-stat-card">
+              <strong>182</strong>
+              <span>Candidates in Process</span>
+            </div>
+          </div>
+
+          <div class="employee-overview-card career-overview-card" v-if="careerSectionMode === 'manage-recruitments'">
+            <div class="employee-overview-head">
+              <h6 class="overview-section-title">Manage Job Openings</h6>
+              <div class="employee-overview-actions">
+                <button type="button" class="employee-search-btn assets-search-wrap" @click="showCareerSearchModal = true">
+                  <iconify-icon icon="lucide:plus" />
+                  <input v-model="careerSearchKeyword" type="text" placeholder="Filter and search job openings" class="border-0 bg-transparent flex-grow-1" />
+                  <iconify-icon icon="lucide:search" />
+                </button>
+                <button type="button" class="employee-export-btn" @click="exportCareerJobs">
+                  Export Excel
+                  <iconify-icon icon="lucide:file-down" />
+                </button>
+              </div>
+            </div>
+            <div v-if="showCareerSearchModal" class="edit-overlay" @click.self="showCareerSearchModal = false">
+              <div class="employee-filter-modal career-search-modal">
+                <button type="button" class="employee-filter-close" @click="showCareerSearchModal = false">
+                  <iconify-icon icon="lucide:x" />
+                </button>
+
+                <div class="asset-search-left">
+                  <button
+                      v-for="chip in careerFilterChips"
+                      :key="chip"
+                      type="button"
+                      class="asset-search-chip"
+                      :class="{ active: selectedCareerFilterChip === chip }"
+                      @click="selectedCareerFilterChip = chip"
+                    >
+                      {{ chip }}
+                    </button>
+                 
+                </div>
+                <div class="asset-search-right">
+                  <div class="asset-search-section">
+                <h6>Search Job Tittle</h6>
+                <div class="add-grid-one">
+                  <div class="add-field">
+                    <SearchableSelect v-model="careerSearchFilters.jobTitle" placeholder="Search Job Tittle" :options="careerJobTitleOptions" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="asset-search-section">
+                <h6>Posted Date</h6>
+                <div class="add-grid-one">
+                  <div class="add-field">
+                    <input :value="formatDateDisplay(careerSearchFilters.postedDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('careerSearchFilters.postedDate')" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="asset-search-section">
+                <h6>Closing Date</h6>
+                <div class="add-grid-one">
+                  <div class="add-field">
+                    <input :value="formatDateDisplay(careerSearchFilters.closingDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('careerSearchFilters.closingDate')" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="asset-search-section">
+                <h6>Department</h6>
+                <div class="add-grid-one">
+                  <div class="add-field">
+                    <SearchableSelect v-model="careerSearchFilters.department" placeholder="Select Department" :options="careerDepartmentOptions" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="asset-search-section">
+                <h6>Type</h6>
+                <div class="add-grid-one">
+                  <div class="add-field">
+                    <SearchableSelect v-model="careerSearchFilters.type" placeholder="Select Type" :options="careerTypeOptions" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="asset-search-section">
+                <h6>Status</h6>
+                <div class="add-grid-one">
+                  <div class="add-field">
+                    <SearchableSelect v-model="careerSearchFilters.status" placeholder="Select Status" :options="careerStatusOptions" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="employee-filter-actions mt-2">
+                <button type="button" class="employee-filter-btn ghost" @click="resetCareerSearchFilters">Reset</button>
+                <button type="button" class="employee-filter-btn primary" @click="applyCareerSearchFilters">Search</button>
+              </div>
+                </div>
+                <div class="asset-search-right">
+                  <!-- next step fields -->
+                </div>
+              </div>
+            </div>
+            <div class="leave-table-wrap career-table-wrap">
+              <table class="table leave-table align-middle mb-0 career-table">
+                <thead>
+                  <tr>
+                    <th class="checkbox-col"><input type="checkbox" /></th>
+                    <th>Job Tittle</th>
+                    <th>Department</th>
+                    <th>Branch</th>
+                    <th>Type</th>
+                    <th>Openings</th>
+                    <th>Posted Date</th>
+                    <th>Closing Date</th>
+                    <th>Hiring Manager</th>
+                    <th>Applicants</th>
+                    <th>Status</th>
+                    <th class="col-action sticky-action-col">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="job in pagedCareerRows" :key="`career-row-${job.id}`">
+                    <td class="checkbox-col"><input type="checkbox" /></td>
+                    <td>{{ job.title }}</td>
+                    <td>{{ job.department }}</td>
+                    <td>{{ job.branch }}</td>
+                    <td>{{ job.type }}</td>
+                    <td><strong>{{ job.openings }}</strong></td>
+                    <td>{{ job.postedDate }}</td>
+                    <td>{{ job.closingDate }}</td>
+                    <td>
+                      <div class="career-manager-cell">
+                        <img :src="job.hiringManagerAvatar" :alt="job.hiringManager" class="employee-thumb" />
+                        <span>{{ job.hiringManager }}</span>
+                      </div>
+                    </td>
+                    <td>{{ job.applicants }}</td>
+                    <td>
+                      <span class="career-status-pill" :class="`career-status-${String(job.status || '').toLowerCase().replace(/\s+/g, '-')}`">{{ job.status }}</span>
+                    </td>
+                    <td class="col-action sticky-action-col">
+                      <button type="button" class="row-action-btn" @click.stop="toggleCareerRowMenu(job.id, $event)">
+                        <iconify-icon icon="lucide:more-vertical" />
+                      </button>
+                      <teleport to="body">
+                        <div
+                          v-if="openCareerRowMenuId === job.id"
+                          class="leave-row-menu"
+                          :style="careerRowMenuStyle"
+                          @click.stop
+                        >
+                          <button type="button" class="leave-row-menu-item">
+                            <iconify-icon icon="lucide:pencil" /> Edit
+                          </button>
+                          <button type="button" class="leave-row-menu-item danger">
+                            <iconify-icon icon="lucide:trash-2" /> Delete
+                          </button>
+                        </div>
+                      </teleport>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="hr-footer">
+              <span>Showing {{ careerStartEntry }} to {{ careerEndEntry }} of {{ filteredCareerRows.length }} Entries</span>
+              <div class="hr-pagination">
+                <button type="button" class="page-btn" :disabled="careerPage === 1" @click="careerPage = Math.max(1, careerPage - 1)">Previous</button>
+                <template v-for="(item, idx) in careerPaginationItems" :key="item.type === 'page' ? `cp-${item.n}` : `cd-${idx}`">
+                  <span v-if="item.type === 'dots'" class="page-dots">...</span>
+                  <button
+                    v-else
+                    type="button"
+                    class="page-number"
+                    :class="{ active: careerPage === item.n }"
+                    @click="careerPage = item.n"
+                  >
+                    {{ item.n }}
+                  </button>
+                </template>
+                <button type="button" class="page-btn" :disabled="careerPage >= careerTotalPages" @click="careerPage = Math.min(careerTotalPages, careerPage + 1)">Next</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="hr-empty-tab leave-announcement-card" v-else>
+            <h6 class="overview-section-title">Career</h6>
+            <p>Career module will appear here.</p>
+          </div>
+        </div>
+      </div>
+
       <div v-else class="hr-content-card">
         <div class="hr-content-shell hr-empty-tab"></div>
       </div>
@@ -799,6 +1185,103 @@
       </div>
     </div>
 
+    <div v-if="showAnnouncementSearchModal" class="edit-overlay" @click.self="showAnnouncementSearchModal = false">
+      <div class="employee-filter-modal leave-search-modal announcement-search-modal">
+        <button type="button" class="employee-filter-close" @click="showAnnouncementSearchModal = false">
+          <iconify-icon icon="lucide:x" />
+        </button>
+        <div class="asset-search-right w-100">
+          <div class="asset-search-section">
+            <h6>Announcement Title</h6>
+            <div class="add-grid-one">
+              <div class="add-field">
+                <input v-model="announcementSearchFilters.title" type="text" placeholder="Search title" />
+              </div>
+            </div>
+          </div>
+          <div class="asset-search-section">
+            <h6>Branch</h6>
+            <div class="add-grid-one">
+              <div class="add-field">
+                <SearchableSelect v-model="announcementSearchFilters.branch" :options="announcementBranchOptions" placeholder="Not Selected" />
+              </div>
+            </div>
+          </div>
+          <div class="asset-search-section">
+            <h6>Department</h6>
+            <div class="add-grid-one">
+              <div class="add-field">
+                <SearchableSelect v-model="announcementSearchFilters.department" :options="announcementDepartmentOptions" placeholder="Not Selected" />
+              </div>
+            </div>
+          </div>
+          <div class="employee-filter-actions mt-2">
+            <button type="button" class="employee-filter-btn ghost" @click="resetAnnouncementSearchFilters">Reset</button>
+            <button type="button" class="employee-filter-btn primary" @click="applyAnnouncementSearchFilters">Search</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showAnnouncementModal" class="edit-overlay add-employee-overlay" @click.self="closeAnnouncementModal">
+      <div class="add-employee-modal leave-apply-modal announcement-modal">
+        <div class="add-employee-head">
+          <h6>Add Announcements</h6>
+          <button type="button" class="add-employee-close" @click="closeAnnouncementModal">
+            <iconify-icon icon="lucide:x" />
+          </button>
+        </div>
+
+        <div class="add-employee-body">
+          <section class="add-employee-section">
+            <div class="add-grid-two">
+              <div class="add-field add-field-full">
+                <label>Announcement Tittle *</label>
+                <SearchableSelect
+                  v-model="announcementForm.title"
+                  :options="announcementRows.map((row) => row.title)"
+                  placeholder="Enter Announcement Tittle"
+                />
+              </div>
+              <div class="add-field">
+                <label>Branch *</label>
+                <SearchableSelect
+                  v-model="announcementForm.branch"
+                  :options="announcementBranchOptions"
+                  placeholder="Not Selected"
+                />
+              </div>
+              <div class="add-field">
+                <label>Department *</label>
+                <SearchableSelect
+                  v-model="announcementForm.department"
+                  :options="announcementDepartmentOptions"
+                  placeholder="Not Selected"
+                />
+              </div>
+              <div class="add-field">
+                <label>Start Date</label>
+                <input :value="formatDateDisplay(announcementForm.startDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('announcementForm.startDate')" />
+              </div>
+              <div class="add-field">
+                <label>End Date</label>
+                <input :value="formatDateDisplay(announcementForm.endDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('announcementForm.endDate')" />
+              </div>
+              <div class="add-field add-field-full">
+                <label>Description</label>
+                <textarea v-model="announcementForm.description" placeholder="Enter text"></textarea>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="add-employee-footer">
+          <button type="button" class="add-employee-clear-btn" @click="clearAnnouncementForm">Clear</button>
+          <button type="button" class="add-employee-save-btn" @click="saveAnnouncement">Confirm</button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="showLeaveDetailModal && selectedLeaveRow" class="edit-overlay" @click.self="closeLeaveDetails">
       <div class="leave-detail-modal">
         <button type="button" class="employee-filter-close" @click="closeLeaveDetails"><iconify-icon icon="lucide:x" /></button>
@@ -844,47 +1327,241 @@
       </div>
     </div>
 
-    <div v-if="editingRow" class="edit-overlay" @click.self="editingRow = null">
-      <div class="edit-modal">
-        <div class="edit-modal-head">
-          <h6>Edit Attendance</h6>
-          <button type="button" class="row-action-btn" @click="editingRow = null">
-            <iconify-icon icon="lucide:x" />
-          </button>
+    <div v-if="showAttendanceDetailModal && selectedAttendanceRow" class="edit-overlay" @click.self="closeAttendanceDetailModal">
+      <div class="attendance-detail-modal">
+        <button type="button" class="employee-filter-close" @click="closeAttendanceDetailModal"><iconify-icon icon="lucide:x" /></button>
+        <button
+          type="button"
+          class="attendance-detail-edit-link"
+          @click="switchAttendanceDetailToEdit"
+        >
+          <iconify-icon icon="lucide:pencil" />
+          <span>Edit</span>
+        </button>
+
+        <div class="attendance-detail-hero">
+          <div class="attendance-detail-icon">
+            <iconify-icon icon="lucide:calendar-check-2" />
+          </div>
+          <h6>{{ attendanceDetailMode === 'edit' ? 'Edit Attendance' : 'Attendance Details' }}</h6>
+          <p>
+            View the complete attendance information for the selected date. This includes check-in, check-out,
+            working hours, and status.
+          </p>
         </div>
-        <div class="edit-modal-body">
-          <p><strong>Employee:</strong> {{ editingRow.employee_name }}</p>
-          <p><strong>Date:</strong> {{ formatDate(editingRow.date) }}</p>
-          <p><strong>Check In:</strong> {{ formatTime(editingRow.check_in) }}</p>
-          <p><strong>Check Out:</strong> {{ formatTime(editingRow.check_out) }}</p>
+
+        <div class="attendance-detail-grid-card">
+          <div class="attendance-detail-grid">
+            <p><span>Employee ID</span><strong>#EMP{{ formatEmpId(selectedAttendanceRow.employee_id) }}</strong></p>
+            <p><span>Employee Name</span><strong>{{ selectedAttendanceRow.employee_name || '--' }}</strong></p>
+            <p v-if="attendanceDetailMode === 'view'"><span>Date</span><strong>{{ formatDate(selectedAttendanceRow.date) }}</strong></p>
+            <div v-else class="attendance-detail-field">
+              <span>Date</span>
+              <input :value="formatDateDisplay(attendanceEditForm.date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('attendanceEditForm.date')" />
+            </div>
+            <p v-if="attendanceDetailMode === 'view'">
+              <span>Check in &amp; Check out</span>
+              <strong>{{ formatTime(selectedAttendanceRow.check_in) }} - {{ formatTime(selectedAttendanceRow.check_out) }}</strong>
+            </p>
+            <div v-else class="attendance-detail-field attendance-time-row">
+              <span>Check in &amp; Check out</span>
+              <div class="attendance-time-grid">
+                <input v-model="attendanceEditForm.checkIn" type="time" />
+                <input v-model="attendanceEditForm.checkOut" type="time" />
+              </div>
+            </div>
+            <p><span>Hours</span><strong>{{ attendanceDetailMode === 'view' ? formatDuration(selectedAttendanceRow.check_in, selectedAttendanceRow.check_out) : attendanceEditDuration }}</strong></p>
+            <p v-if="attendanceDetailMode === 'view'">
+              <span>Status</span>
+              <strong class="attendance-status-text" :class="`status-${String(selectedAttendanceRow.status || '').toLowerCase().replace(/\s+/g, '-')}`">{{ selectedAttendanceRow.status || '--' }}</strong>
+            </p>
+            <div v-else class="attendance-detail-field">
+              <span>Status</span>
+              <SearchableSelect v-model="attendanceEditForm.status" :options="attendanceStatusOptions" placeholder="Select Status" />
+            </div>
+            <p><span>Break</span><strong>{{ attendanceDetailMode === 'view' ? formatBreakDisplay(selectedAttendanceRow) : attendanceEditForm.breakLabel || '--' }}</strong></p>
+            <p><span>Overtime (OT)</span><strong>{{ attendanceDetailMode === 'view' ? formatOtDisplay(selectedAttendanceRow) : attendanceEditForm.otLabel || '--' }}</strong></p>
+            <p><span>Attachments</span><strong>--</strong></p>
+            <p><span>Image</span><strong>No Media</strong></p>
+            <p class="full"><span>Description</span><strong>{{ attendanceDetailMode === 'view' ? '--' : (attendanceEditForm.description || '--') }}</strong></p>
+          </div>
+        </div>
+
+        <div v-if="attendanceDetailMode === 'edit'" class="attendance-detail-actions">
+          <button type="button" class="employee-filter-btn ghost" @click="closeAttendanceDetailModal">Cancel</button>
+          <button type="button" class="employee-filter-btn primary" @click="saveAttendanceEdit">Save</button>
         </div>
       </div>
     </div>
 
-    <div v-if="showAssetEditModal" class="edit-overlay" @click.self="closeAssetEditModal">
-      <div class="employee-filter-modal section-edit-modal asset-edit-modal">
-        <button type="button" class="employee-filter-close" @click="closeAssetEditModal">
+    <div v-if="showAttendanceSearchModal" class="edit-overlay" @click.self="showAttendanceSearchModal = false">
+      <div class="employee-filter-modal leave-search-modal attendance-search-modal">
+        <button type="button" class="employee-filter-close" @click="showAttendanceSearchModal = false">
           <iconify-icon icon="lucide:x" />
         </button>
-        <div class="employee-filter-right w-100">
-          <h6 class="mb-2">Edit Asset</h6>
-          <div class="add-grid-two">
-            <div class="add-field"><label>Asset ID</label><input v-model="assetEditForm.assetId" type="text" /></div>
-            <div class="add-field"><label>Type</label><input v-model="assetEditForm.type" type="text" /></div>
-            <div class="add-field"><label>Asset Name</label><input v-model="assetEditForm.assetName" type="text" /></div>
-            <div class="add-field"><label>User Name</label><input v-model="assetEditForm.userName" type="text" /></div>
-            <div class="add-field"><label>User Ref</label><input v-model="assetEditForm.userRef" type="text" /></div>
-            <div class="add-field"><label>Date Of Handover</label><input v-model="assetEditForm.handoverDate" type="text" /></div>
-            <div class="add-field"><label>Brand</label><input v-model="assetEditForm.brand" type="text" /></div>
-            <div class="add-field"><label>Category</label><input v-model="assetEditForm.category" type="text" /></div>
-            <div class="add-field"><label>Handover To</label><input v-model="assetEditForm.handoverTo" type="text" /></div>
-            <div class="add-field"><label>Serial Number</label><input v-model="assetEditForm.serial" type="text" /></div>
-            <div class="add-field"><label>Status</label><input v-model="assetEditForm.status" type="text" /></div>
+        <div class="asset-search-left">
+          <button
+            v-for="chip in attendanceSearchChips"
+            :key="chip"
+            type="button"
+            class="asset-search-chip"
+            :class="{ active: selectedAttendanceSearchChip === chip }"
+            @click="selectedAttendanceSearchChip = chip"
+          >
+            {{ chip }}
+          </button>
+        </div>
+        <div class="asset-search-right">
+          <div class="asset-search-section">
+            <h6>Select Employee</h6>
+            <div class="add-grid-one">
+              <div class="add-field">
+                <SearchableSelect v-model="attendanceSearchFilters.employee" :options="leaveEmployeeOptions" placeholder="Search Employee or id" />
+              </div>
+            </div>
+          </div>
+          <div class="asset-search-section">
+            <h6>Attendance Date</h6>
+            <div class="add-grid-one">
+              <div class="add-field">
+                <input :value="formatDateDisplay(attendanceSearchFilters.attendanceDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('attendanceSearchFilters.attendanceDate')" />
+              </div>
+            </div>
+          </div>
+          <div class="asset-search-section">
+            <h6>Type</h6>
+            <div class="add-grid-one">
+              <div class="add-field">
+                <SearchableSelect v-model="attendanceSearchFilters.type" :options="attendanceTypeOptions" placeholder="Select Status" />
+              </div>
+            </div>
+          </div>
+          <div class="asset-search-section">
+            <h6>Status</h6>
+            <div class="add-grid-one">
+              <div class="add-field">
+                <SearchableSelect v-model="attendanceSearchFilters.status" :options="attendanceStatusOptions" placeholder="Select Status" />
+              </div>
+            </div>
           </div>
           <div class="employee-filter-actions mt-2">
-            <button type="button" class="employee-filter-btn ghost" @click="closeAssetEditModal">Cancel</button>
-            <button type="button" class="employee-filter-btn primary" @click="saveAssetEdit">Save</button>
+            <button type="button" class="employee-filter-btn ghost" @click="resetAttendanceSearchFilters">Reset</button>
+            <button type="button" class="employee-filter-btn primary" @click="applyAttendanceSearchFilters">Search</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showAssetEditModal" class="edit-overlay add-employee-overlay" @click.self="closeAssetEditModal">
+      <div class="add-employee-modal asset-create-modal">
+        <div class="add-employee-head">
+          <h6>Edit Asset</h6>
+          <button type="button" class="add-employee-close" @click="closeAssetEditModal">
+            <iconify-icon icon="lucide:x" />
+          </button>
+        </div>
+
+        <div class="add-employee-body">
+          <section class="add-employee-section">
+            <h6>Asset Details</h6>
+            <div class="add-grid-two">
+              <div class="add-field"><label>Asset Type *</label><SearchableSelect v-model="assetEditForm.assetType" :options="assetTypeOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Asset Name *</label><input v-model="assetEditForm.assetName" type="text" placeholder="Enter Asset Name" /></div>
+              <div class="add-field"><label>Serial Number</label><input v-model="assetEditForm.serialNumber" type="text" placeholder="Enter Serial Number" /></div>
+              <div class="add-field"><label>Model Number</label><input v-model="assetEditForm.modelNumber" type="text" placeholder="Enter Model Number" /></div>
+              <div class="add-field"><label>RDP Number</label><input v-model="assetEditForm.rdpNumber" type="text" placeholder="Enter reference number" /></div>
+              <div class="add-field"><label>Remarks</label><input v-model="assetEditForm.remarks" type="text" placeholder="Enter Remarks" /></div>
+              <div class="add-field add-field-full"><label>Description</label><textarea v-model="assetEditForm.description" placeholder="Enter Description"></textarea></div>
+            </div>
+          </section>
+
+          <section class="add-employee-section">
+            <h6>User Details</h6>
+            <div class="add-grid-two">
+              <div ref="assetUserEditPickerRef" class="add-field asset-user-picker-field">
+                <label>Asset User</label>
+                <button type="button" class="asset-user-trigger" @click.stop="toggleAssetUserEditPicker">
+                  <span>{{ selectedAssetResponsiblePersonEdit?.name || 'Not Selected' }}</span>
+                  <iconify-icon icon="lucide:chevron-down" />
+                </button>
+                <div v-if="showAssetUserEditPicker" class="asset-user-dropdown" @click.stop>
+                  <div class="asset-user-dropdown-head">
+                    <span>Person</span>
+                    <button type="button" class="asset-user-close-btn" @click="closeAssetUserEditPicker">
+                      <iconify-icon icon="lucide:x" />
+                    </button>
+                  </div>
+                  <div class="search-input-wrapper mb-2">
+                    <input v-model="assetUserEditSearchQuery" type="text" class="asset-user-search-input" placeholder="Search Responsible Person" />
+                    <iconify-icon icon="lucide:search" class="search-icon" />
+                  </div>
+                  <div class="asset-user-list-scroll">
+                    <button
+                      v-for="person in filteredAssetEditResponsiblePersons"
+                      :key="person.id"
+                      type="button"
+                      class="asset-user-item"
+                      :class="{ selected: Number(assetEditForm.assetUser) === Number(person.id) }"
+                      @click="selectAssetEditResponsiblePerson(person)"
+                    >
+                      <img :src="person.avatar || defaultPersonAvatar" class="asset-user-avatar" alt="user avatar" />
+                      <div class="asset-user-info">
+                        <div class="asset-user-head">
+                          <span class="asset-user-name">{{ person.name }}</span>
+                          <span v-if="person.role_name" class="user-position-badge">{{ person.role_name }}</span>
+                        </div>
+                        <div class="user-item-meta-line">
+                          <span class="meta-value">{{ person.parent_name || person.team_lead_name || '—' }}</span>
+                          <span class="meta-divider">|</span>
+                          <span class="meta-value">{{ person.branch_name || person.office_name || '—' }}</span>
+                        </div>
+                      </div>
+                    </button>
+                    <div v-if="!filteredAssetEditResponsiblePersons.length" class="text-center text-muted py-2">No persons found</div>
+                  </div>
+                </div>
+              </div>
+              <div class="add-field"><label>Date Of Handover</label><input :value="formatDateDisplay(assetEditForm.handoverDate)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('assetEditForm.handoverDate')" /></div>
+              <div class="add-field"><label>Branch Location</label><SearchableSelect v-model="assetEditForm.branchLocation" :options="branchOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Department</label><SearchableSelect v-model="assetEditForm.department" :options="departmentOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Status *</label><SearchableSelect v-model="assetEditForm.status" :options="assetStatusOptions" placeholder="Not Selected" /></div>
+              <div class="add-field"><label>Date Of Return</label><input :value="formatDateDisplay(assetEditForm.returnDate)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('assetEditForm.returnDate')" /></div>
+            </div>
+          </section>
+
+          <section class="add-employee-section">
+            <h6>Purchase Details</h6>
+            <div class="add-grid-two">
+              <div class="add-field"><label>Purchase Date *</label><input :value="formatDateDisplay(assetEditForm.purchaseDate)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('assetEditForm.purchaseDate')" /></div>
+              <div class="add-field"><label>Supplier Name</label><input v-model="assetEditForm.supplierName" type="text" placeholder="Enter Supplier Name" /></div>
+              <div class="add-field"><label>Warranty Date</label><input :value="formatDateDisplay(assetEditForm.warrantyDate)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('assetEditForm.warrantyDate')" /></div>
+              <div class="add-field"><label>Condition *</label><SearchableSelect v-model="assetEditForm.condition" :options="assetConditionOptions" placeholder="Not Selected" /></div>
+              <div class="add-field">
+                <label>Unit Price</label>
+                <div class="asset-price-group">
+                  <input v-model="assetEditForm.unitPrice" type="text" placeholder="Enter Amount" />
+                  <select v-model="assetEditForm.currency">
+                    <option value="UAE Dirham">UAE Dirham</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                  </select>
+                </div>
+              </div>
+              <div class="add-field">
+                <label>QTY *</label>
+                <div class="asset-qty-group">
+                  <input v-model.number="assetEditForm.qty" type="number" min="1" placeholder="Enter item quantity" />
+                  <button type="button" class="asset-qty-btn" @click="decrementAssetEditQty">-</button>
+                  <button type="button" class="asset-qty-btn" @click="incrementAssetEditQty">+</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="add-employee-footer">
+          <button type="button" class="add-employee-clear-btn" @click="closeAssetEditModal">Cancel</button>
+          <button type="button" class="add-employee-save-btn" @click="saveAssetEdit">Save</button>
         </div>
       </div>
     </div>
@@ -1129,14 +1806,117 @@
         </div>
 
         <div class="add-employee-footer">
-          <button type="button" class="add-employee-clear-btn" @click="resetApplyLeaveForm">Cancel</button>
+          <button type="button" class="add-employee-clear-btn" @click="cancelApplyLeave">Cancel</button>
           <button type="button" class="add-employee-save-btn" @click="submitApplyLeave">Apply</button>
         </div>
       </div>
     </div>
 
+    <div v-if="showCreateAttendanceModal" class="edit-overlay add-employee-overlay" @click.self="closeCreateAttendanceModal">
+      <div class="add-employee-modal leave-apply-modal attendance-create-modal">
+        <div class="add-employee-head">
+          <h6>Create New Attendance</h6>
+          <button type="button" class="add-employee-close" @click="closeCreateAttendanceModal">
+            <iconify-icon icon="lucide:x" />
+          </button>
+        </div>
+
+        <div class="add-employee-body">
+          <section class="add-employee-section">
+            <div class="add-grid-two">
+              <div class="add-field add-field-full">
+                <label>Employee *</label>
+                <SearchableSelect
+                  v-model="createAttendanceForm.employee"
+                  :options="applyLeaveEmployeeOptions"
+                  placeholder="Select Employee"
+                />
+              </div>
+              <div class="add-field add-field-full">
+                <label>Type *</label>
+                <SearchableSelect
+                  v-model="createAttendanceForm.type"
+                  :options="attendanceCreateTypeOptions"
+                  placeholder="Select Attendance Type"
+                />
+              </div>
+              <div class="add-field">
+                <label>Status *</label>
+                <SearchableSelect
+                  v-model="createAttendanceForm.status"
+                  :options="attendanceStatusOptions"
+                  placeholder="Select Status"
+                />
+              </div>
+              <div class="add-field">
+                <label>Date *</label>
+                <input :value="formatDateDisplay(createAttendanceForm.date)" type="text" placeholder="--/--/--" readonly @click="openDatePicker('createAttendanceForm.date')" />
+              </div>
+              <div class="add-field">
+                <label>Check In *</label>
+                <input v-model="createAttendanceForm.checkIn" type="time" />
+              </div>
+              <div class="add-field">
+                <label>Check Out *</label>
+                <input v-model="createAttendanceForm.checkOut" type="time" />
+              </div>
+              <div class="add-field">
+                <label>Break *</label>
+                <SearchableSelect
+                  v-model="createAttendanceForm.breakLabel"
+                  :options="attendanceBreakOptions"
+                  placeholder="Select Break"
+                />
+              </div>
+              <div class="add-field">
+                <label>Overtime (OT) *</label>
+                <SearchableSelect
+                  v-model="createAttendanceForm.otLabel"
+                  :options="attendanceOtOptions"
+                  placeholder="Select overtime"
+                />
+              </div>
+              <div class="add-field add-field-full">
+                <label>Description</label>
+                <textarea v-model="createAttendanceForm.description" placeholder="Enter Text"></textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="add-employee-section">
+            <h6>Attachments</h6>
+            <div class="upload-dropzone leave-upload-dropzone">
+              <div>
+                <strong>Upload documents</strong>
+                <small>JPEG, PNG and PDF formats, up to 50MB</small>
+              </div>
+              <label class="select-file-btn">
+                Select File
+                <input type="file" class="d-none" @change="handleCreateAttendanceFileChange" />
+              </label>
+            </div>
+            <div v-if="createAttendanceAttachment" class="uploaded-doc-card">
+              <iconify-icon icon="lucide:file-text" />
+              <div>
+                <p>{{ createAttendanceAttachment.name }}</p>
+                <small>{{ `${Math.max(1, Math.round(createAttendanceAttachment.size / 1024))}KB` }}</small>
+              </div>
+              <button type="button" @click="removeCreateAttendanceFile">
+                <iconify-icon icon="lucide:x-circle" />
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <div class="add-employee-footer">
+          <button type="button" class="add-employee-clear-btn" @click="cancelCreateAttendance">Cancel</button>
+          <button type="button" class="add-employee-save-btn" @click="submitCreateAttendance">Submit</button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="openEmployeeFilters" class="edit-overlay" @click.self="openEmployeeFilters = false">
-      <div class="employee-filter-modal">
+      <div class="employee-filter-modal employee-search-filter-modal">
         <button type="button" class="employee-filter-close" @click="openEmployeeFilters = false">
           <iconify-icon icon="lucide:x" />
         </button>
@@ -1167,11 +1947,17 @@
           </div>
           <div class="employee-filter-field">
             <label>Joining Date</label>
-            <input :value="formatDateDisplay(employeeFilters.joiningDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('employeeFilters.joiningDate')" />
+            <div class="employee-filter-date-wrap">
+              <input :value="formatDateDisplay(employeeFilters.joiningDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('employeeFilters.joiningDate')" />
+              <iconify-icon icon="lucide:calendar-days" />
+            </div>
           </div>
           <div class="employee-filter-field">
             <label>Visa Validity</label>
-            <input :value="formatDateDisplay(employeeFilters.visaValidity)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('employeeFilters.visaValidity')" />
+            <div class="employee-filter-date-wrap">
+              <input :value="formatDateDisplay(employeeFilters.visaValidity)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('employeeFilters.visaValidity')" />
+              <iconify-icon icon="lucide:calendar-days" />
+            </div>
           </div>
           <div class="employee-filter-field">
             <label>Employee Status</label>
@@ -1199,13 +1985,15 @@
             <h6>Profile Details</h6>
             <div class="add-employee-profile-grid">
               <div class="profile-photo-block">
-                <div class="profile-photo-avatar">
-                  <img v-if="addEmployeeProfilePreview" :src="addEmployeeProfilePreview" alt="Profile preview" />
-                  <iconify-icon v-else icon="lucide:user-round" />
+                <div class="profile-photo-wrap">
+                  <div class="profile-photo-avatar">
+                    <img v-if="addEmployeeProfilePreview" :src="addEmployeeProfilePreview" alt="Profile preview" />
+                    <iconify-icon v-else icon="lucide:user-round" />
+                  </div>
+                  <button type="button" class="profile-photo-edit-btn" @click="triggerProfileImageUpload">
+                    <iconify-icon icon="lucide:camera" />
+                  </button>
                 </div>
-                <button type="button" class="profile-photo-edit-btn" @click="triggerProfileImageUpload">
-                  <iconify-icon icon="lucide:camera" />
-                </button>
                 <input ref="profileImageInputRef" type="file" class="d-none" accept="image/*" @change="handleProfileImageChange" />
                 <span>Profile Photo</span>
               </div>
@@ -1216,20 +2004,32 @@
                   <input v-model="addEmployeeForm.full_name" type="text" placeholder="Enter Employee Full Name" />
                 </div>
                 <div class="add-field">
-                  <label>Nationality *</label>
-                  <SearchableSelect v-model="addEmployeeForm.nationality" :options="nationalityOptions" placeholder="Not Selected" />
-                </div>
-                <div class="add-field">
                   <label>Phone Number *</label>
                   <input v-model="addEmployeeForm.phone" type="text" placeholder="Enter Phone Number" />
                 </div>
                 <div class="add-field">
-                  <label>Salary Type *</label>
-                  <SearchableSelect v-model="addEmployeeForm.salary_type" :options="salaryTypeOptions" placeholder="Not Selected" />
+                  <label>Home Country Phone Number</label>
+                  <input v-model="addEmployeeForm.home_country_phone_number" type="text" placeholder="Enter Phone Number" />
                 </div>
                 <div class="add-field">
                   <label>Email *</label>
                   <input v-model="addEmployeeForm.email" type="email" placeholder="Enter Your Email" />
+                </div>
+                <div class="add-field">
+                  <label>Address Inside UAE</label>
+                  <input v-model="addEmployeeForm.address_inside_uae" type="text" placeholder="Enter Address" />
+                </div>
+                <div class="add-field">
+                  <label>Address Outside UAE</label>
+                  <input v-model="addEmployeeForm.address_outside_uae" type="text" placeholder="Enter Address" />
+                </div>
+                <div class="add-field">
+                  <label>Nationality *</label>
+                  <SearchableSelect v-model="addEmployeeForm.nationality" :options="nationalityOptions" placeholder="Not Selected" />
+                </div>
+                <div class="add-field">
+                  <label>Salary Type *</label>
+                  <SearchableSelect v-model="addEmployeeForm.salary_type" :options="salaryTypeOptions" placeholder="Not Selected" />
                 </div>
                 <div class="add-field">
                   <label>Salary *</label>
@@ -1238,6 +2038,40 @@
                     <span>UAE Dirham</span>
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="add-employee-section">
+            <h6>Additional Details</h6>
+            <div class="add-grid-two">
+              <div class="add-field">
+                <label>Father Name</label>
+                <input v-model="addEmployeeForm.father_name" type="text" placeholder="Enter Father Name" />
+              </div>
+              <div class="add-field">
+                <label>Mother Name</label>
+                <input v-model="addEmployeeForm.mother_name" type="text" placeholder="Enter Mother Name" />
+              </div>
+              <div class="add-field">
+                <label>Marital Status *</label>
+                <SearchableSelect v-model="addEmployeeForm.marital_status" :options="maritalStatusOptions" placeholder="Not Selected" />
+              </div>
+              <div class="add-field">
+                <label>Religion</label>
+                <input v-model="addEmployeeForm.religion" type="text" placeholder="Enter Religion" />
+              </div>
+              <div class="add-field">
+                <label>Emergency Contact Name</label>
+                <input v-model="addEmployeeForm.emergency_contact_name" type="text" placeholder="Enter Name" />
+              </div>
+              <div class="add-field">
+                <label>Emergency Email</label>
+                <input v-model="addEmployeeForm.emergency_email" type="email" placeholder="Enter Your Email" />
+              </div>
+              <div class="add-field">
+                <label>Emergency Phone Number</label>
+                <input v-model="addEmployeeForm.emergency_phone_number" type="text" placeholder="Enter Phone Number" />
               </div>
             </div>
           </section>
@@ -1262,12 +2096,40 @@
                 <SearchableSelect v-model="addEmployeeForm.supervisor" :options="supervisorOptions" placeholder="Not Selected" />
               </div>
               <div class="add-field">
+                <label>User Type</label>
+                <input v-model="addEmployeeForm.user_type" type="text" placeholder="Enter User Type" />
+              </div>
+              <div class="add-field">
+                <label>Probation End Date *</label>
+                <input :value="formatDateDisplay(addEmployeeForm.probation_end_date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.probation_end_date')" />
+              </div>
+              <div class="add-field">
                 <label>Joining Date *</label>
                 <input :value="formatDateDisplay(addEmployeeForm.joining_date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.joining_date')" />
               </div>
               <div class="add-field">
                 <label>Visa Validity *</label>
                 <input :value="formatDateDisplay(addEmployeeForm.visa_validity)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.visa_validity')" />
+              </div>
+              <div class="add-field">
+                <label>Sponsor</label>
+                <input v-model="addEmployeeForm.sponsor" type="text" placeholder="Enter Sponsor Name" />
+              </div>
+              <div class="add-field">
+                <label>Contract Joining Date *</label>
+                <input :value="formatDateDisplay(addEmployeeForm.contract_joining_date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.contract_joining_date')" />
+              </div>
+              <div class="add-field">
+                <label>Visa Quota</label>
+                <input v-model="addEmployeeForm.visa_quota" type="text" placeholder="Enter Sponsor Name" />
+              </div>
+              <div class="add-field">
+                <label>Gratuity Termination</label>
+                <input :value="formatDateDisplay(addEmployeeForm.gratuity_termination)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.gratuity_termination')" />
+              </div>
+              <div class="add-field">
+                <label>Vehicle</label>
+                <input v-model="addEmployeeForm.vehicle" type="text" placeholder="Enter Vehicle Number" />
               </div>
             </div>
           </section>
@@ -1289,6 +2151,10 @@
             <div class="add-field">
               <label>Emirates ID Number *</label>
               <input v-model="addEmployeeForm.emirates_id_number" type="text" placeholder="Enter Emirates ID Number" />
+            </div>
+            <div class="add-field mt-2">
+              <label>Expiry Date *</label>
+              <input :value="formatDateDisplay(addEmployeeForm.documents_expiry_date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.documents_expiry_date')" />
             </div>
             <div class="upload-dropzone">
               <div>
@@ -1329,7 +2195,7 @@
             <div class="add-grid-two">
               <div class="add-field"><label>Policy Type *</label><SearchableSelect v-model="addEmployeeForm.policy_type" :options="policyTypeOptions" placeholder="Not Selected" /></div>
               <div class="add-field"><label>Insurance Provider *</label><input v-model="addEmployeeForm.insurance_provider" type="text" placeholder="Enter Insurance Provider Name" /></div>
-              <div class="add-field"><label>Policy Number *</label><input v-model="addEmployeeForm.policy_number" type="text" placeholder="Enter Policy Number" /></div>
+              <div class="add-field"><label>Health Card Number *</label><input v-model="addEmployeeForm.policy_number" type="text" placeholder="Enter Policy Number" /></div>
               <div class="add-field"><label>Start Date *</label><input :value="formatDateDisplay(addEmployeeForm.insurance_start_date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.insurance_start_date')" /></div>
               <div class="add-field"><label>Expiry Date *</label><input :value="formatDateDisplay(addEmployeeForm.insurance_expiry_date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.insurance_expiry_date')" /></div>
             </div>
@@ -1339,6 +2205,114 @@
         <div class="add-employee-footer">
           <button type="button" class="add-employee-clear-btn" @click="resetAddEmployeeForm">{{ isEditEmployeeMode ? 'Cancel' : 'Clear' }}</button>
           <button type="button" class="add-employee-save-btn" @click="saveEmployeeForm">{{ isEditEmployeeMode ? 'Save' : 'Save' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showRequestDocumentModal" class="edit-overlay" @click.self="closeRequestDocumentModal">
+      <div class="employee-filter-modal section-edit-modal request-doc-modal">
+        <button type="button" class="employee-filter-close" @click="closeRequestDocumentModal">
+          <iconify-icon icon="lucide:x" />
+        </button>
+        <div class="employee-filter-right w-100">
+          <p class="request-doc-title">Request New Document</p>
+          <div class="request-doc-grid">
+            <div class="add-field">
+              <label>Document Type *</label>
+              <SearchableSelect v-model="requestDocumentForm.documentType" :options="requestDocumentOptions" placeholder="Select Document" />
+            </div>
+            <div class="add-field">
+              <label>Description</label>
+              <textarea v-model="requestDocumentForm.description" placeholder="Enter Description"></textarea>
+            </div>
+          </div>
+          <div class="employee-filter-actions mt-2">
+            <button type="button" class="employee-filter-btn ghost" @click="closeRequestDocumentModal">Cancel</button>
+            <button type="button" class="employee-filter-btn primary" @click="submitRequestDocument">Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showDocumentDetailModal && selectedRequestedDocument" class="edit-overlay" @click.self="closeDocumentDetailModal">
+      <div class="employee-filter-modal section-edit-modal request-doc-detail-modal">
+        <button type="button" class="employee-filter-close" @click="closeDocumentDetailModal">
+          <iconify-icon icon="lucide:x" />
+        </button>
+        <div class="employee-filter-right w-100">
+          <h6 class="mb-2">Document Detail</h6>
+          <div class="requested-detail-grid">
+            <p><span>Document Type</span><strong>{{ selectedRequestedDocument.documentType }}</strong></p>
+            <p><span>Requested Date</span><strong>{{ selectedRequestedDocument.requestedDate }}</strong></p>
+            <p><span>Status</span><strong :class="`doc-status-${String(selectedRequestedDocument.status).toLowerCase()}`">{{ selectedRequestedDocument.status }}</strong></p>
+          </div>
+          <div class="add-field mt-2">
+            <label>Description</label>
+            <textarea :value="selectedRequestedDocument.description || '--'" readonly></textarea>
+          </div>
+          <div v-if="selectedRequestedDocument.status === 'Rejected'" class="add-field mt-2">
+            <label>Rejection Reason</label>
+            <textarea :value="selectedRequestedDocument.rejectionReason || '--'" readonly></textarea>
+          </div>
+          <div v-if="selectedRequestedDocument.status === 'Pending'" class="request-doc-detail-actions">
+            <button type="button" class="request-doc-approve-btn" @click="openApproveDocumentModal">Approve Document</button>
+            <button type="button" class="request-doc-reject-btn" @click="openRejectDocumentModal">Reject Document</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showApproveDocumentModal && selectedRequestedDocument" class="edit-overlay" @click.self="closeApproveDocumentModal">
+      <div class="employee-filter-modal section-edit-modal request-doc-approve-modal">
+        <button type="button" class="employee-filter-close" @click="closeApproveDocumentModal">
+          <iconify-icon icon="lucide:x" />
+        </button>
+        <div class="employee-filter-right w-100">
+          <h6 class="mb-2">Approve Document</h6>
+          <div class="add-field">
+            <label>Attach Document *</label>
+          </div>
+          <div class="upload-dropzone">
+            <div>
+              <strong>Drag and drop your files</strong>
+              <small>JPEG, PND and PDF formats, up to 50MB</small>
+            </div>
+            <label class="select-file-btn">
+              Select File
+              <input type="file" class="d-none" @change="handleApproveDocumentFileChange" />
+            </label>
+          </div>
+          <div v-if="approveDocumentFile" class="uploaded-doc-card mt-2">
+            <iconify-icon icon="lucide:file-text" />
+            <div>
+              <p>{{ approveDocumentFile.name }}</p>
+              <small>{{ `${Math.max(1, Math.round(approveDocumentFile.size / 1024))}KB` }}</small>
+            </div>
+            <button type="button" @click="approveDocumentFile = null">
+              <iconify-icon icon="lucide:x-circle" />
+            </button>
+          </div>
+          <div class="request-doc-confirm-wrap">
+            <button type="button" class="request-doc-confirm-btn" @click="confirmApproveDocument">Confirm</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showRejectDocumentModal && selectedRequestedDocument" class="edit-overlay" @click.self="closeRejectDocumentModal">
+      <div class="employee-filter-modal section-edit-modal request-doc-reject-modal">
+        <button type="button" class="employee-filter-close" @click="closeRejectDocumentModal">
+          <iconify-icon icon="lucide:x" />
+        </button>
+        <div class="employee-filter-right w-100">
+          <h6 class="mb-2">Reject Document</h6>
+          <div class="add-field">
+            <label>Rejection Reason</label>
+            <textarea v-model="rejectDocumentReason" placeholder="Enter Reason"></textarea>
+          </div>
+          <div class="request-doc-confirm-wrap">
+            <button type="button" class="request-doc-confirm-btn" @click="confirmRejectDocument">Confirm</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1398,8 +2372,12 @@
           <template v-else>
             <div class="add-grid-two">
               <div class="add-field"><label>Full Name *</label><input v-model="sectionEditForm.name" type="text" /></div>
-              <div class="add-field"><label>Phone Number *</label><input v-model="sectionEditForm.phone" type="text" /></div>
-              <div class="add-field"><label>Email *</label><input v-model="sectionEditForm.email" type="email" /></div>
+              <div class="add-field"><label>Email *</label><input v-model="sectionEditForm.email_personal" type="email" /></div>
+              <div class="add-field"><label>Phone Number *</label><input v-model="sectionEditForm.phone_company" type="text" /></div>
+              <div class="add-field"><label>Phone Country Phone Number *</label><input v-model="sectionEditForm.phone_personal" type="text" /></div>
+              <div class="add-field"><label>Date Of Birth *</label><input :value="formatDateDisplay(sectionEditForm.dob)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('sectionEditForm.dob')" /></div>
+              <div class="add-field"><label>Address Inside UAE *</label><input v-model="sectionEditForm.address_inside_uae" type="text" /></div>
+              <div class="add-field"><label>Address Outside UAE *</label><input v-model="sectionEditForm.address_outside_uae" type="text" /></div>
               <div class="add-field"><label>Nationality *</label><SearchableSelect v-model="sectionEditForm.nationality" :options="nationalityOptions" placeholder="Not Selected" /></div>
               <div class="add-field"><label>Salary Type *</label><SearchableSelect v-model="sectionEditForm.salary_type" :options="salaryTypeOptions" placeholder="Not Selected" /></div>
               <div class="add-field"><label>Basic Salary *</label><input v-model="sectionEditForm.salary" type="text" /></div>
@@ -1457,6 +2435,9 @@ const {
 } = useHrDashboard()
 
 const route = useRoute()
+const HR_ACTIVE_TAB_STORAGE_KEY = 'hr.activeTab'
+const HR_LEAVE_MODE_STORAGE_KEY = 'hr.leaveSectionMode'
+const HR_LEAVE_INNER_TAB_STORAGE_KEY = 'hr.leaveInnerTab'
 const hrDebugUi = computed(() => {
   void route.fullPath
   return hrPipelineDebugEnabled()
@@ -1469,17 +2450,60 @@ const loadingEmployees = ref(false)
 // Fetch real employees from API
 const fetchRealEmployees = async () => {
   loadingEmployees.value = true
+  const fallbackEmployees = () => ([
+    {
+      id: 340,
+      name: 'Maria Guan',
+      email: 'mariajoun@gmail.com',
+      phone: '+971 56125 4568',
+      avatar: 'https://i.pravatar.cc/80?img=47',
+      designation: 'Senior Accountant',
+      department: 'Finance',
+      branch: 'Abu Dhabi',
+      joiningDate: '14 Jan 2024',
+      visaValidity: '14 Jan 2027',
+      passportNumber: 'N12345678',
+      employment_status: 'active',
+      status: 'active',
+      statusText: 'Active',
+      statusType: 'active',
+      nationality: 'Indian',
+      salary: '2000.00',
+      salary_type: 'Monthly',
+      supervisor: 'Khalid Al Mazrouei',
+      role_name: 'Employee',
+      employee_code: 'EMP-340',
+      email_work: 'mariajoun@gmail.com',
+      email_personal: 'mariajoun@gmail.com',
+      phone_company: '+971 56125 4568',
+      phone_personal: '+91 8136548745',
+      address_inside_uae: 'Al Wahda, Near Bus Station, Abu Dhabi, United Arab Emirates',
+      address_outside_uae: 'Al Wahda, Near Bus Station, Abu Dhabi, United Arab Emirates',
+      birth_date: '1997-01-14',
+      dob: '14 Jan 1997',
+      marital_status: 'Single',
+    },
+  ])
   try {
     const response = await api.get('/employees', {
       params: {
         per_page: 1000
       }
     })
-    
-    if (response.data && response.data.data) {
-      employeesDirectory.value = response.data.data.map(emp => ({
+
+    const payload = response?.data
+    const employeesPayload = Array.isArray(payload?.data?.data)
+      ? payload.data.data
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload)
+          ? payload
+          : []
+
+    if (employeesPayload.length > 0) {
+      employeesDirectory.value = employeesPayload.map(emp => ({
         id: emp.id,
-        name: emp.name,
+        name: emp.name || emp.full_name || '-',
         email: emp.email,
         phone: emp.phone || '-',
         avatar: emp.avatar || `https://i.pravatar.cc/80?img=${emp.id % 70}`,
@@ -1508,12 +2532,15 @@ const fetchRealEmployees = async () => {
         birth_date: emp.birth_date || '-',
         marital_status: emp.marital_status || '-',
       }))
-      
+
       console.log('Employees loaded from API:', employeesDirectory.value.length)
+    } else {
+      console.warn('No employees array found in /employees response:', payload)
+      employeesDirectory.value = fallbackEmployees()
     }
   } catch (error) {
     console.error('Error fetching employees:', error)
-    employeesDirectory.value = []
+    employeesDirectory.value = fallbackEmployees()
   } finally {
     loadingEmployees.value = false
   }
@@ -1532,13 +2559,23 @@ const page = ref(1)
 const perPage = 10
 const openEmployeeFilters = ref(false)
 const showApplyLeaveModal = ref(false)
+const showCreateAttendanceModal = ref(false)
 const showUnifiedDatePicker = ref(false)
 const datePickerValue = ref(null)
 const activeDateField = ref('')
 const leaveSectionMode = ref('leave')
 const showLeaveSearchModal = ref(false)
+const showCareerSearchModal = ref(false)
+const showAttendanceSearchModal = ref(false)
+const showAnnouncementSearchModal = ref(false)
+const showAnnouncementModal = ref(false)
 const openLeaveRowMenuId = ref(null)
+const openAttendanceRowMenuId = ref(null)
+const openAnnouncementRowMenuId = ref(null)
+const attendanceRowMenuStyle = ref({})
 const leaveRowMenuStyle = ref({})
+const announcementRowMenuStyle = ref({})
+const editingAnnouncementId = ref(null)
 const selectedLeaveRow = ref(null)
 const showLeaveDetailModal = ref(false)
 const showLeaveApproveModal = ref(false)
@@ -1550,8 +2587,14 @@ const showAssetSearchModal = ref(false)
 const showAssetCreateModal = ref(false)
 const assetsPage = ref(1)
 const assetsPerPage = 10
+const careerSectionMode = ref('manage-recruitments')
+const careerSearchKeyword = ref('')
+const careerPage = ref(1)
+const careerPerPage = 10
 const openEmployeeRowMenuId = ref(null)
 const openAssetRowMenuId = ref(null)
+const openCareerRowMenuId = ref(null)
+const employeeFilterChips = ['Finance', 'Marketing', 'HR Department', 'Sales', 'Operations', 'Active', 'In Active']
 const selectedFilterChip = ref('Marketing')
 const showAddEmployeeModal = ref(false)
 const isEditEmployeeMode = ref(false)
@@ -1561,8 +2604,10 @@ const addEmployeeProfilePreview = ref('')
 const addEmployeeProfileFile = ref(null)
 const employeeRowMenuStyle = ref({})
 const assetRowMenuStyle = ref({})
+const careerRowMenuStyle = ref({})
 const selectedEmployeeDetail = ref(null)
 const employeeDetailTab = ref('company')
+const employeeDetailView = ref('details')
 const employeeDetailMainRef = ref(null)
 const employeeCompanySectionRef = ref(null)
 const employeeDocumentsSectionRef = ref(null)
@@ -1574,6 +2619,33 @@ const editingSection = ref('')
 const sectionEditForm = ref({})
 const selectedDocumentType = ref('Emirates ID')
 const addEmployeeUploadedFile = ref(null)
+const showRequestDocumentModal = ref(false)
+const showDocumentDetailModal = ref(false)
+const showApproveDocumentModal = ref(false)
+const showRejectDocumentModal = ref(false)
+const selectedRequestedDocument = ref(null)
+const requestDocumentForm = ref({
+  documentType: '',
+  description: '',
+})
+const requestDocumentOptions = [
+  'Salary Certificate',
+  'Commitment Certificate',
+  'Experience Certificate',
+  'No Objection Certificate',
+  'Employment Certificate',
+  'Completion Of Probationary Period',
+]
+const requestedDocuments = ref([
+  { id: 1, documentType: 'Commitment Certificate', description: 'Lorem Ipsum is simply dummy text...', requestedDate: '05 Feb 2025', status: 'Approved', rejectionReason: '' },
+  { id: 2, documentType: 'Salary Certificate', description: 'Lorem Ipsum is simply dummy text...', requestedDate: '05 Feb 2025', status: 'Pending', rejectionReason: '' },
+  { id: 3, documentType: 'Experience Certificate', description: 'Lorem Ipsum is simply dummy text...', requestedDate: '05 Feb 2025', status: 'Rejected', rejectionReason: 'Not Completed Probation...' },
+  { id: 4, documentType: 'No Objection Certificate', description: '--', requestedDate: '05 Feb 2025', status: 'Approved', rejectionReason: '' },
+  { id: 5, documentType: 'Employment Certificate', description: '--', requestedDate: '05 Feb 2025', status: 'Approved', rejectionReason: '' },
+])
+const editingRequestedDocumentId = ref(null)
+const approveDocumentFile = ref(null)
+const rejectDocumentReason = ref('')
 const employeeFilters = ref({
   name: '',
   department: '',
@@ -1582,7 +2654,36 @@ const employeeFilters = ref({
   visaValidity: '',
   status: '',
 })
-const editingRow = ref(null)
+const showAttendanceDetailModal = ref(false)
+const selectedAttendanceRow = ref(null)
+const attendanceDetailMode = ref('view')
+const attendanceEditForm = ref({
+  date: '',
+  checkIn: '',
+  checkOut: '',
+  status: '',
+  breakLabel: '',
+  otLabel: '',
+  description: '',
+})
+const careerSearchFilters = ref({
+  jobTitle: '',
+  postedDate: '',
+  closingDate: '',
+  department: '',
+  type: '',
+  status: '',
+})
+
+const careerFilterChips = ['Abu Dhabi', 'Dubai', 'Marketing', 'HR Department', 'Finance', 'Operations', 'Sales']
+const selectedCareerFilterChip = ref('Marketing')
+
+const careerJobTitleOptions = computed(() => Array.from(new Set(careerRows.value.map((j) => j.title))).filter(Boolean))
+const careerDepartmentOptions = ['Marketing', 'HR Department', 'Finance', 'Operations', 'Sales']
+const careerTypeOptions = ['Full-time', 'Part-time', 'Contract']
+const careerStatusOptions = ['Open', 'On Hold', 'Closed']
+
+
 const showAssetEditModal = ref(false)
 const editingAssetId = ref(null)
 const selectedAssetSearchChip = ref('Assigned')
@@ -1600,6 +2701,7 @@ const defaultAssetSearchFilters = () => ({
   supplierName: '',
   condition: '',
 })
+
 const assetSearchFilters = ref(defaultAssetSearchFilters())
 const assetTypeOptions = ['Laptop', 'Phone', 'Printer', 'SIM', 'Charger', 'DeskTop']
 const assetStatusOptions = ['Assigned', 'Not Assigned', 'Working', 'In Repair', 'Used', 'New']
@@ -1609,6 +2711,9 @@ const assetResponsiblePersons = ref([])
 const showAssetUserPicker = ref(false)
 const assetUserSearchQuery = ref('')
 const assetUserPickerRef = ref(null)
+const showAssetUserEditPicker = ref(false)
+const assetUserEditSearchQuery = ref('')
+const assetUserEditPickerRef = ref(null)
 const defaultPersonAvatar = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
 const defaultAssetCreateForm = () => ({
   assetType: '',
@@ -1644,18 +2749,39 @@ const filteredAssetResponsiblePersons = computed(() => {
     String(person.email || '').toLowerCase().includes(query),
   )
 })
+const selectedAssetResponsiblePersonEdit = computed(() =>
+  assetResponsiblePersons.value.find((person) => Number(person.id) === Number(assetEditForm.value.assetUser)) || null,
+)
+const filteredAssetEditResponsiblePersons = computed(() => {
+  const query = assetUserEditSearchQuery.value.trim().toLowerCase()
+  if (!query) return assetResponsiblePersons.value
+  return assetResponsiblePersons.value.filter((person) =>
+    String(person.name || '').toLowerCase().includes(query) ||
+    String(person.email || '').toLowerCase().includes(query),
+  )
+})
 const assetEditForm = ref({
   assetId: '',
-  type: '',
+  assetType: '',
   assetName: '',
-  userName: '',
-  userRef: '',
+  serialNumber: '',
+  modelNumber: '',
+  rdpNumber: '',
+  remarks: '',
+  description: '',
+  assetUser: null,
   handoverDate: '',
-  brand: '',
-  category: '',
-  handoverTo: '',
-  serial: '',
+  returnDate: '',
+  branchLocation: '',
+  department: '',
   status: '',
+  purchaseDate: '',
+  supplierName: '',
+  warrantyDate: '',
+  condition: '',
+  unitPrice: '',
+  currency: 'UAE Dirham',
+  qty: 1,
 })
 const hrSectionTab = ref('attendance')
 
@@ -1666,6 +2792,19 @@ const headerTabMenus = {
   Career: ['Manage Recruitments', 'Interviews', 'Career Lists'],
   Assets: ['Asset Directory', 'Asset Requests'],
 }
+
+const careerRows = ref([
+  { id: 1, title: 'Software Engineer', department: 'Marketing', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '05 Feb 2023', closingDate: '12 Feb 2025', hiringManager: 'Maria Guan', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=47', applicants: '85', status: 'Open' },
+  { id: 2, title: 'UI/UX Designer', department: 'Marketing', branch: 'Abu Dhabi', type: 'Full-time', openings: '03', postedDate: '10 Feb 2023', closingDate: '25 Feb 2027', hiringManager: 'Ahmad Al Daghash', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=12', applicants: '30', status: 'Open' },
+  { id: 3, title: 'Backend Developer', department: 'Marketing', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '15 Mar 2023', closingDate: '25 Mar 2027', hiringManager: 'Omar Moraden', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=15', applicants: '25', status: 'On Hold' },
+  { id: 4, title: 'Sales Manager', department: 'Sales', branch: 'Abu Dhabi', type: 'Contract', openings: '01', postedDate: '18 Mar 2023', closingDate: '22 Mar 2025', hiringManager: 'Ahmad Al Adaway', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=21', applicants: '38', status: 'Closed' },
+  { id: 5, title: 'Electronical Engineer', department: 'Operations', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '22 Apr 2023', closingDate: '28 Apr 2027', hiringManager: 'Tarek Mahmoud', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=28', applicants: '50', status: 'Closed' },
+  { id: 6, title: 'HR Manager', department: 'HR Department', branch: 'Abu Dhabi', type: 'Part-time', openings: '02', postedDate: '25 Oct 2023', closingDate: '29 Oct 2027', hiringManager: 'Hadi Zain', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=31', applicants: '45', status: 'Closed' },
+  { id: 7, title: 'Sales Agent', department: 'Sales', branch: 'Abu Dhabi', type: 'Full-time', openings: '05', postedDate: '22 Nov 2023', closingDate: '29 Nov 2027', hiringManager: 'Karim Haddad', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=33', applicants: '65', status: 'Closed' },
+  { id: 8, title: 'Sales Agent', department: 'Sales', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '15 Jan 2024', closingDate: '19 Jan 2026', hiringManager: 'Omar Al Kaabi', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=35', applicants: '45', status: 'Closed' },
+  { id: 9, title: 'Graphic Designer', department: 'Marketing', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '25 May 2025', closingDate: '29 May 2027', hiringManager: 'Khalid Al Mazrouei', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=39', applicants: '62', status: 'Closed' },
+  { id: 10, title: 'Frontend Developer', department: 'Marketing', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '28 Aug 2025', closingDate: '05 Sep 2027', hiringManager: 'Abdullah Al Falasi', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=41', applicants: '32', status: 'Closed' },
+])
 
 // ========== OVERVIEW EMPLOYEES (from API data) ==========
 const overviewEmployees = computed(() => {
@@ -1792,9 +2931,24 @@ const supervisorOptions = computed(() => {
 const branchOptions = ['Dubai HQ', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Saadiyat', 'Reem', 'Main']
 const nationalityOptions = ['UAE', 'Egypt', 'India', 'Pakistan', 'Morocco', 'Jordan', 'Philippines']
 const salaryTypeOptions = ['Daily', 'Monthly', 'Yearly']
+const maritalStatusOptions = ['Single', 'Married', 'Divorced', 'Widowed']
 const bankNameOptions = ['Emirates NBD', 'ADCB', 'Mashreq', 'FAB', 'RAKBANK']
 const policyTypeOptions = ['Basic Health', 'Standard Health', 'Premium Health', 'Life Insurance']
-const employeeDocumentTypes = ['Emirates ID', 'Labor Card', 'Passport', 'Visa', 'Attested Certificates']
+const employeeDocumentTypes = [
+  'Emirates ID',
+  'Labor Card',
+  'Passport',
+  'Visa',
+  'Passport Photo',
+  'Insurance Card',
+  'Broker License',
+  'ILOE Certificate',
+  'Company Stamp',
+  'Labor Contract',
+  'Job Offer Latter',
+  'Signature',
+  'Attested Certificates',
+]
 const statusOptions = ['Active', 'In Active', 'Blocked']
 const leaveTypeOptions = [
   'Annual Leave (Paid Leave)',
@@ -1810,6 +2964,8 @@ const leaveTypeOptions = [
 ]
 const leaveTypeFilterOptions = ['Annual', 'Sick', 'Casual', 'Maternity', 'Paternity']
 const leaveStatusOptions = ['Approved', 'Pending', 'Rejected']
+const announcementBranchOptions = ['All', 'Abu Dhabi', 'Dubai']
+const announcementDepartmentOptions = ['All', 'Marketing', 'HR Department', 'Finance', 'Operations', 'Sales']
 const leaveSearchChips = ['Approved', 'Pending', 'Rejected']
 const selectedLeaveSearchChip = ref('Rejected')
 const defaultLeaveSearchFilters = () => ({
@@ -1819,6 +2975,28 @@ const defaultLeaveSearchFilters = () => ({
   status: '',
 })
 const leaveSearchFilters = ref(defaultLeaveSearchFilters())
+const attendanceSearchChips = ['Present', 'Absent', 'Late', 'Half Day']
+const selectedAttendanceSearchChip = ref('Late')
+const attendanceTypeOptions = ['Present', 'Absent', 'Late', 'Half Day']
+const attendanceStatusOptions = ['Present', 'Absent', 'Late', 'Half Day']
+const attendanceCreateTypeOptions = ['Visit', 'Office', 'Call', 'Work From Home', 'Out Of Office', 'Official Deputation', 'Paid Time Off', 'Remote Work']
+const attendanceBreakOptions = ['0 Mnts', '30 Mnts', '1 hr', '1 hr 30 mnts', '2 hr 30 mnts']
+const attendanceOtOptions = ['0 Mnts', '30 Mnts', '1 hr', '1 hr 30 mnts', '2 hr']
+const defaultAttendanceSearchFilters = () => ({
+  employee: '',
+  attendanceDate: '',
+  type: '',
+  status: '',
+})
+const attendanceSearchFilters = ref(defaultAttendanceSearchFilters())
+const attendanceSearchSummary = computed(() => {
+  const active = []
+  if (attendanceSearchFilters.value.employee) active.push('Employee')
+  if (attendanceSearchFilters.value.attendanceDate) active.push('Date')
+  if (attendanceSearchFilters.value.type) active.push('Type')
+  if (attendanceSearchFilters.value.status) active.push('Status')
+  return active.length ? `Filter Attendance (${active.length})` : 'Filter and search Attendance'
+})
 const defaultApplyLeaveForm = () => ({
   employee: '',
   leaveType: '',
@@ -1828,6 +3006,33 @@ const defaultApplyLeaveForm = () => ({
 })
 const applyLeaveForm = ref(defaultApplyLeaveForm())
 const applyLeaveAttachment = ref(null)
+const defaultAnnouncementForm = () => ({
+  title: '',
+  branch: '',
+  department: '',
+  startDate: '',
+  endDate: '',
+  description: '',
+})
+const announcementForm = ref(defaultAnnouncementForm())
+const announcementSearchFilters = ref({
+  title: '',
+  branch: '',
+  department: '',
+})
+const defaultCreateAttendanceForm = () => ({
+  employee: '',
+  type: '',
+  status: '',
+  date: '',
+  checkIn: '',
+  checkOut: '',
+  breakLabel: '',
+  otLabel: '',
+  description: '',
+})
+const createAttendanceForm = ref(defaultCreateAttendanceForm())
+const createAttendanceAttachment = ref(null)
 const applyLeaveEmployeeOptions = computed(() =>
   employeesDirectory.value.map((employee) => `#${employee.employee_code} ${employee.name}`),
 )
@@ -1836,7 +3041,15 @@ const applyLeaveEmployeeOptions = computed(() =>
 const leaveRows = ref([
   { id: 1, empId: '#EMPO01', employeeName: 'Maria Guan', avatar: 'https://i.pravatar.cc/80?img=47', designation: 'Senior Accountant', leaveType: 'Annual', startDate: '05 Feb 2026', endDate: '05 Feb 2026', days: '25', reason: 'Family Trip', appliedDate: '15 Jan 2026', status: 'Approved', approvedBy: 'HR Manager' },
   { id: 2, empId: '#EMPO02', employeeName: 'Ahmad Al Daghash', avatar: 'https://i.pravatar.cc/80?img=12', designation: 'UI/UX Designer', leaveType: 'Sick', startDate: '10 Feb 2026', endDate: '11 Feb 2026', days: '02', reason: 'Fever', appliedDate: '10 Feb 2026', status: 'Approved', approvedBy: 'HR Manager' },
+  { id: 3, empId: '#EMPO03', employeeName: 'Adeel Malik', avatar: 'https://i.pravatar.cc/80?img=33', designation: 'Sales Executive', leaveType: 'Casual', startDate: '21 Apr 2026', endDate: '21 Apr 2026', days: '01', reason: 'Personal Errand', appliedDate: '19 Apr 2026', status: 'Rejected', approvedBy: '--' },
 ])
+const announcementRows = ref([
+  { id: 1, title: 'National Day Holiday Notification', startDate: '01 Feb 2026', endDate: '04 Feb 2026', branch: 'All', department: 'All', description: 'Dear Team, As we approach the celebration of UAE National Day, we would like to inform you of the upcoming holiday schedule.' },
+  { id: 2, title: 'Ramadan Working Hours', startDate: '05 Apr 2026', endDate: '--', branch: 'Abu Dhabi', department: 'All', description: 'Dear Team, We hope you are doing well. In the month of Ramadan, our working hours will be from 9:00 AM to 4:00 PM.' },
+  { id: 3, title: 'Eid Holidays', startDate: '01 Mar 2026', endDate: '03 Mar 2026', branch: 'Abu Dhabi', department: 'All', description: 'Dear Team, We hope you are doing well. If you have any queries, kindly reach out to the HR Department.' },
+])
+const announcementsPage = ref(1)
+const announcementsPerPage = 10
 
 // ========== ASSETS ROWS ==========
 const assetsRows = ref([
@@ -1848,16 +3061,34 @@ const defaultAddEmployeeForm = () => ({
   full_name: '',
   nationality: '',
   phone: '',
+  home_country_phone_number: '',
   salary_type: '',
   email: '',
+  address_inside_uae: '',
+  address_outside_uae: '',
   salary: '',
+  father_name: '',
+  mother_name: '',
+  marital_status: '',
+  religion: '',
+  emergency_contact_name: '',
+  emergency_email: '',
+  emergency_phone_number: '',
   branch: '',
   designation: '',
   department: '',
   supervisor: '',
+  user_type: '',
+  probation_end_date: '',
   joining_date: '',
   visa_validity: '',
+  sponsor: '',
+  contract_joining_date: '',
+  visa_quota: '',
+  gratuity_termination: '',
+  vehicle: '',
   emirates_id_number: '',
+  documents_expiry_date: '',
   account_holder_name: '',
   bank_name: '',
   branch_location: '',
@@ -1919,10 +3150,15 @@ function getFieldValueByPath(path) {
   if (path === 'employeeFilters.visaValidity') return employeeFilters.value.visaValidity
   if (path === 'addEmployeeForm.joining_date') return addEmployeeForm.value.joining_date
   if (path === 'addEmployeeForm.visa_validity') return addEmployeeForm.value.visa_validity
+  if (path === 'addEmployeeForm.probation_end_date') return addEmployeeForm.value.probation_end_date
+  if (path === 'addEmployeeForm.contract_joining_date') return addEmployeeForm.value.contract_joining_date
+  if (path === 'addEmployeeForm.gratuity_termination') return addEmployeeForm.value.gratuity_termination
+  if (path === 'addEmployeeForm.documents_expiry_date') return addEmployeeForm.value.documents_expiry_date
   if (path === 'addEmployeeForm.insurance_start_date') return addEmployeeForm.value.insurance_start_date
   if (path === 'addEmployeeForm.insurance_expiry_date') return addEmployeeForm.value.insurance_expiry_date
   if (path === 'sectionEditForm.joiningDate') return sectionEditForm.value.joiningDate
   if (path === 'sectionEditForm.visaValidity') return sectionEditForm.value.visaValidity
+  if (path === 'sectionEditForm.dob') return sectionEditForm.value.dob
   if (path === 'sectionEditForm.insurance_start_date') return sectionEditForm.value.insurance_start_date
   if (path === 'sectionEditForm.insurance_expiry_date') return sectionEditForm.value.insurance_expiry_date
   if (path === 'assetSearchFilters.createdOn') return assetSearchFilters.value.createdOn
@@ -1931,9 +3167,20 @@ function getFieldValueByPath(path) {
   if (path === 'assetCreateForm.returnDate') return assetCreateForm.value.returnDate
   if (path === 'assetCreateForm.purchaseDate') return assetCreateForm.value.purchaseDate
   if (path === 'assetCreateForm.warrantyDate') return assetCreateForm.value.warrantyDate
+  if (path === 'assetEditForm.handoverDate') return assetEditForm.value.handoverDate
+  if (path === 'assetEditForm.returnDate') return assetEditForm.value.returnDate
+  if (path === 'assetEditForm.purchaseDate') return assetEditForm.value.purchaseDate
+  if (path === 'assetEditForm.warrantyDate') return assetEditForm.value.warrantyDate
   if (path === 'applyLeaveForm.startDate') return applyLeaveForm.value.startDate
   if (path === 'applyLeaveForm.endDate') return applyLeaveForm.value.endDate
+  if (path === 'announcementForm.startDate') return announcementForm.value.startDate
+  if (path === 'announcementForm.endDate') return announcementForm.value.endDate
+  if (path === 'createAttendanceForm.date') return createAttendanceForm.value.date
   if (path === 'leaveSearchFilters.appliedDate') return leaveSearchFilters.value.appliedDate
+  if (path === 'attendanceSearchFilters.attendanceDate') return attendanceSearchFilters.value.attendanceDate
+  if (path === 'attendanceEditForm.date') return attendanceEditForm.value.date
+  if (path === 'careerSearchFilters.postedDate') return careerSearchFilters.value.postedDate
+  if (path === 'careerSearchFilters.closingDate') return careerSearchFilters.value.closingDate
   return ''
 }
 
@@ -1943,10 +3190,15 @@ function setFieldValueByPath(path, value) {
   else if (path === 'employeeFilters.visaValidity') employeeFilters.value.visaValidity = value
   else if (path === 'addEmployeeForm.joining_date') addEmployeeForm.value.joining_date = value
   else if (path === 'addEmployeeForm.visa_validity') addEmployeeForm.value.visa_validity = value
+  else if (path === 'addEmployeeForm.probation_end_date') addEmployeeForm.value.probation_end_date = value
+  else if (path === 'addEmployeeForm.contract_joining_date') addEmployeeForm.value.contract_joining_date = value
+  else if (path === 'addEmployeeForm.gratuity_termination') addEmployeeForm.value.gratuity_termination = value
+  else if (path === 'addEmployeeForm.documents_expiry_date') addEmployeeForm.value.documents_expiry_date = value
   else if (path === 'addEmployeeForm.insurance_start_date') addEmployeeForm.value.insurance_start_date = value
   else if (path === 'addEmployeeForm.insurance_expiry_date') addEmployeeForm.value.insurance_expiry_date = value
   else if (path === 'sectionEditForm.joiningDate') sectionEditForm.value.joiningDate = value
   else if (path === 'sectionEditForm.visaValidity') sectionEditForm.value.visaValidity = value
+  else if (path === 'sectionEditForm.dob') sectionEditForm.value.dob = value
   else if (path === 'sectionEditForm.insurance_start_date') sectionEditForm.value.insurance_start_date = value
   else if (path === 'sectionEditForm.insurance_expiry_date') sectionEditForm.value.insurance_expiry_date = value
   else if (path === 'assetSearchFilters.createdOn') assetSearchFilters.value.createdOn = value
@@ -1955,9 +3207,20 @@ function setFieldValueByPath(path, value) {
   else if (path === 'assetCreateForm.returnDate') assetCreateForm.value.returnDate = value
   else if (path === 'assetCreateForm.purchaseDate') assetCreateForm.value.purchaseDate = value
   else if (path === 'assetCreateForm.warrantyDate') assetCreateForm.value.warrantyDate = value
+  else if (path === 'assetEditForm.handoverDate') assetEditForm.value.handoverDate = value
+  else if (path === 'assetEditForm.returnDate') assetEditForm.value.returnDate = value
+  else if (path === 'assetEditForm.purchaseDate') assetEditForm.value.purchaseDate = value
+  else if (path === 'assetEditForm.warrantyDate') assetEditForm.value.warrantyDate = value
   else if (path === 'applyLeaveForm.startDate') applyLeaveForm.value.startDate = value
   else if (path === 'applyLeaveForm.endDate') applyLeaveForm.value.endDate = value
+  else if (path === 'announcementForm.startDate') announcementForm.value.startDate = value
+  else if (path === 'announcementForm.endDate') announcementForm.value.endDate = value
+  else if (path === 'createAttendanceForm.date') createAttendanceForm.value.date = value
   else if (path === 'leaveSearchFilters.appliedDate') leaveSearchFilters.value.appliedDate = value
+  else if (path === 'attendanceSearchFilters.attendanceDate') attendanceSearchFilters.value.attendanceDate = value
+  else if (path === 'attendanceEditForm.date') attendanceEditForm.value.date = value
+  else if (path === 'careerSearchFilters.postedDate') careerSearchFilters.value.postedDate = value
+  else if (path === 'careerSearchFilters.closingDate') careerSearchFilters.value.closingDate = value
 }
 
 function openDatePicker(path) {
@@ -2064,6 +3327,77 @@ const leavePaginationItems = computed(() => {
   return items
 })
 
+const filteredAnnouncementRows = computed(() => {
+  const f = announcementSearchFilters.value
+  return announcementRows.value.filter((row) => {
+    if (f.title && !String(row.title || '').toLowerCase().includes(String(f.title).toLowerCase())) return false
+    if (f.branch && String(row.branch || '').toLowerCase() !== String(f.branch).toLowerCase()) return false
+    if (f.department && String(row.department || '').toLowerCase() !== String(f.department).toLowerCase()) return false
+    return true
+  })
+})
+const announcementsTotalPages = computed(() => Math.max(1, Math.ceil(filteredAnnouncementRows.value.length / announcementsPerPage)))
+const pagedAnnouncementRows = computed(() => {
+  const start = (announcementsPage.value - 1) * announcementsPerPage
+  return filteredAnnouncementRows.value.slice(start, start + announcementsPerPage)
+})
+const announcementsStartEntry = computed(() => (filteredAnnouncementRows.value.length ? (announcementsPage.value - 1) * announcementsPerPage + 1 : 0))
+const announcementsEndEntry = computed(() => Math.min(announcementsPage.value * announcementsPerPage, filteredAnnouncementRows.value.length))
+const announcementsPaginationItems = computed(() => {
+  const total = announcementsTotalPages.value
+  const current = announcementsPage.value
+  if (total <= 1) return [{ type: 'page', n: 1 }]
+  if (total <= 7) return Array.from({ length: total }, (_, i) => ({ type: 'page', n: i + 1 }))
+  const items = []
+  const pushDots = () => {
+    if (items.length && items[items.length - 1].type === 'dots') return
+    items.push({ type: 'dots' })
+  }
+  items.push({ type: 'page', n: 1 })
+  const left = Math.max(2, current - 1)
+  const right = Math.min(total - 1, current + 1)
+  if (left > 2) pushDots()
+  for (let i = left; i <= right; i += 1) items.push({ type: 'page', n: i })
+  if (right < total - 1) pushDots()
+  items.push({ type: 'page', n: total })
+  return items
+})
+
+const filteredCareerRows = computed(() => {
+  const keyword = careerSearchKeyword.value.trim().toLowerCase()
+  if (!keyword) return careerRows.value
+  return careerRows.value.filter((row) =>
+    [row.title, row.department, row.branch, row.type, row.postedDate]
+      .some((v) => String(v || '').toLowerCase().includes(keyword)),
+  )
+})
+const careerTotalPages = computed(() => Math.max(1, Math.ceil(filteredCareerRows.value.length / careerPerPage)))
+const pagedCareerRows = computed(() => {
+  const start = (careerPage.value - 1) * careerPerPage
+  return filteredCareerRows.value.slice(start, start + careerPerPage)
+})
+const careerStartEntry = computed(() => (filteredCareerRows.value.length ? (careerPage.value - 1) * careerPerPage + 1 : 0))
+const careerEndEntry = computed(() => Math.min(careerPage.value * careerPerPage, filteredCareerRows.value.length))
+const careerPaginationItems = computed(() => {
+  const total = careerTotalPages.value
+  const current = careerPage.value
+  if (total <= 1) return [{ type: 'page', n: 1 }]
+  if (total <= 7) return Array.from({ length: total }, (_, i) => ({ type: 'page', n: i + 1 }))
+  const items = []
+  const pushDots = () => {
+    if (items.length && items[items.length - 1].type === 'dots') return
+    items.push({ type: 'dots' })
+  }
+  items.push({ type: 'page', n: 1 })
+  const left = Math.max(2, current - 1)
+  const right = Math.min(total - 1, current + 1)
+  if (left > 2) pushDots()
+  for (let i = left; i <= right; i += 1) items.push({ type: 'page', n: i })
+  if (right < total - 1) pushDots()
+  items.push({ type: 'page', n: total })
+  return items
+})
+
 const assetSearchSummary = computed(() => {
   const f = assetSearchFilters.value
   if (f.assetName) return `Search: ${f.assetName}`
@@ -2142,6 +3476,19 @@ const paginationItems = computed(() => {
   return items
 })
 
+const attendanceEditDuration = computed(() => {
+  if (!attendanceEditForm.value.checkIn || !attendanceEditForm.value.checkOut) return '--'
+  const inParts = attendanceEditForm.value.checkIn.split(':').map(Number)
+  const outParts = attendanceEditForm.value.checkOut.split(':').map(Number)
+  if (inParts.length < 2 || outParts.length < 2) return '--'
+  const start = (inParts[0] * 60) + inParts[1]
+  const end = (outParts[0] * 60) + outParts[1]
+  const diff = Math.max(0, end - start)
+  const hours = Math.floor(diff / 60)
+  const minutes = diff % 60
+  return `${hours}h ${minutes}m`
+})
+
 watch(searchKeyword, () => {
   page.value = 1
 })
@@ -2168,6 +3515,18 @@ watch([selectedLeaveSearchChip, () => leaveSearchFilters.value.employee, () => l
 
 watch(leaveTotalPages, (tp) => {
   if (leavePage.value > tp) leavePage.value = tp
+})
+
+watch(announcementsTotalPages, (tp) => {
+  if (announcementsPage.value > tp) announcementsPage.value = tp
+})
+
+watch(careerSearchKeyword, () => {
+  careerPage.value = 1
+})
+
+watch(careerTotalPages, (tp) => {
+  if (careerPage.value > tp) careerPage.value = tp
 })
 
 const chartOptions = computed(() => ({
@@ -2264,8 +3623,135 @@ function formatOtDisplay(row) {
   return `${h} hr ${r} M`
 }
 
-function openEdit(row) {
-  editingRow.value = row
+function attendanceRowKey(row) {
+  return `${row.employee_id}-${row.date}`
+}
+
+function toTimeInputValue(value) {
+  if (!value) return ''
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    const hhmmMatch = trimmed.match(/^([01]?\d|2[0-3]):([0-5]\d)$/)
+    if (hhmmMatch) return `${String(hhmmMatch[1]).padStart(2, '0')}:${hhmmMatch[2]}`
+    const ampmMatch = trimmed.match(/^(\d{1,2}):([0-5]\d)\s*([AaPp][Mm])$/)
+    if (ampmMatch) {
+      let hour = Number(ampmMatch[1])
+      const minute = ampmMatch[2]
+      const suffix = ampmMatch[3].toUpperCase()
+      if (suffix === 'PM' && hour < 12) hour += 12
+      if (suffix === 'AM' && hour === 12) hour = 0
+      return `${String(hour).padStart(2, '0')}:${minute}`
+    }
+  }
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${hh}:${mm}`
+}
+
+function resolveAttendanceDate(row) {
+  if (row?.date) return row.date
+  if (row?.attendance_date) return row.attendance_date
+  if (row?.check_in) return String(row.check_in).slice(0, 10)
+  if (row?.check_out) return String(row.check_out).slice(0, 10)
+  return ''
+}
+
+function populateAttendanceEditForm(row) {
+  const resolvedDate = resolveAttendanceDate(row)
+  attendanceEditForm.value = {
+    date: resolvedDate,
+    checkIn: toTimeInputValue(row?.check_in),
+    checkOut: toTimeInputValue(row?.check_out),
+    status: row?.status || '',
+    breakLabel: formatBreakDisplay(row || {}),
+    otLabel: formatOtDisplay(row || {}),
+    description: '',
+  }
+}
+
+function withTime(dateIso, timeValue, fallbackDateTime) {
+  if (!timeValue) return fallbackDateTime || null
+  const base = dateIso || (fallbackDateTime ? String(fallbackDateTime).slice(0, 10) : '')
+  if (!base) return fallbackDateTime || null
+  return `${base}T${timeValue}:00`
+}
+
+function toggleAttendanceRowMenu(id, row, event) {
+  if (openAttendanceRowMenuId.value === id) {
+    openAttendanceRowMenuId.value = null
+    return
+  }
+  const rect = event?.currentTarget?.getBoundingClientRect?.()
+  if (rect) {
+    const menuWidth = 260
+    const menuHeight = 170
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight
+    const spaceBelow = viewportHeight - rect.bottom
+    const shouldOpenUp = spaceBelow < menuHeight + 12
+    const top = shouldOpenUp
+      ? Math.max(12, rect.top - menuHeight - 6)
+      : Math.min(viewportHeight - menuHeight - 12, rect.bottom + 4)
+    const left = Math.min(
+      viewportWidth - menuWidth - 12,
+      Math.max(12, rect.right - menuWidth + 4),
+    )
+    attendanceRowMenuStyle.value = {
+      top: `${top}px`,
+      left: `${left}px`,
+    }
+  }
+  selectedAttendanceRow.value = row
+  openAttendanceRowMenuId.value = id
+}
+
+function openAttendanceDetails(row) {
+  selectedAttendanceRow.value = row
+  attendanceDetailMode.value = 'view'
+  showAttendanceDetailModal.value = true
+  openAttendanceRowMenuId.value = null
+}
+
+function openAttendanceEdit(row) {
+  selectedAttendanceRow.value = row
+  populateAttendanceEditForm(row)
+  attendanceDetailMode.value = 'edit'
+  showAttendanceDetailModal.value = true
+  openAttendanceRowMenuId.value = null
+}
+
+function switchAttendanceDetailToEdit() {
+  if (selectedAttendanceRow.value) {
+    populateAttendanceEditForm(selectedAttendanceRow.value)
+  }
+  attendanceDetailMode.value = 'edit'
+}
+
+function closeAttendanceDetailModal() {
+  showAttendanceDetailModal.value = false
+  attendanceDetailMode.value = 'view'
+}
+
+function saveAttendanceEdit() {
+  if (!selectedAttendanceRow.value) return
+  const targetKey = attendanceRowKey(selectedAttendanceRow.value)
+  employees.value = employees.value.map((row) => {
+    if (attendanceRowKey(row) !== targetKey) return row
+    return {
+      ...row,
+      date: attendanceEditForm.value.date || row.date,
+      status: (attendanceEditForm.value.status || row.status || '').toLowerCase(),
+      check_in: withTime(attendanceEditForm.value.date || row.date, attendanceEditForm.value.checkIn, row.check_in),
+      check_out: withTime(attendanceEditForm.value.date || row.date, attendanceEditForm.value.checkOut, row.check_out),
+      break_label: attendanceEditForm.value.breakLabel || row.break_label,
+      ot_label: attendanceEditForm.value.otLabel || row.ot_label,
+    }
+  })
+  selectedAttendanceRow.value = employees.value.find((row) => attendanceRowKey(row) === targetKey) || null
+  showAttendanceDetailModal.value = false
+  attendanceDetailMode.value = 'view'
 }
 
 async function onAttendanceDateChange() {
@@ -2346,6 +3832,11 @@ function onHeaderMenuSelect(tab, item) {
     else if (item === 'Attendance Management') leaveSectionMode.value = 'attendance'
     else leaveSectionMode.value = 'announcements'
   }
+  if (tab === 'Career') {
+    if (item === 'Manage Recruitments') careerSectionMode.value = 'manage-recruitments'
+    else if (item === 'Interviews') careerSectionMode.value = 'interviews'
+    else careerSectionMode.value = 'career-lists'
+  }
   openHeaderMenu.value = null
 }
 
@@ -2382,9 +3873,15 @@ function onDocumentClick(event) {
   if (assetUserPickerRef.value && !assetUserPickerRef.value.contains(event.target)) {
     closeAssetUserPicker()
   }
+  if (assetUserEditPickerRef.value && !assetUserEditPickerRef.value.contains(event.target)) {
+    closeAssetUserEditPicker()
+  }
   openEmployeeRowMenuId.value = null
   openAssetRowMenuId.value = null
   openLeaveRowMenuId.value = null
+  openAttendanceRowMenuId.value = null
+  openAnnouncementRowMenuId.value = null
+  openCareerRowMenuId.value = null
 }
 
 function toggleEmployeeRowMenu(id, event) {
@@ -2550,6 +4047,208 @@ function applyLeaveSearchFilters() {
   showLeaveSearchModal.value = false
 }
 
+function toggleAnnouncementRowMenu(id, event) {
+  if (openAnnouncementRowMenuId.value === id) {
+    openAnnouncementRowMenuId.value = null
+    return
+  }
+  const rect = event?.currentTarget?.getBoundingClientRect?.()
+  if (rect) {
+    const menuWidth = 260
+    const menuHeight = 126
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight
+    const spaceBelow = viewportHeight - rect.bottom
+    const shouldOpenUp = spaceBelow < menuHeight + 12
+    const top = shouldOpenUp
+      ? Math.max(12, rect.top - menuHeight - 8)
+      : Math.min(viewportHeight - menuHeight - 12, rect.bottom + 8)
+    const left = Math.min(
+      viewportWidth - menuWidth - 12,
+      Math.max(12, rect.right - menuWidth + 10),
+    )
+    announcementRowMenuStyle.value = {
+      top: `${top}px`,
+      left: `${left}px`,
+    }
+  }
+  openAnnouncementRowMenuId.value = id
+}
+
+function openAnnouncementModalForCreate() {
+  editingAnnouncementId.value = null
+  announcementForm.value = defaultAnnouncementForm()
+  showAnnouncementModal.value = true
+}
+
+function openEditAnnouncement(item) {
+  editingAnnouncementId.value = item.id
+  announcementForm.value = {
+    title: item.title || '',
+    branch: item.branch || '',
+    department: item.department || '',
+    startDate: normalizeDateInput(item.startDate),
+    endDate: normalizeDateInput(item.endDate),
+    description: item.description || '',
+  }
+  showAnnouncementModal.value = true
+  openAnnouncementRowMenuId.value = null
+}
+
+function closeAnnouncementModal() {
+  showAnnouncementModal.value = false
+}
+
+function clearAnnouncementForm() {
+  announcementForm.value = defaultAnnouncementForm()
+}
+
+function saveAnnouncement() {
+  const payload = {
+    title: announcementForm.value.title || 'Untitled Announcement',
+    startDate: formatDate(announcementForm.value.startDate) || '--',
+    endDate: formatDate(announcementForm.value.endDate) || '--',
+    branch: announcementForm.value.branch || 'All',
+    department: announcementForm.value.department || 'All',
+    description: announcementForm.value.description || '--',
+  }
+  if (editingAnnouncementId.value) {
+    announcementRows.value = announcementRows.value.map((item) =>
+      item.id === editingAnnouncementId.value ? { ...item, ...payload } : item,
+    )
+  } else {
+    const nextId = announcementRows.value.length ? Math.max(...announcementRows.value.map((item) => Number(item.id) || 0)) + 1 : 1
+    announcementRows.value.unshift({ id: nextId, ...payload })
+    announcementsPage.value = 1
+  }
+  showAnnouncementModal.value = false
+  editingAnnouncementId.value = null
+}
+
+function deleteAnnouncement(item) {
+  announcementRows.value = announcementRows.value.filter((row) => row.id !== item.id)
+  openAnnouncementRowMenuId.value = null
+}
+
+function applyAnnouncementSearchFilters() {
+  announcementsPage.value = 1
+  showAnnouncementSearchModal.value = false
+}
+
+function resetAnnouncementSearchFilters() {
+  announcementSearchFilters.value = {
+    title: '',
+    branch: '',
+    department: '',
+  }
+  announcementsPage.value = 1
+}
+
+function exportAnnouncements() {
+  const headers = ['Title', 'Start Date', 'End Date', 'Branch', 'Department', 'Description']
+  const rows = filteredAnnouncementRows.value.map((row) => [
+    row.title,
+    row.startDate,
+    row.endDate,
+    row.branch,
+    row.department,
+    row.description,
+  ])
+  const csv = [headers, ...rows]
+    .map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `announcements-${new Date().toISOString().slice(0, 10)}.csv`
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
+function toggleCareerRowMenu(id, event) {
+  if (openCareerRowMenuId.value === id) {
+    openCareerRowMenuId.value = null
+    return
+  }
+  const rect = event?.currentTarget?.getBoundingClientRect?.()
+  if (rect) {
+    const menuWidth = 230
+    const menuHeight = 110
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight
+    const spaceBelow = viewportHeight - rect.bottom
+    const shouldOpenUp = spaceBelow < menuHeight + 12
+    const top = shouldOpenUp
+      ? Math.max(12, rect.top - menuHeight - 8)
+      : Math.min(viewportHeight - menuHeight - 12, rect.bottom + 8)
+    const left = Math.min(
+      viewportWidth - menuWidth - 12,
+      Math.max(12, rect.right - menuWidth + 10),
+    )
+    careerRowMenuStyle.value = {
+      top: `${top}px`,
+      left: `${left}px`,
+    }
+  }
+  openCareerRowMenuId.value = id
+}
+
+function exportCareerJobs() {
+  const headers = ['Job Tittle', 'Department', 'Branch', 'Type', 'Openings', 'Posted Date', 'Closing Date', 'Hiring Manager', 'Applicants', 'Status']
+  const rows = filteredCareerRows.value.map((row) => [
+    row.title,
+    row.department,
+    row.branch,
+    row.type,
+    row.openings,
+    row.postedDate,
+    row.closingDate,
+    row.hiringManager,
+    row.applicants,
+    row.status,
+  ])
+  const csv = [headers, ...rows]
+    .map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `career-jobs-${new Date().toISOString().slice(0, 10)}.csv`
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
+function resetAttendanceSearchFilters() {
+  attendanceSearchFilters.value = defaultAttendanceSearchFilters()
+  selectedAttendanceSearchChip.value = 'Late'
+  searchKeyword.value = ''
+}
+
+function applyAttendanceSearchFilters() {
+  const employeeLabel = String(attendanceSearchFilters.value.employee || '').trim()
+  const statusLabel = String(attendanceSearchFilters.value.status || '').trim()
+  searchKeyword.value = employeeLabel || statusLabel || ''
+  page.value = 1
+  showAttendanceSearchModal.value = false
+}
+function resetCareerSearchFilters() {
+  careerSearchFilters.value = {
+    jobTitle: '',
+    postedDate: '',
+    closingDate: '',
+    department: '',
+    type: '',
+    status: '',
+  }
+  selectedCareerFilterChip.value = 'Marketing'
+}
+
+function applyCareerSearchFilters() {
+  // for now: just close modal; filtering step comes next
+  showCareerSearchModal.value = false
+  careerPage.value = 1
+}
+
 function exportLeaves() {
   const headers = ['EMP ID', 'Employee Name', 'Leave Type', 'Start Date', 'End Date', 'Days', 'Reason', 'Applied Date', 'Status', 'Approved By']
   const rows = filteredLeaveRows.value.map((row) => [
@@ -2579,16 +4278,26 @@ function openEditAsset(asset) {
   editingAssetId.value = asset.id
   assetEditForm.value = {
     assetId: asset.assetId || '',
-    type: asset.type || '',
+    assetType: asset.type || '',
     assetName: asset.assetName || '',
-    userName: asset.userName || '',
-    userRef: asset.userRef || '',
+    serialNumber: asset.serial || '',
+    modelNumber: asset.brand || '',
+    rdpNumber: '',
+    remarks: '',
+    description: '',
+    assetUser: null,
     handoverDate: asset.handoverDate || '',
-    brand: asset.brand || '',
-    category: asset.category || '',
-    handoverTo: asset.handoverTo || '',
-    serial: asset.serial || '',
+    returnDate: asset.returnDate || '',
+    branchLocation: asset.branchLocation || '',
+    department: asset.department || '',
     status: asset.status || '',
+    purchaseDate: asset.purchaseDate || '',
+    supplierName: asset.supplierName || '',
+    warrantyDate: '',
+    condition: asset.condition || '',
+    unitPrice: asset.unitPrice || '',
+    currency: asset.currency || 'UAE Dirham',
+    qty: Number(asset.qty) || 1,
   }
   showAssetEditModal.value = true
   openAssetRowMenuId.value = null
@@ -2658,6 +4367,40 @@ function handleAssetResponsiblePersonSelected(person) {
   }
 }
 
+function closeAssetUserEditPicker() {
+  showAssetUserEditPicker.value = false
+  assetUserEditSearchQuery.value = ''
+}
+
+async function toggleAssetUserEditPicker() {
+  if (!showAssetUserEditPicker.value) {
+    await fetchAssetResponsiblePersons()
+  }
+  showAssetUserEditPicker.value = !showAssetUserEditPicker.value
+}
+
+function selectAssetEditResponsiblePerson(person) {
+  assetEditForm.value.assetUser = Number(person.id)
+  if (!assetEditForm.value.department && person.department_name) {
+    assetEditForm.value.department = person.department_name
+  }
+  if (!assetEditForm.value.branchLocation) {
+    assetEditForm.value.branchLocation =
+      person.branch_name || person.branch?.name || person.office_name || person.office?.name || ''
+  }
+  closeAssetUserEditPicker()
+}
+
+function decrementAssetEditQty() {
+  const current = Number(assetEditForm.value.qty) || 1
+  assetEditForm.value.qty = Math.max(1, current - 1)
+}
+
+function incrementAssetEditQty() {
+  const current = Number(assetEditForm.value.qty) || 1
+  assetEditForm.value.qty = current + 1
+}
+
 async function fetchAssetResponsiblePersons() {
   if (assetResponsiblePersons.value.length) return
   try {
@@ -2719,6 +4462,11 @@ function resetApplyLeaveForm() {
   applyLeaveAttachment.value = null
 }
 
+function cancelApplyLeave() {
+  closeApplyLeaveModal()
+  resetApplyLeaveForm()
+}
+
 function handleApplyLeaveFileChange(event) {
   const file = event?.target?.files?.[0]
   if (!file) return
@@ -2749,9 +4497,84 @@ function submitApplyLeave() {
   resetApplyLeaveForm()
 }
 
+function openLeaveAttendancePrimaryAction() {
+  if (leaveSectionMode.value === 'attendance') {
+    createAttendanceForm.value.date = dateFilter.value || createAttendanceForm.value.date
+    showCreateAttendanceModal.value = true
+    return
+  }
+  if (leaveSectionMode.value === 'announcements') {
+    openAnnouncementModalForCreate()
+    return
+  }
+  showApplyLeaveModal.value = true
+}
+
+function closeCreateAttendanceModal() {
+  showCreateAttendanceModal.value = false
+}
+
+function resetCreateAttendanceForm() {
+  createAttendanceForm.value = defaultCreateAttendanceForm()
+  createAttendanceAttachment.value = null
+  createAttendanceForm.value.date = dateFilter.value || ''
+}
+
+function cancelCreateAttendance() {
+  closeCreateAttendanceModal()
+  resetCreateAttendanceForm()
+}
+
+function handleCreateAttendanceFileChange(event) {
+  const file = event?.target?.files?.[0]
+  if (!file) return
+  createAttendanceAttachment.value = file
+}
+
+function removeCreateAttendanceFile() {
+  createAttendanceAttachment.value = null
+}
+
+function refreshAttendanceSummaryFromRows() {
+  const rows = Array.isArray(employees.value) ? employees.value : []
+  summary.value = {
+    total_employees: rows.length,
+    present_today: rows.filter((e) => String(e.status || '').toLowerCase() === 'present').length,
+    absent_today: rows.filter((e) => String(e.status || '').toLowerCase() === 'absent').length,
+    late_today: rows.filter((e) => String(e.status || '').toLowerCase() === 'late').length,
+  }
+}
+
+function submitCreateAttendance() {
+  const selectedEmployeeText = String(createAttendanceForm.value.employee || '')
+  const employeeCodeMatch = selectedEmployeeText.match(/^#?([^ ]+)\s+/)
+  const employeeName = selectedEmployeeText.replace(/^#?[^ ]+\s+/, '').trim() || 'Unknown'
+  const linkedEmployee = employeesDirectory.value.find((emp) => `#${emp.employee_code} ${emp.name}` === selectedEmployeeText)
+  const employeeId = linkedEmployee?.id || Number(employeeCodeMatch?.[1]?.replace(/\D/g, '')) || Date.now()
+  const baseDate = createAttendanceForm.value.date || dateFilter.value || new Date().toISOString().slice(0, 10)
+
+  const newRow = {
+    employee_id: employeeId,
+    employee_name: linkedEmployee?.name || employeeName,
+    status: String(createAttendanceForm.value.status || 'present').toLowerCase(),
+    date: baseDate,
+    check_in: withTime(baseDate, createAttendanceForm.value.checkIn, null),
+    check_out: withTime(baseDate, createAttendanceForm.value.checkOut, null),
+    break_label: createAttendanceForm.value.breakLabel || null,
+    ot_label: createAttendanceForm.value.otLabel || null,
+  }
+
+  employees.value = [newRow, ...employees.value]
+  page.value = 1
+  refreshAttendanceSummaryFromRows()
+  closeCreateAttendanceModal()
+  resetCreateAttendanceForm()
+}
+
 function closeAssetEditModal() {
   showAssetEditModal.value = false
   editingAssetId.value = null
+  closeAssetUserEditPicker()
 }
 
 function saveAssetEdit() {
@@ -2760,9 +4583,29 @@ function saveAssetEdit() {
     closeAssetEditModal()
     return
   }
+  const selectedUser = selectedAssetResponsiblePersonEdit.value
+  const selectedUserName = selectedUser?.name || assetsRows.value[idx].userName || '-'
   assetsRows.value[idx] = {
     ...assetsRows.value[idx],
-    ...assetEditForm.value,
+    assetId: assetEditForm.value.assetId || assetsRows.value[idx].assetId,
+    type: assetEditForm.value.assetType || '-',
+    assetName: assetEditForm.value.assetName || '-',
+    userName: selectedUserName,
+    handoverTo: selectedUserName,
+    handoverDate: assetEditForm.value.handoverDate || '-',
+    returnDate: assetEditForm.value.returnDate || '-',
+    brand: assetEditForm.value.modelNumber || '-',
+    category: assetEditForm.value.condition || '-',
+    serial: assetEditForm.value.serialNumber || '-',
+    status: assetEditForm.value.status || 'Not Assigned',
+    branchLocation: assetEditForm.value.branchLocation || '',
+    department: assetEditForm.value.department || '',
+    purchaseDate: assetEditForm.value.purchaseDate || '',
+    supplierName: assetEditForm.value.supplierName || '',
+    condition: assetEditForm.value.condition || '',
+    unitPrice: assetEditForm.value.unitPrice || '',
+    currency: assetEditForm.value.currency || 'UAE Dirham',
+    qty: Number(assetEditForm.value.qty) || 1,
   }
   closeAssetEditModal()
 }
@@ -2860,8 +4703,13 @@ function enrichEmployeeDetail(row) {
   return {
     ...row,
     phone: row.phone || '+971 56125 4568',
+    email_personal: row.email_personal || row.email || 'mariajoun@gmail.com',
+    phone_company: row.phone_company || row.phone || '+971 56125 4568',
+    phone_personal: row.phone_personal || row.phone || '+91 8136548745',
     dob: row.dob || '14 Jan 1997',
     address: row.address || 'Al Wahda, Near Bus Station, Abu Dhabi, United Arab Emirates',
+    address_inside_uae: row.address_inside_uae || row.address || 'Al Wahda, Near Bus Station, Abu Dhabi, United Arab Emirates',
+    address_outside_uae: row.address_outside_uae || row.address || 'Al Wahda, Near Bus Station, Abu Dhabi, United Arab Emirates',
     salary_type: row.salary_type || 'Monthly',
     salary: row.salary || '2000.00',
     branch: row.branch || 'Abu Dhabi Head Office',
@@ -2896,8 +4744,117 @@ function openEditEmployee(row) {
 function openEmployeeDetails(row) {
   selectedEmployeeDetail.value = enrichEmployeeDetail(row)
   employeeDetailTab.value = 'company'
+  employeeDetailView.value = 'details'
   activeTab.value = 'Employee Details'
   openEmployeeRowMenuId.value = null
+}
+
+function closeRequestDocumentModal() {
+  showRequestDocumentModal.value = false
+  requestDocumentForm.value = { documentType: '', description: '' }
+  editingRequestedDocumentId.value = null
+}
+
+function openRequestDocumentModal() {
+  editingRequestedDocumentId.value = null
+  requestDocumentForm.value = { documentType: '', description: '' }
+  showRequestDocumentModal.value = true
+}
+
+function submitRequestDocument() {
+  if (!requestDocumentForm.value.documentType) return
+  const today = new Date()
+  const requestedDate = `${String(today.getDate()).padStart(2, '0')} ${today.toLocaleDateString('en-GB', { month: 'short' })} ${today.getFullYear()}`
+  if (editingRequestedDocumentId.value) {
+    requestedDocuments.value = requestedDocuments.value.map((doc) =>
+      doc.id === editingRequestedDocumentId.value
+        ? { ...doc, documentType: requestDocumentForm.value.documentType, description: requestDocumentForm.value.description || '--' }
+        : doc,
+    )
+  } else {
+    requestedDocuments.value.unshift({
+      id: Date.now(),
+      documentType: requestDocumentForm.value.documentType,
+      description: requestDocumentForm.value.description || '--',
+      requestedDate,
+      status: 'Pending',
+      rejectionReason: '',
+    })
+  }
+  closeRequestDocumentModal()
+}
+
+function openEditDocumentRequest(doc) {
+  editingRequestedDocumentId.value = doc.id
+  requestDocumentForm.value = {
+    documentType: doc.documentType,
+    description: doc.description === '--' ? '' : doc.description,
+  }
+  showRequestDocumentModal.value = true
+}
+
+function deleteRequestedDocument(doc) {
+  requestedDocuments.value = requestedDocuments.value.filter((item) => item.id !== doc.id)
+  if (selectedRequestedDocument.value?.id === doc.id) {
+    selectedRequestedDocument.value = null
+    showDocumentDetailModal.value = false
+  }
+}
+
+function openDocumentDetail(doc) {
+  selectedRequestedDocument.value = { ...doc }
+  showDocumentDetailModal.value = true
+}
+
+function closeDocumentDetailModal() {
+  showDocumentDetailModal.value = false
+  selectedRequestedDocument.value = null
+}
+
+function openApproveDocumentModal() {
+  showApproveDocumentModal.value = true
+}
+
+function closeApproveDocumentModal() {
+  showApproveDocumentModal.value = false
+  approveDocumentFile.value = null
+}
+
+function openRejectDocumentModal() {
+  showRejectDocumentModal.value = true
+}
+
+function closeRejectDocumentModal() {
+  showRejectDocumentModal.value = false
+  rejectDocumentReason.value = ''
+}
+
+function handleApproveDocumentFileChange(event) {
+  const [file] = event.target.files || []
+  approveDocumentFile.value = file || null
+}
+
+function confirmApproveDocument() {
+  if (!selectedRequestedDocument.value) return
+  requestedDocuments.value = requestedDocuments.value.map((doc) =>
+    doc.id === selectedRequestedDocument.value.id
+      ? { ...doc, status: 'Approved', rejectionReason: '' }
+      : doc,
+  )
+  selectedRequestedDocument.value = { ...selectedRequestedDocument.value, status: 'Approved', rejectionReason: '' }
+  closeApproveDocumentModal()
+}
+
+function confirmRejectDocument() {
+  if (!selectedRequestedDocument.value) return
+  const reason = rejectDocumentReason.value || 'Rejected'
+  requestedDocuments.value = requestedDocuments.value.map((doc) =>
+    doc.id === selectedRequestedDocument.value.id
+      ? { ...doc, status: 'Rejected', rejectionReason: reason }
+      : doc,
+  )
+  selectedRequestedDocument.value = { ...selectedRequestedDocument.value, status: 'Rejected', rejectionReason: reason }
+  closeRejectDocumentModal()
 }
 
 function saveEmployeeForm() {
@@ -2948,8 +4905,9 @@ function confirmDeleteEmployee(row) {
 function openSectionEdit(sectionKey) {
   if (!selectedEmployeeDetail.value) return
   editingSection.value = sectionKey
-  sectionEditForm.value = { ...selectedEmployeeDetail.value }
-  showSectionEditModal.value = true
+  // Use the same full employee modal (create modal in edit mode)
+  // so edit experience matches create layout/style.
+  openEditEmployee(selectedEmployeeDetail.value)
 }
 
 function saveSectionEdit() {
@@ -2969,9 +4927,47 @@ function syncMobileViewport() {
   }
 }
 
+function restoreHrPageState() {
+  if (typeof window === 'undefined') return
+  try {
+    const savedActiveTab = window.localStorage.getItem(HR_ACTIVE_TAB_STORAGE_KEY)
+    if (savedActiveTab && headerTabs.includes(savedActiveTab)) {
+      activeTab.value = savedActiveTab
+    }
+
+    const savedLeaveMode = window.localStorage.getItem(HR_LEAVE_MODE_STORAGE_KEY)
+    if (savedLeaveMode && ['leave', 'attendance', 'announcements'].includes(savedLeaveMode)) {
+      leaveSectionMode.value = savedLeaveMode
+    }
+
+    const savedLeaveInnerTab = window.localStorage.getItem(HR_LEAVE_INNER_TAB_STORAGE_KEY)
+    if (savedLeaveInnerTab && ['attendance', 'team'].includes(savedLeaveInnerTab)) {
+      hrSectionTab.value = savedLeaveInnerTab
+    }
+  } catch (error) {
+    console.warn('Unable to restore HR page state', error)
+  }
+}
+
+watch(activeTab, (value) => {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(HR_ACTIVE_TAB_STORAGE_KEY, value)
+})
+
+watch(leaveSectionMode, (value) => {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(HR_LEAVE_MODE_STORAGE_KEY, value)
+})
+
+watch(hrSectionTab, (value) => {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(HR_LEAVE_INNER_TAB_STORAGE_KEY, value)
+})
+
 // ========== ON MOUNTED ==========
 onMounted(async () => {
   console.log('BASE URL:', api.defaults.baseURL)
+  restoreHrPageState()
   const d = new Date()
   dateFilter.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   
@@ -3105,6 +5101,23 @@ onBeforeUnmount(() => {
   height: 36px;
   padding: 0 14px;
   font-size: 12px;
+}
+.employee-detail-action-chip.employee-detail-action-chip--light {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff !important;
+}
+.employee-detail-action-chip.employee-detail-action-chip--light,
+.employee-detail-action-chip.employee-detail-action-chip--light * {
+  color: #fff !important;
+}
+.employee-detail-action-chip.employee-detail-action-chip--light :deep(svg) {
+  color: #fff !important;
+  fill: currentColor;
+  stroke: currentColor;
+}
+.request-doc-btn-text {
+  color: #fff !important;
 }
 
 .hr-content-card {
@@ -3392,10 +5405,308 @@ onBeforeUnmount(() => {
 .leave-row-menu-item.danger,
 .leave-row-menu-item.reject { color: #ef4444; }
 .leave-row-menu-item.approve { color: #16a34a; }
+.announcement-overview-card .employee-overview-head {
+  align-items: center;
+}
+.career-summary-row {
+  margin-bottom: 12px;
+}
+.career-summary-row .hr-stat-card {
+  background: #fff;
+}
+.career-overview-card .employee-search-btn input {
+  font-size: 12px;
+  color: #6b7280;
+  outline: none;
+}
+.career-overview-card .employee-search-btn input::placeholder {
+  color: #9ca3af;
+}
+.career-table-wrap {
+  max-width: 100%;
+}
+.career-table {
+  min-width: 1720px;
+}
+.career-table .sticky-action-col {
+  position: sticky;
+  right: 0;
+  z-index: 6;
+  background: #fff;
+  box-shadow: -10px 0 16px -12px rgba(15, 23, 42, 0.35);
+}
+.career-table thead .sticky-action-col {
+  background: #fafbfe;
+  z-index: 7;
+}
+.career-manager-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.career-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+}
+.career-status-open { color: #16a34a; }
+.career-status-on-hold { color: #a16207; }
+.career-status-closed { color: #6b7280; }
+.announcement-table-wrap {
+  max-height: 520px;
+}
+.announcement-table .announcement-description-col {
+  min-width: 360px;
+  width: 360px;
+  color: #6b7280;
+}
+.announcement-row-menu {
+  width: 230px;
+}
+.announcement-search-modal {
+  width: min(720px, 94vw);
+  min-height: auto;
+  grid-template-columns: 1fr;
+}
+.announcement-modal {
+  width: min(760px, 94vw) !important;
+}
+.announcement-modal .add-field :deep(.vs__dropdown-toggle) {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-right: 34px;
+}
+.announcement-modal .add-field :deep(.vs__actions) {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%) !important;
+  height: 100% !important;
+  min-height: 50px;
+  display: inline-flex;
+  align-items: center !important;
+  justify-content: center;
+  padding-right: 0;
+  margin: 0;
+}
+.announcement-modal .add-field :deep(.vs__open-indicator) {
+  margin: 0 !important;
+  transform: none !important;
+  align-self: center;
+  display: inline-flex;
+}
+.announcement-modal .add-field textarea {
+  min-height: 104px;
+}
+.attendance-row-action-cell {
+  position: relative;
+  overflow: visible;
+}
+.hr-table {
+  min-width: 1220px;
+}
+.hr-table .sticky-action-col {
+  position: sticky;
+  right: 0;
+  z-index: 6;
+  background: #fff;
+  box-shadow: -10px 0 16px -12px rgba(15, 23, 42, 0.35);
+}
+.hr-table thead .sticky-action-col {
+  background: #fafbfe;
+  z-index: 7;
+}
+.attendance-row-menu {
+  position: fixed;
+  z-index: 21000;
+  width: min(260px, 88vw);
+  border-radius: 22px;
+  background: #fff;
+  border: 1px solid #eceff5;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+.attendance-row-menu-item {
+  width: 100%;
+  min-height: 58px;
+  border: none;
+  border-radius: 14px;
+  background: #fff;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+}
+.attendance-row-menu-item iconify-icon {
+  font-size: 26px;
+}
+.attendance-row-menu-item.active {
+  color: #111827;
+  background: #f7f7f8;
+}
+.attendance-row-menu-item.active iconify-icon {
+  color: #f59e0b;
+}
+.attendance-detail-modal {
+  width: min(560px, 88vw);
+  border-radius: 16px;
+  border: 1px solid #eceff5;
+  background: #fff;
+  box-shadow: 0 22px 38px rgba(15, 23, 42, 0.2);
+  padding: 18px 22px 20px;
+  position: relative;
+}
+.attendance-detail-edit-link {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: underline;
+}
+.attendance-detail-edit-link iconify-icon {
+  color: #f59e0b;
+}
+.attendance-detail-hero {
+  text-align: center;
+}
+.attendance-detail-icon {
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  margin: 4px auto 12px;
+  background: radial-gradient(circle at 50% 40%, #2942a4 0%, #0b1459 70%);
+  box-shadow: 0 0 26px rgba(11, 20, 89, 0.45);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 30px;
+}
+.attendance-detail-hero h6 {
+  margin: 0;
+  font-size: 15px !important;
+  font-weight: 700;
+  color: #0f1a48;
+}
+.attendance-detail-hero p {
+  margin: 10px auto 0;
+  max-width: 680px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #111827;
+}
+.attendance-detail-grid-card {
+  margin-top: 14px;
+  border: 1px solid #e7eaf2;
+  border-radius: 14px;
+  background: #fff;
+  padding: 10px 14px;
+}
+.attendance-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.attendance-detail-grid p,
+.attendance-detail-field {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.attendance-detail-grid span,
+.attendance-detail-field > span {
+  color: #7b8190;
+  font-size: 13px;
+}
+.attendance-detail-grid strong {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+}
+.attendance-detail-grid p.full {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.attendance-status-text.status-present { color: #16a34a; }
+.attendance-status-text.status-absent { color: #ef4444; }
+.attendance-status-text.status-late { color: #f59e0b; }
+.attendance-detail-field input,
+.attendance-detail-field :deep(.vs__dropdown-toggle) {
+  min-height: 36px;
+  border: 1px solid #d8dde8;
+  border-radius: 10px;
+  width: 240px;
+  font-size: 13px;
+}
+.attendance-detail-field :deep(.vs__selected),
+.attendance-detail-field :deep(.vs__search),
+.attendance-detail-field :deep(.vs__search::placeholder) {
+  font-size: 12px !important;
+}
+.attendance-time-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 260px;
+}
+.attendance-time-grid input {
+  width: 100% !important;
+  min-width: 0;
+  padding: 0 10px;
+}
+.attendance-detail-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
 .leave-search-modal {
   width: min(1100px, 96vw);
   min-height: 560px;
   grid-template-columns: 180px minmax(0, 1fr);
+}
+.attendance-search-modal .add-field :deep(.vs__dropdown-toggle) {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-right: 34px;
+}
+.attendance-search-modal .add-field :deep(.vs__actions) {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%) !important;
+  height: 100% !important;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center !important;
+  justify-content: center;
+  padding-right: 0;
+  margin: 0;
+}
+.attendance-search-modal .add-field :deep(.vs__open-indicator) {
+  margin-top: 0 !important;
+  align-self: center;
+  display: inline-flex;
+  transform: none !important;
 }
 .leave-detail-modal {
   width: min(520px, 94vw);
@@ -3810,9 +6121,37 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
 }
-.leave-apply-modal {
-  width: min(760px, 94vw);
+.add-employee-modal.leave-apply-modal {
+  width: min(720px, 92vw);
   max-height: calc(100vh - 40px);
+}
+.attendance-create-modal {
+  width: min(680px, 92vw) !important;
+}
+.attendance-create-modal .add-field :deep(.vs__dropdown-toggle) {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-right: 34px;
+}
+.attendance-create-modal .add-field :deep(.vs__actions) {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%) !important;
+  height: 100% !important;
+  min-height: 50px;
+  display: inline-flex;
+  align-items: center !important;
+  justify-content: center;
+  padding-right: 0;
+  margin: 0;
+}
+.attendance-create-modal .add-field :deep(.vs__open-indicator) {
+  margin: 0 !important;
+  transform: none !important;
+  align-self: center;
+  display: inline-flex;
 }
 .leave-apply-modal .add-employee-head h6,
 .leave-apply-modal .add-employee-section h6 {
@@ -3856,6 +6195,34 @@ onBeforeUnmount(() => {
 .leave-apply-modal .add-grid-two {
   grid-template-columns: 1fr 1fr;
 }
+.leave-apply-modal .add-field-full {
+  grid-column: 1 / -1;
+}
+.leave-search-modal .add-field :deep(.vs__dropdown-toggle) {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-right: 34px;
+}
+.leave-search-modal .add-field :deep(.vs__actions) {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%) !important;
+  height: 100% !important;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center !important;
+  justify-content: center;
+  padding-right: 0;
+  margin: 0;
+}
+.leave-search-modal .add-field :deep(.vs__open-indicator) {
+  margin: 0 !important;
+  transform: none !important;
+  align-self: center;
+  display: inline-flex;
+}
 .employee-detail-page {
   background: linear-gradient(135deg, #0c1b88 0%, #0d3ea4 55%, #0a60b8 100%);
   border: 1px solid rgba(191, 213, 255, 0.6);
@@ -3867,6 +6234,28 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   margin-bottom: 6px;
+}
+.employee-detail-breadcrumb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.employee-detail-breadcrumb-row .employee-detail-breadcrumb {
+  margin-bottom: 0;
+}
+.employee-detail-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+}
+.employee-detail-title-row .overview-section-title {
+  position: static;
+}
+.employee-detail-page-title {
+  color: #fff !important;
 }
 .employee-detail-layout {
   display: grid;
@@ -3973,6 +6362,206 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px 14px;
+}
+.requested-documents-card {
+  border: 1px solid #dce7ff;
+  border-radius: 12px;
+  background: #fff;
+  padding: 14px;
+  min-height: calc(100vh - 260px);
+}
+.requested-documents-card h6 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2a44;
+}
+.requested-document-list {
+  display: grid;
+  gap: 12px;
+}
+.requested-document-row {
+  border: 1px solid #edf1f6;
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: minmax(150px, 1.3fr) minmax(200px, 1.6fr) 120px 90px minmax(160px, 1.4fr) 110px;
+  gap: 12px;
+  align-items: center;
+}
+.requested-document-row strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+.requested-document-row small {
+  font-size: 11px;
+  color: #9ca3af;
+}
+.requested-document-actions {
+  display: inline-flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.doc-status-approved { color: #15803d !important; }
+.doc-status-pending { color: #d39b1a !important; }
+.doc-status-rejected { color: #dc2626 !important; }
+
+.request-doc-modal,
+.request-doc-approve-modal,
+.request-doc-reject-modal {
+  width: min(640px, 94vw);
+}
+.request-doc-detail-modal {
+  width: min(640px, 94vw);
+}
+.request-doc-modal .employee-filter-right {
+  padding: 16px 18px 14px;
+  gap: 10px;
+}
+.request-doc-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  line-height: 1.25;
+  font-weight: 600;
+  color: #0f1438;
+}
+.request-doc-grid {
+  border: 1px solid #edf1f6;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.request-doc-modal .add-field label {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.request-doc-modal .add-field :deep(.vs__dropdown-toggle) {
+  height: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid #d9dee7;
+  padding: 0 12px;
+}
+.request-doc-modal .add-field :deep(.vs__search),
+.request-doc-modal .add-field :deep(.vs__selected) {
+  font-size: 15px;
+  color: #374151;
+}
+.request-doc-modal .add-field :deep(.vs__search::placeholder) {
+  font-size: 15px;
+  color: #9ca3af;
+}
+.request-doc-modal .add-field :deep(.vs__dropdown-menu) {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
+  margin-top: 6px;
+  padding: 8px;
+  max-height: 260px;
+}
+.request-doc-modal .add-field :deep(.vs__dropdown-option) {
+  font-size: 15px;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+.request-doc-modal .add-field :deep(.vs__dropdown-option--highlight) {
+  background: #f6f7fb;
+  color: #111827;
+}
+.request-doc-modal .add-field :deep(.vs__dropdown-option--selected) {
+  background: #f3f4f6;
+  color: #111827;
+  font-weight: 500;
+}
+.request-doc-grid .add-field textarea,
+.request-doc-detail-modal .add-field textarea,
+.request-doc-reject-modal .add-field textarea {
+  width: 100%;
+  min-height: 160px;
+  border: 1px solid #d9dee7;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 15px;
+  color: #4b5563;
+  resize: vertical;
+}
+.request-doc-modal .employee-filter-actions {
+  justify-content: center;
+  gap: 14px;
+  margin-top: 2px;
+}
+.request-doc-modal .employee-filter-btn {
+  height: 44px;
+  min-width: 120px;
+  font-size: 15px;
+}
+.request-doc-modal .employee-filter-btn.ghost {
+  background: #f3f4f6;
+}
+.request-doc-modal .employee-filter-btn.primary {
+  background: #01054b;
+}
+.requested-detail-grid {
+  display: grid;
+  gap: 10px;
+}
+.requested-detail-grid p {
+  margin: 0;
+  border: 1px solid #edf1f6;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.requested-detail-grid span {
+  font-size: 13px;
+  color: #6b7280;
+}
+.requested-detail-grid strong {
+  font-size: 14px;
+}
+.request-doc-detail-actions {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  justify-content: center;
+}
+.request-doc-approve-btn,
+.request-doc-reject-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: none;
+  border-radius: 999px;
+  height: 40px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+.request-doc-approve-btn { background: #16a34a; }
+.request-doc-reject-btn { background: #ef2222; }
+.request-doc-confirm-wrap {
+  margin-top: 12px;
+}
+.request-doc-confirm-btn {
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  height: 42px;
+  background: #f4a100;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
 }
 .employee-filter-close {
   position: absolute;
@@ -4109,6 +6698,113 @@ onBeforeUnmount(() => {
   background: #0b1020;
   color: #fff;
 }
+
+/* Employee search filter modal (match provided sidebar design) */
+.employee-search-filter-modal {
+  width: min(860px, 96vw);
+  min-height: 620px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  grid-template-columns: 250px minmax(0, 1fr);
+}
+
+.employee-search-filter-modal .employee-filter-left {
+  background: #f8fafc;
+  border-right: 1px solid #e5e7eb;
+  padding: 20px 18px;
+  gap: 14px;
+}
+
+.employee-search-filter-modal .employee-filter-chip {
+  height: 34px;
+  font-size: 14px;
+  padding: 0 14px;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  font-weight: 500;
+}
+
+.employee-search-filter-modal .employee-filter-chip.active {
+  background: #02014f;
+  border: 1px solid #02014f;
+  color: #fff;
+}
+
+.employee-search-filter-modal .employee-filter-right {
+  padding: 22px 24px;
+  gap: 14px;
+}
+
+.employee-search-filter-modal .employee-filter-field label {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 7px;
+}
+
+.employee-search-filter-modal .employee-filter-field input {
+  height: 46px;
+  border-radius: 12px;
+  font-size: 14px;
+  border-color: #d1d5db;
+}
+
+.employee-search-filter-modal .employee-filter-field input::placeholder {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.employee-search-filter-modal .employee-filter-field :deep(.vs__dropdown-toggle) {
+  height: 46px;
+  min-height: 46px;
+  border-radius: 12px;
+  border-color: #d1d5db;
+}
+
+.employee-search-filter-modal .employee-filter-field :deep(.vs__search),
+.employee-search-filter-modal .employee-filter-field :deep(.vs__selected),
+.employee-search-filter-modal .employee-filter-field :deep(.vs__dropdown-option) {
+  font-size: 14px;
+}
+
+.employee-search-filter-modal .employee-filter-date-wrap {
+  position: relative;
+}
+
+.employee-search-filter-modal .employee-filter-date-wrap input {
+  padding-right: 40px;
+}
+
+.employee-search-filter-modal .employee-filter-date-wrap iconify-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.employee-search-filter-modal .employee-filter-actions {
+  margin-top: 10px;
+  gap: 12px;
+}
+
+.employee-search-filter-modal .employee-filter-btn {
+  height: 50px;
+  min-width: 112px;
+  font-size: 15px;
+  border-radius: 999px;
+}
+
+.employee-search-filter-modal .employee-filter-btn.ghost {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.employee-search-filter-modal .employee-filter-btn.primary {
+  background: #000;
+  color: #fff;
+}
 .add-employee-overlay {
   align-items: flex-start;
   padding: 16px 0;
@@ -4168,11 +6864,15 @@ onBeforeUnmount(() => {
   gap: 14px;
 }
 .profile-photo-block {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+}
+.profile-photo-wrap {
+  position: relative;
+  width: 110px;
+  height: 110px;
 }
 .profile-photo-avatar {
   width: 110px;
@@ -4193,8 +6893,9 @@ onBeforeUnmount(() => {
 }
 .profile-photo-edit-btn {
   position: absolute;
-  right: 6px;
-  bottom: 28px;
+  right: 0;
+  bottom: 0;
+  transform: translate(20%, 20%);
   width: 24px;
   height: 24px;
   border-radius: 999px;
@@ -5280,6 +7981,9 @@ onBeforeUnmount(() => {
   }
   .add-employee-modal {
     width: 96vw;
+  }
+  .attendance-create-modal {
+    width: min(680px, 94vw) !important;
   }
   .profile-form-grid,
   .add-grid-two,
