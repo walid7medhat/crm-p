@@ -801,7 +801,9 @@ public function getMatchingListings(Request $request)
                 $this->NotifyApprovers($listing, $user);
                 
                 // Don't set as hot deal yet - wait for approval
-                $listing->update(['is_hot_deal' => 'No']);
+                $listing->update(['is_hot_deal' => 'No',
+                     'hot_deal_approved_by' => null,
+                    'hot_deal_approved_at' => null]);
                  return ApiResponse::success($listing,'Hot deal request has been sent for approval. You will be notified once it\'s reviewed.');
                      
                      
@@ -830,13 +832,16 @@ public function getMatchingListings(Request $request)
         } 
         // If unmarking as hot deal
         else {
-            $listing->update(['is_hot_deal' => 'No']);
+
+            $listing->update(['is_hot_deal' => 'No',  'hot_deal_approved_by' => null,
+                    'hot_deal_approved_at' => null]);
             
             // Optionally cancel any pending requests
             $pendingRequests = $listing->hotDealRequests()->where('status', 'pending')->get();
             foreach ($pendingRequests as $request) {
                 $request->update(['status' => 'rejected']);
             }
+            // dd($listing->is_hot_deal);
         }
     } 
      public function store(ListingRequest $request): JsonResponse
@@ -1149,10 +1154,9 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             return ApiResponse::error('You are Not authorized to update this listing', 403);
         }
   
-            $oldHotDealStatus = $listing->is_hot_deal;
+            $oldHotDealStatus =$listing->is_hot_deal =='Yes' && $listing->hot_deal_approved_by && $listing->hot_deal_approved_at ? $listing->is_hot_deal :'No';
             $newHotDealStatus = $request->has('is_hot_deal') ? $request->is_hot_deal : $oldHotDealStatus;
             // dd($newHotDealStatus !== $oldHotDealStatus,$newHotDealStatus);
-            
             // Handle hot deal status change first
             if ($newHotDealStatus !== $oldHotDealStatus) {
                 $this->handleHotDealStatus($listing, $newHotDealStatus, $oldHotDealStatus);
