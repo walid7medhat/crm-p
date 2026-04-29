@@ -6223,6 +6223,31 @@ onBeforeUnmount(() => {
   align-self: center;
   display: inline-flex;
 }
+.career-search-modal .add-field :deep(.vs__dropdown-toggle) {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-right: 34px;
+}
+.career-search-modal .add-field :deep(.vs__actions) {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%) !important;
+  height: 100% !important;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center !important;
+  justify-content: center;
+  padding-right: 0;
+  margin: 0;
+}
+.career-search-modal .add-field :deep(.vs__open-indicator) {
+  margin: 0 !important;
+  transform: none !important;
+  align-self: center;
+  display: inline-flex;
+}
 .employee-detail-page {
   background: linear-gradient(135deg, #0c1b88 0%, #0d3ea4 55%, #0a60b8 100%);
   border: 1px solid rgba(191, 213, 255, 0.6);
