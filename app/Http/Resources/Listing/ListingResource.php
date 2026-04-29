@@ -229,6 +229,14 @@ $allowedAgentIds = [];
                 'laundry' => (bool) ($this->additional_features['laundry'] ?? false),
                 'driver' => (bool) ($this->additional_features['driver'] ?? false),
             ],
+            'sold_by_company_name' => $this->sold_by_company_name,
+            'sold_by_agent_name' => $this->sold_by_agent_name,
+            'sold_by_agent_phone' => $this->sold_by_agent_phone,
+            'rented_by_agent_email' => $this->rented_by_agent_email,
+            'rented_by_company_name' => $this->rented_by_company_name,
+            'rented_by_agent_name' => $this->rented_by_agent_name,
+            'rented_by_agent_phone' => $this->rented_by_agent_phone,
+            'rented_by_agent_email' => $this->rented_by_agent_email,
         ];
     }
 }

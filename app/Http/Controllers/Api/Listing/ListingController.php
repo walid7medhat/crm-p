@@ -1963,19 +1963,39 @@ public function markAsConverted(Request $request, $id)
             return ApiResponse::error('Access denied', 403);
         }
 
-        $request->validate([
+        $rules = [
             'sold_by' => 'required|in:me,oia,other_company,another_agent',
-            'agent_id' => 'required_if:sold_by,another_agent|exists:users,id'
-        ]);
- 
-        $property->update([
+            'agent_id' => 'required_if:sold_by,another_agent|exists:users,id',
+        ];
+        
+        // Add validation for other company data
+        if ($request->sold_by === 'other_company') {
+            $rules['other_company_details'] = 'required|array';
+            $rules['other_company_details.company_name'] = 'required|string|max:255';
+            $rules['other_company_details.agent_name'] = 'required|string|max:255';
+            $rules['other_company_details.agent_phone'] = 'required|string|max:20';
+            $rules['other_company_details.agent_email'] = 'nullable|email|max:255';
+        }
+        
+        $request->validate($rules);
+        
+        $updateData = [
             'status' => 'converted',
             'sold_by' => $request->sold_by,
-            'converted_at' => Now(),
+            'converted_at' => now(),
             'converted_by' => Auth::id(),
-            'sold_by_agent_id'=> $request->agent_id??null,
-        ]);
-
+            'sold_by_agent_id' => $request->agent_id ?? null,
+        ];
+        
+        // Handle other company details
+        if ($request->sold_by === 'other_company' && $request->has('other_company_details')) {
+            $updateData['sold_by_company_name'] = $request->other_company_details['company_name'];
+            $updateData['sold_by_agent_name'] = $request->other_company_details['agent_name'];
+            $updateData['sold_by_agent_phone'] = $request->other_company_details['agent_phone'];
+            $updateData['sold_by_agent_email'] = $request->other_company_details['agent_email'] ?? null;
+        }
+        
+        $property->update($updateData);
         
         $this->clearCache();
 
@@ -1989,29 +2009,46 @@ public function markAsConverted(Request $request, $id)
     }
 }
 
-// دالة markAsRented جديدة
 public function markAsRented(Request $request, $id)
 {
     try {
         $property = Listing::findOrFail($id);
         
-        $request->validate([
+        $rules = [
             'rented_by' => 'required|in:me,oia,other_company,another_agent',
             'agent_id' => 'required_if:rented_by,another_agent|exists:users,id',
             'rented_date' => 'required|date',
             'owner_id' => 'nullable|exists:owners,id'
-        ]);
+        ];
+        
+        // Add validation for other company data
+        if ($request->rented_by === 'other_company') {
+            $rules['other_company_details'] = 'required|array';
+            $rules['other_company_details.company_name'] = 'required|string|max:255';
+            $rules['other_company_details.agent_name'] = 'required|string|max:255';
+            $rules['other_company_details.agent_phone'] = 'required|string|max:20';
+            $rules['other_company_details.agent_email'] = 'nullable|email|max:255';
+        }
+        
+        $request->validate($rules);
 
-        $data = [
+        $updateData = [
             'status' => 'rented',
             'rented_by' => $request->rented_by,
-            'rented_by_agent_id' => $request->rented_by === 'another_agent' ? $request->agent_id : Auth()->user()->id,
+            'rented_by_agent_id' => $request->rented_by === 'another_agent' ? $request->agent_id : Auth::id(),
             'rented_date' => $request->rented_date,
             'rented_owner_id' => $request->owner_id,
-            'rented_date' => now(),
         ];
+        
+        // Handle other company details
+        if ($request->rented_by === 'other_company' && $request->has('other_company_details')) {
+            $updateData['rented_by_company_name'] = $request->other_company_details['company_name'];
+            $updateData['rented_by_agent_name'] = $request->other_company_details['agent_name'];
+            $updateData['rented_by_agent_phone'] = $request->other_company_details['agent_phone'];
+            $updateData['rented_by_agent_email'] = $request->other_company_details['agent_email'] ?? null;
+        }
 
-        $property->update($data);
+        $property->update($updateData);
 
         return ApiResponse::success(
             new ListingResource($property->fresh()),
@@ -2023,7 +2060,6 @@ public function markAsRented(Request $request, $id)
     }
 }
 
-// تعديل دالة revert من الإيجار
 public function revertFromRented($id)
 {
     try {

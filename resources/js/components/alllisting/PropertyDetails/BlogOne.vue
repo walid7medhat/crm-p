@@ -1408,6 +1408,111 @@
         </div>
     </div>
 </div>
+<!-- Other Company Modal -->
+<div v-if="showOtherCompanyModal" class="modal-overlay" @click="closeOtherCompanyModal">
+  <div class="modal-content" style="max-width: 500px;" @click.stop>
+    <div class="modal-header">
+      <div class="header-content">
+        <i class="ri-building-line header-icon"></i>
+        <div>
+          <h4 class="modal-title">Other Company Details</h4>
+          <p class="modal-subtitle">Enter the company and agent information</p>
+        </div>
+      </div>
+      <button class="modal-close" @click="closeOtherCompanyModal">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <!-- Company Name -->
+      <div class="form-group mb-3">
+        <label class="form-label">Company Name <span class="text-danger">*</span></label>
+        <input 
+          type="text" 
+          v-model="otherCompanyData.company_name" 
+          class="form-control" 
+          placeholder="Enter company name"
+          :class="{ 'is-invalid': !otherCompanyData.company_name.trim() && submittedOtherCompany }"
+        />
+        <div class="invalid-feedback" v-if="!otherCompanyData.company_name.trim() && submittedOtherCompany">
+          Company name is required
+        </div>
+      </div>
+      
+      <!-- Agent Name -->
+      <div class="form-group mb-3">
+        <label class="form-label">Agent Name <span class="text-danger">*</span></label>
+        <input 
+          type="text" 
+          v-model="otherCompanyData.agent_name" 
+          class="form-control" 
+          placeholder="Enter agent name"
+          :class="{ 'is-invalid': !otherCompanyData.agent_name.trim() && submittedOtherCompany }"
+        />
+        <div class="invalid-feedback" v-if="!otherCompanyData.agent_name.trim() && submittedOtherCompany">
+          Agent name is required
+        </div>
+      </div>
+      
+      <!-- Agent Phone -->
+      <div class="form-group mb-3">
+        <label class="form-label">Agent Phone <span class="text-danger">*</span></label>
+        <input 
+          type="tel" 
+          v-model="otherCompanyData.agent_phone" 
+          class="form-control" 
+          placeholder="Enter agent phone number"
+          :class="{ 'is-invalid': !otherCompanyData.agent_phone.trim() && submittedOtherCompany }"
+        />
+        <div class="invalid-feedback" v-if="!otherCompanyData.agent_phone.trim() && submittedOtherCompany">
+          Agent phone is required
+        </div>
+      </div>
+      
+      <!-- Agent Email -->
+      <div class="form-group mb-3">
+        <label class="form-label">Agent Email</label>
+        <input 
+          type="email" 
+          v-model="otherCompanyData.agent_email" 
+          class="form-control" 
+          placeholder="Enter agent email (optional)"
+        />
+      </div>
+      
+      <!-- Rented Date (only for rent type) -->
+      <div class="form-group" v-if="otherCompanyType === 'rented'">
+        <label class="form-label">Rented Date <span class="text-danger">*</span></label>
+        <input 
+          type="date" 
+          v-model="rentedDate" 
+          class="form-control"
+          :min="today"
+          required
+          :class="{ 'is-invalid': !rentedDate && submittedOtherCompany }"
+        />
+        <div class="invalid-feedback" v-if="!rentedDate && submittedOtherCompany">
+          Rented date is required
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-modal btn-modal-secondary" @click="closeOtherCompanyModal">
+        Cancel
+      </button>
+      <button 
+        class="btn-modal btn-modal-primary" 
+        @click="submitOtherCompany"
+        :disabled="submittingOtherCompany || !otherCompanyData.company_name.trim() || !otherCompanyData.agent_name.trim() || !otherCompanyData.agent_phone.trim()"
+      >
+        <i class="ri-checkbox-circle-line me-2"></i>
+        {{ submittingOtherCompany ? 'Submitting...' : (otherCompanyType === 'sold' ? 'Mark as Sold' : 'Mark as Rented') }}
+      </button>
+    </div>
+  </div>
+</div>
 <!-- Add New Owner Modal (for Sold by Me / Oia) -->
 <div v-if="showAddOwnerModal" class="modal-overlay add-owner-modal-overlay" @click="showAddOwnerModal = false">
   <div class="modal-content add-owner-modal-content" style="max-width: 1200px; width: 95%; max-height: 95vh; overflow-y: auto;" @click.stop>
@@ -1888,8 +1993,10 @@ const locationIcon  =  '/assets/images/Location.png';
     const availableAgents = ref([]);
     
   const selectedSoldByAgent = ref(null);
-const availableAgentsForSoldBy = ref([]);
-const loadingAgentsForSoldBy = ref(false);
+  const availableAgentsForSoldBy = ref([]);
+  const loadingAgentsForSoldBy = ref(false);
+  const submittedOtherCompany = ref(false);
+
  // في setup()
 const isAnotherAgentSelected = computed(() => {
     // للبيع
@@ -2076,6 +2183,12 @@ const timeSlots = ref([
   { value: '16:00', label: '04:00 PM' },
   { value: '17:00', label: '05:00 PM' },
   { value: '18:00', label: '06:00 PM' },
+  { value: '19:00', label: '07:00 PM' },
+  { value: '20:00', label: '08:00 PM' },
+  { value: '21:00', label: '09:00 PM' },
+  { value: '22:00', label: '10:00 PM' },
+  { value: '23:00', label: '11:00 PM' },
+  { value: '00:00', label: '12:00 AM' },
 ]);
 
 const today = computed(() => {
@@ -2571,12 +2684,188 @@ const closeSoldOutModal = () => {
   soldByChoice.value = null;
     selectedSoldByAgent.value = null; 
 };
+// أضف هذه المتغيرات في setup() مع بقية المتغيرات
+const showOtherCompanyModal = ref(false);
+const otherCompanyData = ref({
+  agent_name: '',
+  agent_phone: '',
+  agent_email: '',
+  company_name: ''
+});
+const submittingOtherCompany = ref(false);
+const otherCompanyType = ref('sold'); // 'sold' or 'rented'
+
+// إضافة دالة لفتح مودال الشركة الأخرى
+const openOtherCompanyModal = (type) => {
+  submittedOtherCompany.value = false;
+
+  otherCompanyType.value = type; // 'sold' or 'rented'
+  otherCompanyData.value = {
+    agent_name: '',
+    agent_phone: '',
+    agent_email: '',
+    company_name: ''
+  };
+  showOtherCompanyModal.value = true;
+  
+  if (type === 'sold') {
+    showSoldOutModal.value = false;
+  } else {
+    showRentedModal.value = false;
+  }
+};
+
+// دالة لإغلاق مودال الشركة الأخرى
+const closeOtherCompanyModal = () => {
+  showOtherCompanyModal.value = false;
+  otherCompanyData.value = {
+    agent_name: '',
+    agent_phone: '',
+    agent_email: '',
+    company_name: ''
+  };
+  otherCompanyType.value = 'sold';
+};
+
+
+const submitOtherCompany = async () => {
+  submittedOtherCompany.value = true;
+
+  // التحقق من صحة البيانات
+  if (!otherCompanyData.value.company_name.trim()) {
+    proxy.$showNotification('Please enter company name', 'warning');
+    submittedOtherCompany.value = false;
+    return;
+  }
+  
+  if (!otherCompanyData.value.agent_name.trim()) {
+    proxy.$showNotification('Please enter agent name', 'warning');
+    submittedOtherCompany.value = false;
+    return;
+  }
+  
+  if (!otherCompanyData.value.agent_phone.trim()) {
+    proxy.$showNotification('Please enter agent phone number', 'warning');
+    submittedOtherCompany.value = false;
+    return;
+  }
+  
+  // التحقق من تاريخ الإيجار إذا كان النوع rented
+  if (otherCompanyType.value === 'rented' && !rentedDate.value) {
+    proxy.$showNotification('Please select rented date', 'warning');
+    submittedOtherCompany.value = false;
+    return;
+  }
+  
+  try {
+    submittingOtherCompany.value = true;
+    
+    if (otherCompanyType.value === 'sold') {
+      await markAsSoldWithOtherCompany();
+    } else {
+      await markAsRentedWithOtherCompany();
+    }
+  } catch (error) {
+    console.error('Submit error:', error);
+    proxy.$showNotification(error.response?.data?.message || 'Failed to submit other company data', 'error');
+    submittedOtherCompany.value = false;
+  } finally {
+    submittingOtherCompany.value = false;
+  }
+};
+
+const markAsSoldWithOtherCompany = async () => {
+  try {
+    const payload = {
+      sold_by: 'other_company',
+      other_company_details: {
+        company_name: otherCompanyData.value.company_name,
+        agent_name: otherCompanyData.value.agent_name,
+        agent_phone: otherCompanyData.value.agent_phone,
+        agent_email: otherCompanyData.value.agent_email || null
+      }
+    };
+    
+    const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, payload);
+    
+    if (response.data.status) {
+      // تحديث البيانات المحلية
+      property.value.status = 'converted';
+      property.value.sold_by = 'other_company';
+      property.value.sold_by_company_name = otherCompanyData.value.company_name;
+      property.value.sold_by_agent_name = otherCompanyData.value.agent_name;
+      property.value.sold_by_agent_phone = otherCompanyData.value.agent_phone;
+      property.value.sold_by_agent_email = otherCompanyData.value.agent_email || null;
+      
+      proxy.$showNotification(`Property marked as sold by ${otherCompanyData.value.company_name}!`, 'success');
+      
+      // إغلاق المودالات
+      closeOtherCompanyModal();
+      closeSoldOutModal();
+      
+      // تحديث الصفحة أو إعادة تحميل البيانات
+      await fetchProperty();
+    } else {
+      throw new Error(response.data.message || 'Failed to mark as sold');
+    }
+  } catch (error) {
+    console.error('Mark as sold error:', error);
+    throw error;
+  }
+};
+
+const markAsRentedWithOtherCompany = async () => {
+  if (!rentedDate.value) {
+    proxy.$showNotification('Please select rented date', 'warning');
+    return;
+  }
+  
+  try {
+    const payload = {
+      rented_by: 'other_company',
+      rented_date: rentedDate.value,
+      other_company_details: {
+        company_name: otherCompanyData.value.company_name,
+        agent_name: otherCompanyData.value.agent_name,
+        agent_phone: otherCompanyData.value.agent_phone,
+        agent_email: otherCompanyData.value.agent_email || null
+      }
+    };
+    
+    const response = await api.patch(`/listings/properties/${property.value.id}/mark-rented`, payload);
+    
+    if (response.data.status) {
+      // تحديث البيانات المحلية
+      property.value.status = 'rented';
+      property.value.rented_by = 'other_company';
+      property.value.rented_by_company_name = otherCompanyData.value.company_name;
+      property.value.rented_by_agent_name = otherCompanyData.value.agent_name;
+      property.value.rented_by_agent_phone = otherCompanyData.value.agent_phone;
+      property.value.rented_by_agent_email = otherCompanyData.value.agent_email || null;
+      property.value.rented_date = rentedDate.value;
+      
+      proxy.$showNotification(`Property marked as rented by ${otherCompanyData.value.company_name}!`, 'success');
+      
+      // إغلاق المودالات
+      closeOtherCompanyModal();
+      closeRentedModal();
+      
+      // تحديث الصفحة أو إعادة تحميل البيانات
+      await fetchProperty();
+    } else {
+      throw new Error(response.data.message || 'Failed to mark as rented');
+    }
+  } catch (error) {
+    console.error('Mark as rented error:', error);
+    throw error;
+  }
+};
 
 const selectSoldBy = async (soldBy) => {
-    if (soldBy === 'other_company') {
-        await markAsSold('other_company');
+     if (soldBy === 'other_company') {
+        openOtherCompanyModal('sold');
         return;
-    }
+      }
     
     if (soldBy === 'another_agent') {
         await fetchAvailableAgentsForSoldBy();
@@ -2641,10 +2930,10 @@ const fetchAvailableAgentsForRentedBy = async () => {
 // دالة اختيار نوع الإيجار
 const selectRentedBy = async (rentedBy) => {
     if (rentedBy === 'other_company') {
-      showRentedModal.value = false; 
-        await markAsRented('other_company');
-        return;
+      openOtherCompanyModal('rented');
+      return;
     }
+  
     
     if (rentedBy === 'another_agent') {
         await fetchAvailableAgentsForRentedBy();
@@ -5307,7 +5596,17 @@ const openDriveLink = () => {
     selectRentedBy,
     markAsRented,
         addPersonType,
-   revertFromRented
+   revertFromRented,
+
+
+    showOtherCompanyModal,
+  otherCompanyData,
+  submittingOtherCompany,
+  otherCompanyType,
+  openOtherCompanyModal,
+  closeOtherCompanyModal,
+  submitOtherCompany,
+  submittedOtherCompany,
     };
   },
 
