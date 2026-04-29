@@ -209,11 +209,11 @@
 <script>
 import axios from 'axios'
 
-const START_10 = 9 * 60 + 16
-const END_10 = 9 * 60 + 59
-const START_25 = 10 * 60
-const END_25 = 12 * 60
-const START_100 = 12 * 60 + 1
+const START_10 = 9 * 60 + 16      // 9:16 AM
+const END_10 = 10 * 60            // 10:00 AM (inclusive)
+const START_25 = 10 * 60 + 1      // 10:01 AM
+const END_25 = 12 * 60            // 12:00 PM
+const START_100 = 12 * 60 + 1     // 12:01 PM
 
 export default {
   name: 'AttendanceMonthlyReports',
@@ -763,7 +763,7 @@ export default {
       return hour * 60 + minute
     },
     getDeduction(minutes) {
-      if (minutes <= 9 * 60 + 15) return 0
+      if (minutes <= 9 * 60 + 16) return 0
       if (minutes >= START_10 && minutes <= END_10) return 10
       if (minutes >= START_25 && minutes <= END_25) return 25
       if (minutes >= START_100) return 100
