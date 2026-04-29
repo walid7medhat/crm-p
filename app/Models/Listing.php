@@ -41,17 +41,22 @@ class Listing extends Model
         'payment_plan' => 'array',
         'floor_plans_source' => 'array',
         'additional_features' => 'array',
-        
+        'approved_at'=>'datetime',
+    'approved' => 'boolean', 
 
     ];
     
-    public function soldByAgent()
+         public function soldByAgent()
         {
             return $this->belongsTo(User::class, 'sold_by_agent_id');
         }
          public function rentByAgent()
         {
             return $this->belongsTo(User::class, 'rented_owner_id');
+        }
+        public function approvedBy()
+        {
+            return $this->belongsTo(User::class, 'approved_by');
         }
  public function getFloorPlansSourcesAttribute()
     {

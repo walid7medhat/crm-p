@@ -90,6 +90,9 @@
                   <span v-if="property.occupancy_status && property.completion_status != 'Under Construction'" class="badge-occupancy_status">
                     {{property.occupancy_status}}
                   </span>
+                  <span v-if="!property.approved" class="badge-sold bg-danger">
+                    Need Approve
+                  </span>
               
                   
                 </div>
@@ -358,6 +361,7 @@ export default {
         case 'active':
           return properties.value.filter(property => 
             property.is_active && 
+            property.approved  &&
             !property.is_archived && 
             property.status !== 'converted' &&  
             property.status !== 'rented' &&

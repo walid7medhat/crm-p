@@ -46,7 +46,16 @@ $allowedAgentIds = [];
             'id' => $this->id,
             'reference_number'=>$this->reference_number,
             'is_active' => (bool)$this->is_active,
-            'is_archived' => (bool)$this->is_archived,
+              'approved' => (bool) $this->approved,
+            'approved_at' => $this->approved_at?->format('Y-m-d H:i:s'),
+            'approved_by' => $this->whenLoaded('approvedBy', function() {
+                return [
+                    'id' => $this->approvedBy->id,
+                    'name' => $this->approvedBy->name,
+                ];
+            }),
+            'approval_status' => $this->approved ? 'approved' : 'pending',
+                'is_archived' => (bool)$this->is_archived,
             'title' => $this->area?->name,
             'status' => $this->status, // draft, published, etc.
             'unit_number' => $this->unit_number,
@@ -153,10 +162,10 @@ $allowedAgentIds = [];
                  'showDocuments'=>$showDocuments,
                   'show_offers'=>$user->hasRole('super_admin'),
             ],
-            'canShowOwner' => $user && ($user->hasRole('super_admin') || $this->agent_id == $user->id),
+            'canShowOwner' => $user && ($user->hasRole('super_admin') || $this->agent_id == $user->id) || ($user->hasRole('manager') && $user->listing_team == 1),
 
 // $this->isOwner($user) || ($canAssignAgent && $user->hasRole('manager') && $user->listing_team == 1)
-            'is_owner' =>$this->isOwner($user) || ($canAssignAgent && $user->hasRole('manager') && $user->listing_team == 1),
+            'is_owner' =>$this->isOwner($user) || ( $user->hasRole('manager') && $user->listing_team == 1),
 
             // Gallery Images
             'gallery_images' => $this->galleryImages->map(function ($galleryImage) {

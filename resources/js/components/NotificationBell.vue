@@ -294,6 +294,7 @@ export default {
   padding: 10px;
   margin-bottom: 8px;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .dropdown-item.unread {
@@ -304,6 +305,8 @@ export default {
 .item-message {
   font-size: 11px;
   color: #334155;
+  white-space: normal;
+    word-break: break-word;
 }
 
 .item-time {

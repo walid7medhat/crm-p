@@ -72,7 +72,42 @@
                             </tr>
                         </tbody>
                     </table>
-
+                        <!-- Pagination -->
+                        <div v-if="pagination.last_page > 1" class="pagination-wrapper mt-4">
+                            <nav>
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item" :class="{ disabled: pagination.current_page === 1 }">
+                                        <button class="page-link" @click="changePage(pagination.current_page - 1)">
+                                            Previous
+                                        </button>
+                                    </li>
+                                    
+                                    <li 
+                                        v-for="page in visiblePages" 
+                                        :key="page" 
+                                        class="page-item" 
+                                        :class="{ active: page === pagination.current_page }"
+                                    >
+                                        <button class="page-link" @click="changePage(page)">
+                                            {{ page }}
+                                        </button>
+                                    </li>
+                                    
+                                    <li class="page-item" :class="{ disabled: pagination.current_page === pagination.last_page }">
+                                        <button class="page-link" @click="changePage(pagination.current_page + 1)">
+                                            Next
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                        
+                        <!-- Info -->
+                        <div class="text-center text-muted mt-2 small" v-if="pagination.total > 0">
+                            Showing {{ ((pagination.current_page - 1) * pagination.per_page) + 1 }} 
+                            to {{ Math.min(pagination.current_page * pagination.per_page, pagination.total) }} 
+                            of {{ pagination.total }} requests
+                        </div>
                     <!-- Empty -->
                     <div v-if="!loading && hotDealRequests.length === 0" class="text-center py-5">
                         <h5>No Requests</h5>
@@ -119,7 +154,7 @@
     </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted,computed } from 'vue'
 import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
 
@@ -130,6 +165,12 @@ const selectedId = ref(null)
 const actionType = ref(null)
 const comments = ref('')
 
+const pagination = ref({
+    current_page: 1,
+    last_page: 1,
+    per_page: 50,
+    total: 0
+})
 onMounted(() => {
     fetchRequests()
 })
@@ -140,17 +181,39 @@ function viewProperty(id) {
 function formatPrice(price) {
     return price ? new Intl.NumberFormat().format(price) + ' AED' : '-'
 }
-async function fetchRequests() {
+async function fetchRequests(page = 1) {
     try {
         loading.value = true
 
-        const res = await api.get('/listings/hot-deal-requests/pending')
+        const res = await api.get('/listings/hot-deal-requests/pending', {
+            params: { page, per_page: 50 }
+        })
+        
+        console.log('API Response:', res.data)
 
         if (res.data.status) {
-            hotDealRequests.value = res.data.data.data
+            // ✅ التصحيح - البيانات موجودة في res.data.data.data
+            if (res.data.data && Array.isArray(res.data.data.data)) {
+                hotDealRequests.value = res.data.data.data
+                // حفظ معلومات الباجنيشن
+                pagination.value = {
+                    current_page: res.data.data.current_page,
+                    last_page: res.data.data.last_page,
+                    per_page: res.data.data.per_page,
+                    total: res.data.data.total
+                }
+            } 
+            // Fallback إذا كانت المصفوفة مباشرة
+            else if (Array.isArray(res.data.data)) {
+                hotDealRequests.value = res.data.data
+            }
+            else {
+                hotDealRequests.value = []
+            }
         }
 
     } catch (e) {
+        console.error('Error:', e)
         Swal.fire('Error', 'Failed to load requests', 'error')
     } finally {
         loading.value = false
@@ -183,6 +246,34 @@ async function submitAction() {
 function formatDate(date) {
     return new Date(date).toLocaleString()
 }
+const visiblePages = computed(() => {
+    const current = pagination.value.current_page
+    const last = pagination.value.last_page
+    const delta = 2
+    const range = []
+    
+    for (let i = Math.max(2, current - delta); i <= Math.min(last - 1, current + delta); i++) {
+        range.push(i)
+    }
+    
+    if (current - delta > 2) {
+        range.unshift('...')
+    }
+    if (current + delta < last - 1) {
+        range.push('...')
+    }
+    
+    range.unshift(1)
+    if (last !== 1) range.push(last)
+    
+    return range
+})
+
+function changePage(page) {
+    if (page < 1 || page > pagination.value.last_page) return
+    pagination.value.current_page = page
+    fetchRequests(page)
+}
 </script>
 <style scoped>
 .modal-overlay {
@@ -200,5 +291,14 @@ function formatDate(date) {
     border-radius: 8px;
     width: 400px;
     padding: 20px;
+}
+.modal-header h5{
+    font-size:20px !important;
+}
+.modal-footer{
+    margin-top:20px !important;
+}
+.btn{
+    margin:5px !important;
 }
 </style>

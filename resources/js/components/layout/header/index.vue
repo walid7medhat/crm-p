@@ -577,6 +577,10 @@ const requestsItems = computed(() => {
       items.push({ path: '/hotDeal-requests', label: 'Hot Deal Requests', colorClass: 'text-white w-auto', count: 0 });
     }
     
+    if (user.value?.is_listing_team &&  (user.value.roles?.includes('super_admin') ||  user.value.roles?.includes('manager'))) {
+      items.push({ path: '/need-approve-requests', label: 'Need Approval Listings', colorClass: 'text-white w-auto', count: 0 });
+    }
+    
     return items;
   }
 });
@@ -605,6 +609,7 @@ const fetchAllCounts = async () => {
           if (item.path === '/my-requests') item.count = counts.requests.all || 0;
           if (item.path === '/my-orders') item.count = counts.orders.all || 0;
            if (item.path === '/hotDeal-requests') item.count = counts.hot_deals.all || 0;
+           if (item.path === '/need-approve-requests') item.count = counts.needapprove.all || 0;
         });
       }
     }
@@ -749,7 +754,7 @@ const filteredUsersItems = computed(() => {
 const mainMenuItems = computed(() => {
   const items = [];
 
-  items.push({ path: '/payment-breakdown', label: 'Breakdown', icon: 'lucide:receipt-text' });
+//   items.push({ path: '/payment-breakdown', label: 'Breakdown', icon: 'lucide:receipt-text' });
 
   if (isSuperAdmin.value) {
     items.push({ path: '/lead-reports', label: 'Lead Reports', icon: 'lucide:bar-chart-2' });

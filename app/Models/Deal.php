@@ -85,6 +85,11 @@ class Deal extends Model
         return $this->belongsTo(Project::class);
     }
 
+
+    public function listing()
+    {
+        return $this->belongsTo(Listing::class);
+    }
     public function area()
     {
         return $this->belongsTo(Area::class);

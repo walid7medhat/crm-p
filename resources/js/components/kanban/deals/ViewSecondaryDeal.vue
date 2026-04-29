@@ -268,6 +268,18 @@
               <p class="info-value mb-0">{{ deal.project?.name  }}</p>
             </div>
           </div> -->
+             <div class="col-md-12" v-if="deal.listing">
+            <div class="info-group">
+              <label class="info-label">Listing</label>
+              <p class="info-value mb-0">{{ deal.listing?.name  }}</p>
+            </div>
+          </div>
+           <div class="col-md-12" v-if="deal.listing">
+            <div class="info-group">
+              <label class="info-label">Agent</label>
+              <p class="info-value mb-0">{{ deal.listing?.agent  }}</p>
+            </div>
+          </div>
              <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Developer sales person name</label>

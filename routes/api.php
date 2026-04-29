@@ -633,6 +633,12 @@ Route::post('/search-alerts',[ListingController::class, 'store_search_alert']);
     });
 
 Route::prefix('listings')->group(function(){
+      Route::patch('/properties/{listing}/approve', [ListingController::class, 'approve']);
+    Route::patch('/properties/{listing}/reject', [ListingController::class, 'reject']);
+    Route::get('/pending-approvals', [ListingController::class, 'getPendingApprovals']);
+    Route::post('/batch-approve', [ListingController::class, 'batchApprove']);
+    
+    
         Route::post('/areas/coordinates/bulk', [AreaController::class, 'bulkUpdateCoordinates']);
      Route::get('/properties/map', [ListingController::class, 'map']);
      Route::get('matching',[ListingController::class,'getMatchingListings']);

@@ -16,7 +16,15 @@ class ListingGridResource extends JsonResource
             //     $this->project?->title,
             //     $this->area?->name,
             // ])->filter()->implode(', '),
-
+              'approved' => (bool) $this->approved,
+                'approved_at' => $this->approved_at?->format('Y-m-d H:i:s'),
+                'approved_by' => $this->whenLoaded('approvedBy', function() {
+                    return [
+                        'id' => $this->approvedBy->id,
+                        'name' => $this->approvedBy->name,
+                    ];
+                }),
+                'approval_status' => $this->approved ? 'approved' : 'pending',
             'is_active'=>(bool)$this->is_active,
             'is_archived'=>(bool)$this->is_archived,
             'is_hot_deal'=>$this->is_hot_deal =='Yes' && $this->hot_deal_approved_by && $this->hot_deal_approved_at ? $this->is_hot_deal :'No',
@@ -52,7 +60,7 @@ class ListingGridResource extends JsonResource
                 'avatar' => $this->avatar ?  $this->avatar : null,
                 ];
             }),
-            
+            'owner' => $this->whenLoaded('owner', new OwnerResource($this->owner)),
             'created_at' => $this->created_at?->format('M d, Y'),
         ];
     }

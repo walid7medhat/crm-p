@@ -63,7 +63,7 @@ import MyRequests from './pages/listings/my_requests.vue'
 import MyOrders from './pages/listings/my_order.vue'
 import AllRequests from './pages/listings/AllRequests.vue'
 import HotDealRequests from './pages/listings/hot_deal_requests.vue'
-
+import NeedApprove from './pages/listings/PendingApprovalsTable.vue'
 import allNotifications from './components/allNotifications.vue'
 
 // Kanban
@@ -149,6 +149,7 @@ const baseRoutes = [
   { path: '/properties-map', component: PropertyMapPage, meta: { requiresAuth: true } },
   { path: '/property-details/:id', name: 'property.show', component: PropertyShow, meta: { requiresAuth: true } },
   { path: '/properties/:id/edit', name: 'property.edit', component: EditPropertyForm, meta: { requiresAuth: true } },
+  { path: '/need-approve-requests', name: 'property.approve', component: NeedApprove, meta: { requiresAuth: true } },
 
   { path: '/assign-role', component: AssignRole, meta: { requiresAuth: true } },
   { path: '/role-access', component: RoleAccess, meta: { requiresAuth: true } },

@@ -71,7 +71,7 @@ public function index(Request $request): JsonResponse
         $user = Auth::user();
         
         $query = Owner::with('location');
-        if(!($user->hasRole('admin') || $user->hasRole('super_admin'))){
+        if(!($user->hasRole('admin') || $user->hasRole('super_admin') || ($user->hasRole('manager') && $user->listing_team == 1))){
                 $query->where('added_by', $user->id);
         }
                      

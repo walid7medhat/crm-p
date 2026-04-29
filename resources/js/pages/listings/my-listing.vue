@@ -15,7 +15,7 @@
       <div class="top-export-col">
         <button type="button" class="export-active-btn" :disabled="isExporting" @click="exportActiveListingsToExcel">
           <i class="ri-file-excel-2-line me-1"></i>
-          {{ isExporting ? 'Exporting...' : 'Export Active Listings' }}
+          {{ isExporting ? 'Exporting...' : 'Export Listings' }}
         </button>
       </div>
     </div>
@@ -98,6 +98,9 @@
                   </span>
                   <span v-if="property.occupancy_status && property.completion_status != 'Under Construction'" class="badge-occupancy_status">
                     {{property.occupancy_status}}
+                  </span>
+                   <span v-if="!property.approved" class="badge-sold bg-danger">
+                    Need Approve
                   </span>
                 </div>
               <!-- Images Count Badge Only -->
@@ -293,7 +296,7 @@ export default {
           return properties.value;
         case 'active':
           return properties.value.filter(property => property.is_active && !property.is_archived && property.status !== 'converted' &&
-              property.status !== 'rented' &&
+              property.status !== 'rented' && property.approved  &&
               property.status !== 'converted' && property.status !== 'draft');
         case 'inactive':
           return properties.value.filter(property => !property.is_active && !property.is_archived && property.status !== 'converted' &&

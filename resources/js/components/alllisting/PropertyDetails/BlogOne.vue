@@ -660,6 +660,23 @@
                   
                   <div class="dropdown-container" :class="{ expanded: showActionsDropdown }">
                     <div class="dropdown-menu" :class="{ show: showActionsDropdown }">
+                        <button 
+                          v-if="canApproveListings && !property.approved && property.status !== 'converted' && property.status !== 'rented'"
+                          class="dropdown-item success"
+                          @click="approveListing"
+                        >
+                          <i class="ri-checkbox-circle-line"></i>
+                          Approve Listing
+                        </button>
+                        
+                        <button 
+                          v-if="canApproveListings && property.approved"
+                          class="dropdown-item warning"
+                          @click="openRejectFromDetailsModal"
+                        >
+                          <i class="ri-close-circle-line"></i>
+                          Remove Approval / Reject
+                        </button>
                           <!-- Create Offer -->
                               <button  
                                 class="dropdown-item"
@@ -702,7 +719,7 @@
                     
                               <!-- Assign to Agent -->
                               <button 
-                                v-if="canAssignAgent"
+                                v-if="canAssignAgent && property.status != 'converted' && property.status != 'rented'"
                                 class="dropdown-item"
                                 @click="openAssignAgentModal"
                               >
@@ -1896,6 +1913,69 @@
     </div>
   </div>
 </div>
+<!-- Reject Listing Modal -->
+<div v-if="showRejectDetailsModal" class="modal-overlay" @click="showRejectDetailsModal = false">
+  <div class="modal-content" @click.stop style="max-width: 500px;">
+    <div class="modal-header">
+      <h5 class="text-white">Reject Listing</h5>
+      <button class="modal-close" @click="showRejectDetailsModal = false">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="alert alert-warning mb-3 d-flex">
+        <i class="ri-alert-line me-2"></i>
+        <span>This listing will be marked as rejected and the agent will be notified.</span>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+        <textarea 
+          v-model="rejectReasonDetails"
+          class="form-control"
+          rows="4"
+          placeholder="Please provide a detailed reason why this listing needs changes or is being rejected..."
+          maxlength="255"
+        ></textarea>
+        <div class="char-counter mt-1">
+          {{ rejectReasonDetails.length }}/255
+        </div>
+      </div>
+      
+      <!-- عرض معلومات القائمة للـ Preview -->
+      <div class="listing-preview mt-3 p-2 bg-light rounded">
+        <div class="d-flex gap-2 align-items-center">
+          <img 
+            :src="property?.main_image || '/default-image.jpg'" 
+            class="rounded" 
+            style="width: 50px; height: 50px; object-fit: cover;"
+          />
+          <div>
+            <div class="fw-bold">{{ property?.reference_number || 'N/A' }}</div>
+            <div class="small text-muted">{{ property?.area?.title || 'No area' }}</div>
+            <div class="small fw-bold">AED {{ formatPrice(property?.price) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-modal btn-modal-secondary" @click="showRejectDetailsModal = false">
+        Cancel
+      </button>
+      <button 
+        class="btn-modal btn-modal-danger" 
+        @click="confirmRejectListing"
+        :disabled="!rejectReasonDetails.trim() || rejectingListing"
+        style="background: #dc3545;color:#fff"
+      >
+        <i class="ri-close-circle-line me-2"></i>
+        {{ rejectingListing ? 'Rejecting...' : 'Reject Listing' }}
+      </button>
+    </div>
+  </div>
+</div>
 </template>
 
 <script>
@@ -1996,7 +2076,98 @@ const locationIcon  =  '/assets/images/Location.png';
   const availableAgentsForSoldBy = ref([]);
   const loadingAgentsForSoldBy = ref(false);
   const submittedOtherCompany = ref(false);
+// أضف هذه المتغيرات الجديدة
+const showRejectDetailsModal = ref(false);
+const rejectReasonDetails = ref('');
+const rejectingListing = ref(false);
 
+const canApproveListings = computed(() => {
+  const currentUser = getCurrentUser();
+  if (!currentUser) return false;
+  
+  const isManagerWithListingTeam = currentUser.roles?.includes('manager') && currentUser?.is_listing_team;
+  
+  const isSuperAdminUser = currentUser.roles?.includes('super_admin');
+  return isManagerWithListingTeam || isSuperAdminUser;
+});
+
+const approveListing = async () => {
+  const result = await Swal.fire({
+    title: 'Approve Listing?',
+    text: 'Are you sure you want to approve this listing? It will become visible to all users.',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#28a745',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Yes, Approve',
+    cancelButtonText: 'Cancel'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const response = await api.patch(`/listings/properties/${property.value.id}/approve`);
+    
+    if (response.data.status) {
+      // تحديث الحالة المحلية
+      property.value.approved = true;
+      property.value.approval_status = 'approved';
+      
+      proxy.$showNotification('Listing approved successfully!', 'success');
+      closeActionsDropdown();
+      
+      // إعادة تحميل البيانات
+      await fetchProperty();
+    }
+  } catch (error) {
+    console.error('Error approving listing:', error);
+    proxy.$showNotification(
+      error.response?.data?.message || 'Failed to approve listing',
+      'error'
+    );
+  }
+};
+
+const openRejectFromDetailsModal = () => {
+  rejectReasonDetails.value = '';
+  showRejectDetailsModal.value = true;
+  closeActionsDropdown();
+};
+
+const confirmRejectListing = async () => {
+  if (!rejectReasonDetails.value.trim()) {
+    proxy.$showNotification('Please provide a reason for rejection', 'warning');
+    return;
+  }
+  
+  try {
+    rejectingListing.value = true;
+    
+    const response = await api.patch(`/listings/properties/${property.value.id}/reject`, {
+      reason: rejectReasonDetails.value
+    });
+    
+    if (response.data.status) {
+      // تحديث الحالة المحلية
+      property.value.approved = false;
+      property.value.approval_status = 'rejected';
+      
+      proxy.$showNotification('Listing has been rejected and the agent has been notified.', 'success');
+      showRejectDetailsModal.value = false;
+      
+      // إعادة تحميل البيانات
+      await fetchProperty();
+    }
+  } catch (error) {
+    console.error('Error rejecting listing:', error);
+    proxy.$showNotification(
+      error.response?.data?.message || 'Failed to reject listing',
+      'error'
+    );
+  } finally {
+    rejectingListing.value = false;
+  }
+};
  // في setup()
 const isAnotherAgentSelected = computed(() => {
     // للبيع
@@ -5232,6 +5403,10 @@ const getLocationIcon = () => {
 const windowWidth = ref(window.innerWidth);
 
     onMounted(() => {
+          console.log('Current User:', getCurrentUser());
+  console.log('Roles:', getCurrentUser()?.roles);
+  console.log('is_listing_team:', getCurrentUser()?.is_listing_team);
+  console.log('canApproveListings:', canApproveListings.value);
         window.addEventListener('resize', () => {
           windowWidth.value = window.innerWidth;
         });
@@ -5607,6 +5782,13 @@ const openDriveLink = () => {
   closeOtherCompanyModal,
   submitOtherCompany,
   submittedOtherCompany,
+   canApproveListings,
+  approveListing,
+  openRejectFromDetailsModal,
+  confirmRejectListing,
+  showRejectDetailsModal,
+  rejectReasonDetails,
+  rejectingListing,
     };
   },
 
@@ -5743,6 +5925,7 @@ const openDriveLink = () => {
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   transform: none;
+  overflow-y:auto;
 }
 
 .dropdown-item {

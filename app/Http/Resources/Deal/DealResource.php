@@ -59,7 +59,11 @@ class DealResource extends JsonResource
                 'id' => $this->propertyType?->id,
                 'name' => $this->propertyType?->name,
             ],
-            
+            'listing' =>$this->listing?  [
+                'id' => $this->listing?->id,
+                'name' => $this->listing?->area?->area_title,
+                'agent'=>$this->listing?->agent->name,
+            ]:null,
             // 'project' => $this->whenLoaded('project', fn() => [
             //     'id' => $this->project->id,
             //     'name' => $this->project->title,

@@ -691,6 +691,8 @@ public function getPropertyTypesWithListings(Request $request)
                     })
                 ->where('is_active', true) // Only active listings
                 ->where('status', '!=', 'converted') // Exclude converted
+                ->where('status', '!=', 'rented')
+                ->where('approved', true)
                 ->where('status', '!=', 'draft') // Exclude draft
                 ->where('is_archived', false); // Exclude archived
             }])
@@ -702,6 +704,8 @@ public function getPropertyTypesWithListings(Request $request)
                     })
                 ->where('is_active', true)
                 ->where('status', '!=', 'converted')
+                 ->where('status', '!=', 'rented')
+                ->where('approved', true)
                 ->where('status', '!=', 'draft')
                 ->where('is_archived', false);
             });
@@ -759,7 +763,6 @@ public function getPropertyTypesWithListings(Request $request)
         })->orWhere('handled_by', $user->id);
         })
                 ->count();
-         $hot_deals=
 
             $orders = ListingAccessRequest::with(['listing', 'requestedBy','convertedBy'])
             
@@ -773,9 +776,13 @@ public function getPropertyTypesWithListings(Request $request)
                     $q->whereIn('requested_by', $user_hierarchy);
                 })  ->orderBy('created_at', 'desc')
                 ->count();
+            $needApprove=Listing::where('approved', false)
+                            ->where('status', 'published')
+                            ->where('is_archived', false)->count();
             $counts = [
                 'listings' => [
-                    'all' => Listing::where('is_active',true)->where('is_archived',false)->whereNotIn('status',['converted','draft'])->count(),
+                    'all' => Listing::where('is_active',true)->where('is_archived',false)->whereNotIn('status',['converted','draft','rented']) 
+                ->where('approved', true)->count(),
                     'my' => Listing::whereIn('agent_id', $user_hierarchy)->count(),
                     'archive' => Listing::where('status', 'archived')->count()
                 ],
@@ -787,6 +794,9 @@ public function getPropertyTypesWithListings(Request $request)
                 ],
                 'hot_deals' => [
                     'all' => $hot_deals,
+                ],
+                'needapprove' => [
+                    'all' => $needApprove,
                 ]
             ];
 

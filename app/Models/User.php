@@ -308,9 +308,9 @@ function getOfficeAttribute()
             return true;
         }
         
-        // Manager can only manage if in listing team
+        // Manager can only manage if in listing team shourouq can edit all listings
         if ($this->hasRole('manager')) {
-            return $this->listing_team == 1 && $canAssignAgent;
+            return $this->listing_team == 1 ;
         }elseif ($this->hasRole('team_lead')) {
             $manager = $this->getManagerAttribute();
             return $manager && $manager->listing_team == 1 && $canAssignAgent;

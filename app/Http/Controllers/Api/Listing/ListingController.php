@@ -32,7 +32,9 @@ use App\Traits\HotDealNotifiable;
 use App\Models\HotDealRequest;
 use App\Services\ListingMapCoordinateResolver;
 use Illuminate\Support\Facades\Log;
-
+use App\Notifications\ListingNeedsApproval;
+use App\Notifications\ListingApproved;
+use App\Notifications\ListingRejected;
 class ListingController extends Controller
 {
     use HotDealNotifiable;
@@ -282,7 +284,9 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             'agent:id,name',
             'galleryImages',
         ]);
-
+ $isManagerWithListingTeam = $user->hasRole('manager') && $user->listing_team;
+    
+   
           if (!($user->hasRole('super_admin') || $user->hasRole('admin')) && $request->boolean('my_listings')) {
                     $currentUser = $user;
                     $allIds = User::where(function($q) use ($currentUser) {
@@ -304,7 +308,7 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
                 ->where('status', '!=', 'converted')
                 ->where('status', '!=', 'rented')
                 ->where('status', '!=', 'draft')
-                ->where('is_archived', false);
+                ->where('is_archived', false)->where('approved', true);
         }
         
         if($request->has('active') ){
@@ -312,7 +316,7 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
                 ->where('status', '!=', 'converted')
                 ->where('status', '!=', 'rented')
                 ->where('status', '!=', 'draft')
-                ->where('is_archived', false);
+                ->where('is_archived', false)->where('approved', true);
         }
          if ($request->has('area_id')) {
                     $areaId = $request->area_id;
@@ -553,7 +557,7 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
              }
             if ($request->has('sold_by_agent_id')) {
                 $agentId = $request->sold_by_agent_id;
-                
+                $query->with('owner');
                 $query->where(function($q) use ($agentId) {
                     $q->where(function($sub) use ($agentId) {
                         $sub->whereIn('sold_by', ['another_agent','me'])
@@ -855,6 +859,7 @@ public function getMatchingListings(Request $request)
                 DB::beginTransaction();
 
                 $data = $request->validated();
+                $data['approved']=false;
                 \Log::info('Validated data', array_keys($data));
 
                 $listingStatus = 'draft';
@@ -1042,6 +1047,15 @@ public function getMatchingListings(Request $request)
                 }
             }
             if( $listingStatus == 'published'){
+                  $managers = User::whereHas('roles', function($query) {
+                            $query->where('name', 'manager');
+                        })
+                        ->where('listing_team', 1)
+                        ->get();
+                        
+                    foreach ($managers as $manager) {
+                        $manager->notify(new ListingNeedsApproval($listing));
+                    }
                 dispatch(new CheckSearchAlerts());
             }
                 DB::commit();
@@ -1058,7 +1072,7 @@ public function getMatchingListings(Request $request)
                     201
                 );
             } catch (\Exception $e) {
-                dd($e->getMessage());
+                // dd($e->getMessage());
                 DB::rollBack();
                 
                 return ApiResponse::error('Failed to create listing: ' . $e->getMessage());
@@ -2380,5 +2394,244 @@ public function validateUnitNumber(Request $request)
             ], 404);
         }
     }
+    
+    /**
+ * Approve a listing
+ */
+public function approve(Listing $listing): JsonResponse
+{
+    try {
+        $user = auth()->user();
+        
+        if (!($user->hasRole('super_admin') || ($user->hasRole('manager') && $user->listing_team))) {
+            return ApiResponse::error('You are not authorized to approve listings.', 403);
+        }
+        
+        if ($listing->approved) {
+            return ApiResponse::error('This listing has already been approved.', 422);
+        }
+        
+        $oldApprovedStatus = $listing->approved;
+        
+        $listing->update([
+            'approved' => true,
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+        ]);
+        
+        if ($listing->added_by) {
+            $creator = User::find($listing->added_by);
+            if ($creator) {
+                $creator->notify(new ListingApproved($listing, $user));
+            }
+        }
+        
+        if ($listing->agent_id && $listing->agent_id != $listing->added_by) {
+            $agent = User::find($listing->agent_id);
+            if ($agent) {
+                $agent->notify(new ListingApproved($listing, $user));
+            }
+        }
+        
+        $this->clearCache();
+        
+        return ApiResponse::success(
+            new ListingResource($listing),
+            'Listing approved successfully.'
+        );
+        
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to approve listing: ' . $e->getMessage());
+    }
+}
 
+/**
+ * Reject a listing (remove approval status)
+ */
+public function reject(Listing $listing, Request $request): JsonResponse
+{
+    try {
+        $user = auth()->user();
+        
+        if (!($user->hasRole('super_admin') || ($user->hasRole('manager') && $user->listing_team))) {
+            return ApiResponse::error('You are not authorized to reject listings.', 403);
+        }
+        
+        $reason = $request->input('reason', 'No reason provided');
+        
+        $listing->update([
+            'approved' => false,
+            'approved_by' => null,
+            'approved_at' => null,
+        ]);
+        
+        if ($listing->added_by) {
+            $creator = User::find($listing->added_by);
+            if ($creator) {
+                $creator->notify(new ListingRejected($listing, $reason));
+            }
+        }
+        
+        if ($listing->agent_id && $listing->agent_id != $listing->added_by) {
+            $agent = User::find($listing->agent_id);
+            if ($agent) {
+                $agent->notify(new ListingRejected($listing, $reason));
+            }
+        }
+        
+        $this->clearCache();
+        
+        return ApiResponse::success(
+            new ListingResource($listing),
+            'Listing approval has been revoked.'
+        );
+        
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to reject listing: ' . $e->getMessage());
+    }
+}
+
+
+public function getPendingApprovals(Request $request): JsonResponse
+{
+    try {
+        $user = auth()->user();
+        
+        if (!$user->hasRole('manager') || !$user->listing_team) {
+            return ApiResponse::error('Unauthorized access.', 403);
+        }
+        
+        $query = Listing::with([
+            'propertyType:id,name',
+            'area:id,name,parent_id',
+            'agent:id,name,email',
+            'addedBy:id,name,email',
+            'galleryImages',
+        ])
+        ->where('approved', false)
+        ->where('status', 'published')
+        ->where('is_archived', false)
+        ->orderBy('created_at', 'desc');
+        
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('reference_number', 'like', "%{$search}%")
+                  ->orWhere('unit_number', 'like', "%{$search}%");
+            });
+        }
+        
+        if ($request->has('property_type_id') && $request->property_type_id) {
+            $query->where('property_type_id', $request->property_type_id);
+        }
+        
+        if ($request->has('agent_id') && $request->agent_id) {
+            $query->where('agent_id', $request->agent_id);
+        }
+        
+        $perPage = $request->get('per_page', 15);
+        $listings = $query->paginate($perPage);
+        
+        return response()->json([
+            'status' => true,
+            'data' => ListingGridResource::collection($listings),
+            'message' => 'Pending approvals retrieved successfully',
+            'pagination' => [
+                'current_page' => $listings->currentPage(),
+                'last_page' => $listings->lastPage(),
+                'per_page' => $listings->perPage(),
+                'total' => $listings->total(),
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Failed to retrieve pending approvals: ' . $e->getMessage(),
+            'data' => [],
+            'pagination' => [
+                'current_page' => 1,
+                'last_page' => 1,
+                'per_page' => 15,
+                'total' => 0,
+            ]
+        ], 500);
+    }
+}
+
+/**
+ * Update multiple listings approval status (batch update)
+ */
+public function batchApprove(Request $request): JsonResponse
+{
+    try {
+        $user = auth()->user();
+        
+        if (!$user->hasRole('manager') || !$user->listing_team) {
+            return ApiResponse::error('Unauthorized access.', 403);
+        }
+        
+        $request->validate([
+            'listing_ids' => 'required|array',
+            'listing_ids.*' => 'exists:listings,id',
+            'action' => 'required|in:approve,reject',
+            'reason' => 'required_if:action,reject|nullable|string'
+        ]);
+        
+        $listingIds = $request->listing_ids;
+        $action = $request->action;
+        $reason = $request->input('reason');
+        
+        $listings = Listing::whereIn('id', $listingIds)->get();
+        $updatedCount = 0;
+        
+        foreach ($listings as $listing) {
+            if ($action === 'approve' && !$listing->approved) {
+                $listing->update([
+                    'approved' => true,
+                    'approved_by' => $user->id,
+                    'approved_at' => now(),
+                ]);
+                
+                // إرسال إشعارات
+                if ($listing->added_by) {
+                    User::find($listing->added_by)?->notify(new ListingApproved($listing, $user));
+                }
+                if ($listing->agent_id && $listing->agent_id != $listing->added_by) {
+                    User::find($listing->agent_id)?->notify(new ListingApproved($listing, $user));
+                }
+                
+                $updatedCount++;
+                
+            } elseif ($action === 'reject' && $listing->approved) {
+                $listing->update([
+                    'approved' => false,
+                    'approved_by' => null,
+                    'approved_at' => null,
+                ]);
+                
+                // إرسال إشعارات
+                if ($listing->added_by) {
+                    User::find($listing->added_by)?->notify(new ListingRejected($listing, $reason));
+                }
+                if ($listing->agent_id && $listing->agent_id != $listing->added_by) {
+                    User::find($listing->agent_id)?->notify(new ListingRejected($listing, $reason));
+                }
+                
+                $updatedCount++;
+            }
+        }
+        
+        $this->clearCache();
+        
+        return ApiResponse::success(
+            null,
+            "{$updatedCount} listing(s) have been {$action}d successfully."
+        );
+        
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to process batch approval: ' . $e->getMessage());
+    }
+}
 }
