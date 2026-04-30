@@ -1982,17 +1982,17 @@ public function markAsConverted(Request $request, $id)
         }
 
         $rules = [
-            'sold_by' => 'required|in:me,oia,other_company,another_agent',
+            'sold_by' => 'required|in:me,oia,owner,a_to_a,another_agent',
             'agent_id' => 'required_if:sold_by,another_agent|exists:users,id',
         ];
         
-        // Add validation for other company data
-        if ($request->sold_by === 'other_company') {
-            $rules['other_company_details'] = 'required|array';
-            $rules['other_company_details.company_name'] = 'required|string|max:255';
-            $rules['other_company_details.agent_name'] = 'required|string|max:255';
-            $rules['other_company_details.agent_phone'] = 'required|string|max:20';
-            $rules['other_company_details.agent_email'] = 'nullable|email|max:255';
+        // A to A validation (كانت other_company)
+        if ($request->sold_by === 'a_to_a') {
+            $rules['a_to_a_details'] = 'required|array';
+            $rules['a_to_a_details.company_name'] = 'required|string|max:255';
+            $rules['a_to_a_details.agent_name'] = 'required|string|max:255';
+            $rules['a_to_a_details.agent_phone'] = 'required|string|max:20';
+            $rules['a_to_a_details.commercial_license'] = 'required|string|max:255';
         }
         
         $request->validate($rules);
@@ -2005,12 +2005,12 @@ public function markAsConverted(Request $request, $id)
             'sold_by_agent_id' => $request->agent_id ?? null,
         ];
         
-        // Handle other company details
-        if ($request->sold_by === 'other_company' && $request->has('other_company_details')) {
-            $updateData['sold_by_company_name'] = $request->other_company_details['company_name'];
-            $updateData['sold_by_agent_name'] = $request->other_company_details['agent_name'];
-            $updateData['sold_by_agent_phone'] = $request->other_company_details['agent_phone'];
-            $updateData['sold_by_agent_email'] = $request->other_company_details['agent_email'] ?? null;
+        // Handle A to A details
+        if ($request->sold_by === 'a_to_a' && $request->has('a_to_a_details')) {
+            $updateData['sold_by_company_name'] = $request->a_to_a_details['company_name'];
+            $updateData['sold_by_agent_name'] = $request->a_to_a_details['agent_name'];
+            $updateData['sold_by_agent_phone'] = $request->a_to_a_details['agent_phone'];
+            $updateData['commercial_license'] = $request->a_to_a_details['commercial_license'];
         }
         
         $property->update($updateData);
@@ -2033,23 +2033,22 @@ public function markAsRented(Request $request, $id)
         $property = Listing::findOrFail($id);
         
         $rules = [
-            'rented_by' => 'required|in:me,oia,other_company,another_agent',
+            'rented_by' => 'required|in:me,oia,owner,a_to_a,another_agent',
             'agent_id' => 'required_if:rented_by,another_agent|exists:users,id',
-            'rented_date' => 'required|date',
+            'rented_date' => 'nullable|date',
             'owner_id' => 'nullable|exists:owners,id'
         ];
         
-        // Add validation for other company data
-        if ($request->rented_by === 'other_company') {
-            $rules['other_company_details'] = 'required|array';
-            $rules['other_company_details.company_name'] = 'required|string|max:255';
-            $rules['other_company_details.agent_name'] = 'required|string|max:255';
-            $rules['other_company_details.agent_phone'] = 'required|string|max:20';
-            $rules['other_company_details.agent_email'] = 'nullable|email|max:255';
+        // A to A validation
+        if ($request->rented_by === 'a_to_a') {
+            $rules['a_to_a_details'] = 'required|array';
+            $rules['a_to_a_details.company_name'] = 'required|string|max:255';
+            $rules['a_to_a_details.agent_name'] = 'required|string|max:255';
+            $rules['a_to_a_details.agent_phone'] = 'required|string|max:20';
+            $rules['a_to_a_details.commercial_license'] = 'required|string|max:255';
         }
         
         $request->validate($rules);
-
         $updateData = [
             'status' => 'rented',
             'rented_by' => $request->rented_by,
@@ -2058,15 +2057,16 @@ public function markAsRented(Request $request, $id)
             'rented_owner_id' => $request->owner_id,
         ];
         
-        // Handle other company details
-        if ($request->rented_by === 'other_company' && $request->has('other_company_details')) {
-            $updateData['rented_by_company_name'] = $request->other_company_details['company_name'];
-            $updateData['rented_by_agent_name'] = $request->other_company_details['agent_name'];
-            $updateData['rented_by_agent_phone'] = $request->other_company_details['agent_phone'];
-            $updateData['rented_by_agent_email'] = $request->other_company_details['agent_email'] ?? null;
+        // Handle A to A details
+        if ($request->rented_by === 'a_to_a' && $request->has('a_to_a_details')) {
+            $updateData['rented_by_company_name'] = $request->a_to_a_details['company_name'];
+            $updateData['rented_by_agent_name'] = $request->a_to_a_details['agent_name'];
+            $updateData['rented_by_agent_phone'] = $request->a_to_a_details['agent_phone'];
+            $updateData['commercial_license'] = $request->a_to_a_details['commercial_license'];
         }
 
         $property->update($updateData);
+        $this->clearCache();
 
         return ApiResponse::success(
             new ListingResource($property->fresh()),
@@ -2088,7 +2088,11 @@ public function revertFromRented($id)
             'rented_by' => null,
             'rented_by_agent_id' => null,
             'rented_date' => null,
-            'rented_owner_id' => null
+            'rented_owner_id' => null,
+            'rented_by_company_name'=>null,
+            'rented_by_agent_name'=>null,
+            'rented_by_agent_phone'=>null,
+            'commercial_license'=>null,
         ]);
 
         return ApiResponse::success(
@@ -2113,7 +2117,11 @@ public function revertFromConverted($id)
             'status' => 'active',
             'sold_by' => null,
             'converted_at' => null,
-            'converted_by' => null
+            'converted_by' => null,
+            'sold_by_company_name'=>null,
+            'sold_by_agent_name'=>null,
+            'sold_by_agent_phone'=>null,
+            'commercial_license'=>null,
         ]);
 
         $this->clearCache();

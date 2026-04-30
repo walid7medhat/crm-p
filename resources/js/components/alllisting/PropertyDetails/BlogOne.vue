@@ -1180,7 +1180,7 @@
     </div>
   </div>
 </div>
-    <!-- Sold Out Modal -->
+
 <!-- Mark as Sold Out Modal -->
 <div v-if="showSoldOutModal" class="modal-overlay" @click="closeSoldOutModal">
   <div class="modal-content sold-out-modal-content" @click.stop>
@@ -1191,7 +1191,8 @@
           Mark as Sold Out
         </h4>
         <p class="sold-out-modal-subtitle">
-          {{ !soldByChoice ? 'Choose who sold this property' : 'Add the new owner for this property' }}
+          {{ !soldByChoice ? 'Choose how this property was sold' : 
+             (soldByChoice === 'oia' ? 'Choose the selling agent' : 'Add the new owner details') }}
         </p>
       </div>
       <button type="button" class="modal-close" @click="closeSoldOutModal" aria-label="Close">
@@ -1200,72 +1201,64 @@
     </div>
 
     <div class="modal-body sold-out-modal-body">
-      <!-- Step 1: Choose option -->
+      <!-- المستوى الأول: الخيارات الرئيسية -->
       <template v-if="!soldByChoice">
         <div class="sold-out-options">
-          <div class="option-card" @click="selectSoldBy('me')">
-            <div class="option-icon">
-              <i class="ri-user-star-line"></i>
-            </div>
+          <div class="option-card" @click="selectSoldBy('oia')">
+            <div class="option-icon"><i class="ri-building-line"></i></div>
             <div class="option-content">
-              <h6>Sold Out by Me</h6>
-              <p>You closed this deal</p>
+              <h6>Sold by OIA</h6>
+              <p>Sold by OIA Properties</p>
             </div>
-            <div class="option-arrow">
-              <i class="ri-arrow-right-s-line"></i>
-            </div>
-          </div>
-          <!--<div class="option-card" @click="selectSoldBy('oia')">-->
-          <!--  <div class="option-icon">-->
-          <!--    <i class="ri-award-line"></i>-->
-          <!--  </div>-->
-          <!--  <div class="option-content">-->
-          <!--    <h6>Sold Out by Oia</h6>-->
-          <!--    <p>Another Oia agent closed this deal</p>-->
-          <!--  </div>-->
-          <!--  <div class="option-arrow">-->
-          <!--    <i class="ri-arrow-right-s-line"></i>-->
-          <!--  </div>-->
-          <!--</div>-->
-          <div class="option-card" @click="selectSoldBy('other_company')">
-            <div class="option-icon">
-              <i class="ri-forbid-line"></i>
-            </div>
-            <div class="option-content">
-              <h6>Sold Out by Other Company</h6>
-              <p>Sold by an external company</p>
-            </div>
-            <div class="option-arrow">
-              <i class="ri-arrow-right-s-line"></i>
-            </div>
+            <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
           </div>
           
-          
-               <!-- NEW OPTION: Sold by Another Agent -->
-        <div class="option-card" @click="selectSoldBy('another_agent')">
-            <div class="option-icon">
-                <i class="ri-user-shared-line"></i>
-            </div>
+          <div class="option-card" @click="selectSoldBy('owner')">
+            <div class="option-icon"><i class="ri-home-2-line"></i></div>
             <div class="option-content">
-                <h6>Sold by Another Agent</h6>
-                <p>Another agent from Oia closed this deal</p>
+              <h6>Sold by Owner</h6>
+              <p>Direct owner sale</p>
             </div>
-            <div class="option-arrow">
-                <i class="ri-arrow-right-s-line"></i>
-            </div>
-        </div>
-        
-        
+            <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
+          </div>
         </div>
       </template>
-      <template v-else-if="soldByChoice === 'another_agent'">
-    <div class="sold-out-add-owner-step">
-        <p class="sold-out-step-text">
-            Select the agent who sold this property, then add the new owner.
-        </p>
-        
-        <!-- v-select for agents -->
-        <div class="form-group mb-3">
+
+      <!-- المستوى الثاني: اختيار نوع البيع داخل OIA -->
+      <template v-else-if="soldByChoice === 'oia' && !showOIAgentSelection">
+        <div class="sold-out-options">
+          <div class="option-card" @click="openOIAgentSelection">
+            <div class="option-icon"><i class="ri-user-star-line"></i></div>
+            <div class="option-content">
+              <h6>OIA Agent</h6>
+              <p>Sold by an OIA agent (you or another)</p>
+            </div>
+            <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
+          </div>
+          
+          <div class="option-card" @click="openAToAModalForSale">
+            <div class="option-icon"><i class="ri-user-shared-line"></i></div>
+            <div class="option-content">
+              <h6>A to A Transaction</h6>
+              <p>Sold to another agent/company</p>
+            </div>
+            <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
+          </div>
+        </div>
+        <!-- زر Back للرجوع للمستوى الأول -->
+        <div class="text-center mt-3">
+          <button type="button" class="btn-modal btn-modal-secondary" @click="soldByChoice = null">
+            Back
+          </button>
+        </div>
+      </template>
+
+      <!-- اختيار الـ OIA Agent -->
+      <template v-else-if="showOIAgentSelection">
+        <div class="sold-out-add-owner-step">
+          <p class="sold-out-step-text">Select the OIA agent who sold this property</p>
+          
+          <div class="form-group mb-3">
             <label class="form-label">Select Agent *</label>
             <v-select 
                 v-model="selectedSoldByAgent"
@@ -1279,151 +1272,250 @@
                     {{ agent.name }}
                 </template>
             </v-select>
+            <div v-if="availableAgentsForSoldBy.length === 0 && !loadingAgentsForSoldBy" class="text-danger mt-1">
+                No agents available. Please contact administrator.
+            </div>
+          </div>
+          
+          <div class="d-flex gap-2">
+            <button type="button" class="btn-modal btn-modal-secondary" @click="backToOIAOptions">
+              Back
+            </button>
+            <button 
+                type="button" 
+                class="btn-modal btn-modal-primary" 
+                @click="markAsSoldByOIAgent"
+                :disabled="!selectedSoldByAgent"
+            >
+              Confirm
+            </button>
+          </div>
         </div>
-         <button 
-            type="button" 
-            class="btn-modal btn-modal-primary" 
-            @click="markAsSold('another_agent', selectedSoldByAgent)"
-            :disabled="!selectedSoldByAgent"
-        >
-            <i class="ri-checkbox-circle-line me-2"></i>
-            Confirm Sold by Agent
-        </button>
-   
-    </div>
-</template>
+      </template>
 
-      <!-- Step 2: Add new owner (for Sold by Me / Sold by Oia) -->
-      <template v-else>
+      <!-- إضافة مالك جديد (حالة me) -->
+      <template v-else-if="soldByChoice === 'me'">
         <div class="sold-out-add-owner-step">
-          <p class="sold-out-step-text">
-            Add the new owner details before marking as sold. You can then mark the property as sold.
-          </p>
-          <button type="button" class="btn-modal btn-modal-primary btn-add-owner-inline" @click="openAddOwnerModal('owner')">
-            <i class="ri-user-add-line me-2"></i>
-            Add New Owner
-          </button>
+          <p class="sold-out-step-text">Add the new owner details before marking as sold.</p>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn-modal btn-modal-secondary" @click="backToOIAOptions">
+              Back
+            </button>
+            <button type="button" class="btn-modal btn-modal-primary" @click="openAddOwnerModal('owner')">
+              Add New Owner
+            </button>
+          </div>
         </div>
       </template>
     </div>
 
-    <div class="modal-footer sold-out-modal-footer">
-      <button v-if="soldByChoice" type="button" class="btn-modal btn-modal-secondary" @click="soldByChoice = null">
-        Back
-      </button>
-      <button type="button" class="btn-modal btn-modal-secondary" @click="closeSoldOutModal">
-        Cancel
-      </button>
-    </div>
+    <!-- مفيش Footer مع Cancel -->
   </div>
 </div>
 <!-- Mark as Rented Modal -->
 <div v-if="showRentedModal" class="modal-overlay" @click="closeRentedModal">
-    <div class="modal-content sold-out-modal-content" @click.stop>
-        <div class="modal-header sold-out-modal-header">
-            <div class="sold-out-header-inner">
-                <h4 class="sold-out-modal-title">
-                    <i class="ri-home-gear-line me-2"></i>
-                    Mark as Rented
-                </h4>
-                <p class="sold-out-modal-subtitle">
-                    {{ !rentedByChoice ? 'Choose who rented this property' : 'Add the new tenant for this property' }}
-                </p>
-            </div>
-            <button type="button" class="modal-close" @click="closeRentedModal">
-                <i class="ri-close-line"></i>
-            </button>
-        </div>
-
-        <div class="modal-body sold-out-modal-body">
-            <!-- Step 1: Choose option -->
-            <template v-if="!rentedByChoice">
-                <div class="sold-out-options">
-                    <div class="option-card" @click="selectRentedBy('me')">
-                        <div class="option-icon"><i class="ri-user-star-line"></i></div>
-                        <div class="option-content">
-                            <h6>Rented by Me</h6>
-                            <p>You closed this deal</p>
-                        </div>
-                        <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
-                    </div>
-                    <!--<div class="option-card" @click="selectRentedBy('oia')">-->
-                    <!--    <div class="option-icon"><i class="ri-award-line"></i></div>-->
-                    <!--    <div class="option-content">-->
-                    <!--        <h6>Rented by Oia</h6>-->
-                    <!--        <p>Another Oia agent closed this deal</p>-->
-                    <!--    </div>-->
-                    <!--    <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>-->
-                    <!--</div>-->
-                    <div class="option-card" @click="selectRentedBy('other_company')">
-                        <div class="option-icon"><i class="ri-forbid-line"></i></div>
-                        <div class="option-content">
-                            <h6>Rented by Other Company</h6>
-                            <p>Rented by an external company</p>
-                        </div>
-                        <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
-                    </div>
-                    <div class="option-card" @click="selectRentedBy('another_agent')">
-                        <div class="option-icon"><i class="ri-user-shared-line"></i></div>
-                        <div class="option-content">
-                            <h6>Rented by Another Agent</h6>
-                            <p>Another agent from Oia closed this deal</p>
-                        </div>
-                        <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
-                    </div>
-                </div>
-            </template>
-            
-            <!-- Step 2: Select Agent + Rented Date -->
-            <template v-else-if="rentedByChoice === 'another_agent'">
-                <div class="sold-out-add-owner-step">
-                    <p class="sold-out-step-text">Select the agent who rented this property, then add the new tenant.</p>
-                    
-                    <div class="form-group mb-3">
-                        <label class="form-label">Select Agent *</label>
-                        <v-select v-model="selectedRentedByAgent" :options="availableAgentsForRentedBy" 
-                            placeholder="Choose an agent..." label="name" :reduce="agent => agent.id"
-                            :loading="loadingAgentsForRentedBy" />
-                    </div>
-                    
-                    <div class="form-group mb-3">
-                        <label class="form-label">Rented Date *</label>
-                        <input type="date" v-model="rentedDate" class="form-control" required />
-                    </div>
-                       <button 
-                        type="button" 
-                        class="btn-modal btn-modal-primary" 
-                        @click="markAsRented('another_agent', selectedRentedByAgent)"
-                        :disabled="!selectedRentedByAgent || !rentedDate"
-                    >
-                        <i class="ri-checkbox-circle-line me-2"></i>
-                        Confirm Rented by Agent
-                    </button>
-                
-                </div>
-            </template>
-
-            <!-- Step 2b: Add new tenant (for other options) -->
-            <template v-else>
-                <div class="sold-out-add-owner-step">
-                    <p class="sold-out-step-text">Add the new tenant details before marking as rented.</p>
-                    <div class="form-group mb-3">
-                        <label class="form-label">Rented Date *</label>
-                        <input type="date" v-model="rentedDate" class="form-control" required />
-                    </div>
-                    <button type="button" class="btn-modal btn-modal-primary btn-add-owner-inline" 
-                        @click="openAddOwnerModal('tenant')">
-                        <i class="ri-user-add-line me-2"></i> Add New Tenant
-                    </button>
-                </div>
-            </template>
-        </div>
-
-        <div class="modal-footer sold-out-modal-footer">
-            <button v-if="rentedByChoice" type="button" class="btn-modal btn-modal-secondary" @click="rentedByChoice = null">Back</button>
-            <button type="button" class="btn-modal btn-modal-secondary" @click="closeRentedModal">Cancel</button>
-        </div>
+  <div class="modal-content sold-out-modal-content" @click.stop>
+    <div class="modal-header sold-out-modal-header">
+      <div class="sold-out-header-inner">
+        <h4 class="sold-out-modal-title">
+          <i class="ri-home-gear-line me-2"></i>
+          Mark as Rented
+        </h4>
+        <p class="sold-out-modal-subtitle">
+          {{ !rentedByChoice ? 'Choose how this property was rented' : 
+             (rentedByChoice === 'oia' ? 'Choose the renting agent' : 'Add the new tenant details') }}
+        </p>
+      </div>
+      <button type="button" class="modal-close" @click="closeRentedModal">
+        <i class="ri-close-line"></i>
+      </button>
     </div>
+
+    <div class="modal-body sold-out-modal-body">
+      <!-- المستوى الأول -->
+      <template v-if="!rentedByChoice">
+        <div class="sold-out-options">
+          <div class="option-card" @click="selectRentedBy('oia')">
+            <div class="option-icon"><i class="ri-building-line"></i></div>
+            <div class="option-content">
+              <h6>Rented by OIA</h6>
+              <p>Rented by OIA Properties</p>
+            </div>
+            <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
+          </div>
+          
+          <div class="option-card" @click="selectRentedBy('owner')">
+            <div class="option-icon"><i class="ri-home-2-line"></i></div>
+            <div class="option-content">
+              <h6>Rented by Owner</h6>
+              <p>Direct owner rental</p>
+            </div>
+            <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
+          </div>
+        </div>
+      </template>
+
+      <!-- المستوى الثاني: OIA Options -->
+      <template v-else-if="rentedByChoice === 'oia' && !showOIAgentSelectionRent">
+        <div class="sold-out-options">
+          <div class="option-card" @click="openOIAgentSelectionRent">
+            <div class="option-icon"><i class="ri-user-star-line"></i></div>
+            <div class="option-content">
+              <h6>OIA Agent</h6>
+              <p>Rented by an OIA agent (you or another)</p>
+            </div>
+            <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
+          </div>
+          
+          <div class="option-card" @click="openAToAModalForRent">
+            <div class="option-icon"><i class="ri-user-shared-line"></i></div>
+            <div class="option-content">
+              <h6>A to A Transaction</h6>
+              <p>Rented to another agent/company</p>
+            </div>
+            <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
+          </div>
+        </div>
+            <div class="text-center mt-3">
+                <button type="button" class="btn-modal btn-modal-secondary" @click="rentedByChoice = null">
+                    Back
+                </button>
+            </div>
+      </template>
+
+      <!-- اختيار الـ OIA Agent للإيجار -->
+      <template v-else-if="showOIAgentSelectionRent">
+        <div class="sold-out-add-owner-step">
+          <p class="sold-out-step-text">Select the OIA agent who rented this property</p>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Rented Date *</label>
+            <input type="date" v-model="rentedDate" class="form-control" :min="today" required />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Select Agent *</label>
+            <v-select 
+                v-model="selectedRentedByAgent"
+                :options="availableAgentsForRentedBy"
+                placeholder="Choose an agent..."
+                label="name"
+                :reduce="agent => agent.id"
+                :loading="loadingAgentsForRentedBy"
+            />
+          </div>
+          
+          <div class="d-flex gap-2">
+            <button type="button" class="btn-modal btn-modal-secondary" @click="backToOIAOptionsRent">
+              Back
+            </button>
+            <button 
+                type="button" 
+                class="btn-modal btn-modal-primary" 
+                @click="markAsRentedByOIAgent"
+                :disabled="!selectedRentedByAgent || !rentedDate"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <!-- حالة me (نفس المستخدم) -->
+      <template v-else-if="rentedByChoice === 'me'">
+        <div class="sold-out-add-owner-step">
+          <p class="sold-out-step-text">Add the new tenant details before marking as rented.</p>
+          <div class="form-group mb-3">
+            <label class="form-label">Rented Date *</label>
+            <input type="date" v-model="rentedDate" class="form-control" :min="today" required />
+          </div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn-modal btn-modal-secondary" @click="backToOIAOptionsRent">
+              Back
+            </button>
+            <button type="button" class="btn-modal btn-modal-primary" @click="openAddOwnerModal('tenant')">
+              Add New Tenant
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <!-- حالة owner -->
+      <template v-else-if="rentedByChoice === 'owner'">
+        <div class="sold-out-add-owner-step">
+          <p class="sold-out-step-text">Confirm rental by owner</p>
+          <div class="form-group mb-3">
+            <label class="form-label">Rented Date *</label>
+            <input type="date" v-model="rentedDate" class="form-control" :min="today" required />
+          </div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn-modal btn-modal-secondary" @click="rentedByChoice = null">
+              Back
+            </button>
+            <button type="button" class="btn-modal btn-modal-primary" @click="markAsRentedByOwnerConfirm">
+              Confirm
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- مفيش Cancel هنا -->
+  </div>
+</div>
+<!-- A to A Modal -->
+<div v-if="showAToAModal" class="modal-overlay" @click="closeAToAModal">
+  <div class="modal-content" style="max-width: 500px;" @click.stop>
+    <div class="modal-header">
+      <div class="header-content">
+        <i class="ri-user-shared-line header-icon"></i>
+        <div>
+          <h4 class="modal-title">A to A Transaction</h4>
+          <p class="modal-subtitle">Enter the receiving agent/company details</p>
+        </div>
+      </div>
+      <button class="modal-close" @click="closeAToAModal">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="form-group mb-3">
+        <label class="form-label">Company Name <span class="text-danger">*</span></label>
+        <input type="text" v-model="aToAData.company_name" class="form-control" placeholder="Enter company name" />
+      </div>
+      <div class="form-group mb-3">
+        <label class="form-label">Agent Name <span class="text-danger">*</span></label>
+        <input type="text" v-model="aToAData.agent_name" class="form-control" placeholder="Enter agent name" />
+      </div>
+      
+      <div class="form-group mb-3">
+        <label class="form-label">Agent Phone <span class="text-danger">*</span></label>
+        <input type="tel" v-model="aToAData.agent_phone" class="form-control" placeholder="Enter agent phone number" />
+      </div>
+      
+      <div class="form-group mb-3">
+        <label class="form-label">Commercial License Number <span class="text-danger">*</span></label>
+        <input type="text" v-model="aToAData.commercial_license" class="form-control" placeholder="Enter commercial license number" />
+      </div>
+      
+      <div class="form-group" v-if="aToAType === 'rented'">
+        <label class="form-label">Rented Date <span class="text-danger">*</span></label>
+        <input type="date" v-model="rentedDate" class="form-control" :min="today" required />
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button 
+        class="btn-modal btn-modal-primary w-100" 
+        @click="aToAType === 'sold' ? submitAToA() : submitAToAForRent()"
+        :disabled="submittingATO || !aToAData.company_name.trim() || !aToAData.agent_name.trim() || !aToAData.agent_phone.trim() || !aToAData.commercial_license.trim() || (aToAType === 'rented' && !rentedDate)"
+      >
+        <i class="ri-checkbox-circle-line me-2"></i>
+        {{ submittingATO ? 'Submitting...' : 'Confirm Transaction' }}
+      </button>
+    </div>
+  </div>
 </div>
 <!-- Other Company Modal -->
 <div v-if="showOtherCompanyModal" class="modal-overlay" @click="closeOtherCompanyModal">
@@ -2798,6 +2890,21 @@ const showSoldOutModal = ref(false);
 
 const soldByChoice = ref(null);
 const showAddOwnerModal = ref(false);
+
+
+const showOIAgentSelection = ref(false);
+const showAToAModal = ref(false);
+const aToAData = ref({
+  company_name:'',
+  agent_name: '',
+  agent_phone: '',
+  commercial_license: ''
+});
+const submittingATO = ref(false);
+const aToAType = ref('sold'); // 'sold' or 'rented'
+
+const showOIAgentSelectionRent = ref(false);
+
 const isSubmittingOwner = ref(false);
 const ownerNationalities = ref([
   "Afghanistan","Albania","Algeria","Andorra","Angola","Antigua and Barbuda","Argentina","Armenia","Australia","Austria",
@@ -2850,11 +2957,7 @@ const openSoldOutModal = () => {
   closeActionsDropdown();
 };
 
-const closeSoldOutModal = () => {
-  showSoldOutModal.value = false;
-  soldByChoice.value = null;
-    selectedSoldByAgent.value = null; 
-};
+
 // أضف هذه المتغيرات في setup() مع بقية المتغيرات
 const showOtherCompanyModal = ref(false);
 const otherCompanyData = ref({
@@ -2885,7 +2988,17 @@ const openOtherCompanyModal = (type) => {
     showRentedModal.value = false;
   }
 };
+const backToRentedOptions = () => {
+    rentedByChoice.value = null;
+};
 
+const markAsRentedByOwnerConfirm = async () => {
+    if (!rentedDate.value) {
+        proxy.$showNotification('Please select rented date', 'warning');
+        return;
+    }
+    await markAsRentedByOwner();
+};
 // دالة لإغلاق مودال الشركة الأخرى
 const closeOtherCompanyModal = () => {
   showOtherCompanyModal.value = false;
@@ -3032,33 +3145,188 @@ const markAsRentedWithOtherCompany = async () => {
   }
 };
 
+
+
 const selectSoldBy = async (soldBy) => {
-     if (soldBy === 'other_company') {
-        openOtherCompanyModal('sold');
-        return;
-      }
-    
-    if (soldBy === 'another_agent') {
-        await fetchAvailableAgentsForSoldBy();
-        soldByChoice.value = 'another_agent';
+    if (soldBy === 'owner') {
+      closeSoldOutModal();
+        // Sold by Owner - يظهر alert confirm فقط
+        const result = await Swal.fire({
+            title: 'Confirm Sold by Owner',
+            text: 'Are you sure you want to mark this property as sold directly by the owner? This action cannot be undone.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Confirm',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (result.isConfirmed) {
+            await markAsSoldByOwner();
+        }
         return;
     }
     
-    soldByChoice.value = soldBy;
+    if (soldBy === 'oia') {
+        // Sold by OIA - يفتح المستوى الثاني
+        soldByChoice.value = 'oia';
+        return;
+    }
 };
 
+const markAsSoldByOwner = async () => {
+    try {
+        const payload = { sold_by: 'owner' };
+        const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, payload);
+        
+        if (response.data.status) {
+            property.value.status = 'converted';
+            property.value.sold_by = 'owner';
+            proxy.$showNotification('Property marked as sold by owner!', 'success');
+            closeSoldOutModal();
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to mark as sold by owner');
+    }
+};
+
+// ✅ فتح مودال اختيار الـ OIA Agent
+const openOIAgentSelection = async () => {
+    console.log('🔍 Opening OIA Agent selection...');
+    await fetchAvailableAgentsForSoldBy();
+    showOIAgentSelection.value = true;
+    console.log('✅ showOIAgentSelection =', showOIAgentSelection.value);
+};
+
+// ✅ جلب الأجنت من الـ API
 const fetchAvailableAgentsForSoldBy = async () => {
     try {
         loadingAgentsForSoldBy.value = true;
+        console.log('📡 Fetching agents from /listings/agents');
         const response = await api.get('/listings/agents');
+        console.log('📦 Response:', response.data);
+        
         if (response.data.status) {
             availableAgentsForSoldBy.value = response.data.data;
+            console.log('✅ Agents loaded:', availableAgentsForSoldBy.value.length);
+        } else {
+            console.log('❌ No agents or status false');
+            availableAgentsForSoldBy.value = [];
         }
     } catch (error) {
+        console.error('❌ Error fetching agents:', error);
         handleApiError(error, 'Failed to load agents');
+        availableAgentsForSoldBy.value = [];
     } finally {
         loadingAgentsForSoldBy.value = false;
     }
+};
+
+const backToOIAOptions = () => {
+    showOIAgentSelection.value = false;
+    soldByChoice.value = 'oia';
+};
+
+const markAsSoldByOIAgent = async () => {
+    if (!selectedSoldByAgent.value) {
+        proxy.$showNotification('Please select an agent', 'warning');
+        return;
+    }
+    
+    const currentUser = getCurrentUser();
+    const isCurrentUser = selectedSoldByAgent.value === currentUser?.id;
+    
+    showOIAgentSelection.value = false;
+    
+    if (isCurrentUser) {
+        // نفس المستخدم = Sold by Me
+        soldByChoice.value = 'me';
+    } else {
+        // مستخدم آخر = Sold by Another Agent
+        await markAsSoldByAnotherAgent(selectedSoldByAgent.value);
+    }
+};
+
+// بيع عن طريق Agent آخر
+const markAsSoldByAnotherAgent = async (agentId) => {
+    try {
+        const payload = { 
+            sold_by: 'another_agent',
+            agent_id: agentId
+        };
+        
+        const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, payload);
+        
+        if (response.data.status) {
+            property.value.status = 'converted';
+            property.value.sold_by = 'another_agent';
+            property.value.sold_by_agent_id = agentId;
+            const selectedAgent = availableAgentsForSoldBy.value.find(a => a.id === agentId);
+            property.value.sold_by_agent_name = selectedAgent?.name;
+            proxy.$showNotification('Property marked as sold by another agent!', 'success');
+            closeSoldOutModal();
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to mark as sold by another agent');
+    }
+};
+
+// فتح مودال A to A
+const openAToAModalForSale = () => {
+    aToAType.value = 'sold';
+    aToAData.value = { company_name:'',agent_name: '', agent_phone: '', commercial_license: '' };
+    showAToAModal.value = true;
+    closeSoldOutModal();
+};
+
+// تأكيد A to A
+const submitAToA = async () => {
+    if (!aToAData.value.company_name.trim() || !aToAData.value.agent_name.trim() || !aToAData.value.agent_phone.trim() || !aToAData.value.commercial_license.trim()) {
+        proxy.$showNotification('Please fill all required fields', 'warning');
+        return;
+    }
+
+    try {
+        submittingATO.value = true;
+        
+        const payload = {
+            sold_by: 'a_to_a',
+            a_to_a_details: {
+              company_name:aToAData.value.company_name,
+                agent_name: aToAData.value.agent_name,
+                agent_phone: aToAData.value.agent_phone,
+                commercial_license: aToAData.value.commercial_license
+            }
+        };
+        
+        const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, payload);
+        
+        if (response.data.status) {
+            property.value.status = 'converted';
+            property.value.sold_by = 'a_to_a';
+            proxy.$showNotification('Property marked as sold via A to A!', 'success');
+            closeAToAModal();
+            closeSoldOutModal();
+            await fetchProperty();
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to submit A to A transaction');
+    } finally {
+        submittingATO.value = false;
+    }
+};
+
+const closeAToAModal = () => {
+    showAToAModal.value = false;
+    aToAData.value = { company_name:'',agent_name: '', agent_phone: '', commercial_license: '' };
+};
+
+const closeSoldOutModal = () => {
+    showSoldOutModal.value = false;
+    soldByChoice.value = null;
+    selectedSoldByAgent.value = null;
+    showOIAgentSelection.value = false;
 };
 // في setup()
 const showRentedModal = ref(false);
@@ -3068,12 +3336,7 @@ const rentedDate = ref('');
 const availableAgentsForRentedBy = ref([]);
 const loadingAgentsForRentedBy = ref(false);
 const addPersonType = ref('owner');
-const closeRentedModal = () => {
-    showRentedModal.value = false;
-    rentedByChoice.value = null;
-    selectedRentedByAgent.value = null;
-    rentedDate.value = '';
-};
+
 // دالة فتح مودال الإيجار
 const openRentedModal = () => {
     showRentedModal.value = true;
@@ -3098,23 +3361,177 @@ const fetchAvailableAgentsForRentedBy = async () => {
     }
 };
 
-// دالة اختيار نوع الإيجار
+// دالة اختيار نوع الإيجار (المستوى الأول)
 const selectRentedBy = async (rentedBy) => {
-    if (rentedBy === 'other_company') {
-      openOtherCompanyModal('rented');
-      return;
-    }
-  
-    
-    if (rentedBy === 'another_agent') {
-        await fetchAvailableAgentsForRentedBy();
-        rentedByChoice.value = 'another_agent';
+    if (rentedBy === 'owner') {
+      closeRentedModal();
+        const result = await Swal.fire({
+            title: 'Confirm Rented by Owner',
+            text: 'Are you sure you want to mark this property as rented directly by the owner?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Confirm',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (result.isConfirmed) {
+            await markAsRentedByOwner();
+        }
         return;
     }
     
-    rentedByChoice.value = rentedBy;
+    if (rentedBy === 'oia') {
+        rentedByChoice.value = 'oia';
+        return;
+    }
 };
 
+const markAsRentedByOwner = async () => {
+    // if (!rentedDate.value) {
+    //     proxy.$showNotification('Please select rented date', 'warning');
+    //     return;
+    // }
+    
+    try {
+        const payload = { rented_by: 'owner', rented_date: rentedDate.value };
+        const response = await api.patch(`/listings/properties/${property.value.id}/mark-rented`, payload);
+        
+        if (response.data.status) {
+            property.value.status = 'rented';
+            property.value.rented_by = 'owner';
+            property.value.rented_date = rentedDate.value;
+            proxy.$showNotification('Property marked as rented by owner!', 'success');
+            closeRentedModal();
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to mark as rented by owner');
+    }
+};
+
+const openOIAgentSelectionRent = async () => {
+    await fetchAvailableAgentsForRentedBy();
+    showOIAgentSelectionRent.value = true;
+};
+
+
+
+const backToOIAOptionsRent = () => {
+    showOIAgentSelectionRent.value = false;
+    rentedByChoice.value = 'oia';
+        selectedRentedByAgent.value = null;
+
+};
+
+const markAsRentedByOIAgent = async () => {
+    if (!selectedRentedByAgent.value) {
+        proxy.$showNotification('Please select an agent', 'warning');
+        return;
+    }
+    
+    if (!rentedDate.value) {
+        proxy.$showNotification('Please select rented date', 'warning');
+        return;
+    }
+    
+    const currentUser = getCurrentUser();
+    const isCurrentUser = selectedRentedByAgent.value === currentUser?.id;
+    
+    showOIAgentSelectionRent.value = false;
+    
+    if (isCurrentUser) {
+        // نفس المستخدم = me
+        rentedByChoice.value = 'me';
+        // الـ form هيظهر عشان يضيف المستأجر
+    } else {
+        // مستخدم آخر = another_agent - ننفذ مباشرة
+        await markAsRentedByAnotherAgent(selectedRentedByAgent.value);
+    }
+};
+
+const markAsRentedByAnotherAgent = async (agentId) => {
+    try {
+        const payload = { 
+            rented_by: 'another_agent',
+            agent_id: agentId,
+            rented_date: rentedDate.value
+        };
+        
+        const response = await api.patch(`/listings/properties/${property.value.id}/mark-rented`, payload);
+        
+        if (response.data.status) {
+            property.value.status = 'rented';
+            property.value.rented_by = 'another_agent';
+            property.value.rented_by_agent_id = agentId;
+            property.value.rented_date = rentedDate.value;
+            const selectedAgent = availableAgentsForRentedBy.value.find(a => a.id === agentId);
+            property.value.rented_by_agent_name = selectedAgent?.name;
+            proxy.$showNotification('Property marked as rented by another agent!', 'success');
+            closeRentedModal();
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to mark as rented by another agent');
+    }
+};
+
+const openAToAModalForRent = () => {
+    aToAType.value = 'rented';
+    aToAData.value = {company_name:'',agent_name: '', agent_phone: '', commercial_license: '' };
+    showAToAModal.value = true;
+    closeRentedModal();
+};
+
+const submitAToAForRent = async () => {
+    if (!aToAData.value.company_name.trim() || !aToAData.value.agent_name.trim() || !aToAData.value.agent_phone.trim() || !aToAData.value.commercial_license.trim()) {
+        proxy.$showNotification('Please fill all required fields', 'warning');
+        return;
+    }
+    
+    if (!rentedDate.value) {
+        proxy.$showNotification('Please select rented date', 'warning');
+        return;
+    }
+
+    try {
+        submittingATO.value = true;
+        
+        const payload = {
+            rented_by: 'a_to_a',
+            rented_date: rentedDate.value,
+            a_to_a_details: {
+              company_name:aToAData.value.company_name,
+                agent_name: aToAData.value.agent_name,
+                agent_phone: aToAData.value.agent_phone,
+                commercial_license: aToAData.value.commercial_license
+            }
+        };
+        
+        const response = await api.patch(`/listings/properties/${property.value.id}/mark-rented`, payload);
+        
+        if (response.data.status) {
+            property.value.status = 'rented';
+            property.value.rented_by = 'a_to_a';
+            property.value.rented_date = rentedDate.value;
+            proxy.$showNotification('Property marked as rented via A to A!', 'success');
+            closeAToAModal();
+            closeRentedModal();
+            await fetchProperty();
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to submit A to A transaction');
+    } finally {
+        submittingATO.value = false;
+    }
+};
+
+const closeRentedModal = () => {
+    showRentedModal.value = false;
+    rentedByChoice.value = null;
+    selectedRentedByAgent.value = null;
+    showOIAgentSelectionRent.value = false;
+    rentedDate.value = '';
+};
 // دالة تنفيذ الإيجار
 const markAsRented = async (rentedBy, agentId = null, ownerId = null) => {
     const rentedByText = rentedBy === 'oia' ? 'Oia' : 
@@ -3333,10 +3750,13 @@ const revertFromRented = async () => {
     }
 };
 const openAddOwnerModal = (type = 'owner') => {
+    console.log('🔓 openAddOwnerModal called with type:', type);
+    console.log('soldByChoice:', soldByChoice.value);
+    console.log('rentedByChoice:', rentedByChoice.value);
+    
     addPersonType.value = type;
     
     if (type === 'tenant') {
-        // حالة الإيجار
         if (rentedByChoice.value === 'another_agent' && !selectedRentedByAgent.value) {
             proxy.$showNotification('Please select an agent first', 'warning');
             return;
@@ -3346,7 +3766,6 @@ const openAddOwnerModal = (type = 'owner') => {
             return;
         }
     } else {
-        // حالة البيع
         if (soldByChoice.value === 'another_agent' && !selectedSoldByAgent.value) {
             proxy.$showNotification('Please select an agent first', 'warning');
             return;
@@ -3355,6 +3774,7 @@ const openAddOwnerModal = (type = 'owner') => {
     
     resetNewOwnerForm();
     showAddOwnerModal.value = true;
+    console.log('✅ showAddOwnerModal set to true');
 };
 
 const resetNewOwnerForm = () => {
@@ -5789,6 +6209,33 @@ const openDriveLink = () => {
   showRejectDetailsModal,
   rejectReasonDetails,
   rejectingListing,
+
+  showOIAgentSelection,
+    showAToAModal,
+    aToAData,
+    submittingATO,
+    aToAType,
+    
+    // متغيرات الإيجار
+    showOIAgentSelectionRent,
+    selectedRentedByAgent,
+    availableAgentsForRentedBy,
+    
+    // دوال البيع
+    openOIAgentSelection,
+    backToOIAOptions,
+    markAsSoldByOIAgent,
+    openAToAModalForSale,
+    submitAToA,
+    closeAToAModal,
+    
+   
+    openOIAgentSelectionRent,
+    backToOIAOptionsRent,
+    markAsRentedByOIAgent,
+    openAToAModalForRent,
+    submitAToAForRent,
+   
     };
   },
 
