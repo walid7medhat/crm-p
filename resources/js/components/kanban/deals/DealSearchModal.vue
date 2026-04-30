@@ -116,13 +116,6 @@
                 <label class="form-label-custom">Date Of Birth</label>
                 <b-form-input v-model="form.buyer_dob" type="date" class="custom-input" />
               </div>
-              <div v-if="fieldSettings.buyer_amount_currency" class="col-md-6">
-                <label class="form-label-custom">Amount & Currency</label>
-                <div class="input-group-custom">
-                  <b-form-input v-model="form.amount" type="number" placeholder="Enter Amount" class="custom-input" />
-              
-                </div>
-              </div>
               <div v-if="fieldSettings.buyer_email" class="col-md-6">
                 <label class="form-label-custom">Email</label>
                 <b-form-input v-model="form.buyer_email" type="email" class="custom-input" placeholder="Enter Email" />
@@ -505,7 +498,6 @@ const defaultFieldSettings = {
   buyer_last_name: true,
   buyer_phone: true,
   buyer_date_of_birth: false,
-  buyer_amount_currency: false,
   buyer_email: false,
   buyer_residency_status: false,
   buyer_country_residence: false,
@@ -587,7 +579,6 @@ const fieldSettingsSections = [
       { id: 'buyer_first_name', label: 'First Name' },
       { id: 'buyer_last_name', label: 'Last Name' },
       { id: 'buyer_date_of_birth', label: 'Date Of Birth' },
-      { id: 'buyer_amount_currency', label: 'Amount & Currency' },
       { id: 'buyer_phone', label: 'Phone Number' },
       { id: 'buyer_email', label: 'Email' },
       { id: 'buyer_residency_status', label: 'Residency Status' },

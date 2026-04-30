@@ -206,13 +206,17 @@
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Language <span class="text-danger">*</span></label>
             <v-select 
-              v-model="form.buyer_language" 
+              :model-value="normalizeLanguageSelection(form.buyer_language)"
+              @update:modelValue="updateBuyerLanguage"
               :options="languageOptions" 
               :reduce="item => item.value" 
               label="text" 
-              placeholder="Select Language" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.buyer_language }"
+              placeholder="Select Language(s)" 
+              class="custom-v-select buyer-language-select"
+              :multiple="true"
+              :searchable="true"
+              :close-on-select="false"
+              :class="{ 'is-invalid': showErrors && !hasLanguageSelection(form.buyer_language) }"
             >
                 <template #open-indicator="{ attributes }">
                   <span v-bind="attributes">
@@ -224,29 +228,6 @@
             <div v-if="showErrors && fieldErrors.buyer_language" class="invalid-feedback d-block">
                 {{ fieldErrors.buyer_language }}
               </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Amount &amp; Currency</label>
-            <div class="input-group-custom">
-              <b-form-input v-model="form.amount" type="number" placeholder="Enter Amount" class="custom-input" />
-              <v-select 
-                v-model="form.currency" 
-                :options="currencyOptions" 
-                :reduce="o => o.value" 
-                label="text" 
-                :clearable="false" 
-                class="custom-v-select-inline" 
-              >
-               <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-             </v-select>
-             <div v-if="showErrors && fieldErrors.amount" class="invalid-feedback d-block">
-                {{ fieldErrors.amount }}
-              </div>
-            </div>
           </div>
         </div>
 
@@ -1091,30 +1072,6 @@
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="form-label-custom">Deal Total Amount</label>
-            <div class="input-group-custom">
-              <b-form-input v-model="form.deal_total_amount" type="number" placeholder="Enter Amount" class="custom-input" />
-              <v-select 
-                v-model="form.currency" 
-                :options="currencyOptions" 
-                :reduce="o => o.value" 
-                label="text" 
-                :clearable="false" 
-                class="custom-v-select-inline" 
-              >
-                <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-            
-              </v-select>
-               <div v-if="showErrors && fieldErrors.deal_total_amount" class="invalid-feedback d-block">
-                {{ fieldErrors.deal_total_amount }}
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
             <label class="form-label-custom">Deal Commission %</label>
             <b-form-input v-model="form.deal_commission" type="number" placeholder="Enter Commission %" class="custom-input" />
              <div v-if="showErrors && fieldErrors.deal_commission" class="invalid-feedback d-block">
@@ -1163,6 +1120,7 @@ import DocumentUpload from './DocumentUpload.vue'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue' 
 import api from '@/plugins/axios'
 import { getCurrentInstance } from 'vue'
+import { normalizeLanguageSelection, hasLanguageSelection } from '@/composables/useLanguageMultiSelect'
 
 const { proxy } = getCurrentInstance()
 const props = defineProps({
@@ -1230,6 +1188,10 @@ function isSectionVisible(sectionName) {
 
 function isDocumentEditMode(documentSectionKey) {
   return props.activeEditSection === documentSectionKey
+}
+
+function updateBuyerLanguage(value) {
+  form.value.buyer_language = normalizeLanguageSelection(value)
 }
 
 // Normalize historical values to the two supported states.
@@ -1490,7 +1452,7 @@ function validateForm() {
       errors.push('Buyer city is required')
       fieldErrorsObj.buyer_city = 'City is required'
     }
-    if (!form.value.buyer_language) {
+    if (!hasLanguageSelection(form.value.buyer_language)) {
       errors.push('Buyer language is required')
       fieldErrorsObj.buyer_language = 'Language is required'
     }
@@ -2326,19 +2288,6 @@ const languageOptions = [
   { value: 'xhosa', text: 'Xhosa' },
   { value: 'other', text: 'Other' }
 ]
-const currencyOptions = [
-  { value: 'AED', text: 'AED' },
-  { value: 'USD', text: 'USD' },
-  { value: 'EUR', text: 'EUR' },
-  { value: 'GBP', text: 'GBP' },
-  { value: 'SAR', text: 'SAR' },
-  { value: 'QAR', text: 'QAR' },
-  { value: 'KWD', text: 'KWD' },
-  { value: 'BHD', text: 'BHD' },
-  { value: 'OMR', text: 'OMR' },
-  { value: 'EGP', text: 'EGP' }
-]
-
 const bedroomOptions = [
   { value: 'studio', text: 'Studio' },
   { value: '1', text: '1 Bedroom' },
@@ -2348,15 +2297,6 @@ const bedroomOptions = [
   { value: '5', text: '5 Bedrooms' },
   { value: '5+', text: '5+ Bedrooms' }
 ]
-
-watch(
-  () => form.value?.currency,
-  (val) => {
-    if (!val && form.value) form.value.currency = 'AED'
-  },
-  { immediate: true }
-)
-
 
 // Update watchers to work with the new format
 watch(() => form.value?.buyer_country, (newCountry, oldCountry) => {
@@ -2419,6 +2359,9 @@ watch(() => form.value?.landlord_country, (newCountry, oldCountry) => {
 :deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 13px; }
 :deep(.custom-v-select .vs__search::placeholder) { font-size: 10px !important; color: #9ca3af; }
 :deep(.custom-v-select .vs__placeholder) { font-size: 10px !important; color: #9ca3af; }
+:deep(.buyer-language-select .vs__selected) { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+:deep(.buyer-language-select .vs__dropdown-option--highlight) { background: #eff6ff; color: #1e3a8a; }
+:deep(.buyer-language-select .vs__dropdown-option--selected) { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
 :deep(.custom-v-select-inline) { min-width: 120px; }
 :deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border: none; border-left: 1px solid #e5e7eb; border-radius: 0 8px 8px 0; font-size: 11px; }
 :deep(.custom-v-select-inline .vs__selected) { font-size: 11px; font-weight: 500; color: #64748b; }

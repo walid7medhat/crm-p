@@ -123,6 +123,7 @@ import { BModal, BSpinner, BButton } from 'bootstrap-vue-3'
 import DealForm from './DealForm.vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
+import { normalizeLanguageSelection, hasLanguageSelection } from '@/composables/useLanguageMultiSelect'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -522,8 +523,6 @@ async function loadLeadData() {
       developer_phone: lead.developer_phone,
       developer_name: lead.developer_name,
       responsible_person_id: lead.responsible_person_id,
-      deal_total_amount: lead.budget,
-      currency: lead.currency || 'AED',
       
       // Buyer/Tenant data based on lead
       buyer_first_name: lead.first_name || '',
@@ -534,8 +533,7 @@ async function loadLeadData() {
       buyer_nationality: lead.nationality || '',
       buyer_residency_status: lead.residency_status || '',
       buyer_city: lead.city || '',
-      buyer_language: lead.language || '',
-      amount: lead.budget || ''
+      buyer_language: normalizeLanguageSelection(lead.language || ''),
     }
     
     Swal.fire({
@@ -627,7 +625,7 @@ function validateForm() {
       errors.push('Buyer city is required')
       fieldErrorsObj.buyer_city = 'City is required'
     }
-    if (!formData.value.buyer_language) {
+    if (!hasLanguageSelection(formData.value.buyer_language)) {
       errors.push('Buyer language is required')
       fieldErrorsObj.buyer_language = 'Language is required'
     }
@@ -882,11 +880,9 @@ function resetFormData() {
     area_id: null,
     property_link: '',
     property_reference: '',
-    deal_total_amount: null,
     deal_commission: null,
     agent_share: null,
     company_share: null,
-    currency: 'AED',
     responsible_person_id: null,
     
     // Buyer fields
@@ -899,7 +895,7 @@ function resetFormData() {
     buyer_residency_status: '',
     buyer_city: '',
     buyer_country: '',
-    buyer_language: '',
+    buyer_language: [],
     buyer_documents: [],
     amount: null,
     

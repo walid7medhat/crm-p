@@ -251,6 +251,7 @@ import DealCommentList from './DealCommentList.vue'
 import ResponsiblePersonSection from './ResponsiblePersonSection.vue'
 import axios from '@/plugins/axios'
 import { useStageTransition } from '@/composables/useStageTransition'
+import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
 const props = defineProps({
   modelValue: Boolean,
   deal: { type: Object, default: null },
@@ -518,11 +519,9 @@ function dealToFormData(deal) {
     area_id: deal.area_id ?? deal.area?.id ?? null,
     property_link: deal.property_link ?? '',
     property_reference: deal.property_reference ?? '',
-    deal_total_amount: deal.deal_total_amount ?? null,
     deal_commission: deal.deal_commission ?? null,
     agent_share: deal.agent_share ?? null,
     company_share: deal.company_share ?? null,
-    currency: deal.currency ?? 'AED',
     responsible_person_id: deal.responsible_person_id ?? deal.responsible_person?.id ?? null,
     lost_reason: deal.lost_reason ?? '',
     buyer_first_name: buyer.first_name ?? '',
@@ -534,8 +533,7 @@ function dealToFormData(deal) {
     buyer_residency_status: buyer.residency_status ?? '',
     buyer_city: buyer.city ?? '',
     buyer_country: buyer.country ?? '',
-    buyer_language: buyer.language ?? '',
-    buyer_amount: buyer.amount ?? null,
+    buyer_language: normalizeLanguageSelection(buyer.language),
     buyer_documents: mapPartyDocuments(buyer, 'buyer'),
     seller_first_name: seller.first_name ?? '',
     seller_last_name: seller.last_name ?? '',
@@ -558,7 +556,6 @@ function dealToFormData(deal) {
     tenant_city: tenant.city ?? '',
     tenant_country: tenant.country ?? '',
     tenant_language: tenant.language ?? '',
-    tenant_amount: tenant.amount ?? null,
     tenant_documents: mapPartyDocuments(tenant, 'tenant'),
     landlord_first_name: landlord.first_name ?? '',
     landlord_last_name: landlord.last_name ?? '',
@@ -847,7 +844,7 @@ function close() {
 }
 :deep(.view-deal-modal-outer .modal-content.view-deal-modal-content-wrap),
 :deep(#view-deal-modal .modal-content) {
-  overflow: hidden !important; /* 👈 بدل visible */
+  overflow: visible !important;
   position: relative;
 }
 .view-deal-modal-content {
@@ -1370,22 +1367,28 @@ function close() {
   background: #02014f;
 }
 .close-btn {
-   position: absolute;
-    top: 0px;
-    left: -25px;
-    transform: translate(-56%);
-    width: 50px;
-    height: 30px;
-    border-radius: 999px;
-    background: #000000;
-    color: #d9e7f5;
-    font-size: 20px;
-    padding: 0;
-    box-shadow: none;
-    z-index: -1;
-            justify-content: center;
-    display: flex;
-    align-items: center;
+  position: absolute;
+  top: -6px;
+  right: -80px;
+  width: 83px;
+  height: 49px;
+  border: 1px solid #4fa5f7;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2f88ef 0%, #5db8ff 100%);
+  color: #ffffff;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2);
+  z-index: -1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: filter 0.2s ease;
+}
+
+.close-btn:hover {
+  filter: brightness(0.96);
 }
 
 :deep(.view-deal-modal-outer .modal-content) {

@@ -42,15 +42,19 @@
             <v-select v-model="form.buyer_country" :options="countryOptions" :reduce="o => o.value" label="text" placeholder="Not Selected" class="custom-v-select" />
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">Amount & Currency <span class="text-danger">*</span></label>
-            <div class="input-group-custom">
-              <b-form-input v-model="form.amount" type="number" placeholder="Enter Amount" class="custom-input" />
-              <v-select v-model="form.currency" :options="currencyOptions" :reduce="o => o.value" label="text" :clearable="false" class="custom-v-select-inline" />
-            </div>
-          </div>
-          <div class="col-md-4">
             <label class="form-label-custom">Buyer Language <span class="text-danger">*</span></label>
-            <v-select v-model="form.buyer_language" :options="languageOptions" :reduce="o => o.value" label="text" placeholder="Select Language" class="custom-v-select" />
+            <v-select
+              :model-value="normalizeLanguageSelection(form.buyer_language)"
+              @update:modelValue="updateBuyerLanguage"
+              :options="languageOptions"
+              :reduce="o => o.value"
+              label="text"
+              placeholder="Select Language(s)"
+              class="custom-v-select buyer-language-select"
+              :multiple="true"
+              :searchable="true"
+              :close-on-select="false"
+            />
           </div>
         </div>
       </div>
@@ -166,6 +170,7 @@ import { BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
+import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
 
 const props = defineProps({
   modelValue: { type: Object, default: () => ({}) },
@@ -195,6 +200,13 @@ function removeTag(key, tag) {
   emit('update:modelValue', { ...obj, [key]: arr })
 }
 
+function updateBuyerLanguage(value) {
+  emit('update:modelValue', {
+    ...props.modelValue,
+    buyer_language: normalizeLanguageSelection(value),
+  })
+}
+
 const buyerDocTabs = [
   { id: 'national_id', name: 'Buyer National ID' },
   { id: 'passport', name: 'Buyer Passport' },
@@ -206,7 +218,6 @@ const buyerDocTabs = [
 const nationalityOptions = [{ value: null, text: 'Select Nationality' }]
 const residencyOptions = [{ value: null, text: 'Select Status' }]
 const countryOptions = [{ value: null, text: 'Not Selected' }]
-const currencyOptions = [{ value: 'AED', text: 'UAE Dirham' }, { value: 'USD', text: 'USD' }]
 const languageOptions = [{ value: null, text: 'Select Language' }]
 const propertyTypeOptions = [{ value: null, text: 'Not Selected' }]
 const bedroomOptions = [{ value: null, text: 'Select Bedroom' }, { value: '1', text: '1' }, { value: '2', text: '2' }, { value: '3', text: '3' }, { value: '4', text: '4' }, { value: '5+', text: '5+' }]
@@ -223,6 +234,9 @@ const bedroomOptions = [{ value: null, text: 'Select Bedroom' }, { value: '1', t
 :deep(.custom-v-select-inline) { min-width: 120px; }
 :deep(.custom-v-select .vs__dropdown-toggle) { height: 44px !important; min-height: 44px !important; border-radius: var(--deal-input-r, 10px); border: 1px solid #E2E8F0; font-size: 14px; }
 :deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 44px !important; min-height: 44px !important; border: none; border-left: 1px solid #E2E8F0; border-radius: 0 var(--deal-input-r, 10px) var(--deal-input-r, 10px) 0; }
+:deep(.buyer-language-select .vs__selected) { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+:deep(.buyer-language-select .vs__dropdown-option--highlight) { background: #eff6ff; color: #1e3a8a; }
+:deep(.buyer-language-select .vs__dropdown-option--selected) { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
 .doc-tabs { gap: 8px; }
 .doc-tab { padding: 6px 14px; border-radius: 100px; border: 1px solid #E2E8F0; background: #fff; font-size: 12px; color: #64748B; cursor: pointer; }
 .doc-tab.active { background: #0F172A; color: #fff; border-color: #0F172A; }

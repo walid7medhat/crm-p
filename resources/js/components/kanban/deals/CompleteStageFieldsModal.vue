@@ -259,12 +259,16 @@
                     <label class="form-label-custom">Buyer Language <span class="text-danger">*</span></label>
                     <v-select
                       append-to-body 
-                      v-model="formData.buyer_language" 
+                      :model-value="normalizeLanguageSelection(formData.buyer_language)"
+                      @update:modelValue="(v) => { formData.buyer_language = normalizeLanguageSelection(v) }"
                       :options="languageOptions" 
                       :reduce="item => item.value" 
                       label="text" 
-                      placeholder="Select Language" 
-                      class="custom-v-select"
+                      placeholder="Select Language(s)" 
+                      class="custom-v-select buyer-language-select"
+                      :multiple="true"
+                      :searchable="true"
+                      :close-on-select="false"
                       :class="{ 'is-invalid': isFieldInvalid('buyer_language') }"
                     >
                       <template #open-indicator="{ attributes }">
@@ -275,21 +279,6 @@
                     </v-select>
                   </div>
                   
-                  <div class="col-md-4" v-if="hasField('buyer_amount')">
-                    <label class="form-label-custom">Amount</label>
-                    <div class="input-group-custom">
-                      <b-form-input 
-                        v-model="formData.buyer_amount" 
-                        type="number" 
-                        placeholder="Enter Amount" 
-                        class="custom-input"
-                        :class="{ 'is-invalid': isFieldInvalid('buyer_amount') }"
-                      />
-                      <div class="currency-fixed-display">
-                        {{ formData.currency || 'AED' }}
-                      </div>
-                    </div>
-                  </div>
                   
                   <div class="col-12" v-if="hasField('buyer_party')">
                     <div class="alert alert-warning py-2 mb-0">
@@ -648,21 +637,6 @@
                     </v-select>
                   </div>
                   
-                  <div class="col-md-4" v-if="hasField('tenant_amount')">
-                    <label class="form-label-custom">Amount</label>
-                    <div class="input-group-custom">
-                      <b-form-input 
-                        v-model="formData.tenant_amount" 
-                        type="number" 
-                        placeholder="Enter Amount" 
-                        class="custom-input"
-                        :class="{ 'is-invalid': isFieldInvalid('tenant_amount') }"
-                      />
-                      <div class="currency-fixed-display">
-                        {{ formData.currency || 'AED' }}
-                      </div>
-                    </div>
-                  </div>
                   
                   <div class="col-12" v-if="hasField('tenant_party')">
                     <div class="alert alert-warning py-2 mb-0">
@@ -1039,21 +1013,6 @@
               <h6 class="section-title mb-3">Deal Financials</h6>
               <div class="form-card p-3 radius-12">
                 <div class="row g-3">
-                  <div class="col-md-4" v-if="hasField('deal_total_amount')">
-                    <label class="form-label-custom">Deal Total Amount</label>
-                    <div class="input-group-custom">
-                      <b-form-input 
-                        v-model="formData.deal_total_amount" 
-                        type="number" 
-                        placeholder="Enter Amount" 
-                        class="custom-input"
-                        :class="{ 'is-invalid': isFieldInvalid('deal_total_amount') }"
-                      />
-                      <div class="currency-fixed-display">
-                        {{ formData.currency || 'AED' }}
-                      </div>
-                    </div>
-                  </div>
                   
                   <div class="col-md-4" v-if="hasField('deal_commission')">
                     <label class="form-label-custom">Deal Commission %</label>
@@ -1131,6 +1090,7 @@ import 'vue-select/dist/vue-select.css'
 import DocumentUpload from './DocumentUpload.vue'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
 import api from '@/plugins/axios'
+import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -1173,7 +1133,7 @@ function getExistingFieldValue(key) {
       if (field === 'city') return party.city || ''
       if (field === 'country') return party.country || ''
       if (field === 'language') return party.language || ''
-      if (field === 'amount') return party.amount || ''
+      if (field === 'amount') return ''
       return party[field] || ''
     }
   }
@@ -1339,7 +1299,6 @@ async function initializeForm() {
     formData.value = { ...initial }
     formData.value.area_id = normalizeLocationId(formData.value.area_id)
     formData.value.subcommunity_id = normalizeLocationId(formData.value.subcommunity_id)
-    if (!formData.value.currency) formData.value.currency = 'AED'
     
     // Initialize document arrays with existing documents
     const parties = ['buyer', 'seller', 'tenant', 'landlord']
@@ -1636,6 +1595,7 @@ function normalizeStageLabel(label) {
 }
 
 const effectiveMissingFields = computed(() => {
+  const excludedFields = new Set(['buyer_amount', 'tenant_amount', 'deal_total_amount', 'currency'])
   const direct = Array.isArray(props.missingFields) ? props.missingFields : []
   const byStage = props.groupedMissing?.by_stage
     || props.missingFieldsGroupedByStage?.stages
@@ -1643,6 +1603,7 @@ const effectiveMissingFields = computed(() => {
 
   if (!Array.isArray(byStage) || byStage.length === 0) {
     return Array.from(new Set([...direct, ...groupedSectionFieldKeys.value]))
+      .filter((key) => !excludedFields.has(String(key)))
   }
 
   const targetStageId = String(props.targetStageId ?? '')
@@ -1679,7 +1640,7 @@ const effectiveMissingFields = computed(() => {
   if (targetStageIndex === -1) {
     const union = new Set([...direct, ...groupedSectionFieldKeys.value])
     orderedStages.forEach((entry) => entry.fields.forEach((key) => union.add(key)))
-    return Array.from(union)
+    return Array.from(union).filter((key) => !excludedFields.has(String(key)))
   }
 
   const cumulative = new Set()
@@ -1691,7 +1652,7 @@ const effectiveMissingFields = computed(() => {
     direct.forEach((key) => cumulative.add(key))
   }
   groupedSectionFieldKeys.value.forEach((key) => cumulative.add(key))
-  return Array.from(cumulative)
+  return Array.from(cumulative).filter((key) => !excludedFields.has(String(key)))
 })
 
 function hasEffectiveMissingPrefix(prefix) {
@@ -2111,7 +2072,7 @@ function getInitialValue(key) {
       const field = key.replace(partyType + '_', '')
       // Map dob to date_of_birth
       if (field === 'dob') return party.date_of_birth || ''
-      if (field === 'amount') return party.amount || ''
+      if (field === 'amount') return ''
       return party[field] || ''
     }
   }
@@ -2213,7 +2174,7 @@ function hasPartyFields(partyType) {
     `${partyType}_first_name`, `${partyType}_last_name`, `${partyType}_phone`,
     `${partyType}_email`, `${partyType}_nationality`, `${partyType}_dob`,
     `${partyType}_residency_status`, `${partyType}_city`, `${partyType}_country`,
-    `${partyType}_language`, `${partyType}_amount`,
+    `${partyType}_language`,
   ]
   return (
     possibleFields.some(field => requiredFields.includes(field)) ||
@@ -2232,7 +2193,7 @@ function hasPropertyFields() {
 
 function hasFinancialFields() {
   const requiredFields = effectiveMissingFields.value || []
-  const financialFields = ['deal_total_amount', 'deal_commission', 'agent_share', 'company_share']
+  const financialFields = ['deal_commission', 'agent_share', 'company_share']
   return (
     financialFields.some(field => requiredFields.includes(field)) ||
     hasAnyValueInFields(financialFields)
@@ -3371,6 +3332,23 @@ watch(() => formData.value?.landlord_country, (newCountry, oldCountry) => {
 :deep(.custom-v-select .vs__placeholder) {
   font-size: 10px;
   color: #9ca3af;
+}
+
+:deep(.buyer-language-select .vs__selected) {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+:deep(.buyer-language-select .vs__dropdown-option--highlight) {
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+:deep(.buyer-language-select .vs__dropdown-option--selected) {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 600;
 }
 
 /* Keep all placeholders compact in this modal (scoped to modal root) */

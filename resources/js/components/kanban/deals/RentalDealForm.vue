@@ -216,13 +216,6 @@
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="form-label-custom">Deal Total Amount And Currency</label>
-            <div class="input-group-custom">
-              <b-form-input v-model="form.deal_total_amount" type="number" placeholder="Enter Amount" class="custom-input" />
-              <v-select v-model="form.currency" :options="currencyOptions" :reduce="o => o.value" label="text" :clearable="false" class="custom-v-select-inline" />
-            </div>
-          </div>
-          <div class="col-md-4">
             <label class="form-label-custom">Deal Total Commission %</label>
             <b-form-input v-model="form.deal_commission" type="number" placeholder="Enter %" class="custom-input" />
           </div>
@@ -315,7 +308,6 @@ const sourceOptions = [{ value: null, text: 'Select Source' }]
 const nationalityOptions = [{ value: null, text: 'Select Nationality' }]
 const residencyOptions = [{ value: null, text: 'Select Status' }]
 const countryOptions = [{ value: null, text: 'Not Selected' }]
-const currencyOptions = [{ value: 'AED', text: 'UAE Dirham' }, { value: 'USD', text: 'USD' }]
 const propertyTypeOptions = [{ value: null, text: 'Not Selected' }]
 const bedroomOptions = [{ value: null, text: 'Select Bedroom' }, { value: '1', text: '1' }, { value: '2', text: '2' }, { value: '3', text: '3' }, { value: '4', text: '4' }, { value: '5+', text: '5+' }]
 </script>

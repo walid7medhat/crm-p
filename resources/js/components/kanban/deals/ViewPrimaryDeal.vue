@@ -168,17 +168,11 @@
             </div>
           </div>
 
-          <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Amount & Currency</label>
-              <p class="info-value mb-0">{{ val(buyer.amount_formatted) }}</p>
-            </div>
-          </div>
 
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Buyer Language</label>
-              <p class="info-value mb-0">{{ val(buyer.language) }}</p>
+              <p class="info-value mb-0">{{ formatLanguageSelection(buyer.language) }}</p>
             </div>
           </div>
 
@@ -353,13 +347,6 @@
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
         />
         <div v-else class="row g-3">
-         <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Deal Total Amount</label>
-              <p class="info-value mb-0">{{ val(deal.deal_total_amount) }}</p>
-            </div>
-          </div>
-            
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Agent Share %</label>
@@ -389,6 +376,7 @@
 import { computed } from 'vue'
 import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
 import InlineSectionEditor from './InlineSectionEditor.vue'
+import { formatLanguageSelection } from '@/composables/useLanguageMultiSelect'
 
 const props = defineProps({
   deal: { type: Object, default: null },
@@ -425,20 +413,6 @@ const buyer = computed(() => {
   return parties.find(p => p.party_type === 'buyer' && p.party_role === 'primary') || {}
 })
 
-const buyerAmountCurrency = computed(() => {
-  if (!buyer.value) return '----'
-  if (buyer.value.amount) return `${buyer.value.amount} AED`
-  return '----'
-})
-
-const amountCurrency = computed(() => {
-  const d = props.deal
-  if (!d) return '----'
-  const amt = d.amount ?? d.budget
-  const cur = d.currency || 'AED'
-  if (amt != null && amt !== '') return `${amt} ${cur}`
-  return '----'
-})
 const buyerDocuments = computed(() => {
   const parties = props.deal?.parties || []
 

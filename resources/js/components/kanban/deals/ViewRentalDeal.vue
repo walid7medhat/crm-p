@@ -137,12 +137,6 @@
               <p class="info-value mb-0">{{ val(tenant.nationality) }}</p>
             </div>
           </div>
-           <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Amount & Currency</label>
-              <p class="info-value mb-0">{{ val(tenant.amount_formatted) }}</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -254,12 +248,6 @@
             <div class="info-group">
               <label class="info-label">Landlord City Of Residence</label>
               <p class="info-value mb-0">{{ val(landlord.city) }}</p>
-            </div>
-          </div>
-           <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Amount & Currency</label>
-              <p class="info-value mb-0">{{ val(landlord.amount_formatted) }}</p>
             </div>
           </div>
         </div>
@@ -453,18 +441,6 @@
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
         />
         <div v-else class="row g-3">
-             <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Deal Total Amount</label>
-              <p class="info-value mb-0">{{ val(deal.deal_total_amount) }}</p>
-            </div>
-          </div>
-          <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Deal Total Amount And Currency</label>
-              <p class="info-value mb-0">{{ amountCurrency }}</p>
-            </div>
-          </div>
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Deal Total Commission %</label>
@@ -536,14 +512,6 @@ function tagsDisplay(arr) {
 }
 
 
-const amountCurrency = computed(() => {
-  const d = props.deal
-  if (!d) return '----'
-  const amt = d.deal_total_amount ?? d.amount ?? d.budget
-  const cur = d.currency || 'AED'
-  if (amt != null && amt !== '') return `${amt} ${cur}`
-  return '----'
-})
 const tenantDocuments = computed(() => {
   const d = props.deal || {}
 

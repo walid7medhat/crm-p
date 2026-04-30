@@ -708,19 +708,24 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .close-btn {
-   position: absolute;
-    top: 13px;
-    left: -11px;
-    transform: translate(-56%);
-    width: 50px;
-    height: 30px;
+    position: absolute;
+    top: 8px;
+    right: -61px;
+    width: 83px;
+    height: 49px;
+    border: 1px solid #4fa5f7;
     border-radius: 999px;
-    background: #01062c;
-    color: #d9e7f5;
-    font-size: 20px;
+    background: linear-gradient(90deg, #2f88ef 0%, #5db8ff 100%);
+    color: #ffffff;
+    font-size: 18px;
+    line-height: 1;
     padding: 0;
-    box-shadow: none;
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2);
     z-index: -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: filter 0.2s ease;
 }
 
 .close-btn iconify-icon {
@@ -1029,8 +1034,8 @@ textarea, input, select {
 
 :deep(.view-lead-modal) {
     padding: 0 !important;
-    height: 85vh;
-    max-height: 85vh;
+    height: 92vh;
+    max-height: 92vh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -1038,8 +1043,8 @@ textarea, input, select {
 
 /* تعديل الـ modal-content */
 :deep(.modal-content) {
-    height: 85vh;
-    max-height: 85vh;
+    height: 92vh;
+    max-height: 92vh;
     border-radius: 16px;
 }
 
@@ -1096,9 +1101,16 @@ textarea, input, select {
 }
 </style>
 <style>
+.modal#view-lead-modal .modal-dialog {
+    max-width: min(1200px, 95vw) !important;
+    width: min(1200px, 95vw) !important;
+    max-height: 92vh !important;
+    margin: 2vh auto !important;
+}
+
 .view-lead-modal {
     padding: 0 !important;
-    height: 85vh;
+    height: 92vh;
     max-height: 100vh;
     display: flex;
     flex-direction: column;

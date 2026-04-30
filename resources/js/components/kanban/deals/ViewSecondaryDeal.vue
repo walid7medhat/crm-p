@@ -153,16 +153,10 @@
               <p class="info-value mb-0">{{ val(buyer.city) }}</p>
             </div>
           </div>
-           <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Amount & Currency</label>
-              <p class="info-value mb-0">{{ val(buyer.amount_formatted) }}</p>
-            </div>
-          </div>
           <div class="col-md-12">
             <div class="info-group">
               <label class="info-label">Buyer Language</label>
-              <p class="info-value mb-0">{{ val(buyer.language) }}</p>
+              <p class="info-value mb-0">{{ formatLanguageSelection(buyer.language) }}</p>
             </div>
           </div>
         </div>
@@ -373,12 +367,6 @@
               <p class="info-value mb-0">{{ val(seller.language) }}</p>
             </div>
           </div>
-           <div class="col-md-12">
-            <div class="info-group">
-              <label class="info-label">Amount & Currency</label>
-              <p class="info-value mb-0">{{ val(seller.amount_formatted) }}</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -446,12 +434,6 @@
         <div v-else class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
-              <label class="info-label">Deal Total Amount And Currency</label>
-              <p class="info-value mb-0">{{ amountCurrency }}</p>
-            </div>
-          </div>
-          <div class="col-md-12">
-            <div class="info-group">
               <label class="info-label">Deal Total Commission %</label>
               <p class="info-value mb-0">{{ val(deal.deal_commission) }}</p>
             </div>
@@ -479,6 +461,7 @@
 import { computed } from 'vue'
 import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
 import InlineSectionEditor from './InlineSectionEditor.vue'
+import { formatLanguageSelection } from '@/composables/useLanguageMultiSelect'
 
 const props = defineProps({
   deal: { type: Object, default: null },
@@ -561,15 +544,6 @@ function tagsDisplay(arr) {
 }
 
 
-
-const amountCurrency = computed(() => {
-  const d = props.deal
-  if (!d) return '----'
-  const amt = d.deal_total_amount ?? d.amount ?? d.budget
-  const cur = d.currency || 'AED'
-  if (amt != null && amt !== '') return `${amt} ${cur}`
-  return '----'
-})
 
 const missingSummary = computed(() => {
   const d = props.deal || {}
