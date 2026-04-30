@@ -1139,8 +1139,6 @@ const qualityStatusOptions = computed(() => {
         return [
             { value: null, text: 'Select Quality Status' },
             { value: 'no_answer', text: 'No Answer' },
-            { value: 'contacted', text: 'Contacted' },
-            { value: 'wrong_person', text: 'Wrong Person' }
         ]
     }
     
@@ -1150,14 +1148,9 @@ const qualityStatusOptions = computed(() => {
             { value: null, text: 'Select Quality Status' },
             { value: 'not_interested', text: 'Not Interested' },
             { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
-            { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
             { value: 'job_seeker', text: 'Job Seeker' },
             { value: 'broker', text: 'Broker' },
-            { value: 'registered_by_mistake', text: 'Registered by Mistake' },
             { value: 'spam_leads', text: 'Spam Leads' },
-            { value: 'already_assigned_to_another_agent', text: 'Already Assigned to Another Agent' },
-            { value: 'client_was_just_searching_online', text: 'Client Was Just Searching Online' },
-            { value: 'number_does_not_exist', text: 'Number Does Not Exist' }
         ]
     }
     
@@ -1165,8 +1158,8 @@ const qualityStatusOptions = computed(() => {
     if (stageOrder === 8) {
         return [
             { value: null, text: 'Select Why Lost' },
-            { value: 'lost_by_other_company', text: 'Lost by Other Company' },
-            { value: 'lost_by_our_company', text: 'Lost by Our Company' }
+            { value: 'Bought Direct from Developer', text: 'Bought Direct from Developer' },
+            { value: 'Clients Budget Is Too Low', text: 'Clients Budget Is Too Low' }
         ]
     }
 

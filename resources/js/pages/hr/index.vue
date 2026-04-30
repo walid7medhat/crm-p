@@ -646,7 +646,15 @@
                 />
                 <iconify-icon icon="lucide:search" />
               </div>
-              <button type="button" class="hr-export-btn" @click="exportAttendance">
+              <div v-if="hrSectionTab === 'team'" class="hr-sales-position-filter">
+                <label>Sales Position</label>
+                <SearchableSelect
+                  v-model="salesPositionFilter"
+                  :options="salesPositionOptions"
+                  placeholder="All Sales Positions"
+                />
+              </div>
+              <button type="button" class="hr-export-btn" @click="hrSectionTab === 'team' ? exportSalesAttendanceByManager() : exportAttendance()">
                 Export Excel
                 <iconify-icon icon="lucide:file-down" />
               </button>
@@ -792,9 +800,82 @@
           </template>
 
           <template v-else>
-            <div class="hr-empty-tab leave-announcement-card">
-              <h6 class="overview-section-title">Announcements</h6>
-              <p>Announcements module will appear here.</p>
+            <div class="team-attendance-view">
+              <template v-if="loading">
+                <div class="hr-empty-tab leave-announcement-card">
+                  <h6 class="overview-section-title">Team Attendance</h6>
+                  <p>Loading attendance by team...</p>
+                </div>
+              </template>
+              <template v-else-if="teamAttendanceGroups.length === 0">
+                <div class="hr-empty-tab leave-announcement-card">
+                  <h6 class="overview-section-title">Team Attendance</h6>
+                  <p>No attendance records found for teams.</p>
+                </div>
+              </template>
+              <template v-else>
+                <template v-if="!selectedDepartmentView">
+                  <div class="department-boxes-grid">
+                    <button
+                      v-for="department in departmentAttendanceGroups"
+                      :key="`dept-box-${department.department_name}`"
+                      type="button"
+                      class="department-box-card"
+                      @click="selectedDepartmentView = department.department_name"
+                    >
+                      <strong>{{ department.department_name }}</strong>
+                      <span>{{ department.members.length }} people</span>
+                      <small>{{ department.manager_groups.length }} manager{{ department.manager_groups.length === 1 ? '' : 's' }}</small>
+                    </button>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="team-attendance-card__head">
+                    <div class="d-flex align-items-center gap-2">
+                      <button type="button" class="page-btn" @click="selectedDepartmentView = ''">Back</button>
+                      <h6 class="overview-section-title mb-0">{{ selectedDepartmentData?.department_name || selectedDepartmentView }}</h6>
+                    </div>
+                    <span class="team-attendance-count">{{ selectedDepartmentData?.members?.length || 0 }} member{{ (selectedDepartmentData?.members?.length || 0) === 1 ? '' : 's' }}</span>
+                  </div>
+                  <div class="team-attendance-table-wrap" v-if="selectedDepartmentData">
+                    <table class="table hr-table align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th>Employee</th>
+                          <th>Manager</th>
+                          <th>Status</th>
+                          <th>Check In</th>
+                          <th>Check Out</th>
+                          <th>Duration</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template v-for="managerGroup in selectedDepartmentData.manager_groups" :key="`dept-mgr-${selectedDepartmentData.department_name}-${managerGroup.manager_name}`">
+                          <tr class="manager-group-row">
+                            <td colspan="6">
+                              <strong>{{ managerGroup.manager_name }}</strong>
+                              <span class="manager-group-count"> - {{ managerGroup.members.length }} member{{ managerGroup.members.length === 1 ? '' : 's' }}</span>
+                            </td>
+                          </tr>
+                          <tr v-for="member in managerGroup.members" :key="`dept-member-${selectedDepartmentData.department_name}-${managerGroup.manager_name}-${member.employee_id}-${member.check_in || member.date || 'no-date'}`">
+                            <td>
+                              <div class="employee-cell">
+                                <span class="avatar-circle">{{ initials(member.employee_name) }}</span>
+                                <span>{{ member.employee_name || '--' }}</span>
+                              </div>
+                            </td>
+                            <td>{{ attendanceManagerName(member) }}</td>
+                            <td><span class="status-badge" :class="`status-${member.status}`">{{ member.status || 'absent' }}</span></td>
+                            <td>{{ formatTime(member.check_in) }}</td>
+                            <td>{{ formatTime(member.check_out) }}</td>
+                            <td>{{ formatDuration(member.check_in, member.check_out) }}</td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </template>
+              </template>
             </div>
           </template>
           </template>
@@ -1080,6 +1161,9 @@
                           :style="careerRowMenuStyle"
                           @click.stop
                         >
+                          <button type="button" class="leave-row-menu-item" @click="openCareerApplicants(job)">
+                            <iconify-icon icon="lucide:users" /> View Applicants
+                          </button>
                           <button type="button" class="leave-row-menu-item">
                             <iconify-icon icon="lucide:pencil" /> Edit
                           </button>
@@ -1112,6 +1196,164 @@
                 </template>
                 <button type="button" class="page-btn" :disabled="careerPage >= careerTotalPages" @click="careerPage = Math.min(careerTotalPages, careerPage + 1)">Next</button>
               </div>
+            </div>
+          </div>
+
+          <div class="career-applicants-view" v-else-if="careerSectionMode === 'view-applicants'">
+            <div class="career-applicants-head">
+              <div class="career-applicants-head-left">
+                <div class="career-applicants-breadcrumb">
+                  <button type="button" class="career-crumb-link" @click="careerSectionMode = 'manage-recruitments'">Career</button>
+                  <iconify-icon icon="lucide:chevron-right" />
+                  <button type="button" class="career-crumb-link" @click="careerSectionMode = 'manage-recruitments'">Manage Recruitments</button>
+                  <iconify-icon icon="lucide:chevron-right" />
+                  <span>{{ selectedCareerJob?.title || 'Job Applicants' }}</span>
+                </div>
+                <h6 class="career-applicants-page-title">All Applicants</h6>
+              </div>
+              <div class="career-applicants-actions">
+                <button type="button" class="employee-search-btn assets-search-wrap">
+                  <iconify-icon icon="lucide:plus" />
+                  <input v-model="careerApplicantsSearch" type="text" placeholder="Filter and search candidates" class="border-0 bg-transparent flex-grow-1" />
+                  <iconify-icon icon="lucide:search" />
+                </button>
+                <button type="button" class="career-circle-btn"><iconify-icon icon="lucide:download" /></button>
+                <button type="button" class="career-circle-btn"><iconify-icon icon="lucide:trash-2" /></button>
+              </div>
+            </div>
+
+            <div class="career-applicants-card">
+              <div class="career-applicants-title-wrap">
+                <div class="career-company-avatar"><span>O</span></div>
+                <div>
+                  <h6>{{ selectedCareerJob?.title || 'IT Support Specialist -Systems, Network & Security' }}</h6>
+                  <p>{{ selectedCareerJob?.branch || 'Abu Dhabi' }} | {{ selectedCareerJob?.type || 'Full-time' }}</p>
+                </div>
+              </div>
+              <div class="career-applicants-meta-row">
+                <span class="career-meta-pill">Posted Date : {{ selectedCareerJob?.postedDate || '08 Feb 2026' }}</span>
+                <span class="career-meta-pill">Closing Date : {{ selectedCareerJob?.closingDate || '08 Feb 2026' }}</span>
+                <span class="career-count-text">{{ careerApplicantsCount }} Applicants</span>
+              </div>
+            </div>
+
+            <div class="career-applicants-body">
+              <aside class="career-applicant-list-card">
+                <div class="career-applicant-list-head">
+                  <label class="career-check">
+                    <input type="checkbox" />
+                    <span>{{ careerApplicantsCount }} Applicants</span>
+                  </label>
+                  <button type="button" class="career-list-delete"><iconify-icon icon="lucide:trash-2" /></button>
+                </div>
+                <div class="career-applicant-list-scroll">
+                  <button
+                    v-for="applicant in filteredCareerApplicants"
+                    :key="applicant.id"
+                    type="button"
+                    class="career-applicant-list-item"
+                    :class="{ active: selectedCareerApplicantId === applicant.id }"
+                    @click="selectedCareerApplicantId = applicant.id"
+                  >
+                    <img :src="applicant.avatar" alt="applicant avatar" />
+                    <div class="career-applicant-list-info">
+                      <strong>{{ applicant.name }}</strong>
+                      <p>{{ applicant.email }}</p>
+                      <small>{{ applicant.location }}</small>
+                      <div class="career-applicant-row-foot">
+                        <span :class="`career-decision-${String(applicant.decision || 'maybe').toLowerCase().replace(/\s+/g, '-')}`">{{ applicant.decision }}</span>
+                        <i>|</i>
+                        <span>{{ applicant.appliedAgo }}</span>
+                      </div>
+                    </div>
+                    <iconify-icon icon="lucide:mail" />
+                  </button>
+                </div>
+              </aside>
+
+              <section class="career-applicant-detail-card" v-if="selectedCareerApplicant">
+                <div class="career-detail-top">
+                  <div class="career-applicant-profile">
+                    <img :src="selectedCareerApplicant.avatar" alt="profile" />
+                    <div>
+                      <strong>{{ selectedCareerApplicant.name }}</strong>
+                      <p>{{ selectedCareerApplicant.location }}</p>
+                    </div>
+                  </div>
+                  <div class="career-decision-chips">
+                    <button type="button" class="career-decision-chip selected" :class="{ active: selectedCareerApplicant.decision === 'Selected' }" @click="setCareerApplicantDecision('Selected')">Selected</button>
+                    <button type="button" class="career-decision-chip rejected" :class="{ active: selectedCareerApplicant.decision === 'Rejected' }" @click="setCareerApplicantDecision('Rejected')">Rejected</button>
+                    <button type="button" class="career-decision-chip maybe" :class="{ active: selectedCareerApplicant.decision === 'Maybe' }" @click="setCareerApplicantDecision('Maybe')">May be</button>
+                  </div>
+                </div>
+
+                <div class="career-detail-stat-grid">
+                  <div><span>Applied at</span><strong>{{ selectedCareerApplicant.appliedAt }}</strong></div>
+                  <div><span>Availability Status</span><strong>{{ selectedCareerApplicant.availabilityStatus }}</strong></div>
+                  <div><span>Hiring Status</span><strong>{{ selectedCareerApplicant.hiringStatus }}</strong></div>
+                  <div><span>Interview Status</span><strong>{{ selectedCareerApplicant.interviewStatus }}</strong></div>
+                </div>
+
+                <div class="career-detail-quick-actions">
+                  <button type="button"><iconify-icon icon="lucide:calendar-days" /> Schedule Interview</button>
+                  <button type="button"><iconify-icon icon="lucide:mail" /> Send Rejection Mail</button>
+                </div>
+
+                <div class="career-accordion-block">
+                  <button type="button" class="career-accordion-title" @click="toggleCareerApplicantSection('details')">
+                    <span>Applicant Details</span>
+                    <iconify-icon :icon="careerApplicantSectionsOpen.details ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+                  </button>
+                  <div v-if="careerApplicantSectionsOpen.details" class="career-details-grid">
+                    <p><span>Email</span><strong>{{ selectedCareerApplicant.email }}</strong></p>
+                    <p><span>Visa Status</span><strong>{{ selectedCareerApplicant.visaStatus }}</strong></p>
+                    <p><span>Phone</span><strong>{{ selectedCareerApplicant.phone }}</strong></p>
+                    <p><span>Visa Expiry</span><strong>{{ selectedCareerApplicant.visaExpiry }}</strong></p>
+                    <p><span>Gender</span><strong>{{ selectedCareerApplicant.gender }}</strong></p>
+                    <p><span>Notice Period</span><strong>{{ selectedCareerApplicant.noticePeriod }}</strong></p>
+                    <p><span>Date of birth</span><strong>{{ selectedCareerApplicant.dob }}</strong></p>
+                    <p><span>Current Salary</span><strong>{{ selectedCareerApplicant.currentSalary }}</strong></p>
+                    <p><span>Current Location</span><strong>{{ selectedCareerApplicant.location }}</strong></p>
+                    <p><span>Expected Salary</span><strong>{{ selectedCareerApplicant.expectedSalary }}</strong></p>
+                    <p><span>Nationality</span><strong>{{ selectedCareerApplicant.nationality }}</strong></p>
+                    <p><span>Experience in UAE</span><strong>{{ selectedCareerApplicant.uaeExperience }}</strong></p>
+                    <p><span>Total Experience</span><strong>{{ selectedCareerApplicant.totalExperience }}</strong></p>
+                  </div>
+                </div>
+
+                <div class="career-accordion-block">
+                  <button type="button" class="career-accordion-title" @click="toggleCareerApplicantSection('resume')">
+                    <span>Resume</span>
+                    <iconify-icon :icon="careerApplicantSectionsOpen.resume ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+                  </button>
+                  <div v-if="careerApplicantSectionsOpen.resume" class="career-generic-box">
+                    <img :src="selectedCareerApplicant.resumeImage || '/assets/images/placeholder-1.jpg'" alt="resume preview" />
+                  </div>
+                </div>
+
+                <div class="career-accordion-block">
+                  <button type="button" class="career-accordion-title" @click="toggleCareerApplicantSection('questions')">
+                    <span>Questions &amp; Answers</span>
+                    <iconify-icon :icon="careerApplicantSectionsOpen.questions ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+                  </button>
+                  <div v-if="careerApplicantSectionsOpen.questions" class="career-qna-list">
+                    <div v-for="(item, qIdx) in selectedCareerApplicant.questions" :key="`q-${qIdx}`" class="career-qna-item">
+                      <strong>{{ qIdx + 1 }} - {{ item.question }}</strong>
+                      <p>Answer : {{ item.answer }} <span>Idea Answer : {{ item.idealAnswer }}</span></p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="career-accordion-block">
+                  <button type="button" class="career-accordion-title" @click="toggleCareerApplicantSection('notes')">
+                    <span>Applicant Notes</span>
+                    <iconify-icon :icon="careerApplicantSectionsOpen.notes ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+                  </button>
+                  <div v-if="careerApplicantSectionsOpen.notes" class="career-generic-box">
+                    <p>{{ selectedCareerApplicant.notes }}</p>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
 
@@ -2805,6 +3047,75 @@ const careerRows = ref([
   { id: 9, title: 'Graphic Designer', department: 'Marketing', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '25 May 2025', closingDate: '29 May 2027', hiringManager: 'Khalid Al Mazrouei', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=39', applicants: '62', status: 'Closed' },
   { id: 10, title: 'Frontend Developer', department: 'Marketing', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '28 Aug 2025', closingDate: '05 Sep 2027', hiringManager: 'Abdullah Al Falasi', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=41', applicants: '32', status: 'Closed' },
 ])
+const selectedCareerJob = ref(null)
+const careerApplicantsSearch = ref('')
+const selectedCareerApplicantId = ref(1)
+const careerApplicantSectionsOpen = ref({
+  details: true,
+  resume: true,
+  questions: true,
+  notes: true,
+})
+const careerApplicantsRows = ref([
+  {
+    id: 1,
+    name: 'Emmanual Martin',
+    email: 'emmanualmartinjos@gmail.com',
+    location: 'Abu Dhabi, United Arab Emirates',
+    avatar: 'https://i.pravatar.cc/80?img=12',
+    decision: 'Selected',
+    appliedAgo: '2 Weeks Ago',
+    appliedAt: '12 February 2026',
+    availabilityStatus: 'Pending',
+    hiringStatus: 'Onboarding',
+    interviewStatus: 'Not Scheduled',
+    visaStatus: 'Visit Visa',
+    visaExpiry: '14 / 11 / 2026',
+    phone: '+971 56 123 4569',
+    gender: 'Mail',
+    noticePeriod: '30 Days',
+    dob: '11 / 12 / 2001',
+    currentSalary: '5000 AED',
+    expectedSalary: '7000 AED',
+    nationality: 'Indian',
+    totalExperience: '3',
+    uaeExperience: '2',
+    notes: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean lorem quam, eleifend vitae commodo vitae.',
+    questions: [
+      { question: 'A team member is frustrated with a project. What’s your approach?', answer: 'Yes', idealAnswer: 'No' },
+      { question: 'If a customer is angry and yelling at you, what is the best response?', answer: 'Candidate Not Answered', idealAnswer: 'No' },
+      { question: 'How many years of administrative experience do you currently have?', answer: '3', idealAnswer: '3' },
+    ],
+    resumeImage: 'https://placehold.co/920x1200/ffffff/0f172a?text=Resume+Preview',
+  },
+  {
+    id: 2,
+    name: 'Emmanual Martin',
+    email: 'emmanualmartinjos@gmail.com',
+    location: 'Abu Dhabi, United Arab Emirates',
+    avatar: 'https://i.pravatar.cc/80?img=14',
+    decision: 'Rejected',
+    appliedAgo: '2 Weeks Ago',
+    appliedAt: '10 February 2026',
+    availabilityStatus: 'Available',
+    hiringStatus: 'Screening',
+    interviewStatus: 'Scheduled',
+    visaStatus: 'Employment Visa',
+    visaExpiry: '01 / 03 / 2027',
+    phone: '+971 56 111 4569',
+    gender: 'Mail',
+    noticePeriod: '15 Days',
+    dob: '14 / 03 / 1999',
+    currentSalary: '4500 AED',
+    expectedSalary: '6000 AED',
+    nationality: 'Jordanian',
+    totalExperience: '4',
+    uaeExperience: '1',
+    notes: 'Candidate profile rejected after technical screening.',
+    questions: [],
+    resumeImage: 'https://placehold.co/920x1200/ffffff/0f172a?text=Resume+Preview',
+  },
+])
 
 // ========== OVERVIEW EMPLOYEES (from API data) ==========
 const overviewEmployees = computed(() => {
@@ -3371,6 +3682,17 @@ const filteredCareerRows = computed(() => {
       .some((v) => String(v || '').toLowerCase().includes(keyword)),
   )
 })
+const filteredCareerApplicants = computed(() => {
+  const keyword = careerApplicantsSearch.value.trim().toLowerCase()
+  if (!keyword) return careerApplicantsRows.value
+  return careerApplicantsRows.value.filter((row) =>
+    [row.name, row.email, row.location, row.decision].some((v) => String(v || '').toLowerCase().includes(keyword)),
+  )
+})
+const selectedCareerApplicant = computed(() =>
+  careerApplicantsRows.value.find((row) => row.id === selectedCareerApplicantId.value) || filteredCareerApplicants.value[0] || null,
+)
+const careerApplicantsCount = computed(() => filteredCareerApplicants.value.length)
 const careerTotalPages = computed(() => Math.max(1, Math.ceil(filteredCareerRows.value.length / careerPerPage)))
 const pagedCareerRows = computed(() => {
   const start = (careerPage.value - 1) * careerPerPage
@@ -3444,6 +3766,143 @@ const filteredRows = computed(() => {
     return name.includes(keyword) || status.includes(keyword) || id.includes(keyword)
   })
 })
+
+const timeSortValue = (value) => {
+  if (!value) return Number.MAX_SAFE_INTEGER
+  const parsed = new Date(value).getTime()
+  return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed
+}
+
+const employeeManagerById = computed(() => {
+  const map = new Map()
+  for (const emp of employeesDirectory.value || []) {
+    const id = String(emp?.id || '').trim()
+    const manager = String(emp?.supervisor || '').trim()
+    if (id && manager && manager !== '-') {
+      map.set(id, manager)
+    }
+  }
+  return map
+})
+
+const employeePositionById = computed(() => {
+  const map = new Map()
+  for (const emp of employeesDirectory.value || []) {
+    const id = String(emp?.id || '').trim()
+    const position = String(emp?.designation || '').trim()
+    if (id && position && position !== '-') {
+      map.set(id, position)
+    }
+  }
+  return map
+})
+
+const salesPositionFilter = ref('')
+const selectedDepartmentView = ref('')
+
+const attendancePositionName = (member) => {
+  const directoryPosition = employeePositionById.value.get(String(member?.employee_id || '').trim())
+  const fromAgent = member?.agent_record?.role_name || member?.agent_record?.designation
+  return String(directoryPosition || fromAgent || '').trim()
+}
+
+const isSalesPosition = (position) => String(position || '').toLowerCase().includes('sales')
+
+const salesPositionOptions = computed(() => {
+  const set = new Set()
+  for (const member of mergedData.value || []) {
+    const position = attendancePositionName(member)
+    if (isSalesPosition(position)) set.add(position)
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b))
+})
+
+const attendanceManagerName = (member) => {
+  const directoryManager = employeeManagerById.value.get(String(member?.employee_id || '').trim())
+  const fromAgent = member?.agent_record?.parent_name || member?.agent_record?.team_lead_name || member?.agent_record?.manager_name
+  return String(directoryManager || fromAgent || 'Unassigned').trim() || 'Unassigned'
+}
+
+const matchesSalesPositionFilter = (member) => {
+  const position = attendancePositionName(member)
+  if (!isSalesPosition(position)) return false
+  if (!salesPositionFilter.value) return true
+  return String(position).toLowerCase() === String(salesPositionFilter.value).toLowerCase()
+}
+
+const compareAttendanceMembers = (a, b) => {
+  const managerCompare = attendanceManagerName(a).localeCompare(attendanceManagerName(b))
+  if (managerCompare !== 0) return managerCompare
+  const timeCompare = timeSortValue(a.check_in) - timeSortValue(b.check_in)
+  if (timeCompare !== 0) return timeCompare
+  return String(a.employee_name || '').localeCompare(String(b.employee_name || ''))
+}
+
+const groupMembersByManager = (members) => {
+  const grouped = new Map()
+  for (const member of members || []) {
+    const managerName = attendanceManagerName(member)
+    if (!grouped.has(managerName)) grouped.set(managerName, [])
+    grouped.get(managerName).push(member)
+  }
+  return Array.from(grouped.entries())
+    .map(([manager_name, list]) => ({
+      manager_name,
+      members: [...list].sort(compareAttendanceMembers),
+    }))
+    .sort((a, b) => String(a.manager_name || '').localeCompare(String(b.manager_name || '')))
+}
+
+const teamAttendanceGroups = computed(() =>
+  groupedTeams.value
+    .map((team) => ({
+      ...team,
+      members: [...(team.members || [])].filter(matchesSalesPositionFilter).sort(compareAttendanceMembers),
+      manager_groups: groupMembersByManager((team.members || []).filter(matchesSalesPositionFilter)),
+    }))
+    .filter((team) => team.members.length > 0)
+    .sort((a, b) => String(a.team_name || '').localeCompare(String(b.team_name || ''))),
+)
+
+const employeeDepartmentById = computed(() => {
+  const map = new Map()
+  for (const emp of employeesDirectory.value || []) {
+    const id = String(emp?.id || '').trim()
+    const department = String(emp?.department || '').trim()
+    if (id && department && department !== '-') {
+      map.set(id, department)
+    }
+  }
+  return map
+})
+
+const attendanceDepartmentName = (member) => {
+  const directoryDepartment = employeeDepartmentById.value.get(String(member?.employee_id || '').trim())
+  const fromAgent = member?.agent_record?.department || member?.agent_record?.department_name
+  const fromAttendance = member?.attendance_record?.department || member?.department
+  return String(directoryDepartment || fromAgent || fromAttendance || 'Unassigned').trim() || 'Unassigned'
+}
+
+const departmentAttendanceGroups = computed(() => {
+  const grouped = new Map()
+  for (const member of mergedData.value || []) {
+    if (!matchesSalesPositionFilter(member)) continue
+    const key = attendanceDepartmentName(member)
+    if (!grouped.has(key)) grouped.set(key, [])
+    grouped.get(key).push(member)
+  }
+  return Array.from(grouped.entries())
+    .map(([department_name, members]) => ({
+      department_name,
+      members: [...members].sort(compareAttendanceMembers),
+      manager_groups: groupMembersByManager(members),
+    }))
+    .sort((a, b) => String(a.department_name || '').localeCompare(String(b.department_name || '')))
+})
+
+const selectedDepartmentData = computed(() =>
+  departmentAttendanceGroups.value.find((d) => d.department_name === selectedDepartmentView.value) || null,
+)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredRows.value.length / perPage)))
 const pagedRows = computed(() => {
@@ -3785,6 +4244,76 @@ function exportAttendance() {
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
   link.download = `attendance-${new Date().toISOString().slice(0, 10)}.csv`
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
+function isSalesAttendanceMember(member) {
+  return matchesSalesPositionFilter(member)
+}
+
+function csvEscape(cell) {
+  return `"${String(cell ?? '').replace(/"/g, '""')}"`
+}
+
+function exportSalesAttendanceByManager() {
+  const baseTeams = selectedDepartmentView.value && selectedDepartmentData.value
+    ? [{
+        team_name: selectedDepartmentData.value.department_name,
+        manager_groups: selectedDepartmentData.value.manager_groups || [],
+      }]
+    : teamAttendanceGroups.value
+
+  const salesTeams = baseTeams
+    .map((team) => ({
+      ...team,
+      manager_groups: (team.manager_groups || [])
+        .map((group) => ({
+          ...group,
+          members: (group.members || []).filter(isSalesAttendanceMember),
+        }))
+        .filter((group) => group.members.length > 0),
+    }))
+    .filter((team) => (team.manager_groups || []).length > 0)
+
+  if (!salesTeams.length) {
+    if (window.$showNotification) window.$showNotification('No sales attendance data to export', 'warning')
+    return
+  }
+
+  const headers = ['Row Type', 'Team', 'Manager', 'Employee Name', 'EMP ID', 'Status', 'Check In', 'Check Out', 'Duration', 'Break', 'OT']
+  const rows = []
+
+  for (const team of salesTeams) {
+    rows.push(['TEAM_HEADER', team.team_name, '', '', '', '', '', '', '', '', ''])
+    for (const managerGroup of team.manager_groups) {
+      rows.push(['MANAGER_HIGHLIGHT', team.team_name, `*** ${managerGroup.manager_name} ***`, '', '', '', '', '', '', '', ''])
+      for (const member of managerGroup.members) {
+        rows.push([
+          'EMPLOYEE',
+          team.team_name,
+          managerGroup.manager_name,
+          member.employee_name || '',
+          `EMP${formatEmpId(member.employee_id)}`,
+          member.status || '',
+          formatTime(member.check_in),
+          formatTime(member.check_out),
+          formatDuration(member.check_in, member.check_out),
+          formatBreakDisplay(member),
+          formatOtDisplay(member),
+        ])
+      }
+    }
+  }
+
+  const csv = [headers, ...rows]
+    .map((line) => line.map(csvEscape).join(','))
+    .join('\n')
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `sales-attendance-by-manager-${new Date().toISOString().slice(0, 10)}.csv`
   link.click()
   URL.revokeObjectURL(link.href)
 }
@@ -4173,7 +4702,7 @@ function toggleCareerRowMenu(id, event) {
   const rect = event?.currentTarget?.getBoundingClientRect?.()
   if (rect) {
     const menuWidth = 230
-    const menuHeight = 110
+    const menuHeight = 170
     const viewportWidth = window.innerWidth || document.documentElement.clientWidth
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight
     const spaceBelow = viewportHeight - rect.bottom
@@ -4191,6 +4720,24 @@ function toggleCareerRowMenu(id, event) {
     }
   }
   openCareerRowMenuId.value = id
+}
+
+function openCareerApplicants(job) {
+  selectedCareerJob.value = job
+  careerSectionMode.value = 'view-applicants'
+  openCareerRowMenuId.value = null
+  selectedCareerApplicantId.value = careerApplicantsRows.value[0]?.id || null
+}
+
+function setCareerApplicantDecision(nextDecision) {
+  if (!selectedCareerApplicant.value) return
+  careerApplicantsRows.value = careerApplicantsRows.value.map((row) =>
+    row.id === selectedCareerApplicant.value.id ? { ...row, decision: nextDecision } : row,
+  )
+}
+
+function toggleCareerApplicantSection(sectionKey) {
+  careerApplicantSectionsOpen.value[sectionKey] = !careerApplicantSectionsOpen.value[sectionKey]
 }
 
 function exportCareerJobs() {
@@ -5458,6 +6005,328 @@ onBeforeUnmount(() => {
 .career-status-open { color: #16a34a; }
 .career-status-on-hold { color: #a16207; }
 .career-status-closed { color: #6b7280; }
+.career-applicants-view {
+  display: grid;
+  gap: 12px;
+}
+.career-applicants-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 4px 0;
+}
+.career-applicants-head-left {
+  display: grid;
+  gap: 3px;
+}
+.career-applicants-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  font-weight: 500;
+}
+.career-applicants-breadcrumb iconify-icon {
+  color: rgba(198, 210, 255, 0.9);
+}
+.career-crumb-link {
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+.career-applicants-breadcrumb span {
+  color: #ffffff;
+  font-weight: 600;
+}
+.career-applicants-page-title {
+  margin: 0;
+  color: #fff;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+.career-applicants-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateY(-3px);
+}
+.career-circle-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #6b7280;
+}
+.career-applicants-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #dbe4ff;
+  padding: 14px;
+}
+.career-applicants-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.career-company-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #0a1f84;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+.career-applicants-title-wrap h6 {
+  margin: 0;
+  font-size: 20px;
+}
+.career-applicants-title-wrap p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+.career-applicants-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.career-meta-pill {
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: #4b5563;
+}
+.career-count-text {
+  margin-left: auto;
+  color: #d3a326;
+  font-weight: 600;
+  font-size: 14px;
+}
+.career-applicants-body {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.career-applicant-list-card,
+.career-applicant-detail-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #dbe4ff;
+  padding: 12px;
+}
+.career-applicant-list-card {
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 210px);
+  overflow: hidden;
+}
+.career-applicant-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.career-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.career-list-delete {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+}
+.career-applicant-list-scroll {
+  max-height: calc(100vh - 290px);
+  overflow: auto;
+  margin-top: 8px;
+  padding-right: 4px;
+}
+.career-applicant-list-item {
+  border: none;
+  border-bottom: 1px solid #eef2f7;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 10px 4px;
+}
+.career-applicant-list-item.active {
+  background: #f8fbff;
+  border-radius: 10px;
+}
+.career-applicant-list-item img {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+}
+.career-applicant-list-info strong {
+  font-size: 15px;
+}
+.career-applicant-list-info p,
+.career-applicant-list-info small {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
+}
+.career-applicant-row-foot {
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.career-decision-selected { color: #13a552; }
+.career-decision-rejected { color: #d73939; }
+.career-decision-maybe { color: #d3a326; }
+.career-detail-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.career-applicant-detail-card {
+  max-height: calc(100vh - 210px);
+  overflow: auto;
+  padding-right: 8px;
+}
+.career-applicant-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.career-applicant-profile img {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+}
+.career-applicant-profile p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+.career-decision-chips {
+  display: inline-flex;
+  gap: 8px;
+}
+.career-decision-chip {
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  background: #fff;
+}
+.career-decision-chip.active.selected { background: #16a34a; color: #fff; border-color: #16a34a; }
+.career-decision-chip.active.rejected { background: #ef4444; color: #fff; border-color: #ef4444; }
+.career-decision-chip.active.maybe { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+.career-detail-stat-grid {
+  margin-top: 10px;
+  border: 1px solid #eef2f7;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.career-detail-stat-grid > div {
+  padding: 10px;
+  border-right: 1px solid #eef2f7;
+}
+.career-detail-stat-grid > div:last-child {
+  border-right: 0;
+}
+.career-detail-stat-grid span {
+  color: #9ca3af;
+  font-size: 12px;
+  display: block;
+}
+.career-detail-stat-grid strong {
+  font-size: 14px;
+}
+.career-detail-quick-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+.career-detail-quick-actions button {
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 7px 14px;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.career-accordion-block {
+  margin-top: 10px;
+  border: 1px solid #eef2f7;
+  border-radius: 10px;
+}
+.career-accordion-title {
+  border: none;
+  background: #fff;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+}
+.career-details-grid {
+  border-top: 1px solid #eef2f7;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+.career-details-grid p {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.career-details-grid p span {
+  color: #9ca3af;
+}
+.career-generic-box {
+  border-top: 1px solid #eef2f7;
+  padding: 12px;
+}
+.career-generic-box img {
+  width: 100%;
+  border-radius: 8px;
+}
+.career-qna-list {
+  border-top: 1px solid #eef2f7;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+.career-qna-item {
+  border: 1px solid #eef2f7;
+  border-radius: 10px;
+  padding: 10px;
+}
+.career-qna-item p {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+.career-qna-item p span {
+  color: #9ca3af;
+  margin-left: 10px;
+}
 .announcement-table-wrap {
   max-height: 520px;
 }
@@ -7542,6 +8411,128 @@ onBeforeUnmount(() => {
 
 .hr-empty-tab {
   min-height: 620px;
+}
+
+.team-attendance-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.team-attendance-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.team-attendance-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid #edf1f8;
+}
+
+.team-attendance-count {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.team-attendance-table-wrap {
+  overflow-x: auto;
+}
+
+.manager-group-row td {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 12px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.manager-group-count {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.team-attendance-section-divider {
+  margin-top: 8px;
+  padding: 8px 2px;
+}
+
+.department-boxes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.department-box-card {
+  border: 1px solid #dbe4f0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 20px 18px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 145px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  align-items: center;
+  justify-content: center;
+}
+
+.department-box-card:hover {
+  transform: translateY(-2px);
+  border-color: #93c5fd;
+  box-shadow: 0 14px 28px rgba(30, 64, 175, 0.14);
+}
+
+.department-box-card strong {
+  color: #0f172a;
+  font-size: 18px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.department-box-card span {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.department-box-card small {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eaf2ff;
+  border: 1px solid #cfe0ff;
+}
+
+@media (max-width: 900px) {
+  .department-boxes-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hr-sales-position-filter {
+  min-width: 230px;
+}
+
+.hr-sales-position-filter label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #64748b;
 }
 .team-view-controls {
   margin-top: 8px;

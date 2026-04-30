@@ -314,7 +314,7 @@
                             </div>
 
                             <!-- Why Lost -->
-                            <div v-if="missingFields.includes('why_lost_lead') || missingFields.includes('lost_reason')" class="form-group mb-3">
+                            <div v-if="missingFields.includes('why_lost_lead') || missingFields.includes('lost_reason')" class="form-group mb-3 lost-reason-field">
                                 <label class="form-label">Why Lost</label>
                                 <v-select append-to-body
                                     v-model="formData.lost_reason"
@@ -322,7 +322,7 @@
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Select Reason"
-                                    class="custom-v-select searchable-select"
+                                    class="custom-v-select searchable-select lost-reason-select"
                                 >
                                     <template #open-indicator="{ attributes }">
                                         <span v-bind="attributes">
@@ -901,8 +901,6 @@ const branchOptions = [
 
 const lostReasonOptions = [
     { value: 'bought_direct_from_developer', text: 'Bought Direct from Developer' },
-    { value: 'bought_from_competitor_company', text: 'Bought from Competitor Company' },
-    { value: 'bought_from_another_agent_oia_properties', text: 'Bought from Another Agent — Oia  Properties' },
     { value: 'changed_decision', text: 'Changed Decision' },
     { value: 'clients_budget_is_too_low', text: "Client's Budget Is Too Low" }
 ]
@@ -1668,6 +1666,11 @@ defineExpose({
     margin-bottom: 0 !important;
 }
 
+/* Make Why Lost select use full row width in grid layout */
+.dynamic-form .box-shadow .form-group.lost-reason-field {
+    grid-column: 1 / -1;
+}
+
 :deep(.searchable-select .vs__dropdown-toggle) {
     min-height: 42px;
     border: 1px solid #cfd8e3;
@@ -1792,6 +1795,36 @@ defineExpose({
 :deep(.custom-v-select .vs__dropdown-option--selected) {
     background: #FAA300 !important;
     color: #fff !important;
+}
+
+/* Show full reason text for Why Lost select */
+:deep(.lost-reason-select .vs__dropdown-toggle) {
+    height: auto;
+    min-height: 42px;
+}
+
+:deep(.lost-reason-select .vs__selected-options) {
+    overflow: visible;
+    max-width: none;
+}
+
+:deep(.lost-reason-select .vs__selected) {
+    white-space: normal;
+    line-height: 1.3;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    text-overflow: clip;
+}
+
+:deep(.lost-reason-select .vs__dropdown-menu) {
+    min-width: max-content;
+    width: max-content;
+    max-width: min(92vw, 560px);
+}
+
+:deep(.lost-reason-select .vs__dropdown-option) {
+    white-space: normal;
+    word-break: break-word;
 }
 
 .budget-input::placeholder {
