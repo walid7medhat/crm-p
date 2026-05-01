@@ -134,7 +134,7 @@
                                                         v-if="task.has_service_duplicate"
                                                         class="service-dup-badge"
                                                     >
-                                                        Provide
+                                                        Black List
                                                     </span>
                                                     <div 
                                                         v-if="isFieldEnabled('duplicate_count') && index === 0  && isAdminOrSuperAdmin && task.duplicate_no>0"
