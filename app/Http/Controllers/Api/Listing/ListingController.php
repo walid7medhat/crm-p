@@ -1896,9 +1896,10 @@ public function assignAgent(Request $request, $id)
             
         // جلب property
         $property = Listing::with(['agent'])->findOrFail($id);
-
+        if ($currentUser->hasAnyRole(['manager']) && $currentUser->listing_team==1) {
+        }
         // لو المدير أو تيم ليد، تأكد property تبعته أو تبع agent من تحته
-        if ($currentUser->hasRole(['team_lead','manager'])) {
+        elseif ($currentUser->hasRole(['team_lead','manager'])) {
 
             // جلب جميع الـ agent المسموح بهم (التحتيه)
             $allowedAgentIds = User::where(function($q) use ($currentUser) {

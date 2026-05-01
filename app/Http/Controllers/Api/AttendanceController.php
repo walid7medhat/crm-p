@@ -125,6 +125,7 @@ class AttendanceController extends Controller
         $normalized = $rows->map(function (Attendance $attendance) {
             $row = [
                 'employee_id' => $attendance->employee_id,
+                'biometric_code'=>$attendance->user?->biometric_code,
                 'employee_name' => $attendance->employee_name ?? $attendance->user?->name ?? 'Unknown',
                 'status' => $attendance->status ?: $this->resolveStatus([
                     'status' => null,
@@ -133,7 +134,7 @@ class AttendanceController extends Controller
                 'check_in' => $attendance->check_in?->timezone('Asia/Dubai')->toDateTimeString(),
                 'check_out' => $attendance->check_out?->timezone('Asia/Dubai')->toDateTimeString(),
                 'date' => $attendance->date ? Carbon::parse($attendance->date)->toDateString() : null,
-                'department' => data_get($attendance->user, 'department'),
+                'department' => $attendance->user?->employeeProfile?->department?->name,
                 'email' => $attendance->user?->email,
             ];
 
@@ -198,7 +199,7 @@ class AttendanceController extends Controller
 
             $usersByBioCode = User::query()
                 ->whereNotNull('biometric_code')
-                ->get(['id', 'name', 'email', 'biometric_code'])
+                ->get(['id', 'name', 'email', 'biometric_code','department_id'])
                 ->keyBy('biometric_code');
 
             $safeRows = collect($rows)->filter(fn ($row) => is_array($row))->values();
@@ -224,10 +225,11 @@ class AttendanceController extends Controller
                 $mapped[] = [
                     'employee_key' => $employeeKey,
                     'employee_id' => $user?->id ?? $bioCode,
+                    'biometric_code'=>$user?->biometric_code,
                     'user_id' => $user?->id,
                     'employee_name' => $user?->name ?: ($fallbackName ?: ($bioCode ?: 'Unknown')),
                     'email' => $user?->email,
-                    'department' => data_get($user, 'department') ?: ($row['department'] ?? null),
+                    'department' => $user?->employeeProfile?->department?->name,
                     'status' => !empty($row['status']) ? strtolower((string) $row['status']) : null,
                     'check_in' => $row['first_checkin'] ?? null,
                     'check_out' => $row['last_checkout'] ?? null,
@@ -376,7 +378,7 @@ public function generatePeriodReport(Request $request)
     $endDate = $request->end_date ? Carbon::parse($request->end_date) : Carbon::now('Asia/Dubai')->endOfMonth();
 
     // Get all active users
-    $users = User::get();
+    $users = User::whereHas('attendances')->get();
     $reports = [];
 
     foreach ($users as $user) {
@@ -463,6 +465,8 @@ public function generatePeriodReport(Request $request)
             'user_id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'biometric_code'=>$user?->biometric_code,
+            'department'=>$user?->employeeProfile?->department?->name,
             'employee_id' => $user->employee_id ?? null,
             'period_start' => $startDate->format('Y-m-d'),
             'period_end' => $endDate->format('Y-m-d'),

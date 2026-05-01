@@ -232,9 +232,13 @@ export default {
     }
   },
   async mounted() {
+const today = new Date()
+  today.setHours(0,0,0,0)
+
     const now = new Date()
     this.startDate = this.formatDate(new Date(now.getFullYear(), now.getMonth(), 1))
-    this.endDate = this.formatDate(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+    // this.endDate = this.formatDate(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+      this.endDate =this.formatDate(today)
     this.selectedMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     this.fetchReport()
   },
@@ -303,6 +307,19 @@ export default {
           'Employee',
           'employee',
         ])
+        const employeeId = this.pickField(row, [
+          'Employee ID',
+          'employee_id',
+          'emp_id',
+          'id',
+          'user_id',
+        ])
+        const department = this.pickField(row, [
+          'Department',
+          'department',
+          'department_name',
+          'dept',
+        ])
         const dateRaw = this.pickField(row, ['Date', 'date', 'attendance_date', 'day'])
         const checkInRaw = this.pickField(row, [
           'Check-in Time',
@@ -318,14 +335,29 @@ export default {
           'checkout',
           'time_out',
         ])
-
+  const biometricCode = this.pickField(row, [
+          'Biometric Code',
+          'biometric_code',
+        ])
         const date = this.normalizeDate(dateRaw)
         const checkInMinutes = this.toMinutes(checkInRaw)
         const checkOutMinutes = this.toMinutes(checkOutRaw)
         if (!employeeName || !date) continue
 
-        if (!grouped.has(employeeName)) grouped.set(employeeName, new Map())
-        const byDate = grouped.get(employeeName)
+        const groupKey = employeeId ? `${employeeName}__${employeeId}` : employeeName
+        if (!grouped.has(groupKey)) {
+          grouped.set(groupKey, {
+            employeeName,
+             biometricCode: biometricCode || '',
+            employeeId: employeeId || '',
+            department: department || '',
+            byDate: new Map(),
+          })
+        }
+        const group = grouped.get(groupKey)
+        if (!group.employeeId && employeeId) group.employeeId = employeeId
+        if (!group.department && department) group.department = department
+        const byDate = group.byDate
         const current = byDate.get(date)
 
         if (current === undefined) {
@@ -351,7 +383,12 @@ export default {
       const rangeDates = this.calendarDatesInRange
       const totalWorkingDays = this.workingDaysCountInRange
       const rows = []
-      for (const [employeeName, byDate] of grouped.entries()) {
+      for (const [, employeeData] of grouped.entries()) {
+        const employeeName = employeeData.employeeName
+        const employeeId = employeeData.employeeId || ''
+        const department = employeeData.department || ''
+        const biometricCode = employeeData.biometricCode || ''
+        const byDate = employeeData.byDate
         let d10 = 0
         let d25 = 0
         let d100 = 0
@@ -425,6 +462,9 @@ export default {
         const avgDeductionPerDay = totalDeductionPercent
         rows.push({
           employeeName,
+          employeeId,
+          biometricCode,
+          department,
           totalDays,
           noDeductionDays,
           absentDays,
@@ -516,24 +556,23 @@ export default {
     },
   },
   methods: {
-    validateDateRange() {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
-      const start = new Date(this.startDate)
-      const end = new Date(this.endDate)
-      
+     validateDateRange() {
+      const today = this.formatDate(new Date())
+    
+      let start = this.startDate
+      let end = this.endDate
+    
       if (start > today) {
-        this.startDate = this.formatDate(today)
+        this.startDate = today
         alert('Start date cannot be in the future')
       }
-      
+    
       if (end > today) {
-        this.endDate = this.formatDate(today)
-        alert('End date cannot be in the future')
+        this.endDate = today
+        alert('End date cannot be in the future'+today+end)
       }
-      
-      if (start > end) {
+    
+      if (start && end && start > end) {
         this.endDate = this.startDate
         alert('Start date cannot be after end date')
       }
@@ -603,11 +642,16 @@ export default {
           this.rawRows = payload.flatMap((user) =>
             (user.daily_breakdown || []).map((day) => ({
               'Employee Name': user.name,
+              'Employee ID': user.employee_id || user.id || '',
+                  'Biometric Code': user.biometric_code || '', 
+
+              'Department':  user.department || '',
               Date: day.date,
               'Check-in Time': day.check_in,
               'Check-out Time': day.check_out,
             })),
           )
+          
         } else if (payload.length && payload[0]?.present !== undefined && payload[0]?.late !== undefined) {
           const generated = []
           const rangeDates = this.workingDatesInRange
@@ -630,6 +674,8 @@ export default {
             for (let i = 0; i < presentCount; i += 1) {
               generated.push({
                 'Employee Name': name,
+                'Employee ID': item.employee_id || item.id || '',
+                'Department':  item.department || '',
                 Date: attendanceDates[dateIndex],
                 'Check-in Time': '09:10 AM',
                 'Check-out Time': '06:00 PM',
@@ -639,6 +685,8 @@ export default {
             for (let i = 0; i < lateCount; i += 1) {
               generated.push({
                 'Employee Name': name,
+                'Employee ID': item.employee_id || item.id || '',
+                'Department': item.department || '',
                 Date: attendanceDates[dateIndex],
                 'Check-in Time': '09:35 AM',
                 'Check-out Time': '06:00 PM',
@@ -646,7 +694,14 @@ export default {
               dateIndex += 1
             }
             for (const absentDate of absentDates) {
-              generated.push({ 'Employee Name': name, Date: absentDate, 'Check-in Time': '', 'Check-out Time': '' })
+              generated.push({
+                'Employee Name': name,
+                'Employee ID': item.employee_id || item.id || '',
+                'Department': item.department || '',
+                Date: absentDate,
+                'Check-in Time': '',
+                'Check-out Time': '',
+              })
             }
           }
           this.rawRows = generated
@@ -828,18 +883,52 @@ export default {
       this.selectedEmployee = null
     },
     exportReport() {
-      const exportRows = this.processedRows.map((row) => ({
-        'Employee Name': row.employeeName,
-        'Total Working Days': row.totalDays,
-        'Present Days': row.presentDays,
-        'Absent Days': row.absentDays,
-        'Weekend Days': row.weekendDays,
-        '10% Days Count': row.d10,
-        '25% Days Count': row.d25,
-        '100% Days Count': row.d100,
-        'Total Deduction %': row.totalDeductionPercent.toFixed(1),
-      }))
-      const headers = Object.keys(exportRows[0] || {})
+      const dates = this.calendarDatesInRange.map((date) => this.formatDate(date))
+      const baseHeaders = [
+        'Employee Name',
+        'Employee Code',
+        'Department',
+        'Total Working Days',
+        'Present Days',
+        'Absent Days',
+        'Weekend Days',
+        '10% Days Count',
+        '25% Days Count',
+        '100% Days Count',
+      ]
+      const perDayHeaders = dates.flatMap((date) => ([
+        `${date} In`,
+        `${date} Out`,
+        `${date} Status`,
+      ]))
+      const headers = [...baseHeaders, ...perDayHeaders]
+
+      const exportRows = this.processedRows.map((row) => {
+        const dailyMap = new Map(row.dailyBreakdown.map((item) => [item.date, item]))
+        const exportRow = {
+          'Employee Name': row.employeeName,
+          'Employee Code': row.biometricCode || '',
+          'Department': row.department || '',
+          'Total Working Days': row.totalDays,
+          'Present Days': row.presentDays,
+          'Absent Days': row.absentDays,
+          'Weekend Days': row.weekendDays,
+          '10% Days Count': row.d10,
+          '25% Days Count': row.d25,
+          '100% Days Count': row.d100,
+        }
+
+        for (const date of dates) {
+          const day = dailyMap.get(date)
+          exportRow[`${date} In`] = day ? this.formatMinutes(day.checkInMinutes) : '-'
+          exportRow[`${date} Out`] = day ? this.formatMinutes(day.checkOutMinutes) : '-'
+          exportRow[`${date} Status`] = day?.status || '-'
+          
+        }
+
+        return exportRow
+      })
+
       const csvLines = [headers.join(',')]
       for (const row of exportRows) {
         csvLines.push(

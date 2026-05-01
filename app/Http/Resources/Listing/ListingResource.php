@@ -32,6 +32,8 @@ $allowedAgentIds = [];
         if ($roleAllowed) {
             if ($user->hasAnyRole(['super_admin','admin'])) {
                 $canAssignAgent = true;
+            }elseif ($user->hasAnyRole(['manager']) && $user->listing_team==1) {
+                $canAssignAgent = true;
             } else {
               $allowedAgentIds = $user->getAllSubordinatesIds();
 
