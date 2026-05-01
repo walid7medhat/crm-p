@@ -79,6 +79,25 @@
                                     <iconify-icon icon="lucide:chevron-down" />
                                 </button>
                             </div>
+                            <div v-else-if="field.id === 'purpose_purchase' && form.leadType !== 'rent'" class="col-md-6 mt-3">
+                                <label class="form-label-custom">{{ field.label }}</label>
+                                <v-select
+                                    v-model="form[field.formKey]"
+                                    :options="field.options"
+                                    :reduce="opt => opt.value"
+                                    label="text"
+                                    :placeholder="field.placeholder || 'Select'"
+                                    :clearable="hasValue(form[field.formKey])"
+                                    append-to-body
+                                    class="custom-v-select"
+                                >
+                                    <template #open-indicator="{ attributes }">
+                                        <span v-bind="attributes">
+                                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                        </span>
+                                    </template>
+                                </v-select>
+                            </div>
                             <b-form-input
                                 v-else-if="field.type === 'text' && field.id !== 'budget_to'"
                                 v-model="form[field.formKey]"
@@ -207,6 +226,23 @@
                                 filterable
                                 append-to-body
                                 class="custom-v-select mt-2 office-multi-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                            <v-select
+                                v-if="field.id === 'source' && form.source === 'portal'"
+                                v-model="form.sourcePortal"
+                                :options="portalSourceOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                placeholder="Select Portal"
+                                :clearable="hasValue(form.sourcePortal)"
+                                append-to-body
+                                class="custom-v-select mt-2"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -461,6 +497,23 @@
                                     </span>
                                 </template>
                             </v-select>
+                               <v-select
+                                v-if="field.id === 'source' && form.source === 'portal'"
+                                v-model="form.sourcePortal"
+                                :options="portalSourceOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                placeholder="Select Portal"
+                                :clearable="hasValue(form.sourcePortal)"
+                                append-to-body
+                                class="custom-v-select mt-2"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
                             <!-- Multi-select for office/branch -->
                             <v-select
                                 v-else-if="field.type === 'select' && field.id === 'office'"
@@ -621,7 +674,7 @@ const showBudgetDropdown = ref(false)
 const budgetTriggerRef = ref(null)
 const budgetDropdownPanelRef = ref(null)
 const budgetDropdownStyle = ref({})
-const selectedLeadFieldIds = ref(['first_name', 'lead_name', 'created_on', 'assigned_on', 'work_phone', 'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 'team','stage','quality_status', 'interaction_result'])
+const selectedLeadFieldIds = ref(['lead_name','first_name',  'created_on', 'assigned_on', 'work_phone', 'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 'team','stage','quality_status', 'interaction_result'])
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
 const teamOptions = ref([{ value: null, text: 'Select Team' }])
 const officeOptions = ref([{ value: null, text: 'Select Office' }])
@@ -969,6 +1022,7 @@ const form = ref({
     leadName: '',
     source: '',
     sourceWebsite: [],
+    sourcePortal: '',
     interactionResult: '',
     qualityStatus: '',
     createdFrom: '',    
@@ -1065,13 +1119,21 @@ const purposeOptions = [
 const sourceOptions = ref([
     { value: null, text: 'Select Source' },
     { value: 'Lead Form', text: 'Meta' },
-    { value: 'website', text: 'Website' }
+    { value: 'website', text: 'Website' },
+    { value: 'portal', text: 'Portal' },
 ])
 const websiteSourceOptions = ref([
     { value: null, text: 'Select Website' },
     { value: 'Allproperties.ae', text: 'Allproperties.ae' },
-    { value: 'Oiaproperties.com', text: 'Oiaproperties.com' }
+    { value: 'Oiaproperties.com', text: 'Oiaproperties.com' },
+    
 ])
+const portalSourceOptions = ref([
+    { value: null, text: 'Select Portal' },
+    { value: 'propertyfinder', text: 'Property Finder' },
+    { value: 'bayut', text: 'Bayut' },
+])
+
 const websiteSourceOptionsForMulti = computed(() =>
     websiteSourceOptions.value.filter(o => o.value != null)
 )
@@ -1320,8 +1382,8 @@ const getCurrentUserBranches = () => {
 
 const searchFieldsConfig = computed(() => {
     const fields = [
-        { id: 'first_name', label: 'Client Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter client name' },
         { id: 'lead_name', label: 'Lead Name', formKey: 'leadName', queryKey: 'lead_name', type: 'text', placeholder: 'Enter Lead Name' },
+        { id: 'first_name', label: 'Client Name', formKey: 'firstName', queryKey: 'first_name', type: 'text', placeholder: 'Enter client name' },
         { id: 'email', label: 'Email', formKey: 'email', queryKey: 'email', type: 'text', placeholder: 'Enter Email' },
           { id: 'work_phone', label: 'Phone', formKey: 'workPhone', queryKey: 'work_phone', type: 'text', placeholder: 'Enter Phone' },
         { id: 'created_on', label: 'Created On', formKey: 'createdOn', queryKey: 'created_at', type: 'select', options: createdOnOptions },
@@ -1409,7 +1471,9 @@ const visibleSearchFields = computed(() => {
             if (f.id === 'quality_status' && (stageOrder === 2 || stageOrder === 3)) {
                 return false
             }
-            
+             if (f.id === 'purpose_purchase' && form.value.leadType === 'rent') {
+                return false
+            }
             if (f.id === 'interaction_result' && !(stageOrder === 2 || stageOrder === 3)) {
                 return false
             }
@@ -1451,7 +1515,7 @@ const searchFieldSections = [
     {
         id: 'lead-info',
         title: 'Lead Information',
-        fieldIds: ['first_name', 'lead_name', 'work_phone', 'email', 'created_on', 'assigned_on']
+        fieldIds: ['lead_name','first_name',  'work_phone', 'email', 'created_on', 'assigned_on']
     },
     {
         id: 'assignment',
@@ -1625,6 +1689,16 @@ function getDisplayValue(field, rawValue) {
             return `Website (${names.join(', ')})`
         }
         return 'Website'
+    }
+    if (field.formKey === 'source' && rawValue === 'portal') {
+     const portalValue = form.value.sourcePortal
+        if (portalValue) {
+            const opts = portalSourceOptions.value
+            const opt = opts.find(o => o.value === portalValue)
+            const portalName = opt ? opt.text : String(portalValue)
+            return `Portal (${portalName})`
+        }
+        return 'Portal'
     }
     if (Array.isArray(rawValue)) {
         if (field.type === 'select') {
@@ -1933,9 +2007,16 @@ function applySearch() {
         } else {
             sourceParam = 'website'
         }
-    } else if (form.value.source) {
-        sourceParam = form.value.source
-    }
+        }else if (form.value.source === 'portal') {
+        // ✅ معالجة Portal
+        if (form.value.sourcePortal && form.value.sourcePortal !== '') {
+            sourceParam = form.value.sourcePortal
+        } else {
+            sourceParam = 'portal'
+        }
+        }  else if (form.value.source) {
+            sourceParam = form.value.source
+        }
 
     const query = {
         lead_name: form.value.leadName || undefined,
@@ -2450,7 +2531,54 @@ const resetForm = () => {
     show.value = false
     emit('search', { query: null, activePill: null, activeFilters: [] })
 }
-
+// ابحث عن هذا الجزء في الكود واستبدله بالكود التالي
+watch(() => form.value.responsible, async (newResponsibleId) => {
+    if (!newResponsibleId) return
+    
+    const selectedPerson = allResponsiblePersons.value.find(p => p.id === newResponsibleId)
+    if (!selectedPerson) return
+    
+    // ✅ 1. معالجة الـ Team
+    if (selectedPerson.team_id) {
+        form.value.team = selectedPerson.team_id
+        console.log('Team set to:', selectedPerson.team_id)
+    }
+    
+  
+    const branchIdFromApi = selectedPerson.branch_id || selectedPerson.office_id || selectedPerson.officeId;
+    
+    if (branchIdFromApi) {
+ 
+        let branchId = branchIdFromApi;
+        
+     
+        const normalizedBranch = normalizeOfficeId(branchId);
+        
+        if (normalizedBranch !== null && normalizedBranch !== undefined) {
+            if (!Array.isArray(form.value.office)) {
+                form.value.office = [];
+            }
+            if (!form.value.office.includes(normalizedBranch)) {
+                form.value.office.push(normalizedBranch);
+                console.log('Branch added (normalized):', normalizedBranch);
+                
+                if (form.value.office.length) {
+                    selectedOffice.value = [...form.value.office];
+                }
+            }
+        } else {
+            console.warn('Branch ID is invalid and could not be normalized:', branchId);
+        }
+    } else {
+        console.warn('No branch_id found for selected person:', selectedPerson);
+    }
+    
+    await Promise.all([
+        fetchResponsiblePersonsWithFilter(),
+        fetchTeamsWithFilter()
+    ]);
+    
+}, { immediate: false })
 watch(officeOptions, (newOptions) => {
     if (form.value.office && form.value.office.length && newOptions.length) {
         const normalizedSelection = normalizeOfficeSelection(form.value.office)
@@ -2481,8 +2609,13 @@ watch(() => form.value.assignedOn, (newVal, oldVal) => {
 })
 
 watch(() => form.value.source, (newVal) => {
-    if (newVal !== 'website') {
+    if (newVal === 'website') {
         form.value.sourceWebsite = []
+    } else if (newVal === 'portal') {
+        form.value.sourceWebsite = []
+    } else {
+        form.value.sourceWebsite = []
+        form.value.sourcePortal = []
     }
 })
 
@@ -2684,14 +2817,14 @@ onBeforeUnmount(() => {
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
     background: #fff;
-    overflow: hidden;
+    /* overflow: hidden; */
 }
 
 .lead-search-container {
     min-height: 460px;
     background: #fff;
     border-radius: 12px;
-    overflow: hidden;
+    /* overflow: hidden; */
 }
 
 .sidebar-pills {
@@ -2926,15 +3059,27 @@ onBeforeUnmount(() => {
 }
 
 .close-btn {
-    position: absolute;
-    top: 0px;
-    right: 10px;
-    border: none;
-    background: transparent;
-    font-size: 22px;
-    color: #000000;
-    cursor: pointer;
-    z-index: 10;
+        position: absolute;
+    top: 8px;
+    right: -61px;
+    width: 83px;
+    height: 49px;
+    color: rgb(255, 255, 255);
+    font-size: 18px;
+    line-height: 1;
+    box-shadow: rgba(15, 23, 42, 0.2) 0px 8px 16px;
+    z-index: -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgb(79, 165, 247);
+    border-image: initial;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgb(47, 136, 239), rgb(93, 184, 255));
+    padding: 0px;
+    transition: filter 0.2s;
 }
 
 .form-label-custom {
@@ -3298,6 +3443,7 @@ onBeforeUnmount(() => {
     font-size: 12px;
     color: #475569;
     transition: all 0.2s;
+      font-size: 14px !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
@@ -3342,6 +3488,7 @@ onBeforeUnmount(() => {
 :deep(.lead-search-rp-select .vs__dropdown-option) {
     padding: 8px 10px !important;
     white-space: normal !important;
+      font-size: 14px !important;
 }
 
 :deep(.lead-search-rp-select .vs__selected) {
@@ -3456,5 +3603,8 @@ onBeforeUnmount(() => {
     .vs__dropdown-option--selected {
         background: #FAA300 !important;
         color: #fff !important;
+    }
+    .vs__dropdown-option{
+        font-size: 14px !important;
     }
 </style>

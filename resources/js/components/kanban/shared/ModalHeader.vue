@@ -36,20 +36,29 @@ defineEmits(['close'])
     color: #01062C;
 }
 
-.header-close-btn-top {
-    background: transparent;
-    border: none;
-    font-size: 20px;
-    color: #000;
-    font-weight: 500;
-    cursor: pointer;
-    margin-bottom: 10px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
+ .header-close-btn-top{
+            position: absolute;
+            top: 8px;
+            right: -61px;
+            width: 83px;
+            height: 49px;
+            color: rgb(255, 255, 255);
+            font-size: 18px;
+            line-height: 1;
+            box-shadow: rgba(15, 23, 42, 0.2) 0px 8px 16px;
+            z-index: -1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-width: 1px;
+            border-style: solid;
+            border-color: rgb(79, 165, 247);
+            border-image: initial;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgb(47, 136, 239), rgb(93, 184, 255));
+            padding: 0px;
+            transition: filter 0.2s;
+      }
 .header-close-btn-top:hover {
     opacity: 0.7;
 }

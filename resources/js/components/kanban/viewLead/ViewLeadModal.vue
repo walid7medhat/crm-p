@@ -12,7 +12,7 @@
         :trap-focus="false"
         dialog-class="kanban-mobile-fullscreen-modal"
     >
-        <div v-if="show" class="view-lead-modal-content p-3">
+        <div v-if="show" class="view-lead-modal-content p-3 pb-0">
             <!-- Header -->
             <div class="modal-header-custom d-flex justify-content-between align-items-center px-1">
                 <div class="d-flex align-items-center gap-3">
@@ -26,10 +26,11 @@
             <!-- Stages Progress -->
             <StageSelector v-model="leadStageId"   
             :require-validation="true"
+            :class="pt-0"
             @stage-change-request="handleStageChangeRequest"/>
 
             <!-- Tabs -->
-            <div class="tabs-container mb-3 border-bottom">
+            <div class="tabs-container mb- border-bottom">
                 <div class="d-flex gap-4">
                     <button 
                         class="tab-item" 
@@ -271,7 +272,8 @@ const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
             'lead_source',
             'purpose_buying',
             'bedrooms',
-            'status_lead'
+            'status_lead',
+            'deal_name'
         ]
 
         const missingFields = requiredFieldsForConversion.filter(field => {
@@ -434,6 +436,7 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
         if (additionalData.branch) payload.branch = additionalData.branch
         if (additionalData.lost_reason) payload.why_lost_lead = additionalData.lost_reason
         if (additionalData.interaction_result) payload.interaction_result = additionalData.interaction_result
+        if (additionalData.deal_name) payload.deal_name = additionalData.deal_name
         
         // Handle lead status based on stage
         if (additionalData.lead_status) {
@@ -477,6 +480,7 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
             if (payload.status_lead) lead.value.status_lead = payload.status_lead
             if (payload.status_lead_pool) lead.value.status_lead = payload.status_lead_pool
             if (payload.unqualified_status) lead.value.status_lead = payload.unqualified_status
+            if (payload.deal_name) lead.value.deal_name = payload.deal_name
         }
         
         // Update stage selector
@@ -758,7 +762,7 @@ const $showNotification = (message, type = 'info') => {
 .tab-item {
     background: none;
     border: none;
-    padding: 12px 10px;
+    padding: 10px;
     font-size: 13px;
     font-weight: 500;
     color: #64748B;
@@ -1034,8 +1038,8 @@ textarea, input, select {
 
 :deep(.view-lead-modal) {
     padding: 0 !important;
-    height: 92vh;
-    max-height: 92vh;
+    height: 98vh;
+    max-height: 98vh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -1104,13 +1108,13 @@ textarea, input, select {
 .modal#view-lead-modal .modal-dialog {
     max-width: min(1200px, 95vw) !important;
     width: min(1200px, 95vw) !important;
-    max-height: 92vh !important;
-    margin: 2vh auto !important;
+    max-height: 98vh !important;
+    margin: 1vh auto !important;
 }
 
 .view-lead-modal {
     padding: 0 !important;
-    height: 92vh;
+    height: 98vh;
     max-height: 100vh;
     display: flex;
     flex-direction: column;

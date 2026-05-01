@@ -58,7 +58,7 @@
 
           <!-- Form Sections -->
           <div v-else class="complete-fields-form">
-            <!-- <div v-if="missingFieldLabels.length > 0" class="alert alert-info py-2 mb-3">
+            <div v-if="missingFieldLabels.length > 0" class="alert alert-info py-2 mb-3">
               <div class="small fw-semibold mb-1">Missing required data:</div>
               <div class="small">
                 {{ missingFieldLabels.join(' • ') }}
@@ -66,7 +66,7 @@
             </div>
             <div>
               {{ unresolvedMissingLabels.join(' • ') }}
-            </div> -->
+            </div>
             <!-- Source and Deal Name Section -->
             <section v-if="hasSourceAndDealNameFields()" class="form-section">
               <h6 class="section-title mb-3">Source and Deal Name</h6>
@@ -850,7 +850,7 @@
               <div class="form-card p-3 radius-12">
                 <div class="row g-3">
                   <div class="col-md-6" v-if="hasLocationField()">
-                    <label class="form-label-custom">Location <span class="text-danger">*</span></label>
+                    <label class="form-label-custom">Property Address <span class="text-danger">*</span></label>
                     <v-select
                       append-to-body 
                       v-model="locationSelectModel" 
@@ -983,6 +983,25 @@
                       :class="{ 'is-invalid': isFieldInvalid('unit_size') }"
                     />
                   </div>
+                   <div class="col-md-6" v-if="hasField('developer_id')">
+                      <label class="form-label-custom">Developer</label>
+                      <v-select
+                        append-to-body 
+                        v-model="formData.developer_id" 
+                        :options="developers" 
+                        :reduce="item => item.id" 
+                        label="name" 
+                        placeholder="Developer" 
+                        class="custom-v-select"
+                        :class="{ 'is-invalid': isFieldInvalid('developer_id') }"
+                      >
+                        <template #open-indicator="{ attributes }">
+                          <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          </span>
+                        </template>
+                      </v-select>
+                    </div>
 
                   <div class="col-md-6" v-if="hasField('developer_name')">
                     <label class="form-label-custom">Developer sales person name</label>
@@ -1051,13 +1070,13 @@
             </section>
             
             <!-- Responsible Person -->
-            <div class="col-12 mt-3" v-if="hasField('responsible_person_id')">
+            <!-- <div class="col-12 mt-3" v-if="hasField('responsible_person_id')">
               <ResponsiblePersonSelector 
                 v-model="formData.responsible_person_id" 
                 :users="users" 
                 :class="{ 'is-invalid': isFieldInvalid('responsible_person_id') }"
               />
-            </div>
+            </div> -->
           </div>
         </div>
 
@@ -1380,7 +1399,7 @@ const fetchAvailableListings = async (areaId) => {
       size_sqft: listing.size_sqft,
       // project_id: listing.project_id,
       // project_name: listing.project?.title,
-      // developer_id: listing.developer_id,
+      developer_id: listing.developer_id,
       status: listing.status,
       display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type?.name || 'Property'} (${listing.status === 'converted' ? 'Sold' : 'Rented'})`
     }))
@@ -1432,7 +1451,7 @@ function normalizeResidencyStatus(status) {
 
 function getRequiredDocumentsByResidency(residencyStatus) {
   return normalizeResidencyStatus(residencyStatus) === 'resident'
-    ? ['passport', 'visa', 'national_id']
+    ? ['passport', 'national_id']
     : ['passport']
 }
 
@@ -1497,7 +1516,7 @@ const documentTypesByParty = computed(() => {
   ) {
     const buyerDocDefinitions = [
       { id: 'passport', name: 'Passport' },
-      { id: 'visa', name: 'Residence  Visa' },
+      // { id: 'visa', name: 'Residence  Visa' },
       { id: 'national_id', name: 'Emirates ID' },
       { id: 'kyc', name: 'KYC' },
       { id: 'spa', name: 'Buyer SPA' },
@@ -1932,7 +1951,7 @@ const onListingSelected = (listing) => {
   formData.value.bedrooms = listing.bedrooms === 0 ? 'studio' : String(listing.bedrooms)
   formData.value.unit_size = listing.size_sqft || ''
   // formData.value.project_id = listing.project_id
-  // formData.value.developer_id = listing.developer_id
+  formData.value.developer_id = listing.developer_id
   formData.value.listing_id = listing.id
   formData.value.listing_status = listing.status
 }
@@ -2184,7 +2203,7 @@ function hasPartyFields(partyType) {
 
 function hasPropertyFields() {
   const requiredFields = effectiveMissingFields.value || []
-  const propertyFields = ['unit_no', 'property_type_id', 'bedrooms', 'area_id', 'subcommunity_id', 'unit_size', 'developer_name', 'developer_phone']
+  const propertyFields = ['unit_no', 'property_type_id', 'bedrooms', 'area_id', 'subcommunity_id', 'unit_size','developer_id', 'developer_name', 'developer_phone']
   return (
     propertyFields.some(field => requiredFields.includes(field)) ||
     hasAnyValueInFields(propertyFields)

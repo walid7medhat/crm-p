@@ -181,6 +181,7 @@ class StageController extends Controller
 
         // ================= stages =================
         $stagesQuery = Stage::where('stage_type', 'lead')
+         ->where('name', '!=', 'lead pool')
             ->whereIn('id', $visibleStageIds) 
             ->orderBy('order');
             if ($request->filled('stage_id')) {

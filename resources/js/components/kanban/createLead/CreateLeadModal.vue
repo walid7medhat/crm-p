@@ -813,7 +813,9 @@
                 { value: 'spam_leads', text: 'Spam Leads' },
                 { value: 'already_assigned_to_another_agent', text: 'Already Assigned to Another Agent' },
                 { value: 'client_was_just_searching_online', text: 'Client Was Just Searching Online' },
-                { value: 'number_does_not_exist', text: 'Number Does Not Exist' }
+                { value: 'number_does_not_exist', text: 'Number Does Not Exist' },
+                   { value: 'service_provide', text: 'service provide' },
+
             ]
         }
         return []
@@ -2516,14 +2518,14 @@ const clearClientData = () => {
         margin: 0 !important;
         padding: 4px 2px 12px !important;
       }
-      :deep(.header-close-btn-top) {
+      /* :deep(.header-close-btn-top) {
         width: 40px;
         height: 40px;
         border-radius: 999px;
         border: 1px solid #e5e7eb;
         background: #f8fafc;
         margin-bottom: 0 !important;
-      }
+      } */
       :deep(.header-modal-title) {
         font-size: 17px !important;
         font-weight: 700 !important;

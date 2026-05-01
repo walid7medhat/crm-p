@@ -65,7 +65,10 @@
                 <!-- Tab Content -->
                 <Deals v-if="tab.id === 'deals'" ref="dealsRef"    @deal-created="(deal) => dealsRef?.openDealModal?.(deal)"/>
                 <Leads v-else-if="tab.id === 'leads'" ref="leadsRef"  @deal-created="handleDealCreatedFromLeads" />
-                <Integration v-else-if="tab.id === 'integration'" ref="integrationRef" />
+                
+                 <LeadPool v-else-if="tab.id === 'lead-pool'" ref="leadPoolRef" />
+                 <Integration v-else-if="tab.id === 'integration'" ref="integrationRef" />
+
             </b-tab>
 
             <!-- Header Actions at the end of the tabs row -->
@@ -194,6 +197,8 @@ import CreateLeadModal from './createLead/CreateLeadModal.vue'
 import CreateDealModal from './deals/CreateDealModal.vue'
 import CreateIntegrationModal from './integration/CreateIntegrationModal.vue'
 import AddStageModal from './stage/AddStageModal.vue'
+import LeadPool from './leadList/LeadPool.vue'
+
 const addStage = '/assets/images/kanban/add-stage.svg'
 import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem, BModal, BButton } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
@@ -263,6 +268,7 @@ const tabs = computed(() => {
     const baseTabs = [
         { id: 'deals', name: 'Deals', hasChevron: false },
         { id: 'leads', name: 'Leads', hasChevron: false },
+            { id: 'lead-pool', name: 'Lead Pool', hasChevron: false } 
         // { id: 'inventory', name: 'Inventory', hasChevron: true },
         // { id: 'costumers', name: 'Costumers', hasChevron: true },
         // { id: 'analytics', name: 'Analytics', hasChevron: false }

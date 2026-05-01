@@ -235,7 +235,7 @@
               
                 </v-select>
               </div>
-              <div v-if="fieldSettings.property_project_name" class="col-md-6">
+              <!-- <div v-if="fieldSettings.property_project_name" class="col-md-6">
                 <label class="form-label-custom">Project Name</label>
                 <v-select
                   v-model="form.project_id"
@@ -256,8 +256,8 @@
                       </span>
                   </template>
               </v-select>
-              </div>
-              <!-- <div v-if="fieldSettings.property_developer" class="col-md-6">
+              </div> -->
+              <div v-if="fieldSettings.property_developer" class="col-md-6">
                 <label class="form-label-custom">Developer</label>
                 <v-select
                   v-model="form.developer_id"
@@ -276,9 +276,9 @@
                       </span>
                   </template>
               </v-select>
-              </div> -->
+              </div>
               <div v-if="fieldSettings.property_area" class="col-md-6">
-                <label class="form-label-custom">Area</label>
+                <label class="form-label-custom">Property Address</label>
                 <v-select
                   v-model="form.area_id"
                   :options="areas"
@@ -506,7 +506,7 @@ const defaultFieldSettings = {
   property_unit_no: true,
   property_type: true,
   property_bedrooms: false,
-  property_project_name: true,
+  // property_project_name: true,
   property_developer: false,
   property_area: false,
   property_sub_community: false,
@@ -592,12 +592,12 @@ const fieldSettingsSections = [
     tab: 'deals',
     label: 'Property Details',
     fields: [
+      { id: 'property_area', label: 'Property Address' },
       { id: 'property_unit_no', label: 'Unit No' },
       { id: 'property_type', label: 'Property Type' },
       { id: 'property_bedrooms', label: 'Bedrooms' },
-      { id: 'property_project_name', label: 'Project Name' },
+      // { id: 'property_project_name', label: 'Project Name' },
       { id: 'property_developer', label: 'Developer' },
-      { id: 'property_area', label: 'Area' },
       { id: 'property_sub_community', label: 'Sub Community' },
       { id: 'property_unit_size', label: 'Unit Size' },
     ],
@@ -644,7 +644,7 @@ const form = ref({
   property_type_id: null,
   bedrooms: null,
   project_id: null,
-  // developer_id: null,
+  developer_id: null,
   area_id: null,
   subcommunity_id: null,
   unit_size: '',
@@ -666,11 +666,9 @@ const nationalityOptions = [
 ]
 
 const residencyOptions = [
-  { value: 'citizen', text: 'Citizen' },
   { value: 'resident', text: 'Resident' },
-  { value: 'investor', text: 'Investor' },
-  { value: 'tourist', text: 'Tourist' },
-  { value: 'other', text: 'Other' },
+  { value: 'non_resident', text: 'Non Resident' },
+
 ]
 
 const countryOptions = [

@@ -1,5 +1,5 @@
 <template>
-    <div class="stage-selector-wrapper py-3 pb-0">
+    <div class="stage-selector-wrapper py-3 pt-0 pb-0">
         <!-- Track = exact height of pills row so arrows align vertically in the middle -->
         <div class="stage-selector-track">
             <div

@@ -983,7 +983,8 @@ const formatLeadStatus = (status, stageOrder = null) => {
             'spam_leads': 'Spam Leads',
             'already_assigned_to_another_agent': 'Already Assigned to Another Agent',
             'client_was_just_searching_online': 'Client Was Just Searching Online',
-            'number_does_not_exist': 'Number Does Not Exist'
+            'number_does_not_exist': 'Number Does Not Exist',
+            'service_provide':'service provide',
         }
         return unqualifiedMapping[status] || formatText(status)
     }
@@ -1974,7 +1975,7 @@ const saveClientRequirement = async () => {
     border: 1px solid #e2e8f0;
     border-radius: 14px;
     padding: 14px;
-    margin-bottom: 18px;
+    margin-bottom: 10px;
     background: #ffffff;
     overflow: visible;
 }

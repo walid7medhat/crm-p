@@ -830,7 +830,7 @@
           
           <!-- Area (Location) - Required -->
           <div class="col-md-6">
-            <label class="form-label-custom"> Property Location <span class="text-danger">*</span></label>
+            <label class="form-label-custom"> Property Address <span class="text-danger">*</span></label>
             <v-select 
               v-model="form.area_id" 
               :options="areas" 
@@ -1005,7 +1005,7 @@
           </div> -->
 
           <!-- Developer - يتم تعبئته تلقائياً -->
-          <!-- <div class="col-md-4">
+          <div class="col-md-4">
             <label class="form-label-custom">Developer</label>
             <v-select 
               v-model="form.developer_id" 
@@ -1025,7 +1025,7 @@
             <div v-if="showErrors && fieldErrors.developer_id" class="invalid-feedback d-block">
               {{ fieldErrors.developer_id }}
             </div>
-          </div> -->
+          </div>
         <div class="col-md-4">
             <label class="form-label-custom">Developer sales person name</label>
             <b-form-input 
@@ -1206,7 +1206,7 @@ function normalizeResidencyStatus(status) {
 
 function getRequiredDocumentsByResidency(residencyStatus) {
   return normalizeResidencyStatus(residencyStatus) === 'resident'
-    ? ['passport', 'visa', 'national_id']
+    ? ['passport', 'national_id']
     : ['passport']
 }
 
@@ -1242,9 +1242,9 @@ const primaryBuyerDocTypes = computed(() => {
   if (requiredResidencyDocs.includes('passport')) {
     docs.push({ id: 'passport', name: 'Passport', required: true })
   }
-  if (requiredResidencyDocs.includes('visa')) {
-    docs.push({ id: 'visa', name: 'Residence Visa', required: false })
-  }
+  // if (requiredResidencyDocs.includes('visa')) {
+  //   docs.push({ id: 'visa', name: 'Residence Visa', required: false })
+  // }
   if (requiredResidencyDocs.includes('national_id')) {
     docs.push({ id: 'national_id', name: 'Emirates ID', required: true })
   }
@@ -1266,9 +1266,9 @@ const secondaryBuyerDocTypes = computed(() => {
   if (requiredResidencyDocs.includes('passport')) {
     docs.push({ id: 'passport', name: 'Buyer Passport', required: true })
   }
-  if (requiredResidencyDocs.includes('visa')) {
-    docs.push({ id: 'visa', name: 'Buyer Residence  Visa', required: false })
-  }
+  // if (requiredResidencyDocs.includes('visa')) {
+  //   docs.push({ id: 'visa', name: 'Buyer Residence  Visa', required: false })
+  // }
   if (requiredResidencyDocs.includes('national_id')) {
     docs.push({ id: 'national_id', name: 'Buyer Emirates ID', required: true })
   }
@@ -1291,7 +1291,7 @@ const sellerDocTypes = computed(() => {
   const allDocs = {
     passport: { id: 'passport', name: 'Seller Passport', required: true },
     national_id: { id: 'national_id', name: 'Seller Emirates ID', required: true },
-    visa: { id: 'visa', name: 'Seller Residence  Visa', required: false },
+    // visa: { id: 'visa', name: 'Seller Residence  Visa', required: false },
     title_deed: { id: 'title_deed', name: 'Unit SPA / Title Deed', required: false }
   }
   
@@ -1306,7 +1306,7 @@ const tenantDocTypes = computed(() => {
     passport: { id: 'passport', name: 'Tenant Passport', required: true },
     national_id: { id: 'national_id', name: 'Tenant Emirates ID', required: false },
     kyc: { id: 'kyc', name: 'Tenant KYC', required: false },
-    visa: { id: 'visa', name: 'Tenant Residence Visa', required: false },
+    // visa: { id: 'visa', name: 'Tenant Residence Visa', required: false },
     payment_proof: { id: 'payment_proof', name: 'Tenant Proof of Payment', required: false },
     ejari: { id: 'ejari', name: 'Tawtheeq/Ejari Contract', required: false },
     tenancy_contract: { id: 'tenancy_contract', name: 'Tenancy Contract', required: false },
@@ -1323,7 +1323,7 @@ const landlordDocTypes = computed(() => {
   const allDocs = {
     passport: { id: 'passport', name: 'Landlord Passport', required: true },
     national_id: { id: 'national_id', name: 'Landlord Emairates ID', required: true },
-    visa: { id: 'visa', name: 'Landlord Residence  Visa', required: false },
+    // visa: { id: 'visa', name: 'Landlord Residence  Visa', required: false },
     title_deed: { id: 'title_deed', name: 'Title Deed', required: true }
   }
   
@@ -1724,7 +1724,7 @@ const fetchAvailableListings = async (areaId) => {
       size_sqft: listing.size_sqft,
       // project_id: listing.project_id,
       // project_name: listing.project?.title,
-      // developer_id: listing.developer_id,
+      developer_id: listing.developer_id,
       developer_name: listing.developer?.name,
       status: listing.status, // 'converted' or 'rented'
       display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type?.name || 'Property'} (${listing.status === 'converted' ? 'Sold' : 'Rented'})`
@@ -1775,7 +1775,7 @@ const onListingSelected = (listing) => {
   form.value.bedrooms = listing.bedrooms === 0 ? 'studio' : String(listing.bedrooms)
   form.value.unit_size = listing.size_sqft || ''
   // form.value.project_id = listing.project_id
-  // form.value.developer_id = listing.developer_id
+  form.value.developer_id = listing.developer_id
   
   // يمكن إضافة listing_id إلى الـ form لربط الديل بالـ listing
   form.value.listing_id = listing.id

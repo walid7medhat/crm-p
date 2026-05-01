@@ -38,6 +38,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             // Basic Information
             'lead_name' => $this->lead_name,
             'lead_number' => $this->lead_number,
+            'deal_name' => $this->deal_name,
             'stage_id' => $this->stage_id,
             
             // Contact Information

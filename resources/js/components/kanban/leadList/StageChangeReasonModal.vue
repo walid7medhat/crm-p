@@ -107,7 +107,7 @@
                 <div v-if="missingFields.length > 0" class="dynamic-form">
     <!-- 🟨 Status & Meta -->
                         <div 
-                            v-if="['status_lead','lead_type','property_status','available_date','branch','why_lost_lead','lost_reason'].some(f => missingFields.includes(f))" 
+                            v-if="['status_lead','lead_type','deal_name','property_status','available_date','branch','why_lost_lead','lost_reason'].some(f => missingFields.includes(f))" 
                             class="box-shadow lead_qualification lead-qualification-card"
                         >
                              <h5 class="section-title ">Lead Qualification</h5>
@@ -116,7 +116,6 @@
                                 v-if="missingFields.includes('status_lead') || missingFields.includes('lead_type') || missingFields.includes('property_status')"
                                 class="lead-qualification-trio"
                             >
-                            <!-- Lead Status -->
                             <!-- Lead Status -->
                                 <div v-if="missingFields.includes('status_lead')" class="form-group mb-0 lead-qual-field">
                                     <!-- حالة خاصة للمرحلة 6 (Converted) -->
@@ -249,7 +248,17 @@
                                         </v-select>
                                     </template>
                                 </div>
-  <!-- Lead Type (Sale/Rent) -->
+                                <div v-if="isConversion && targetStageOrder === 6 && missingFields.includes('deal_name')" class="form-group mb-0 lead-qual-field">
+                                    <label class="form-label">Deal Name <span class="text-danger">*</span></label>
+                                    <input 
+                                        type="text" 
+                                        v-model="formData.deal_name" 
+                                        class="form-control" 
+                                        placeholder="Enter deal name"
+                                        required
+                                    />
+                                </div>
+                        <!-- Lead Type (Sale/Rent) -->
                         <div v-if="missingFields.includes('lead_type')" class="form-group mb-0 lead-qual-field">
                             <label class="form-label ">Lead Type <span class="text-danger">*</span></label>
                             <v-select append-to-body
@@ -695,7 +704,9 @@ const unqualifiedStatusOptions = [
     { value: 'spam_leads', text: 'Spam Leads' },
     { value: 'already_assigned_to_another_agent', text: 'Already Assigned to Another Agent' },
     { value: 'client_was_just_searching_online', text: 'Client Was Just Searching Online' },
-    { value: 'number_does_not_exist', text: 'Number Does Not Exist' }
+    { value: 'number_does_not_exist', text: 'Number Does Not Exist' },
+    { value: 'service_provide', text: 'service provide' },
+    
 ]
 
 const defaultLeadStatusOptions = [
@@ -969,7 +980,9 @@ const formData = ref({
     lead_status: props.targetStageOrder === 6 ? 'converted' : '',
     available_date: '',
     branch: '',
-    lost_reason: ''
+    lost_reason: '',
+    deal_name: ''
+
 })
 
 const loadLookupData = async () => {
@@ -1011,7 +1024,8 @@ const resetForm = () => {
         lead_status: '',
         available_date: '',
         branch: '',
-        lost_reason: ''
+        lost_reason: '',
+        deal_name: '',
     }
       budgetFromDisplay.value = ''
     budgetToDisplay.value = ''
@@ -1170,6 +1184,10 @@ const handleSubmit = async () => {
             $showNotification('Please select lost reason', 'warning')
             return
         }
+        if (field === 'deal_name'  && !formData.value.deal_name.trim()) {
+            $showNotification('Please enter deal name', 'warning')
+            return
+        }
     }
     
     isSubmitting.value = true
@@ -1227,6 +1245,7 @@ const handleSubmit = async () => {
                     bedrooms: bedroomsValue,
                     purpose_buying: formData.value.purpose_buying,
                     lead_status: formData.value.lead_status,
+                    deal_name: formData.value.deal_name,
                 })
             }
             : {
@@ -1253,7 +1272,8 @@ const handleSubmit = async () => {
                 lead_status: formData.value.lead_status,
                 available_date: formData.value.available_date,
                 branch: formData.value.branch,
-                lost_reason: formData.value.lost_reason
+                lost_reason: formData.value.lost_reason,
+                deal_name: formData.value.deal_name,
             }
         
         // Remove empty fields
@@ -1305,6 +1325,7 @@ watch(visible, (newVal) => {
             } else {
                 formData.value.lead_status = props.leadData.lead_status || ''
             }
+            formData.value.deal_name = props.leadData.deal_name || ''
             syncBudgetDisplayFields()
         } else if (props.targetStageOrder === 6) {
             // إذا لم يوجد lead data وكانت المرحلة 6، اجعل القيمة 'converted'
@@ -1400,11 +1421,27 @@ defineExpose({
 }
 
 .btn-close {
-    background: none;
-    border: none;
-    font-size: 1rem;
-    cursor: pointer;
-    color: #6b7280;
+     position: absolute;
+    top: 8px;
+    right: -61px;
+    width: 83px;
+    height: 49px;
+    color: rgb(255, 255, 255);
+    font-size: 18px;
+    line-height: 1;
+    box-shadow: rgba(15, 23, 42, 0.2) 0px 8px 16px;
+    z-index: -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgb(79, 165, 247);
+    border-image: initial;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgb(47, 136, 239), rgb(93, 184, 255));
+    padding: 0px;
+    transition: filter 0.2s;
 }
 
 .modal-body {
@@ -1706,6 +1743,7 @@ defineExpose({
 :deep(.searchable-select .vs__dropdown-option) {
     color: #111827 !important;
     background: #fff !important;
+    font-size: 14px !important;
 }
 
 :deep(.searchable-select .vs__dropdown-option--highlight) {
@@ -1785,6 +1823,7 @@ defineExpose({
     font-size: 14px;
     color: #475569;
     transition: all 0.2s;
+      font-size: 14px !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
@@ -1809,7 +1848,7 @@ defineExpose({
 }
 
 :deep(.lost-reason-select .vs__selected) {
-    white-space: normal;
+    /* white-space: normal; */
     line-height: 1.3;
     padding-top: 8px;
     padding-bottom: 8px;
@@ -1825,6 +1864,7 @@ defineExpose({
 :deep(.lost-reason-select .vs__dropdown-option) {
     white-space: normal;
     word-break: break-word;
+      font-size: 14px !important;
 }
 
 .budget-input::placeholder {
@@ -2470,4 +2510,7 @@ defineExpose({
     .vs__search, .vs__search:focus{
     z-index:0 !important;
 }
+ .vs__dropdown-option{
+        font-size: 14px !important;
+    }
 </style>

@@ -78,10 +78,10 @@ class DealResource extends JsonResource
             ],
             'developer_name'=>$this->developer_name,
             'developer_phone'=>$this->developer_phone,
-            // 'developer' => [
-            //     'id' => $this->developer?->id,
-            //     'name' => $this->developer?->name,
-            // ],
+            'developer' => [
+                'id' => $this->developer?->id,
+                'name' => $this->developer?->name,
+            ],
             'responsible_person_id' => $this->responsible_person_id,
             
                'responsible_person' => new UserResource($this->responsiblePerson),

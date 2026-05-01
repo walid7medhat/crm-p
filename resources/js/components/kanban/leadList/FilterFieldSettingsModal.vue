@@ -93,8 +93,8 @@ const activeTabs = ref(['leads'])
 
 // تعريف الحقول مع قيم افتراضية
 const getDefaultLeadFields = () => [
-    { id: 'first_name', label: 'Client Name', checked: true },
     { id: 'lead_name', label: 'Lead Name', checked: true },
+    { id: 'first_name', label: 'Client Name', checked: true },
     { id: 'created_on', label: 'Created On', checked: true },
     { id: 'assigned_on', label: 'Assign On', checked: true },
     { id: 'work_phone', label: 'Phone', checked: true },
@@ -328,14 +328,27 @@ onMounted(() => {
 }
 
 .close-btn-custom {
-    background: transparent;
-    border: none;
-    color: #000;
-    cursor: pointer;
-    padding: 0;
+    position: absolute;
+    top: 8px;
+    right: -61px;
+    width: 83px;
+    height: 49px;
+    color: rgb(255, 255, 255);
+    font-size: 18px;
+    line-height: 1;
+    box-shadow: rgba(15, 23, 42, 0.2) 0px 8px 16px;
+    z-index: -1;
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgb(79, 165, 247);
+    border-image: initial;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgb(47, 136, 239), rgb(93, 184, 255));
+    padding: 0px;
+    transition: filter 0.2s;;
 }
 
 .border-bottom-light {

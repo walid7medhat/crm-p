@@ -615,7 +615,10 @@ class LeadController extends Controller
                         'email'  => $user->email,
                         'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                         'role_name' => $user->roles()->first()->name,
+                        'team_id'=>$user->parent?->id,
                         'parent_name' => $user->parent?->name,
+                        'branch_id' => $user->office?->id,
+
                         'branch_name' => $user->office?->name
                     ];
                 });
@@ -634,7 +637,10 @@ class LeadController extends Controller
                         'name'   => $user->name,
                         'email'  => $user->email,
                         'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                        'team_id'=>$user->parent?->id,
                         'parent_name' => $user->parent?->name,
+                        'branch_id' => $user->office?->id,
+
                         'branch_name' => $user->office?->name
                     ];
                 });
@@ -702,6 +708,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             'status_lead' => 'nullable|string|max:50', // استخدام العمود الموجود
             'property_status'=>'nullable',
             'lead_type'=>'nullable',
+            'deal_name'=>'nullable',
             
             // Stage 5: Future - عمود جديد
             'available_date' => 'nullable|date',
@@ -789,7 +796,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         // إضافة جميع الحقول حسب المرحلة
         $additionalFields = [
             // الحقول الموجودة
-            'area_id', 'property_type_id', 'budget', 'budget_from', 'budget_to', 'lead_source', 
+            'area_id', 'property_type_id', 'budget', 'budget_from', 'budget_to', 'lead_source', 'deal_name',
             'purpose_buying', 'bedrooms', 'responsible_person_id','property_status','lead_type',
             'salutation',
             'status_lead',      // يستخدم للمراحل 4, 9, 10
@@ -836,6 +843,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 $updateData['interaction_result'] = 'answered';
             }
         }
+        // dd($updateData);
         // تحديث الـ Lead
         $lead->update($updateData);
 

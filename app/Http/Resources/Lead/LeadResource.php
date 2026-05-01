@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Lead;
 
 use App\Models\Integration;
+use App\Models\Lead;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class LeadResource extends JsonResource
@@ -37,6 +38,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             
             // Basic Information
             'lead_name' => $this->lead_name,
+            'deal_name' => $this->deal_name,
             'lead_number' => $this->lead_number,
             'stage_id' => $this->stage_id,
             
@@ -147,6 +149,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
 
             'original_branch' => data_get($this->createdHistory, 'changes.lead_branch_source'),
            'api_first_question' => $this->getFirstApiQuestion(),
+            'has_service_duplicate' => $this->hasServiceDuplicate(),
 
         ];
     }
@@ -210,5 +213,20 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
     }
     
     return null;
+}
+ protected function hasServiceDuplicate(): bool
+{
+    return Lead::query()
+        ->where('id', '!=', $this->id)
+        ->where('status_lead', 'service_provide')
+        ->where(function ($q) {
+            if ($this->work_phone) {
+                $q->orWhere('work_phone', $this->work_phone);
+            }
+            if ($this->email) {
+                $q->orWhere('email', $this->email);
+            }
+        })
+        ->exists();
 }
 }

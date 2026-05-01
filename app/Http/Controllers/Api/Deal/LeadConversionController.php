@@ -131,7 +131,7 @@ class LeadConversionController extends Controller
                 'stage_id' => $stage->id,
                 
                 'source' => $lead->lead_source ?? $lead->source,
-                'deal_name' => $lead->lead_name,
+                'deal_name' =>$lead->deal_name?? $lead->lead_name,
 
                 // 'deal_total_amount' => $lead->budget,
                 'currency' => $lead->currency ?? 'AED',
@@ -153,7 +153,7 @@ class LeadConversionController extends Controller
                     'phone' => $lead->work_phone,
                     'email' => $lead->email,
                     
-                    'amount' => $lead->budget,
+                    // 'amount' => $lead->budget,
                 ]);
             }else
             {
@@ -167,7 +167,7 @@ class LeadConversionController extends Controller
                     'phone' => $lead->work_phone,
                     'email' => $lead->email,
                     
-                    'amount' => $lead->budget,
+                    // 'amount' => $lead->budget,
                 ]);
             }
            

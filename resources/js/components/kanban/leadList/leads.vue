@@ -130,6 +130,12 @@
                                                 <!-- Task Header - Lead Name  -->
                                                 <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
                                                     <p class="task-title flex-grow-1 mb-0">{{ task.lead_name }}</p>
+                                                    <span 
+                                                        v-if="task.has_service_duplicate"
+                                                        class="service-dup-badge"
+                                                    >
+                                                        Provide
+                                                    </span>
                                                     <div 
                                                         v-if="isFieldEnabled('duplicate_count') && index === 0  && isAdminOrSuperAdmin && task.duplicate_no>0"
                                                         class="duplicate-badge position-relative cursor-pointer"
@@ -769,6 +775,8 @@ import Swal from 'sweetalert2'
 // Import Bootstrap
 import * as bootstrap from 'bootstrap'
 const emit = defineEmits(['deal-created'])
+
+const leadPoolRef = ref(null)
 
 
 const showStageChangeModal = ref(false)
@@ -2862,6 +2870,7 @@ async function onLeadDragChange(evt, column) {
                 'purpose_buying',
                 'bedrooms',
                 'status_lead',
+                'deal_name'
               
             ]
             
@@ -3060,6 +3069,7 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         if (additionalData.branch) payload.branch = additionalData.branch
         if (additionalData.lost_reason) payload.why_lost_lead = additionalData.lost_reason
         if (additionalData.interaction_result) payload.interaction_result = additionalData.interaction_result
+        if (additionalData.deal_name) payload.deal_name = additionalData.deal_name
         
         if (additionalData.lead_status) {
             if (targetStageOrder === 4 || (isConversion && targetStageOrder === 6)) {
@@ -3102,6 +3112,7 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
             if (payload.status_lead) lead.status_lead = payload.status_lead
             if (payload.status_lead_pool) lead.status_lead = payload.status_lead_pool
             if (payload.unqualified_status) lead.status_lead = payload.unqualified_status
+            if (payload.deal_name) lead.deal_name = payload.deal_name
         }
         
         // Close modal
@@ -4359,5 +4370,12 @@ const $showNotification = (message, type = 'info') => {
     line-height: 1;
     font-weight: 600;
 }
-
+.service-dup-badge {
+    background: #ff4d4f;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    margin-left: 6px;
+}
 </style>

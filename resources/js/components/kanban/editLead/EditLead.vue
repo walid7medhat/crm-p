@@ -704,7 +704,9 @@ const leadStatusOptions = computed(() => {
             { value: 'spam_leads', text: 'Spam Leads' },
             { value: 'already_assigned_to_another_agent', text: 'Already Assigned to Another Agent' },
             { value: 'client_was_just_searching_online', text: 'Client Was Just Searching Online' },
-            { value: 'number_does_not_exist', text: 'Number Does Not Exist' }
+            { value: 'number_does_not_exist', text: 'Number Does Not Exist' },
+            { value: 'service_provide', text: 'service provide' },
+
         ]
     }
     

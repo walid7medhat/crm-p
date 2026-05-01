@@ -243,7 +243,7 @@
         <div v-else class="row g-3">
           <div class="col-md-12">
             <div class="info-group">
-              <label class="info-label">Property Location</label>
+              <label class="info-label">Property Address</label>
               <p class="info-value mb-0">{{ getAreaName()}}</p>
             </div>
           </div>
@@ -285,8 +285,8 @@
           </div>
            <div class="col-md-12">
             <div class="info-group">
-              <label class="info-label">Project Name</label>
-              <p class="info-value mb-0">{{ deal.project?.name  }}</p>
+              <label class="info-label">Developer Name</label>
+              <p class="info-value mb-0">{{ getDeveloperName() }}</p>
             </div>
           </div>
           <div class="col-md-12">

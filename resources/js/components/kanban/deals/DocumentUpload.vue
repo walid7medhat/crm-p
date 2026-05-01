@@ -128,7 +128,16 @@ const selectedBoxRef = ref({ typeId: null, boxId: null })
 const isHydratingFromModel = ref(false)
 const previewModal = ref({ open: false, url: '', kind: 'file' })
 const filesSection = ref(null)
-
+const alternativeGroups = ref([
+  {
+    groupId: 'identification',
+    types: ['national_id', 'passport'], 
+    name: 'Identification Documents'
+  }
+])
+const alternativePairs = ref([
+  { type1: 'national_id', type2: 'passport' }
+])
 // New structure: each document type has an array of boxes, each box has its own files array
 const boxesByType = ref({})
 
@@ -370,24 +379,75 @@ function hydrateFilesFromModelValue(model) {
   boxesByType.value = next
   isHydratingFromModel.value = false
 }
+const hasAlternativeDocuments = computed(() => {
+  return alternativeGroups.value.length > 0 || alternativePairs.value.length > 0
+})
 
 // Computed for missing required docs
 const missingRequiredDocs = computed(() => {
   const missing = []
   props.documentTypes.forEach(type => {
-    const boxes = boxesByType.value[type.id] || []
-    const hasAnyFile = boxes.some(box => box.files.length > 0)
-    
-    if (type.required && !hasAnyFile) {
-      missing.push(type.name)
+    // استخدم الدالة الجديدة للتحقق
+    if (isDocumentTypeRequired(type.id)) {
+      const hasFile = hasFilesForType(type.id)
+      if (!hasFile) {
+        missing.push(type.name)
+      }
     }
   })
+
+  
+  // تحسين الرسالة للمجموعات البديلة
+  const alternativeMissingMap = new Map()
+  
+  alternativeGroups.value.forEach(group => {
+    const typesInGroup = group.types
+    const missingInGroup = typesInGroup.filter(typeId => {
+      const hasFile = hasFilesForType(typeId)
+      return !hasFile && isDocumentTypeRequired(typeId)
+    })
+    
+    if (missingInGroup.length === typesInGroup.length && missingInGroup.length > 0) {
+      // كلهم مفقودين! نضيفهم كلهم
+      missingInGroup.forEach(typeId => {
+        const type = props.documentTypes.find(t => t.id === typeId)
+        if (type && !missing.includes(type.name)) {
+          missing.push(type.name)
+        }
+      })
+    } else if (missingInGroup.length > 0 && missingInGroup.length < typesInGroup.length) {
+      // اللوجيك الجديد: إذا كان واحد موجود، الباقي مش مطلوب
+      // فالمفقودين دول مش هيتضافوا للـ missing أصلاً لأن isDocumentTypeRequired رجع false
+    }
+  })
+  
+  // معالجة الأزواج البديلة
+  alternativePairs.value.forEach(pair => {
+    const type1Required = isDocumentTypeRequired(pair.type1)
+    const type2Required = isDocumentTypeRequired(pair.type2)
+    const type1HasFile = hasFilesForType(pair.type1)
+    const type2HasFile = hasFilesForType(pair.type2)
+    
+    // لو الاتنين مطلوبين ومالهمش ملفات، نضيف الاتنين
+    if (type1Required && !type1HasFile && type2Required && !type2HasFile) {
+      const type1 = props.documentTypes.find(t => t.id === pair.type1)
+      const type2 = props.documentTypes.find(t => t.id === pair.type2)
+      if (type1 && !missing.includes(type1.name)) missing.push(type1.name)
+      if (type2 && !missing.includes(type2.name)) missing.push(type2.name)
+    }
+  })
+  
   return missing
 })
 
 function hasFilesForType(typeId) {
   const boxes = boxesByType.value[typeId] || []
-  return boxes.some(box => box.files.length > 0)
+
+  return boxes.some(box => 
+    box.files.some(file => 
+      file && (file.is_existing || file.file || file.url)
+    )
+  )
 }
 
 function isImageFile(file) {
@@ -486,8 +546,31 @@ function getDocumentTypeName(typeId) {
 }
 
 function isDocumentTypeRequired(typeId) {
-  const type = props.documentTypes.find(t => t.id === typeId)
-  return type?.required || false
+  const docType = props.documentTypes.find(t => t.id === typeId)
+  const originalRequired = docType?.required || false
+  
+  if (!originalRequired) return false
+  if (hasFilesForType(typeId)) return false
+  for (const pair of alternativePairs.value) {
+    if (pair.type1 === typeId) {
+      const hasAlternative = hasFilesForType(pair.type2)
+      if (hasAlternative) return false
+    }
+    if (pair.type2 === typeId) {
+      const hasAlternative = hasFilesForType(pair.type1)
+      if (hasAlternative) return false
+    }
+  }
+  
+  for (const group of alternativeGroups.value) {
+    if (group.types.includes(typeId)) {
+      const otherTypes = group.types.filter(t => t !== typeId)
+      const hasAnyOther = otherTypes.some(otherType => hasFilesForType(otherType))
+      if (hasAnyOther) return false
+    }
+  }
+  
+  return true
 }
 
 defineExpose({
@@ -613,7 +696,7 @@ const $showNotification = (message, type = 'success') => {
 }
 
 .document-box.required {
-  border-color: #f59e0b;
+  border-color: rgb(220, 53, 69);
 }
 
 .document-box.uploaded {
