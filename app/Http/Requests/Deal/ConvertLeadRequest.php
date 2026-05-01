@@ -23,17 +23,14 @@ class ConvertLeadRequest extends FormRequest
             'listing_id' => 'nullable|exists:listings,id',
 
             'property_type_id' => 'required|exists:property_types,id',
-            // 'subcommunity_id' => 'required|exists:areas,id',
             'responsible_person_id' => 'required|exists:users,id',
             
             // Optional fields
             'bedrooms' => 'nullable|string',
             'unit_size' => 'nullable|numeric',
-            // 'project_id' => 'nullable|exists:projects,id',
             'area_id' => 'nullable|exists:areas,id',
-            // 'developer_id' => 'nullable|exists:developers,id',
-            'developer_name'=>'nullable|string|max:255',
-            'developer_phone'=>'nullable|string|max:255',
+            'developer_name' => 'nullable|string|max:255',
+            'developer_phone' => 'nullable|string|max:255',
             'deal_total_amount' => 'nullable|numeric',
             'deal_commission' => 'nullable|numeric',
             'agent_share' => 'nullable|numeric',
@@ -42,6 +39,14 @@ class ConvertLeadRequest extends FormRequest
             'property_link' => 'nullable|string|url',
             'property_reference' => 'nullable|string',
         ];
+
+        // ✅ Check if listing_id exists to determine if we should skip seller/landlord
+        $hasListingId = $this->filled('listing_id');
+        $listing = null;
+        
+        if ($hasListingId) {
+            $listing = \App\Models\Listing::find($this->listing_id);
+        }
 
         // Primary Deal Rules
         if ($this->deal_type === 'primary') {
@@ -58,24 +63,25 @@ class ConvertLeadRequest extends FormRequest
                 'buyer_country' => 'nullable|string',
                 'amount' => 'nullable|numeric',
                 
-                // Secondary buyer (optional)
                 'secondary_first_name' => 'nullable|string',
                 'secondary_last_name' => 'nullable|string',
                 'secondary_phone' => 'nullable|string',
                 'secondary_email' => 'nullable|email',
                 'secondary_amount' => 'nullable|numeric',
                 
-                // Documents
                 'buyer_documents' => 'sometimes|array',
                 'buyer_documents.*.file' => 'sometimes|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:51200',
                 'buyer_documents.*.document_type' => 'required_with:buyer_documents.*.file|in:national_id,passport,kyc,spa,payment_proof',
             ]);
         }
 
-        // Secondary Deal Rules
+        // Secondary Deal Rules - ✅ جعل Seller اختياري إذا كان هناك listing_id
         if ($this->deal_type === 'secondary') {
+            // ✅ تحديد ما إذا كان يجب جعل Seller مطلوباً أم لا
+            $isSellerRequired = !($hasListingId && $listing && $listing->status === 'converted');
+            
             $rules = array_merge($rules, [
-                // Buyer required fields
+                // Buyer required fields (دائماً مطلوبة)
                 'buyer_first_name' => 'required|string',
                 'buyer_last_name' => 'required|string',
                 'buyer_dob' => 'required|date',
@@ -87,28 +93,26 @@ class ConvertLeadRequest extends FormRequest
                 'buyer_language' => 'required|string',
                 'buyer_country' => 'nullable|string',
                 
-                // Seller required fields
-                'seller_first_name' => 'required|string',
-                'seller_last_name' => 'required|string',
-                'seller_dob' => 'required|date',
-                'seller_phone' => 'required|string',
-                'seller_email' => 'required|email',
-                'seller_nationality' => 'required|string',
-                'seller_residency_status' => 'required|string',
-                'seller_city' => 'required|string',
-                'seller_language' => 'required|string',
+                // ✅ Seller fields - مطلوبة فقط إذا لم يكن هناك listing_id من نوع converted
+                'seller_first_name' => $isSellerRequired ? 'required|string' : 'nullable|string',
+                'seller_last_name' => $isSellerRequired ? 'required|string' : 'nullable|string',
+                'seller_dob' => $isSellerRequired ? 'required|date' : 'nullable|date',
+                'seller_phone' => $isSellerRequired ? 'required|string' : 'nullable|string',
+                'seller_email' => $isSellerRequired ? 'required|email' : 'nullable|email',
+                'seller_nationality' => $isSellerRequired ? 'required|string' : 'nullable|string',
+                'seller_residency_status' => $isSellerRequired ? 'required|string' : 'nullable|string',
+                'seller_city' => $isSellerRequired ? 'required|string' : 'nullable|string',
+                'seller_language' => $isSellerRequired ? 'required|string' : 'nullable|string',
                 'seller_country' => 'nullable|string',
                 
                 'amount' => 'nullable|numeric',
                 
-                // Secondary buyer (optional)
                 'secondary_first_name' => 'nullable|string',
                 'secondary_last_name' => 'nullable|string',
                 'secondary_phone' => 'nullable|string',
                 'secondary_email' => 'nullable|email',
                 'secondary_amount' => 'nullable|numeric',
                 
-                // Documents
                 'buyer_documents' => 'sometimes|array',
                 'buyer_documents.*.file' => 'sometimes|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:51200',
                 'buyer_documents.*.document_type' => 'required_with:buyer_documents.*.file|in:noc,national_id,passport,kyc,payment_proof,title_deed',
@@ -119,10 +123,13 @@ class ConvertLeadRequest extends FormRequest
             ]);
         }
 
-        // Rental Deal Rules (من غير Client)
+        // Rental Deal Rules - ✅ جعل Landlord اختياري إذا كان هناك listing_id
         if ($this->deal_type === 'rental') {
+            // ✅ تحديد ما إذا كان يجب جعل Landlord مطلوباً أم لا
+            $isLandlordRequired = !($hasListingId && $listing && $listing->status === 'rented');
+            
             $rules = array_merge($rules, [
-                // Tenant required fields
+                // Tenant required fields (دائماً مطلوبة)
                 'tenant_first_name' => 'required|string',
                 'tenant_last_name' => 'required|string',
                 'tenant_dob' => 'nullable|date',
@@ -134,16 +141,16 @@ class ConvertLeadRequest extends FormRequest
                 'tenant_language' => 'required|string',
                 'tenant_country' => 'nullable|string',
                 
-                // Landlord required fields
-                'landlord_first_name' => 'required|string',
-                'landlord_last_name' => 'required|string',
-                'landlord_dob' => 'required|date',
-                'landlord_phone' => 'required|string',
-                'landlord_email' => 'required|email',
-                'landlord_nationality' => 'required|string',
-                'landlord_residency_status' => 'required|string',
-                'landlord_city' => 'required|string',
-                'landlord_language' => 'required|string',
+                // ✅ Landlord fields - مطلوبة فقط إذا لم يكن هناك listing_id من نوع rented
+                'landlord_first_name' => $isLandlordRequired ? 'required|string' : 'nullable|string',
+                'landlord_last_name' => $isLandlordRequired ? 'required|string' : 'nullable|string',
+                'landlord_dob' => $isLandlordRequired ? 'required|date' : 'nullable|date',
+                'landlord_phone' => $isLandlordRequired ? 'required|string' : 'nullable|string',
+                'landlord_email' => $isLandlordRequired ? 'required|email' : 'nullable|email',
+                'landlord_nationality' => $isLandlordRequired ? 'required|string' : 'nullable|string',
+                'landlord_residency_status' => $isLandlordRequired ? 'required|string' : 'nullable|string',
+                'landlord_city' => $isLandlordRequired ? 'required|string' : 'nullable|string',
+                'landlord_language' => $isLandlordRequired ? 'required|string' : 'nullable|string',
                 'landlord_country' => 'nullable|string',
                 
                 // Documents
@@ -173,8 +180,6 @@ class ConvertLeadRequest extends FormRequest
             'deal_name.required' => 'Deal name is required',
             'property_type_id.required' => 'Property type is required',
             'property_type_id.exists' => 'Selected property type is invalid',
-            'subcommunity_id.required' => 'Subcommunity is required',
-            'subcommunity_id.exists' => 'Selected subcommunity is invalid',
             'responsible_person_id.required' => 'Responsible person is required',
             
             // Buyer fields

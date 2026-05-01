@@ -313,6 +313,7 @@ class LeadConversionController extends Controller
                 'company_share' => $request->company_share,
                 
                 'unit_no' => $request->unit_no,
+                'listing_id' => $request->listing_id,
                 'property_type_id' => $request->property_type_id,
                 'bedrooms' => $request->bedrooms,
                 'unit_size' => $request->unit_size,
@@ -496,108 +497,135 @@ class LeadConversionController extends Controller
      * إنشاء أطراف الصفقة حسب النوع
      */
     private function createDealParties($deal, $request)
-    {
-        $parties = [];
+{
+    $parties = [];
+    
+    // ✅ التحقق من وجود listing_id ونوعه
+    $hasListingId = $request->filled('listing_id');
+    $listing = null;
+    $isListingConverted = false;
+    $isListingRented = false;
+    
+    if ($hasListingId) {
+        $listing = \App\Models\Listing::find($request->listing_id);
+        if ($listing) {
+            $isListingConverted = $listing->status === 'converted';
+            $isListingRented = $listing->status === 'rented';
+        }
+    }
 
-        switch ($request->deal_type) {
-            
-            case 'rental':
-                // Client (العميل)
-                if ($request->client_name) {
-                    $nameParts = explode(' ', $request->client_name, 2);
-                    $parties[] = DealParty::create([
-                        'deal_id' => $deal->id,
-                        'party_type' => 'client',
-                        'party_role' => 'primary',
-                        'first_name' => $nameParts[0] ?? '',
-                        'last_name' => $nameParts[1] ?? '',
-                        'phone' => $request->client_phone,
-                        'email' => $request->client_email,
-                    ]);
-                }
-
-                // Tenant (المستأجر)
+    switch ($request->deal_type) {
+        
+        case 'rental':
+            // Client (العميل) - لو موجود
+            if ($request->client_name) {
+                $nameParts = explode(' ', $request->client_name, 2);
                 $parties[] = DealParty::create([
                     'deal_id' => $deal->id,
-                    'party_type' => 'tenant',
+                    'party_type' => 'client',
                     'party_role' => 'primary',
-                    'first_name' => $request->tenant_first_name,
-                    'last_name' => $request->tenant_last_name,
-                    'phone' => $request->tenant_phone,
-                    'email' => $request->tenant_email,
-                    'nationality' => $request->tenant_nationality,
+                    'first_name' => $nameParts[0] ?? '',
+                    'last_name' => $nameParts[1] ?? '',
+                    'phone' => $request->client_phone,
+                    'email' => $request->client_email,
                 ]);
+            }
 
-                // Landlord (المالك)
+            // Tenant (المستأجر) - دائماً مطلوب
+            $parties[] = DealParty::create([
+                'deal_id' => $deal->id,
+                'party_type' => 'tenant',
+                'party_role' => 'primary',
+                'first_name' => $request->tenant_first_name,
+                'last_name' => $request->tenant_last_name,
+                'phone' => $request->tenant_phone,
+                'email' => $request->tenant_email,
+                'nationality' => $request->tenant_nationality,
+                'residency_status' => $request->tenant_residency_status,
+                'country' => $request->tenant_country,
+                'city' => $request->tenant_city,
+                'language' => $request->tenant_language,
+            ]);
+
+            // ✅ Landlord (المالك) - يتم إنشاؤه فقط إذا لم يكن هناك listing_id من نوع rented
+            $shouldCreateLandlord = !($hasListingId && $isListingRented);
+            
+            if ($shouldCreateLandlord && $request->landlord_first_name) {
                 $parties[] = DealParty::create([
                     'deal_id' => $deal->id,
                     'party_type' => 'landlord',
                     'party_role' => 'primary',
                     'first_name' => $request->landlord_first_name,
                     'last_name' => $request->landlord_last_name,
+                    'date_of_birth' => $request->landlord_dob,
                     'phone' => $request->landlord_phone,
                     'email' => $request->landlord_email,
                     'nationality' => $request->landlord_nationality,
                     'residency_status' => $request->landlord_residency_status,
                     'country' => $request->landlord_country,
                     'city' => $request->landlord_city,
+                    'language' => $request->landlord_language,
                 ]);
-                break;
+            }
+            break;
 
-            case 'primary':
-                // Buyer (المشتري)
+        case 'primary':
+            // Buyer (المشتري) - دائماً مطلوب
+            $parties[] = DealParty::create([
+                'deal_id' => $deal->id,
+                'party_type' => 'buyer',
+                'party_role' => 'primary',
+                'first_name' => $request->buyer_first_name,
+                'last_name' => $request->buyer_last_name,
+                'date_of_birth' => $request->buyer_dob,
+                'phone' => $request->buyer_phone,
+                'email' => $request->buyer_email,
+                'nationality' => $request->buyer_nationality,
+                'residency_status' => $request->buyer_residency_status,
+                'city' => $request->buyer_city,
+                'country' => $request->buyer_country,
+                'language' => $request->buyer_language,
+                'amount' => $request->amount,
+            ]);
+
+            // Secondary Buyer (لو موجود)
+            if ($request->filled('secondary_buyer_first_name')) {
                 $parties[] = DealParty::create([
                     'deal_id' => $deal->id,
                     'party_type' => 'buyer',
-                    'party_role' => 'primary',
-                    'first_name' => $request->buyer_first_name,
-                    'last_name' => $request->buyer_last_name,
-                    'date_of_birth' => $request->buyer_dob,
-                    'phone' => $request->buyer_phone,
-                    'email' => $request->buyer_email,
-                    'nationality' => $request->buyer_nationality,
-                    'residency_status' => $request->buyer_residency_status,
-                    'city' => $request->buyer_city,
-                    'country' => $request->buyer_country,
-                    'language' => $request->buyer_language,
-                    'amount' => $request->amount,
+                    'party_role' => 'secondary',
+                    'first_name' => $request->secondary_buyer_first_name,
+                    'last_name' => $request->secondary_buyer_last_name,
+                    'phone' => $request->secondary_buyer_phone,
+                    'email' => $request->secondary_buyer_email,
+                    'amount' => $request->secondary_buyer_amount,
                 ]);
+            }
+            break;
 
-                // Secondary Buyer (لو موجود)
-                if ($request->filled('secondary_buyer_first_name')) {
-                    $parties[] = DealParty::create([
-                        'deal_id' => $deal->id,
-                        'party_type' => 'buyer',
-                        'party_role' => 'secondary',
-                        'first_name' => $request->secondary_buyer_first_name,
-                        'last_name' => $request->secondary_buyer_last_name,
-                        'phone' => $request->secondary_buyer_phone,
-                        'email' => $request->secondary_buyer_email,
-                        'amount' => $request->secondary_buyer_amount,
-                    ]);
-                }
-                break;
+        case 'secondary':
+            // Buyer (المشتري) - دائماً مطلوب
+            $parties[] = DealParty::create([
+                'deal_id' => $deal->id,
+                'party_type' => 'buyer',
+                'party_role' => 'primary',
+                'first_name' => $request->buyer_first_name,
+                'last_name' => $request->buyer_last_name,
+                'date_of_birth' => $request->buyer_dob,
+                'phone' => $request->buyer_phone,
+                'email' => $request->buyer_email,
+                'nationality' => $request->buyer_nationality,
+                'residency_status' => $request->buyer_residency_status,
+                'city' => $request->buyer_city,
+                'country' => $request->buyer_country,
+                'language' => $request->buyer_language,
+                'amount' => $request->amount,
+            ]);
 
-            case 'secondary':
-                // Buyer (المشتري)
-                $parties[] = DealParty::create([
-                    'deal_id' => $deal->id,
-                    'party_type' => 'buyer',
-                    'party_role' => 'primary',
-                    'first_name' => $request->buyer_first_name,
-                    'last_name' => $request->buyer_last_name,
-                    'date_of_birth' => $request->buyer_dob,
-                    'phone' => $request->buyer_phone,
-                    'email' => $request->buyer_email,
-                    'nationality' => $request->buyer_nationality,
-                    'residency_status' => $request->buyer_residency_status,
-                    'city' => $request->buyer_city,
-                    'country' => $request->buyer_country,
-                    'language' => $request->buyer_language,
-                    'amount' => $request->amount,
-                ]);
-
-                // Seller (البائع)
+            // ✅ Seller (البائع) - يتم إنشاؤه فقط إذا لم يكن هناك listing_id من نوع converted
+            $shouldCreateSeller = !($hasListingId && $isListingConverted);
+            
+            if ($shouldCreateSeller && $request->seller_first_name) {
                 $parties[] = DealParty::create([
                     'deal_id' => $deal->id,
                     'party_type' => 'seller',
@@ -607,28 +635,32 @@ class LeadConversionController extends Controller
                     'date_of_birth' => $request->seller_dob,
                     'phone' => $request->seller_phone,
                     'email' => $request->seller_email,
+                    'nationality' => $request->seller_nationality,
+                    'residency_status' => $request->seller_residency_status,
                     'city' => $request->seller_city,
+                    'country' => $request->seller_country,
                     'language' => $request->seller_language,
                 ]);
+            }
 
-                // Secondary Buyer (لو موجود)
-                if ($request->filled('secondary_buyer_first_name')) {
-                    $parties[] = DealParty::create([
-                        'deal_id' => $deal->id,
-                        'party_type' => 'buyer',
-                        'party_role' => 'secondary',
-                        'first_name' => $request->secondary_buyer_first_name,
-                        'last_name' => $request->secondary_buyer_last_name,
-                        'phone' => $request->secondary_buyer_phone,
-                        'email' => $request->secondary_buyer_email,
-                        'amount' => $request->secondary_buyer_amount,
-                    ]);
-                }
-                break;
-        }
-
-        return $parties;
+            // Secondary Buyer (لو موجود)
+            if ($request->filled('secondary_buyer_first_name')) {
+                $parties[] = DealParty::create([
+                    'deal_id' => $deal->id,
+                    'party_type' => 'buyer',
+                    'party_role' => 'secondary',
+                    'first_name' => $request->secondary_buyer_first_name,
+                    'last_name' => $request->secondary_buyer_last_name,
+                    'phone' => $request->secondary_buyer_phone,
+                    'email' => $request->secondary_buyer_email,
+                    'amount' => $request->secondary_buyer_amount,
+                ]);
+            }
+            break;
     }
+
+    return $parties;
+}
 
     /**
      * توليد رقم الصفقة
