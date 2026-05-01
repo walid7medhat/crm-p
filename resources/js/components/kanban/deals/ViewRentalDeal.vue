@@ -24,7 +24,7 @@
     </div>
 
     <!-- Deal Information (from card) -->
-    <div class="col-12" v-if="deal.createdBy || deal.source ">
+    <!-- <div class="col-12" v-if="deal.createdBy || deal.source ">
       
       <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'deal_information' }">
         <div class="section-head mb-3">
@@ -52,20 +52,20 @@
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
         />
         <div v-else class="row g-3">
-           <div class="col-md-12" v-if="deal.deal_name">
+           <div class="col-md-6" v-if="deal.deal_name">
             <div class="info-group">
               <label class="info-label">Deal Name</label>
               <p class="info-value mb-0">{{ deal.deal_name }}</p>
             </div>
           </div>
         
-          <div class="col-md-12" v-if="deal.createdBy">
+          <div class="col-md-6" v-if="deal.createdBy">
             <div class="info-group">
               <label class="info-label">Created By</label>
               <p class="info-value mb-0">{{ deal.createdBy }}</p>
             </div>
           </div>
-          <div class="col-md-12" v-if="deal.source">
+          <div class="col-md-6" v-if="deal.source">
             <div class="info-group">
               <label class="info-label">Source</label>
               <p class="info-value mb-0">{{ deal.source }}</p>
@@ -73,7 +73,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </div> -->
 
 
 
@@ -107,31 +107,31 @@
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
         />
         <div v-else class="row g-3">
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Tenant First Name</label>
               <p class="info-value mb-0">{{ val(tenant.first_name) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Tenant Last Name</label>
               <p class="info-value mb-0">{{ val(tenant.last_name) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Tenant Phone Number</label>
               <p class="info-value mb-0">{{ val(tenant.phone) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Tenant Email</label>
               <p class="info-value mb-0">{{ val(tenant.email) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Tenant Nationality</label>
               <p class="info-value mb-0">{{ val(tenant.nationality) }}</p>
@@ -174,7 +174,7 @@
     </div>
 
     <!-- Landlord Details -->
-    <div class="col-12">
+    <div class="col-12" v-if="!deal.listing">
       
       <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'landlord_details' }">
         <div class="section-head mb-3">
@@ -202,49 +202,49 @@
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
         />
         <div v-else class="row g-3">
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Landlord First Name</label>
               <p class="info-value mb-0">{{ val(landlord.first_name) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Landlord Last Name</label>
               <p class="info-value mb-0">{{ val(landlord.last_name) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Landlord Phone Number</label>
               <p class="info-value mb-0">{{ val(landlord.phone) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Landlord Email</label>
               <p class="info-value mb-0">{{ val(landlord.email) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Landlord Nationality</label>
               <p class="info-value mb-0">{{ val(landlord.nationality) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Landlord Residency Status</label>
               <p class="info-value mb-0">{{ val(landlord.residency_status) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Landlord Country Of Residence</label>
               <p class="info-value mb-0">{{ val(landlord.country) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Landlord City Of Residence</label>
               <p class="info-value mb-0">{{ val(landlord.city) }}</p>
@@ -255,7 +255,7 @@
     </div>
 
     <!-- Landlord Documents -->
-    <div class="col-12">
+    <div class="col-12" v-if="!deal.listing">
       
       <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'landlord_documents' }">
         <div class="section-head mb-3">
@@ -315,86 +315,86 @@
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
         />
         <div v-else class="row g-3">
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Property Address</label>
               <p class="info-value mb-0">{{ getAreaName() }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Unit No</label>
               <p class="info-value mb-0">{{ val(deal.unit_no) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Property Type</label>
               <p class="info-value mb-0">{{ val(deal.property_type?.name) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Bedrooms</label>
               <p class="info-value mb-0">{{ val(deal.bedrooms) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Property Link</label>
               <p class="info-value mb-0">{{ val(deal.property_link) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Property Reference</label>
               <p class="info-value mb-0">{{ val(deal.property_reference) }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Unit Size</label>
               <p class="info-value mb-0">{{ val(deal.unit_size) }}</p>
             </div>
           </div>
      
-          <!-- <div class="col-md-12">
+          <!-- <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Sub Community</label>
               <p class="info-value mb-0">{{ tagsDisplay(deal.sub_communities) }}</p>
             </div>
           </div> -->
-          <!-- <div class="col-md-12">
+          <!-- <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Project Name</label>
               <p class="info-value mb-0">{{ deal.project?.name  }}</p>
             </div>
           </div> -->
-             <div class="col-md-12" v-if="deal.listing">
+             <div class="col-md-6" v-if="deal.listing">
             <div class="info-group">
               <label class="info-label">Listing</label>
               <p class="info-value mb-0">{{ deal.listing?.name  }}</p>
             </div>
           </div>
-           <div class="col-md-12" v-if="deal.listing">
+           <div class="col-md-6" v-if="deal.listing">
             <div class="info-group">
               <label class="info-label">Agent</label>
               <p class="info-value mb-0">{{ deal.listing?.agent  }}</p>
             </div>
           </div>
-           <div class="col-md-12">
+           <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Developer Name</label>
               <p class="info-value mb-0">{{ getDeveloperName() }}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Developer sales person name</label>
               <p class="info-value mb-0">{{  val(deal.developer_name)}}</p>
             </div>
           </div>
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Developer sales person phone</label>
               <p class="info-value mb-0">{{  val(deal.developer_phone)}}</p>
@@ -447,19 +447,19 @@
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
         />
         <div v-else class="row g-3">
-          <div class="col-md-12">
+          <div class="col-md-6">
             <div class="info-group">
               <label class="info-label">Deal Total Commission %</label>
               <p class="info-value mb-0">{{ val(deal.deal_commission) }}</p>
             </div>
           </div>
-          <!--<div class="col-md-12">-->
+          <!--<div class="col-md-6">-->
           <!--  <div class="info-group">-->
           <!--    <label class="info-label">Agent Share %</label>-->
           <!--    <p class="info-value mb-0">{{ val(deal.agent_share) }}</p>-->
           <!--  </div>-->
           <!--</div>-->
-          <!--<div class="col-md-12">-->
+          <!--<div class="col-md-6">-->
           <!--  <div class="info-group">-->
           <!--    <label class="info-label">Company Share %</label>-->
           <!--    <p class="info-value mb-0">{{ val(deal.company_share) }}</p>-->

@@ -14,7 +14,29 @@
       <!-- Header: title + deal type dropdown + close -->
       <div class="view-deal-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div class="d-flex align-items-center gap-3 flex-wrap">
-          <span class="view-deal-title">{{ dealTitle }}</span>
+         <div class="d-flex align-items-center gap-2">
+            <template v-if="!isEditingTitle">
+              <span class="view-deal-title" @click="startEditTitle">
+                {{ deal.value?.deal_name || dealTitle }}
+              </span>
+              <iconify-icon 
+                icon="lucide:pencil" 
+                class="cursor-pointer"
+                @click="startEditTitle"
+              />
+            </template>
+
+            <template v-else>
+              <input
+                v-model="dealTitleInput"
+                class="form-control form-control-sm"
+                style="width: 500px;border:none;height: 35px;"
+                @keyup.enter="saveTitle"
+                @blur="saveTitle"
+                autofocus
+              />
+            </template>
+          </div>
           <!-- <b-dropdown
             class="deal-type-dropdown"
             menu-class="deal-type-dropdown-menu"
@@ -98,7 +120,7 @@
         <template v-if="activeTab === 'general'">
           <div class="row g-4">
             <!-- Left column: Deal Information (with edit icon) or full-width edit form -->
-            <div class="col-md-5">
+            <div class="col-md-6">
               <div class="info-card bg-white p-3 radius-12 shadow-sm">
                   <div v-if="dealType === 'primary'" class="row g-3 view-deal-content">
                     <ViewPrimaryDeal
@@ -170,7 +192,7 @@
             </div>
 
             <!-- Right column: Activity | Comments (hidden when editing) -->
-            <div class="col-md-7">
+            <div class="col-md-6">
               <ResponsiblePersonSection
                 v-if="deal?.id"
                 :deal="deal"
@@ -284,6 +306,8 @@ const editLookup = ref({
 })
 const editHydrationRequestId = ref(0)
 
+const isEditingTitle = ref(false)
+const dealTitleInput = ref('')
 
 
 const { updateAndChangeStage } = useStageTransition()
@@ -391,8 +415,12 @@ async function fetchStagesFromAPI(dealTypeValue = null) {
     return []
   }
 }
-
-// دالة مساعدة للحصول على لون افتراضي
+function handleDealUpdatedFromModal(updatedDeal) {
+  selectedDeal.value = {
+    ...selectedDeal.value,
+    ...updatedDeal
+  }
+}
 function getDefaultColor(order) {
   const colors = ['#3B82F6', '#22C55E', '#059669', '#DC2626']
   return colors[(order || 0) % colors.length] || '#3B82F6'
@@ -516,6 +544,8 @@ function dealToFormData(deal) {
     unit_size: deal.unit_size ?? '',
     project_id: deal.project_id ?? deal.project?.id ?? null,
     developer_id: deal.developer_id ?? deal.developer?.id ?? null,
+    developer_name: deal.developer_name ?? '',
+    developer_phone: deal.developer_phone ?? '',
     area_id: deal.area_id ?? deal.area?.id ?? null,
     property_link: deal.property_link ?? '',
     property_reference: deal.property_reference ?? '',
@@ -738,7 +768,37 @@ async function saveEditDeal() {
     editSaving.value = false
   }
 }
+function startEditTitle() {
+  isEditingTitle.value = true
+  dealTitleInput.value = deal.value?.deal_name || ''
+}
 
+async function saveTitle() {
+  if (!deal.value?.id) return
+
+  const newName = dealTitleInput.value
+
+  try {
+    await axios.put(`/deals/${deal.value.id}`, {
+      deal_name: newName
+    })
+
+    // 🔥 أهم خطوة
+    if (hydratedDeal.value) {
+      hydratedDeal.value.deal_name = newName
+    }
+
+    emit('deal-updated', {
+      ...deal.value,
+      deal_name: newName
+    })
+
+  } catch (e) {
+    console.error('Error updating deal name', e)
+  } finally {
+    isEditingTitle.value = false
+  }
+}
 watch(() => props.modelValue, async (val) => {
   show.value = val
   if (val && props.deal?.deal_type) {
@@ -779,7 +839,11 @@ watch(dealType, async (newType) => {
     selectedStageIndex.value = currentStageIndex.value
   }
 })
-
+watch(() => deal.value, (val) => {
+  if (val) {
+    dealTitleInput.value = val.deal_name || ''
+  }
+}, { immediate: true })
 watch(show, (val) => {
   if (val && props.deal) selectedStageIndex.value = currentStageIndex.value
   if (!val) {
@@ -808,14 +872,14 @@ function close() {
   margin: 2vh auto !important;
 }
 #view-deal-modal .modal-content {
-  max-height: 92vh !important;
+  max-height: 98vh !important;
   border-radius: 12px !important;
   overflow: visible !important;
   border: 1px solid #e5e7eb !important;
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08) !important;
 }
 #view-deal-modal .modal-body {
-  overflow: visible !important;
+  overflow: hidden !important;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -840,7 +904,7 @@ function close() {
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08) !important;
 }
 :deep(.view-deal-modal-outer .modal-body) {
-  overflow: visible !important;
+  overflow: hidden !important;
 }
 :deep(.view-deal-modal-outer .modal-content.view-deal-modal-content-wrap),
 :deep(#view-deal-modal .modal-content) {
@@ -853,7 +917,7 @@ function close() {
   flex-direction: column;
   min-height: 100%;
   height: 100%;
-  overflow: visible;
+  overflow: hidden;
   max-width: 100%;
   font-family: 'Montserrat', sans-serif;
   --deal-font: 'Montserrat', sans-serif;
@@ -1036,7 +1100,7 @@ function close() {
 .tab-item {
   background: none;
   border: none;
-  padding: 12px 10px;
+  padding:  10px;
   font-size: 13px;
   font-weight: 500;
   color: var(--deal-text-muted, #64748b);
@@ -1394,5 +1458,27 @@ function close() {
 :deep(.view-deal-modal-outer .modal-content) {
   position: relative;
   z-index: 2;
+    display: flex;
+  flex-direction: column;
+  max-height: 96vh !important;
+  overflow: hidden !important;
 }
+.modal-body-custom::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body-custom::-webkit-scrollbar-track {
+    background: #F1F5F9;
+    border-radius: 10px;
+}
+
+.modal-body-custom::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 10px;
+}
+
+.modal-body-custom::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+}
+
 </style>

@@ -257,7 +257,7 @@
     </section>
 
     <!-- Seller Section (for Secondary only) -->
-    <section v-if="dealType === 'secondary' && isSectionVisible('seller_details')" class="form-section">
+<section v-if="dealType === 'secondary' && !shouldHideSeller && isSectionVisible('seller_details')" class="form-section">
       <h6 class="section-title mb-3">Seller Details</h6>
       <div class="form-card p-3 radius-12">
         <div v-if="!isDocumentEditMode('seller_documents')" class="row g-3">
@@ -631,7 +631,7 @@
     </section>
 
     <!-- Landlord Section (for Rental) -->
-    <section v-if="dealType === 'rental' && isSectionVisible('landlord_details')" class="form-section">
+  <section v-if="dealType === 'rental' && !shouldHideLandlord && isSectionVisible('landlord_details')" class="form-section">
       <h6 class="section-title mb-3">Landlord Details</h6>
       <div class="form-card p-3 radius-12">
         <div v-if="!isDocumentEditMode('landlord_documents')" class="row g-3">
@@ -1143,8 +1143,24 @@ const props = defineProps({
   inlineMode: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['update:modelValue', 'search-areas', 'search-subcommunities'])
+const emit = defineEmits(['update:modelValue', 'search-areas', 'search-subcommunities', 'update:hasListingId', 'update:dealType'])
+// أضف هذا في قسم <script setup>
+const hasListingId = ref(false)
 
+// هل يجب إخفاء Seller Section؟
+const shouldHideSeller = computed(() => {
+  return hasListingId.value && props.dealType === 'secondary'
+})
+
+// هل يجب إخفاء Landlord Section؟
+const shouldHideLandlord = computed(() => {
+  return hasListingId.value && props.dealType === 'rental'
+})
+
+// هل يجب إخفاء Tenant Section؟ (يظهر فقط في Rental مع listing_id)
+const shouldHideTenant = computed(() => {
+  return hasListingId.value && props.dealType !== 'rental'
+})
 const form = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v)
@@ -1385,7 +1401,6 @@ function clearAllDocuments() {
 }
 
 // Validation function
-// Validation function
 function validateForm() {
   const errors = []
   const fieldErrorsObj = {}
@@ -1456,19 +1471,9 @@ function validateForm() {
       errors.push('Buyer language is required')
       fieldErrorsObj.buyer_language = 'Language is required'
     }
-
-    const buyerDocs = form.value.buyer_documents || []
-    const requiredBuyerDocs = (props.dealType === 'primary' ? primaryBuyerDocTypes.value : secondaryBuyerDocTypes.value)
-      .filter((doc) => doc.required)
-      .map((doc) => doc.id)
-    requiredBuyerDocs.forEach((docType) => {
-      if (!hasDocumentFile(buyerDocs, docType)) {
-        errors.push(`Buyer ${docType.replaceAll('_', ' ')} document is required`)
-      }
-    })
   }
   
-  if (props.dealType === 'secondary') {
+  if (props.dealType === 'secondary' && !shouldHideSeller.value) {
     if (!form.value.seller_first_name) {
       errors.push('Seller first name is required')
       fieldErrorsObj.seller_first_name = 'First name is required'
@@ -1508,79 +1513,81 @@ function validateForm() {
   }
   
   if (props.dealType === 'rental') {
-    // Tenant validation
-    if (!form.value.tenant_first_name) {
-      errors.push('Tenant first name is required')
-      fieldErrorsObj.tenant_first_name = 'First name is required'
-    }
-    if (!form.value.tenant_last_name) {
-      errors.push('Tenant last name is required')
-      fieldErrorsObj.tenant_last_name = 'Last name is required'
-    }
-    if (!form.value.tenant_phone) {
-      errors.push('Tenant phone is required')
-      fieldErrorsObj.tenant_phone = 'Phone is required'
-    }
-    if (!form.value.tenant_email) {
-      errors.push('Tenant email is required')
-      fieldErrorsObj.tenant_email = 'Email is required'
-    }
-    if (!form.value.tenant_nationality) {
-      errors.push('Tenant nationality is required')
-      fieldErrorsObj.tenant_nationality = 'Nationality is required'
-    }
-    if (!form.value.tenant_residency_status) {
-      errors.push('Tenant residency status is required')
-      fieldErrorsObj.tenant_residency_status = 'Residency status is required'
-    }
-    if (!form.value.tenant_city) {
-      errors.push('Tenant city is required')
-      fieldErrorsObj.tenant_city = 'City is required'
-    }
-    if (!form.value.tenant_language) {
-      errors.push('Tenant language is required')
-      fieldErrorsObj.tenant_language = 'Language is required'
-    }
+      if (!form.value.tenant_first_name) {
+        errors.push('Tenant first name is required')
+        fieldErrorsObj.tenant_first_name = 'First name is required'
+      }
+      if (!form.value.tenant_last_name) {
+        errors.push('Tenant last name is required')
+        fieldErrorsObj.tenant_last_name = 'Last name is required'
+      }
+      if (!form.value.tenant_phone) {
+        errors.push('Tenant phone is required')
+        fieldErrorsObj.tenant_phone = 'Phone is required'
+      }
+      if (!form.value.tenant_email) {
+        errors.push('Tenant email is required')
+        fieldErrorsObj.tenant_email = 'Email is required'
+      }
+      if (!form.value.tenant_nationality) {
+        errors.push('Tenant nationality is required')
+        fieldErrorsObj.tenant_nationality = 'Nationality is required'
+      }
+      if (!form.value.tenant_residency_status) {
+        errors.push('Tenant residency status is required')
+        fieldErrorsObj.tenant_residency_status = 'Residency status is required'
+      }
+      if (!form.value.tenant_city) {
+        errors.push('Tenant city is required')
+        fieldErrorsObj.tenant_city = 'City is required'
+      }
+      if (!form.value.tenant_language) {
+        errors.push('Tenant language is required')
+        fieldErrorsObj.tenant_language = 'Language is required'
+      }
     
-    // Landlord validation
-    if (!form.value.landlord_first_name) {
-      errors.push('Landlord first name is required')
-      fieldErrorsObj.landlord_first_name = 'First name is required'
-    }
-    if (!form.value.landlord_last_name) {
-      errors.push('Landlord last name is required')
-      fieldErrorsObj.landlord_last_name = 'Last name is required'
-    }
-    if (!form.value.landlord_phone) {
-      errors.push('Landlord phone is required')
-      fieldErrorsObj.landlord_phone = 'Phone is required'
-    }
-    if (!form.value.landlord_email) {
-      errors.push('Landlord email is required')
-      fieldErrorsObj.landlord_email = 'Email is required'
-    }
-    if (!form.value.landlord_nationality) {
-      errors.push('Landlord nationality is required')
-      fieldErrorsObj.landlord_nationality = 'Nationality is required'
-    }
-    if (!form.value.landlord_dob) {
-      errors.push('Landlord date of birth is required')
-      fieldErrorsObj.landlord_dob = 'Date of birth is required'
-    }
-    if (!form.value.landlord_residency_status) {
-      errors.push('Landlord residency status is required')
-      fieldErrorsObj.landlord_residency_status = 'Residency status is required'
-    }
-    if (!form.value.landlord_city) {
-      errors.push('Landlord city is required')
-      fieldErrorsObj.landlord_city = 'City is required'
-    }
-    if (!form.value.landlord_language) {
-      errors.push('Landlord language is required')
-      fieldErrorsObj.landlord_language = 'Language is required'
+    
+    if (!shouldHideLandlord.value) {
+      if (!form.value.landlord_first_name) {
+        errors.push('Landlord first name is required')
+        fieldErrorsObj.landlord_first_name = 'First name is required'
+      }
+      if (!form.value.landlord_last_name) {
+        errors.push('Landlord last name is required')
+        fieldErrorsObj.landlord_last_name = 'Last name is required'
+      }
+      if (!form.value.landlord_phone) {
+        errors.push('Landlord phone is required')
+        fieldErrorsObj.landlord_phone = 'Phone is required'
+      }
+      if (!form.value.landlord_email) {
+        errors.push('Landlord email is required')
+        fieldErrorsObj.landlord_email = 'Email is required'
+      }
+      if (!form.value.landlord_nationality) {
+        errors.push('Landlord nationality is required')
+        fieldErrorsObj.landlord_nationality = 'Nationality is required'
+      }
+      if (!form.value.landlord_dob) {
+        errors.push('Landlord date of birth is required')
+        fieldErrorsObj.landlord_dob = 'Date of birth is required'
+      }
+      if (!form.value.landlord_residency_status) {
+        errors.push('Landlord residency status is required')
+        fieldErrorsObj.landlord_residency_status = 'Residency status is required'
+      }
+      if (!form.value.landlord_city) {
+        errors.push('Landlord city is required')
+        fieldErrorsObj.landlord_city = 'City is required'
+      }
+      if (!form.value.landlord_language) {
+        errors.push('Landlord language is required')
+        fieldErrorsObj.landlord_language = 'Language is required'
+      }
     }
   }
   
+  // ✅ إرجاع كلا المصفوفتين
   return { errors, fieldErrorsObj }
 }
 
@@ -1657,6 +1664,41 @@ const fetchAllAreas = async () => {
     console.error('Error loading areas:', error)
   }
 }
+// Watch for shouldHideSeller changes to clear seller data
+watch(() => shouldHideSeller.value, (hide) => {
+  if (hide) {
+    // Clear all seller fields
+    form.value.seller_first_name = ''
+    form.value.seller_last_name = ''
+    form.value.seller_dob = ''
+    form.value.seller_phone = ''
+    form.value.seller_email = ''
+    form.value.seller_nationality = ''
+    form.value.seller_residency_status = ''
+    form.value.seller_city = ''
+    form.value.seller_country = ''
+    form.value.seller_language = ''
+    form.value.seller_documents = []
+  }
+})
+
+// Watch for shouldHideLandlord changes
+watch(() => shouldHideLandlord.value, (hide) => {
+  if (hide) {
+    // Clear all landlord fields
+    form.value.landlord_first_name = ''
+    form.value.landlord_last_name = ''
+    form.value.landlord_dob = ''
+    form.value.landlord_phone = ''
+    form.value.landlord_email = ''
+    form.value.landlord_nationality = ''
+    form.value.landlord_residency_status = ''
+    form.value.landlord_city = ''
+    form.value.landlord_country = ''
+    form.value.landlord_language = ''
+    form.value.landlord_documents = []
+  }
+})
 onMounted(() => {
   // fetchProjects()
   getCurrentUser()
@@ -1725,7 +1767,6 @@ const fetchAvailableListings = async (areaId) => {
       // project_id: listing.project_id,
       // project_name: listing.project?.title,
       developer_id: listing.developer_id,
-      developer_name: listing.developer?.name,
       status: listing.status, // 'converted' or 'rented'
       display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type?.name || 'Property'} (${listing.status === 'converted' ? 'Sold' : 'Rented'})`
     }))
@@ -1754,8 +1795,7 @@ const onAreaSelected = (areaId) => {
     form.value.unit_size = ''
     // form.value.project_id = null
     form.value.developer_id = null
-    form.value.developer_name = ''
-    form.value.developer_phone = ''
+  
   }
   if (props.dealType === 'secondary' || props.dealType === 'rental' ) {
   fetchAvailableListings(areaId)
@@ -1767,7 +1807,14 @@ const onAreaSelected = (areaId) => {
 
 // دالة عند اختيار Listing
 const onListingSelected = (listing) => {
-  if (!listing) return
+ if (!listing) {
+    hasListingId.value = false
+     emit('update:hasListingId', false)  
+    return
+  }
+  
+  hasListingId.value = true
+   emit('update:hasListingId', true)  
   
   // تعبئة بيانات Property Details من الـ Listing المختار
   form.value.unit_no = listing.unit_number || ''
@@ -1857,12 +1904,9 @@ const nationalityOptions = [
 ]
 
 const residencyOptions = [
-  { value: 'citizen', text: 'Citizen' },
   { value: 'resident', text: 'Resident' },
-  { value: 'investor', text: 'Investor' },
-  { value: 'tourist', text: 'Tourist' },
-  { value: 'student', text: 'Student' },
-  { value: 'other', text: 'Other' }
+  { value: 'non_resident', text: 'Non Resident' },
+
 ]
 const buyerResidencyOptions = [
   { value: 'resident', text: 'Resident' },
@@ -2395,15 +2439,15 @@ watch(() => form.value?.landlord_country, (newCountry, oldCountry) => {
 }
 .inline-mode :deep(.row.g-3) {
   display: flex;
-  flex-direction: column;
-  gap: 12px !important;
+  flex-direction: row;
+  gap: 9px !important;
 }
 .inline-mode :deep(.row.g-3 > [class*='col-']) {
-  width: 100% !important;
+  width: 49% !important;
   max-width: 100% !important;
-  flex: 0 0 100% !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
+  /* flex: 0 0 100% !important; */
+  /* padding-left: 0 !important;
+  padding-right: 0 !important; */
 }
 :deep(.custom-v-select .vs__open-indicator-icon) {
     font-size: 13px;

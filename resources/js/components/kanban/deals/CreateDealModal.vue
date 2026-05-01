@@ -92,6 +92,7 @@
               :field-errors="fieldErrors"           
               :selected-stage-id="selectedStageId"  
               :selected-stage-name="selectedStage?.name || ''"
+               @update:hasListingId="handleHasListingIdUpdate"
             />
       </div>
 
@@ -163,7 +164,13 @@ const dealTypeTabs = [
   { id: 'secondary', name: 'Secondary' },
   { id: 'rental', name: 'Rental' }
 ]
+const hasListingId = ref(false)
 
+// دالة لاستقبال التحديث من DealForm
+const handleHasListingIdUpdate = (value) => {
+  hasListingId.value = value
+  console.log('hasListingId updated:', value)
+}
 function selectDealType(id) {
   dealType.value = id
 }
@@ -191,11 +198,33 @@ watch(dealType, async () => {
   await fetchStages()
   resetFormData()
 })
-
-// Watch for changes in the dealType prop from parent
-watch(() => props.dealType, (newVal) => {
-  if (newVal && newVal !== dealType.value) {
-    dealType.value = newVal
+watch(() => hasListingId.value, (hasId) => {
+  if (hasId && dealType.value === 'secondary') {
+    // Clear seller data in formData
+    formData.value.seller_first_name = ''
+    formData.value.seller_last_name = ''
+    formData.value.seller_dob = ''
+    formData.value.seller_phone = ''
+    formData.value.seller_email = ''
+    formData.value.seller_nationality = ''
+    formData.value.seller_residency_status = ''
+    formData.value.seller_city = ''
+    formData.value.seller_country = ''
+    formData.value.seller_language = ''
+    formData.value.seller_documents = []
+  } else if (hasId && dealType.value === 'rental') {
+    // Clear landlord data in formData
+    formData.value.landlord_first_name = ''
+    formData.value.landlord_last_name = ''
+    formData.value.landlord_dob = ''
+    formData.value.landlord_phone = ''
+    formData.value.landlord_email = ''
+    formData.value.landlord_nationality = ''
+    formData.value.landlord_residency_status = ''
+    formData.value.landlord_city = ''
+    formData.value.landlord_country = ''
+    formData.value.landlord_language = ''
+    formData.value.landlord_documents = []
   }
 })
 const selectedStageIndex = computed(() => {
@@ -632,6 +661,8 @@ function validateForm() {
   }
   
   if (dealType.value === 'secondary') {
+        if (!hasListingId.value) {
+
     if (!formData.value.seller_first_name) {
       errors.push('Seller first name is required')
       fieldErrorsObj.seller_first_name = 'First name is required'
@@ -669,8 +700,11 @@ function validateForm() {
       fieldErrorsObj.seller_language = 'Language is required'
     }
   }
+  }
   
   if (dealType.value === 'rental') {
+        if (!hasListingId.value) {
+
     // Tenant validation
     if (!formData.value.tenant_first_name) {
       errors.push('Tenant first name is required')
@@ -743,6 +777,7 @@ function validateForm() {
       fieldErrorsObj.landlord_language = 'Language is required'
     }
   }
+  }
   
   // Set field errors
   fieldErrors.value = fieldErrorsObj
@@ -753,7 +788,6 @@ function validateForm() {
 
 
 // Validate and submit
-// Validate and submit
 async function validateAndSubmit() {
   // Show field errors
   showFieldErrors.value = true
@@ -762,10 +796,9 @@ async function validateAndSubmit() {
   if (dealFormRef.value && dealFormRef.value.validateForm) {
     const { errors, fieldErrorsObj } = dealFormRef.value.validateForm()
     validationErrors.value = errors
-    fieldErrors.value = fieldErrorsObj
+    fieldErrors.value = fieldErrorsObj  
     
     if (errors.length > 0) {
-      // Scroll to first error
       await nextTick()
       const firstErrorField = document.querySelector('.is-invalid')
       if (firstErrorField) {
@@ -774,7 +807,6 @@ async function validateAndSubmit() {
       return
     }
   } else {
-    // لو مفيش validateForm في DealForm، استخدمي validateForm المحلية
     const errors = validateForm()
     if (errors.length > 0) {
       return
@@ -784,6 +816,7 @@ async function validateAndSubmit() {
   await submitForm()
 }
 
+// Submit form
 // Submit form
 async function submitForm() {
   isSubmitting.value = true
@@ -800,21 +833,36 @@ async function submitForm() {
       submitData.append('lead_id', props.leadId)
     }
     
-    // Add all form fields
+    // ✅ تصفية الحقول: لا ترسل Seller/Landlord عندما تكون مخفية
     Object.keys(formData.value).forEach(key => {
-      if (formData.value[key] !== null && formData.value[key] !== undefined && formData.value[key] !== '') {
-        if (key.includes('documents') && Array.isArray(formData.value[key])) {
-          // Handle document files
-          formData.value[key].forEach((doc, index) => {
-            if (doc.file) {
-              submitData.append(`documents[${index}]`, doc.file)
-              submitData.append(`documents[${index}][category]`, doc.category)
-              submitData.append(`documents[${index}][document_type]`, doc.document_type)
+      const value = formData.value[key]
+      if (value === null || value === undefined || value === '') return
+      
+      // ✅ لا ترسل Seller fields إذا كان hasListingId و dealType secondary
+      if (dealType.value === 'secondary' && hasListingId.value) {
+        if (key.startsWith('seller_')) return
+      }
+      
+      // ✅ لا ترسل Landlord fields إذا كان hasListingId و dealType rental
+      if (dealType.value === 'rental' && hasListingId.value) {
+        if (key.startsWith('landlord_')) return
+      }
+      
+      // Handle documents
+      if (key.includes('documents') && Array.isArray(value)) {
+        // Handle document files
+        value.forEach((doc, index) => {
+          if (doc.file) {
+            submitData.append(`documents[${index}]`, doc.file)
+            submitData.append(`documents[${index}][category]`, doc.category)
+            submitData.append(`documents[${index}][document_type]`, doc.document_type)
+            if (doc.deal_party_id) {
+              submitData.append(`documents[${index}][deal_party_id]`, doc.deal_party_id)
             }
-          })
-        } else if (!key.includes('documents')) {
-          submitData.append(key, formData.value[key])
-        }
+          }
+        })
+      } else if (!key.includes('documents')) {
+        submitData.append(key, value)
       }
     })
     

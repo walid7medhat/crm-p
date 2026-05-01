@@ -113,7 +113,7 @@
                              <h5 class="section-title ">Lead Qualification</h5>
 
                             <div
-                                v-if="missingFields.includes('status_lead') || missingFields.includes('lead_type') || missingFields.includes('property_status')"
+                                v-if="targetStageOrder === 6 || missingFields.includes('status_lead') || missingFields.includes('lead_type') || missingFields.includes('property_status')"
                                 class="lead-qualification-trio"
                             >
                             <!-- Lead Status -->
@@ -248,7 +248,7 @@
                                         </v-select>
                                     </template>
                                 </div>
-                                <div v-if="isConversion && targetStageOrder === 6 && missingFields.includes('deal_name')" class="form-group mb-0 lead-qual-field">
+                                <div v-if="missingFields.includes('deal_name') && targetStageOrder === 6" class="form-group mb-0 lead-qual-field">
                                     <label class="form-label">Deal Name <span class="text-danger">*</span></label>
                                     <input 
                                         type="text" 
@@ -1334,6 +1334,7 @@ watch(visible, (newVal) => {
     }
 })
 onMounted(() => {
+    console.log(props.targetStageOrder);
     document.addEventListener('click', handleClickOutside)
 })
 

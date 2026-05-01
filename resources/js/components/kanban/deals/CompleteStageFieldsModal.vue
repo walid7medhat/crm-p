@@ -58,17 +58,17 @@
 
           <!-- Form Sections -->
           <div v-else class="complete-fields-form">
-            <div v-if="missingFieldLabels.length > 0" class="alert alert-info py-2 mb-3">
+            <!-- <div v-if="missingFieldLabels.length > 0" class="alert alert-info py-2 mb-3">
               <div class="small fw-semibold mb-1">Missing required data:</div>
               <div class="small">
                 {{ missingFieldLabels.join(' • ') }}
               </div>
-            </div>
-            <div>
+            </div> -->
+            <!-- <div>
               {{ unresolvedMissingLabels.join(' • ') }}
-            </div>
+            </div> -->
             <!-- Source and Deal Name Section -->
-            <section v-if="hasSourceAndDealNameFields()" class="form-section">
+            <!-- <section v-if="hasSourceAndDealNameFields()" class="form-section">
               <h6 class="section-title mb-3">Source and Deal Name</h6>
               <div class="form-card p-3 radius-12">
                 <div class="row g-3">
@@ -102,7 +102,7 @@
                   </div>
                 </div>
               </div>
-            </section>
+            </section> -->
 
             <!-- Lost Reason Section -->
             <section v-if="hasField('lost_reason')" class="form-section">
@@ -311,7 +311,7 @@
             </section>
 
             <!-- Seller Section -->
-            <section v-if="hasPartyFields('seller') || documentTypesByParty.seller.length > 0" class="form-section">
+            <section v-if="!shouldHideSeller && (hasPartyFields('seller') || documentTypesByParty.seller.length > 0)" class="form-section">
               <h6 class="section-title mb-3" v-if="hasPartyFields('seller')">Seller Details</h6>
               <div class="form-card p-3 radius-12" v-if="hasPartyFields('seller')">
                 <div class="row g-3">
@@ -664,7 +664,7 @@
             </section>
 
             <!-- Landlord Section -->
-            <section v-if="hasPartyFields('landlord') || documentTypesByParty.landlord.length > 0" class="form-section">
+            <section v-if="!shouldHideTenant  && (hasPartyFields('landlord') || documentTypesByParty.landlord.length > 0)" class="form-section">
               <h6 class="section-title mb-3" v-if="hasPartyFields('landlord')">Landlord Details</h6>
               <div class="form-card p-3 radius-12" v-if="hasPartyFields('landlord')">
                 <div class="row g-3">
@@ -1123,6 +1123,7 @@ const props = defineProps({
   groupedMissing: { type: Object, default: () => ({ sections: [], by_stage: [] }) },
   deal: { type: Object, default: null }
 })
+const hasListingId = ref(false)
 
 const emit = defineEmits(['save', 'closed', 'open-deal'])
 // Add this function to get existing data from the deal
@@ -1620,9 +1621,45 @@ const effectiveMissingFields = computed(() => {
     || props.missingFieldsGroupedByStage?.stages
     || []
 
+  // ✅ إذا كان هناك listing_id محدد، نستخدم نوع الصفقة لتحديد الحقول المطلوبة
+  if (hasListingId.value) {
+    const dealType = formData.value?.deal_type
+    
+    if (dealType === 'secondary') {
+      // إخفاء جميع حقول Seller
+      const filtered = [...direct, ...groupedSectionFieldKeys.value]
+        .filter(key => !excludedFields.has(String(key)))
+        .filter(key => !key.startsWith('seller_') && !key.includes('seller_document_'))
+      return Array.from(new Set(filtered))
+    }
+    
+    if (dealType === 'rental') {
+      // إخفاء جميع حقول Landlord
+      const filtered = [...direct, ...groupedSectionFieldKeys.value]
+        .filter(key => !excludedFields.has(String(key)))
+        .filter(key => !key.startsWith('landlord_') && !key.includes('landlord_document_'))
+      return Array.from(new Set(filtered))
+    }
+    
+    // Primary: إخفاء Seller, Tenant, Landlord كلهم
+    const filtered = [...direct, ...groupedSectionFieldKeys.value]
+      .filter(key => !excludedFields.has(String(key)))
+      .filter(key => {
+        return !key.startsWith('seller_') && 
+               !key.includes('seller_document_') &&
+               !key.startsWith('tenant_') && 
+               !key.includes('tenant_document_') &&
+               !key.startsWith('landlord_') && 
+               !key.includes('landlord_document_')
+      })
+    return Array.from(new Set(filtered))
+  }
+
+  // ❌ بدون listing_id: نعتمد على الموجود من stage (الحالة الأصلية)
   if (!Array.isArray(byStage) || byStage.length === 0) {
-    return Array.from(new Set([...direct, ...groupedSectionFieldKeys.value]))
+    let result = Array.from(new Set([...direct, ...groupedSectionFieldKeys.value]))
       .filter((key) => !excludedFields.has(String(key)))
+    return result
   }
 
   const targetStageId = String(props.targetStageId ?? '')
@@ -1944,8 +1981,12 @@ const onAreaSelected = (areaId) => {
 
 // دالة عند اختيار Listing
 const onListingSelected = (listing) => {
-  if (!listing) return
+   if (!listing) {
+    hasListingId.value = false
+    return
+  }
   
+  hasListingId.value = true
   formData.value.unit_no = listing.unit_number || ''
   formData.value.property_type_id = listing.property_type_id
   formData.value.bedrooms = listing.bedrooms === 0 ? 'studio' : String(listing.bedrooms)
@@ -1978,6 +2019,18 @@ watch(() => formData.value, (newVal) => {
     }
   })
 }, { deep: true })
+
+const shouldHideSeller = computed(() => {
+  return hasListingId.value && formData.value?.deal_type === 'secondary'
+})
+
+const shouldHideLandlord = computed(() => {
+  return hasListingId.value && formData.value?.deal_type === 'rental'
+})
+
+const shouldHideTenant = computed(() => {
+  return hasListingId.value && formData.value?.deal_type !== 'rental'
+})
 watch(() => props, (newVal) => {
   console.log('Props received by modal:', {
     show: newVal.show,
@@ -2472,12 +2525,9 @@ const nationalityOptions = [
   { value: 'other', text: 'Other' }
 ]
 const residencyOptions = [
-  { value: 'citizen', text: 'Citizen' },
   { value: 'resident', text: 'Resident' },
-  { value: 'investor', text: 'Investor' },
-  { value: 'tourist', text: 'Tourist' },
-  { value: 'student', text: 'Student' },
-  { value: 'other', text: 'Other' }
+  { value: 'non_resident', text: 'Non Resident' },
+
 ]
 const buyerResidencyOptions = [
   { value: 'resident', text: 'Resident' },

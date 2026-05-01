@@ -1075,7 +1075,6 @@ textarea, input, select {
     overflow-x: hidden;
 }
 
-/* شريط التمرير */
 .modal-body-custom::-webkit-scrollbar {
     width: 6px;
 }

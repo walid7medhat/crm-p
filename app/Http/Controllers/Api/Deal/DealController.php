@@ -134,7 +134,7 @@ class DealController extends Controller
             'unit_no',
             'bedrooms',
             'unit_size',
-            'property_link','lost_reason'
+            'property_link','lost_reason','developr_id','developer_name','developer_phone','listing_id'
         ]));
 
         if ($deal->getChanges()) {
@@ -574,7 +574,7 @@ public function getDealsByStage(Request $request)
     
     
     
-    public function checkStageRequirements(CheckStageRequirementsRequest $request, DealStageValidator $validator)
+public function checkStageRequirements(CheckStageRequirementsRequest $request, DealStageValidator $validator)
 {
     $deal = Deal::find($request->deal_id);
     
@@ -587,25 +587,27 @@ public function getDealsByStage(Request $request)
 
     $deal->load(['parties', 'documents']);
     
-    // تسجيل عدد المستندات الموجودة
-    Log::info('Deal documents count', [
-        'deal_id' => $deal->id,
-        'documents_count' => $deal->documents->count()
-    ]);
-    
     $guard = app(DealStageValidatorService::class);
-    $result = $guard->validateStageChange($deal, (int) $request->target_stage_id, $request->deal_type);
+    
+    // ✅ تمرير listing_id من الـ Request إذا وجد
+    $result = $guard->validateStageChange(
+        $deal, 
+        (int) $request->target_stage_id, 
+        $request->deal_type,
+        $request->listing_id // ✅ إضافة listing_id من الـ Request
+    );
 
     $response = [
-        'success' => true,
+        'success' => $result['valid'],
         'valid' => $result['valid'],
         'missing_fields' => $result['missing_fields'] ?? [],
         'grouped_missing' => $result['grouped_missing'] ?? ['sections' => [], 'by_stage' => []],
-        'message' => $result['message'] ?? 'Validation checked',
+        'message' => $result['message'] ?? ($result['valid'] ? 'Validation passed' : 'Missing required fields'),
+        'has_listing_id' => $result['has_listing_id'] ?? false,
+        'deal_type' => $result['deal_type'] ?? $request->deal_type,
     ];
 
     if (!empty($result['missing_fields'])) {
-        // Backward-compatible payload keys expected by current frontend
         $response['missing_fields_grouped'] = $result['missing_fields_grouped'] ?? ['sections' => []];
         $response['missing_by_stage'] = $result['missing_by_stage'] ?? [];
         $response['missing_fields_grouped_by_stage'] = $result['missing_fields_grouped_by_stage'] ?? ['stages' => []];

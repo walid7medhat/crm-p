@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Deal;
 use App\Models\Stage;
 use Illuminate\Support\Facades\Log;
-
 class DealStageValidator
 {
     /** Map UI/requirement field names to model attributes */

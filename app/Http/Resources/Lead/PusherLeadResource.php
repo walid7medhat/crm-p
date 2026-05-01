@@ -89,10 +89,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'interaction_result' => $this->interaction_result,
             'available_date'=>$this->available_date,
             'branch'=>$this->branch,
-            'status_unit' => $this->status_unit,
             'status_project' => $this->status_project,
-            'lists' => $this->lists,
-            'unqualified_reason' => $this->unqualified_reason,
             'why_lost_lead' => $this->why_lost_lead,
             
             // Additional
@@ -105,8 +102,8 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             
             // Relationships
             'stage' => new \App\Http\Resources\Stage\MainStageResource($this->whenLoaded('stage')),
-            'added_by_user' => new \App\Http\Resources\User\UserResource($this->whenLoaded('addedBy')),
-            'responsible_person' => new \App\Http\Resources\User\UserResource($this->responsiblePerson),
+            // 'added_by_user' => new \App\Http\Resources\User\UserResource($this->whenLoaded('addedBy')),
+            // 'responsible_person' => new \App\Http\Resources\User\UserResource($this->responsiblePerson),
           
             
             'budget' =>  (int) $this->budget,
@@ -117,7 +114,6 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'currency' => $this->currency,
             
             'created_at' => $this->created_at->setTimezone(config('app.timezone')),
-            'updated_at' => $this->updated_at,
             'duplicate_no'=>$this->duplicate_leads->count(),
             'duplicate_ids'=>$this->duplicate_leads->pluck('id')->toArray(),
             'is_reverted'=>!is_null($this->revert),
@@ -126,7 +122,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'can_delete'=>auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin') ),
              'raw_meta_data' => $rawMetaData, 
                         'facebook_questions_answers' =>$facebookFields,
-            'parent'=>new \App\Http\Resources\User\UserResource($assignedBy),
+            // 'parent'=>new \App\Http\Resources\User\UserResource($assignedBy),
             'assigned_at'=>$assignmentHistory?$assignmentHistory->created_at:$this->created_at,
             'property_type'=>$this->propertyType?->name,
             'area'=>$this->area?->title,
@@ -139,9 +135,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'risk' => ($this->priority === 'hot' && $this->updated_at && $this->updated_at->lt(now()->subDays(2)))
                 ? 'cooling down'
                 : '',
-            'original_name' => data_get($this->createdHistory, 'changes.name', $this->name),
 
-            'original_branch' => data_get($this->createdHistory, 'changes.lead_branch_source'),
            'api_first_question' => $this->getFirstApiQuestion(),
 
         ];

@@ -256,6 +256,7 @@
       @deal-updated="handleDealUpdatedFromModal"
       @stage-change-request="handleStageChangeFromModal"
         :auto-edit-section="autoEditSection"
+        
     />
 
     <div

@@ -6,28 +6,39 @@
       <p class="empty-hint">Upload documents from edit mode</p>
     </div>
     
-    <div v-else class="documents-grid">
+    <!-- كل نوع في مجموعة لوحده -->
+    <div v-else class="documents-by-type">
       <div 
-        v-for="doc in normalizedDocs" 
-        :key="doc.key" 
-        
+        v-for="(group, category) in groupedByCategory" 
+        :key="category" 
+        class="document-type-group"
       >
-                <label class="document-box-label">{{ doc.categoryLabel }}</label>
-
-        <div class="document-box" @click="previewDocument(doc)">
-          <img
-            v-if="isImage(doc) && doc.url"
-            :src="doc.url"
-            :alt="doc.name"
-            class="document-box-preview"
-          />
-          <div v-else class="document-box-preview-placeholder">
-            <iconify-icon :icon="fileIcon(doc)" class="placeholder-icon" />
-          </div>
-          <div class="document-box-name">{{ doc.displayName }}</div>
-          <div class="document-box-meta">
-            <span v-if="doc.sizeLabel" class="document-size">{{ doc.sizeLabel }}</span>
-            <button type="button" class="document-view-btn" @click.stop="previewDocument(doc)">View</button>
+        <div class="document-type-header">
+          <h4 class="document-type-title">{{ group.label }}</h4>
+          <span class="document-type-count">{{ group.docs.length }} document(s)</span>
+        </div>
+        
+        <div class="documents-grid">
+          <div 
+            v-for="doc in group.docs" 
+            :key="doc.key" 
+            class="document-box"
+            @click="previewDocument(doc)"
+          >
+            <img
+              v-if="isImage(doc) && doc.url"
+              :src="doc.url"
+              :alt="doc.name"
+              class="document-box-preview"
+            />
+            <div v-else class="document-box-preview-placeholder">
+              <iconify-icon :icon="fileIcon(doc)" class="placeholder-icon" />
+            </div>
+            <div class="document-box-name">{{ doc.displayName }}</div>
+            <div class="document-box-meta">
+              <span v-if="doc.sizeLabel" class="document-size">{{ doc.sizeLabel }}</span>
+              <button type="button" class="document-view-btn" @click.stop="previewDocument(doc)">View</button>
+            </div>
           </div>
         </div>
       </div>
@@ -101,7 +112,23 @@ function handleClickOutside(event) {
   activeMenu.value = null
 }
 
-
+// Group documents by category
+const groupedByCategory = computed(() => {
+  const groups = {}
+  
+  normalizedDocs.value.forEach(doc => {
+    const category = doc.category
+    if (!groups[category]) {
+      groups[category] = {
+        label: doc.categoryLabel,
+        docs: []
+      }
+    }
+    groups[category].docs.push(doc)
+  })
+  
+  return groups
+})
 // Document normalization functions
 function extractName(doc, index) {
   if (typeof doc === 'string') return doc.split('/').pop() || `Document ${index + 1}`
@@ -274,19 +301,58 @@ function deleteDocument(doc) {
   margin: 0;
 }
 
+/* Document Type Group */
+.documents-by-type {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.document-type-group {
+  border-bottom: 1px solid #E2E8F0;
+  padding-bottom: 20px;
+}
+
+.document-type-group:last-child {
+  border-bottom: none;
+}
+
+.document-type-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.document-type-title {
+  font-size: 14px !important;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0;
+}
+
+.document-type-count {
+  font-size: 11px;
+  color: #94A3B8;
+  background: #F1F5F9;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
 /* Documents Grid */
 .documents-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .document-box {
-  border: 1px dashed #cbd5e1;
+  border: 1px solid #E2E8F0;
   border-radius: 12px;
   background: #fff;
-  min-height: 180px;
-  padding: 10px;
+  min-height: 160px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -294,22 +360,14 @@ function deleteDocument(doc) {
   gap: 8px;
   position: relative;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .document-box:hover {
-  border-color: #a9bddb;
+  border-color: #8ab5ff;
   background: #f8fbff;
-}
-
-.document-box-label {
-  /* position: absolute;
-  top: 8px;
-  left: 10px;
-  right: 10px; */
-  text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  color: #334155;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .document-box-preview {
@@ -321,27 +379,28 @@ function deleteDocument(doc) {
 
 .document-box-preview-placeholder {
   width: 100%;
-  max-width: 160px;
-  height: 84px;
+  max-width: 120px;
+  height: 80px;
   border-radius: 8px;
-  background: #f1f5f9;
+  background: #F1F5F9;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .placeholder-icon {
-  font-size: 26px;
+  font-size: 32px;
   color: #64748B;
 }
 
 .document-box-name {
   font-size: 12px;
-  font-weight: 600;
-  color: #0f172a;
+  font-weight: 500;
+  color: #0F172A;
   max-width: 100%;
   text-align: center;
   word-break: break-word;
+  line-height: 1.3;
 }
 
 .document-box-meta {
@@ -355,89 +414,26 @@ function deleteDocument(doc) {
 
 .document-size {
   color: #94A3B8;
+  font-size: 10px;
 }
 
 .document-view-btn {
-  border: 1px solid #dbe4ef;
+  border: 1px solid #E2E8F0;
   background: #fff;
-  color: #334155;
-  border-radius: 8px;
-  font-size: 11px;
-  padding: 2px 10px;
-}
-
-/* Document Actions */
-.document-actions {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.action-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: #475569;
+  border-radius: 6px;
+  font-size: 10px;
+  padding: 4px 10px;
   cursor: pointer;
-  color: #94A3B8;
   transition: all 0.2s;
 }
 
-.action-btn:hover {
+.document-view-btn:hover {
   background: #F1F5F9;
-  color: #475569;
+  border-color: #CBD5E1;
 }
 
-/* Dropdown Menu */
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 8px;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  min-width: 160px;
-  z-index: 1000;
-  overflow: hidden;
-}
-
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 10px 16px;
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  color: #334155;
-  cursor: pointer;
-  transition: background 0.2s;
-  text-align: left;
-}
-
-.dropdown-item:hover {
-  background: #F8FAFC;
-}
-
-.dropdown-item.delete-item {
-  color: #EF4444;
-}
-
-.dropdown-item.delete-item:hover {
-  background: #FEF2F2;
-}
-
-.dropdown-item iconify-icon {
-  font-size: 16px;
-}
-
-/* Modal */
+/* Modal styles (keep as is) */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -545,6 +541,20 @@ function deleteDocument(doc) {
 
 .btn-download:hover {
   background: #2563EB;
+}
+
+/* Compact mode for smaller screens */
+@media (max-width: 768px) {
+  .documents-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  
+  .document-type-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 }
 
 /* Animations */

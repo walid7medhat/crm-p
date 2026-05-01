@@ -8,69 +8,77 @@
       <span class="document-upload-pill" v-if="missingRequiredDocs.length > 0">Required documents missing: {{ missingRequiredDocs.join(', ') }}</span>
     </div>
 
-    <!-- كل البوكسات في grid واحد جنب بعض -->
-    <div class="all-boxes-grid">
-      <div 
-        v-for="box in allBoxes" 
-        :key="box.id"
-        class="document-box-wrapper"
-      >
-        <div class="document-box-label">
-          <div> {{ getDocumentTypeName(box.typeId) }}
-                <span v-if="isDocumentTypeRequired(box.typeId)" class="text-danger">*</span>
+    <!-- كل نوع في صف لوحده -->
+    <div class="document-box-grid">
+      <div v-for="type in documentTypes" :key="type.id" class="document-type-group">
+        <!-- Header with title and add button -->
+        <div class="document-type-header">
+          <div class="document-box-label">
+            <div>
+              {{ type.name }}
+              <span v-if="type.required" class="text-danger">*</span>
+            </div>
+            <button
+              type="button"
+              class="add-box-btn"
+              @click="addNewBox(type.id)"
+              title="Add another {{ type.name }}"
+            >
+              <iconify-icon icon="lucide:plus" />
+            </button>
           </div>
-         
-          <button
-            type="button"
-            class="add-same-type-btn"
-            @click.stop="addNewBox(box.typeId)"
-            :title="'Add another ' + getDocumentTypeName(box.typeId)"
-          >
-            <iconify-icon icon="lucide:plus" />
-          </button>
         </div>
 
-        <div 
-          class="document-box"
-          :class="{ required: isDocumentTypeRequired(box.typeId), uploaded: box.files.length > 0 }"
-        >
-          <button
-            v-if="getBoxesForType(box.typeId).length > 1"
-            type="button"
-            class="remove-box-btn"
-            @click.stop="removeBox(box.typeId, box.id)"
-            title="Remove this box"
+        <!-- Boxes for this document type (جنب بعض) -->
+        <div class="document-boxes-container">
+          <div 
+            v-for="box in getBoxesForType(type.id)"
+            :key="box.id"
+            class="document-box-wrapper"
           >
-            <iconify-icon icon="lucide:x" />
-          </button>
+            <div 
+              class="document-box"
+              :class="{ required: type.required, uploaded: box.files.length > 0 }"
+            >
+              <button
+                v-if="getBoxesForType(type.id).length > 1"
+                type="button"
+                class="remove-box-btn"
+                @click.stop="removeBox(type.id, box.id)"
+                title="Remove this box"
+              >
+                <iconify-icon icon="lucide:x" />
+              </button>
 
-          <div class="document-box-content" @click="triggerFileInput(box.typeId, box.id)">
-            <template v-if="box.files.length > 0">
-              <img
-                v-if="isImageFile(box.files[0])"
-                :src="resolveViewTarget(box.files[0])"
-                alt="uploaded preview"
-                class="document-box-preview"
-              />
-              <iconify-icon
-                v-else
-                :icon="getFileIcon(box.files[0]?.type || box.files[0]?.mime_type)"
-                class="document-box-icon uploaded-icon"
-              />
-              <div class="document-box-uploaded-name">
-                {{ box.files[0]?.name || 'Uploaded' }}
-              </div>
-              <div class="document-box-actions">
-                <button type="button" class="document-box-action-btn" @click.stop="viewFile(box.files[0])">View</button>
-                <button type="button" class="document-box-action-btn danger" @click.stop="removeFile(box.typeId, box.id, box.files[0]?.id)">Delete</button>
-              </div>
-            </template>
+              <div class="document-box-content" @click="triggerFileInput(type.id, box.id)">
+                <template v-if="box.files.length > 0">
+                  <img
+                    v-if="isImageFile(box.files[0])"
+                    :src="resolveViewTarget(box.files[0])"
+                    alt="uploaded preview"
+                    class="document-box-preview"
+                  />
+                  <iconify-icon
+                    v-else
+                    :icon="getFileIcon(box.files[0]?.type || box.files[0]?.mime_type)"
+                    class="document-box-icon uploaded-icon"
+                  />
+                  <div class="document-box-uploaded-name">
+                    {{ box.files[0]?.name || 'Uploaded' }}
+                  </div>
+                  <div class="document-box-actions">
+                    <button type="button" class="document-box-action-btn" @click.stop="viewFile(box.files[0])">View</button>
+                    <button type="button" class="document-box-action-btn danger" @click.stop="removeFile(type.id, box.id, box.files[0]?.id)">Delete</button>
+                  </div>
+                </template>
 
-            <template v-else>
-              <iconify-icon icon="lucide:upload" class="document-box-icon" />
-              <div class="document-box-upload-text">Upload {{ getDocumentTypeName(box.typeId) }}</div>
-              <div class="document-box-upload-hint">Max 10MB · JPG, PNG, PDF</div>
-            </template>
+                <template v-else>
+                  <iconify-icon icon="lucide:upload" class="document-box-icon" />
+                  <div class="document-box-upload-text">Upload {{ type.name }}</div>
+                  <div class="document-box-upload-hint">Max 10MB · JPG, PNG, PDF</div>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -445,7 +453,7 @@ function hasFilesForType(typeId) {
 
   return boxes.some(box => 
     box.files.some(file => 
-      file && (file.is_existing || file.file || file.url)
+      file && (file.is_existing || file.file || file.url || file.file_url)
     )
   )
 }
@@ -989,5 +997,77 @@ const $showNotification = (message, type = 'success') => {
 .document-upload-container.is-compact .all-boxes-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+}
+
+/* استبدل .all-boxes-grid بـ .document-box-grid */
+.document-box-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.document-type-group {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 16px;
+}
+
+.document-type-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.document-box-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  margin-left: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.add-box-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-box-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.add-box-btn iconify-icon {
+  font-size: 12px;
+}
+
+.document-boxes-container {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+
+/* في الـ compact mode */
+.document-upload-container.is-compact .document-boxes-container {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.document-upload-container.is-compact .document-box-label {
+  font-size: 11px;
 }
 </style>
