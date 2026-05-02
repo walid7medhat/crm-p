@@ -79,11 +79,12 @@
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Date Of Birth <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.buyer_dob" 
-              type="date" 
+            <AdvancedDatePicker
+              v-model="form.buyer_dob"
+              date-only
+              placeholder="Select date"
               class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.buyer_dob }"
+              :invalid="showErrors && !!fieldErrors.buyer_dob"
             />
              <div v-if="showErrors && fieldErrors.buyer_dob" class="invalid-feedback d-block">
                 {{ fieldErrors.buyer_dob }}
@@ -287,11 +288,12 @@
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.seller_dob" 
-              type="date" 
+            <AdvancedDatePicker
+              v-model="form.seller_dob"
+              date-only
+              placeholder="Select date"
               class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.seller_dob }"
+              :invalid="showErrors && !!fieldErrors.seller_dob"
             />
              <div v-if="showErrors && fieldErrors.seller_dob" class="invalid-feedback d-block">
                 {{ fieldErrors.seller_dob }}
@@ -476,7 +478,13 @@
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Date Of Birth</label>
-            <b-form-input v-model="form.tenant_dob" type="date" class="custom-input" />
+            <AdvancedDatePicker
+              v-model="form.tenant_dob"
+              date-only
+              placeholder="Select date"
+              class="custom-input"
+              :invalid="showErrors && !!fieldErrors.tenant_dob"
+            />
             <div v-if="showErrors && fieldErrors.tenant_dob" class="invalid-feedback d-block">
                 {{ fieldErrors.tenant_dob }}
               </div>
@@ -661,11 +669,12 @@
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.landlord_dob" 
-              type="date" 
+            <AdvancedDatePicker
+              v-model="form.landlord_dob"
+              date-only
+              placeholder="Select date"
               class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.landlord_dob }"
+              :invalid="showErrors && !!fieldErrors.landlord_dob"
             />
               <div v-if="showErrors && fieldErrors.landlord_dob" class="invalid-feedback d-block">
                 {{ fieldErrors.landlord_dob }}
@@ -1117,7 +1126,8 @@ import { BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import DocumentUpload from './DocumentUpload.vue'
-import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue' 
+import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
+import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue' 
 import api from '@/plugins/axios'
 import { getCurrentInstance } from 'vue'
 import { normalizeLanguageSelection, hasLanguageSelection } from '@/composables/useLanguageMultiSelect'

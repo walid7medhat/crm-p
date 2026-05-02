@@ -45,6 +45,7 @@
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
           :loading="inlineEditLoading"
+          :hide-footer-actions="hideInlineEditActions"
           @update:model-value="(v) => emit('update:inline-edit-data', v)"
           @save="emit('inline-edit-save')"
           @cancel="emit('inline-edit-cancel')"
@@ -100,6 +101,7 @@
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
           :loading="inlineEditLoading"
+          :hide-footer-actions="hideInlineEditActions"
           @update:model-value="(v) => emit('update:inline-edit-data', v)"
           @save="emit('inline-edit-save')"
           @cancel="emit('inline-edit-cancel')"
@@ -163,6 +165,7 @@
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
           :loading="inlineEditLoading"
+          :hide-footer-actions="hideInlineEditActions"
           @update:model-value="(v) => emit('update:inline-edit-data', v)"
           @save="emit('inline-edit-save')"
           @cancel="emit('inline-edit-cancel')"
@@ -195,6 +198,7 @@
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
           :loading="inlineEditLoading"
+          :hide-footer-actions="hideInlineEditActions"
           @update:model-value="(v) => emit('update:inline-edit-data', v)"
           @save="emit('inline-edit-save')"
           @cancel="emit('inline-edit-cancel')"
@@ -276,6 +280,7 @@
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
           :loading="inlineEditLoading"
+          :hide-footer-actions="hideInlineEditActions"
           @update:model-value="(v) => emit('update:inline-edit-data', v)"
           @save="emit('inline-edit-save')"
           @cancel="emit('inline-edit-cancel')"
@@ -308,6 +313,7 @@
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
           :loading="inlineEditLoading"
+          :hide-footer-actions="hideInlineEditActions"
           @update:model-value="(v) => emit('update:inline-edit-data', v)"
           @save="emit('inline-edit-save')"
           @cancel="emit('inline-edit-cancel')"
@@ -440,6 +446,7 @@
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
           :loading="inlineEditLoading"
+          :hide-footer-actions="hideInlineEditActions"
           @update:model-value="(v) => emit('update:inline-edit-data', v)"
           @save="emit('inline-edit-save')"
           @cancel="emit('inline-edit-cancel')"
@@ -489,6 +496,7 @@ const props = defineProps({
   inlineEditLoading: { type: Boolean, default: false },
   selectedStageId: { type: [Number, String], default: null },
   selectedStageName: { type: String, default: '' },
+  hideInlineEditActions: { type: Boolean, default: false },
 })
 const emit = defineEmits(['edit-section', 'update:inline-edit-data', 'inline-edit-save', 'inline-edit-cancel', 'search-areas', 'search-subcommunities'])
 

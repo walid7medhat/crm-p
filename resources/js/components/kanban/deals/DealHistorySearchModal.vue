@@ -21,11 +21,11 @@
       </div>
       <div class="col-md-3">
         <label class="form-label">Date From</label>
-        <input v-model="form.dateFrom" type="date" class="form-control" />
+        <AdvancedDatePicker v-model="form.dateFrom" date-only placeholder="Select date" />
       </div>
       <div class="col-md-3">
         <label class="form-label">Date To</label>
-        <input v-model="form.dateTo" type="date" class="form-control" />
+        <AdvancedDatePicker v-model="form.dateTo" date-only placeholder="Select date" />
       </div>
     </div>
     <div class="d-flex justify-content-end gap-2 mt-3">
@@ -37,6 +37,7 @@
 
 <script setup>
 import { reactive, watch } from 'vue'
+import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 
 const props = defineProps({
   initialSearch: { type: String, default: '' },

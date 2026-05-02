@@ -676,10 +676,11 @@ const budgetDropdownPanelRef = ref(null)
 const budgetDropdownStyle = ref({})
 const selectedLeadFieldIds = ref(['lead_name','first_name',  'created_on', 'assigned_on', 'work_phone', 'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 'team','stage','quality_status', 'interaction_result'])
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
-const teamOptions = ref([{ value: null, text: 'Select Team' }])
 const officeOptions = ref([{ value: null, text: 'Select Office' }])
 const allResponsiblePersons = ref([])
 const allTeams = ref([])
+/** Avoid team watcher re-fetch when responsible selection sets team + branch */
+const syncingFromResponsible = ref(false)
 const selectedOffice = ref(null)
 const selectedPillType = ref(null)
 const validationErrors = ref({})
@@ -717,6 +718,29 @@ const normalizeOfficeSelection = (value) => {
     return [...new Set(normalized)]
 }
 
+/** Branch office id for a team row (API may send office_id or admin_parent_id). */
+function teamBranchId(team) {
+    if (!team) return null
+    return normalizeOfficeId(team.office_id ?? team.admin_parent_id ?? null)
+}
+
+function pruneTeamAndResponsible() {
+    const teamOpts = computedTeamOptions.value.filter((o) => o.value != null)
+    if (
+        form.value.team &&
+        !teamOpts.some((o) => Number(o.value) === Number(form.value.team))
+    ) {
+        form.value.team = ''
+    }
+    const personOpts = personOptions.value.filter((o) => o.value != null)
+    if (
+        form.value.responsible &&
+        !personOpts.some((o) => Number(o.value) === Number(form.value.responsible))
+    ) {
+        form.value.responsible = ''
+    }
+}
+
 // Helper functions for branch selection
 const isBranchSelected = (branchValue) => {
     if (!form.value.office) return false
@@ -736,32 +760,24 @@ const isCitySelected = (cityId) => {
     return cityPill.children.some(child => selected.includes(normalizeOfficeId(child.value)))
 }
 
-// Handle office change to update filters
+// Handle office / branch change — refresh API lists, then drop team/responsible if incompatible
 const handleOfficeChange = async (newOffice) => {
     console.log('Office changed to:', newOffice)
     const normalizedOffices = normalizeOfficeSelection(newOffice)
     form.value.office = normalizedOffices
-    
-    // Update selectedOffice for filtering
+
     if (normalizedOffices.length) {
         selectedOffice.value = [...normalizedOffices]
     } else {
         selectedOffice.value = null
     }
-    
-    // Clear responsible and team when office changes
-    if (form.value.responsible) {
-        form.value.responsible = ''
-    }
-    if (form.value.team) {
-        form.value.team = ''
-    }
-    
-    // Fetch filtered data based on selected offices
+
     await Promise.all([
         fetchResponsiblePersonsWithFilter(),
         fetchTeamsWithFilter()
     ])
+    await nextTick()
+    pruneTeamAndResponsible()
 }
 
 watch(() => props.modelValue, (val) => {
@@ -898,6 +914,10 @@ function syncFormFromQuery(query) {
     normalizeSourceWebsiteForm(next)
     next.budgetFrom = formatBudgetWithCommas(next.budgetFrom)
     next.budgetTo = formatBudgetWithCommas(next.budgetTo)
+    if (next.team !== '' && next.team != null && next.team !== undefined) {
+        const tn = Number(next.team)
+        if (!Number.isNaN(tn)) next.team = tn
+    }
     form.value = next
 }
 
@@ -1047,8 +1067,20 @@ const DEFAULT_RESPONSIBLE_AVATAR =
 
 const personOptions = computed(() => {
     const opts = [{ value: null, text: 'Select Person' }]
+    let filteredPersons = [...allResponsiblePersons.value]
 
-    const filteredPersons = [...allResponsiblePersons.value]
+    if (form.value.team) {
+        const tid = Number(form.value.team)
+        filteredPersons = filteredPersons.filter((p) => Number(p.team_id) === tid)
+    }
+
+    const officeSel = normalizeOfficeSelection(form.value.office || [])
+    if (officeSel.length) {
+        filteredPersons = filteredPersons.filter((p) => {
+            const bid = normalizeOfficeId(p.branch_id)
+            return bid != null && officeSel.includes(bid)
+        })
+    }
 
     filteredPersons.forEach((p) => {
         opts.push({
@@ -1066,13 +1098,76 @@ const personOptions = computed(() => {
 
 const computedTeamOptions = computed(() => {
     const opts = [{ value: null, text: 'Select Team' }]
-    
-    let filteredTeams = [...allTeams.value]
-    
-    filteredTeams.forEach(team => {
-        opts.push({ value: team.id, text: team.name })
+    let filteredTeams = allTeams.value.filter((t) => t && t.id != null)
+
+    const officeSel = normalizeOfficeSelection(form.value.office || [])
+    if (officeSel.length) {
+        filteredTeams = filteredTeams.filter((team) => {
+            const bid = teamBranchId(team)
+            return bid != null && officeSel.includes(bid)
+        })
+    }
+
+    const selectedId =
+        form.value.team !== null &&
+        form.value.team !== undefined &&
+        form.value.team !== ''
+            ? Number(form.value.team)
+            : null
+    if (
+        selectedId &&
+        !Number.isNaN(selectedId) &&
+        !filteredTeams.some((t) => Number(t.id) === selectedId)
+    ) {
+        const missing = allTeams.value.find((t) => Number(t.id) === selectedId)
+        if (missing) filteredTeams = [...filteredTeams, missing]
+    }
+
+    filteredTeams.forEach((team) => {
+        const id = Number(team.id)
+        opts.push({
+            value: Number.isNaN(id) ? team.id : id,
+            text: team.name || `Team ${team.id}`,
+        })
     })
-    
+
+    return opts
+})
+
+/**
+ * Branch multi-select options: `/get-offices` ids may differ from team `admin_parent_id` (User id).
+ * Merge selected branch ids with labels from offices API or team.admin_parent_name so v-select shows names.
+ */
+const branchSelectOptions = computed(() => {
+    const fromApi = (officeOptions.value || []).filter((o) => o.value != null)
+    const opts = fromApi.map((o) => ({
+        value: normalizeOfficeId(o.value),
+        text: o.text || `Office ${o.value}`,
+        raw: o.raw,
+    }))
+    const seen = new Set(opts.map((o) => String(o.value)))
+
+    const ensureOptionForBranchId = (branchId) => {
+        const nid = normalizeOfficeId(branchId)
+        if (nid == null) return
+        const key = String(nid)
+        if (seen.has(key)) return
+        seen.add(key)
+
+        let text = fromApi.find((o) => normalizeOfficeId(o.value) === nid)?.text || null
+        if (!text) {
+            const team = allTeams.value.find((t) => {
+                const bid = teamBranchId(t)
+                return bid != null && String(bid) === key
+            })
+            text = team?.admin_parent_name || null
+        }
+        if (!text) text = `Branch #${nid}`
+        opts.push({ value: nid, text })
+    }
+
+    normalizeOfficeSelection(form.value.office || []).forEach(ensureOptionForBranchId)
+
     return opts
 })
 
@@ -1489,6 +1584,7 @@ const visibleSearchFields = computed(() => {
                 f.formKey === 'createdOn' ? createdOnOptions :
                 f.formKey === 'assignedOn' ? createdOnOptions :
                 f.formKey === 'team' ? computedTeamOptions.value :
+                f.formKey === 'office' ? branchSelectOptions.value :
                 f.formKey === 'areaId' ? areaOptions.value :
                 f.formKey === 'propertyType' ? propertyTypeOptions.value :
                 f.formKey === 'purposePurchase' ? purposeOptions :
@@ -1704,7 +1800,14 @@ function getDisplayValue(field, rawValue) {
         if (field.type === 'select') {
             const opts = field.options || []
             const selectedTexts = rawValue.map(val => {
-                const opt = opts.find(o => o.value === val)
+                const opt = opts.find(
+                    (o) =>
+                        o &&
+                        (o.value === val ||
+                            (val != null &&
+                                o.value != null &&
+                                Number(o.value) === Number(val))),
+                )
                 return opt ? opt.text : String(val)
             })
             return selectedTexts.join(', ')
@@ -1715,7 +1818,14 @@ function getDisplayValue(field, rawValue) {
         const opts = field.formKey === 'responsible'
             ? personOptions.value
             : (field.formKey === 'branchSource' ? branchSourceOptions.value : (field.options || []))
-        const opt = opts.find(o => o.value === rawValue)
+        const opt = opts.find(
+            (o) =>
+                o &&
+                (o.value === rawValue ||
+                    (rawValue != null &&
+                        o.value != null &&
+                        Number(o.value) === Number(rawValue))),
+        )
         return opt ? opt.text : String(rawValue)
     }
     return String(rawValue)
@@ -2073,7 +2183,8 @@ function applySearch() {
                     field.formKey === 'responsible' ? personOptions.value : 
                     field.formKey === 'branchSource' ? branchSourceOptions.value : 
                     field.formKey === 'source' ? sourceOptions.value :
-                    field.formKey === 'team' ? teamOptions.value : 
+                    field.formKey === 'team' ? computedTeamOptions.value : 
+                    field.formKey === 'office' ? branchSelectOptions.value :
                     field.formKey === 'areaId' ? areaOptions.value : 
                     field.formKey === 'qualityStatus' ? qualityStatusOptions.value :
                     field.formKey === 'leadType' ? leadTypeOptions :
@@ -2159,16 +2270,13 @@ async function selectCityBranch(cityPill, child) {
         selectedOffice.value = null
     }
     selectedPillType.value = cityPill.id
-    
-    // Clear responsible and team
-    form.value.responsible = ''
-    form.value.team = ''
-    
-    // Fetch filtered data
+
     await Promise.all([
         fetchResponsiblePersonsWithFilter(),
         fetchTeamsWithFilter()
     ])
+    await nextTick()
+    pruneTeamAndResponsible()
 }
 
 async function fetchResponsiblePersonsWithFilter() {
@@ -2251,7 +2359,9 @@ async function fetchTeams() {
             allTeams.value = data.map(team => ({
                 id: team.id,
                 name: team.name,
-                office_id: team.office_id || null,
+                office_id: team.office_id || team.admin_parent_id || null,
+                admin_parent_id: team.admin_parent_id || null,
+                admin_parent_name: team.admin_parent_name || null,
                 city: team.city || null
             }))
         }
@@ -2282,9 +2392,10 @@ async function fetchTeamsWithFilter() {
             allTeams.value = data.map(team => ({
                 id: team.id,
                 name: team.name,
-                office_id: team.office_id || null,
+                office_id: team.office_id || team.admin_parent_id || null,
                 city: team.city || null,
-                admin_parent_id: team.admin_parent_id || null
+                admin_parent_id: team.admin_parent_id || null,
+                admin_parent_name: team.admin_parent_name || null
             }))
         } else {
             allTeams.value = []
@@ -2531,54 +2642,67 @@ const resetForm = () => {
     show.value = false
     emit('search', { query: null, activePill: null, activeFilters: [] })
 }
-// ابحث عن هذا الجزء في الكود واستبدله بالكود التالي
 watch(() => form.value.responsible, async (newResponsibleId) => {
     if (!newResponsibleId) return
-    
+
     const selectedPerson = allResponsiblePersons.value.find(p => p.id === newResponsibleId)
     if (!selectedPerson) return
-    
-    // ✅ 1. معالجة الـ Team
-    if (selectedPerson.team_id) {
-        form.value.team = selectedPerson.team_id
-        console.log('Team set to:', selectedPerson.team_id)
-    }
-    
-  
-    const branchIdFromApi = selectedPerson.branch_id || selectedPerson.office_id || selectedPerson.officeId;
-    
-    if (branchIdFromApi) {
- 
-        let branchId = branchIdFromApi;
-        
-     
-        const normalizedBranch = normalizeOfficeId(branchId);
-        
-        if (normalizedBranch !== null && normalizedBranch !== undefined) {
-            if (!Array.isArray(form.value.office)) {
-                form.value.office = [];
-            }
-            if (!form.value.office.includes(normalizedBranch)) {
-                form.value.office.push(normalizedBranch);
-                console.log('Branch added (normalized):', normalizedBranch);
-                
-                if (form.value.office.length) {
-                    selectedOffice.value = [...form.value.office];
-                }
-            }
-        } else {
-            console.warn('Branch ID is invalid and could not be normalized:', branchId);
+
+    syncingFromResponsible.value = true
+    try {
+        if (selectedPerson.team_id != null && selectedPerson.team_id !== '') {
+            form.value.team = Number(selectedPerson.team_id)
         }
-    } else {
-        console.warn('No branch_id found for selected person:', selectedPerson);
+
+        const branchIdFromApi =
+            selectedPerson.branch_id || selectedPerson.office_id || selectedPerson.officeId
+
+        if (branchIdFromApi) {
+            const normalizedBranch = normalizeOfficeId(branchIdFromApi)
+            if (normalizedBranch !== null && normalizedBranch !== undefined) {
+                form.value.office = [normalizedBranch]
+                selectedOffice.value = [normalizedBranch]
+            }
+        }
+
+        await Promise.all([
+            fetchResponsiblePersonsWithFilter(),
+            fetchTeamsWithFilter()
+        ])
+        await nextTick()
+        pruneTeamAndResponsible()
+    } finally {
+        syncingFromResponsible.value = false
     }
-    
-    await Promise.all([
-        fetchResponsiblePersonsWithFilter(),
-        fetchTeamsWithFilter()
-    ]);
-    
 }, { immediate: false })
+
+watch(
+    () => form.value.team,
+    async (teamId) => {
+        if (syncingFromResponsible.value) return
+        if (!teamId) {
+            await Promise.all([
+                fetchResponsiblePersonsWithFilter(),
+                fetchTeamsWithFilter()
+            ])
+            await nextTick()
+            pruneTeamAndResponsible()
+            return
+        }
+        const team = allTeams.value.find((t) => Number(t.id) === Number(teamId))
+        const bid = teamBranchId(team)
+        if (bid != null) {
+            form.value.office = [bid]
+            selectedOffice.value = [bid]
+        }
+        await Promise.all([
+            fetchResponsiblePersonsWithFilter(),
+            fetchTeamsWithFilter()
+        ])
+        await nextTick()
+        pruneTeamAndResponsible()
+    },
+)
 watch(officeOptions, (newOptions) => {
     if (form.value.office && form.value.office.length && newOptions.length) {
         const normalizedSelection = normalizeOfficeSelection(form.value.office)

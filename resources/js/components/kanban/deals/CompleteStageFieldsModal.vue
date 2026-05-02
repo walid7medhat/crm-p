@@ -247,11 +247,12 @@
 
                   <div class="col-md-6" v-if="hasField('buyer_dob')">
                     <label class="form-label-custom">Buyer Date Of Birth <span class="text-danger">*</span></label>
-                    <b-form-input 
-                      v-model="formData.buyer_dob" 
-                      type="date" 
+                    <AdvancedDatePicker
+                      v-model="formData.buyer_dob"
+                      date-only
+                      placeholder="Select date"
                       class="custom-input"
-                      :class="{ 'is-invalid': isFieldInvalid('buyer_dob') }"
+                      :invalid="isFieldInvalid('buyer_dob')"
                     />
                   </div>
 
@@ -337,11 +338,12 @@
                   
                   <div class="col-md-4" v-if="hasField('seller_dob')">
                     <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
-                    <b-form-input 
-                      v-model="formData.seller_dob" 
-                      type="date" 
+                    <AdvancedDatePicker
+                      v-model="formData.seller_dob"
+                      date-only
+                      placeholder="Select date"
                       class="custom-input"
-                      :class="{ 'is-invalid': isFieldInvalid('seller_dob') }"
+                      :invalid="isFieldInvalid('seller_dob')"
                     />
                   </div>
                   
@@ -690,11 +692,12 @@
                   
                   <div class="col-md-4" v-if="hasField('landlord_dob')">
                     <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
-                    <b-form-input 
-                      v-model="formData.landlord_dob" 
-                      type="date" 
+                    <AdvancedDatePicker
+                      v-model="formData.landlord_dob"
+                      date-only
+                      placeholder="Select date"
                       class="custom-input"
-                      :class="{ 'is-invalid': isFieldInvalid('landlord_dob') }"
+                      :invalid="isFieldInvalid('landlord_dob')"
                     />
                   </div>
                   
@@ -1108,6 +1111,7 @@ import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import DocumentUpload from './DocumentUpload.vue'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
+import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import api from '@/plugins/axios'
 import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
 

@@ -112,11 +112,11 @@
                 <div v-if="showDateDropdown" class="date-dropdown" @click.stop>
                     <div class="date-dropdown-row">
                         <span class="date-dropdown-label">From</span>
-                        <input type="date" class="filter-input date-inline" v-model="dateFrom" />
+                        <AdvancedDatePicker v-model="dateFrom" date-only placeholder="From" />
                     </div>
                     <div class="date-dropdown-row">
                         <span class="date-dropdown-label">To</span>
-                        <input type="date" class="filter-input date-inline" v-model="dateTo" />
+                        <AdvancedDatePicker v-model="dateTo" date-only placeholder="To" />
                     </div>
                     <button type="button" class="date-dropdown-close" @click="showDateDropdown = false">Done</button>
                 </div>
@@ -133,6 +133,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 
 const props = defineProps({
     initialSearch: {

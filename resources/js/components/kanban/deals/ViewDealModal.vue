@@ -6,61 +6,37 @@
     hide-footer
     size="xl"
     centered
-    body-class="p-0"
-    modal-class="view-deal-modal-outer"
-    content-class="view-deal-modal-content-wrap"
+    body-class="p-0 view-lead-modal"
+    dialog-class="kanban-mobile-fullscreen-modal"
+    :z-index="1040"
+    :no-enforce-focus="true"
+    :trap-focus="false"
   >
-    <div v-if="show" class="view-deal-modal-content view-deal-modal-padding deal-figma-ui">
-      <!-- Header: title + deal type dropdown + close -->
-      <div class="view-deal-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-3 flex-wrap">
-         <div class="d-flex align-items-center gap-2">
-            <template v-if="!isEditingTitle">
-              <span class="view-deal-title" @click="startEditTitle">
-                {{ deal.value?.deal_name || dealTitle }}
-              </span>
-              <iconify-icon 
-                icon="lucide:pencil" 
-                class="cursor-pointer"
-                @click="startEditTitle"
-              />
-            </template>
-
-            <template v-else>
-              <input
-                v-model="dealTitleInput"
-                class="form-control form-control-sm"
-                style="width: 500px;border:none;height: 35px;"
-                @keyup.enter="saveTitle"
-                @blur="saveTitle"
-                autofocus
-              />
-            </template>
-          </div>
-          <!-- <b-dropdown
-            class="deal-type-dropdown"
-            menu-class="deal-type-dropdown-menu"
-            toggle-class="deal-type-dropdown-toggle"
-            variant="none"
-            no-caret
-          >
-            <template #button-content>
-              <span class="deal-type-dropdown-label">{{ selectedDealTypeName }}</span>
-              <iconify-icon icon="lucide:pencil" class="deal-type-pencil-icon" aria-hidden="true" />
-              <iconify-icon icon="lucide:chevron-down" class="deal-type-dropdown-chevron"></iconify-icon>
-            </template>
-            <b-dropdown-item
-              v-for="tab in dealTypeTabs"
-              :key="tab.id"
-              :active="dealType === tab.id"
-              class="deal-type-dropdown-item"
-              @click="dealType = tab.id"
-            >
-              {{ tab.name }}
-            </b-dropdown-item>
-          </b-dropdown> -->
+    <div v-if="show" class="view-lead-modal-content p-3 pb-0">
+      <!-- Header — same structure as ViewLeadModal -->
+      <div class="modal-header-custom d-flex justify-content-between align-items-center px-1">
+        <div class="d-flex align-items-center gap-3 min-w-0">
+          <template v-if="!isEditingTitle">
+            <span class="modal-title view-deal-title-truncate" @click="startEditTitle">
+              {{ deal.value?.deal_name || dealTitle }}
+            </span>
+            <iconify-icon
+              icon="lucide:pencil"
+              class="cursor-pointer deal-title-pencil flex-shrink-0"
+              @click="startEditTitle"
+            />
+          </template>
+          <template v-else>
+            <input
+              v-model="dealTitleInput"
+              class="form-control form-control-sm view-deal-title-input"
+              @keyup.enter="saveTitle"
+              @blur="saveTitle"
+              autofocus
+            />
+          </template>
         </div>
-        <button class="close-btn" @click="close" type="button">
+        <button class="close-btn" type="button" aria-label="Close" @click="close">
           <iconify-icon icon="lucide:x"></iconify-icon>
         </button>
       </div>
@@ -94,8 +70,8 @@
         </div>
       </div>
 
-      <!-- Tabs: General | History (orange underline for active) -->
-      <div class="tabs-container border-bottom">
+      <!-- Tabs — same classes as ViewLeadModal -->
+      <div class="tabs-container mb- border-bottom">
         <div class="d-flex gap-4">
           <button
             class="tab-item"
@@ -114,11 +90,11 @@
         </div>
       </div>
 
-      <!-- Main content -->
-      <div class="modal-body-custom view-deal-body-padding">
+      <!-- Main content — same padding as ViewLeadModal (p-4) -->
+      <div class="modal-body-custom p-4">
         <!-- General tab: two columns like Lead -->
         <template v-if="activeTab === 'general'">
-          <div class="row g-4">
+          <div class="row g-3 g-lg-4">
             <!-- Left column: Deal Information (with edit icon) or full-width edit form -->
             <div class="col-md-6">
               <div class="info-card bg-white p-3 radius-12 shadow-sm">
@@ -126,6 +102,7 @@
                     <ViewPrimaryDeal
                       :deal="deal"
                       :show-responsible-section="false"
+                      :hide-inline-edit-actions="isEditingDeal"
                       :active-edit-section="activeEditSection"
                       :inline-edit-data="editFormData"
                       :inline-edit-lookup="editLookup"
@@ -148,6 +125,7 @@
                     <ViewSecondaryDeal
                       :deal="deal"
                       :show-responsible-section="false"
+                      :hide-inline-edit-actions="isEditingDeal"
                       :active-edit-section="activeEditSection"
                       :inline-edit-data="editFormData"
                       :inline-edit-lookup="editLookup"
@@ -170,6 +148,7 @@
                     <ViewRentalDeal
                       :deal="deal"
                       :show-responsible-section="false"
+                      :hide-inline-edit-actions="isEditingDeal"
                       :active-edit-section="activeEditSection"
                       :inline-edit-data="editFormData"
                       :inline-edit-lookup="editLookup"
@@ -197,6 +176,12 @@
                 v-if="deal?.id"
                 :deal="deal"
                 @person-updated="handlePersonUpdated"
+              />
+              <DealLeadInformationSection
+                v-if="deal?.id && linkedLeadId"
+                :lead-id="linkedLeadId"
+                :lead="deal.lead"
+                @view-more="showLinkedLeadModal = true"
               />
               <div class="activity-card bg-white p-3 radius-12 shadow-sm">
                 <div class="d-flex gap-2 mb-4 w-fit-content toggle-buttons-container">
@@ -253,9 +238,37 @@
             :is-active="show && activeTab === 'history'"
           />
         </div>
+
+        <template v-if="isEditingDeal">
+          <div class="edit-lead-bar-spacer"></div>
+        </template>
+      </div>
+
+      <!-- Same fixed Save/Cancel bar as ViewLeadModal GeneralTab when editing -->
+      <div v-if="isEditingDeal" class="edit-lead-bottom-bar">
+        <button type="button" class="edit-bar-btn edit-bar-cancel" @click="cancelEditDeal">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="edit-bar-btn edit-bar-save"
+          :disabled="editSaving"
+          @click="saveEditDeal"
+        >
+          <span v-if="editSaving">Saving...</span>
+          <span v-else>Save</span>
+        </button>
       </div>
     </div>
   </b-modal>
+
+  <ViewLeadModal
+    v-if="linkedLeadId"
+    v-model="showLinkedLeadModal"
+    :lead-id="linkedLeadId"
+    :z-index="2100"
+    @lead-updated="handleLinkedLeadUpdated"
+  />
 </template>
 
 <script setup>
@@ -271,6 +284,8 @@ import DealCommentsSection from './DealCommentsSection.vue'
 import DealActivityList from './DealActivityList.vue'
 import DealCommentList from './DealCommentList.vue'
 import ResponsiblePersonSection from './ResponsiblePersonSection.vue'
+import DealLeadInformationSection from './DealLeadInformationSection.vue'
+import ViewLeadModal from '../viewLead/ViewLeadModal.vue'
 import axios from '@/plugins/axios'
 import { useStageTransition } from '@/composables/useStageTransition'
 import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
@@ -321,6 +336,15 @@ const dealTitle = computed(() => {
 
 const dealEntityId = computed(() => deal.value?.id ?? null)
 
+/** Present when deal was converted from a lead (API `lead_id` or nested `lead.id`). */
+const linkedLeadId = computed(() => {
+  const d = deal.value
+  if (!d) return null
+  const raw = d.lead_id ?? d.lead?.id
+  if (raw === null || raw === undefined || raw === '') return null
+  return raw
+})
+
 const selectedDealTypeName = computed(() => {
   const tab = dealTypeTabs.find(t => t.id === dealType.value)
   return tab ? tab.name : 'Primary / Off Plan'
@@ -347,6 +371,12 @@ function handlePersonUpdated(updatedPerson) {
       ...(updatedPerson || {}),
     },
   })
+}
+
+const showLinkedLeadModal = ref(false)
+
+function handleLinkedLeadUpdated() {
+  hydrateDealForView()
 }
 
 const dealTypeTabs = [
@@ -755,7 +785,20 @@ async function saveEditDeal() {
         }
       }
     }
-    emit('deal-updated', updated)
+    // View mode reads from hydratedDeal first; without a refetch it stays stale after save
+    // (e.g. buyer name in parties) while the edit form reloads fresh data on next open.
+    await hydrateDealForView()
+    if (hydratedDeal.value && selectedResponsibleId) {
+      hydratedDeal.value.responsible_person_id = selectedResponsibleId
+      if (selectedResponsible) {
+        hydratedDeal.value.responsible_person = {
+          id: selectedResponsible.id,
+          name: selectedResponsible.name,
+          avatar: selectedResponsible.avatar || selectedResponsible.profile_image || null,
+        }
+      }
+    }
+    emit('deal-updated', hydratedDeal.value ?? updated)
     isEditingDeal.value = false
     activeEditSection.value = null
   } catch (err) {
@@ -847,6 +890,7 @@ watch(() => deal.value, (val) => {
 watch(show, (val) => {
   if (val && props.deal) selectedStageIndex.value = currentStageIndex.value
   if (!val) {
+    showLinkedLeadModal.value = false
     hydratedDeal.value = null
     editHydrationRequestId.value = 0
     isEditingDeal.value = false
@@ -864,93 +908,110 @@ function close() {
 </script>
 
 <style>
-/* Global: modal large, 12px radius, like image */
-#view-deal-modal .modal-dialog {
-  max-width: min(1200px, 95vw) !important;
-  width: min(1200px, 95vw) !important;
-  max-height: 92vh !important;
-  margin: 2vh auto !important;
+/* Mirrors ViewLeadModal non-scoped modal shell — fluid width for all viewports */
+.modal#view-deal-modal .modal-dialog {
+  max-width: min(1200px, calc(100vw - 24px)) !important;
+  width: min(1200px, calc(100vw - 24px)) !important;
+  max-height: min(98vh, 100dvh) !important;
+  margin: 1vh auto !important;
 }
+
 #view-deal-modal .modal-content {
-  max-height: 98vh !important;
-  border-radius: 12px !important;
   overflow: visible !important;
   border: 1px solid #e5e7eb !important;
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08) !important;
+  max-height: min(98vh, 100dvh) !important;
 }
-#view-deal-modal .modal-body {
-  overflow: hidden !important;
-  height: 100%;
+
+.view-lead-modal {
+  padding: 0 !important;
+  height: min(98vh, 100dvh);
+  max-height: 100vh;
   display: flex;
   flex-direction: column;
-    padding: 12px;
-    background-color: #fff;
-    border-radius: 12px;
+}
+
+@media (max-width: 768px) {
+  .modal#view-deal-modal .modal-dialog {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    min-height: 100dvh;
+  }
+
+  .view-lead-modal {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 100dvh;
+  }
 }
 </style>
 
 <style scoped>
-:deep(.view-deal-modal-outer .modal-dialog) {
-  max-width: min(1200px, 95vw) !important;
-  width: min(1200px, 95vw) !important;
-  max-height: 92vh !important;
+/* Mirror ViewLeadModal shell — shared class names: view-lead-modal, view-lead-modal-content */
+.view-lead-modal {
+  z-index: 1000 !important;
 }
-:deep(.view-deal-modal-outer .modal-content.view-deal-modal-content-wrap),
-:deep(#view-deal-modal .modal-content) {
-  max-height: 92vh !important;
-  border-radius: 12px !important;
-  overflow: visible !important;
-  border: 1px solid #e5e7eb !important;
-  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08) !important;
-}
-:deep(.view-deal-modal-outer .modal-body) {
-  overflow: hidden !important;
-}
-:deep(.view-deal-modal-outer .modal-content.view-deal-modal-content-wrap),
-:deep(#view-deal-modal .modal-content) {
-  overflow: visible !important;
+
+.view-lead-modal-content {
+  background: #fff;
+  border-radius: 16px;
+  overflow: visible;
+  font-family: 'Montserrat', sans-serif;
   position: relative;
-}
-.view-deal-modal-content {
-  /* background: #fff; */
   display: flex;
   flex-direction: column;
-  min-height: 100%;
   height: 100%;
-  overflow: hidden;
   max-width: 100%;
-  font-family: 'Montserrat', sans-serif;
   --deal-font: 'Montserrat', sans-serif;
-      background: #fff;
-    border-radius: 16px;
 }
 
-.view-deal-modal-padding {
-  padding: 1rem !important; /* match ViewLeadModal p-3 */
+.modal-header-custom,
+.deal-progress-wrapper,
+.tabs-container {
+  flex-shrink: 0;
 }
 
-/* Header (match View Lead) */
 .modal-header-custom {
   background: #fff;
-}
-
-.view-deal-body-padding {
-  padding: 1.5rem !important; /* match ViewLeadModal p-4 */
-}
-
-/* Header: title 18px + deal type tag pill + close */
-.view-deal-header {
-  padding: 0 0.25rem;
-  border-bottom: none;
   position: relative;
-  /* background: #fff; */
 }
-.view-deal-title {
-  font-size: 14px;
+
+.modal-title {
+  font-size: clamp(14px, 2.8vw, 16px);
   font-weight: 600;
-  color: var(--deal-navy-deep, #01062c);
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  color: #01062c;
+}
+
+.view-deal-title-truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.view-deal-title-input {
+  width: min(500px, 100%);
+  max-width: 100%;
+  border: none !important;
+  height: 35px;
+}
+
+.deal-title-pencil {
+  color: #64748b;
+}
+
+.settings-btn,
+.close-btn,
+.notification-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 .deal-type-tag-pill {
   display: inline-flex;
@@ -1012,6 +1073,9 @@ function close() {
 /* Stage progress (match Create Deal modal) */
 .deal-progress-wrapper {
   overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
   scrollbar-width: none;
   padding: 0.75rem 0.75rem 0;
   border-bottom: 1px solid #f1f5f9;
@@ -1075,17 +1139,29 @@ function close() {
     font-weight: 400;
 }
 
-@media (max-width: 768px) {
- .deal-stage-pill {
-        min-width: 104px;
-        max-width: 138px;
-        padding: 1px 8px;
-    }
+@media (max-width: 991.98px) {
+  .deal-stage-pill {
+    min-width: 96px;
+    max-width: min(138px, 28vw);
+    padding: 1px 6px;
+  }
 
-    .stage-text {
-        font-size: 11px;
-        font-weight: 500;
-    }
+  .stage-text {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .deal-stage-pill {
+    min-width: 104px;
+    max-width: 138px;
+    padding: 1px 8px;
+  }
+
+  .stage-text {
+    font-size: 11px;
+    font-weight: 500;
+  }
 }
 /* Tabs: General | History (orange underline when active) */
 .tabs-container {
@@ -1110,7 +1186,6 @@ function close() {
 }
 .tab-item.active {
   color: #01062c;
-  font-weight: 600;
 }
 .tab-item.active::after {
   content: '';
@@ -1343,9 +1418,10 @@ function close() {
 }
 
 .modal-body-custom {
-  flex: 1 1 auto;
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .form-scroll-area {
@@ -1430,10 +1506,11 @@ function close() {
 :deep(.activity-input-section .btn-save) {
   background: #02014f;
 }
+/* Close pill — matches ViewLeadModal / compiled selector values */
 .close-btn {
   position: absolute;
-  top: -6px;
-  right: -80px;
+  top: 2px;
+  right: -61px;
   width: 83px;
   height: 49px;
   border: 1px solid #4fa5f7;
@@ -1442,26 +1519,151 @@ function close() {
   color: #ffffff;
   font-size: 18px;
   line-height: 1;
-  padding: 0;
+  padding: 0 14px 0 18px;
   box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2);
   z-index: -1;
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
   transition: filter 0.2s ease;
+}
+
+.close-btn iconify-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .close-btn:hover {
   filter: brightness(0.96);
 }
 
-:deep(.view-deal-modal-outer .modal-content) {
+/* Match GeneralTab.vue — spacer + fixed Save/Cancel while editing deal */
+.edit-lead-bar-spacer {
+  height: 56px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.edit-lead-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 1rem;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  z-index: 1050;
+}
+
+.edit-bar-btn {
+  padding: 8px 20px;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.edit-bar-cancel {
+  background: #f4f4f4;
+  color: #01062c;
+}
+
+.edit-bar-cancel:hover {
+  background: #e2e8f0;
+}
+
+.edit-bar-save {
+  background: #01062c;
+  color: #fff;
+}
+
+.edit-bar-save:hover:not(:disabled) {
+  background: #060a2b;
+}
+
+.edit-bar-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ≤992px: floating pill clips off-screen — keep close in header row (all tablets / small laptops) */
+@media (max-width: 991.98px) {
+  .close-btn {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: auto;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 16px;
+    justify-content: flex-end;
+    margin-left: auto;
+    flex-shrink: 0;
+    z-index: 2;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18);
+  }
+
+  .modal-header-custom {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .view-lead-modal-content {
+    padding-left: clamp(10px, 3vw, 1rem) !important;
+    padding-right: clamp(10px, 3vw, 1rem) !important;
+  }
+
+  :deep(#view-deal-modal .modal-content) {
+    height: auto !important;
+    max-height: min(92vh, 100dvh) !important;
+  }
+
+  :deep(#view-deal-modal .modal-body.view-lead-modal) {
+    height: auto !important;
+    max-height: min(98vh, 100dvh) !important;
+    min-height: min(98vh, 100dvh);
+  }
+
+  .tabs-container .d-flex {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 1rem !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tabs-container .d-flex::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Allow close pill (right: -61px) to paint outside — same idea as ViewLeadModal */
+:deep(.kanban-mobile-fullscreen-modal .modal-content),
+:deep(.kanban-mobile-fullscreen-modal .modal-body),
+.modal-body-custom {
+  overflow-x: hidden !important;
+}
+
+:deep(.kanban-mobile-fullscreen-modal .modal-content) {
+  overflow: visible !important;
+}
+
+:deep(#view-deal-modal .modal-content) {
+  height: 92vh;
+  max-height: 92vh;
+  border-radius: 16px;
   position: relative;
-  z-index: 2;
-    display: flex;
-  flex-direction: column;
-  max-height: 96vh !important;
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 .modal-body-custom::-webkit-scrollbar {
     width: 6px;
@@ -1481,4 +1683,85 @@ function close() {
     background: #94A3B8;
 }
 
+/* Same as ViewLeadModal :deep(.view-lead-modal) — scroll lives in .modal-body-custom */
+:deep(#view-deal-modal .modal-body.view-lead-modal) {
+  padding: 0 !important;
+  height: min(98vh, 100dvh);
+  max-height: min(98vh, 100dvh);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  :deep(#view-deal-modal .modal-body.view-lead-modal),
+  :deep(#view-deal-modal .modal-content) {
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .view-lead-modal-content {
+    height: 100dvh;
+    border-radius: 0 !important;
+    padding: 10px !important;
+    display: flex;
+    flex-direction: column;
+    background: #f8fbff;
+  }
+
+  .modal-body-custom {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 8px 4px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .modal-header-custom,
+  .deal-progress-wrapper,
+  .tabs-container {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #eef2f7;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .tabs-container {
+    margin-top: 8px;
+  }
+
+  /* Same as ViewLeadModal: inline close on small screens */
+  .close-btn {
+    position: static;
+    transform: none;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    left: auto;
+    top: auto;
+    right: auto;
+    margin-left: auto;
+    padding: 0;
+    justify-content: center;
+    box-shadow: none;
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+    color: #64748b;
+    flex-shrink: 0;
+  }
+
+  .close-btn iconify-icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  .modal-header-custom {
+    align-items: flex-start;
+  }
+}
+
 </style>
+

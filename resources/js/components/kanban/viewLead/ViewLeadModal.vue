@@ -7,7 +7,7 @@
         size="xl"
         centered
         body-class="p-0 view-lead-modal"
-        :z-index="1040"
+        :z-index="zIndex"
         :no-enforce-focus="true"
         :trap-focus="false"
         dialog-class="kanban-mobile-fullscreen-modal"
@@ -105,8 +105,13 @@ import api from '@/plugins/axios'
 const props = defineProps({
     modelValue: Boolean,
     leadId: {
-        type: Number,
+        type: [Number, String],
         default: null
+    },
+    /** Use a higher value when opening on top of another modal (e.g. view deal). */
+    zIndex: {
+        type: Number,
+        default: 1040
     }
 })
 
@@ -714,8 +719,8 @@ const $showNotification = (message, type = 'info') => {
 .close-btn {
     position: absolute;
     top: 8px;
-    right: -61px;
-    width: 83px;
+    right: -48px;
+    width: 64px;
     height: 49px;
     border: 1px solid #4fa5f7;
     border-radius: 999px;

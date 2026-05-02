@@ -536,9 +536,10 @@
                                         <!-- Available Date (Stage 5) -->
                                         <div v-if="shouldShowField('available_date')" class="col-md-4">
                                             <label class="form-label-custom">Available Date</label>
-                                            <b-form-input 
-                                                v-model="form.available_date" 
-                                                type="date" 
+                                            <AdvancedDatePicker
+                                                v-model="form.available_date"
+                                                date-only
+                                                placeholder="Select date"
                                                 class="custom-input"
                                             />
                                         </div>
@@ -650,6 +651,7 @@
     import ModalHeader from '../shared/ModalHeader.vue'
     import StageSelector from '../shared/StageSelector.vue'
     import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
+    import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
     import { formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
     
     const props = defineProps({

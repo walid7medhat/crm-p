@@ -205,7 +205,28 @@ import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import SettingsHub from './settings/SettingsHub.vue'
 import { useRoute } from 'vue-router'
-const activeTab = ref('leads')
+
+const KANBAN_ACTIVE_TAB_KEY = 'kanban_active_tab'
+
+function readStoredKanbanTab() {
+    try {
+        const v = localStorage.getItem(KANBAN_ACTIVE_TAB_KEY)
+        if (['deals', 'leads', 'lead-pool', 'integration'].includes(v)) return v
+    } catch {
+        /* ignore */
+    }
+    return null
+}
+
+function persistKanbanTab(tabId) {
+    try {
+        localStorage.setItem(KANBAN_ACTIVE_TAB_KEY, tabId)
+    } catch {
+        /* ignore */
+    }
+}
+
+const activeTab = ref(readStoredKanbanTab() ?? 'leads')
 const showSearchModal = ref(false)
 const showSelectedFiltersModal = ref(false)
 const showSettingsHub = ref(false)
@@ -230,6 +251,10 @@ const syncActiveTabWithRoute = () => {
         activeTab.value = 'deals'
     }
 }
+
+watch(activeTab, (id) => {
+    persistKanbanTab(id)
+})
 
 function updateKanbanMobileBreakpoint() {
     kanbanIsMobile.value = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
@@ -390,6 +415,9 @@ function onDocumentClick(e) {
 }
 
 onMounted(() => {
+    if (activeTab.value === 'integration' && !isSuperAdmin.value) {
+        activeTab.value = 'leads'
+    }
     syncActiveTabWithRoute()
     updateKanbanMobileBreakpoint()
     window.addEventListener('resize', updateKanbanMobileBreakpoint)

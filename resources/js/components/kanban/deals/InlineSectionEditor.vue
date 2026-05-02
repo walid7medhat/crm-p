@@ -20,7 +20,7 @@
         @search-subcommunities="$emit('search-subcommunities', $event)"
         @search-projects="$emit('search-projects', $event)"
       />
-      <div class="edit-deal-actions mt-3 pt-3 border-top">
+      <div v-if="!hideFooterActions" class="edit-deal-actions mt-3 pt-3 border-top">
         <button type="button" class="btn-history-cancel me-2" @click="$emit('cancel')">Cancel</button>
         <button type="button" class="btn-save-deal-view" :disabled="saving" @click="$emit('save')">
           <span v-if="saving">Saving...</span>
@@ -46,6 +46,8 @@ const props = defineProps({
   fieldErrors: { type: Object, default: () => ({}) },
   saving: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
+  /** When true, Save/Cancel are shown elsewhere (e.g. modal fixed bottom bar). */
+  hideFooterActions: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue', 'search-areas', 'search-subcommunities', 'search-projects', 'cancel', 'save'])

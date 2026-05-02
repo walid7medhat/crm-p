@@ -450,9 +450,10 @@
                 <!-- Available Date (for Future stage) -->
                 <div class="info-group" v-if="shouldShowField('available_date')" >
                     <label class="form-label-custom">Available Date</label>
-                    <b-form-input 
-                        v-model="form.available_date" 
-                        type="date" 
+                    <AdvancedDatePicker
+                        v-model="form.available_date"
+                        date-only
+                        placeholder="Select date"
                         class="custom-input"
                     />
                 </div>
@@ -592,6 +593,7 @@ import { BFormInput, BFormTextarea, BDropdown } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
+import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import { formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
 
 const props = defineProps({

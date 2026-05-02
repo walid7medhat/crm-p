@@ -125,6 +125,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import DateTimePicker from '../shared/DateTimePicker.vue'
 import api from '@/plugins/axios'
+import { formatReminderStyle } from '@/composables/useAdvancedDateModel'
 
 const props = defineProps({
     dealId: {
@@ -156,41 +157,13 @@ const reminderOptions = [
     { label: '1 day before', value: '1440' },
 ]
 
-const formattedDateTime = computed(() => {
-    const date = selectedDateTime.value
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-
-    const dayName = days[date.getDay()]
-    const monthName = months[date.getMonth()]
-    const day = date.getDate()
-    const hours = date.getHours()
-    const minutes = date.getMinutes()
-    const ampm = hours >= 12 ? 'pm' : 'am'
-    const displayHours = hours % 12 || 12
-    const displayMinutes = minutes < 10 ? `0${minutes}` : minutes
-
-    return `${dayName}, ${monthName} ${day}, ${displayHours}:${displayMinutes} ${ampm}`
-})
+const formattedDateTime = computed(() => formatReminderStyle(selectedDateTime.value))
 
 const formattedCustomDate = computed(() => {
     if (!reminderDate.value) {
         return formattedDateTime.value
     }
-    const date = new Date(reminderDate.value)
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-
-    const dayName = days[date.getDay()]
-    const monthName = months[date.getMonth()]
-    const day = date.getDate()
-    const hours = date.getHours()
-    const minutes = date.getMinutes()
-    const ampm = hours >= 12 ? 'pm' : 'am'
-    const displayHours = hours % 12 || 12
-    const displayMinutes = minutes < 10 ? `0${minutes}` : minutes
-
-    return `${dayName}, ${monthName} ${day}, ${displayHours}:${displayMinutes} ${ampm}`
+    return formatReminderStyle(reminderDate.value)
 })
 
 const selectReminderOption = (value) => {

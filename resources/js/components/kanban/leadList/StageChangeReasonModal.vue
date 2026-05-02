@@ -300,7 +300,11 @@
                             <!-- Available Date -->
                             <div v-if="missingFields.includes('available_date')" class="form-group mb-3">
                                 <label class="form-label">Available Date</label>
-                                <input type="date" v-model="formData.available_date" class="form-control">
+                                <AdvancedDatePicker
+                                    v-model="formData.available_date"
+                                    date-only
+                                    placeholder="Select date"
+                                />
                             </div>
 
                             <!-- Branch -->
@@ -575,6 +579,7 @@ import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
 import DateTimePicker from '../shared/DateTimePicker.vue'
+import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import { formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
 
 const props = defineProps({

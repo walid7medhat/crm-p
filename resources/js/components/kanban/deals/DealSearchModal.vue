@@ -114,7 +114,7 @@
               </div>
               <div v-if="fieldSettings.buyer_date_of_birth" class="col-md-6">
                 <label class="form-label-custom">Date Of Birth</label>
-                <b-form-input v-model="form.buyer_dob" type="date" class="custom-input" />
+                <AdvancedDatePicker v-model="form.buyer_dob" date-only placeholder="Select date" class="custom-input" />
               </div>
               <div v-if="fieldSettings.buyer_email" class="col-md-6">
                 <label class="form-label-custom">Email</label>
@@ -235,7 +235,7 @@
               
                 </v-select>
               </div>
-              <!-- <div v-if="fieldSettings.property_project_name" class="col-md-6">
+              <div v-if="fieldSettings.property_project_name" class="col-md-6">
                 <label class="form-label-custom">Project Name</label>
                 <v-select
                   v-model="form.project_id"
@@ -256,8 +256,8 @@
                       </span>
                   </template>
               </v-select>
-              </div> -->
-              <div v-if="fieldSettings.property_developer" class="col-md-6">
+              </div>
+              <!-- <div v-if="fieldSettings.property_developer" class="col-md-6">
                 <label class="form-label-custom">Developer</label>
                 <v-select
                   v-model="form.developer_id"
@@ -276,9 +276,9 @@
                       </span>
                   </template>
               </v-select>
-              </div>
+              </div> -->
               <div v-if="fieldSettings.property_area" class="col-md-6">
-                <label class="form-label-custom">Property Address</label>
+                <label class="form-label-custom">Area</label>
                 <v-select
                   v-model="form.area_id"
                   :options="areas"
@@ -409,7 +409,7 @@
                 <label class="form-label-custom">Created By</label>
                 <v-select
                   v-model="form.created_by_date"
-                  :options="datePresetOptions"
+                  :options="createdByDatePresetOptions"
                   :reduce="opt => opt.value"
                   label="text"
                   class="custom-v-select deal-select-placeholder"
@@ -418,6 +418,7 @@
                   :searchable="true"
                   :clearable="true"
                   append-to-body
+                  @option:selected="onCreatedByDatePresetSelected"
                 >
                <template #open-indicator="{ attributes }">
                       <span v-bind="attributes">
@@ -452,6 +453,16 @@
     :defaults="defaultFieldSettings"
     @apply="applyFieldSettings"
   />
+
+  <!-- Custom “Date Created” calendar (last option: Custom Date) -->
+  <DateTimePicker
+    :show="showCreatedByDatePicker"
+    :model-value="createdByPickerDate"
+    date-only
+    @update:show="showCreatedByDatePicker = $event"
+    @apply="onCreatedByCustomDateApply"
+    @cancel="onCreatedByCustomDateCancel"
+  />
 </template>
 
 <script setup>
@@ -461,6 +472,13 @@ import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
 import DealFilterFieldSettingsModal from './DealFilterFieldSettingsModal.vue'
+import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
+import DateTimePicker from '../shared/DateTimePicker.vue'
+import {
+  parseToDate,
+  toDateOnlyApiString,
+  formatDateOnlyLong,
+} from '@/composables/useAdvancedDateModel'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -506,7 +524,7 @@ const defaultFieldSettings = {
   property_unit_no: true,
   property_type: true,
   property_bedrooms: false,
-  // property_project_name: true,
+  property_project_name: true,
   property_developer: false,
   property_area: false,
   property_sub_community: false,
@@ -592,12 +610,12 @@ const fieldSettingsSections = [
     tab: 'deals',
     label: 'Property Details',
     fields: [
-      { id: 'property_area', label: 'Property Address' },
       { id: 'property_unit_no', label: 'Unit No' },
       { id: 'property_type', label: 'Property Type' },
       { id: 'property_bedrooms', label: 'Bedrooms' },
-      // { id: 'property_project_name', label: 'Project Name' },
+      { id: 'property_project_name', label: 'Project Name' },
       { id: 'property_developer', label: 'Developer' },
+      { id: 'property_area', label: 'Area' },
       { id: 'property_sub_community', label: 'Sub Community' },
       { id: 'property_unit_size', label: 'Unit Size' },
     ],
@@ -644,7 +662,7 @@ const form = ref({
   property_type_id: null,
   bedrooms: null,
   project_id: null,
-  developer_id: null,
+  // developer_id: null,
   area_id: null,
   subcommunity_id: null,
   unit_size: '',
@@ -666,9 +684,11 @@ const nationalityOptions = [
 ]
 
 const residencyOptions = [
+  { value: 'citizen', text: 'Citizen' },
   { value: 'resident', text: 'Resident' },
-  { value: 'non_resident', text: 'Non Resident' },
-
+  { value: 'investor', text: 'Investor' },
+  { value: 'tourist', text: 'Tourist' },
+  { value: 'other', text: 'Other' },
 ]
 
 const countryOptions = [
@@ -721,6 +741,20 @@ const datePresetOptions = [
   { text: 'Last Week', value: 'last_week' },
   { text: 'Last Month', value: 'last_month' },
 ]
+
+/** “Date Created” presets + Custom Date (opens calendar modal). Label updates when a day is chosen. */
+const createdByCustomYmd = ref('')
+const showCreatedByDatePicker = ref(false)
+const createdByPickerDate = ref(new Date())
+
+const createdByDatePresetOptions = computed(() => {
+  let customText = 'Custom Date'
+  if (createdByCustomYmd.value && form.value.created_by_date === 'custom') {
+    const pretty = formatDateOnlyLong(createdByCustomYmd.value, '')
+    customText = pretty ? `Custom (${pretty})` : 'Custom Date'
+  }
+  return [...datePresetOptions, { text: customText, value: 'custom' }]
+})
 
 // Search functions for dynamic data
 const searchProjects = async (search) => {
@@ -780,7 +814,30 @@ const fetchStages = async () => {
   }
 }
 
+function onCreatedByCustomDateApply(date) {
+  if (date instanceof Date && !Number.isNaN(date.getTime())) {
+    createdByCustomYmd.value = toDateOnlyApiString(date)
+  }
+  showCreatedByDatePicker.value = false
+}
+
+function onCreatedByCustomDateCancel() {
+  showCreatedByDatePicker.value = false
+}
+
+function onCreatedByDatePresetSelected(option) {
+  const val =
+    typeof option === 'object' && option !== null && 'value' in option
+      ? option.value
+      : option
+  if (val !== 'custom') return
+  createdByPickerDate.value = parseToDate(createdByCustomYmd.value) || new Date()
+  showCreatedByDatePicker.value = true
+}
+
 const resetForm = () => {
+  createdByCustomYmd.value = ''
+  showCreatedByDatePicker.value = false
   form.value = {
     deal_name: '',
     end_date: null,
@@ -895,9 +952,19 @@ const applySearch = () => {
     pushFilter('modified_by', 'Modified By', p?.text || form.value.modified_by)
   }
   if (form.value.created_by_date && form.value.created_by_date !== 'any') {
-    const range = presetRange(form.value.created_by_date)
-    if (range) Object.assign(query, range)
-    pushFilter('created_by', 'Created By', form.value.created_by_date)
+    if (form.value.created_by_date === 'custom') {
+      if (createdByCustomYmd.value) {
+        query.from_date = createdByCustomYmd.value
+        query.to_date = createdByCustomYmd.value
+        const chip =
+          formatDateOnlyLong(createdByCustomYmd.value, '') || createdByCustomYmd.value
+        pushFilter('created_by', 'Created By', chip)
+      }
+    } else {
+      const range = presetRange(form.value.created_by_date)
+      if (range) Object.assign(query, range)
+      pushFilter('created_by', 'Created By', form.value.created_by_date)
+    }
   }
 
   // Buyer fields
@@ -993,6 +1060,13 @@ watch(activePill, (val) => {
     form.value.responsible_person_id = null
   }
 })
+
+watch(
+  () => form.value.created_by_date,
+  (v) => {
+    if (v !== 'custom') createdByCustomYmd.value = ''
+  },
+)
 watch(
   () => props.currentQuery,
   (q) => {

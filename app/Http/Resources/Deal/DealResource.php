@@ -41,12 +41,15 @@ class DealResource extends JsonResource
             'property_link' => $this->property_link,
             'property_reference' => $this->property_reference,
             
-            // Relationships
+            // Relationships (lead_id always when set so kanban / modals can link without loading full lead)
+            'lead_id' => $this->lead_id,
             'lead' => $this->whenLoaded('lead', fn() => [
                 'id' => $this->lead->id,
+                'lead_name' => $this->lead->lead_name,
                 'name' => $this->lead->lead_name,
                 'email' => $this->lead->email,
-                'phone' => $this->lead->phone,
+                'phone' => $this->lead->phone ?? $this->lead->work_phone,
+                'work_phone' => $this->lead->work_phone,
             ]),
             
             'stage' => [
