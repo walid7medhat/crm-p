@@ -136,12 +136,12 @@
                 >
                   <i class="ri-check-line"></i>
                 </button>
-                <!--<button -->
-                <!--  @click="openRejectModal(listing)" -->
-                <!--  class="btn btn-sm btn-danger"-->
-                <!--  title="Reject">-->
-                <!--  <i class="ri-close-line"></i>-->
-                <!--</button>-->
+                <button 
+                  @click="openRejectModal(listing)" 
+                  class="btn btn-sm btn-danger"
+                  title="Reject">
+                  <i class="ri-close-line"></i>
+                </button>
               </div>
             </td>
           </tr>

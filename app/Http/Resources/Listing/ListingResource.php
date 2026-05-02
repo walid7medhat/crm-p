@@ -57,6 +57,10 @@ $allowedAgentIds = [];
                 ];
             }),
             'approval_status' => $this->approved ? 'approved' : 'pending',
+            'rejection_reason'=>$this->rejection_reason,
+            'rejected_by'=>$this->rejected_by,
+            'rejected_by_name'=>$this->rejectedBy?->name,
+            'rejected_at'=>$this->rejected_at,
                 'is_archived' => (bool)$this->is_archived,
             'title' => $this->area?->name,
             'status' => $this->status, // draft, published, etc.

@@ -42,7 +42,26 @@
                 </div> -->
               </div>
             </div>
-
+           <div v-if="hasRejectionReason" class="rejection-alert-container mb-4">
+              <div class="alert alert-danger rejection-alert" role="alert">
+                <div class="rejection-alert-header">
+                  <i class="ri-close-circle-fill me-2"></i>
+                  <strong>Listing Rejected</strong>
+                </div>
+                <div class="rejection-alert-body d-flex">
+                  <div class="rejection-reason-wrapper">
+                    <p class="rejection-reason-label">Reason:</p>
+                    <p class="rejection-reason-text">{{ property.rejection_reason }}</p>
+                  </div>
+                  <div class="rejection-meta" v-if="property.rejected_at">
+                    <small class="rejection-date">
+                      <i class="ri-calendar-line me-1"></i>
+                      {{ formatRejectionDate(property.rejected_at) }}
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
             <!-- Property Details Section -->
             <div class="property-content " v-if="property">
               
@@ -571,7 +590,6 @@
           </div>
         </div>
 
-         
 
             <div class="sidebar-section" v-if="isPropertyOwner ">
                 <br>
@@ -2337,6 +2355,63 @@ const confirmCancelRequest = async () => {
   }
 };
     // Computed properties
+const hasRejectionReason = computed(() => {
+  console.log('🔍 hasRejectionReason computed called');
+  console.log('  - property.value exists?', !!property.value);
+  console.log('  - rejection_reason:', property.value?.rejection_reason);
+  console.log('  - approved:', property.value?.approved);
+  
+  const hasReason = property.value?.rejection_reason && 
+                    property.value?.rejection_reason.trim() !== '' && property.value.status =='draft';
+  
+  console.log('  - Result:', hasReason);
+  return hasReason;
+});
+const rejectionDetails = computed(() => {
+  if (!hasRejectionReason.value) return null;
+  
+  return {
+    reason: property.value.rejection_reason,
+    rejected_by: property.value.rejected_by_name || property.value.rejected_by,
+    rejected_at: property.value.rejected_at,
+    rejected_by_user: property.value.rejected_by_user
+  };
+});
+
+const formatRejectionDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+    const checkAccessAndRedirect = () => {
+      if (!property.value) return false;
+    
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        return false;
+      }
+    
+      const hasAccess = 
+        isPropertyOwner.value ||         
+        canApproveListings.value ; 
+      if (!hasAccess && !property.value.approved) {
+        console.warn('Access denied for user:', currentUser?.id);
+        
+        proxy.$showNotification('You do not have permission to view this property.', 'error');
+        
+        router.push('/alllisting');
+        
+        return false;
+      }
+    
+      return true;
+    };
     const isPropertyOwner = computed(() => {
       return property.value?.is_owner || false;
     });
@@ -4103,8 +4178,8 @@ const revertFromConverted = async () => {
         
         if (response.data.status) {
           property.value = response.data.data;
-          
-          console.log('Property Data:', property.value);
+        //   console.log(response.data.data);
+        //   console.log('Property Data:', property.value);
           console.log('Area Data:', property.value.area);
           console.log('Area Hierarchy:', property.value.area?.hierarchy);
           console.log('Area Parent:', property.value.area?.parent);
@@ -4115,7 +4190,10 @@ const revertFromConverted = async () => {
           }
           
           await fetchRequestStatus();
-          
+           const hasAccess = checkAccessAndRedirect();
+              if (!hasAccess) {
+                return;
+              }
         } else {
           throw new Error(response.data.message || 'Failed to fetch property');
         }
@@ -6235,7 +6313,7 @@ const openDriveLink = () => {
     markAsRentedByOIAgent,
     openAToAModalForRent,
     submitAToAForRent,
-   
+   hasRejectionReason,formatRejectionDate ,rejectionDetails
     };
   },
 
@@ -9201,4 +9279,113 @@ margin: 0 2px;
 .option-content h6{
         font-size:20px !important;
 }
+/* Rejection Alert Styles */
+/* Rejection Alert Styles */
+.rejection-alert-container {
+  /*padding: 0 16px;*/
+  margin-bottom: 16px;
+}
+
+.rejection-alert {
+  background: #fff;
+  border-left: 4px solid #dc3545;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display:flex;
+}
+
+.rejection-alert-header {
+  font-size: 16px;
+  color: #dc3545;
+  display: inline-flex;
+  align-items: center;
+  border-right: 2px solid #ffe0e0;
+  padding-right: 16px;
+  margin-right: 16px;
+}
+
+.rejection-alert-header i {
+  font-size: 18px;
+}
+
+.rejection-alert-header strong {
+  font-weight: 600;
+}
+
+.rejection-alert-body {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.rejection-reason-wrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rejection-reason-label {
+  font-weight: 600;
+  color: #721c24;
+  margin: 0;
+  font-size: 14px;
+}
+
+.rejection-reason-text {
+  color: #721c24;
+  font-size: 14px;
+  margin: 0;
+  font-weight: 500;
+}
+
+.rejection-meta {
+  display: inline-flex;
+  align-items: center;
+}
+
+.rejection-date {
+  color: #6c757d;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rejection-date i {
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .rejection-alert {
+    padding: 12px 16px;
+  }
+  
+  .rejection-alert-header {
+    display: flex;
+    border-right: none;
+    border-bottom: 1px solid #ffe0e0;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    padding-right: 0;
+    margin-right: 0;
+    width: 100%;
+  }
+  
+  .rejection-alert-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .rejection-reason-wrapper {
+    flex-wrap: wrap;
+  }
+}
+
 </style>

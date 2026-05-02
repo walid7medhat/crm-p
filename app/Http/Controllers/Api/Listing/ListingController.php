@@ -1147,12 +1147,308 @@ public function getMatchingListings(Request $request)
         ];
     }
 
+// public function update(ListingRequest $request, $listingId): JsonResponse
+// {
+//     try {
+//         ini_set('memory_limit', '1024M');
+
+        
+
+//         DB::beginTransaction();
+
+//         $user = Auth::user();
+//         $listing = Listing::find($listingId);
+        
+//         if (!$listing) {
+//             return ApiResponse::error('Listing Not found', 404);
+//         }
+
+//         // Check if user has permission to update this listing
+//         if ($listing->added_by !== $user->id && $listing->agent_id !== $user->id && ! $user->hasRole('super_admin') && !$user->canEditListings($listing->agent_id)) {
+//             return ApiResponse::error('You are Not authorized to update this listing', 403);
+//         }
+  
+//             $oldHotDealStatus =$listing->is_hot_deal =='Yes' && $listing->hot_deal_approved_by && $listing->hot_deal_approved_at ? $listing->is_hot_deal :'No';
+//             $newHotDealStatus = $request->has('is_hot_deal') ? $request->is_hot_deal : $oldHotDealStatus;
+//             // dd($newHotDealStatus !== $oldHotDealStatus,$newHotDealStatus);
+//             // Handle hot deal status change first
+//             if ($newHotDealStatus !== $oldHotDealStatus) {
+//                 $this->handleHotDealStatus($listing, $newHotDealStatus, $oldHotDealStatus);
+
+//             }
+//         $data = $request->validated();
+//         unset($data['agent_id']);
+
+
+//         // Handle listing status based on action
+//         if ($request->has('action')) {
+//             if ($request->action === 'publish') {
+//                 $data['status'] = 'published';
+//             } elseif ($request->action === 'draft') {
+//                 $data['status'] = 'draft';
+//             } elseif ($request->action === 'preview') {
+//                 $data['status'] = 'draft';
+//             }
+//         }
+         
+
+//         // Remove files from data array before updating listing
+//          unset($data['is_hot_deal']);
+//         unset($data['floor_plans']);
+//         unset($data['floor_plan_names']);
+//         unset($data['gallery']);
+//         unset($data['hero_image']);
+//          unset($data['additional_documents']);
+//   if($listing->completion_status=='Completed'){
+//             $data['payment_plan']=null;
+//         }
+//         $heroImageProcessed = false;
+        
+//         if ($request->hasFile('hero_image')) {
+//             // \Log::info('Processing new hero image upload');
+            
+//             // Delete old hero image if exists
+//             if ($listing->hero_image_path) {
+//                 ImageHelper::deleteImage($listing->hero_image_path);
+//                 // \Log::info('Deleted old hero image', ['path' => $listing->hero_image_path]);
+//             }
+            
+//             $heroImageFile = $request->file('hero_image');
+//             // $compressionResult = ImageHelper::compressAndConvertToWebP(
+//             //     $heroImageFile, 
+//             //     "listings/hero",
+//             //     ['quality' => 90, 'max_width' => 1920]
+//             // );
+//              $compressionResult = ImageHelper::compressAndConvertToWebP(
+//                                 $heroImageFile,
+//                                 "listings/hero",
+//                                 [
+//                                     'quality' => 85,
+//                                     'max_width' => 1920,
+//                                     'watermark' => [
+//                                         'enabled'  => true,
+//                                         'path'     => 'storage/Setting/1745128256Oia Watermark.png',
+//                                         'position' => 'center',
+//                                         'opacity'  => 90
+//                                     ]
+//                                 ]
+//                             );
+//             $data['hero_image_path'] = $compressionResult['path'];
+//             $heroImageProcessed = true;
+//             // \Log::info('New hero image uploaded', ['path' => $compressionResult['path']]);
+//         }
+
+//         // Handle document uploads
+//         $documentFields = [
+//             'spa_document' => 'spa_document_path',
+//             'desk_document' => 'desk_document_path',
+//             'other_document' => 'other_document_path'
+//         ];
+        
+//         foreach ($documentFields as $field => $pathField) {
+//             if ($request->hasFile($field)) {
+
+//                 // Delete old document if exists
+//                 if ($listing->$pathField) {
+//                     Storage::disk('public')->delete($listing->$pathField);
+//                 }
+                
+//                 $file = $request->file($field);
+//                 $path = $file->store("listings/documents", 'public');
+//                 $data[$pathField] = $path;
+//             }
+//             unset($data[$field]);
+//         }
+
+//         // For draft updates, set default values for null required fields
+//         if ($request->input('action') === 'draft') {
+
+//             $defaultValues = [
+//                 'unit_number' => $data['unit_number'] ?? 'DRAFT-' . uniqid(),
+//                 'ownership_type' => $data['ownership_type'] ?? 'freehold',
+//                 'completion_status' => $data['completion_status'] ?? 'Completed',
+//             ];
+
+//             $data = array_merge($defaultValues, $data);
+//         }
+
+//         // Update listing
+//         $listing->update($data);
+
+//         // dd($data,$listing);
+
+//         // Handle floor plans upload with compression
+//         if ($request->hasFile('floor_plans') ) {
+//             $floorPlanNames = $request->floor_plan_names ?? [];
+            
+//             // Get current max order to continue from there
+//             $maxOrder = $listing->floorPlans()->max('order') ?? -1;
+            
+//             foreach ($request->file('floor_plans') as $index => $floorPlanFile) {
+               
+//                  $compressionResult = ImageHelper::compressAndConvertToWebP(
+//                                 $floorPlanFile,
+//                                 "listings/floor_plans",
+//                                 [
+//                                     'quality' => 85,
+//                                     'max_width' => 1600,
+//                                     'watermark' => [
+//                                         'enabled'  => true,
+//                                         'path'     => 'storage/Setting/1745128256Oia Watermark.png',
+//                                         'position' => 'center',
+//                                         'opacity'  => 90
+//                                     ]
+//                                 ]
+//                             );
+                
+//                 $floorPlanName = $floorPlanNames[$index] ?? $floorPlanFile->getClientOriginalName();
+                
+//                 $listing->floorPlans()->create([
+//                     'name' => $floorPlanName,
+//                     'image_path' => $compressionResult['path'],
+//                     'order' => $maxOrder + $index + 1
+//                 ]);
+//             }
+//         }
+     
+
+//         if ($request->hasFile('gallery')) {
+
+//             // Get current max order to continue from there
+//             $maxOrder = $listing->galleryImages()->max('order') ?? -1;
+            
+//             $setFirstAsHero = $request->has('hero_image_from_gallery') && $request->input('hero_image_from_gallery') === 'first_new_image';
+            
+//             foreach ($request->file('gallery') as $index => $galleryFile) {
+               
+//                  $compressionResult = ImageHelper::compressAndConvertToWebP(
+//                                 $galleryFile,
+//                                 "listings/gallery",
+//                                 [
+//                                     'quality' => 85,
+//                                     'max_width' => 1920,
+//                                     'watermark' => [
+//                                         'enabled'  => true,
+//                                         'path'     => 'storage/Setting/1745128256Oia Watermark.png',
+//                                         'position' => 'center',
+//                                         'opacity'  => 90
+//                                     ]
+//                                 ]
+//                             );
+//                 $galleryImage = $listing->galleryImages()->create([
+//                     'name' => $galleryFile->getClientOriginalName(),
+//                     'image_path' => $compressionResult['path'],
+//                     'order' => $maxOrder + $index + 1
+//                 ]);
+                
+//                 if ($setFirstAsHero && $index === 0 && !$heroImageProcessed) {
+//                     // \Log::info('Setting first new gallery image as hero image', [
+//                     //     'gallery_image_id' => $galleryImage->id,
+//                     //     'path' => $compressionResult['path']
+//                     // ]);
+                    
+//                     $listing->update([
+//                         'hero_image_path' => $compressionResult['path']
+//                     ]);
+//                     $heroImageProcessed = true;
+//                 }
+//             }
+//             // \Log::info('Gallery images added successfully');
+//         }
+
+//         if (!$heroImageProcessed && $request->has('hero_image_from_gallery') && is_numeric($request->input('hero_image_from_gallery'))) {
+//             $heroGalleryImageId = $request->input('hero_image_from_gallery');
+//             $heroGalleryImage = $listing->galleryImages()->find($heroGalleryImageId);
+            
+//             if ($heroGalleryImage) {
+//                 // \Log::info('Setting existing gallery image as hero image', [
+//                 //     'gallery_image_id' => $heroGalleryImageId,
+//                 //     'path' => $heroGalleryImage->image_path
+//                 // ]);
+                
+//                 $listing->update([
+//                     'hero_image_path' => $heroGalleryImage->image_path
+//                 ]);
+//                 $heroImageProcessed = true;
+                
+//                 // \Log::info('Hero image updated from gallery successfully');
+//             } else {
+//                 // \Log::warning('Gallery image Not found for hero image', [
+//                 //     'gallery_image_id' => $heroGalleryImageId
+//                 // ]);
+//             }
+//         }
+//          if ($request->has('imported_floor_plans')) {
+//             foreach ($request->imported_floor_plans as $importedPlanData) {
+//               $projectFloorPlan = \App\Models\FloorPlanImage::find($importedPlanData['project_floor_plan_id']);
+//                         if ($projectFloorPlan) {
+//                             $listing->floorPlans()->create([
+//                                 'name' => $importedPlanData['name']??$projectFloorPlan->name,
+//                                 'image_path' => $projectFloorPlan->image_path,
+//                                 'order' => $projectFloorPlan->sort_order,
+//                                 'is_from_project' => true,
+//                                 'project_floor_plan_id' => $importedPlanData['project_floor_plan_id']
+//                             ]);
+//                         }
+//             }
+//         }
+//  // Append additional documents (new uploads only; existing kept)
+//         if ($request->hasFile('additional_documents') && Schema::hasTable('listing_additional_documents')) {
+//             $maxOrder = $listing->additionalDocuments()->max('order') ?? -1;
+//             foreach ($request->file('additional_documents') as $index => $file) {
+//                 if (!$file->isValid()) continue;
+//                 $path = $file->store('listings/additional_documents', 'public');
+//                 $listing->additionalDocuments()->create([
+//                     'path' => $path,
+//                     'original_name' => $file->getClientOriginalName(),
+//                     'order' => $maxOrder + $index + 1
+//                 ]);
+//             }
+//         }
+
+//         DB::commit();
+
+//         // Reload relationships
+//         $listing->load(['propertyType', 'area', 'agent', 'owner', 'developer', 'addedBy', 'floorPlans', 'galleryImages','additionalDocuments']);
+
+//         $this->clearCache();
+//         $this->clearSpecificCache($listing->id);
+
+//         // \Log::info('Property update completed successfully');
+
+//         // Determine success message based on action
+//         $successMessage = 'Listing updated successfully';
+//         if ($request->has('action')) {
+//             if ($request->action === 'publish') {
+//                 $successMessage = 'Listing published successfully';
+//             } elseif ($request->action === 'draft') {
+//                 $successMessage = 'Listing saved as draft successfully';
+//             } elseif ($request->action === 'preview') {
+//                 $successMessage = 'Listing updated for preview successfully';
+//             }
+//         }
+
+//         return ApiResponse::success(
+//             new ListingResource($listing),
+//             $successMessage
+//         );
+//     } catch (\Exception $e) {
+//         DB::rollBack();
+//         \Log::error('Failed to update listing', [
+//             'listing_id' => $listingId,
+//             'message' => $e->getMessage(),
+//             'file' => $e->getFile(),
+//             'line' => $e->getLine(),
+//             'trace' => $e->getTraceAsString()
+//         ]);
+        
+//         return ApiResponse::error('Failed to update listing: ' . $e->getMessage());
+//     }
+// }
 public function update(ListingRequest $request, $listingId): JsonResponse
 {
     try {
         ini_set('memory_limit', '1024M');
-
-        
 
         DB::beginTransaction();
 
@@ -1168,74 +1464,72 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             return ApiResponse::error('You are Not authorized to update this listing', 403);
         }
   
-            $oldHotDealStatus =$listing->is_hot_deal =='Yes' && $listing->hot_deal_approved_by && $listing->hot_deal_approved_at ? $listing->is_hot_deal :'No';
-            $newHotDealStatus = $request->has('is_hot_deal') ? $request->is_hot_deal : $oldHotDealStatus;
-            // dd($newHotDealStatus !== $oldHotDealStatus,$newHotDealStatus);
-            // Handle hot deal status change first
-            if ($newHotDealStatus !== $oldHotDealStatus) {
-                $this->handleHotDealStatus($listing, $newHotDealStatus, $oldHotDealStatus);
-
-            }
+        // ========== تتبع الحالة قبل التحديث ==========
+        $oldStatus = $listing->status;
+        $wasRejected = !is_null($listing->rejection_reason) && $listing->approved == false;
+        
+        $oldHotDealStatus = $listing->is_hot_deal == 'Yes' && $listing->hot_deal_approved_by && $listing->hot_deal_approved_at ? $listing->is_hot_deal : 'No';
+        $newHotDealStatus = $request->has('is_hot_deal') ? $request->is_hot_deal : $oldHotDealStatus;
+        
+        // Handle hot deal status change first
+        if ($newHotDealStatus !== $oldHotDealStatus) {
+            $this->handleHotDealStatus($listing, $newHotDealStatus, $oldHotDealStatus);
+        }
+        
         $data = $request->validated();
         unset($data['agent_id']);
 
-
         // Handle listing status based on action
+        $newStatus = null;
         if ($request->has('action')) {
             if ($request->action === 'publish') {
+                $newStatus = 'published';
                 $data['status'] = 'published';
             } elseif ($request->action === 'draft') {
+                $newStatus = 'draft';
                 $data['status'] = 'draft';
             } elseif ($request->action === 'preview') {
+                $newStatus = 'draft';
                 $data['status'] = 'draft';
             }
         }
          
-
         // Remove files from data array before updating listing
-         unset($data['is_hot_deal']);
+        unset($data['is_hot_deal']);
         unset($data['floor_plans']);
         unset($data['floor_plan_names']);
         unset($data['gallery']);
         unset($data['hero_image']);
-         unset($data['additional_documents']);
-   if($listing->completion_status=='Completed'){
-            $data['payment_plan']=null;
+        unset($data['additional_documents']);
+        
+        if($listing->completion_status == 'Completed'){
+            $data['payment_plan'] = null;
         }
+        
         $heroImageProcessed = false;
         
         if ($request->hasFile('hero_image')) {
-            // \Log::info('Processing new hero image upload');
-            
-            // Delete old hero image if exists
             if ($listing->hero_image_path) {
                 ImageHelper::deleteImage($listing->hero_image_path);
-                // \Log::info('Deleted old hero image', ['path' => $listing->hero_image_path]);
             }
             
             $heroImageFile = $request->file('hero_image');
-            // $compressionResult = ImageHelper::compressAndConvertToWebP(
-            //     $heroImageFile, 
-            //     "listings/hero",
-            //     ['quality' => 90, 'max_width' => 1920]
-            // );
-             $compressionResult = ImageHelper::compressAndConvertToWebP(
-                                $heroImageFile,
-                                "listings/hero",
-                                [
-                                    'quality' => 85,
-                                    'max_width' => 1920,
-                                    'watermark' => [
-                                        'enabled'  => true,
-                                        'path'     => 'storage/Setting/1745128256Oia Watermark.png',
-                                        'position' => 'center',
-                                        'opacity'  => 90
-                                    ]
-                                ]
-                            );
+            $compressionResult = ImageHelper::compressAndConvertToWebP(
+                $heroImageFile,
+                "listings/hero",
+                [
+                    'quality' => 85,
+                    'max_width' => 1920,
+                    'watermark' => [
+                        'enabled'  => true,
+                        'path'     => 'storage/Setting/1745128256Oia Watermark.png',
+                        'position' => 'center',
+                        'opacity'  => 90
+                    ]
+                ]
+            );
             $data['hero_image_path'] = $compressionResult['path'];
             $heroImageProcessed = true;
-            // \Log::info('New hero image uploaded', ['path' => $compressionResult['path']]);
         }
 
         // Handle document uploads
@@ -1247,8 +1541,6 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         
         foreach ($documentFields as $field => $pathField) {
             if ($request->hasFile($field)) {
-
-                // Delete old document if exists
                 if ($listing->$pathField) {
                     Storage::disk('public')->delete($listing->$pathField);
                 }
@@ -1262,44 +1554,47 @@ public function update(ListingRequest $request, $listingId): JsonResponse
 
         // For draft updates, set default values for null required fields
         if ($request->input('action') === 'draft') {
-
             $defaultValues = [
                 'unit_number' => $data['unit_number'] ?? 'DRAFT-' . uniqid(),
                 'ownership_type' => $data['ownership_type'] ?? 'freehold',
                 'completion_status' => $data['completion_status'] ?? 'Completed',
             ];
-
             $data = array_merge($defaultValues, $data);
+        }
+
+        // ========== التحقق من أن القائمة كانت مرفوضة ويتم إعادة نشرها ==========
+        $isResubmitting = ($wasRejected && $newStatus === 'published');
+        
+        if ($isResubmitting) {
+            $data['rejection_reason'] = null;
+            $data['rejected_by'] = null;
+            $data['rejected_at'] = null;
+           
         }
 
         // Update listing
         $listing->update($data);
 
-        // dd($data,$listing);
-
         // Handle floor plans upload with compression
-        if ($request->hasFile('floor_plans') ) {
+        if ($request->hasFile('floor_plans')) {
             $floorPlanNames = $request->floor_plan_names ?? [];
-            
-            // Get current max order to continue from there
             $maxOrder = $listing->floorPlans()->max('order') ?? -1;
             
             foreach ($request->file('floor_plans') as $index => $floorPlanFile) {
-               
-                 $compressionResult = ImageHelper::compressAndConvertToWebP(
-                                $floorPlanFile,
-                                "listings/floor_plans",
-                                [
-                                    'quality' => 85,
-                                    'max_width' => 1600,
-                                    'watermark' => [
-                                        'enabled'  => true,
-                                        'path'     => 'storage/Setting/1745128256Oia Watermark.png',
-                                        'position' => 'center',
-                                        'opacity'  => 90
-                                    ]
-                                ]
-                            );
+                $compressionResult = ImageHelper::compressAndConvertToWebP(
+                    $floorPlanFile,
+                    "listings/floor_plans",
+                    [
+                        'quality' => 85,
+                        'max_width' => 1600,
+                        'watermark' => [
+                            'enabled'  => true,
+                            'path'     => 'storage/Setting/1745128256Oia Watermark.png',
+                            'position' => 'center',
+                            'opacity'  => 90
+                        ]
+                    ]
+                );
                 
                 $floorPlanName = $floorPlanNames[$index] ?? $floorPlanFile->getClientOriginalName();
                 
@@ -1311,30 +1606,25 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             }
         }
      
-
         if ($request->hasFile('gallery')) {
-
-            // Get current max order to continue from there
             $maxOrder = $listing->galleryImages()->max('order') ?? -1;
-            
             $setFirstAsHero = $request->has('hero_image_from_gallery') && $request->input('hero_image_from_gallery') === 'first_new_image';
             
             foreach ($request->file('gallery') as $index => $galleryFile) {
-               
-                 $compressionResult = ImageHelper::compressAndConvertToWebP(
-                                $galleryFile,
-                                "listings/gallery",
-                                [
-                                    'quality' => 85,
-                                    'max_width' => 1920,
-                                    'watermark' => [
-                                        'enabled'  => true,
-                                        'path'     => 'storage/Setting/1745128256Oia Watermark.png',
-                                        'position' => 'center',
-                                        'opacity'  => 90
-                                    ]
-                                ]
-                            );
+                $compressionResult = ImageHelper::compressAndConvertToWebP(
+                    $galleryFile,
+                    "listings/gallery",
+                    [
+                        'quality' => 85,
+                        'max_width' => 1920,
+                        'watermark' => [
+                            'enabled'  => true,
+                            'path'     => 'storage/Setting/1745128256Oia Watermark.png',
+                            'position' => 'center',
+                            'opacity'  => 90
+                        ]
+                    ]
+                );
                 $galleryImage = $listing->galleryImages()->create([
                     'name' => $galleryFile->getClientOriginalName(),
                     'image_path' => $compressionResult['path'],
@@ -1342,18 +1632,12 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                 ]);
                 
                 if ($setFirstAsHero && $index === 0 && !$heroImageProcessed) {
-                    // \Log::info('Setting first new gallery image as hero image', [
-                    //     'gallery_image_id' => $galleryImage->id,
-                    //     'path' => $compressionResult['path']
-                    // ]);
-                    
                     $listing->update([
                         'hero_image_path' => $compressionResult['path']
                     ]);
                     $heroImageProcessed = true;
                 }
             }
-            // \Log::info('Gallery images added successfully');
         }
 
         if (!$heroImageProcessed && $request->has('hero_image_from_gallery') && is_numeric($request->input('hero_image_from_gallery'))) {
@@ -1361,38 +1645,29 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             $heroGalleryImage = $listing->galleryImages()->find($heroGalleryImageId);
             
             if ($heroGalleryImage) {
-                // \Log::info('Setting existing gallery image as hero image', [
-                //     'gallery_image_id' => $heroGalleryImageId,
-                //     'path' => $heroGalleryImage->image_path
-                // ]);
-                
                 $listing->update([
                     'hero_image_path' => $heroGalleryImage->image_path
                 ]);
                 $heroImageProcessed = true;
-                
-                // \Log::info('Hero image updated from gallery successfully');
-            } else {
-                // \Log::warning('Gallery image Not found for hero image', [
-                //     'gallery_image_id' => $heroGalleryImageId
-                // ]);
             }
         }
-         if ($request->has('imported_floor_plans')) {
+        
+        if ($request->has('imported_floor_plans')) {
             foreach ($request->imported_floor_plans as $importedPlanData) {
-               $projectFloorPlan = \App\Models\FloorPlanImage::find($importedPlanData['project_floor_plan_id']);
-                        if ($projectFloorPlan) {
-                            $listing->floorPlans()->create([
-                                'name' => $importedPlanData['name']??$projectFloorPlan->name,
-                                'image_path' => $projectFloorPlan->image_path,
-                                'order' => $projectFloorPlan->sort_order,
-                                'is_from_project' => true,
-                                'project_floor_plan_id' => $importedPlanData['project_floor_plan_id']
-                            ]);
-                        }
+                $projectFloorPlan = \App\Models\FloorPlanImage::find($importedPlanData['project_floor_plan_id']);
+                if ($projectFloorPlan) {
+                    $listing->floorPlans()->create([
+                        'name' => $importedPlanData['name'] ?? $projectFloorPlan->name,
+                        'image_path' => $projectFloorPlan->image_path,
+                        'order' => $projectFloorPlan->sort_order,
+                        'is_from_project' => true,
+                        'project_floor_plan_id' => $importedPlanData['project_floor_plan_id']
+                    ]);
+                }
             }
         }
- // Append additional documents (new uploads only; existing kept)
+        
+        // Append additional documents
         if ($request->hasFile('additional_documents') && Schema::hasTable('listing_additional_documents')) {
             $maxOrder = $listing->additionalDocuments()->max('order') ?? -1;
             foreach ($request->file('additional_documents') as $index => $file) {
@@ -1408,19 +1683,23 @@ public function update(ListingRequest $request, $listingId): JsonResponse
 
         DB::commit();
 
+        // ========== إرسال إشعار إذا تم إعادة إرسال القائمة بعد الرفض ==========
+        if ($isResubmitting) {
+            $this->sendResubmissionNotification($listing, $user);
+        }
+
         // Reload relationships
-        $listing->load(['propertyType', 'area', 'agent', 'owner', 'developer', 'addedBy', 'floorPlans', 'galleryImages','additionalDocuments']);
+        $listing->load(['propertyType', 'area', 'agent', 'owner', 'developer', 'addedBy', 'floorPlans', 'galleryImages', 'additionalDocuments']);
 
         $this->clearCache();
         $this->clearSpecificCache($listing->id);
 
-        // \Log::info('Property update completed successfully');
-
-        // Determine success message based on action
         $successMessage = 'Listing updated successfully';
         if ($request->has('action')) {
             if ($request->action === 'publish') {
-                $successMessage = 'Listing published successfully';
+                $successMessage = $isResubmitting 
+                    ? 'Listing has been resubmitted for approval successfully.' 
+                    : 'Listing published successfully';
             } elseif ($request->action === 'draft') {
                 $successMessage = 'Listing saved as draft successfully';
             } elseif ($request->action === 'preview') {
@@ -1432,6 +1711,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             new ListingResource($listing),
             $successMessage
         );
+        
     } catch (\Exception $e) {
         DB::rollBack();
         \Log::error('Failed to update listing', [
@@ -1443,6 +1723,34 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         ]);
         
         return ApiResponse::error('Failed to update listing: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Send notification to managers when a rejected listing is resubmitted
+ */
+private function sendResubmissionNotification($listing, $user)
+{
+    try {
+        // Get all managers in listing team
+        $managers = User::whereHas('roles', function($query) {
+            $query->where('name', 'manager');
+        })
+        ->where('listing_team', 1)
+        ->get();
+        
+        foreach ($managers as $manager) {
+            $manager->notify(new ListingNeedsApproval($listing, $user));
+        }
+        
+        \Log::info('Resubmission notification sent', [
+            'listing_id' => $listing->id,
+            'resubmitted_by' => $user->id,
+            'notified_managers' => $managers->pluck('id')->toArray()
+        ]);
+        
+    } catch (\Exception $e) {
+        \Log::error('Failed to send resubmission notification: ' . $e->getMessage());
     }
 }
     public function destroy($listing): JsonResponse
@@ -2426,6 +2734,7 @@ public function approve(Listing $listing): JsonResponse
             'approved' => true,
             'approved_by' => $user->id,
             'approved_at' => now(),
+             'status' => 'published',
         ]);
         
         if ($listing->added_by) {
@@ -2457,6 +2766,7 @@ public function approve(Listing $listing): JsonResponse
 /**
  * Reject a listing (remove approval status)
  */
+
 public function reject(Listing $listing, Request $request): JsonResponse
 {
     try {
@@ -2466,12 +2776,20 @@ public function reject(Listing $listing, Request $request): JsonResponse
             return ApiResponse::error('You are not authorized to reject listings.', 403);
         }
         
-        $reason = $request->input('reason', 'No reason provided');
+        $request->validate([
+            'reason' => 'required|string|min:3|max:1000',
+        ]);
+        
+        $reason = $request->input('reason');
         
         $listing->update([
             'approved' => false,
             'approved_by' => null,
             'approved_at' => null,
+            'status' => 'draft',  
+            'rejection_reason' => $reason,  
+            'rejected_by' => $user->id, 
+            'rejected_at' => now(),  
         ]);
         
         if ($listing->added_by) {
@@ -2491,16 +2809,14 @@ public function reject(Listing $listing, Request $request): JsonResponse
         $this->clearCache();
         
         return ApiResponse::success(
-            new ListingResource($listing),
-            'Listing approval has been revoked.'
+            new ListingResource($listing->fresh()),
+            'Listing has been rejected and moved to draft.'
         );
         
     } catch (\Exception $e) {
         return ApiResponse::error('Failed to reject listing: ' . $e->getMessage());
     }
 }
-
-
 public function getPendingApprovals(Request $request): JsonResponse
 {
     try {
@@ -2572,6 +2888,9 @@ public function getPendingApprovals(Request $request): JsonResponse
 /**
  * Update multiple listings approval status (batch update)
  */
+/**
+ * Update multiple listings approval status (batch update)
+ */
 public function batchApprove(Request $request): JsonResponse
 {
     try {
@@ -2585,7 +2904,7 @@ public function batchApprove(Request $request): JsonResponse
             'listing_ids' => 'required|array',
             'listing_ids.*' => 'exists:listings,id',
             'action' => 'required|in:approve,reject',
-            'reason' => 'required_if:action,reject|nullable|string'
+            'reason' => 'required_if:action,reject|nullable|string|min:3|max:1000'
         ]);
         
         $listingIds = $request->listing_ids;
@@ -2594,49 +2913,64 @@ public function batchApprove(Request $request): JsonResponse
         
         $listings = Listing::whereIn('id', $listingIds)->get();
         $updatedCount = 0;
+        $errors = [];
         
         foreach ($listings as $listing) {
-            if ($action === 'approve' && !$listing->approved) {
-                $listing->update([
-                    'approved' => true,
-                    'approved_by' => $user->id,
-                    'approved_at' => now(),
-                ]);
-                
-                // إرسال إشعارات
-                if ($listing->added_by) {
-                    User::find($listing->added_by)?->notify(new ListingApproved($listing, $user));
+            try {
+                if ($action === 'approve' && !$listing->approved) {
+                    $listing->update([
+                        'approved' => true,
+                        'approved_by' => $user->id,
+                        'approved_at' => now(),
+                        'status' => 'published',
+                    ]);
+                    
+                    // إرسال إشعارات الموافقة
+                    if ($listing->added_by) {
+                        User::find($listing->added_by)?->notify(new ListingApproved($listing, $user));
+                    }
+                    if ($listing->agent_id && $listing->agent_id != $listing->added_by) {
+                        User::find($listing->agent_id)?->notify(new ListingApproved($listing, $user));
+                    }
+                    
+                    $updatedCount++;
+                    
+                } elseif ($action === 'reject') {
+                    $listing->update([
+                        'approved' => false,
+                        'approved_by' => null,
+                        'approved_at' => null,
+                        'status' => 'draft',
+                        'rejection_reason' => $reason,
+                        'rejected_by' => $user->id,
+                        'rejected_at' => now(),
+                    ]);
+                    
+                    // إرسال إشعارات الرفض
+                    if ($listing->added_by) {
+                        User::find($listing->added_by)?->notify(new ListingRejected($listing, $reason));
+                    }
+                    if ($listing->agent_id && $listing->agent_id != $listing->added_by) {
+                        User::find($listing->agent_id)?->notify(new ListingRejected($listing, $reason));
+                    }
+                    
+                    $updatedCount++;
                 }
-                if ($listing->agent_id && $listing->agent_id != $listing->added_by) {
-                    User::find($listing->agent_id)?->notify(new ListingApproved($listing, $user));
-                }
-                
-                $updatedCount++;
-                
-            } elseif ($action === 'reject' && $listing->approved) {
-                $listing->update([
-                    'approved' => false,
-                    'approved_by' => null,
-                    'approved_at' => null,
-                ]);
-                
-                // إرسال إشعارات
-                if ($listing->added_by) {
-                    User::find($listing->added_by)?->notify(new ListingRejected($listing, $reason));
-                }
-                if ($listing->agent_id && $listing->agent_id != $listing->added_by) {
-                    User::find($listing->agent_id)?->notify(new ListingRejected($listing, $reason));
-                }
-                
-                $updatedCount++;
+            } catch (\Exception $e) {
+                $errors[] = "Listing ID {$listing->id}: " . $e->getMessage();
             }
         }
         
         $this->clearCache();
         
+        $message = "{$updatedCount} listing(s) have been {$action}d successfully.";
+        if (!empty($errors)) {
+            $message .= " Errors: " . implode('; ', $errors);
+        }
+        
         return ApiResponse::success(
             null,
-            "{$updatedCount} listing(s) have been {$action}d successfully."
+            $message
         );
         
     } catch (\Exception $e) {

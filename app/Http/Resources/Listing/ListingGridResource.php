@@ -25,6 +25,9 @@ class ListingGridResource extends JsonResource
                     ];
                 }),
                 'approval_status' => $this->approved ? 'approved' : 'pending',
+                   'rejection_reason'=>$this->rejection_reason,
+            'rejected_by'=>$this->rejected_by,
+            'rejected_by_name'=>$this->rejectedBy?->name,
             'is_active'=>(bool)$this->is_active,
             'is_archived'=>(bool)$this->is_archived,
             'is_hot_deal'=>$this->is_hot_deal =='Yes' && $this->hot_deal_approved_by && $this->hot_deal_approved_at ? $this->is_hot_deal :'No',
