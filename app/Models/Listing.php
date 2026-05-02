@@ -42,7 +42,7 @@ class Listing extends Model
         'floor_plans_source' => 'array',
         'additional_features' => 'array',
         'approved_at'=>'datetime',
-    'approved' => 'boolean', 
+        'approved' => 'boolean', 
 
     ];
     

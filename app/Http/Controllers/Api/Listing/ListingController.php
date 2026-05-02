@@ -1565,12 +1565,12 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         // ========== التحقق من أن القائمة كانت مرفوضة ويتم إعادة نشرها ==========
         $isResubmitting = ($wasRejected && $newStatus === 'published');
         
-        if ($isResubmitting) {
-            $data['rejection_reason'] = null;
-            $data['rejected_by'] = null;
-            $data['rejected_at'] = null;
+        // if ($isResubmitting) {
+        //     $data['rejection_reason'] = null;
+        //     $data['rejected_by'] = null;
+        //     $data['rejected_at'] = null;
            
-        }
+        // }
 
         // Update listing
         $listing->update($data);
@@ -2735,6 +2735,9 @@ public function approve(Listing $listing): JsonResponse
             'approved_by' => $user->id,
             'approved_at' => now(),
              'status' => 'published',
+             'rejection_reason' => null,
+            'rejected_by' => null,
+            'rejected_at' => null,
         ]);
         
         if ($listing->added_by) {
@@ -2923,6 +2926,9 @@ public function batchApprove(Request $request): JsonResponse
                         'approved_by' => $user->id,
                         'approved_at' => now(),
                         'status' => 'published',
+                        'rejection_reason' => null,
+                        'rejected_by' => null,
+                        'rejected_at' => null,
                     ]);
                     
                     // إرسال إشعارات الموافقة
