@@ -35,7 +35,7 @@ class DealResource extends JsonResource
             'agent_share' => $this->agent_share,
             'company_share' => $this->company_share,
             
-            // Relationships (lead_id always when set so kanban / modals can link without loading full lead)
+            // Relationships
             'lead_id' => $this->lead_id,
             'lead' => $this->whenLoaded('lead', fn() => [
                 'id' => $this->lead->id,
@@ -52,7 +52,6 @@ class DealResource extends JsonResource
                 'color' => $this->stage->color,
             ],
             
-          
             'listing' => $this->listing ? [
                 'id' => $this->listing->id,
                 'name' => $this->listing->area?->area_title,
@@ -72,11 +71,11 @@ class DealResource extends JsonResource
                         'sort_order' => $property->sort_order,
                         'unit_no' => $property->unit_no,
                         'property_type_id' => $property->property_type_id,
-                        'property_type' => $property->propertyType?->name,
+                        'property_type_name' => $property->propertyType?->name,
                         'bedrooms' => $property->bedrooms,
                         'unit_size' => $property->unit_size,
                         'area_id' => $property->area_id,
-                        'area' => $property->area?->name,
+                        'area_name' => $property->area?->area_title,
                         'project_id' => $property->project_id,
                         'developer_id' => $property->developer_id,
                         'developer_name' => $property->developer_name,
@@ -85,8 +84,15 @@ class DealResource extends JsonResource
                         'budget_to' => $property->budget_to,
                         'purchase_price' => $property->purchase_price,
                         'rental_price' => $property->rental_price,
-                        'payment_proof' => $property->payment_proof,
-                        'spa_document' => $property->spa_document,
+                        'commission' => $property->commission,
+                        
+                        // ✅ Debug: نجيب البيانات الخام الأول
+                        'payment_proof_raw' => $property->payment_proof,
+                        'spa_document_raw' => $property->spa_document,
+                        
+                        'payment_proof' => PropertyDocumentResource::make($property->payment_proof),
+                        'spa_document' => PropertyDocumentResource::make($property->spa_document),
+                        
                         'display_name' => $property->display_name,
                         'budget_range' => $property->budget_range,
                     ];
@@ -123,4 +129,38 @@ class DealResource extends JsonResource
             'converted_at' => $this->lead?->converted_at?->format('Y-m-d H:i:s'),
         ];
     }
+    
+    /**
+     * Parse JSON field to array
+     */
+    private function parseJsonField($value)
+    {
+        // لو فاضي
+        if (empty($value)) {
+            return [];
+        }
+        
+        // لو已经是 array
+        if (is_array($value)) {
+            return $value;
+        }
+        
+        // لو string - نحاول decode JSON
+        if (is_string($value)) {
+            // أولاً: لو كانت JSON string
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+            
+            // ثانياً: لو كانت serialized string
+            $unserialized = @unserialize($value);
+            if ($unserialized !== false && is_array($unserialized)) {
+                return $unserialized;
+            }
+        }
+        
+        return [];
+    }
+    
 }

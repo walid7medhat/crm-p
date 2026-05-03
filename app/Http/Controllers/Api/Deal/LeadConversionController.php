@@ -198,7 +198,6 @@ class LeadConversionController extends Controller
                 'message' => 'Lead converted to deal successfully',
                 'data' => new DealResource($deal->load([
                     'stage',
-                    'propertyType',
                     'parties',
                     'responsiblePerson',
                     'documents',
@@ -372,58 +371,156 @@ class LeadConversionController extends Controller
     /**
      * Create multi properties for deal
      */
-    private function createDealProperties(Deal $deal, $request)
-    {
-        // If properties are sent in the request (multi properties)
-        if ($request->has('properties') && is_array($request->properties) && count($request->properties) > 0) {
-            foreach ($request->properties as $index => $propertyData) {
-                $deal->properties()->create([
-                    'sort_order' => $index,
-                    'unit_no' => $propertyData['unit_no'] ?? null,
-                    'property_type_id' => $propertyData['property_type_id'] ?? null,
-                    'bedrooms' => $propertyData['bedrooms'] ?? null,
-                    'unit_size' => $propertyData['unit_size'] ?? null,
-                    'area_id' => $propertyData['area_id'] ?? null,
-                    'project_id' => $propertyData['project_id'] ?? null,
-                    'developer_id' => $propertyData['developer_id'] ?? null,
-                    'developer_name' => $propertyData['developer_name'] ?? null,
-                    'developer_phone' => $propertyData['developer_phone'] ?? null,
-                    'budget_from' => $propertyData['budget_from'] ?? null,
-                    'budget_to' => $propertyData['budget_to'] ?? null,
-                    'purchase_price' => $propertyData['purchase_price'] ?? null,
-                    'rental_price' => $propertyData['rental_price'] ?? null,
-                    'payment_proof' => $propertyData['payment_proof'] ?? null,
-                    'spa_document' => $propertyData['spa_document'] ?? null,
-                    'contract_document' => $propertyData['contract_document'] ?? null,
-                    'ejari_document' => $propertyData['ejari_document'] ?? null,
-                    'commission' => $propertyData['commission'] ?? null,
-                ]);
+/**
+ * Create multi properties for deal
+ */
+private function createDealProperties(Deal $deal, $request)
+{
+    // ========== MULTI PROPERTIES MODE ==========
+    if ($request->has('properties') && is_array($request->properties) && count($request->properties) > 0) {
+        foreach ($request->properties as $index => $propertyData) {
+            // Handle payment_proof files
+            $paymentProofPaths = [];
+            if (isset($propertyData['payment_proof']) && is_array($propertyData['payment_proof'])) {
+                foreach ($propertyData['payment_proof'] as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                        $paymentProofPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
             }
-        } 
-        // Fallback: create single property from old fields
-        else {
-            $propertyData = [];
             
-            if ($request->filled('unit_no')) $propertyData['unit_no'] = $request->unit_no;
-            if ($request->filled('property_type_id')) $propertyData['property_type_id'] = $request->property_type_id;
-            if ($request->filled('bedrooms')) $propertyData['bedrooms'] = $request->bedrooms;
-            if ($request->filled('unit_size')) $propertyData['unit_size'] = $request->unit_size;
-            if ($request->filled('area_id')) $propertyData['area_id'] = $request->area_id;
-            if ($request->filled('project_id')) $propertyData['project_id'] = $request->project_id;
-            if ($request->filled('developer_id')) $propertyData['developer_id'] = $request->developer_id;
-            if ($request->filled('developer_name')) $propertyData['developer_name'] = $request->developer_name;
-            if ($request->filled('developer_phone')) $propertyData['developer_phone'] = $request->developer_phone;
-            if ($request->filled('budget_from')) $propertyData['budget_from'] = $request->budget_from;
-            if ($request->filled('budget_to')) $propertyData['budget_to'] = $request->budget_to;
-            if ($request->filled('purchase_price')) $propertyData['purchase_price'] = $request->purchase_price;
-            if ($request->filled('rental_price')) $propertyData['rental_price'] = $request->rental_price;
-             if ($request->filled('commission')) $propertyData['commission'] = $request->commission;
+            // Handle spa_document files
+            $spaDocumentPaths = [];
+            if (isset($propertyData['spa_document']) && is_array($propertyData['spa_document'])) {
+                foreach ($propertyData['spa_document'] as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
+                        $spaDocumentPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            }
             
-            if (!empty($propertyData)) {
-                $deal->properties()->create(array_merge($propertyData, ['sort_order' => 0]));
+            $deal->properties()->create([
+                'sort_order' => $index,
+                'unit_no' => $propertyData['unit_no'] ?? null,
+                'property_type_id' => $propertyData['property_type_id'] ?? null,
+                'bedrooms' => $propertyData['bedrooms'] ?? null,
+                'unit_size' => $propertyData['unit_size'] ?? null,
+                'area_id' => $propertyData['area_id'] ?? null,
+                'project_id' => $propertyData['project_id'] ?? null,
+                'developer_id' => $propertyData['developer_id'] ?? null,
+                'developer_name' => $propertyData['developer_name'] ?? null,
+                'developer_phone' => $propertyData['developer_phone'] ?? null,
+                'budget_from' => $propertyData['budget_from'] ?? null,
+                'budget_to' => $propertyData['budget_to'] ?? null,
+                'purchase_price' => $propertyData['purchase_price'] ?? null,
+                'rental_price' => $propertyData['rental_price'] ?? null,
+                'payment_proof' => !empty($paymentProofPaths) ? json_encode($paymentProofPaths) : null,
+                'spa_document' => !empty($spaDocumentPaths) ? json_encode($spaDocumentPaths) : null,
+                'contract_document' => $propertyData['contract_document'] ?? null,
+                'ejari_document' => $propertyData['ejari_document'] ?? null,
+                'commission' => $propertyData['commission'] ?? null,
+            ]);
+        }
+    } 
+    // ========== SINGLE PROPERTY MODE ==========
+    else {
+        $propertyData = [];
+        
+        // Text fields
+        if ($request->filled('unit_no')) $propertyData['unit_no'] = $request->unit_no;
+        if ($request->filled('property_type_id')) $propertyData['property_type_id'] = $request->property_type_id;
+        if ($request->filled('bedrooms')) $propertyData['bedrooms'] = $request->bedrooms;
+        if ($request->filled('unit_size')) $propertyData['unit_size'] = $request->unit_size;
+        if ($request->filled('area_id')) $propertyData['area_id'] = $request->area_id;
+        if ($request->filled('project_id')) $propertyData['project_id'] = $request->project_id;
+        if ($request->filled('developer_id')) $propertyData['developer_id'] = $request->developer_id;
+        if ($request->filled('developer_name')) $propertyData['developer_name'] = $request->developer_name;
+        if ($request->filled('developer_phone')) $propertyData['developer_phone'] = $request->developer_phone;
+        if ($request->filled('budget_from')) $propertyData['budget_from'] = $request->budget_from;
+        if ($request->filled('budget_to')) $propertyData['budget_to'] = $request->budget_to;
+        if ($request->filled('purchase_price')) $propertyData['purchase_price'] = $request->purchase_price;
+        if ($request->filled('rental_price')) $propertyData['rental_price'] = $request->rental_price;
+        if ($request->filled('commission')) $propertyData['commission'] = $request->commission;
+        
+        // Handle payment_proof files from direct request
+        $paymentProofPaths = [];
+        if ($request->hasFile('payment_proof')) {
+            $files = $request->file('payment_proof');
+            if (is_array($files)) {
+                foreach ($files as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                        $paymentProofPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
+                $path = $files->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                $paymentProofPaths[] = [
+                    'original_name' => $files->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $files->getMimeType(),
+                    'size' => $files->getSize(),
+                ];
             }
         }
+        
+        // Handle spa_document files from direct request
+        $spaDocumentPaths = [];
+        if ($request->hasFile('spa_document')) {
+            $files = $request->file('spa_document');
+            if (is_array($files)) {
+                foreach ($files as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
+                        $spaDocumentPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
+                $path = $files->store("deals/{$deal->id}/properties/spa_document", 'public');
+                $spaDocumentPaths[] = [
+                    'original_name' => $files->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $files->getMimeType(),
+                    'size' => $files->getSize(),
+                ];
+            }
+        }
+        
+        // Add files to property data
+        if (!empty($paymentProofPaths)) {
+            $propertyData['payment_proof'] = json_encode($paymentProofPaths);
+        }
+        if (!empty($spaDocumentPaths)) {
+            $propertyData['spa_document'] = json_encode($spaDocumentPaths);
+        }
+        
+        if (!empty($propertyData)) {
+            $deal->properties()->create(array_merge($propertyData, ['sort_order' => 0]));
+        }
     }
+}
 
     /**
      * Upload documents

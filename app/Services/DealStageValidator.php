@@ -394,4 +394,39 @@ class DealStageValidator
             'landlord_language' => ['section' => 'Landlord Details', 'label' => 'Language', 'type' => 'select'],
         ];
     }
+    /**
+ * Get missing fields grouped by stage for UI
+ */
+public function getMissingFieldsGroupedByStageForUI(array $missingByStage): array
+{
+    $grouped = [];
+    
+    foreach ($missingByStage as $stageMissing) {
+        $stageId = $stageMissing['stage_id'];
+        $stageName = $stageMissing['stage_name'];
+        $stageOrder = $stageMissing['stage_order'];
+        $missingFields = $stageMissing['missing_fields'];
+        
+        // Group missing fields by section
+        $groupedFields = $this->getMissingFieldsGroupedForUI($missingFields);
+        
+        $grouped[] = [
+            'stage_id' => $stageId,
+            'stage_name' => $stageName,
+            'stage_order' => $stageOrder,
+            'missing_fields' => $missingFields,
+            'grouped_missing' => $groupedFields,
+        ];
+    }
+    
+    return $grouped;
+}
+
+/**
+ * Get missing fields grouped by stage (alternative version)
+ */
+public function getMissingFieldsGroupedByStage($missingFieldsByStage): array
+{
+    return $this->getMissingFieldsGroupedByStageForUI($missingFieldsByStage);
+}
 }

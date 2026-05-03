@@ -24,6 +24,8 @@ use App\Models\DealDocument;
 use App\Models\DealParty;
 use App\Models\User;
 use App\Helpers\ImageHelper;
+use App\Http\Requests\Deal\UpdatePropertyRequest;
+use App\Models\DealProperty;
 use Illuminate\Http\JsonResponse;
 
 class DealController extends Controller
@@ -1217,4 +1219,199 @@ class DealController extends Controller
             'data' => $deal->properties()->with(['propertyType', 'area', 'developer'])->get()
         ]);
     }
+
+     public function updateProperty(UpdatePropertyRequest $request, Deal $deal, DealProperty $property)
+    {
+        // Check authorization
+        if (!$this->authorizeAccess($deal)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Update text fields
+            $property->update($request->only([
+                'unit_no', 'property_type_id', 'bedrooms', 'unit_size',
+                'area_id', 'developer_id', 'developer_name', 'developer_phone',
+                'budget_from', 'budget_to', 'purchase_price', 'commission'
+            ]));
+
+            // Handle payment_proof files
+            if ($request->hasFile('payment_proof')) {
+                $paymentProofPaths = [];
+                foreach ($request->file('payment_proof') as $file) {
+                    $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                    $paymentProofPaths[] = [
+                        'original_name' => $file->getClientOriginalName(),
+                        'path' => $path,
+                        'mime_type' => $file->getMimeType(),
+                        'size' => $file->getSize(),
+                    ];
+                }
+                $property->payment_proof = json_encode($paymentProofPaths);
+            }
+
+            // Handle spa_document files
+            if ($request->hasFile('spa_document')) {
+                $spaDocumentPaths = [];
+                foreach ($request->file('spa_document') as $file) {
+                    $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
+                    $spaDocumentPaths[] = [
+                        'original_name' => $file->getClientOriginalName(),
+                        'path' => $path,
+                        'mime_type' => $file->getMimeType(),
+                        'size' => $file->getSize(),
+                    ];
+                }
+                $property->spa_document = json_encode($spaDocumentPaths);
+            }
+
+            $property->save();
+
+            DB::commit();
+
+            // Load relationships for response
+            $property->load(['propertyType', 'area', 'developer']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $property,
+                'message' => 'Property updated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error updating property: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update property: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function authorizeAccess($deal)
+    {
+        $user = auth()->user();
+        if ($user->hasAnyRole(['super_admin'])) {
+            return true;
+        }
+        
+        if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+            $subordinatesIds = $user->getAllSubordinatesIds();
+            return in_array($deal->responsible_person_id, array_merge($subordinatesIds, [$user->id])) 
+                   || $deal->added_by == $user->id;
+        }
+        
+        return $deal->responsible_person_id == $user->id || $deal->added_by == $user->id;
+    }
+    /**
+ * حذف مستند من Property
+ */
+public function deletePropertyDocument(Request $request)
+{
+    try {
+        $deal = Deal::find($request->deal_id);
+        $property = DealProperty::find($request->property_id);
+        
+        if (!$deal || !$property) {
+            return response()->json(['success' => false, 'message' => 'Not found'], 404);
+        }
+        
+        $documentType = $request->document_type; // 'payment_proof' or 'spa_document'
+        $filePath = $request->file_path;
+        
+        // حذف الملف من التخزين
+        if (\Storage::disk('public')->exists($filePath)) {
+            \Storage::disk('public')->delete($filePath);
+        }
+        
+        // حذف من JSON في قاعدة البيانات
+        $currentDocs = json_decode($property->$documentType, true) ?? [];
+        $filteredDocs = array_filter($currentDocs, function($doc) use ($filePath) {
+            return $doc['path'] !== $filePath;
+        });
+        
+        $property->$documentType = !empty($filteredDocs) ? json_encode(array_values($filteredDocs)) : null;
+        $property->save();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Document deleted successfully'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Delete failed: ' . $e->getMessage()
+        ], 500);
+    }
+}
+public function addProperty(Request $request, Deal $deal)
+{
+    if (!$this->authorizeAccess($deal)) {
+        return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+    }
+    
+    // ✅ Validation rules
+    $validated = $request->validate([
+        'unit_no' => 'required|string|max:255',
+        'property_type_id' => 'required|exists:property_types,id',
+        'bedrooms' => 'nullable|string|max:50',
+        'unit_size' => 'required|numeric|min:0',
+        'area_id' => 'required|exists:areas,id',
+        'developer_id' => 'required|exists:developers,id',
+        'developer_name' => 'required|string|max:255',
+        'developer_phone' => 'required|string|max:50',
+        'budget_from' => 'nullable|numeric|min:0',
+        'budget_to' => 'nullable|numeric|min:0|gte:budget_from',
+        'purchase_price' => 'nullable|numeric|min:0',
+        'commission' => 'nullable|numeric|min:0|max:100',
+    ]);
+    
+    try {
+        DB::beginTransaction();
+        
+        $property = $deal->properties()->create([
+            'sort_order' => $deal->properties()->count(),
+            'unit_no' => $validated['unit_no'] ?? null,
+            'property_type_id' => $validated['property_type_id'] ?? null,
+            'bedrooms' => $validated['bedrooms'] ?? null,
+            'unit_size' => $validated['unit_size'] ?? null,
+            'area_id' => $validated['area_id'] ?? null,
+            'developer_id' => $validated['developer_id'] ?? null,
+            'developer_name' => $validated['developer_name'] ?? null,
+            'developer_phone' => $validated['developer_phone'] ?? null,
+            'budget_from' => $validated['budget_from'] ?? null,
+            'budget_to' => $validated['budget_to'] ?? null,
+            'purchase_price' => $validated['purchase_price'] ?? null,
+            'commission' => $validated['commission'] ?? null,
+        ]);
+        
+        DB::commit();
+        
+        // Load relationships for response
+        $property->load(['propertyType', 'area', 'developer']);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $property,
+            'message' => 'Property added successfully'
+        ]);
+        
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to add property: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

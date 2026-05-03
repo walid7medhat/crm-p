@@ -468,6 +468,9 @@ Route::middleware('jwt.auth')->group(function () {
          Route::post('/{id}/change-stage', [DealController::class, 'changeStage']);
         Route::post('/get-stage-required-fields', [DealController::class, 'getStageRequiredFields']);
         Route::post('/{id}/update-and-change-stage', [DealController::class, 'updateAndChangeStage']);
+        Route::put('/{deal}/properties/{property}', [DealController::class, 'updateProperty']);
+        Route::delete('/property-document', [DealController::class, 'deletePropertyDocument']);
+        Route::post('/{deal}/properties', [DealController::class, 'addProperty']);
     });
     
 });

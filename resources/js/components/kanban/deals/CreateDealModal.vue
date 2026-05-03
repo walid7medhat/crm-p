@@ -863,12 +863,10 @@ async function validateAndSubmit() {
 }
 
 // Submit form
-// Submit form
 async function submitForm() {
   isSubmitting.value = true
   
   try {
-    // Prepare form data for API
     const submitData = new FormData()
     
     // Add basic fields
@@ -879,24 +877,23 @@ async function submitForm() {
       submitData.append('lead_id', props.leadId)
     }
     
-    // ✅ تصفية الحقول: لا ترسل Seller/Landlord عندما تكون مخفية
+    // Add form data fields
     Object.keys(formData.value).forEach(key => {
       const value = formData.value[key]
       if (value === null || value === undefined || value === '') return
       
-      // ✅ لا ترسل Seller fields إذا كان hasListingId و dealType secondary
+      // Skip seller fields when hasListingId
       if (dealType.value === 'secondary' && hasListingId.value) {
         if (key.startsWith('seller_')) return
       }
       
-      // ✅ لا ترسل Landlord fields إذا كان hasListingId و dealType rental
+      // Skip landlord fields when hasListingId
       if (dealType.value === 'rental' && hasListingId.value) {
         if (key.startsWith('landlord_')) return
       }
       
       // Handle documents
       if (key.includes('documents') && Array.isArray(value)) {
-        // Handle document files
         value.forEach((doc, index) => {
           if (doc.file) {
             submitData.append(`documents[${index}]`, doc.file)
@@ -911,23 +908,35 @@ async function submitForm() {
         submitData.append(key, value)
       }
     })
-        
-    // ========== ✅ (Multi Properties) ==========
+    
+    // ========== ✅ MULTI PROPERTIES ==========
     if (dealFormRef.value && dealFormRef.value.getPropertiesData) {
       const propertiesData = dealFormRef.value.getPropertiesData()
       if (propertiesData && propertiesData.length > 0) {
-        // ✅ أرسل كل property على حدة
         propertiesData.forEach((property, idx) => {
           Object.keys(property).forEach(key => {
             const value = property[key]
             if (value !== null && value !== undefined && value !== '') {
-              submitData.append(`properties[${idx}][${key}]`, value)
+              // Handle file arrays
+              if ((key === 'payment_proof' || key === 'spa_document') && Array.isArray(value)) {
+                if (value.length > 0) {
+                  value.forEach((file, fileIndex) => {
+                    if (file instanceof File) {
+                      submitData.append(`properties[${idx}][${key}][${fileIndex}]`, file)
+                    }
+                  })
+                } else {
+                  submitData.append(`properties[${idx}][${key}]`, JSON.stringify([]))
+                }
+              } else {
+                submitData.append(`properties[${idx}][${key}]`, value)
+              }
             }
           })
         })
       }
     }
-    // Submit to API
+    
     const response = await api.post('/deals/store/new', submitData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
@@ -956,13 +965,10 @@ async function submitForm() {
         confirmButtonText: 'OK'
       })
     } else {
-      const backendDetail = error.response?.data?.error
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: backendDetail
-          ? `${error.response?.data?.message || 'Failed to create deal'}: ${backendDetail}`
-          : (error.response?.data?.message || 'Failed to create deal'),
+        text: error.response?.data?.message || 'Failed to create deal',
         confirmButtonText: 'OK'
       })
     }

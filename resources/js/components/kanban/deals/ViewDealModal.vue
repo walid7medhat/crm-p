@@ -119,6 +119,7 @@
                       @search-areas="editSearchAreas"
                       @search-subcommunities="editSearchSubCommunities"
                       @search-projects="editSearchProjects"
+                        @refresh-deal="hydrateDealForView"
                     />
                   </div>
                   <div v-else-if="dealType === 'secondary'" class="row g-3 view-deal-content">
@@ -142,6 +143,7 @@
                       @search-areas="editSearchAreas"
                       @search-subcommunities="editSearchSubCommunities"
                       @search-projects="editSearchProjects"
+                        @refresh-deal="hydrateDealForView"
                     />
                   </div>
                   <div v-else class="row g-3 view-deal-content">
@@ -165,6 +167,7 @@
                       @search-areas="editSearchAreas"
                       @search-subcommunities="editSearchSubCommunities"
                       @search-projects="editSearchProjects"
+                        @refresh-deal="hydrateDealForView"
                     />
                   </div>
               </div>
@@ -372,7 +375,9 @@ function handlePersonUpdated(updatedPerson) {
     },
   })
 }
-
+async function handleRefreshDeal() {
+  await hydrateDealForView()
+}
 const showLinkedLeadModal = ref(false)
 
 function handleLinkedLeadUpdated() {
@@ -567,18 +572,7 @@ function dealToFormData(deal) {
   return {
     source: deal.source ?? '',
     deal_name: deal.deal_name ?? '',
-    unit_no: deal.unit_no ?? '',
-    property_type_id: deal.property_type_id ?? deal.property_type?.id ?? null,
-    subcommunity_id: deal.subcommunity_id ?? deal.subcommunity?.id ?? null,
-    bedrooms: deal.bedrooms ?? null,
-    unit_size: deal.unit_size ?? '',
-    project_id: deal.project_id ?? deal.project?.id ?? null,
-    developer_id: deal.developer_id ?? deal.developer?.id ?? null,
-    developer_name: deal.developer_name ?? '',
-    developer_phone: deal.developer_phone ?? '',
-    area_id: deal.area_id ?? deal.area?.id ?? null,
-    property_link: deal.property_link ?? '',
-    property_reference: deal.property_reference ?? '',
+ 
     deal_commission: deal.deal_commission ?? null,
     agent_share: deal.agent_share ?? null,
     company_share: deal.company_share ?? null,
@@ -736,7 +730,10 @@ function cancelEditDeal() {
 async function hydrateAutoEditSection() {
   const section = props.autoEditSection
   if (!show.value || !props.deal?.id || !section) return
-
+if (section === 'add_new_property') {
+ 
+    return
+  }
   // Always rehydrate on open/deal change to avoid stale previous form data.
   activeEditSection.value = section
   isEditingDeal.value = true
@@ -846,6 +843,14 @@ watch(() => props.modelValue, async (val) => {
   show.value = val
   if (val && props.deal?.deal_type) {
     dealType.value = props.deal.deal_type
+    await hydrateDealForView()
+    await fetchStagesFromAPI(props.deal.deal_type)
+    selectedStageIndex.value = currentStageIndex.value
+  }
+})
+watch(() => show.value, async (isOpen) => {
+  if (isOpen && props.deal?.id) {
+    await fetchEditLookups()  // ✅ حمل البيانات أولاً
     await hydrateDealForView()
     await fetchStagesFromAPI(props.deal.deal_type)
     selectedStageIndex.value = currentStageIndex.value
@@ -996,7 +1001,10 @@ function close() {
   max-width: 100%;
   border: none !important;
   height: 35px;
+  border: 1px solid #0d6efd !important; 
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.2);
 }
+
 
 .deal-title-pencil {
   color: #64748b;

@@ -38,15 +38,13 @@ class DealProperty extends Model
         'ejari_document',
     ];
     
-    protected $casts = [
+       protected $casts = [
+        'payment_proof' => 'array',  
+        'spa_document' => 'array',   
         'budget_from' => 'decimal:2',
         'budget_to' => 'decimal:2',
         'purchase_price' => 'decimal:2',
-        'rental_price' => 'decimal:2',
-        'payment_proof' => 'array',
-        'spa_document' => 'array',
-        'contract_document' => 'array',
-        'ejari_document' => 'array',
+        'commission' => 'decimal:2',
     ];
     
     // ========== Relationships ==========

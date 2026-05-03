@@ -88,7 +88,7 @@
       </div>
 
       <!-- ========== BASIC PROPERTY FIELDS (تتعبي تلقائياً من الـ Listing) ========== -->
-      <div class="col-md-4">
+      <div class="col-md-6">
         <label class="form-label-custom">
           Unit No <span v-if="isRequired('unit_no')" class="text-danger">*</span>
         </label>
@@ -119,7 +119,7 @@
         </v-select>
       </div>
 
-      <div class="col-md-4">
+      <div class="col-md-4" v-if="showBedroomsField">
         <label class="form-label-custom">
           Bedrooms <span v-if="isRequired('bedrooms')" class="text-danger">*</span>
         </label>
@@ -485,9 +485,35 @@ watch(() => props.property.area_id, async (newAreaId) => {
 
 // Initialize
 getCurrentUser()
-
+const fetchAllAreas = async () => {
+  try {
+      const response = await api.get('/listings/areas')
+    
+    // معالجة البيانات
+    const responseData = response.data
+    let areasData = []
+    
+    if (responseData?.data?.data) {
+      areasData = responseData.data.data
+    } else if (responseData?.data && Array.isArray(responseData.data)) {
+      areasData = responseData.data
+    } else if (Array.isArray(responseData)) {
+      areasData = responseData
+    } else {
+      areasData = []
+    }
+     props.areas = areasData
+     emit('update:areas', areasData)
+   
+    
+    console.log(`Loaded ${props.areas.length} areas`)
+  } catch (error) {
+    console.error('Error loading areas:', error)
+  }
+}
 onMounted(() => {
   ensurePropertyDocumentArrays(localProperty.value)
+  fetchAllAreas()
 })
 
 watch(
@@ -511,6 +537,28 @@ const bedroomOptions = [
 const showPropertyCommission = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
   return stageName.includes('won') || stageName.includes('deal won')
+})
+// بعد الـ computed الموجودة
+const showBedroomsField = computed(() => {
+  const propertyTypeId = localProperty.value.property_type_id
+  if (!propertyTypeId) return true // لو لسه مجاش
+  
+  const selectedType = props.propertyTypes.find(t => t.id === propertyTypeId)
+  const typeName = selectedType?.name?.toLowerCase() || ''
+  
+  // لو الاسم يحتوي على land أو plot، نخفي الـ Bedrooms
+  if (typeName.includes('land') || typeName.includes('plot')) {
+    return false
+  }
+  
+  return true
+})
+
+// كمان لو اختار Land أو Plot، نحذف قيمة الـ bedrooms
+watch(() => localProperty.value.property_type_id, (newTypeId) => {
+  if (!showBedroomsField.value) {
+    localProperty.value.bedrooms = null
+  }
 })
 </script>
 
@@ -563,14 +611,215 @@ const showPropertyCommission = computed(() => {
   padding-bottom: 0;
 }
 
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--deal-navy-deep, #01062c);
-  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
-  margin-bottom: 10px;
-  letter-spacing: -0.02em;
-  line-height: 1.35;
-  display: block;
+
+
+/* Figma deal forms — Inter, 16px sections, 12px labels, 14px inputs */
+.section-title { font-size: 16px !important; font-weight: 600; color: var(--deal-navy-deep, #01062c); font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); margin-bottom: 10px; letter-spacing: -0.02em; line-height: 1.35; }
+.form-card { background: #fff; border: 1px solid #e5e7eb; box-shadow: none; padding: 0.875rem 1rem !important; }
+.radius-12 { border-radius: 8px; }
+.form-label-custom { font-size: 12px !important; font-weight: 500; color: var(--deal-text-muted, #64748b); margin-bottom: 4px; display: block; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.custom-input { height: 42px !important; min-height: 42px; border-radius: 8px !important; border: 1px solid #e5e7eb !important; font-size: 13px !important; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.custom-input::placeholder { font-size: 10px !important; color: #9ca3af; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.custom-input.is-invalid { border-color: #dc3545 !important; }
+.input-group-custom { display: flex; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+.input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 8px 0 0 8px !important; }
+:deep(.custom-v-select) { font-size: 13px; }
+:deep(.custom-v-select .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 13px; padding: 2px 8px;overflow: hidden; }
+:deep(.custom-v-select.is-invalid .vs__dropdown-toggle) { border-color: #dc3545 !important; }
+:deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 13px; }
+:deep(.custom-v-select .vs__search::placeholder) { font-size: 10px !important; color: #9ca3af; }
+:deep(.custom-v-select .vs__placeholder) { font-size: 10px !important; color: #9ca3af; }
+:deep(.buyer-language-select .vs__selected) {     height: 26px !important;background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; margin:5px !important}
+:deep(.buyer-language-select .vs__dropdown-option--highlight) { background: #eff6ff; color: #1e3a8a; }
+:deep(.buyer-language-select .vs__dropdown-option--selected) { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
+:deep(.custom-v-select-inline) { min-width: 120px; }
+:deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border: none; border-left: 1px solid #e5e7eb; border-radius: 0 8px 8px 0; font-size: 11px; }
+:deep(.custom-v-select-inline .vs__selected) { font-size: 11px; font-weight: 500; color: #64748b; }
+:deep(.custom-v-select-inline .vs__search::placeholder) { font-size: 9px !important; color: #9ca3af; }
+:deep(.custom-v-select-inline .vs__placeholder) { font-size: 9px !important; color: #9ca3af; }
+.doc-tabs { gap: 8px; }
+.doc-tab { height: 32px; min-height: 32px; padding: 0 14px; border-radius: 100px; border: 1px solid #E2E8F0; background: #fff; font-size: 12px; font-weight: 500; color: #64748B; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.doc-tab.active { background: #0F172A; color: #fff; border-color: #0F172A; }
+.upload-zone { border-style: dashed !important; border-color: #E2E8F0 !important; background: #F8FAFC; }
+.upload-icon { font-size: 36px; color: #94A3B8; }
+.upload-text { font-size: 14px; color: #475569; margin: 0; }
+.tag-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #F1F5F9; border-radius: 100px; font-size: 13px; }
+.tag-remove { cursor: pointer; font-size: 16px; }
+.btn-tag-search { background: transparent; border: none; color: var(--deal-navy, #0f172a); font-size: 14px; font-weight: 500; cursor: pointer; }
+.add-custom-field-link { font-size: 14px; color: var(--deal-navy, #0f172a); font-weight: 500; text-decoration: underline; }
+.form-section { margin-top: 14px; }
+.form-section:first-of-type { margin-top: 0; }
+
+/* Inline per-section edit mode */
+.inline-mode .section-title {
+  display: none !important;
 }
+.inline-mode .form-card {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+.inline-mode .form-section {
+  margin-top: 0 !important;
+}
+.inline-mode :deep(.row.g-3) {
+  display: flex;
+  flex-direction: row;
+  gap: 9px !important;
+}
+.inline-mode :deep(.row.g-3 > [class*='col-']) {
+  width: 49% !important;
+  max-width: 100% !important;
+  /* flex: 0 0 100% !important; */
+  /* padding-left: 0 !important;
+  padding-right: 0 !important; */
+}
+:deep(.custom-v-select .vs__open-indicator-icon) {
+    font-size: 13px;
+    color: #cfdbec;
+}
+
+:deep(.custom-v-select svg) {
+    vertical-align: middle !important;
+}
+  /* Location dropdown options: 2 lines with icon (like image) */
+    .location-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 4px 0;
+      min-height: 40px;
+    }
+    
+    .location-option-icon {
+      font-size: 1.1rem;
+      color: #64748b;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    
+    .location-option-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .location-option-name {
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: #01062d;
+      line-height: 1.2;
+    }
+    
+    .location-option-subtitle {
+      font-size: 0.65rem;
+      color: #64748b;
+      line-height: 1.2;
+    }
+    
+    /* Location dropdown list: wider */
+    :deep(.location-select + .vs__dropdown-menu),
+    :deep(.location-select .vs__dropdown-menu) {
+      min-width: 320px !important;
+      width: 100% !important;
+      max-width: 400px;
+    }
+    .document-upload-container.is-compact .all-boxes-grid{
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+:deep(.vs__open-indicator) {
+  color: #94a3b8 !important;
+      /* margin-bottom: 10px; */
+}
+
+:deep(.vs__deselect) {
+  border: none !important;
+  box-shadow: none !important;
+}
+:deep(.custom-v-select .vs__selected) {
+  text-align: left !important;
+  font-size: 13px;
+  padding-left: 8px;
+  height: 100%;
+  margin: 0px;
+}
+
+:deep(.custom-v-select .vs__search::placeholder),
+:deep(.custom-v-select .vs__placeholder) {
+  text-align: left !important;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+:deep(.custom-v-select .vs__dropdown-menu) {
+  overflow-y: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.custom-v-select .vs__clear) {
+  fill: #94a3b8;
+  padding: 4px;
+  cursor: pointer;
+}
+
+
+:deep(.custom-v-select .vs__clear svg) {
+  display: none !important;
+}
+
+:deep(.custom-v-select .vs__clear) {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="%2394a3b8" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg>') !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 14px !important;
+  width: 24px !important;
+  height: 24px !important;
+}
+:deep(.custom-v-select .vs__deselect svg) {
+  display: none !important;
+}
+
+:deep(.custom-v-select .vs__deselect) {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="%2394a3b8" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg>') !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 14px !important;
+  width: 24px !important;
+  height: 24px !important;
+}
+.custom-remove-icon {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #94a3b8; 
+  font-size: 12px;
+}
+
+
+.btn-add-property {
+  background: transparent;
+  border: 1px solid #01062C;
+  border-radius: 100px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #01062C;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.btn-add-property:hover {
+  background: #01062C;
+  color: #fff;
+}
+
 </style>
+<style>
+.advanced-date-trigger{
+  border:none !important;
+}</style>

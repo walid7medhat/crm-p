@@ -59,10 +59,24 @@ class ConvertLeadRequest extends FormRequest
             'properties.*.budget_to' => 'nullable|numeric|min:0|gte:properties.*.budget_from',
             'properties.*.purchase_price' => 'nullable|numeric|min:0',
             'properties.*.rental_price' => 'nullable|numeric|min:0',
+            'properties.*.commission' => 'nullable|numeric|min:0|max:100',
+            
+            // ✅ ملفات payment_proof في الـ multi properties
             'properties.*.payment_proof' => 'nullable|array',
+            'properties.*.payment_proof.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            
+            // ✅ ملفات spa_document في الـ multi properties
             'properties.*.spa_document' => 'nullable|array',
+            'properties.*.spa_document.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            
             'properties.*.contract_document' => 'nullable|array',
             'properties.*.ejari_document' => 'nullable|array',
+            
+            // ========== SINGLE PROPERTY MODE ==========
+            'payment_proof' => 'nullable|array',
+            'payment_proof.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            'spa_document' => 'nullable|array',
+            'spa_document.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
         ];
 
         $hasListingId = $this->filled('listing_id');
@@ -157,7 +171,7 @@ class ConvertLeadRequest extends FormRequest
                 'tenant_nationality' => 'required|string',
                 'tenant_residency_status' => 'required|string',
                 'tenant_city' => 'required_if:tenant_residency_status,resident|nullable|string',
-               'tenant_country' => 'required_if:tenant_residency_status,non_resident|nullable|string',
+                'tenant_country' => 'required_if:tenant_residency_status,non_resident|nullable|string',
                 'tenant_language' => 'required|string',
                 
                 'landlord_first_name' => $isLandlordRequired ? 'required|string' : 'nullable|string',
@@ -240,23 +254,30 @@ class ConvertLeadRequest extends FormRequest
             
             // Properties validation
             'properties.*.budget_to.gte' => 'Budget To must be greater than or equal to Budget From',
-
-             
-        // Buyer fields - تحديث الرسائل
-        'buyer_city.required_if' => 'Buyer city is required for residents',
-        'buyer_country.required_if' => 'Buyer country is required for non-residents',
-        
-        // Seller fields
-        'seller_city.required_if' => 'Seller city is required for residents',
-        'seller_country.required_if' => 'Seller country is required for non-residents',
-        
-        // Tenant fields
-        'tenant_city.required_if' => 'Tenant city is required for residents',
-        'tenant_country.required_if' => 'Tenant country is required for non-residents',
-        
-        // Landlord fields
-        'landlord_city.required_if' => 'Landlord city is required for residents',
-        'landlord_country.required_if' => 'Landlord country is required for non-residents',
+            
+            // Buyer fields - updated messages
+            'buyer_city.required_if' => 'Buyer city is required for residents',
+            'buyer_country.required_if' => 'Buyer country is required for non-residents',
+            
+            // Seller fields
+            'seller_city.required_if' => 'Seller city is required for residents',
+            'seller_country.required_if' => 'Seller country is required for non-residents',
+            
+            // Tenant fields
+            'tenant_city.required_if' => 'Tenant city is required for residents',
+            'tenant_country.required_if' => 'Tenant country is required for non-residents',
+            
+            // Landlord fields
+            'landlord_city.required_if' => 'Landlord city is required for residents',
+            'landlord_country.required_if' => 'Landlord country is required for non-residents',
+            
+            // File validation messages
+            'properties.*.payment_proof.*.file' => 'Each payment proof must be a valid file',
+            'properties.*.payment_proof.*.mimes' => 'Payment proof must be a JPG, JPEG, PNG, or PDF file',
+            'properties.*.payment_proof.*.max' => 'Payment proof cannot exceed 10MB',
+            'properties.*.spa_document.*.file' => 'Each SPA document must be a valid file',
+            'properties.*.spa_document.*.mimes' => 'SPA document must be a JPG, JPEG, PNG, or PDF file',
+            'properties.*.spa_document.*.max' => 'SPA document cannot exceed 10MB',
         ];
     }
 }

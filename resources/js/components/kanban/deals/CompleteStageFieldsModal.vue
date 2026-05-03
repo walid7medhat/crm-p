@@ -1524,9 +1524,10 @@ const documentTypesByParty = computed(() => {
       // { id: 'visa', name: 'Residence  Visa' },
       { id: 'national_id', name: 'Emirates ID' },
       { id: 'kyc', name: 'KYC' },
-      { id: 'spa', name: 'Buyer SPA' },
-      { id: 'payment_proof', name: 'Buyer Payment Proof' },
+      // { id: 'spa', name: 'Buyer SPA' },
+      // { id: 'payment_proof', name: 'Buyer Payment Proof' },
     ]
+    
     const requiredBuyerResidencyDocs = getDocsForResidency(buyerResidency)
     buyerDocDefinitions.forEach((doc) => {
       // Match DealForm.vue: residency controls passport/visa/national ID; stage controls KYC/SPA/payment proof.

@@ -41,6 +41,40 @@ class UpdateDealRequest extends FormRequest
             'properties.*.budget_to' => 'nullable|numeric|min:0',
             'properties.*.purchase_price' => 'nullable|numeric|min:0',
             'properties.*.rental_price' => 'nullable|numeric|min:0',
+            'properties.*.commission' => 'nullable|numeric|min:0|max:100',
+            
+            // ✅ ملفات payment_proof
+            'properties.*.payment_proof' => 'nullable|array',
+            'properties.*.payment_proof.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            
+            // ✅ ملفات spa_document
+            'properties.*.spa_document' => 'nullable|array',
+            'properties.*.spa_document.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            
+            // ✅ Single property mode (direct fields)
+            'payment_proof' => 'nullable|array',
+            'payment_proof.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            'spa_document' => 'nullable|array',
+            'spa_document.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+        ];
+    }
+    
+    public function messages(): array
+    {
+        return [
+            // File validation messages
+            'properties.*.payment_proof.*.file' => 'Each payment proof must be a valid file',
+            'properties.*.payment_proof.*.mimes' => 'Payment proof must be a JPG, JPEG, PNG, or PDF file',
+            'properties.*.payment_proof.*.max' => 'Payment proof cannot exceed 10MB',
+            'properties.*.spa_document.*.file' => 'Each SPA document must be a valid file',
+            'properties.*.spa_document.*.mimes' => 'SPA document must be a JPG, JPEG, PNG, or PDF file',
+            'properties.*.spa_document.*.max' => 'SPA document cannot exceed 10MB',
+            'payment_proof.*.file' => 'Payment proof must be a valid file',
+            'payment_proof.*.mimes' => 'Payment proof must be a JPG, JPEG, PNG, or PDF file',
+            'payment_proof.*.max' => 'Payment proof cannot exceed 10MB',
+            'spa_document.*.file' => 'SPA document must be a valid file',
+            'spa_document.*.mimes' => 'SPA document must be a JPG, JPEG, PNG, or PDF file',
+            'spa_document.*.max' => 'SPA document cannot exceed 10MB',
         ];
     }
 }

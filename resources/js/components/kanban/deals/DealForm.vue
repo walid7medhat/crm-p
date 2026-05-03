@@ -85,6 +85,11 @@
               <template #open-indicator="{ attributes }">
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
+                <template #deselect="{ option }">
+                <span class="custom-remove-icon">
+                  <iconify-icon icon="lucide:x-circle"></iconify-icon>
+                </span>
+              </template>
             </v-select>
             <div v-if="showErrors && fieldErrors.buyer_language" class="invalid-feedback d-block">{{ fieldErrors.buyer_language }}</div>
           </div>
@@ -349,7 +354,7 @@
             </v-select>
             <div class="small text-muted mt-1"><iconify-icon icon="lucide:info" class="me-1"></iconify-icon> Showing available units in this location</div>
           </div>
-          <div class="col-md-4"><label class="form-label-custom">Unit No <span class="text-danger">*</span></label><b-form-input v-model="form.unit_no" placeholder="Enter Unit No" class="custom-input" :class="{ 'is-invalid': showErrors && !form.unit_no }" /></div>
+          <div class="col-md-6"><label class="form-label-custom">Unit No <span class="text-danger">*</span></label><b-form-input v-model="form.unit_no" placeholder="Enter Unit No" class="custom-input" :class="{ 'is-invalid': showErrors && !form.unit_no }" /></div>
           <div class="col-md-4">
             <label class="form-label-custom">Property Type <span class="text-danger">*</span></label>
             <v-select v-model="form.property_type_id" :options="propertyTypes" :reduce="item => item.id" label="name" placeholder="Select Property Type" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.property_type_id }" clearable>
@@ -358,7 +363,7 @@
               </template>
             </v-select>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-4" v-if="showBedroomsFieldInProperty">
             <label class="form-label-custom">Bedrooms</label>
             <v-select v-model="form.bedrooms" :options="bedroomOptions" :reduce="o => o.value" label="text" placeholder="Select Bedroom" class="custom-v-select" clearable>
               <template #open-indicator="{ attributes }">
@@ -546,7 +551,7 @@ const primaryBuyerDocTypes = computed(() => {
   if (requiredResidencyDocs.includes('passport')) docs.push({ id: 'passport', name: 'Passport', required: true })
   if (requiredResidencyDocs.includes('national_id')) docs.push({ id: 'national_id', name: 'Emirates ID', required: true })
   docs.push({ id: 'kyc', name: 'KYC', required: isSpaStageOrLater.value })
-  docs.push({ id: 'spa', name: 'Buyer SPA', required: isSpaStageOrLater.value })
+  // docs.push({ id: 'spa', name: 'Buyer SPA', required: isSpaStageOrLater.value })
   // docs.push({ id: 'payment_proof', name: 'Buyer Payment Proof', required: isEoiStageOrLater.value })
   return docs
 })
@@ -900,26 +905,48 @@ const addNewProperty = () => {
 const getPropertiesData = () => {
   console.log('getPropertiesData called, showMultiProperties:', showMultiProperties.value)
   console.log('propertiesList:', propertiesList.value)
- if (showMultiProperties.value && propertiesList.value.length > 0) {
-    const dataToSend = propertiesList.value.map((prop, index) => ({
-      sort_order: index,
-      unit_no: prop.unit_no || '',
-      property_type_id: prop.property_type_id || null,
-      bedrooms: prop.bedrooms || null,
-      unit_size: prop.unit_size || '',
-      area_id: prop.area_id || null,
-      project_id: prop.project_id || null,
-      developer_id: prop.developer_id || null,
-      developer_name: prop.developer_name || '',
-      developer_phone: prop.developer_phone || '',
-      budget_from: prop.budget_from || null,
-      budget_to: prop.budget_to || null,
-      purchase_price: prop.purchase_price || null,
-         commission: prop.commission || null,
-      rental_price: prop.rental_price || null,
-      payment_proof: prop.payment_proof || [],
-      spa_document: prop.spa_document || [],
-    }))
+  
+  if (showMultiProperties.value && propertiesList.value.length > 0) {
+    const dataToSend = propertiesList.value.map((prop, index) => {
+      // استخراج الملفات الفعلية فقط من payment_proof
+      let paymentProofFiles = []
+      let spaDocumentFiles = []
+      
+      // معالجة payment_proof - استخراج الـ File فقط
+      if (prop.payment_proof && Array.isArray(prop.payment_proof)) {
+        paymentProofFiles = prop.payment_proof
+          .filter(doc => doc && doc.file instanceof File)
+          .map(doc => doc.file)
+      }
+      
+      // معالجة spa_document - استخراج الـ File فقط
+      if (prop.spa_document && Array.isArray(prop.spa_document)) {
+        spaDocumentFiles = prop.spa_document
+          .filter(doc => doc && doc.file instanceof File)
+          .map(doc => doc.file)
+      }
+      
+      return {
+        sort_order: index,
+        unit_no: prop.unit_no || '',
+        property_type_id: prop.property_type_id || null,
+        bedrooms: prop.bedrooms || null,
+        unit_size: prop.unit_size || '',
+        area_id: prop.area_id || null,
+        project_id: prop.project_id || null,
+        developer_id: prop.developer_id || null,
+        developer_name: prop.developer_name || '',
+        developer_phone: prop.developer_phone || '',
+        budget_from: prop.budget_from || null,
+        budget_to: prop.budget_to || null,
+        purchase_price: prop.purchase_price || null,
+        commission: prop.commission || null,
+        rental_price: prop.rental_price || null,
+        payment_proof: paymentProofFiles,  // الآن هي مصفوفة من Files فقط
+        spa_document: spaDocumentFiles,    // الآن هي مصفوفة من Files فقط
+      }
+    })
+    
     console.log('Properties data to send:', dataToSend)
     return dataToSend
   }
@@ -934,7 +961,11 @@ watch(() => shouldHideSeller.value, (hide) => {
 watch(() => shouldHideLandlord.value, (hide) => {
   if (hide) { form.value.landlord_first_name = ''; form.value.landlord_last_name = ''; form.value.landlord_dob = ''; form.value.landlord_phone = ''; form.value.landlord_email = ''; form.value.landlord_nationality = ''; form.value.landlord_residency_status = ''; form.value.landlord_city = ''; form.value.landlord_country = ''; form.value.landlord_language = ''; form.value.landlord_documents = [] }
 })
-
+watch(() => form.value.property_type_id, (newTypeId) => {
+  if (!showBedroomsFieldInProperty.value) {
+    form.value.bedrooms = null
+  }
+})
 // ========== Expose ==========
 defineExpose({ clearAllDocuments, validateForm, getPropertiesData, propertiesList })
 
@@ -971,7 +1002,52 @@ const showPropertyCommission = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
   return stageName.includes('won') || stageName.includes('deal won')
 })
+const fetchAllAreas = async () => {
+  try {
+      const response = await api.get('/listings/areas')
+    
+    // معالجة البيانات
+    const responseData = response.data
+    let areasData = []
+    
+    if (responseData?.data?.data) {
+      areasData = responseData.data.data
+    } else if (responseData?.data && Array.isArray(responseData.data)) {
+      areasData = responseData.data
+    } else if (Array.isArray(responseData)) {
+      areasData = responseData
+    } else {
+      areasData = []
+    }
+     props.areas = areasData
+     emit('update:areas', areasData)
+   
+    
+    console.log(`Loaded ${props.areas.length} areas`)
+  } catch (error) {
+    console.error('Error loading areas:', error)
+  }
+}
+// أضف هذا مع الـ computed الموجودة (بعد showPropertyCommission مثلاً)
+const showBedroomsFieldInProperty = computed(() => {
+  const propertyTypeId = form.value.property_type_id
+  if (!propertyTypeId) return true
+  
+  const selectedType = props.propertyTypes.find(t => t.id === propertyTypeId)
+  const typeName = selectedType?.name?.toLowerCase() || ''
+  
+  if (typeName.includes('land') || typeName.includes('plot')) {
+    return false
+  }
+  
+  return true
+})
+onMounted(() => {
+  // fetchProjects()
+  getCurrentUser()
+    fetchAllAreas()
 
+})
 </script>
 
 <style scoped>
@@ -991,7 +1067,7 @@ const showPropertyCommission = computed(() => {
 :deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 13px; }
 :deep(.custom-v-select .vs__search::placeholder) { font-size: 10px !important; color: #9ca3af; }
 :deep(.custom-v-select .vs__placeholder) { font-size: 10px !important; color: #9ca3af; }
-:deep(.buyer-language-select .vs__selected) { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+:deep(.buyer-language-select .vs__selected) {     height: 26px !important;background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; margin:5px !important}
 :deep(.buyer-language-select .vs__dropdown-option--highlight) { background: #eff6ff; color: #1e3a8a; }
 :deep(.buyer-language-select .vs__dropdown-option--selected) { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
 :deep(.custom-v-select-inline) { min-width: 120px; }
@@ -1093,7 +1169,7 @@ const showPropertyCommission = computed(() => {
 
 :deep(.vs__open-indicator) {
   color: #94a3b8 !important;
-      margin-bottom: 10px;
+      /* margin-bottom: 10px; */
 }
 
 :deep(.vs__deselect) {
@@ -1140,6 +1216,27 @@ const showPropertyCommission = computed(() => {
   width: 24px !important;
   height: 24px !important;
 }
+:deep(.custom-v-select .vs__deselect svg) {
+  display: none !important;
+}
+
+:deep(.custom-v-select .vs__deselect) {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="%2394a3b8" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg>') !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 14px !important;
+  width: 24px !important;
+  height: 24px !important;
+}
+.custom-remove-icon {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #94a3b8; 
+  font-size: 12px;
+}
+
+
 .btn-add-property {
   background: transparent;
   border: 1px solid #01062C;
@@ -1160,3 +1257,7 @@ const showPropertyCommission = computed(() => {
 }
 
 </style>
+<style>
+.advanced-date-trigger{
+  border:none !important;
+}</style>
