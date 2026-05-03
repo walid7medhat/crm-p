@@ -685,7 +685,7 @@ const $showNotification = (message, type = 'success') => {
   border: 1px dashed #cbd5e1;
   border-radius: 12px;
   background: #fff;
-  min-height: 152px;
+  min-height: 120px;
   padding: 10px;
   text-align: center;
   display: flex;
@@ -752,7 +752,7 @@ const $showNotification = (message, type = 'success') => {
 }
 
 .document-box-icon {
-  font-size: 28px;
+  font-size: 20px;
   color: #6b7280;
 }
 
@@ -1056,7 +1056,7 @@ const $showNotification = (message, type = 'success') => {
 
 .document-boxes-container {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 

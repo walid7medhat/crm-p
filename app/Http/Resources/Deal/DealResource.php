@@ -1,15 +1,15 @@
 <?php
-// app/Http/Resources/DealResource.php
 
 namespace App\Http\Resources\Deal;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use  App\Http\Resources\User\UserResource;
+use App\Http\Resources\User\UserResource;
+
 class DealResource extends JsonResource
 {
     public function toArray($request)
     {
-          $assignmentHistory = $this->histories()
+        $assignmentHistory = $this->histories()
             ->where('changes->action', 'assigned')
             ->orderBy('created_at', 'desc') 
             ->first();
@@ -19,6 +19,7 @@ class DealResource extends JsonResource
         } else {
             $assignedBy = $this->addedBy;
         }
+        
         return [
             'id' => $this->id,
             'deal_number' => $this->deal_number,
@@ -33,13 +34,6 @@ class DealResource extends JsonResource
             'deal_commission' => $this->deal_commission,
             'agent_share' => $this->agent_share,
             'company_share' => $this->company_share,
-            
-            // Property
-            'unit_no' => $this->unit_no,
-            'bedrooms' => $this->bedrooms,
-            'unit_size' => $this->unit_size,
-            'property_link' => $this->property_link,
-            'property_reference' => $this->property_reference,
             
             // Relationships (lead_id always when set so kanban / modals can link without loading full lead)
             'lead_id' => $this->lead_id,
@@ -58,49 +52,71 @@ class DealResource extends JsonResource
                 'color' => $this->stage->color,
             ],
             
-            'property_type' =>[
-                'id' => $this->propertyType?->id,
-                'name' => $this->propertyType?->name,
-            ],
-            'listing' =>$this->listing?  [
-                'id' => $this->listing?->id,
-                'name' => $this->listing?->area?->area_title,
-                'agent'=>$this->listing?->agent->name,
-            ]:null,
-            // 'project' => $this->whenLoaded('project', fn() => [
-            //     'id' => $this->project->id,
-            //     'name' => $this->project->title,
-            // ]),
-            // 'subcommunity' => $this->whenLoaded('subcommunity', fn() => [
-            //     'id' => $this->subcommunity->id,
-            //     'name' => $this->subcommunity->name,
-            // ]),
+          
+            'listing' => $this->listing ? [
+                'id' => $this->listing->id,
+                'name' => $this->listing->area?->area_title,
+                'agent' => $this->listing->agent->name,
+            ] : null,
+            
             'area' => [
                 'id' => $this->area?->id,
                 'name' => $this->area?->name,
             ],
-            'developer_name'=>$this->developer_name,
-            'developer_phone'=>$this->developer_phone,
+            
+            // ========== MULTI PROPERTIES ==========
+            'properties' => $this->whenLoaded('properties', function() {
+                return $this->properties->map(function($property) {
+                    return [
+                        'id' => $property->id,
+                        'sort_order' => $property->sort_order,
+                        'unit_no' => $property->unit_no,
+                        'property_type_id' => $property->property_type_id,
+                        'property_type' => $property->propertyType?->name,
+                        'bedrooms' => $property->bedrooms,
+                        'unit_size' => $property->unit_size,
+                        'area_id' => $property->area_id,
+                        'area' => $property->area?->name,
+                        'project_id' => $property->project_id,
+                        'developer_id' => $property->developer_id,
+                        'developer_name' => $property->developer_name,
+                        'developer_phone' => $property->developer_phone,
+                        'budget_from' => $property->budget_from,
+                        'budget_to' => $property->budget_to,
+                        'purchase_price' => $property->purchase_price,
+                        'rental_price' => $property->rental_price,
+                        'payment_proof' => $property->payment_proof,
+                        'spa_document' => $property->spa_document,
+                        'display_name' => $property->display_name,
+                        'budget_range' => $property->budget_range,
+                    ];
+                });
+            }),
+            
+            'developer_name' => $this->developer_name,
+            'developer_phone' => $this->developer_phone,
             'developer' => [
                 'id' => $this->developer?->id,
                 'name' => $this->developer?->name,
             ],
-            'responsible_person_id' => $this->responsible_person_id,
             
-               'responsible_person' => new UserResource($this->responsiblePerson),
-           'buyer_name' => (function () {
-                    $buyer = $this->parties
-                        ->where('party_type', 'buyer')
-                        ->where('party_role', 'primary')
-                        ->first();
-                
-                    return $buyer ? trim($buyer->first_name . ' ' . $buyer->last_name) : null;
-                })(),
+            'responsible_person_id' => $this->responsible_person_id,
+            'responsible_person' => new UserResource($this->responsiblePerson),
+            
+            'buyer_name' => (function () {
+                $buyer = $this->parties
+                    ->where('party_type', 'buyer')
+                    ->where('party_role', 'primary')
+                    ->first();
+                return $buyer ? trim($buyer->first_name . ' ' . $buyer->last_name) : null;
+            })(),
+            
             'parties' => DealPartyResource::collection($this->whenLoaded('parties')),
             'documents' => DealDocumentResource::collection($this->whenLoaded('documents')),
-                 'parent'=>new UserResource($assignedBy),
-            'assigned_at'=>$assignmentHistory?$assignmentHistory->created_at:$this->created_at,
-            'lost_reason'=>$this->lost_reason,
+            'parent' => new UserResource($assignedBy),
+            'assigned_at' => $assignmentHistory ? $assignmentHistory->created_at : $this->created_at,
+            'lost_reason' => $this->lost_reason,
+            
             // Timestamps
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),

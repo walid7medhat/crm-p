@@ -25,20 +25,12 @@ class Deal extends Model
         'deal_commission',
         'agent_share',
         'company_share',
-        'unit_no',
-        'property_type_id',
-        'bedrooms',
-        'unit_size',
-        'property_link',
-        'property_reference',
-        'project_id',
-        'area_id',
-        'developer_id',
         'responsible_person_id',
         'created_by',
         'updated_by',
-        'metadata','subcommunity_id','lost_reason','listing_id',
-        'developer_name','developer_phone'
+        'metadata',
+        'lost_reason',
+        'listing_id',
     ];
 
     protected $casts = [
@@ -47,20 +39,20 @@ class Deal extends Model
         'deal_commission' => 'decimal:2',
         'agent_share' => 'decimal:2',
         'company_share' => 'decimal:2',
-        'unit_size' => 'decimal:2'
     ];
 
-    // Relationships
+    // ========== Relationships ==========
     public function lead()
     {
         return $this->belongsTo(Lead::class);
     }
-      public function addedBy()
+
+    public function addedBy()
     {
         return $this->belongsTo(User::class, 'added_by');
     }
 
-   public function histories()
+    public function histories()
     {
         return LeadHistory::query()
             ->where(function ($query) {
@@ -75,33 +67,9 @@ class Deal extends Model
         return $this->belongsTo(Stage::class);
     }
 
-    public function propertyType()
-    {
-        return $this->belongsTo(PropertyType::class);
-    }
-
-    public function project()
-    {
-        return $this->belongsTo(Project::class);
-    }
-
-
     public function listing()
     {
         return $this->belongsTo(Listing::class);
-    }
-    public function area()
-    {
-        return $this->belongsTo(Area::class);
-    }
-    public function subcommunity()
-    {
-        return $this->belongsTo(Area::class,'subcommunity_id');
-    }
-
-    public function developer()
-    {
-        return $this->belongsTo(Developer::class);
     }
 
     public function parties()
@@ -154,7 +122,76 @@ class Deal extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    // Scopes
+    public function comments()
+    {
+        return $this->hasMany(DealComment::class)->latest();
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(DealActivity::class)->latest();
+    }
+
+    public function pendingActivities()
+    {
+        return $this->hasMany(DealActivity::class)->pending();
+    }
+
+    // ========== Multi Properties ==========
+    public function properties()
+    {
+        return $this->hasMany(DealProperty::class)->orderBy('sort_order');
+    }
+
+    public function mainProperty()
+    {
+        return $this->hasOne(DealProperty::class)->where('sort_order', 0);
+    }
+
+    public function getHasMultiplePropertiesAttribute()
+    {
+        return $this->properties()->count() > 1;
+    }
+
+    public function getTotalPurchaseAmountAttribute()
+    {
+        return $this->properties()->sum('purchase_price');
+    }
+
+    // ========== Accessors (from main property) ==========
+    public function getBedroomsFormattedAttribute()
+    {
+        $mainProperty = $this->mainProperty;
+        return $mainProperty?->bedrooms ? $mainProperty->bedrooms . ' BR' : 'N/A';
+    }
+
+    public function getUnitSizeFormattedAttribute()
+    {
+        $mainProperty = $this->mainProperty;
+        return $mainProperty?->unit_size ? $mainProperty->unit_size . ' sqft' : 'N/A';
+    }
+
+    public function getUnitNoAttribute()
+    {
+        return $this->mainProperty?->unit_no;
+    }
+
+    public function getPropertyTypeIdAttribute()
+    {
+        return $this->mainProperty?->property_type_id;
+    }
+
+    public function getAreaIdAttribute()
+    {
+        return $this->mainProperty?->area_id;
+    }
+
+    public function getBedroomsAttribute()
+    {
+        return $this->mainProperty?->bedrooms;
+    }
+
+    // ========== Scopes ==========
     public function scopeOfType($query, $type)
     {
         return $query->where('deal_type', $type);
@@ -175,23 +212,84 @@ class Deal extends Model
         return $query->where('responsible_person_id', $userId);
     }
 
-    // Accessors
-    public function getBedroomsFormattedAttribute()
+    public function scopeVisibleFor($query, $user)
     {
-        return $this->bedrooms ? $this->bedrooms . ' BR' : 'N/A';
+        if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+            $subordinatesIds = $user->getAllSubordinatesIds();
+            $query->whereIn(
+                'responsible_person_id',
+                array_merge($subordinatesIds, [$user->id])
+            );
+        } elseif (!$user->hasRole('super_admin') && auth()->user()->id != 30 && auth()->user()->id != 33) {
+            $query->where('responsible_person_id', $user->id);
+        }
+        return $query;
     }
 
-    public function getUnitSizeFormattedAttribute()
+    public function scopeFilter($query, $request)
     {
-        return $this->unit_size ? $this->unit_size . ' sqft' : 'N/A';
+        return $query
+            // Basic deal filters
+            ->when($request->deal_type, fn($q, $v) => $q->where('deal_type', $v))
+            ->when($request->stage_id, fn($q, $v) => $q->where('stage_id', $v))
+            ->when($request->status, fn($q, $v) => $q->where('status', $v))
+            ->when($request->responsible_id, fn($q, $v) => $q->where('responsible_person_id', $v))
+            ->when($request->modified_by, fn($q, $v) => $q->where('modified_by', $v))
+            ->when($request->my_deals, function ($q, $v) {
+                $q->where(function ($sub) use ($v) {
+                    $sub->where('responsible_person_id', auth()->user()->id)
+                        ->orWhere('created_by', auth()->user()->id);
+                });
+            })
+            
+            // Property filters (through properties relationship)
+            ->when($request->project_id, fn($q, $v) => $q->whereHas('properties', fn($p) => $p->where('project_id', $v)))
+            ->when($request->area_id, fn($q, $v) => $q->whereHas('properties', fn($p) => $p->where('area_id', $v)))
+            ->when($request->developer_id, fn($q, $v) => $q->whereHas('properties', fn($p) => $p->where('developer_id', $v)))
+            ->when($request->property_type_id, fn($q, $v) => $q->whereHas('properties', fn($p) => $p->where('property_type_id', $v)))
+            ->when($request->bedrooms, fn($q, $v) => $q->whereHas('properties', fn($p) => $p->where('bedrooms', $v)))
+            ->when($request->unit_no, fn($q, $v) => $q->whereHas('properties', fn($p) => $p->where('unit_no', 'like', "%$v%")))
+            ->when($request->unit_size, fn($q, $v) => $q->whereHas('properties', fn($p) => $p->where('unit_size', $v)))
+            
+            // Financial filters
+            ->when($request->amount, fn($q, $v) => $q->where('deal_total_amount', $v))
+            ->when($request->currency, fn($q, $v) => $q->where('currency', $v))
+            
+            // Date filters
+            ->when($request->from_date, fn($q, $v) => $q->whereDate('created_at', '>=', $v))
+            ->when($request->to_date, fn($q, $v) => $q->whereDate('created_at', '<=', $v))
+            
+            // Buyer party filters
+            ->when($request->buyer_first_name, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('first_name', 'like', "%$v%")))
+            ->when($request->buyer_last_name, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('last_name', 'like', "%$v%")))
+            ->when($request->buyer_phone, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('phone', 'like', "%$v%")))
+            ->when($request->buyer_email, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('email', 'like', "%$v%")))
+            ->when($request->buyer_dob, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('date_of_birth', $v)))
+            ->when($request->buyer_nationality, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('nationality', $v)))
+            ->when($request->buyer_residency_status, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('residency_status', $v)))
+            ->when($request->buyer_country, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('country', $v)))
+            ->when($request->buyer_city, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('city', 'like', "%$v%")))
+            
+            // Global search
+            ->when($request->search, function($q, $search) {
+                $q->where(function($query) use ($search) {
+                    $query->where('deal_number', 'like', "%$search%")
+                        ->orWhere('deal_name', 'like', "%$search%")
+                        ->orWhere('source', 'like', "%$search%")
+                        ->orWhere('property_reference', 'like', "%$search%")
+                        ->orWhere('property_link', 'like', "%$search%")
+                        ->orWhere('currency', 'like', "%$search%")
+                        ->orWhere('lost_reason', 'like', "%$search%")
+                        ->orWhereHas('responsiblePerson', fn($u) => $u->where('name', 'like', "%$search%")->orWhere('email', 'like', "%$search%"))
+                        ->orWhereHas('properties', fn($p) => $p->where('unit_no', 'like', "%$search%")->orWhereHas('area', fn($a) => $a->where('name', 'like', "%$search%"))
+                        ->orWhereHas('propertyType', fn($pt) => $pt->where('name', 'like', "%$search%")))
+                        ->orWhereHas('parties', fn($p) => $p->where('first_name', 'like', "%$search%")->orWhere('last_name', 'like', "%$search%")->orWhere('email', 'like', "%$search%")->orWhere('phone', 'like', "%$search%"))
+                        ->orWhereHas('lead', fn($l) => $l->where('lead_name', 'like', "%$search%")->orWhere('email', 'like', "%$search%")->orWhere('work_phone', 'like', "%$search%"));
+                });
+            });
     }
 
-    public function getAmountFormattedAttribute()
-    {
-        return $this->deal_total_amount ? number_format($this->deal_total_amount, 2) . ' ' . $this->currency : 'N/A';
-    }
-
-    // Helpers
+    // ========== Helpers ==========
     public function isPrimary()
     {
         return $this->deal_type === 'primary';
@@ -221,164 +319,4 @@ class Deal extends Model
     {
         return $this->status === 'completed';
     }
-    public function comments()
-    {
-        return $this->hasMany(DealComment::class)->latest();
-    }
-       public function activities()
-    {
-        return $this->hasMany(DealActivity::class)->latest();
-    }
-
-    public function pendingActivities()
-    {
-        return $this->hasMany(DealActivity::class)->pending();
-    }
-    
-        public function scopeVisibleFor($query, $user)
-{
-    if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
-
-                    $subordinatesIds = $user->getAllSubordinatesIds();
-
-        $query->whereIn(
-            'responsible_person_id',
-            array_merge($subordinatesIds, [$user->id])
-        );
-
-                } elseif (!$user->hasRole('super_admin') &&  auth()->user()->id !=30 &&  auth()->user()->id !=33) {
-
-                    $query->where('responsible_person_id', $user->id);
-                }
-
-                return $query;
-            }
-
-public function scopeFilter($query, $request)
-{
-    return $query
-        // Basic deal filters
-        ->when($request->deal_type, fn($q, $v) => $q->where('deal_type', $v))
-        ->when($request->stage_id, fn($q, $v) => $q->where('stage_id', $v))
-        ->when($request->status, fn($q, $v) => $q->where('status', $v))
-        ->when($request->responsible_id, fn($q, $v) => $q->where('responsible_person_id', $v))
-        ->when($request->modified_by, fn($q, $v) => $q->where('modified_by', $v))
-        ->when($request->my_deals, function ($q, $v) {
-            $q->where(function ($sub) use ($v) {
-                $sub->where('responsible_person_id', auth()->user()->id)
-                    ->orWhere('created_by', auth()->user()->id);
-            });
-        })
-        // Property filters
-        ->when($request->project_id, fn($q, $v) => $q->where('project_id', $v))
-        ->when($request->area_id, fn($q, $v) => $q->where('area_id', $v))
-        ->when($request->subcommunity_id, fn($q, $v) => $q->where('subcommunity_id', $v))
-        ->when($request->developer_id, fn($q, $v) => $q->where('developer_id', $v))
-        ->when($request->property_type_id, fn($q, $v) => $q->where('property_type_id', $v))
-        ->when($request->bedrooms, fn($q, $v) => $q->where('bedrooms', $v))
-        ->when($request->unit_no, fn($q, $v) => $q->where('unit_no', 'like', "%$v%"))
-        ->when($request->unit_size, fn($q, $v) => $q->where('unit_size', $v))
-        
-        // Financial filters
-        ->when($request->amount, fn($q, $v) => $q->where('deal_total_amount', $v))
-        ->when($request->currency, fn($q, $v) => $q->where('currency', $v))
-        
-        // Date filters
-        ->when($request->from_date, fn($q, $v) => $q->whereDate('created_at', '>=', $v))
-        ->when($request->to_date, fn($q, $v) => $q->whereDate('created_at', '<=', $v))
-        
-        // Buyer party filters (using whereHas on parties relationship)
-        ->when($request->buyer_first_name, function($q, $v) {
-            $q->whereHas('parties', function($party) use ($v) {
-                $party->where('party_type', 'buyer')
-                      ->where('first_name', 'like', "%$v%");
-            });
-        })
-        ->when($request->buyer_last_name, function($q, $v) {
-            $q->whereHas('parties', function($party) use ($v) {
-                $party->where('party_type', 'buyer')
-                      ->where('last_name', 'like', "%$v%");
-            });
-        })
-        ->when($request->buyer_phone, function($q, $v) {
-            $q->whereHas('parties', function($party) use ($v) {
-                $party->where('party_type', 'buyer')
-                      ->where('phone', 'like', "%$v%");
-            });
-        })
-        ->when($request->buyer_email, function($q, $v) {
-            $q->whereHas('parties', function($party) use ($v) {
-                $party->where('party_type', 'buyer')
-                      ->where('email', 'like', "%$v%");
-            });
-        })
-        ->when($request->buyer_dob, function($q, $v) {
-            $q->whereHas('parties', function($party) use ($v) {
-                $party->where('party_type', 'buyer')
-                      ->where('date_of_birth', $v);
-            });
-        })
-        ->when($request->buyer_nationality, function($q, $v) {
-            $q->whereHas('parties', function($party) use ($v) {
-                $party->where('party_type', 'buyer')
-                      ->where('nationality', $v);
-            });
-        })
-        ->when($request->buyer_residency_status, function($q, $v) {
-            $q->whereHas('parties', function($party) use ($v) {
-                $party->where('party_type', 'buyer')
-                      ->where('residency_status', $v);
-            });
-        })
-        ->when($request->buyer_country, function($q, $v) {
-            $q->whereHas('parties', function($party) use ($v) {
-                $party->where('party_type', 'buyer')
-                      ->where('country_of_residence', $v);
-            });
-        })
-        ->when($request->buyer_city, function($q, $v) {
-            $q->whereHas('parties', function($party) use ($v) {
-                $party->where('party_type', 'buyer')
-                      ->where('city_of_residence', 'like', "%$v%");
-            });
-        })
-        
-        // Global search (keeps existing functionality)
-        ->when($request->search, function($q, $search) {
-            $q->where(function($query) use ($search) {
-                $query->where('deal_number', 'like', "%$search%")
-                    ->orWhere('deal_name', 'like', "%$search%")
-                    ->orWhere('source', 'like', "%$search%")
-                    ->orWhere('unit_no', 'like', "%$search%")
-                    ->orWhere('property_reference', 'like', "%$search%")
-                    ->orWhere('property_link', 'like', "%$search%")
-                    ->orWhere('currency', 'like', "%$search%")
-                    ->orWhere('lost_reason', 'like', "%$search%")
-                    ->orWhereHas('responsiblePerson', function($user) use ($search) {
-                        $user->where('name', 'like', "%$search%")
-                             ->orWhere('email', 'like', "%$search%");
-                    })
-                    ->orWhereHas('project', function($project) use ($search) {
-                        $project->where('title', 'like', "%$search%");
-                    })
-                    ->orWhereHas('area', function($area) use ($search) {
-                        $area->where('name', 'like', "%$search%");
-                    })
-                    ->orWhereHas('subcommunity', function($sub) use ($search) {
-                        $sub->where('name', 'like', "%$search%");
-                    })
-                    ->orWhereHas('parties', function($party) use ($search) {
-                        $party->where('first_name', 'like', "%$search%")
-                              ->orWhere('last_name', 'like', "%$search%")
-                              ->orWhere('email', 'like', "%$search%")
-                              ->orWhere('phone', 'like', "%$search%");
-                    })
-                    ->orWhereHas('lead', function($lead) use ($search) {
-                        $lead->where('lead_name', 'like', "%$search%")
-                             ->orWhere('email', 'like', "%$search%")
-                             ->orWhere('work_phone', 'like', "%$search%");
-                    });
-            });
-        });
-}
 }

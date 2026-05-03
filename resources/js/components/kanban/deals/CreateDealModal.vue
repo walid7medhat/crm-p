@@ -611,10 +611,6 @@ function validateForm() {
     errors.push('Property type is required')
     fieldErrorsObj.property_type_id = 'Property type is required'
   }
-  // if (!formData.value.subcommunity_id) {
-  //   errors.push('Subcommunity is required')
-  //   fieldErrorsObj.subcommunity_id = 'Subcommunity is required'
-  // }
   if (!formData.value.responsible_person_id) {
     errors.push('Responsible person is required')
     fieldErrorsObj.responsible_person_id = 'Responsible person is required'
@@ -650,10 +646,23 @@ function validateForm() {
       errors.push('Buyer residency status is required')
       fieldErrorsObj.buyer_residency_status = 'Residency status is required'
     }
-    if (!formData.value.buyer_city) {
-      errors.push('Buyer city is required')
-      fieldErrorsObj.buyer_city = 'City is required'
+    
+    // ✅ Buyer city - مطلوب فقط للمقيمين (resident)
+    if (formData.value.buyer_residency_status === 'resident') {
+      if (!formData.value.buyer_city) {
+        errors.push('Buyer city is required')
+        fieldErrorsObj.buyer_city = 'City is required'
+      }
     }
+    
+    // ✅ Buyer country - مطلوب فقط لغير المقيمين
+    if (formData.value.buyer_residency_status !== 'resident' && formData.value.buyer_residency_status) {
+      if (!formData.value.buyer_country) {
+        errors.push('Buyer country is required')
+        fieldErrorsObj.buyer_country = 'Country is required'
+      }
+    }
+    
     if (!hasLanguageSelection(formData.value.buyer_language)) {
       errors.push('Buyer language is required')
       fieldErrorsObj.buyer_language = 'Language is required'
@@ -661,122 +670,159 @@ function validateForm() {
   }
   
   if (dealType.value === 'secondary') {
-        if (!hasListingId.value) {
-
-    if (!formData.value.seller_first_name) {
-      errors.push('Seller first name is required')
-      fieldErrorsObj.seller_first_name = 'First name is required'
+    if (!hasListingId.value) {
+      if (!formData.value.seller_first_name) {
+        errors.push('Seller first name is required')
+        fieldErrorsObj.seller_first_name = 'First name is required'
+      }
+      if (!formData.value.seller_last_name) {
+        errors.push('Seller last name is required')
+        fieldErrorsObj.seller_last_name = 'Last name is required'
+      }
+      if (!formData.value.seller_phone) {
+        errors.push('Seller phone is required')
+        fieldErrorsObj.seller_phone = 'Phone is required'
+      }
+      if (!formData.value.seller_email) {
+        errors.push('Seller email is required')
+        fieldErrorsObj.seller_email = 'Email is required'
+      }
+      if (!formData.value.seller_nationality) {
+        errors.push('Seller nationality is required')
+        fieldErrorsObj.seller_nationality = 'Nationality is required'
+      }
+      if (!formData.value.seller_dob) {
+        errors.push('Seller date of birth is required')
+        fieldErrorsObj.seller_dob = 'Date of birth is required'
+      }
+      if (!formData.value.seller_residency_status) {
+        errors.push('Seller residency status is required')
+        fieldErrorsObj.seller_residency_status = 'Residency status is required'
+      }
+      
+      // ✅ Seller city - مطلوب فقط للمقيمين
+      if (formData.value.seller_residency_status === 'resident') {
+        if (!formData.value.seller_city) {
+          errors.push('Seller city is required')
+          fieldErrorsObj.seller_city = 'City is required'
+        }
+      }
+      
+      // ✅ Seller country - مطلوب فقط لغير المقيمين
+      if (formData.value.seller_residency_status !== 'resident' && formData.value.seller_residency_status) {
+        if (!formData.value.seller_country) {
+          errors.push('Seller country is required')
+          fieldErrorsObj.seller_country = 'Country is required'
+        }
+      }
+      
+      if (!formData.value.seller_language) {
+        errors.push('Seller language is required')
+        fieldErrorsObj.seller_language = 'Language is required'
+      }
     }
-    if (!formData.value.seller_last_name) {
-      errors.push('Seller last name is required')
-      fieldErrorsObj.seller_last_name = 'Last name is required'
-    }
-    if (!formData.value.seller_phone) {
-      errors.push('Seller phone is required')
-      fieldErrorsObj.seller_phone = 'Phone is required'
-    }
-    if (!formData.value.seller_email) {
-      errors.push('Seller email is required')
-      fieldErrorsObj.seller_email = 'Email is required'
-    }
-    if (!formData.value.seller_nationality) {
-      errors.push('Seller nationality is required')
-      fieldErrorsObj.seller_nationality = 'Nationality is required'
-    }
-    if (!formData.value.seller_dob) {
-      errors.push('Seller date of birth is required')
-      fieldErrorsObj.seller_dob = 'Date of birth is required'
-    }
-    if (!formData.value.seller_residency_status) {
-      errors.push('Seller residency status is required')
-      fieldErrorsObj.seller_residency_status = 'Residency status is required'
-    }
-    if (!formData.value.seller_city) {
-      errors.push('Seller city is required')
-      fieldErrorsObj.seller_city = 'City is required'
-    }
-    if (!formData.value.seller_language) {
-      errors.push('Seller language is required')
-      fieldErrorsObj.seller_language = 'Language is required'
-    }
-  }
   }
   
   if (dealType.value === 'rental') {
-        if (!hasListingId.value) {
-
-    // Tenant validation
-    if (!formData.value.tenant_first_name) {
-      errors.push('Tenant first name is required')
-      fieldErrorsObj.tenant_first_name = 'First name is required'
+    if (!hasListingId.value) {
+      // Tenant validation
+      if (!formData.value.tenant_first_name) {
+        errors.push('Tenant first name is required')
+        fieldErrorsObj.tenant_first_name = 'First name is required'
+      }
+      if (!formData.value.tenant_last_name) {
+        errors.push('Tenant last name is required')
+        fieldErrorsObj.tenant_last_name = 'Last name is required'
+      }
+      if (!formData.value.tenant_phone) {
+        errors.push('Tenant phone is required')
+        fieldErrorsObj.tenant_phone = 'Phone is required'
+      }
+      if (!formData.value.tenant_email) {
+        errors.push('Tenant email is required')
+        fieldErrorsObj.tenant_email = 'Email is required'
+      }
+      if (!formData.value.tenant_nationality) {
+        errors.push('Tenant nationality is required')
+        fieldErrorsObj.tenant_nationality = 'Nationality is required'
+      }
+      if (!formData.value.tenant_residency_status) {
+        errors.push('Tenant residency status is required')
+        fieldErrorsObj.tenant_residency_status = 'Residency status is required'
+      }
+      
+      // ✅ Tenant city - مطلوب فقط للمقيمين
+      if (formData.value.tenant_residency_status === 'resident') {
+        if (!formData.value.tenant_city) {
+          errors.push('Tenant city is required')
+          fieldErrorsObj.tenant_city = 'City is required'
+        }
+      }
+      
+      // ✅ Tenant country - مطلوب فقط لغير المقيمين
+      if (formData.value.tenant_residency_status !== 'resident' && formData.value.tenant_residency_status) {
+        if (!formData.value.tenant_country) {
+          errors.push('Tenant country is required')
+          fieldErrorsObj.tenant_country = 'Country is required'
+        }
+      }
+      
+      if (!formData.value.tenant_language) {
+        errors.push('Tenant language is required')
+        fieldErrorsObj.tenant_language = 'Language is required'
+      }
+      
+      // Landlord validation
+      if (!formData.value.landlord_first_name) {
+        errors.push('Landlord first name is required')
+        fieldErrorsObj.landlord_first_name = 'First name is required'
+      }
+      if (!formData.value.landlord_last_name) {
+        errors.push('Landlord last name is required')
+        fieldErrorsObj.landlord_last_name = 'Last name is required'
+      }
+      if (!formData.value.landlord_phone) {
+        errors.push('Landlord phone is required')
+        fieldErrorsObj.landlord_phone = 'Phone is required'
+      }
+      if (!formData.value.landlord_email) {
+        errors.push('Landlord email is required')
+        fieldErrorsObj.landlord_email = 'Email is required'
+      }
+      if (!formData.value.landlord_nationality) {
+        errors.push('Landlord nationality is required')
+        fieldErrorsObj.landlord_nationality = 'Nationality is required'
+      }
+      if (!formData.value.landlord_dob) {
+        errors.push('Landlord date of birth is required')
+        fieldErrorsObj.landlord_dob = 'Date of birth is required'
+      }
+      if (!formData.value.landlord_residency_status) {
+        errors.push('Landlord residency status is required')
+        fieldErrorsObj.landlord_residency_status = 'Residency status is required'
+      }
+      
+      // ✅ Landlord city - مطلوب فقط للمقيمين
+      if (formData.value.landlord_residency_status === 'resident') {
+        if (!formData.value.landlord_city) {
+          errors.push('Landlord city is required')
+          fieldErrorsObj.landlord_city = 'City is required'
+        }
+      }
+      
+      // ✅ Landlord country - مطلوب فقط لغير المقيمين
+      if (formData.value.landlord_residency_status !== 'resident' && formData.value.landlord_residency_status) {
+        if (!formData.value.landlord_country) {
+          errors.push('Landlord country is required')
+          fieldErrorsObj.landlord_country = 'Country is required'
+        }
+      }
+      
+      if (!formData.value.landlord_language) {
+        errors.push('Landlord language is required')
+        fieldErrorsObj.landlord_language = 'Language is required'
+      }
     }
-    if (!formData.value.tenant_last_name) {
-      errors.push('Tenant last name is required')
-      fieldErrorsObj.tenant_last_name = 'Last name is required'
-    }
-    if (!formData.value.tenant_phone) {
-      errors.push('Tenant phone is required')
-      fieldErrorsObj.tenant_phone = 'Phone is required'
-    }
-    if (!formData.value.tenant_email) {
-      errors.push('Tenant email is required')
-      fieldErrorsObj.tenant_email = 'Email is required'
-    }
-    if (!formData.value.tenant_nationality) {
-      errors.push('Tenant nationality is required')
-      fieldErrorsObj.tenant_nationality = 'Nationality is required'
-    }
-    if (!formData.value.tenant_residency_status) {
-      errors.push('Tenant residency status is required')
-      fieldErrorsObj.tenant_residency_status = 'Residency status is required'
-    }
-    if (!formData.value.tenant_city) {
-      errors.push('Tenant city is required')
-      fieldErrorsObj.tenant_city = 'City is required'
-    }
-    if (!formData.value.tenant_language) {
-      errors.push('Tenant language is required')
-      fieldErrorsObj.tenant_language = 'Language is required'
-    }
-    
-    // Landlord validation
-    if (!formData.value.landlord_first_name) {
-      errors.push('Landlord first name is required')
-      fieldErrorsObj.landlord_first_name = 'First name is required'
-    }
-    if (!formData.value.landlord_last_name) {
-      errors.push('Landlord last name is required')
-      fieldErrorsObj.landlord_last_name = 'Last name is required'
-    }
-    if (!formData.value.landlord_phone) {
-      errors.push('Landlord phone is required')
-      fieldErrorsObj.landlord_phone = 'Phone is required'
-    }
-    if (!formData.value.landlord_email) {
-      errors.push('Landlord email is required')
-      fieldErrorsObj.landlord_email = 'Email is required'
-    }
-    if (!formData.value.landlord_nationality) {
-      errors.push('Landlord nationality is required')
-      fieldErrorsObj.landlord_nationality = 'Nationality is required'
-    }
-    if (!formData.value.landlord_dob) {
-      errors.push('Landlord date of birth is required')
-      fieldErrorsObj.landlord_dob = 'Date of birth is required'
-    }
-    if (!formData.value.landlord_residency_status) {
-      errors.push('Landlord residency status is required')
-      fieldErrorsObj.landlord_residency_status = 'Residency status is required'
-    }
-    if (!formData.value.landlord_city) {
-      errors.push('Landlord city is required')
-      fieldErrorsObj.landlord_city = 'City is required'
-    }
-    if (!formData.value.landlord_language) {
-      errors.push('Landlord language is required')
-      fieldErrorsObj.landlord_language = 'Language is required'
-    }
-  }
   }
   
   // Set field errors
@@ -865,7 +911,22 @@ async function submitForm() {
         submitData.append(key, value)
       }
     })
-    
+        
+    // ========== ✅ (Multi Properties) ==========
+    if (dealFormRef.value && dealFormRef.value.getPropertiesData) {
+      const propertiesData = dealFormRef.value.getPropertiesData()
+      if (propertiesData && propertiesData.length > 0) {
+        // ✅ أرسل كل property على حدة
+        propertiesData.forEach((property, idx) => {
+          Object.keys(property).forEach(key => {
+            const value = property[key]
+            if (value !== null && value !== undefined && value !== '') {
+              submitData.append(`properties[${idx}][${key}]`, value)
+            }
+          })
+        })
+      }
+    }
     // Submit to API
     const response = await api.post('/deals/store/new', submitData, {
       headers: { 'Content-Type': 'multipart/form-data' }
@@ -932,7 +993,7 @@ function resetFormData() {
     agent_share: null,
     company_share: null,
     responsible_person_id: null,
-    
+     deal_total_amount: null,
     // Buyer fields
     buyer_first_name: '',
     buyer_last_name: '',
@@ -942,7 +1003,7 @@ function resetFormData() {
     buyer_nationality: '',
     buyer_residency_status: '',
     buyer_city: '',
-    buyer_country: '',
+    buyer_country: 'United Arab Emirates',
     buyer_language: [],
     buyer_documents: [],
     amount: null,
@@ -969,7 +1030,7 @@ function resetFormData() {
     tenant_nationality: '',
     tenant_residency_status: '',
     tenant_city: '',
-    tenant_country: '',
+    tenant_country: 'United Arab Emirates',
     tenant_language: '',
     tenant_documents: [],
     
@@ -982,7 +1043,7 @@ function resetFormData() {
     landlord_nationality: '',
     landlord_residency_status: '',
     landlord_city: '',
-    landlord_country: '',
+    landlord_country: 'United Arab Emirates',
     landlord_language: '',
     landlord_documents: []
   }

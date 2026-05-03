@@ -1,15 +1,15 @@
 <?php
-// app/Http/Resources/DealResource.php
 
 namespace App\Http\Resources\Deal;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use  App\Http\Resources\User\UserResource;
+use App\Http\Resources\User\UserResource;
+
 class DealPusherResource extends JsonResource
 {
     public function toArray($request)
     {
-          $assignmentHistory = $this->histories()
+        $assignmentHistory = $this->histories()
             ->where('changes->action', 'assigned')
             ->orderBy('created_at', 'desc') 
             ->first();
@@ -19,6 +19,7 @@ class DealPusherResource extends JsonResource
         } else {
             $assignedBy = $this->addedBy;
         }
+        
         return [
             'id' => $this->id,
             'deal_number' => $this->deal_number,
@@ -34,19 +35,10 @@ class DealPusherResource extends JsonResource
             'agent_share' => $this->agent_share,
             'company_share' => $this->company_share,
             
-            // Property
-            'unit_no' => $this->unit_no,
-            'bedrooms' => $this->bedrooms,
-            'unit_size' => $this->unit_size,
-            'property_link' => $this->property_link,
-            'property_reference' => $this->property_reference,
-            
             // Relationships
             'lead' => $this->whenLoaded('lead', fn() => [
                 'id' => $this->lead->id,
                 'name' => $this->lead->lead_name,
-                'email' => $this->lead->email,
-                'phone' => $this->lead->phone,
             ]),
             
             'stage' => [
@@ -55,10 +47,8 @@ class DealPusherResource extends JsonResource
                 'color' => $this->stage->color,
             ],
             
-           
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
-            'converted_at' => $this->lead?->converted_at?->format('Y-m-d H:i:s'),
         ];
     }
 }

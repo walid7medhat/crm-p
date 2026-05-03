@@ -5,445 +5,159 @@
       <div class="small">{{ missingFieldLabels.join(' • ') }}</div>
     </div>
 
-    <!-- Source and Deal Name (Common for all) -->
+    <!-- Source and Deal Name -->
     <section v-if="isSectionVisible('deal_information')" class="form-section">
       <h6 class="section-title mb-3">About Deal</h6>
       <div class="form-card p-3 radius-12">
-        <div v-if="!isDocumentEditMode('buyer_documents')" class="row g-3">
+        <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label-custom">Deal Name <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.deal_name" 
-              placeholder="Enter Deal Name" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.deal_name }"
-            />
-             <div v-if="showErrors && fieldErrors.deal_name" class="invalid-feedback d-block">
-                {{ fieldErrors.deal_name }}
-              </div>
+            <b-form-input v-model="form.deal_name" placeholder="Enter Deal Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.deal_name }" />
+            <div v-if="showErrors && fieldErrors.deal_name" class="invalid-feedback d-block">{{ fieldErrors.deal_name }}</div>
           </div>
           <div class="col-md-6">
             <label class="form-label-custom">Source <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.source" 
-              :options="sources" 
-              :reduce="item => item.name" 
-              label="name" 
-              placeholder="Not Selected" 
-              class="custom-v-select" 
-              :class="{ 'is-invalid': showErrors && !form.source }"
-            >
-                 <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-          
+            <v-select v-model="form.source" :options="sources" :reduce="item => item.name" label="name" placeholder="Not Selected" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.source }" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
             </v-select>
-              <div v-if="showErrors && fieldErrors.source" class="invalid-feedback d-block">
-                {{ fieldErrors.source }}
-              </div>
+            <div v-if="showErrors && fieldErrors.source" class="invalid-feedback d-block">{{ fieldErrors.source }}</div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Buyer Section (for Primary & Secondary) -->
+    <!-- Buyer Section -->
     <section v-if="(dealType === 'primary' || dealType === 'secondary') && isSectionVisible('buyer_details')" class="form-section">
       <h6 class="section-title mb-3">Buyer Details</h6>
       <div class="form-card p-3 radius-12">
-        <div v-if="!isDocumentEditMode('buyer_documents')" class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label-custom">Buyer First Name <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.buyer_first_name" 
-              placeholder="Enter First Name" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.buyer_first_name }"
-            />
-              <div v-if="showErrors && fieldErrors.buyer_first_name" class="invalid-feedback d-block">
-                {{ fieldErrors.buyer_first_name }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Buyer Last Name <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.buyer_last_name" 
-              placeholder="Enter Last Name" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.buyer_last_name }"
-            />
-              <div v-if="showErrors && fieldErrors.buyer_last_name" class="invalid-feedback d-block">
-                {{ fieldErrors.buyer_last_name }}
-              </div>
-          </div>
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label-custom">Buyer First Name <span class="text-danger">*</span></label><b-form-input v-model="form.buyer_first_name" placeholder="Enter First Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.buyer_first_name }" /><div v-if="showErrors && fieldErrors.buyer_first_name" class="invalid-feedback d-block">{{ fieldErrors.buyer_first_name }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Buyer Last Name <span class="text-danger">*</span></label><b-form-input v-model="form.buyer_last_name" placeholder="Enter Last Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.buyer_last_name }" /><div v-if="showErrors && fieldErrors.buyer_last_name" class="invalid-feedback d-block">{{ fieldErrors.buyer_last_name }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Date Of Birth <span class="text-danger">*</span></label>
-            <AdvancedDatePicker
-              v-model="form.buyer_dob"
-              date-only
-              placeholder="Select date"
-              class="custom-input"
-              :invalid="showErrors && !!fieldErrors.buyer_dob"
-            />
-             <div v-if="showErrors && fieldErrors.buyer_dob" class="invalid-feedback d-block">
-                {{ fieldErrors.buyer_dob }}
-              </div>
+            <AdvancedDatePicker type="date" date-only placeholder="Select date" v-model="form.buyer_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.buyer_dob" />
+            <div v-if="showErrors && fieldErrors.buyer_dob" class="invalid-feedback d-block">{{ fieldErrors.buyer_dob }}</div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Buyer Phone Number <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.buyer_phone" 
-              placeholder="Enter Phone" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.buyer_phone }"
-            />
-             <div v-if="showErrors && fieldErrors.buyer_phone" class="invalid-feedback d-block">
-                {{ fieldErrors.buyer_phone }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Buyer Email <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.buyer_email" 
-              type="email" 
-              placeholder="Enter Email" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.buyer_email }"
-            />
-             <div v-if="showErrors && fieldErrors.buyer_email" class="invalid-feedback d-block">
-                {{ fieldErrors.buyer_email }}
-              </div>
-          </div>
+          <div class="col-md-4"><label class="form-label-custom">Buyer Phone Number <span class="text-danger">*</span></label><b-form-input v-model="form.buyer_phone" placeholder="Enter Phone" class="custom-input" :class="{ 'is-invalid': showErrors && !form.buyer_phone }" /><div v-if="showErrors && fieldErrors.buyer_phone" class="invalid-feedback d-block">{{ fieldErrors.buyer_phone }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Buyer Email <span class="text-danger">*</span></label><b-form-input v-model="form.buyer_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !form.buyer_email }" /><div v-if="showErrors && fieldErrors.buyer_email" class="invalid-feedback d-block">{{ fieldErrors.buyer_email }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Nationality <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.buyer_nationality" 
-              :options="nationalityOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Nationality" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.buyer_nationality }"
-            >
-          
-               <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-            </v-select>
-             <div v-if="showErrors && fieldErrors.buyer_nationality" class="invalid-feedback d-block">
-                {{ fieldErrors.buyer_nationality }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Buyer Residency Status <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.buyer_residency_status" 
-              :options="buyerResidencyOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Resident or Non Resident" 
-              :clearable="false"
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.buyer_residency_status }"
-            >
-               <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-          
-             </v-select>
-              <div v-if="showErrors && fieldErrors.buyer_residency_status" class="invalid-feedback d-block">
-                {{ fieldErrors.buyer_residency_status }}
-              </div>
-          </div>
-          
-          <div class="col-md-4">
-            <label class="form-label-custom">Buyer Country Of Residence <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.buyer_country" 
-              :options="countryOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Country" 
-              class="custom-v-select" 
-            >
-             <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-          
-          
-             </v-select>
-             <div v-if="showErrors && fieldErrors.buyer_country" class="invalid-feedback d-block">
-                {{ fieldErrors.buyer_country }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Buyer City Of Residence <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.buyer_city" 
-              :options="buyerCityOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select City" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.buyer_city }"
-            >
+            <v-select v-model="form.buyer_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.buyer_nationality }" clearable>
               <template #open-indicator="{ attributes }">
-                <span v-bind="attributes">
-                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                </span>
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
             </v-select>
-            <div v-if="showErrors && fieldErrors.buyer_city" class="invalid-feedback d-block">
-              {{ fieldErrors.buyer_city }}
-            </div>
+            <div v-if="showErrors && fieldErrors.buyer_nationality" class="invalid-feedback d-block">{{ fieldErrors.buyer_nationality }}</div>
+          </div>
+          <div class="col-md-4" >
+            <label class="form-label-custom">Buyer Residency Status <span class="text-danger">*</span></label>
+            <v-select v-model="form.buyer_residency_status" :options="buyerResidencyOptions" :reduce="item => item.value" label="text" placeholder="Resident or Non Resident" :clearable="false" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.buyer_residency_status }">
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+              
+            </v-select>
+            <div v-if="showErrors && fieldErrors.buyer_residency_status" class="invalid-feedback d-block">{{ fieldErrors.buyer_residency_status }}</div>
+          </div>
+          <div class="col-md-4"  v-if="form.buyer_residency_status !== 'resident'">
+            <label class="form-label-custom">Buyer Country Of Residence <span class="text-danger">*</span></label>
+            <v-select v-model="form.buyer_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.buyer_country" class="invalid-feedback d-block">{{ fieldErrors.buyer_country }}</div>
+          </div>
+          <div class="col-md-4"  v-if="form.buyer_residency_status === 'resident'">
+            <label class="form-label-custom">Buyer City Of Residence <span class="text-danger">*</span></label>
+            <v-select v-model="form.buyer_city" :options="buyerCityOptions" :reduce="item => item.value" label="text" placeholder="Select City" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.buyer_city }" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.buyer_city" class="invalid-feedback d-block">{{ fieldErrors.buyer_city }}</div>
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Language <span class="text-danger">*</span></label>
-            <v-select 
-              :model-value="normalizeLanguageSelection(form.buyer_language)"
-              @update:modelValue="updateBuyerLanguage"
-              :options="languageOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Language(s)" 
-              class="custom-v-select buyer-language-select"
-              :multiple="true"
-              :searchable="true"
-              :close-on-select="false"
-              :class="{ 'is-invalid': showErrors && !hasLanguageSelection(form.buyer_language) }"
-            >
-                <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-          
+            <v-select :model-value="normalizeLanguageSelection(form.buyer_language)" @update:modelValue="updateBuyerLanguage" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language(s)" class="custom-v-select buyer-language-select" :multiple="true" :searchable="true" :close-on-select="false" :class="{ 'is-invalid': showErrors && !hasLanguageSelection(form.buyer_language) }" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
             </v-select>
-            <div v-if="showErrors && fieldErrors.buyer_language" class="invalid-feedback d-block">
-                {{ fieldErrors.buyer_language }}
-              </div>
+            <div v-if="showErrors && fieldErrors.buyer_language" class="invalid-feedback d-block">{{ fieldErrors.buyer_language }}</div>
           </div>
         </div>
-
-        <!-- Buyer Documents -->
         <div class="mt-3">
           <label class="section-title">Buyer Documents</label>
-          <DocumentUpload
-            v-if="dealType === 'primary'"
-            v-model="form.buyer_documents"
-            category="buyer"
-            :document-types="primaryBuyerDocTypes"
-            :compact="inlineMode"
-            :show-errors="showErrors"
-            ref="buyerDocUploadRef"
-          />
-          <DocumentUpload
-            v-else-if="dealType === 'secondary'"
-            v-model="form.buyer_documents"
-            category="buyer"
-            :document-types="secondaryBuyerDocTypes"
-            :compact="inlineMode"
-            :show-errors="showErrors"
-            ref="buyerDocUploadRef"
-          />
+          <DocumentUpload v-if="dealType === 'primary'" v-model="form.buyer_documents" category="buyer" :document-types="primaryBuyerDocTypes" :compact="inlineMode" :show-errors="showErrors" ref="buyerDocUploadRef" />
+          <DocumentUpload v-else-if="dealType === 'secondary'" v-model="form.buyer_documents" category="buyer" :document-types="secondaryBuyerDocTypes" :compact="inlineMode" :show-errors="showErrors" ref="buyerDocUploadRef" />
         </div>
       </div>
     </section>
 
     <!-- Seller Section (for Secondary only) -->
-<section v-if="dealType === 'secondary' && !shouldHideSeller && isSectionVisible('seller_details')" class="form-section">
+    <section v-if="dealType === 'secondary' && !shouldHideSeller && isSectionVisible('seller_details')" class="form-section">
       <h6 class="section-title mb-3">Seller Details</h6>
       <div class="form-card p-3 radius-12">
-        <div v-if="!isDocumentEditMode('seller_documents')" class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.seller_first_name" 
-              placeholder="Enter First Name" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.seller_first_name }"
-            />
-             <div v-if="showErrors && fieldErrors.seller_first_name" class="invalid-feedback d-block">
-                {{ fieldErrors.seller_first_name }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Last Name <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.seller_last_name" 
-              placeholder="Enter Last Name" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.seller_last_name }"
-            />
-            <div v-if="showErrors && fieldErrors.seller_last_name" class="invalid-feedback d-block">
-                {{ fieldErrors.seller_last_name }}
-              </div>
-          </div>
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label-custom">First Name <span class="text-danger">*</span></label><b-form-input v-model="form.seller_first_name" placeholder="Enter First Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.seller_first_name }" /><div v-if="showErrors && fieldErrors.seller_first_name" class="invalid-feedback d-block">{{ fieldErrors.seller_first_name }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Last Name <span class="text-danger">*</span></label><b-form-input v-model="form.seller_last_name" placeholder="Enter Last Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.seller_last_name }" /><div v-if="showErrors && fieldErrors.seller_last_name" class="invalid-feedback d-block">{{ fieldErrors.seller_last_name }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
-            <AdvancedDatePicker
-              v-model="form.seller_dob"
-              date-only
-              placeholder="Select date"
-              class="custom-input"
-              :invalid="showErrors && !!fieldErrors.seller_dob"
-            />
-             <div v-if="showErrors && fieldErrors.seller_dob" class="invalid-feedback d-block">
-                {{ fieldErrors.seller_dob }}
-              </div>
+            <AdvancedDatePicker type="date" date-only placeholder="Select date" v-model="form.seller_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.seller_dob" />
+            <div v-if="showErrors && fieldErrors.seller_dob" class="invalid-feedback d-block">{{ fieldErrors.seller_dob }}</div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.seller_phone" 
-              placeholder="Enter Phone" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.seller_phone }"
-            />
-             <div v-if="showErrors && fieldErrors.seller_phone" class="invalid-feedback d-block">
-                {{ fieldErrors.seller_phone }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Email <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.seller_email" 
-              type="email" 
-              placeholder="Enter Email" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.seller_email }"
-            />
-            <div v-if="showErrors && fieldErrors.seller_email" class="invalid-feedback d-block">
-                {{ fieldErrors.seller_email }}
-              </div>
-          </div>
+          <div class="col-md-4"><label class="form-label-custom">Phone <span class="text-danger">*</span></label><b-form-input v-model="form.seller_phone" placeholder="Enter Phone" class="custom-input" :class="{ 'is-invalid': showErrors && !form.seller_phone }" /><div v-if="showErrors && fieldErrors.seller_phone" class="invalid-feedback d-block">{{ fieldErrors.seller_phone }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Email <span class="text-danger">*</span></label><b-form-input v-model="form.seller_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !form.seller_email }" /><div v-if="showErrors && fieldErrors.seller_email" class="invalid-feedback d-block">{{ fieldErrors.seller_email }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.seller_nationality" 
-              :options="nationalityOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Nationality" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.seller_nationality }"
-            >
-             <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
+            <v-select v-model="form.seller_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.seller_nationality }" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
             </v-select>
-            <div v-if="showErrors && fieldErrors.seller_nationality" class="invalid-feedback d-block">
-                {{ fieldErrors.seller_nationality }}
-              </div>
+            <div v-if="showErrors && fieldErrors.seller_nationality" class="invalid-feedback d-block">{{ fieldErrors.seller_nationality }}</div>
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.seller_residency_status" 
-              :options="residencyOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Status" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.seller_residency_status }"
-            >
-          
-             <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>  
-           </v-select>
-             <div v-if="showErrors && fieldErrors.seller_residency_status" class="invalid-feedback d-block">
-                {{ fieldErrors.seller_residency_status }}
-              </div>
-          </div>
-          
-          <div class="col-md-4">
-            <label class="form-label-custom">Country Of Residence</label>
-            <v-select 
-              v-model="form.seller_country" 
-              :options="countryOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Country" 
-              class="custom-v-select" 
-            >
-             <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-            </v-select>
-             <div v-if="showErrors && fieldErrors.seller_country" class="invalid-feedback d-block">
-                {{ fieldErrors.seller_country }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.seller_city" 
-              :options="sellerCityOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select City" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.seller_city }"
-            >
+            <v-select v-model="form.seller_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.seller_residency_status }" clearable>
               <template #open-indicator="{ attributes }">
-                <span v-bind="attributes">
-                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                </span>
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
             </v-select>
-            <div v-if="showErrors && fieldErrors.seller_city" class="invalid-feedback d-block">
-              {{ fieldErrors.seller_city }}
-            </div>
+            <div v-if="showErrors && fieldErrors.seller_residency_status" class="invalid-feedback d-block">{{ fieldErrors.seller_residency_status }}</div>
+          </div>
+          <div class="col-md-4"  v-if="form.seller_residency_status !== 'resident'">
+            <label class="form-label-custom">Country Of Residence</label>
+            <v-select v-model="form.seller_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.seller_country" class="invalid-feedback d-block">{{ fieldErrors.seller_country }}</div>
+          </div>
+          <div class="col-md-4" v-if="form.seller_residency_status === 'resident'">
+            <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+            <v-select v-model="form.seller_city" :options="sellerCityOptions" :reduce="item => item.value" label="text" placeholder="Select City" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.seller_city }" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.seller_city" class="invalid-feedback d-block">{{ fieldErrors.seller_city }}</div>
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Language <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.seller_language" 
-              :options="languageOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Language" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.seller_language }"
-            > 
-           <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-             </v-select>
-              <div v-if="showErrors && fieldErrors.seller_language" class="invalid-feedback d-block">
-                {{ fieldErrors.seller_language }}
-              </div>
+            <v-select v-model="form.seller_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.seller_language }" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.seller_language" class="invalid-feedback d-block">{{ fieldErrors.seller_language }}</div>
           </div>
         </div>
-
-        <!-- Seller Documents -->
-        <div class="mt-3">
-          <label class="section-title">Seller Documents</label>
-          <DocumentUpload 
-            v-model="form.seller_documents"
-            category="seller"
-            :document-types="sellerDocTypes"
-            :compact="inlineMode"
-            :show-errors="showErrors"
-            ref="sellerDocUploadRef"
-          />
-        </div>
+        <div class="mt-3"><label class="section-title">Seller Documents</label><DocumentUpload v-model="form.seller_documents" category="seller" :document-types="sellerDocTypes" :compact="inlineMode" :show-errors="showErrors" ref="sellerDocUploadRef" /></div>
       </div>
     </section>
 
@@ -451,688 +165,282 @@
     <section v-if="dealType === 'rental' && isSectionVisible('tenant_details')" class="form-section">
       <h6 class="section-title mb-3">Tenant Details</h6>
       <div class="form-card p-3 radius-12">
-        <div v-if="!isDocumentEditMode('tenant_documents')" class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.tenant_first_name" 
-              placeholder="Enter First Name" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.tenant_first_name }"
-            />
-            <div v-if="showErrors && fieldErrors.tenant_first_name" class="invalid-feedback d-block">
-                {{ fieldErrors.tenant_first_name }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Last Name <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.tenant_last_name" 
-              placeholder="Enter Last Name" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.tenant_last_name }"
-            />
-             <div v-if="showErrors && fieldErrors.tenant_last_name" class="invalid-feedback d-block">
-                {{ fieldErrors.tenant_last_name }}
-              </div>
-          </div>
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label-custom">First Name <span class="text-danger">*</span></label><b-form-input v-model="form.tenant_first_name" placeholder="Enter First Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.tenant_first_name }" /><div v-if="showErrors && fieldErrors.tenant_first_name" class="invalid-feedback d-block">{{ fieldErrors.tenant_first_name }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Last Name <span class="text-danger">*</span></label><b-form-input v-model="form.tenant_last_name" placeholder="Enter Last Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.tenant_last_name }" /><div v-if="showErrors && fieldErrors.tenant_last_name" class="invalid-feedback d-block">{{ fieldErrors.tenant_last_name }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Date Of Birth</label>
-            <AdvancedDatePicker
-              v-model="form.tenant_dob"
-              date-only
-              placeholder="Select date"
-              class="custom-input"
-              :invalid="showErrors && !!fieldErrors.tenant_dob"
-            />
-            <div v-if="showErrors && fieldErrors.tenant_dob" class="invalid-feedback d-block">
-                {{ fieldErrors.tenant_dob }}
-              </div>
+            <AdvancedDatePicker type="date" date-only placeholder="Select date" v-model="form.tenant_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.tenant_dob" />
+            <div v-if="showErrors && fieldErrors.tenant_dob" class="invalid-feedback d-block">{{ fieldErrors.tenant_dob }}</div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.tenant_phone" 
-              placeholder="Enter Phone" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.tenant_phone }"
-            />
-            <div v-if="showErrors && fieldErrors.tenant_phone" class="invalid-feedback d-block">
-                {{ fieldErrors.tenant_phone }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Email <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.tenant_email" 
-              type="email" 
-              placeholder="Enter Email" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.tenant_email }"
-            />
-             <div v-if="showErrors && fieldErrors.tenant_email" class="invalid-feedback d-block">
-                {{ fieldErrors.tenant_email }}
-              </div>
-          </div>
+          <div class="col-md-4"><label class="form-label-custom">Phone <span class="text-danger">*</span></label><b-form-input v-model="form.tenant_phone" placeholder="Enter Phone" class="custom-input" :class="{ 'is-invalid': showErrors && !form.tenant_phone }" /><div v-if="showErrors && fieldErrors.tenant_phone" class="invalid-feedback d-block">{{ fieldErrors.tenant_phone }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Email <span class="text-danger">*</span></label><b-form-input v-model="form.tenant_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !form.tenant_email }" /><div v-if="showErrors && fieldErrors.tenant_email" class="invalid-feedback d-block">{{ fieldErrors.tenant_email }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.tenant_nationality" 
-              :options="nationalityOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Nationality" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.tenant_nationality }"
-            >
-                <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
+            <v-select v-model="form.tenant_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.tenant_nationality }" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
             </v-select>
-            <div v-if="showErrors && fieldErrors.tenant_nationality" class="invalid-feedback d-block">
-                {{ fieldErrors.tenant_nationality }}
-              </div>
+            <div v-if="showErrors && fieldErrors.tenant_nationality" class="invalid-feedback d-block">{{ fieldErrors.tenant_nationality }}</div>
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.tenant_residency_status" 
-              :options="residencyOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Status" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.tenant_residency_status }"
-            > 
-               <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-          
-            </v-select>
-             <div v-if="showErrors && fieldErrors.tenant_residency_status" class="invalid-feedback d-block">
-                {{ fieldErrors.tenant_residency_status }}
-              </div>
-          </div>
-         
-          <div class="col-md-4">
-            <label class="form-label-custom">Country Of Residence</label>
-            <v-select 
-              v-model="form.tenant_country" 
-              :options="countryOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Country" 
-              class="custom-v-select" 
-            >
+            <v-select v-model="form.tenant_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.tenant_residency_status }" clearable>
               <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-          
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
             </v-select>
-             <div v-if="showErrors && fieldErrors.tenant_country" class="invalid-feedback d-block">
-                {{ fieldErrors.tenant_country }}
-              </div>
+            <div v-if="showErrors && fieldErrors.tenant_residency_status" class="invalid-feedback d-block">{{ fieldErrors.tenant_residency_status }}</div>
           </div>
-          <div class="col-md-4">
-          <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-          <v-select 
-            v-model="form.tenant_city" 
-            :options="tenantCityOptions" 
-            :reduce="item => item.value" 
-            label="text" 
-            placeholder="Select City" 
-            class="custom-v-select"
-            :class="{ 'is-invalid': showErrors && !form.tenant_city }"
-          >
-            <template #open-indicator="{ attributes }">
-              <span v-bind="attributes">
-                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-              </span>
-            </template>
-          </v-select>
-          <div v-if="showErrors && fieldErrors.tenant_city" class="invalid-feedback d-block">
-            {{ fieldErrors.tenant_city }}
+          <div class="col-md-4" v-if="form.tenant_residency_status !== 'resident'">
+            <label class="form-label-custom">Country Of Residence</label>
+            <v-select v-model="form.tenant_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.tenant_country" class="invalid-feedback d-block">{{ fieldErrors.tenant_country }}</div>
           </div>
-        </div>
+          <div class="col-md-4" v-if="form.tenant_residency_status === 'resident'">
+            <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+            <v-select v-model="form.tenant_city" :options="tenantCityOptions" :reduce="item => item.value" label="text" placeholder="Select City" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.tenant_city }" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.tenant_city" class="invalid-feedback d-block">{{ fieldErrors.tenant_city }}</div>
+          </div>
           <div class="col-md-4">
             <label class="form-label-custom">Language <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.tenant_language" 
-              :options="languageOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Language" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.tenant_language }"
-            >
-           <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
+            <v-select v-model="form.tenant_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.tenant_language }" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
             </v-select>
-            <div v-if="showErrors && fieldErrors.tenant_language" class="invalid-feedback d-block">
-                {{ fieldErrors.tenant_language }}
-              </div>
+            <div v-if="showErrors && fieldErrors.tenant_language" class="invalid-feedback d-block">{{ fieldErrors.tenant_language }}</div>
           </div>
         </div>
-
-        <!-- Tenant Documents -->
-        <div class="mt-3">
-          <label class="section-title">Tenant Documents</label>
-          <DocumentUpload 
-            v-model="form.tenant_documents"
-            category="tenant"
-            :document-types="tenantDocTypes"
-            :compact="inlineMode"
-            :show-errors="showErrors"
-            ref="tenantDocUploadRef"
-          />
-        </div>
+        <div class="mt-3"><label class="section-title">Tenant Documents</label><DocumentUpload v-model="form.tenant_documents" category="tenant" :document-types="tenantDocTypes" :compact="inlineMode" :show-errors="showErrors" ref="tenantDocUploadRef" /></div>
       </div>
     </section>
 
     <!-- Landlord Section (for Rental) -->
-  <section v-if="dealType === 'rental' && !shouldHideLandlord && isSectionVisible('landlord_details')" class="form-section">
+    <section v-if="dealType === 'rental' && !shouldHideLandlord && isSectionVisible('landlord_details')" class="form-section">
       <h6 class="section-title mb-3">Landlord Details</h6>
       <div class="form-card p-3 radius-12">
-        <div v-if="!isDocumentEditMode('landlord_documents')" class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.landlord_first_name" 
-              placeholder="Enter First Name" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.landlord_first_name }"
-            />
-              <div v-if="showErrors && fieldErrors.landlord_first_name" class="invalid-feedback d-block">
-                {{ fieldErrors.landlord_first_name }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Last Name <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.landlord_last_name" 
-              placeholder="Enter Last Name" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.landlord_last_name }"
-            />
-             <div v-if="showErrors && fieldErrors.landlord_last_name" class="invalid-feedback d-block">
-                {{ fieldErrors.landlord_last_name }}
-              </div>
-          </div>
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label-custom">First Name <span class="text-danger">*</span></label><b-form-input v-model="form.landlord_first_name" placeholder="Enter First Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.landlord_first_name }" /><div v-if="showErrors && fieldErrors.landlord_first_name" class="invalid-feedback d-block">{{ fieldErrors.landlord_first_name }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Last Name <span class="text-danger">*</span></label><b-form-input v-model="form.landlord_last_name" placeholder="Enter Last Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.landlord_last_name }" /><div v-if="showErrors && fieldErrors.landlord_last_name" class="invalid-feedback d-block">{{ fieldErrors.landlord_last_name }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
-            <AdvancedDatePicker
-              v-model="form.landlord_dob"
-              date-only
-              placeholder="Select date"
-              class="custom-input"
-              :invalid="showErrors && !!fieldErrors.landlord_dob"
-            />
-              <div v-if="showErrors && fieldErrors.landlord_dob" class="invalid-feedback d-block">
-                {{ fieldErrors.landlord_dob }}
-              </div>
+            <AdvancedDatePicker type="date" date-only placeholder="Select date" v-model="form.landlord_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.landlord_dob" />
+            <div v-if="showErrors && fieldErrors.landlord_dob" class="invalid-feedback d-block">{{ fieldErrors.landlord_dob }}</div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.landlord_phone" 
-              placeholder="Enter Phone" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.landlord_phone }"
-            />
-             <div v-if="showErrors && fieldErrors.landlord_phone" class="invalid-feedback d-block">
-                {{ fieldErrors.landlord_phone }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">Email <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.landlord_email" 
-              type="email" 
-              placeholder="Enter Email" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.landlord_email }"
-            />
-             <div v-if="showErrors && fieldErrors.landlord_email" class="invalid-feedback d-block">
-                {{ fieldErrors.landlord_email }}
-              </div>
-          </div>
+          <div class="col-md-4"><label class="form-label-custom">Phone <span class="text-danger">*</span></label><b-form-input v-model="form.landlord_phone" placeholder="Enter Phone" class="custom-input" :class="{ 'is-invalid': showErrors && !form.landlord_phone }" /><div v-if="showErrors && fieldErrors.landlord_phone" class="invalid-feedback d-block">{{ fieldErrors.landlord_phone }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Email <span class="text-danger">*</span></label><b-form-input v-model="form.landlord_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !form.landlord_email }" /><div v-if="showErrors && fieldErrors.landlord_email" class="invalid-feedback d-block">{{ fieldErrors.landlord_email }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.landlord_nationality" 
-              :options="nationalityOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Nationality" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.landlord_nationality }"
-             >
-             <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-              
-              </v-select>
-             <div v-if="showErrors && fieldErrors.landlord_nationality" class="invalid-feedback d-block">
-                {{ fieldErrors.landlord_nationality }}
-              </div>
+            <v-select v-model="form.landlord_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.landlord_nationality }" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.landlord_nationality" class="invalid-feedback d-block">{{ fieldErrors.landlord_nationality }}</div>
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.landlord_residency_status" 
-              :options="residencyOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Status" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.landlord_residency_status }"
-            >
-             <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template> 
-          
-           </v-select>
-             <div v-if="showErrors && fieldErrors.landlord_residency_status" class="invalid-feedback d-block">
-                {{ fieldErrors.landlord_residency_status }}
-              </div>
-          </div>
-          
-          <div class="col-md-4">
-            <label class="form-label-custom">Country Of Residence</label>
-            <v-select 
-              v-model="form.landlord_country" 
-              :options="countryOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Country" 
-              class="custom-v-select" 
-            >
+            <v-select v-model="form.landlord_residency_status" :options="residencyOptions" :reduce="item => item.value" label="text" placeholder="Select Status" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.landlord_residency_status }" clearable>
               <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-          
-           </v-select>
-             <div v-if="showErrors && fieldErrors.landlord_country" class="invalid-feedback d-block">
-                {{ fieldErrors.landlord_country }}
-              </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.landlord_city" 
-              :options="landlordCityOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select City" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.landlord_city }"
-            >
-              <template #open-indicator="{ attributes }">
-                <span v-bind="attributes">
-                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                </span>
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
             </v-select>
-            <div v-if="showErrors && fieldErrors.landlord_city" class="invalid-feedback d-block">
-              {{ fieldErrors.landlord_city }}
-            </div>
+            <div v-if="showErrors && fieldErrors.landlord_residency_status" class="invalid-feedback d-block">{{ fieldErrors.landlord_residency_status }}</div>
+          </div>
+          <div class="col-md-4" v-if="form.landlord_residency_status !== 'resident'">
+            <label class="form-label-custom">Country Of Residence</label>
+            <v-select v-model="form.landlord_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.landlord_country" class="invalid-feedback d-block">{{ fieldErrors.landlord_country }}</div>
+          </div>
+          <div class="col-md-4" v-if="form.landlord_residency_status === 'resident'">
+            <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+            <v-select v-model="form.landlord_city" :options="landlordCityOptions" :reduce="item => item.value" label="text" placeholder="Select City" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.landlord_city }" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+            <div v-if="showErrors && fieldErrors.landlord_city" class="invalid-feedback d-block">{{ fieldErrors.landlord_city }}</div>
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Language <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.landlord_language" 
-              :options="languageOptions" 
-              :reduce="item => item.value" 
-              label="text" 
-              placeholder="Select Language" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.landlord_language }"
-            >
+            <v-select v-model="form.landlord_language" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.landlord_language }" clearable>
               <template #open-indicator="{ attributes }">
-                  <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                  </span>
-                </template>
-          
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
             </v-select>
-               <div v-if="showErrors && fieldErrors.landlord_language" class="invalid-feedback d-block">
-                {{ fieldErrors.landlord_language }}
-              </div>
+            <div v-if="showErrors && fieldErrors.landlord_language" class="invalid-feedback d-block">{{ fieldErrors.landlord_language }}</div>
           </div>
         </div>
+        <div class="mt-3"><label class="section-title">Landlord Documents</label><DocumentUpload v-model="form.landlord_documents" category="landlord" :document-types="landlordDocTypes" :compact="inlineMode" :show-errors="showErrors" ref="landlordDocUploadRef" /></div>
+      </div>
+    </section>
 
-        <!-- Landlord Documents -->
-        <div class="mt-3">
-          <label class="section-title">Landlord Documents</label>
-          <DocumentUpload 
-            v-model="form.landlord_documents"
-            category="landlord"
-            :document-types="landlordDocTypes"
-            :compact="inlineMode"
+    <!-- ========== PROPERTY DETAILS SECTION (Multi Properties) ========== -->
+    <section v-if="isSectionVisible('property_details')" class="form-section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="section-title mb-0">Property Details</h6>
+        <button 
+          v-if="showMultiProperties"
+          type="button" 
+          class="btn-add-property"
+          @click="addNewProperty"
+        >
+          <iconify-icon icon="lucide:plus" class="me-1"></iconify-icon>
+          Add Property
+        </button>
+      </div>
+      
+      <div class="form-card p-3 radius-12">
+        <!-- Multi Properties Mode -->
+        <div v-if="showMultiProperties && propertiesList.length > 0">
+          <PropertyList
+            ref="propertyListRef"
+            v-model="propertiesList"
+            :property-types="propertyTypes"
+            :areas="areas"
+            :developers="developers"
             :show-errors="showErrors"
-            ref="landlordDocUploadRef"
+            :required-fields="props.missingFields"
+            :deal-type="dealType"
+            :selected-stage-name="selectedStageName"
+          :property-doc-types="propertyDocTypes"
+             :show-property-documents="showPropertyDocuments"
+              :inline-mode="inlineMode"
+            @search-areas="(search) => emit('search-areas', search)"
           />
         </div>
-      </div>
-    </section>
-
-   <!-- Property Details Section -->
-    <section v-if="isSectionVisible('property_details')" class="form-section">
-      <h6 class="section-title mb-3">Property Details</h6>
-      <div class="form-card p-3 radius-12">
-        <div class="row g-3">
-          
-          <!-- Area (Location) - Required -->
+        
+        <!-- Legacy Single Property Mode -->
+        <div v-else class="row g-3">
           <div class="col-md-6">
-            <label class="form-label-custom"> Property Address <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.area_id" 
-              :options="areas" 
-              :reduce="item => item.id" 
-              label="name" 
-              placeholder="Select Location..." 
-              class="custom-v-select"
-              :filterable="true"
-              :searchable="true"
-              :clearable="true"
-              @update:modelValue="onAreaSelected"
-              @open="() => $emit('search-areas', '')"  
-              @search="(search) => $emit('search-areas', search)" 
-              :class="{ 'is-invalid': showErrors && !form.area_id }"
-            >
-              <template #open-indicator="{ attributes }">
-                      <span v-bind="attributes">
-                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                      </span>
-                  </template>
-                  <template #option="option">
-                      <div class="location-option">
-                          <i class="ri-map-pin-line location-option-icon"></i>
-                          <div class="location-option-text">
-                              <span class="location-option-name">{{ locationFirstLine(option) }}</span>
-                              <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
-                          </div>
-                      </div>
-                  </template>
-
-                  <template #selected-option="option">
-                      <div v-if="option" class="location-selected">
-                          <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
-                          <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
-                      </div>
-                  </template>
-            </v-select>
-            <div v-if="showErrors && fieldErrors.area_id" class="invalid-feedback d-block">
-              {{ fieldErrors.area_id }}
-            </div>
-          </div>
-
-          <!-- Select Listing (Unit) - يظهر بعد اختيار المنطقة -->
-          <div class="col-md-6" v-if="availableListings.length > 0">
-            <label class="form-label-custom">Select Unit <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="selectedListing" 
-              :options="availableListings" 
-              :reduce="item => item" 
-              label="display_name" 
-              placeholder="Select a unit..." 
-              class="custom-v-select"
-              @update:modelValue="onListingSelected"
-            >
+            <label class="form-label-custom">Property Address <span class="text-danger">*</span></label>
+            <v-select v-model="form.area_id" :options="areas" :reduce="item => item.id" label="name" placeholder="Select Location..." class="custom-v-select" @update:modelValue="onAreaSelected" @search="(search) => emit('search-areas', search)" :class="{ 'is-invalid': showErrors && !form.area_id }" clearable>
               <template #option="option">
-                <div>
-                  <strong>{{ option.unit_number || 'No Unit' }}</strong>
-                  <span class="text-muted ms-2">- {{ option.property_type?.name || 'N/A' }}</span>
-                  <div class="small text-muted">{{ option.bedrooms_text }} | {{ option.size_sqft || 'N/A' }} sqft</div>
-                </div>
+                <div class="location-option"><i class="ri-map-pin-line location-option-icon"></i><div class="location-option-text"><span class="location-option-name">{{ option.name }}</span><span class="location-option-subtitle">{{ option.area_parents_title }}</span></div></div>
               </template>
               <template #open-indicator="{ attributes }">
-                <span v-bind="attributes">
-                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                </span>
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
             </v-select>
-            <div class="small text-muted mt-1">
-              <i class="ri-information-line"></i> Showing available units in this location
-            </div>
           </div>
-
-          <!-- Unit No - يتم تعبئته تلقائياً من الـ Listing -->
-          <div class="col-md-4">
-            <label class="form-label-custom">Unit No <span class="text-danger">*</span></label>
-            <b-form-input 
-              v-model="form.unit_no" 
-              placeholder="Enter Unit No" 
-              class="custom-input"
-              :class="{ 'is-invalid': showErrors && !form.unit_no }"
-              
-            />
-            <div v-if="showErrors && fieldErrors.unit_no" class="invalid-feedback d-block">
-              {{ fieldErrors.unit_no }}
-            </div>
+          <div class="col-md-6" v-if="availableListings.length > 0">
+            <label class="form-label-custom">Select Unit</label>
+            <v-select v-model="selectedListing" :options="availableListings" :reduce="item => item" label="display_name" placeholder="Select a unit..." class="custom-v-select" @update:modelValue="onListingSelected" :disabled="isLoadingListings" clearable>
+              <template #option="option">
+                <div><strong>{{ option.unit_number || 'No Unit' }}</strong><span class="text-muted ms-2">- {{ option.property_type?.name || 'N/A' }}</span><div class="small text-muted">{{ option.bedrooms_text }} | {{ option.size_sqft || 'N/A' }} sqft</div><div class="small text-success">{{ option.status === 'converted' ? 'Sold' : 'Rented' }}</div></div>
+              </template>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+            <div class="small text-muted mt-1"><iconify-icon icon="lucide:info" class="me-1"></iconify-icon> Showing available units in this location</div>
           </div>
-
-          <!-- Property Type - يتم تعبئته تلقائياً -->
+          <div class="col-md-4"><label class="form-label-custom">Unit No <span class="text-danger">*</span></label><b-form-input v-model="form.unit_no" placeholder="Enter Unit No" class="custom-input" :class="{ 'is-invalid': showErrors && !form.unit_no }" /></div>
           <div class="col-md-4">
             <label class="form-label-custom">Property Type <span class="text-danger">*</span></label>
-            <v-select 
-              v-model="form.property_type_id" 
-              :options="propertyTypes" 
-              :reduce="item => item.id" 
-              label="name" 
-              placeholder="Select Property Type" 
-              class="custom-v-select"
-              :class="{ 'is-invalid': showErrors && !form.property_type_id }"
-              
-            >
+            <v-select v-model="form.property_type_id" :options="propertyTypes" :reduce="item => item.id" label="name" placeholder="Select Property Type" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.property_type_id }" clearable>
               <template #open-indicator="{ attributes }">
-                <span v-bind="attributes">
-                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                </span>
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
             </v-select>
-            <div v-if="showErrors && fieldErrors.property_type_id" class="invalid-feedback d-block">
-              {{ fieldErrors.property_type_id }}
-            </div>
           </div>
-
-          <!-- Bedrooms - يتم تعبئته تلقائياً -->
           <div class="col-md-4">
             <label class="form-label-custom">Bedrooms</label>
-            <v-select 
-              v-model="form.bedrooms" 
-              :options="bedroomOptions" 
-              :reduce="o => o.value" 
-              label="text" 
-              placeholder="Select Bedroom" 
-              class="custom-v-select"
-              
-            >
+            <v-select v-model="form.bedrooms" :options="bedroomOptions" :reduce="o => o.value" label="text" placeholder="Select Bedroom" class="custom-v-select" clearable>
               <template #open-indicator="{ attributes }">
-                <span v-bind="attributes">
-                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                </span>
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
             </v-select>
-            <div v-if="showErrors && fieldErrors.bedrooms" class="invalid-feedback d-block">
-              {{ fieldErrors.bedrooms }}
-            </div>
           </div>
-
-          <!-- Unit Size - يتم تعبئته تلقائياً -->
-          <div class="col-md-4">
-            <label class="form-label-custom">Unit Size (sq.ft)</label>
-            <b-form-input 
-              v-model="form.unit_size" 
-              placeholder="Enter Unit Size" 
-              class="custom-input"
-              
-            />
-            <div v-if="showErrors && fieldErrors.unit_size" class="invalid-feedback d-block">
-              {{ fieldErrors.unit_size }}
-            </div>
-          </div>
-
-          <!-- Project Name - يتم تعبئته تلقائياً -->
-          <!-- <div class="col-md-4">
-            <label class="form-label-custom">Project Name</label>
-            <v-select 
-              v-model="form.project_id" 
-              :options="projects" 
-              :reduce="item => item.id" 
-              label="name" 
-              placeholder="Search Project..." 
-              class="custom-v-select"
-              :filterable="true"
-                :searchable="true"
-                @search="searchProjects"
-            >
-              <template #open-indicator="{ attributes }">
-                <span v-bind="attributes">
-                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                </span>
-              </template>
-            </v-select>
-            <div v-if="showErrors && fieldErrors.project_id" class="invalid-feedback d-block">
-              {{ fieldErrors.project_id }}
-            </div>
-          </div> -->
-
-          <!-- Developer - يتم تعبئته تلقائياً -->
+          <div class="col-md-4"><label class="form-label-custom">Unit Size (sq.ft)</label><b-form-input v-model="form.unit_size" placeholder="Enter Unit Size" class="custom-input" /></div>
+          <div class="col-md-3" v-if="showBudgetFields"><label class="form-label-custom">Budget From <span v-if="isBudgetRequired" class="text-danger">*</span></label><div class="input-group"><span class="input-group-text">AED</span><b-form-input v-model="form.budget_from" type="number" placeholder="Min" class="custom-input" :class="{ 'is-invalid': showErrors && isBudgetRequired && !form.budget_from }" /></div></div>
+          <div class="col-md-3" v-if="showBudgetFields"><label class="form-label-custom">Budget To <span v-if="isBudgetRequired" class="text-danger">*</span></label><div class="input-group"><span class="input-group-text">AED</span><b-form-input v-model="form.budget_to" type="number" placeholder="Max" class="custom-input" :class="{ 'is-invalid': showErrors && isBudgetRequired && !form.budget_to }" /></div></div>
+          <div class="col-md-3" v-if="showPurchasePrice">
+          <label class="form-label-custom">  
+            <span v-if="isWonStage">Amount</span>
+            <span v-else>Purchase Price</span>
+            <span v-if="isPurchasePriceRequired" class="text-danger">*</span>
+          </label>
+        <div class="input-group"><span class="input-group-text">AED</span><b-form-input v-model="form.purchase_price" type="number" placeholder="Amount" class="custom-input" :class="{ 'is-invalid': showErrors && isPurchasePriceRequired && !form.purchase_price }" /></div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Developer</label>
-            <v-select 
-              v-model="form.developer_id" 
-              :options="developers" 
-              :reduce="item => item.id" 
-              label="name" 
-              placeholder="Select Developer" 
-              class="custom-v-select"
-              
-            >
+            <v-select v-model="form.developer_id" :options="developers" :reduce="item => item.id" label="name" placeholder="Select Developer" class="custom-v-select" clearable>
               <template #open-indicator="{ attributes }">
-                <span v-bind="attributes">
-                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                </span>
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
             </v-select>
-            <div v-if="showErrors && fieldErrors.developer_id" class="invalid-feedback d-block">
-              {{ fieldErrors.developer_id }}
-            </div>
           </div>
-        <div class="col-md-4">
-            <label class="form-label-custom">Developer sales person name</label>
-            <b-form-input 
-              v-model="form.developer_name" 
-              placeholder="Enter Developer Name" 
-              class="custom-input"
-            />
-            <div v-if="showErrors && fieldErrors.developer_name" class="invalid-feedback d-block">
-              {{ fieldErrors.developer_name }}
-            </div>
-          </div>
-
-          <div class="col-md-4">
-            <label class="form-label-custom">Developer sales person phone</label>
-            <b-form-input 
-              v-model="form.developer_phone" 
-              type="tel"
-              placeholder="Enter Developer Phone Number" 
-              class="custom-input"
-            />
-            <div v-if="showErrors && fieldErrors.developer_phone" class="invalid-feedback d-block">
-              {{ fieldErrors.developer_phone }}
-            </div>
-          </div>
-          <!-- Property Link - مخفي حالياً -->
-          <!-- <div class="col-md-4">
-            <label class="form-label-custom">Property Link</label>
-            <b-form-input v-model="form.property_link" placeholder="Enter Property Link" class="custom-input" />
-          </div> -->
-
-          <!-- Property Reference - مخفي حالياً -->
-          <!-- <div class="col-md-4">
-            <label class="form-label-custom">Property Reference</label>
-            <b-form-input v-model="form.property_reference" placeholder="Enter Reference" class="custom-input" />
-          </div> -->
-
+          <div class="col-md-4"><label class="form-label-custom">Developer sales person name</label><b-form-input v-model="form.developer_name" placeholder="Enter Developer Name" class="custom-input" /></div>
+          <div class="col-md-4"><label class="form-label-custom">Developer sales person phone</label><b-form-input v-model="form.developer_phone" type="tel" placeholder="Enter Developer Phone Number" class="custom-input" /></div>
         </div>
       </div>
     </section>
 
-    <!-- Deal Financials (Common for all) -->
-    <section v-if="isSectionVisible('deal_financials')" class="form-section">
+    <!-- Deal Financials -->
+    <section v-if="isSectionVisible('deal_financials') && isWonStage" class="form-section">
       <h6 class="section-title mb-3">Deal Financials</h6>
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
+          <!-- Deal Total Amount -->
+          <div class="col-md-4">
+            <label class="form-label-custom">Deal Total Amount</label>
+            <div class="input-group">
+              <span class="input-group-text">AED</span>
+              <b-form-input v-model="form.deal_total_amount" type="number" placeholder="Enter Total Amount" class="custom-input" />
+            </div>
+            <div v-if="showErrors && fieldErrors.deal_total_amount" class="invalid-feedback d-block">{{ fieldErrors.deal_total_amount }}</div>
+          </div>
+          
+          <!-- Deal Commission % -->
           <div class="col-md-4">
             <label class="form-label-custom">Deal Commission %</label>
-            <b-form-input v-model="form.deal_commission" type="number" placeholder="Enter Commission %" class="custom-input" />
-             <div v-if="showErrors && fieldErrors.deal_commission" class="invalid-feedback d-block">
-                {{ fieldErrors.deal_commission }}
-              </div>
+            <div class="input-group">
+              <b-form-input v-model="form.deal_commission" type="number" placeholder="Enter Commission %" class="custom-input" />
+              <span class="input-group-text">%</span>
+            </div>
+            <div v-if="showErrors && fieldErrors.deal_commission" class="invalid-feedback d-block">{{ fieldErrors.deal_commission }}</div>
           </div>
-          <!--<div class="col-md-4">-->
-          <!--  <label class="form-label-custom">Agent Share %</label>-->
-          <!--  <b-form-input v-model="form.agent_share" type="number" placeholder="Enter Agent Share %" class="custom-input" />-->
-          <!--  <div v-if="showErrors && fieldErrors.agent_share" class="invalid-feedback d-block">-->
-          <!--      {{ fieldErrors.agent_share }}-->
-          <!--    </div>-->
-          <!--</div>-->
-          <!--<div class="col-md-4">-->
-          <!--  <label class="form-label-custom">Company Share %</label>-->
-          <!--  <b-form-input v-model="form.company_share" type="number" placeholder="Enter Company Share %" class="custom-input" />-->
-          <!--   <div v-if="showErrors && fieldErrors.company_share" class="invalid-feedback d-block">-->
-          <!--      {{ fieldErrors.company_share }}-->
-          <!--    </div>-->
-          <!--</div>-->
         </div>
       </div>
     </section>
 
     <!-- Responsible Person -->
     <div v-if="!inlineMode" class="col-12">
-      <ResponsiblePersonSelector 
-        v-model="form.responsible_person_id" 
-        :users="users" 
-        :responsible-person="responsiblePerson"
-        :class="{ 'is-invalid': showErrors && !form.responsible_person_id }"
-      />
-        <div v-if="showErrors && fieldErrors.responsible_person_id" class="invalid-feedback d-block">
-                {{ fieldErrors.responsible_person_id }}
-              </div>
+      <ResponsiblePersonSelector v-model="form.responsible_person_id" :users="users" :responsible-person="responsiblePerson" :class="{ 'is-invalid': showErrors && !form.responsible_person_id }" />
+      <div v-if="showErrors && fieldErrors.responsible_person_id" class="invalid-feedback d-block">{{ fieldErrors.responsible_person_id }}</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, computed,onMounted } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import DocumentUpload from './DocumentUpload.vue'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
-import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue' 
+import PropertyList from './PropertyList.vue'
+import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import api from '@/plugins/axios'
 import { getCurrentInstance } from 'vue'
 import { normalizeLanguageSelection, hasLanguageSelection } from '@/composables/useLanguageMultiSelect'
 
 const { proxy } = getCurrentInstance()
+
 const props = defineProps({
   modelValue: { type: Object, default: () => ({}) },
   dealType: { type: String, default: 'primary' },
@@ -1144,53 +452,217 @@ const props = defineProps({
   subCommunities: { type: Array, default: () => [] },
   usersLoading: { type: Boolean, default: false },
   showErrors: { type: Boolean, default: false },
-    fieldErrors: { type: Object, default: () => ({}) },
-      selectedStageId: { type: [Number, String], default: null },
+  fieldErrors: { type: Object, default: () => ({}) },
+  selectedStageId: { type: [Number, String], default: null },
   selectedStageName: { type: String, default: '' },
-  missingFields: { type: Array, default: () => [] }
-  ,
+  missingFields: { type: Array, default: () => [] },
   activeEditSection: { type: String, default: null },
   inlineMode: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update:modelValue', 'search-areas', 'search-subcommunities', 'update:hasListingId', 'update:dealType'])
-// أضف هذا في قسم <script setup>
+
+// ========== Refs ==========
 const hasListingId = ref(false)
-
-// هل يجب إخفاء Seller Section؟
-const shouldHideSeller = computed(() => {
-  return hasListingId.value && props.dealType === 'secondary'
-})
-
-// هل يجب إخفاء Landlord Section؟
-const shouldHideLandlord = computed(() => {
-  return hasListingId.value && props.dealType === 'rental'
-})
-
-// هل يجب إخفاء Tenant Section؟ (يظهر فقط في Rental مع listing_id)
-const shouldHideTenant = computed(() => {
-  return hasListingId.value && props.dealType !== 'rental'
-})
-const form = computed({
-  get: () => props.modelValue,
-  set: (v) => emit('update:modelValue', v)
-})
-
+const form = computed({ get: () => props.modelValue, set: (v) => emit('update:modelValue', v) })
 const responsiblePerson = computed(() => {
   const id = form.value?.responsible_person_id
   if (!id || !props.users.length) return null
   return props.users.find(u => u.id === id) || null
 })
 
-// const projects = ref([])
-const subCommunities = ref([])
-const locationFirstLine = (area) => {
-      return area.name || ''
+// ========== Multi Properties ==========
+const propertiesList = ref([])
+const propertyListRef = ref(null)
+const showMultiProperties = ref(false)
+
+// ========== Listings ==========
+const availableListings = ref([])
+const selectedListing = ref(null)
+const isLoadingListings = ref(false)
+const currentUser = ref(null)
+
+// ========== Document Upload Refs ==========
+const buyerDocUploadRef = ref(null)
+const sellerDocUploadRef = ref(null)
+const tenantDocUploadRef = ref(null)
+const landlordDocUploadRef = ref(null)
+
+// ========== Computed ==========
+const showBudgetFields = computed(() => {
+  const stageName = props.selectedStageName?.toLowerCase() || ''
+  return stageName.includes('eoi')
+})
+const isWonStage = computed(() => {
+  const stageName = props.selectedStageName?.toLowerCase() || ''
+  return stageName.includes('won') || stageName.includes('deal won')
+})
+const isBudgetRequired = computed(() => {
+  const missingFields = props.missingFields || []
+  return missingFields.includes('budget_from') || missingFields.includes('budget_to')
+})
+
+const showPurchasePrice = computed(() => {
+  const stageName = props.selectedStageName?.toLowerCase() || ''
+  return stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
+})
+
+const isPurchasePriceRequired = computed(() => {
+  const missingFields = props.missingFields || []
+  return missingFields.includes('purchase_price')
+})
+const showPropertyDocuments = computed(() => {
+  const stageName = props.selectedStageName?.toLowerCase() || ''
+  return  stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
+})
+const shouldHideSeller = computed(() => hasListingId.value && props.dealType === 'secondary')
+const shouldHideLandlord = computed(() => hasListingId.value && props.dealType === 'rental')
+
+// ========== Document Types ==========
+const normalizeResidencyStatus = (status) => {
+  if (!status) return 'non_resident'
+  const value = String(status).toLowerCase()
+  return value === 'resident' ? 'resident' : 'non_resident'
+}
+
+const getRequiredDocumentsByResidency = (residencyStatus) => {
+  return normalizeResidencyStatus(residencyStatus) === 'resident' ? ['passport', 'national_id'] : ['passport']
+}
+
+const isSpaStageOrLater = computed(() => {
+  const stageName = String(props.selectedStageName || '').toLowerCase()
+  return stageName.includes('spa signed') || stageName.includes('deal done') || stageName.includes('deal won') || stageName.includes('transfer') || stageName.includes('handover') || stageName.includes('closed')
+})
+
+const isEoiStageOrLater = computed(() => {
+  const stageName = String(props.selectedStageName || '').toLowerCase()
+  return stageName.includes('eoi') || isSpaStageOrLater.value
+})
+
+const primaryBuyerDocTypes = computed(() => {
+  const residencyStatus = form.value?.buyer_residency_status
+  const requiredResidencyDocs = getRequiredDocumentsByResidency(residencyStatus)
+  const docs = []
+  if (requiredResidencyDocs.includes('passport')) docs.push({ id: 'passport', name: 'Passport', required: true })
+  if (requiredResidencyDocs.includes('national_id')) docs.push({ id: 'national_id', name: 'Emirates ID', required: true })
+  docs.push({ id: 'kyc', name: 'KYC', required: isSpaStageOrLater.value })
+  docs.push({ id: 'spa', name: 'Buyer SPA', required: isSpaStageOrLater.value })
+  // docs.push({ id: 'payment_proof', name: 'Buyer Payment Proof', required: isEoiStageOrLater.value })
+  return docs
+})
+const propertyDocTypes = computed(() => {
+  const stageName = props.selectedStageName?.toLowerCase() || ''
+  const docs = []
+  
+  if (stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')) {
+    docs.push({ id: 'payment_proof', name: 'Payment Proof', required: stageName.includes('spa') || stageName.includes('won') })
   }
   
-  const locationSecondLine = (area) => {
-      return area.area_parents_title || ''
+  // SPA Document - يظهر من SPA stage (order 4)
+  if (stageName.includes('spa') || stageName.includes('won')) {
+    docs.push({ id: 'spa', name: 'SPA Document', required: true })
   }
+  
+  return docs
+})
+const secondaryBuyerDocTypes = computed(() => {
+  const residencyStatus = form.value?.buyer_residency_status
+  const requiredResidencyDocs = getRequiredDocumentsByResidency(residencyStatus)
+  const docs = []
+  if (requiredResidencyDocs.includes('passport')) docs.push({ id: 'passport', name: 'Buyer Passport', required: true })
+  if (requiredResidencyDocs.includes('national_id')) docs.push({ id: 'national_id', name: 'Buyer Emirates ID', required: true })
+  docs.push({ id: 'kyc', name: 'Buyer KYC', required: isSpaStageOrLater.value })
+  // docs.push({ id: 'spa', name: 'Buyer SPA', required: isSpaStageOrLater.value })
+  // docs.push({ id: 'payment_proof', name: 'Buyer Payment Proof', required: isEoiStageOrLater.value })
+  docs.push({ id: 'noc', name: 'NOC Letter', required: false })
+  docs.push({ id: 'title_deed', name: 'New Title Deed / New SPA', required: false })
+  return docs
+})
+
+const sellerDocTypes = computed(() => {
+  const residencyStatus = form.value?.seller_residency_status
+  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
+  const allDocs = { passport: { id: 'passport', name: 'Seller Passport', required: true }, national_id: { id: 'national_id', name: 'Seller Emirates ID', required: true }, title_deed: { id: 'title_deed', name: 'Unit SPA / Title Deed', required: false } }
+  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
+})
+
+const tenantDocTypes = computed(() => {
+  const residencyStatus = form.value?.tenant_residency_status
+  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
+  const allDocs = { passport: { id: 'passport', name: 'Tenant Passport', required: true }, national_id: { id: 'national_id', name: 'Tenant Emirates ID', required: false }, kyc: { id: 'kyc', name: 'Tenant KYC', required: false }, payment_proof: { id: 'payment_proof', name: 'Tenant Proof of Payment', required: false }, ejari: { id: 'ejari', name: 'Ejari Contract', required: false }, tenancy_contract: { id: 'tenancy_contract', name: 'Tenancy Contract', required: false }, move_in_form: { id: 'move_in_form', name: 'Move In Form', required: false } }
+  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
+})
+
+const landlordDocTypes = computed(() => {
+  const residencyStatus = form.value?.landlord_residency_status
+  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
+  const allDocs = { passport: { id: 'passport', name: 'Landlord Passport', required: true }, national_id: { id: 'national_id', name: 'Landlord Emirates ID', required: true }, title_deed: { id: 'title_deed', name: 'Title Deed', required: true } }
+  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
+})
+
+// ========== City Options ==========
+// ========== Improved Watchers for Residency & Country ==========
+function setupResidencyAndCityWatchers() {
+  const parties = ['buyer', 'seller', 'tenant', 'landlord']
+  
+  parties.forEach(party => {
+    // مراقبة تغيير Residency Status
+    watch(() => form.value[`${party}_residency_status`], (newStatus) => {
+      if (newStatus === 'non_resident') {
+        form.value[`${party}_city`] = null
+      }
+    })
+    
+    // مراقبة تغيير Country للسكان فقط (لتعيين مدينة تلقائية)
+    watch(() => form.value[`${party}_country`], (newCountry) => {
+      if (form.value[`${party}_residency_status`] === 'resident' && newCountry === 'United Arab Emirates') {
+        const uaeCities = citiesByCountry['United Arab Emirates']
+        if (uaeCities && uaeCities.length > 0 && !form.value[`${party}_city`]) {
+          form.value[`${party}_city`] = uaeCities[0].value
+        }
+      }
+    })
+  })
+}
+
+setupResidencyAndCityWatchers()
+const citiesByCountry = {
+  'United Arab Emirates': [{ value: 'Abu Dhabi', text: 'Abu Dhabi' }, { value: 'Dubai', text: 'Dubai' }, { value: 'Sharjah', text: 'Sharjah' }, { value: 'Ajman', text: 'Ajman' }, { value: 'Ras Al Khaimah', text: 'Ras Al Khaimah' }, { value: 'Umm Al Quwain', text: 'Umm Al Quwain' }, { value: 'Fujairah', text: 'Fujairah' }, { value: 'Al Ain', text: 'Al Ain' }],
+  'Saudi Arabia': [{ value: 'Riyadh', text: 'Riyadh' }, { value: 'Jeddah', text: 'Jeddah' }, { value: 'Mecca', text: 'Mecca' }, { value: 'Medina', text: 'Medina' }, { value: 'Dammam', text: 'Dammam' }, { value: 'Khobar', text: 'Khobar' }, { value: 'Tabuk', text: 'Tabuk' }, { value: 'Abha', text: 'Abha' }],
+  'Egypt': [{ value: 'Cairo', text: 'Cairo' }, { value: 'Giza', text: 'Giza' }, { value: 'Alexandria', text: 'Alexandria' }],
+  'India': [{ value: 'Mumbai', text: 'Mumbai' }, { value: 'Delhi', text: 'Delhi' }, { value: 'Bangalore', text: 'Bangalore' }],
+  'Pakistan': [{ value: 'Karachi', text: 'Karachi' }, { value: 'Lahore', text: 'Lahore' }, { value: 'Islamabad', text: 'Islamabad' }],
+}
+
+const buyerCityOptions = computed(() => {
+ if (form.value?.buyer_residency_status === 'resident') {
+    const uaeCities = citiesByCountry['United Arab Emirates']
+    return uaeCities || []
+  }
+})
+
+const sellerCityOptions = computed(() => {
+ if (form.value?.seller_residency_status === 'resident') {
+    const uaeCities = citiesByCountry['United Arab Emirates']
+    return uaeCities || []
+  }
+})
+
+const tenantCityOptions = computed(() => {
+ if (form.value?.tenant_residency_status === 'resident') {
+    const uaeCities = citiesByCountry['United Arab Emirates']
+    return uaeCities || []
+  }
+})
+
+const landlordCityOptions = computed(() => {
+  if (form.value?.landlord_residency_status === 'resident') {
+    const uaeCities = citiesByCountry['United Arab Emirates']
+    return uaeCities || []
+  }
+})
+
+// ========== Functions ==========
 const missingFieldLabels = computed(() => {
   if (!Array.isArray(props.missingFields) || !props.missingFields.length) return []
   return props.missingFields.map((k) => String(k).replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
@@ -1216,267 +688,53 @@ function isDocumentEditMode(documentSectionKey) {
   return props.activeEditSection === documentSectionKey
 }
 
-function updateBuyerLanguage(value) {
-  form.value.buyer_language = normalizeLanguageSelection(value)
-}
+const updateBuyerLanguage = (value) => { form.value.buyer_language = normalizeLanguageSelection(value) }
 
-// Normalize historical values to the two supported states.
-function normalizeResidencyStatus(status) {
-  if (!status) return 'non_resident'
-  const value = String(status).toLowerCase()
-  if (value === 'resident') return 'resident'
-  if (value === 'non_resident' || value === 'non-resident') return 'non_resident'
-  if (value === 'citizen' || value === 'investor' || value === 'student') return 'resident'
-  return 'non_resident'
-}
-
-function getRequiredDocumentsByResidency(residencyStatus) {
-  return normalizeResidencyStatus(residencyStatus) === 'resident'
-    ? ['passport', 'national_id']
-    : ['passport']
-}
-
-const isSpaStageOrLater = computed(() => {
-  const stageName = String(props.selectedStageName || '').toLowerCase()
-  return (
-    stageName.includes('spa signed') ||
-    stageName.includes('deal done') ||
-    stageName.includes('deal won') ||
-    stageName.includes('transfer') ||
-    stageName.includes('handover') ||
-    stageName.includes('closed')
-  )
-})
-
-const isEoiStageOrLater = computed(() => {
-  const stageName = String(props.selectedStageName || '').toLowerCase()
-  return stageName.includes('eoi') || isSpaStageOrLater.value
-})
-
-function hasDocumentFile(docs, type) {
-  return Array.isArray(docs) && docs.some(
-    (doc) => doc?.document_type === type && (doc?.file || doc?.url || doc?.file_url),
-  )
-}
-
-// قوائم المستندات الديناميكية حسب حالة الإقامة
-const primaryBuyerDocTypes = computed(() => {
-  const residencyStatus = form.value?.buyer_residency_status
-  const requiredResidencyDocs = getRequiredDocumentsByResidency(residencyStatus)
-  const docs = []
-
-  if (requiredResidencyDocs.includes('passport')) {
-    docs.push({ id: 'passport', name: 'Passport', required: true })
-  }
-  // if (requiredResidencyDocs.includes('visa')) {
-  //   docs.push({ id: 'visa', name: 'Residence Visa', required: false })
-  // }
-  if (requiredResidencyDocs.includes('national_id')) {
-    docs.push({ id: 'national_id', name: 'Emirates ID', required: true })
-  }
-
-  docs.push(
-    { id: 'kyc', name: 'KYC', required: isSpaStageOrLater.value },
-    { id: 'spa', name: 'Buyer SPA', required: isSpaStageOrLater.value },
-    { id: 'payment_proof', name: 'Buyer Payment Proof', required: isEoiStageOrLater.value },
-  )
-
-  return docs
-})
-
-const secondaryBuyerDocTypes = computed(() => {
-  const residencyStatus = form.value?.buyer_residency_status
-  const requiredResidencyDocs = getRequiredDocumentsByResidency(residencyStatus)
-  const docs = []
-
-  if (requiredResidencyDocs.includes('passport')) {
-    docs.push({ id: 'passport', name: 'Buyer Passport', required: true })
-  }
-  // if (requiredResidencyDocs.includes('visa')) {
-  //   docs.push({ id: 'visa', name: 'Buyer Residence  Visa', required: false })
-  // }
-  if (requiredResidencyDocs.includes('national_id')) {
-    docs.push({ id: 'national_id', name: 'Buyer Emirates ID', required: true })
-  }
-
-  docs.push(
-    { id: 'kyc', name: 'Buyer KYC', required: isSpaStageOrLater.value },
-    { id: 'spa', name: 'Buyer SPA', required: isSpaStageOrLater.value },
-    { id: 'payment_proof', name: 'Buyer Payment Proof', required: isEoiStageOrLater.value },
-    { id: 'noc', name: 'NOC Letter', required: false },
-    { id: 'title_deed', name: 'New Title Deed / New SPA', required: false },
-  )
-
-  return docs
-})
-
-const sellerDocTypes = computed(() => {
-  const residencyStatus = form.value?.seller_residency_status
-  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
-  
-  const allDocs = {
-    passport: { id: 'passport', name: 'Seller Passport', required: true },
-    national_id: { id: 'national_id', name: 'Seller Emirates ID', required: true },
-    // visa: { id: 'visa', name: 'Seller Residence  Visa', required: false },
-    title_deed: { id: 'title_deed', name: 'Unit SPA / Title Deed', required: false }
-  }
-  
-  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
-})
-
-const tenantDocTypes = computed(() => {
-  const residencyStatus = form.value?.tenant_residency_status
-  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
-  
-  const allDocs = {
-    passport: { id: 'passport', name: 'Tenant Passport', required: true },
-    national_id: { id: 'national_id', name: 'Tenant Emirates ID', required: false },
-    kyc: { id: 'kyc', name: 'Tenant KYC', required: false },
-    // visa: { id: 'visa', name: 'Tenant Residence Visa', required: false },
-    payment_proof: { id: 'payment_proof', name: 'Tenant Proof of Payment', required: false },
-    ejari: { id: 'ejari', name: 'Tawtheeq/Ejari Contract', required: false },
-    tenancy_contract: { id: 'tenancy_contract', name: 'Tenancy Contract', required: false },
-    move_in_form: { id: 'move_in_form', name: 'Move In Form', required: false }
-  }
-  
-  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
-})
-
-const landlordDocTypes = computed(() => {
-  const residencyStatus = form.value?.landlord_residency_status
-  const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
-  
-  const allDocs = {
-    passport: { id: 'passport', name: 'Landlord Passport', required: true },
-    national_id: { id: 'national_id', name: 'Landlord Emairates ID', required: true },
-    // visa: { id: 'visa', name: 'Landlord Residence  Visa', required: false },
-    title_deed: { id: 'title_deed', name: 'Title Deed', required: true }
-  }
-  
-  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
-})
-
-// Computed property for city options based on selected country
-const buyerCityOptions = computed(() => {
-  const country = form.value?.buyer_country || 'other'
-  return citiesByCountry[country] || citiesByCountry['other']
-})
-
-const sellerCityOptions = computed(() => {
-  const country = form.value?.seller_country || 'other'
-  return citiesByCountry[country] || citiesByCountry['other']
-})
-
-const tenantCityOptions = computed(() => {
-  const country = form.value?.tenant_country || 'other'
-  return citiesByCountry[country] || citiesByCountry['other']
-})
-
-const landlordCityOptions = computed(() => {
-  const country = form.value?.landlord_country || 'other'
-  return citiesByCountry[country] || citiesByCountry['other']
-})
-// Refs for document upload components
-const buyerDocUploadRef = ref(null)
-const sellerDocUploadRef = ref(null)
-const tenantDocUploadRef = ref(null)
-const landlordDocUploadRef = ref(null)
-
-const __debug = import.meta.env.DEV
-const dlog = (...args) => {
-  if (__debug) console.log(...args)
-}
-
-// Clear all documents function
 function clearAllDocuments() {
-  dlog('Clearing all documents...')
-  // Reset model arrays first (DocumentUpload is v-model driven).
   form.value.buyer_documents = []
   form.value.seller_documents = []
   form.value.tenant_documents = []
   form.value.landlord_documents = []
-
-  // Backward-compatible guard if child component exposes a clear method.
-  const refs = [
-    buyerDocUploadRef.value,
-    sellerDocUploadRef.value,
-    tenantDocUploadRef.value,
-    landlordDocUploadRef.value,
-  ]
-  refs.forEach((r) => {
-    if (r && typeof r.clearAllFiles === 'function') {
-      r.clearAllFiles()
-    }
-  })
+  const refs = [buyerDocUploadRef.value, sellerDocUploadRef.value, tenantDocUploadRef.value, landlordDocUploadRef.value]
+  refs.forEach((r) => { if (r && typeof r.clearAllFiles === 'function') r.clearAllFiles() })
 }
 
-// Validation function
+// ========== Validation ==========
+// ========== Validation ==========
 function validateForm() {
   const errors = []
   const fieldErrorsObj = {}
   
-  // Check stage
-  if (!props.selectedStageId) {
-    errors.push('Please select a stage for the deal')
-    fieldErrorsObj.stage_id = 'Stage is required'
-  }
+  if (!props.selectedStageId) { errors.push('Please select a stage for the deal'); fieldErrorsObj.stage_id = 'Stage is required' }
+  if (!form.value.source) { errors.push('Source is required'); fieldErrorsObj.source = 'Source is required' }
+  if (!form.value.deal_name) { errors.push('Deal name is required'); fieldErrorsObj.deal_name = 'Deal name is required' }
+  if (!form.value.responsible_person_id) { errors.push('Responsible person is required'); fieldErrorsObj.responsible_person_id = 'Responsible person is required' }
   
-  // Required fields check
-  if (!form.value.source) {
-    errors.push('Source is required')
-    fieldErrorsObj.source = 'Source is required'
-  }
-  if (!form.value.deal_name) {
-    errors.push('Deal name is required')
-    fieldErrorsObj.deal_name = 'Deal name is required'
-  }
-  if (!form.value.unit_no) {
-    errors.push('Unit number is required')
-    fieldErrorsObj.unit_no = 'Unit number is required'
-  }
-  if (!form.value.property_type_id) {
-    errors.push('Property type is required')
-    fieldErrorsObj.property_type_id = 'Property type is required'
-  }
-  if (!form.value.responsible_person_id) {
-    errors.push('Responsible person is required')
-    fieldErrorsObj.responsible_person_id = 'Responsible person is required'
-  }
-  
-  // Validate based on deal type
   if (props.dealType === 'primary' || props.dealType === 'secondary') {
-    if (!form.value.buyer_first_name) {
-      errors.push('Buyer first name is required')
-      fieldErrorsObj.buyer_first_name = 'First name is required'
+    if (!form.value.buyer_first_name) { errors.push('Buyer first name is required'); fieldErrorsObj.buyer_first_name = 'First name is required' }
+    if (!form.value.buyer_last_name) { errors.push('Buyer last name is required'); fieldErrorsObj.buyer_last_name = 'Last name is required' }
+    if (!form.value.buyer_phone) { errors.push('Buyer phone is required'); fieldErrorsObj.buyer_phone = 'Phone is required' }
+    if (!form.value.buyer_email) { errors.push('Buyer email is required'); fieldErrorsObj.buyer_email = 'Email is required' }
+    if (!form.value.buyer_nationality) { errors.push('Buyer nationality is required'); fieldErrorsObj.buyer_nationality = 'Nationality is required' }
+    if (!form.value.buyer_dob) { errors.push('Buyer date of birth is required'); fieldErrorsObj.buyer_dob = 'Date of birth is required' }
+    if (!form.value.buyer_residency_status) { errors.push('Buyer residency status is required'); fieldErrorsObj.buyer_residency_status = 'Residency status is required' }
+    
+    // ✅ Buyer city - مطلوب فقط للمقيمين (resident)
+    if (form.value.buyer_residency_status === 'resident') {
+      if (!form.value.buyer_city) {
+        errors.push('Buyer city is required')
+        fieldErrorsObj.buyer_city = 'City is required'
+      }
     }
-    if (!form.value.buyer_last_name) {
-      errors.push('Buyer last name is required')
-      fieldErrorsObj.buyer_last_name = 'Last name is required'
+    
+    // ✅ Buyer country - مطلوب فقط لغير المقيمين (non_resident)
+    if (form.value.buyer_residency_status !== 'resident') {
+      if (!form.value.buyer_country) {
+        errors.push('Buyer country is required')
+        fieldErrorsObj.buyer_country = 'Country is required'
+      }
     }
-    if (!form.value.buyer_phone) {
-      errors.push('Buyer phone is required')
-      fieldErrorsObj.buyer_phone = 'Phone is required'
-    }
-    if (!form.value.buyer_email) {
-      errors.push('Buyer email is required')
-      fieldErrorsObj.buyer_email = 'Email is required'
-    }
-    if (!form.value.buyer_nationality) {
-      errors.push('Buyer nationality is required')
-      fieldErrorsObj.buyer_nationality = 'Nationality is required'
-    }
-    if (!form.value.buyer_dob) {
-      errors.push('Buyer date of birth is required')
-      fieldErrorsObj.buyer_dob = 'Date of birth is required'
-    }
-    if (!form.value.buyer_residency_status) {
-      errors.push('Buyer residency status is required')
-      fieldErrorsObj.buyer_residency_status = 'Residency status is required'
-    }
-    if (!form.value.buyer_city) {
-      errors.push('Buyer city is required')
-      fieldErrorsObj.buyer_city = 'City is required'
-    }
+    
     if (!hasLanguageSelection(form.value.buyer_language)) {
       errors.push('Buyer language is required')
       fieldErrorsObj.buyer_language = 'Language is required'
@@ -1484,915 +742,239 @@ function validateForm() {
   }
   
   if (props.dealType === 'secondary' && !shouldHideSeller.value) {
-    if (!form.value.seller_first_name) {
-      errors.push('Seller first name is required')
-      fieldErrorsObj.seller_first_name = 'First name is required'
+    if (!form.value.seller_first_name) { errors.push('Seller first name is required'); fieldErrorsObj.seller_first_name = 'First name is required' }
+    if (!form.value.seller_last_name) { errors.push('Seller last name is required'); fieldErrorsObj.seller_last_name = 'Last name is required' }
+    if (!form.value.seller_phone) { errors.push('Seller phone is required'); fieldErrorsObj.seller_phone = 'Phone is required' }
+    if (!form.value.seller_email) { errors.push('Seller email is required'); fieldErrorsObj.seller_email = 'Email is required' }
+    if (!form.value.seller_nationality) { errors.push('Seller nationality is required'); fieldErrorsObj.seller_nationality = 'Nationality is required' }
+    if (!form.value.seller_dob) { errors.push('Seller date of birth is required'); fieldErrorsObj.seller_dob = 'Date of birth is required' }
+    if (!form.value.seller_residency_status) { errors.push('Seller residency status is required'); fieldErrorsObj.seller_residency_status = 'Residency status is required' }
+    
+    // ✅ Seller city - مطلوب فقط للمقيمين
+    if (form.value.seller_residency_status === 'resident') {
+      if (!form.value.seller_city) {
+        errors.push('Seller city is required')
+        fieldErrorsObj.seller_city = 'City is required'
+      }
     }
-    if (!form.value.seller_last_name) {
-      errors.push('Seller last name is required')
-      fieldErrorsObj.seller_last_name = 'Last name is required'
+    
+    // ✅ Seller country - مطلوب فقط لغير المقيمين
+    if (form.value.seller_residency_status !== 'resident') {
+      if (!form.value.seller_country) {
+        errors.push('Seller country is required')
+        fieldErrorsObj.seller_country = 'Country is required'
+      }
     }
-    if (!form.value.seller_phone) {
-      errors.push('Seller phone is required')
-      fieldErrorsObj.seller_phone = 'Phone is required'
-    }
-    if (!form.value.seller_email) {
-      errors.push('Seller email is required')
-      fieldErrorsObj.seller_email = 'Email is required'
-    }
-    if (!form.value.seller_nationality) {
-      errors.push('Seller nationality is required')
-      fieldErrorsObj.seller_nationality = 'Nationality is required'
-    }
-    if (!form.value.seller_dob) {
-      errors.push('Seller date of birth is required')
-      fieldErrorsObj.seller_dob = 'Date of birth is required'
-    }
-    if (!form.value.seller_residency_status) {
-      errors.push('Seller residency status is required')
-      fieldErrorsObj.seller_residency_status = 'Residency status is required'
-    }
-    if (!form.value.seller_city) {
-      errors.push('Seller city is required')
-      fieldErrorsObj.seller_city = 'City is required'
-    }
-    if (!form.value.seller_language) {
-      errors.push('Seller language is required')
-      fieldErrorsObj.seller_language = 'Language is required'
-    }
+    
+    if (!form.value.seller_language) { errors.push('Seller language is required'); fieldErrorsObj.seller_language = 'Language is required' }
   }
   
   if (props.dealType === 'rental') {
-      if (!form.value.tenant_first_name) {
-        errors.push('Tenant first name is required')
-        fieldErrorsObj.tenant_first_name = 'First name is required'
-      }
-      if (!form.value.tenant_last_name) {
-        errors.push('Tenant last name is required')
-        fieldErrorsObj.tenant_last_name = 'Last name is required'
-      }
-      if (!form.value.tenant_phone) {
-        errors.push('Tenant phone is required')
-        fieldErrorsObj.tenant_phone = 'Phone is required'
-      }
-      if (!form.value.tenant_email) {
-        errors.push('Tenant email is required')
-        fieldErrorsObj.tenant_email = 'Email is required'
-      }
-      if (!form.value.tenant_nationality) {
-        errors.push('Tenant nationality is required')
-        fieldErrorsObj.tenant_nationality = 'Nationality is required'
-      }
-      if (!form.value.tenant_residency_status) {
-        errors.push('Tenant residency status is required')
-        fieldErrorsObj.tenant_residency_status = 'Residency status is required'
-      }
+    if (!form.value.tenant_first_name) { errors.push('Tenant first name is required'); fieldErrorsObj.tenant_first_name = 'First name is required' }
+    if (!form.value.tenant_last_name) { errors.push('Tenant last name is required'); fieldErrorsObj.tenant_last_name = 'Last name is required' }
+    if (!form.value.tenant_phone) { errors.push('Tenant phone is required'); fieldErrorsObj.tenant_phone = 'Phone is required' }
+    if (!form.value.tenant_email) { errors.push('Tenant email is required'); fieldErrorsObj.tenant_email = 'Email is required' }
+    if (!form.value.tenant_nationality) { errors.push('Tenant nationality is required'); fieldErrorsObj.tenant_nationality = 'Nationality is required' }
+    if (!form.value.tenant_residency_status) { errors.push('Tenant residency status is required'); fieldErrorsObj.tenant_residency_status = 'Residency status is required' }
+    
+    // ✅ Tenant city - مطلوب فقط للمقيمين
+    if (form.value.tenant_residency_status === 'resident') {
       if (!form.value.tenant_city) {
         errors.push('Tenant city is required')
         fieldErrorsObj.tenant_city = 'City is required'
       }
-      if (!form.value.tenant_language) {
-        errors.push('Tenant language is required')
-        fieldErrorsObj.tenant_language = 'Language is required'
-      }
+    }
     
+    // ✅ Tenant country - مطلوب فقط لغير المقيمين
+    if (form.value.tenant_residency_status !== 'resident') {
+      if (!form.value.tenant_country) {
+        errors.push('Tenant country is required')
+        fieldErrorsObj.tenant_country = 'Country is required'
+      }
+    }
+    
+    if (!form.value.tenant_language) { errors.push('Tenant language is required'); fieldErrorsObj.tenant_language = 'Language is required' }
     
     if (!shouldHideLandlord.value) {
-      if (!form.value.landlord_first_name) {
-        errors.push('Landlord first name is required')
-        fieldErrorsObj.landlord_first_name = 'First name is required'
+      if (!form.value.landlord_first_name) { errors.push('Landlord first name is required'); fieldErrorsObj.landlord_first_name = 'First name is required' }
+      if (!form.value.landlord_last_name) { errors.push('Landlord last name is required'); fieldErrorsObj.landlord_last_name = 'Last name is required' }
+      if (!form.value.landlord_phone) { errors.push('Landlord phone is required'); fieldErrorsObj.landlord_phone = 'Phone is required' }
+      if (!form.value.landlord_email) { errors.push('Landlord email is required'); fieldErrorsObj.landlord_email = 'Email is required' }
+      if (!form.value.landlord_nationality) { errors.push('Landlord nationality is required'); fieldErrorsObj.landlord_nationality = 'Nationality is required' }
+      if (!form.value.landlord_dob) { errors.push('Landlord date of birth is required'); fieldErrorsObj.landlord_dob = 'Date of birth is required' }
+      if (!form.value.landlord_residency_status) { errors.push('Landlord residency status is required'); fieldErrorsObj.landlord_residency_status = 'Residency status is required' }
+      
+      // ✅ Landlord city - مطلوب فقط للمقيمين
+      if (form.value.landlord_residency_status === 'resident') {
+        if (!form.value.landlord_city) {
+          errors.push('Landlord city is required')
+          fieldErrorsObj.landlord_city = 'City is required'
+        }
       }
-      if (!form.value.landlord_last_name) {
-        errors.push('Landlord last name is required')
-        fieldErrorsObj.landlord_last_name = 'Last name is required'
+      
+      // ✅ Landlord country - مطلوب فقط لغير المقيمين
+      if (form.value.landlord_residency_status !== 'resident') {
+        if (!form.value.landlord_country) {
+          errors.push('Landlord country is required')
+          fieldErrorsObj.landlord_country = 'Country is required'
+        }
       }
-      if (!form.value.landlord_phone) {
-        errors.push('Landlord phone is required')
-        fieldErrorsObj.landlord_phone = 'Phone is required'
-      }
-      if (!form.value.landlord_email) {
-        errors.push('Landlord email is required')
-        fieldErrorsObj.landlord_email = 'Email is required'
-      }
-      if (!form.value.landlord_nationality) {
-        errors.push('Landlord nationality is required')
-        fieldErrorsObj.landlord_nationality = 'Nationality is required'
-      }
-      if (!form.value.landlord_dob) {
-        errors.push('Landlord date of birth is required')
-        fieldErrorsObj.landlord_dob = 'Date of birth is required'
-      }
-      if (!form.value.landlord_residency_status) {
-        errors.push('Landlord residency status is required')
-        fieldErrorsObj.landlord_residency_status = 'Residency status is required'
-      }
-      if (!form.value.landlord_city) {
-        errors.push('Landlord city is required')
-        fieldErrorsObj.landlord_city = 'City is required'
-      }
-      if (!form.value.landlord_language) {
-        errors.push('Landlord language is required')
-        fieldErrorsObj.landlord_language = 'Language is required'
-      }
+      
+      if (!form.value.landlord_language) { errors.push('Landlord language is required'); fieldErrorsObj.landlord_language = 'Language is required' }
     }
   }
   
-  // ✅ إرجاع كلا المصفوفتين
   return { errors, fieldErrorsObj }
 }
-
-// Search functions
-// function onSearchProjects(search) {
-//   dlog('Searching projects with term:', search)
-//   emit('search-projects', search)
-// }
-// async function searchProjects(search) {
-//   if (!search) return
-//   try {
-//     const response = await api.get('/listings/projects', { params: { search } })
-//     projects.value = response.data?.data ?? response.data ?? []
-//   } catch (e) {
-//     console.error('Error searching projects:', e)
-//   }
-// }
-// watch(() => form.value.project_id, async (newProjectId) => {
-//   if (newProjectId && !projects.value.some(p => p.id === newProjectId)) {
-//     try {
-//       const response = await api.get(`/listings/projects/${newProjectId}`)
-//       if (response.data) {
-//         projects.value.push(response.data)
-//       }
-//     } catch (error) {
-//       console.error('Error fetching specific project:', error)
-//     }
-//   }
-// }, { immediate: true })
-watch(() => props.fieldErrors, (newVal) => {
-  dlog('fieldErrors in DealForm:', newVal)
-}, { deep: true, immediate: true })
-
-watch(() => props.showErrors, (newVal) => {
-  dlog('showErrors in DealForm:', newVal)
-}, { immediate: true })
-// const fetchProjects = async () => {
-//   try {
-//     const response = await api.get('/listings/projects', { 
-//       params: { per_page: 1000 } 
-//     })
-//     projects.value = response.data?.data ?? response.data ?? []
-//     console.log(`Loaded ${projects.value.length} projects`)
-//   } catch (error) {
-//     console.error('Error loading projects:', error)
-//   }
-// }
-
-
-// دالة جديدة لتحميل جميع المناطق
-const fetchAllAreas = async () => {
-  try {
-      const response = await api.get('/listings/areas')
-    
-    // معالجة البيانات
-    const responseData = response.data
-    let areasData = []
-    
-    if (responseData?.data?.data) {
-      areasData = responseData.data.data
-    } else if (responseData?.data && Array.isArray(responseData.data)) {
-      areasData = responseData.data
-    } else if (Array.isArray(responseData)) {
-      areasData = responseData
-    } else {
-      areasData = []
-    }
-     props.areas = areasData
-     emit('update:areas', areasData)
-   
-    
-    console.log(`Loaded ${props.areas.length} areas`)
-  } catch (error) {
-    console.error('Error loading areas:', error)
-  }
-}
-// Watch for shouldHideSeller changes to clear seller data
-watch(() => shouldHideSeller.value, (hide) => {
-  if (hide) {
-    // Clear all seller fields
-    form.value.seller_first_name = ''
-    form.value.seller_last_name = ''
-    form.value.seller_dob = ''
-    form.value.seller_phone = ''
-    form.value.seller_email = ''
-    form.value.seller_nationality = ''
-    form.value.seller_residency_status = ''
-    form.value.seller_city = ''
-    form.value.seller_country = ''
-    form.value.seller_language = ''
-    form.value.seller_documents = []
-  }
-})
-
-// Watch for shouldHideLandlord changes
-watch(() => shouldHideLandlord.value, (hide) => {
-  if (hide) {
-    // Clear all landlord fields
-    form.value.landlord_first_name = ''
-    form.value.landlord_last_name = ''
-    form.value.landlord_dob = ''
-    form.value.landlord_phone = ''
-    form.value.landlord_email = ''
-    form.value.landlord_nationality = ''
-    form.value.landlord_residency_status = ''
-    form.value.landlord_city = ''
-    form.value.landlord_country = ''
-    form.value.landlord_language = ''
-    form.value.landlord_documents = []
-  }
-})
-onMounted(() => {
-  // fetchProjects()
-  getCurrentUser()
-    fetchAllAreas()
-
-})
-
-function onSearchAreas(search) {
-  emit('search-areas', search)
-}
-
-function onSearchSubCommunities(search) {
-  emit('search-subcommunities', search)
-}
-const availableListings = ref([])
-const selectedListing = ref(null)
-const isLoadingListings = ref(false)
-const currentUser = ref(null)
-
-// جلب بيانات المستخدم الحالي
+// ========== Listings Functions ==========
 const getCurrentUser = () => {
-  try {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      currentUser.value = JSON.parse(userData)
-    }
-  } catch (error) {
-    console.error('Error getting user:', error)
-  }
+  try { const userData = localStorage.getItem('user'); if (userData) currentUser.value = JSON.parse(userData) } 
+  catch (error) { console.error('Error getting user:', error) }
 }
 
-// دالة جلب الـ Listings المتاحة (التي باعها أو أجرها الـ Agent الحالي)
 const fetchAvailableListings = async (areaId) => {
-  if (!areaId) {
-    availableListings.value = []
-    return
-  }
-  
-  // التأكد من وجود المستخدم
-  if (!currentUser.value?.id) {
-    getCurrentUser()
-    if (!currentUser.value?.id) return
-  }
-  
+  if (!areaId) { availableListings.value = []; return }
+  if (!currentUser.value?.id) { getCurrentUser(); if (!currentUser.value?.id) return }
   try {
     isLoadingListings.value = true
-    
-    const params = {
-      area_id: areaId,
-      sold_by_agent_id: currentUser.value.id,  // التي قام بها هذا الـ Agent
-      per_page: 100
-    }
-    
+    const params = { area_id: areaId, sold_by_agent_id: currentUser.value.id, per_page: 100 }
     const response = await api.get('/listings/properties', { params })
-    
     const listings = response.data.data || []
     availableListings.value = listings.map(listing => ({
-      id: listing.id,
-      unit_number: listing.unit_number,
-      property_type: listing.property_type,
-      property_type_id: listing.property_type_id,
-      bedrooms: listing.number_of_bedrooms,
+      id: listing.id, unit_number: listing.unit_number, property_type: listing.property_type,
+      property_type_id: listing.property_type_id, bedrooms: listing.number_of_bedrooms,
       bedrooms_text: listing.number_of_bedrooms === 0 ? 'Studio' : `${listing.number_of_bedrooms} Bed`,
-      bathrooms: listing.number_of_bathrooms,
-      size_sqft: listing.size_sqft,
-      // project_id: listing.project_id,
-      // project_name: listing.project?.title,
-      developer_id: listing.developer_id,
-      status: listing.status, // 'converted' or 'rented'
-      display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type?.name || 'Property'} (${listing.status === 'converted' ? 'Sold' : 'Rented'})`
+      size_sqft: listing.size_sqft, developer_id: listing.developer_id, status: listing.status,
+      display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type?.name || 'Property'}`
     }))
-    
-    if (availableListings.value.length === 0) {
-      proxy.$showNotification('No sold or rented units found for you in this location', 'info')
-    }
-    
-  } catch (error) {
-    console.error('Error fetching listings:', error)
-    proxy.$showNotification('Failed to load available units', 'error')
-  } finally {
-    isLoadingListings.value = false
-  }
+  } catch (error) { console.error('Error fetching listings:', error) } 
+  finally { isLoadingListings.value = false }
 }
 
-// دالة عند اختيار المنطقة
 const onAreaSelected = (areaId) => {
-  // إعادة تعيين الـ listing المختار
   selectedListing.value = null
-  // إعادة تعيين بيانات العقار
   if (form.value) {
-    form.value.unit_no = ''
-    form.value.property_type_id = null
-    form.value.bedrooms = null
-    form.value.unit_size = ''
-    // form.value.project_id = null
-    form.value.developer_id = null
-  
+    form.value.unit_no = ''; form.value.property_type_id = null; form.value.bedrooms = null
+    form.value.unit_size = ''; form.value.developer_id = null
   }
-  if (props.dealType === 'secondary' || props.dealType === 'rental' ) {
-  fetchAvailableListings(areaId)
-  }
-  else {
-    availableListings.value = []
-  }
+  if (props.dealType === 'secondary' || props.dealType === 'rental') fetchAvailableListings(areaId)
+  else availableListings.value = []
 }
 
-// دالة عند اختيار Listing
 const onListingSelected = (listing) => {
- if (!listing) {
-    hasListingId.value = false
-     emit('update:hasListingId', false)  
-    return
-  }
-  
-  hasListingId.value = true
-   emit('update:hasListingId', true)  
-  
-  // تعبئة بيانات Property Details من الـ Listing المختار
+  if (!listing) { hasListingId.value = false; emit('update:hasListingId', false); return }
+  hasListingId.value = true; emit('update:hasListingId', true)
   form.value.unit_no = listing.unit_number || ''
   form.value.property_type_id = listing.property_type_id
   form.value.bedrooms = listing.bedrooms === 0 ? 'studio' : String(listing.bedrooms)
   form.value.unit_size = listing.size_sqft || ''
-  // form.value.project_id = listing.project_id
   form.value.developer_id = listing.developer_id
-  
-  // يمكن إضافة listing_id إلى الـ form لربط الديل بالـ listing
   form.value.listing_id = listing.id
-  form.value.listing_status = listing.status // 'converted' or 'rented'
 }
-// Expose functions to parent
-defineExpose({
-  clearAllDocuments,
-  validateForm
+
+// ========== Multi Properties Functions ==========
+const checkShowMultiProperties = () => {
+  const stageName = props.selectedStageName?.toLowerCase() || ''
+  const stagesWithMultiProps = ['eoi', 'booking', 'spa', 'won', 'deal won']
+  const shouldShow = stagesWithMultiProps.some(stage => stageName.includes(stage))
+  showMultiProperties.value = shouldShow
+  if (shouldShow && propertiesList.value.length === 0) initPropertiesFromForm()
+}
+
+const initPropertiesFromForm = () => {
+  const firstProperty = {
+    id: Date.now(), sort_order: 0, unit_no: form.value.unit_no || '', property_type_id: form.value.property_type_id || null,
+    bedrooms: form.value.bedrooms || null, unit_size: form.value.unit_size || '', area_id: form.value.area_id || null,
+    developer_id: form.value.developer_id || null, developer_name: form.value.developer_name || '',
+    developer_phone: form.value.developer_phone || '', budget_from: form.value.budget_from || null,
+    budget_to: form.value.budget_to || null, purchase_price: form.value.purchase_price || null,   commission: null, 
+    payment_proof: [], spa_document: [], listing_id: null
+  }
+  propertiesList.value = [firstProperty]
+}
+
+const addNewProperty = () => {
+  propertiesList.value.push({
+    id: Date.now() + Math.random(), sort_order: propertiesList.value.length, unit_no: '', property_type_id: null,
+    bedrooms: null, unit_size: '', area_id: null, developer_id: null, developer_name: '', developer_phone: '',
+    budget_from: null, budget_to: null, purchase_price: null,   commission: null, payment_proof: [], spa_document: [], listing_id: null
+  })
+}
+
+const getPropertiesData = () => {
+  console.log('getPropertiesData called, showMultiProperties:', showMultiProperties.value)
+  console.log('propertiesList:', propertiesList.value)
+ if (showMultiProperties.value && propertiesList.value.length > 0) {
+    const dataToSend = propertiesList.value.map((prop, index) => ({
+      sort_order: index,
+      unit_no: prop.unit_no || '',
+      property_type_id: prop.property_type_id || null,
+      bedrooms: prop.bedrooms || null,
+      unit_size: prop.unit_size || '',
+      area_id: prop.area_id || null,
+      project_id: prop.project_id || null,
+      developer_id: prop.developer_id || null,
+      developer_name: prop.developer_name || '',
+      developer_phone: prop.developer_phone || '',
+      budget_from: prop.budget_from || null,
+      budget_to: prop.budget_to || null,
+      purchase_price: prop.purchase_price || null,
+         commission: prop.commission || null,
+      rental_price: prop.rental_price || null,
+      payment_proof: prop.payment_proof || [],
+      spa_document: prop.spa_document || [],
+    }))
+    console.log('Properties data to send:', dataToSend)
+    return dataToSend
+  }
+  return null
+}
+
+// ========== Watchers ==========
+watch(() => props.selectedStageName, () => checkShowMultiProperties(), { immediate: true })
+watch(() => shouldHideSeller.value, (hide) => {
+  if (hide) { form.value.seller_first_name = ''; form.value.seller_last_name = ''; form.value.seller_dob = ''; form.value.seller_phone = ''; form.value.seller_email = ''; form.value.seller_nationality = ''; form.value.seller_residency_status = ''; form.value.seller_city = ''; form.value.seller_country = ''; form.value.seller_language = ''; form.value.seller_documents = [] }
+})
+watch(() => shouldHideLandlord.value, (hide) => {
+  if (hide) { form.value.landlord_first_name = ''; form.value.landlord_last_name = ''; form.value.landlord_dob = ''; form.value.landlord_phone = ''; form.value.landlord_email = ''; form.value.landlord_nationality = ''; form.value.landlord_residency_status = ''; form.value.landlord_city = ''; form.value.landlord_country = ''; form.value.landlord_language = ''; form.value.landlord_documents = [] }
 })
 
-// Options for selects
+// ========== Expose ==========
+defineExpose({ clearAllDocuments, validateForm, getPropertiesData, propertiesList })
+
+// ========== Options ==========
 const nationalityOptions = [
-  { value: 'emirati', text: 'Emirati' },
-  { value: 'saudi', text: 'Saudi' },
-  { value: 'egyptian', text: 'Egyptian' },
-  { value: 'jordanian', text: 'Jordanian' },
-  { value: 'lebanese', text: 'Lebanese' },
-  { value: 'syrian', text: 'Syrian' },
-  { value: 'palestinian', text: 'Palestinian' },
-  { value: 'iraqi', text: 'Iraqi' },
-  { value: 'yemeni', text: 'Yemeni' },
-  { value: 'omani', text: 'Omani' },
-  { value: 'qatari', text: 'Qatari' },
-  { value: 'kuwaiti', text: 'Kuwaiti' },
-  { value: 'bahraini', text: 'Bahraini' },
-  { value: 'british', text: 'British' },
-  { value: 'american', text: 'American' },
-  { value: 'canadian', text: 'Canadian' },
-  { value: 'australian', text: 'Australian' },
-  { value: 'indian', text: 'Indian' },
-  { value: 'pakistani', text: 'Pakistani' },
-  { value: 'bangladeshi', text: 'Bangladeshi' },
-  { value: 'filipino', text: 'Filipino' },
-  { value: 'chinese', text: 'Chinese' },
-  { value: 'japanese', text: 'Japanese' },
-  { value: 'south_korean', text: 'South Korean' },
-  { value: 'malaysian', text: 'Malaysian' },
-  { value: 'indonesian', text: 'Indonesian' },
-  { value: 'thai', text: 'Thai' },
-  { value: 'vietnamese', text: 'Vietnamese' },
-  { value: 'singaporean', text: 'Singaporean' },
-  { value: 'sri_lankan', text: 'Sri Lankan' },
-  { value: 'nepalese', text: 'Nepalese' },
-  { value: 'afghan', text: 'Afghan' },
-  { value: 'iranian', text: 'Iranian' },
-  { value: 'turkish', text: 'Turkish' },
-  { value: 'german', text: 'German' },
-  { value: 'french', text: 'French' },
-  { value: 'italian', text: 'Italian' },
-  { value: 'spanish', text: 'Spanish' },
-  { value: 'russian', text: 'Russian' },
-  { value: 'dutch', text: 'Dutch' },
-  { value: 'swiss', text: 'Swiss' },
-  { value: 'belgian', text: 'Belgian' },
-  { value: 'austrian', text: 'Austrian' },
-  { value: 'swedish', text: 'Swedish' },
-  { value: 'norwegian', text: 'Norwegian' },
-  { value: 'danish', text: 'Danish' },
-  { value: 'finnish', text: 'Finnish' },
-  { value: 'polish', text: 'Polish' },
-  { value: 'czech', text: 'Czech' },
-  { value: 'hungarian', text: 'Hungarian' },
-  { value: 'romanian', text: 'Romanian' },
-  { value: 'bulgarian', text: 'Bulgarian' },
-  { value: 'greek', text: 'Greek' },
-  { value: 'portuguese', text: 'Portuguese' },
-  { value: 'south_african', text: 'South African' },
-  { value: 'nigerian', text: 'Nigerian' },
-  { value: 'kenyan', text: 'Kenyan' },
-  { value: 'ethiopian', text: 'Ethiopian' },
-  { value: 'somali', text: 'Somali' },
-  { value: 'sudanese', text: 'Sudanese' },
-  { value: 'moroccan', text: 'Moroccan' },
-  { value: 'algerian', text: 'Algerian' },
-  { value: 'tunisian', text: 'Tunisian' },
-  { value: 'libyan', text: 'Libyan' },
-  { value: 'other', text: 'Other' }
+  { value: 'emirati', text: 'Emirati' }, { value: 'saudi', text: 'Saudi' }, { value: 'egyptian', text: 'Egyptian' },
+  { value: 'indian', text: 'Indian' }, { value: 'pakistani', text: 'Pakistani' }, { value: 'british', text: 'British' },
+  { value: 'american', text: 'American' }, { value: 'canadian', text: 'Canadian' }, { value: 'other', text: 'Other' }
 ]
 
-const residencyOptions = [
-  { value: 'resident', text: 'Resident' },
-  { value: 'non_resident', text: 'Non Resident' },
+const residencyOptions = [{ value: 'resident', text: 'Resident' }, { value: 'non_resident', text: 'Non Resident' }]
+const buyerResidencyOptions = [{ value: 'resident', text: 'Resident' }, { value: 'non_resident', text: 'Non Resident' }]
 
-]
-const buyerResidencyOptions = [
-  { value: 'resident', text: 'Resident' },
-  { value: 'non_resident', text: 'Non Resident' },
-]
-
-// قائمة كاملة بكل دول العالم (مثل صفحة Owner)
 const countryOptions = [
-  { value: "Afghanistan", text: "Afghanistan" },
-  { value: "Albania", text: "Albania" },
-  { value: "Algeria", text: "Algeria" },
-  { value: "Andorra", text: "Andorra" },
-  { value: "Angola", text: "Angola" },
-  { value: "Antigua and Barbuda", text: "Antigua and Barbuda" },
-  { value: "Argentina", text: "Argentina" },
-  { value: "Armenia", text: "Armenia" },
-  { value: "Australia", text: "Australia" },
-  { value: "Austria", text: "Austria" },
-  { value: "Azerbaijan", text: "Azerbaijan" },
-  { value: "Bahamas", text: "Bahamas" },
-  { value: "Bahrain", text: "Bahrain" },
-  { value: "Bangladesh", text: "Bangladesh" },
-  { value: "Barbados", text: "Barbados" },
-  { value: "Belarus", text: "Belarus" },
-  { value: "Belgium", text: "Belgium" },
-  { value: "Belize", text: "Belize" },
-  { value: "Benin", text: "Benin" },
-  { value: "Bhutan", text: "Bhutan" },
-  { value: "Bolivia", text: "Bolivia" },
-  { value: "Bosnia and Herzegovina", text: "Bosnia and Herzegovina" },
-  { value: "Botswana", text: "Botswana" },
-  { value: "Brazil", text: "Brazil" },
-  { value: "Brunei", text: "Brunei" },
-  { value: "Bulgaria", text: "Bulgaria" },
-  { value: "Burkina Faso", text: "Burkina Faso" },
-  { value: "Burundi", text: "Burundi" },
-  { value: "Cabo Verde", text: "Cabo Verde" },
-  { value: "Cambodia", text: "Cambodia" },
-  { value: "Cameroon", text: "Cameroon" },
-  { value: "Canada", text: "Canada" },
-  { value: "Central African Republic", text: "Central African Republic" },
-  { value: "Chad", text: "Chad" },
-  { value: "Chile", text: "Chile" },
-  { value: "China", text: "China" },
-  { value: "Colombia", text: "Colombia" },
-  { value: "Comoros", text: "Comoros" },
-  { value: "Congo", text: "Congo" },
-  { value: "Costa Rica", text: "Costa Rica" },
-  { value: "Croatia", text: "Croatia" },
-  { value: "Cuba", text: "Cuba" },
-  { value: "Cyprus", text: "Cyprus" },
-  { value: "Czechia", text: "Czechia" },
-  { value: "Denmark", text: "Denmark" },
-  { value: "Djibouti", text: "Djibouti" },
-  { value: "Dominica", text: "Dominica" },
-  { value: "Dominican Republic", text: "Dominican Republic" },
-  { value: "Ecuador", text: "Ecuador" },
-  { value: "Egypt", text: "Egypt" },
-  { value: "El Salvador", text: "El Salvador" },
-  { value: "Equatorial Guinea", text: "Equatorial Guinea" },
-  { value: "Eritrea", text: "Eritrea" },
-  { value: "Estonia", text: "Estonia" },
-  { value: "Eswatini", text: "Eswatini" },
-  { value: "Ethiopia", text: "Ethiopia" },
-  { value: "Fiji", text: "Fiji" },
-  { value: "Finland", text: "Finland" },
-  { value: "France", text: "France" },
-  { value: "Gabon", text: "Gabon" },
-  { value: "Gambia", text: "Gambia" },
-  { value: "Georgia", text: "Georgia" },
-  { value: "Germany", text: "Germany" },
-  { value: "Ghana", text: "Ghana" },
-  { value: "Greece", text: "Greece" },
-  { value: "Grenada", text: "Grenada" },
-  { value: "Guatemala", text: "Guatemala" },
-  { value: "Guinea", text: "Guinea" },
-  { value: "Guinea-Bissau", text: "Guinea-Bissau" },
-  { value: "Guyana", text: "Guyana" },
-  { value: "Haiti", text: "Haiti" },
-  { value: "Honduras", text: "Honduras" },
-  { value: "Hungary", text: "Hungary" },
-  { value: "Iceland", text: "Iceland" },
-  { value: "India", text: "India" },
-  { value: "Indonesia", text: "Indonesia" },
-  { value: "Iran", text: "Iran" },
-  { value: "Iraq", text: "Iraq" },
-  { value: "Ireland", text: "Ireland" },
-  { value: "Israel", text: "Israel" },
-  { value: "Italy", text: "Italy" },
-  { value: "Jamaica", text: "Jamaica" },
-  { value: "Japan", text: "Japan" },
-  { value: "Jordan", text: "Jordan" },
-  { value: "Kazakhstan", text: "Kazakhstan" },
-  { value: "Kenya", text: "Kenya" },
-  { value: "Kiribati", text: "Kiribati" },
-  { value: "Kuwait", text: "Kuwait" },
-  { value: "Kyrgyzstan", text: "Kyrgyzstan" },
-  { value: "Laos", text: "Laos" },
-  { value: "Latvia", text: "Latvia" },
-  { value: "Lebanon", text: "Lebanon" },
-  { value: "Lesotho", text: "Lesotho" },
-  { value: "Liberia", text: "Liberia" },
-  { value: "Libya", text: "Libya" },
-  { value: "Liechtenstein", text: "Liechtenstein" },
-  { value: "Lithuania", text: "Lithuania" },
-  { value: "Luxembourg", text: "Luxembourg" },
-  { value: "Madagascar", text: "Madagascar" },
-  { value: "Malawi", text: "Malawi" },
-  { value: "Malaysia", text: "Malaysia" },
-  { value: "Maldives", text: "Maldives" },
-  { value: "Mali", text: "Mali" },
-  { value: "Malta", text: "Malta" },
-  { value: "Marshall Islands", text: "Marshall Islands" },
-  { value: "Mauritania", text: "Mauritania" },
-  { value: "Mauritius", text: "Mauritius" },
-  { value: "Mexico", text: "Mexico" },
-  { value: "Micronesia", text: "Micronesia" },
-  { value: "Moldova", text: "Moldova" },
-  { value: "Monaco", text: "Monaco" },
-  { value: "Mongolia", text: "Mongolia" },
-  { value: "Montenegro", text: "Montenegro" },
-  { value: "Morocco", text: "Morocco" },
-  { value: "Mozambique", text: "Mozambique" },
-  { value: "Myanmar", text: "Myanmar" },
-  { value: "Namibia", text: "Namibia" },
-  { value: "Nauru", text: "Nauru" },
-  { value: "Nepal", text: "Nepal" },
-  { value: "Netherlands", text: "Netherlands" },
-  { value: "New Zealand", text: "New Zealand" },
-  { value: "Nicaragua", text: "Nicaragua" },
-  { value: "Niger", text: "Niger" },
-  { value: "Nigeria", text: "Nigeria" },
-  { value: "North Korea", text: "North Korea" },
-  { value: "North Macedonia", text: "North Macedonia" },
-  { value: "Norway", text: "Norway" },
-  { value: "Oman", text: "Oman" },
-  { value: "Pakistan", text: "Pakistan" },
-  { value: "Palau", text: "Palau" },
-  { value: "Palestine", text: "Palestine" },
-  { value: "Panama", text: "Panama" },
-  { value: "Papua New Guinea", text: "Papua New Guinea" },
-  { value: "Paraguay", text: "Paraguay" },
-  { value: "Peru", text: "Peru" },
-  { value: "Philippines", text: "Philippines" },
-  { value: "Poland", text: "Poland" },
-  { value: "Portugal", text: "Portugal" },
-  { value: "Qatar", text: "Qatar" },
-  { value: "Romania", text: "Romania" },
-  { value: "Russia", text: "Russia" },
-  { value: "Rwanda", text: "Rwanda" },
-  { value: "Saint Kitts and Nevis", text: "Saint Kitts and Nevis" },
-  { value: "Saint Lucia", text: "Saint Lucia" },
-  { value: "Saint Vincent and the Grenadines", text: "Saint Vincent and the Grenadines" },
-  { value: "Samoa", text: "Samoa" },
-  { value: "San Marino", text: "San Marino" },
-  { value: "Sao Tome and Principe", text: "Sao Tome and Principe" },
-  { value: "Saudi Arabia", text: "Saudi Arabia" },
-  { value: "Senegal", text: "Senegal" },
-  { value: "Serbia", text: "Serbia" },
-  { value: "Seychelles", text: "Seychelles" },
-  { value: "Sierra Leone", text: "Sierra Leone" },
-  { value: "Singapore", text: "Singapore" },
-  { value: "Slovakia", text: "Slovakia" },
-  { value: "Slovenia", text: "Slovenia" },
-  { value: "Solomon Islands", text: "Solomon Islands" },
-  { value: "Somalia", text: "Somalia" },
-  { value: "South Africa", text: "South Africa" },
-  { value: "South Korea", text: "South Korea" },
-  { value: "South Sudan", text: "South Sudan" },
-  { value: "Spain", text: "Spain" },
-  { value: "Sri Lanka", text: "Sri Lanka" },
-  { value: "Sudan", text: "Sudan" },
-  { value: "Suriname", text: "Suriname" },
-  { value: "Sweden", text: "Sweden" },
-  { value: "Switzerland", text: "Switzerland" },
-  { value: "Syria", text: "Syria" },
-  { value: "Taiwan", text: "Taiwan" },
-  { value: "Tajikistan", text: "Tajikistan" },
-  { value: "Tanzania", text: "Tanzania" },
-  { value: "Thailand", text: "Thailand" },
-  { value: "Timor-Leste", text: "Timor-Leste" },
-  { value: "Togo", text: "Togo" },
-  { value: "Tonga", text: "Tonga" },
-  { value: "Trinidad and Tobago", text: "Trinidad and Tobago" },
-  { value: "Tunisia", text: "Tunisia" },
-  { value: "Turkey", text: "Turkey" },
-  { value: "Turkmenistan", text: "Turkmenistan" },
-  { value: "Tuvalu", text: "Tuvalu" },
-  { value: "Uganda", text: "Uganda" },
-  { value: "Ukraine", text: "Ukraine" },
-  { value: "United Arab Emirates", text: "United Arab Emirates" },
-  { value: "United Kingdom", text: "United Kingdom" },
-  { value: "United States", text: "United States" },
-  { value: "Uruguay", text: "Uruguay" },
-  { value: "Uzbekistan", text: "Uzbekistan" },
-  { value: "Vanuatu", text: "Vanuatu" },
-  { value: "Vatican City", text: "Vatican City" },
-  { value: "Venezuela", text: "Venezuela" },
-  { value: "Vietnam", text: "Vietnam" },
-  { value: "Yemen", text: "Yemen" },
-  { value: "Zambia", text: "Zambia" },
-  { value: "Zimbabwe", text: "Zimbabwe" }
-];
-
-// مدن كل بلد (كما هي موجودة عندك ولكن مع التأكد من وجود value/text)
-const citiesByCountry = {
-  'United Arab Emirates': [
-    { value: 'Abu Dhabi', text: 'Abu Dhabi' },
-    { value: 'Dubai', text: 'Dubai' },
-    { value: 'Sharjah', text: 'Sharjah' },
-    { value: 'Ajman', text: 'Ajman' },
-    { value: 'Ras Al Khaimah', text: 'Ras Al Khaimah' },
-    { value: 'Umm Al Quwain', text: 'Umm Al Quwain' },
-    { value: 'Fujairah', text: 'Fujairah' },
-    { value: 'Al Ain', text: 'Al Ain' }
-  ],
-  'Saudi Arabia': [
-    { value: 'Riyadh', text: 'Riyadh' },
-    { value: 'Jeddah', text: 'Jeddah' },
-    { value: 'Mecca', text: 'Mecca' },
-    { value: 'Medina', text: 'Medina' },
-    { value: 'Dammam', text: 'Dammam' },
-    { value: 'Khobar', text: 'Khobar' },
-    { value: 'Tabuk', text: 'Tabuk' },
-    { value: 'Abha', text: 'Abha' }
-  ],
-  'Egypt': [
-    { value: 'Cairo', text: 'Cairo' },
-    { value: 'Giza', text: 'Giza' },
-    { value: 'Alexandria', text: 'Alexandria' },
-    { value: 'Sharm El Sheikh', text: 'Sharm El Sheikh' },
-    { value: 'Hurghada', text: 'Hurghada' },
-    { value: 'Mansoura', text: 'Mansoura' },
-    { value: 'Tanta', text: 'Tanta' },
-    { value: 'Aswan', text: 'Aswan' },
-    { value: 'Luxor', text: 'Luxor' }
-  ],
-  'Jordan': [
-    { value: 'Amman', text: 'Amman' },
-    { value: 'Zarqa', text: 'Zarqa' },
-    { value: 'Irbid', text: 'Irbid' },
-    { value: 'Aqaba', text: 'Aqaba' }
-  ],
-  'Lebanon': [
-    { value: 'Beirut', text: 'Beirut' },
-    { value: 'Tripoli', text: 'Tripoli' },
-    { value: 'Sidon', text: 'Sidon' },
-    { value: 'Tyre', text: 'Tyre' }
-  ],
-  'Syria': [
-    { value: 'Damascus', text: 'Damascus' },
-    { value: 'Aleppo', text: 'Aleppo' },
-    { value: 'Homs', text: 'Homs' },
-    { value: 'Latakia', text: 'Latakia' }
-  ],
-  'Palestine': [
-    { value: 'Ramallah', text: 'Ramallah' },
-    { value: 'Gaza', text: 'Gaza' },
-    { value: 'Hebron', text: 'Hebron' },
-    { value: 'Nablus', text: 'Nablus' }
-  ],
-  'Iraq': [
-    { value: 'Baghdad', text: 'Baghdad' },
-    { value: 'Erbil', text: 'Erbil' },
-    { value: 'Basra', text: 'Basra' },
-    { value: 'Mosul', text: 'Mosul' }
-  ],
-  'Yemen': [
-    { value: 'Sanaa', text: 'Sanaa' },
-    { value: 'Aden', text: 'Aden' },
-    { value: 'Taiz', text: 'Taiz' },
-    { value: 'Hodeidah', text: 'Hodeidah' }
-  ],
-  'Oman': [
-    { value: 'Muscat', text: 'Muscat' },
-    { value: 'Salalah', text: 'Salalah' },
-    { value: 'Sohar', text: 'Sohar' },
-    { value: 'Nizwa', text: 'Nizwa' }
-  ],
-  'Qatar': [
-    { value: 'Doha', text: 'Doha' },
-    { value: 'Al Rayyan', text: 'Al Rayyan' },
-    { value: 'Al Wakrah', text: 'Al Wakrah' }
-  ],
-  'Kuwait': [
-    { value: 'Kuwait City', text: 'Kuwait City' },
-    { value: 'Hawalli', text: 'Hawalli' },
-    { value: 'Salmiya', text: 'Salmiya' }
-  ],
-  'Bahrain': [
-    { value: 'Manama', text: 'Manama' },
-    { value: 'Riffa', text: 'Riffa' },
-    { value: 'Muharraq', text: 'Muharraq' }
-  ],
-  'United Kingdom': [
-    { value: 'London', text: 'London' },
-    { value: 'Manchester', text: 'Manchester' },
-    { value: 'Birmingham', text: 'Birmingham' },
-    { value: 'Liverpool', text: 'Liverpool' },
-    { value: 'Leeds', text: 'Leeds' },
-    { value: 'Glasgow', text: 'Glasgow' }
-  ],
-  'United States': [
-    { value: 'New York', text: 'New York' },
-    { value: 'Los Angeles', text: 'Los Angeles' },
-    { value: 'Chicago', text: 'Chicago' },
-    { value: 'Houston', text: 'Houston' },
-    { value: 'Miami', text: 'Miami' },
-    { value: 'San Francisco', text: 'San Francisco' }
-  ],
-  'Canada': [
-    { value: 'Toronto', text: 'Toronto' },
-    { value: 'Vancouver', text: 'Vancouver' },
-    { value: 'Montreal', text: 'Montreal' },
-    { value: 'Ottawa', text: 'Ottawa' },
-    { value: 'Calgary', text: 'Calgary' }
-  ],
-  'Australia': [
-    { value: 'Sydney', text: 'Sydney' },
-    { value: 'Melbourne', text: 'Melbourne' },
-    { value: 'Brisbane', text: 'Brisbane' },
-    { value: 'Perth', text: 'Perth' },
-    { value: 'Adelaide', text: 'Adelaide' }
-  ],
-  'India': [
-    { value: 'Mumbai', text: 'Mumbai' },
-    { value: 'Delhi', text: 'Delhi' },
-    { value: 'Bangalore', text: 'Bangalore' },
-    { value: 'Hyderabad', text: 'Hyderabad' },
-    { value: 'Chennai', text: 'Chennai' },
-    { value: 'Kolkata', text: 'Kolkata' }
-  ],
-  'Pakistan': [
-    { value: 'Karachi', text: 'Karachi' },
-    { value: 'Lahore', text: 'Lahore' },
-    { value: 'Islamabad', text: 'Islamabad' },
-    { value: 'Rawalpindi', text: 'Rawalpindi' }
-  ]
-};
-
-// دالة لجلب المدن حسب البلد المختار
-function getCitiesForCountry(countryValue) {
-  if (!countryValue) return [];
-  const cities = citiesByCountry[countryValue] || [];
-  return cities;
-}
+  { value: "United Arab Emirates", text: "United Arab Emirates" }, { value: "Saudi Arabia", text: "Saudi Arabia" },
+  { value: "Egypt", text: "Egypt" }, { value: "India", text: "India" }, { value: "Pakistan", text: "Pakistan" },
+  { value: "United Kingdom", text: "United Kingdom" }, { value: "United States", text: "United States" },
+  { value: "Canada", text: "Canada" }, { value: "Australia", text: "Australia" }, { value: "Other", text: "Other" }
+]
 
 const languageOptions = [
-  { value: 'english', text: 'English' },
-  { value: 'arabic', text: 'Arabic' },
-  { value: 'spanish', text: 'Spanish' },
-  { value: 'french', text: 'French' },
-  { value: 'german', text: 'German' },
-  { value: 'italian', text: 'Italian' },
-  { value: 'portuguese', text: 'Portuguese' },
-  { value: 'russian', text: 'Russian' },
-  { value: 'chinese', text: 'Chinese' },
-  { value: 'japanese', text: 'Japanese' },
-  { value: 'korean', text: 'Korean' },
-  { value: 'hindi', text: 'Hindi' },
-  { value: 'urdu', text: 'Urdu' },
-  { value: 'bengali', text: 'Bengali' },
-  { value: 'punjabi', text: 'Punjabi' },
-  { value: 'turkish', text: 'Turkish' },
-  { value: 'dutch', text: 'Dutch' },
-  { value: 'polish', text: 'Polish' },
-  { value: 'ukrainian', text: 'Ukrainian' },
-  { value: 'czech', text: 'Czech' },
-  { value: 'swedish', text: 'Swedish' },
-  { value: 'greek', text: 'Greek' },
-  { value: 'hebrew', text: 'Hebrew' },
-  { value: 'thai', text: 'Thai' },
-  { value: 'vietnamese', text: 'Vietnamese' },
-  { value: 'indonesian', text: 'Indonesian' },
-  { value: 'malay', text: 'Malay' },
-  { value: 'filipino', text: 'Filipino' },
-  { value: 'persian', text: 'Persian (Farsi)' },
-  { value: 'swahili', text: 'Swahili' },
-  { value: 'romanian', text: 'Romanian' },
-  { value: 'hungarian', text: 'Hungarian' },
-  { value: 'serbian', text: 'Serbian' },
-  { value: 'croatian', text: 'Croatian' },
-  { value: 'bulgarian', text: 'Bulgarian' },
-  { value: 'tamil', text: 'Tamil' },
-  { value: 'telugu', text: 'Telugu' },
-  { value: 'marathi', text: 'Marathi' },
-  { value: 'gujarati', text: 'Gujarati' },
-  { value: 'kannada', text: 'Kannada' },
-  { value: 'malayalam', text: 'Malayalam' },
-  { value: 'nepali', text: 'Nepali' },
-  { value: 'sinhala', text: 'Sinhala' },
-  { value: 'khmer', text: 'Khmer' },
-  { value: 'lao', text: 'Lao' },
-  { value: 'burmese', text: 'Burmese' },
-  { value: 'mongolian', text: 'Mongolian' },
-  { value: 'kazakh', text: 'Kazakh' },
-  { value: 'uzbek', text: 'Uzbek' },
-  { value: 'azerbaijani', text: 'Azerbaijani' },
-  { value: 'georgian', text: 'Georgian' },
-  { value: 'armenian', text: 'Armenian' },
-  { value: 'albanian', text: 'Albanian' },
-  { value: 'bosnian', text: 'Bosnian' },
-  { value: 'macedonian', text: 'Macedonian' },
-  { value: 'slovak', text: 'Slovak' },
-  { value: 'slovenian', text: 'Slovenian' },
-  { value: 'estonian', text: 'Estonian' },
-  { value: 'latvian', text: 'Latvian' },
-  { value: 'lithuanian', text: 'Lithuanian' },
-  { value: 'icelandic', text: 'Icelandic' },
-  { value: 'norwegian', text: 'Norwegian' },
-  { value: 'danish', text: 'Danish' },
-  { value: 'finnish', text: 'Finnish' },
-  { value: 'welsh', text: 'Welsh' },
-  { value: 'irish', text: 'Irish' },
-  { value: 'scottish_gaelic', text: 'Scottish Gaelic' },
-  { value: 'afrikaans', text: 'Afrikaans' },
-  { value: 'amharic', text: 'Amharic' },
-  { value: 'somali', text: 'Somali' },
-  { value: 'yoruba', text: 'Yoruba' },
-  { value: 'igbo', text: 'Igbo' },
-  { value: 'hausa', text: 'Hausa' },
-  { value: 'zulu', text: 'Zulu' },
-  { value: 'xhosa', text: 'Xhosa' },
+  { value: 'english', text: 'English' }, { value: 'arabic', text: 'Arabic' }, { value: 'french', text: 'French' },
+  { value: 'spanish', text: 'Spanish' }, { value: 'hindi', text: 'Hindi' }, { value: 'urdu', text: 'Urdu' },
   { value: 'other', text: 'Other' }
 ]
+
 const bedroomOptions = [
-  { value: 'studio', text: 'Studio' },
-  { value: '1', text: '1 Bedroom' },
-  { value: '2', text: '2 Bedrooms' },
-  { value: '3', text: '3 Bedrooms' },
-  { value: '4', text: '4 Bedrooms' },
-  { value: '5', text: '5 Bedrooms' },
-  { value: '5+', text: '5+ Bedrooms' }
+  { value: 'studio', text: 'Studio' }, { value: '1', text: '1 Bedroom' }, { value: '2', text: '2 Bedrooms' },
+  { value: '3', text: '3 Bedrooms' }, { value: '4', text: '4 Bedrooms' }, { value: '5', text: '5 Bedrooms' }
 ]
 
-// Update watchers to work with the new format
-watch(() => form.value?.buyer_country, (newCountry, oldCountry) => {
-  if (form.value?.buyer_city) {
-    const validCities = citiesByCountry[newCountry] || citiesByCountry['other']
-    const isValid = validCities.some(city => city.value === form.value?.buyer_city)
-    if (!isValid) {
-      form.value.buyer_city = null
-    }
-  }
+getCurrentUser()
+const showPropertyCommission = computed(() => {
+  const stageName = props.selectedStageName?.toLowerCase() || ''
+  return stageName.includes('won') || stageName.includes('deal won')
 })
-
-watch(() => form.value?.seller_country, (newCountry, oldCountry) => {
-  if (form.value?.seller_city) {
-    const validCities = citiesByCountry[newCountry] || citiesByCountry['other']
-    const isValid = validCities.some(city => city.value === form.value?.seller_city)
-    if (!isValid) {
-      form.value.seller_city = null
-    }
-  }
-})
-
-watch(() => form.value?.tenant_country, (newCountry, oldCountry) => {
-  if (form.value?.tenant_city) {
-    const validCities = citiesByCountry[newCountry] || citiesByCountry['other']
-    const isValid = validCities.some(city => city.value === form.value?.tenant_city)
-    if (!isValid) {
-      form.value.tenant_city = null
-    }
-  }
-})
-
-watch(() => form.value?.landlord_country, (newCountry, oldCountry) => {
-  if (form.value?.landlord_city) {
-    const validCities = citiesByCountry[newCountry] || citiesByCountry['other']
-    const isValid = validCities.some(city => city.value === form.value?.landlord_city)
-    if (!isValid) {
-      form.value.landlord_city = null
-    }
-  }
-})
-
 
 </script>
 
@@ -2512,4 +1094,73 @@ watch(() => form.value?.landlord_country, (newCountry, oldCountry) => {
     .document-upload-container.is-compact .all-boxes-grid{
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+:deep(.vs__open-indicator) {
+  color: #94a3b8 !important;
+      margin-bottom: 10px;
+}
+
+:deep(.vs__deselect) {
+  border: none !important;
+  box-shadow: none !important;
+}
+:deep(.custom-v-select .vs__selected) {
+  text-align: left !important;
+  font-size: 13px;
+  padding-left: 8px;
+  height: 100%;
+  margin: 0px;
+}
+
+:deep(.custom-v-select .vs__search::placeholder),
+:deep(.custom-v-select .vs__placeholder) {
+  text-align: left !important;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+:deep(.custom-v-select .vs__dropdown-menu) {
+  overflow-y: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.custom-v-select .vs__clear) {
+  fill: #94a3b8;
+  padding: 4px;
+  cursor: pointer;
+}
+
+
+:deep(.custom-v-select .vs__clear svg) {
+  display: none !important;
+}
+
+:deep(.custom-v-select .vs__clear) {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="%2394a3b8" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg>') !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 14px !important;
+  width: 24px !important;
+  height: 24px !important;
+}
+.btn-add-property {
+  background: transparent;
+  border: 1px solid #01062C;
+  border-radius: 100px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #01062C;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.btn-add-property:hover {
+  background: #01062C;
+  color: #fff;
+}
+
 </style>

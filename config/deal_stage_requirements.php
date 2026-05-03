@@ -7,178 +7,270 @@ return [
 
     'requirements' => [
         'primary' => [
+            // ===================== EOI STAGE (order 2) =====================
             2 => [
                 'fields' => ['source', 'deal_name'],
                 'parties' => [
-                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
-                    'buyer' => ['passport','national_id'],
+                    'buyer' => ['passport', 'national_id'],
+                ],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,           // Address
+                    'property_type_id' => true,  // Type
+                    'bedrooms' => true,          // Bedrooms
+                    'budget_from' => true,       // Budget From (لكل Property)
+                    'budget_to' => true,         // Budget To (لكل Property)
                 ],
             ],
+            
+            // ===================== BOOKING STAGE (order 3) =====================
             3 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'bedrooms', 'area_id', 'unit_size','developer_id','developer_name','developer_phone' ],
+                'fields' => ['source', 'deal_name'],
                 'parties' => [
-                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
-                'documents' => [
-                    'buyer' => ['national_id', 'passport','payment_proof'],
+                'documents' => [],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'bedrooms' => true,
+                    'unit_no' => true,
+                    'unit_size' => false,
+                    'developer_id' => false,
+                    'purchase_price' => true,     // Purchase Price (لكل Property)
                 ],
             ],
+            
+            // ===================== SPA STAGE (order 4) =====================
             4 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',   'bedrooms', 'area_id', 'unit_size','developer_id','developer_name','developer_phone',],
+                'fields' => ['source', 'deal_name'],
                 'parties' => [
-                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
-                    'buyer' => ['payment_proof', 'national_id', 'passport', 'kyc'],
+                    'buyer' => ['national_id', 'passport', 'kyc'],
                 ],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'bedrooms' => true,
+                    'unit_no' => true,
+                    'unit_size' => false,
+                    'developer_id' => false,
+                    'purchase_price' => true,
+                ],
+                'property_documents' => ['payment_proof', 'spa'],
             ],
+            
+            // ===================== WON STAGE (order 5) =====================
             5 => [
-                // , 'agent_share', 'company_share'
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',   'bedrooms', 'area_id','developer_id','developer_name','developer_phone', 'unit_size', 'deal_total_amount', 'deal_commission'],
+                'fields' => ['source', 'deal_name', 'deal_total_amount', 'deal_commission'],
                 'parties' => [
-                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language', 'amount'],
+                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
-                    'buyer' => ['payment_proof', 'national_id', 'passport', 'kyc'],
+                    'buyer' => ['national_id', 'passport', 'kyc'],
                 ],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'bedrooms' => true,
+                    'unit_no' => true,
+                    'unit_size' => false,
+                    'developer_id' => false,
+                    'purchase_price' => true,
+                ],
+                'property_documents' => ['payment_proof', 'spa'],
             ],
+            
+            // ===================== LOST STAGE (order 6) =====================
             6 => [
                 'fields' => ['lost_reason'],
                 'parties' => [],
                 'documents' => [],
+                'requires_properties' => false,
             ],
         ],
 
         'secondary' => [
             2 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id'],
+                'fields' => ['source', 'deal_name'],
                 'parties' => [
-                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
-                    'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
+                    'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status',  'language'],
                 ],
                 'documents' => [
                     'buyer' => ['national_id', 'passport', 'kyc'],
                     'seller' => ['national_id', 'passport'],
+                ],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'unit_no' => true,
                 ],
             ],
             3 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'bedrooms', 'area_id','developer_id','developer_name','developer_phone'],
+                'fields' => ['source', 'deal_name'],
                 'parties' => [
-                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
-                    'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
+                    'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
                     'buyer' => ['national_id', 'passport', 'kyc'],
                     'seller' => ['national_id', 'passport'],
                 ],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'unit_no' => true,
+                    'bedrooms' => true,
+                    'purchase_price' => true,
+                ],
             ],
             4 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'bedrooms', 'area_id', 'unit_size','developer_id','developer_name','developer_phone'],
+                'fields' => ['source', 'deal_name'],
                 'parties' => [
-                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
-                    'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
+                    'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
                     'buyer' => ['national_id', 'passport', 'kyc'],
                     'seller' => ['national_id', 'passport', 'title_deed'],
                 ],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'unit_no' => true,
+                    'bedrooms' => true,
+                    'unit_size' => false,
+                    'purchase_price' => true,
+                ],
+                'property_documents' => ['payment_proof', 'spa'],
             ],
             5 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id'],
+                'fields' => ['source', 'deal_name', 'deal_total_amount', 'deal_commission'],
                 'parties' => [
-                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
-                    'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
+                    'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
                     'buyer' => ['national_id', 'passport', 'kyc', 'payment_proof'],
                     'seller' => ['national_id', 'passport', 'title_deed', 'noc'],
                 ],
-            ],
-            6 => [
-                // , 'agent_share', 'company_share'
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'deal_total_amount', 'deal_commission'],
-                'parties' => [
-                    'buyer' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language', 'amount'],
-                    'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'unit_no' => true,
+                    'bedrooms' => true,
+                    'unit_size' => false,
+                    'purchase_price' => true,
                 ],
-                'documents' => [
-                    'buyer' => ['national_id', 'passport', 'kyc', 'payment_proof'],
-                    'seller' => ['national_id', 'passport', 'title_deed', 'noc'],
-                ],
+                'property_documents' => ['payment_proof', 'spa'],
             ],
             8 => [
                 'fields' => ['lost_reason'],
                 'parties' => [],
                 'documents' => [],
+                'requires_properties' => false,
             ],
         ],
 
         'rental' => [
             2 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id'],
+                'fields' => ['source', 'deal_name'],
                 'parties' => [
-                    'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'city', 'language'],
-                    'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                    'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'language'],
+                    'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
                     'tenant' => ['passport'],
                     'landlord' => ['passport', 'national_id'],
                 ],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'unit_no' => true,
+                    'budget_from' => true,
+                    'budget_to' => true,
+                ],
             ],
             3 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id'],
+                'fields' => ['source', 'deal_name'],
                 'parties' => [
-                    'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'city', 'language'],
-                    'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                    'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'language'],
+                    'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
-                    'tenant' => ['passport',  'kyc'],
+                    'tenant' => ['passport', 'kyc'],
                     'landlord' => ['passport', 'national_id', 'title_deed'],
+                ],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'unit_no' => true,
+                    'bedrooms' => true,
+                    'rental_price' => true,
                 ],
             ],
             4 => [
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id', 'subcommunity_id'],
+                'fields' => ['source', 'deal_name'],
                 'parties' => [
-                    'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'city', 'language'],
-                    'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                    'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'language'],
+                    'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
-                    'tenant' => ['passport',  'kyc', 'ejari'],
+                    'tenant' => ['passport', 'kyc', 'ejari'],
                     'landlord' => ['passport', 'national_id', 'title_deed'],
                 ],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'unit_no' => true,
+                    'bedrooms' => true,
+                    'rental_price' => true,
+                ],
+                'property_documents' => ['contract', 'ejari'],
             ],
             5 => [
-                
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',   'bedrooms', 'area_id', 'unit_size','developer_id','developer_name','developer_phone'],
+                'fields' => ['source', 'deal_name', 'deal_total_amount', 'deal_commission'],
                 'parties' => [
-                    'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'city', 'language'],
-                    'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                    'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'language'],
+                    'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
-                    'tenant' => ['passport', 'kyc', 'ejari', 'tenancy_contract', 'move_in_form'],
+                    'tenant' => ['passport', 'kyc', 'ejari', 'tenancy_contract', 'move_in_form', 'payment_proof'],
                     'landlord' => ['passport', 'national_id', 'title_deed'],
                 ],
-            ],
-            6 => [
-                // , 'agent_share', 'company_share'
-                'fields' => ['source', 'deal_name', 'unit_no', 'property_type_id',  'deal_total_amount', 'deal_commission'],
-                'parties' => [
-                    'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'city', 'language', 'amount'],
-                    'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'language'],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'unit_no' => true,
+                    'bedrooms' => true,
+                    'unit_size' => false,
+                    'rental_price' => true,
                 ],
-                'documents' => [
-                    'tenant' => ['passport',  'kyc', 'ejari', 'tenancy_contract', 'move_in_form', 'payment_proof'],
-                    'landlord' => ['passport', 'national_id', 'title_deed'],
-                ],
+                'property_documents' => ['contract', 'ejari'],
             ],
             8 => [
                 'fields' => ['lost_reason'],
                 'parties' => [],
                 'documents' => [],
+                'requires_properties' => false,
             ],
         ],
     ],
 ];
-

@@ -512,4 +512,8 @@ const handleCancel = () => {
 .btn-apply-picker:hover {
     background: #152547;
 }
+.advanced-date-trigger{
+    border: none important;
+    border-radius: 12px !important;
+}
 </style>
