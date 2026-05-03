@@ -552,18 +552,14 @@ const primaryBuyerDocTypes = computed(() => {
 })
 const propertyDocTypes = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
-  const docs = []
-  
-  if (stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')) {
-    docs.push({ id: 'payment_proof', name: 'Payment Proof', required: stageName.includes('spa') || stageName.includes('won') })
+  if (!stageName.includes('booking') && !stageName.includes('spa') && !stageName.includes('won')) {
+    return []
   }
-  
-  // SPA Document - يظهر من SPA stage (order 4)
-  if (stageName.includes('spa') || stageName.includes('won')) {
-    docs.push({ id: 'spa', name: 'SPA Document', required: true })
-  }
-  
-  return docs
+  const spaOrWon = stageName.includes('spa') || stageName.includes('won')
+  return [
+    { id: 'payment_proof', name: 'Payment Proof', required: spaOrWon },
+    { id: 'spa', name: 'SPA Document', required: spaOrWon }
+  ]
 })
 const secondaryBuyerDocTypes = computed(() => {
   const residencyStatus = form.value?.buyer_residency_status

@@ -254,30 +254,22 @@
         />
       </div>
 
-      <!-- ========== PROPERTY DOCUMENTS (SPA, Won Stages) ========== -->
-        <div class="col-12" v-if="showPropertyDocuments && propertyDocTypes && propertyDocTypes.length > 0">
-        <label class="form-label-custom mt-2">Property Documents</label>
-        <div class="row g-2">
-            <div class="col-md-6" v-for="docType in propertyDocTypes" :key="docType.id">
-            <DocumentUpload
-                v-model="localProperty[docType.id]"
-                category="property"
-                :document-type="docType.id"
-                :compact="true"
-                :show-errors="showErrors"
-                :required="docType.required"
-                :label="docType.name"
-                :inlineMode="props.inlineMode"
-            />
-            </div>
-        </div>
-        </div>
+      <!-- ========== PROPERTY DOCUMENTS (same layout as Buyer Documents: one upload, lines between types) ========== -->
+      <div class="col-12 mt-3 property-documents-block" v-if="showPropertyDocuments && propertyDocTypes && propertyDocTypes.length > 0">
+        <label class="section-title">Property Documents</label>
+        <DocumentUpload
+          v-model="propertyDocumentsCombined"
+          category="property"
+          :document-types="propertyDocTypes"
+          :compact="props.inlineMode"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import DocumentUpload from './DocumentUpload.vue'
@@ -305,6 +297,35 @@ const props = defineProps({
 const emit = defineEmits(['update:property', 'remove', 'search-areas'])
 
 const localProperty = ref({ ...props.property })
+
+function ensurePropertyDocumentArrays(obj) {
+  if (!obj.payment_proof) obj.payment_proof = []
+  if (!obj.spa_document) obj.spa_document = []
+}
+
+/** Single array for DocumentUpload (like buyer_documents); persisted as payment_proof + spa_document on submit. */
+const propertyDocumentsCombined = computed({
+  get() {
+    const obj = localProperty.value
+    ensurePropertyDocumentArrays(obj)
+    const pay = (obj.payment_proof || []).map((d) => ({
+      ...d,
+      document_type: d.document_type || 'payment_proof'
+    }))
+    const spa = (obj.spa_document || []).map((d) => ({
+      ...d,
+      document_type: d.document_type || 'spa'
+    }))
+    return [...pay, ...spa]
+  },
+  set(files) {
+    const list = Array.isArray(files) ? files : []
+    localProperty.value.payment_proof = list.filter(
+      (f) => (f.document_type || '') === 'payment_proof'
+    )
+    localProperty.value.spa_document = list.filter((f) => (f.document_type || '') === 'spa')
+  }
+})
 
 // Track if we're coming from a listing selection
 let isUpdatingFromListing = false
@@ -465,6 +486,19 @@ watch(() => props.property.area_id, async (newAreaId) => {
 // Initialize
 getCurrentUser()
 
+onMounted(() => {
+  ensurePropertyDocumentArrays(localProperty.value)
+})
+
+watch(
+  () => props.property,
+  (p) => {
+    if (!p) return
+    ensurePropertyDocumentArrays(localProperty.value)
+  },
+  { deep: true }
+)
+
 const bedroomOptions = [
   { value: 'studio', text: 'Studio' },
   { value: '1', text: '1 Bedroom' },
@@ -521,6 +555,22 @@ const showPropertyCommission = computed(() => {
   font-weight: 500;
   color: #64748b;
   margin-bottom: 6px;
+  display: block;
+}
+
+.property-documents-block :deep(.document-upload-container .document-type-group:last-child) {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--deal-navy-deep, #01062c);
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  margin-bottom: 10px;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
   display: block;
 }
 </style>
