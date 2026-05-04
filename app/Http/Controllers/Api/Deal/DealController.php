@@ -1296,37 +1296,72 @@ class DealController extends Controller
     /**
      * مزامنة الـ Properties (Multi Properties)
      */
-    private function syncProperties(Deal $deal, array $propertiesData)
-    {
-        $deal->properties()->delete();
-        
-        if (empty($propertiesData)) {
-            return;
-        }
-        
-        foreach ($propertiesData as $index => $propertyData) {
-            $deal->properties()->create([
-                'sort_order' => $index,
-                'unit_no' => $propertyData['unit_no'] ?? null,
-                'property_type_id' => $propertyData['property_type_id'] ?? null,
-                'bedrooms' => $propertyData['bedrooms'] ?? null,
-                'unit_size' => $propertyData['unit_size'] ?? null,
-                'area_id' => $propertyData['area_id'] ?? null,
-                'project_id' => $propertyData['project_id'] ?? null,
-                'developer_id' => $propertyData['developer_id'] ?? null,
-                'developer_name' => $propertyData['developer_name'] ?? null,
-                'developer_phone' => $propertyData['developer_phone'] ?? null,
-                'budget_from' => $propertyData['budget_from'] ?? null,
-                'budget_to' => $propertyData['budget_to'] ?? null,
-                'purchase_price' => $propertyData['purchase_price'] ?? null,
-                'rental_price' => $propertyData['rental_price'] ?? null,
-                'payment_proof' => $propertyData['payment_proof'] ?? null,
-                'spa_document' => $propertyData['spa_document'] ?? null,
-                'contract_document' => $propertyData['contract_document'] ?? null,
-                'ejari_document' => $propertyData['ejari_document'] ?? null,
-            ]);
+    private function syncProperties(Deal $deal, $propertiesData)
+{
+    // ✅ تحويل string إلى array إذا لزم الأمر
+    if (is_string($propertiesData)) {
+        $decoded = json_decode($propertiesData, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $propertiesData = $decoded;
+        } else {
+            // محاولة فك ترميز URL-encoded string
+            parse_str($propertiesData, $parsed);
+            if (isset($parsed['properties']) && is_array($parsed['properties'])) {
+                $propertiesData = $parsed['properties'];
+            } elseif (isset($parsed[0]) && is_array($parsed[0])) {
+                $propertiesData = $parsed;
+            } else {
+                Log::warning('syncProperties: Could not decode properties data', [
+                    'type' => gettype($propertiesData),
+                    'data' => substr($propertiesData, 0, 500)
+                ]);
+                $propertiesData = [];
+            }
         }
     }
+    
+    // ✅ تأكد أنه array
+    if (!is_array($propertiesData)) {
+        Log::error('syncProperties: propertiesData is not an array', [
+            'type' => gettype($propertiesData)
+        ]);
+        $propertiesData = [];
+    }
+    
+    $deal->properties()->delete();
+    
+    if (empty($propertiesData)) {
+        return;
+    }
+    
+    foreach ($propertiesData as $index => $propertyData) {
+        // تأكد أن propertyData هو array
+        if (!is_array($propertyData)) {
+            continue;
+        }
+        
+        $deal->properties()->create([
+            'sort_order' => $index,
+            'unit_no' => $propertyData['unit_no'] ?? null,
+            'property_type_id' => $propertyData['property_type_id'] ?? null,
+            'bedrooms' => $propertyData['bedrooms'] ?? null,
+            'unit_size' => $propertyData['unit_size'] ?? null,
+            'area_id' => $propertyData['area_id'] ?? null,
+            'project_id' => $propertyData['project_id'] ?? null,
+            'developer_id' => $propertyData['developer_id'] ?? null,
+            'developer_name' => $propertyData['developer_name'] ?? null,
+            'developer_phone' => $propertyData['developer_phone'] ?? null,
+            'budget_from' => $propertyData['budget_from'] ?? null,
+            'budget_to' => $propertyData['budget_to'] ?? null,
+            'purchase_price' => $propertyData['purchase_price'] ?? null,
+            'rental_price' => $propertyData['rental_price'] ?? null,
+            'payment_proof' => $propertyData['payment_proof'] ?? null,
+            'spa_document' => $propertyData['spa_document'] ?? null,
+            'contract_document' => $propertyData['contract_document'] ?? null,
+            'ejari_document' => $propertyData['ejari_document'] ?? null,
+        ]);
+    }
+}
 
     /**
      * جلب الـ Properties لصفقة معينة

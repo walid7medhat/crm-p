@@ -675,11 +675,12 @@
                     
                     <div class="col-md-4" v-if="shouldShowField('landlord_phone')">
                       <label class="form-label-custom">Phone <span v-if="hasField('landlord_phone')" class="text-danger">*</span></label>
-                      <b-form-input 
+                    
+                      <CrmPhoneInput 
                         v-model="formData.landlord_phone" 
-                        placeholder="Enter Phone" 
-                        class="custom-input"
-                        :class="{ 'is-invalid': isFieldInvalid('landlord_phone') }"
+                        placeholder="Enter Phone Number" 
+                        :invalid="validationAttempted && hasField('landlord_phone') && isFieldInvalid('landlord_phone')"
+                        :show-errors="validationAttempted && hasField('landlord_phone')"
                       />
                     </div>
                     
@@ -1006,13 +1007,13 @@
                                 <!-- Developer Phone (لـ Secondary) -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('developer_phone', property)">
                                     <label class="form-label-custom">Developer Phone <span v-if="isPropertyFieldRequired('developer_phone')" class="text-danger">*</span></label>
-                                    <b-form-input 
-                                        :value="property.developer_phone"
-                                        @update:modelValue="(val) => updateProperty(propIndex, 'developer_phone', val)"
-                                        placeholder="Enter Developer Phone" 
-                                        class="custom-input"
-                                        :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'developer_phone') }"
-                                    />
+                                  
+                                    <CrmPhoneInput 
+                                    v-model="property.developer_phone" 
+                                    placeholder="Enter Phone Number" 
+                                    :invalid="isPropertyFieldInvalid(property, 'developer_phone') "
+                                    :show-errors="isPropertyFieldInvalid(property, 'developer_phone') "
+                                  />
                                 </div>
                                 
                                 <!-- Budget From/To (for EOI stages) -->
@@ -1225,17 +1226,16 @@ function hasRequiredInSection(section) {
 }
 
 // ========== Helper Functions ==========
-// تعديل showBudgetFields - تشمل الحقول دي أياً كان الـ stage
 const showBudgetFields = computed(() => {
-  // لو الحقول دي موجودة في missing fields، اظهرها
   const missingKeys = effectiveMissingFields.value || []
   const hasBudgetFrom = missingKeys.some(key => key.includes('budget_from'))
   const hasBudgetTo = missingKeys.some(key => key.includes('budget_to'))
+    if (hasBudgetFrom || hasBudgetTo) {
+    const stageName = props.targetStageName?.toLowerCase() || ''
+    return stageName.includes('eoi')
+  }
   
-  if (hasBudgetFrom || hasBudgetTo) return true
-  
-  const stageName = props.targetStageName?.toLowerCase() || ''
-  return stageName.includes('eoi')
+  return false
 })
 
 const showPurchasePrice = computed(() => {
@@ -1961,28 +1961,31 @@ function showPartyDetailFields(partyType) {
 }
 
 function shouldShowPropertyField(fieldName, property) {
-   if (fieldName === 'budget_from' || fieldName === 'budget_to') {
+  // معالجة budget fields أولاً
+  if (fieldName === 'budget_from' || fieldName === 'budget_to') {
     return showBudgetFields.value
   }
+  
   const dt = props.dealType || 'primary'
+  const stageName = props.targetStageName?.toLowerCase() || ''
+  
   switch (fieldName) {
     case 'unit_no':
     case 'property_type_id':
     case 'area_id':
+      return true
     case 'unit_size':
+      return dt !== 'primary' || !stageName.includes('eoi')
     case 'developer_id':
     case 'developer_name':
     case 'developer_phone':
-      return true
+      return dt === 'secondary'
     case 'bedrooms':
       return showBedroomsForProperty(property)
     case 'rental_price':
       return dt === 'rental'
     case 'purchase_price':
       return showPurchasePrice.value && dt !== 'rental'
-    case 'budget_from':
-    case 'budget_to':
-      return showBudgetFields.value
     default:
       return isPropertyFieldRequired(fieldName)
   }
@@ -2129,11 +2132,16 @@ const effectiveMissingFields = computed(() => {
 const unresolvedMissingKeys = computed(() => {
   const unresolved = []
   const missingKeys = effectiveMissingFields.value || []
-       const isEoiStage = props.targetStageName?.toLowerCase().includes('eoi')
+  const stageName = props.targetStageName?.toLowerCase() || ''
+  const isEoiStage = stageName.includes('eoi')
+  const isWonOrLostStage = stageName.includes('won') || stageName.includes('lost') || stageName.includes('booking') || stageName.includes('spa')
 
   missingKeys.forEach(key => {
   
-    if (!isEoiStage && (key.includes('budget_from') || key.includes('budget_to'))) {
+     if (isWonOrLostStage && (key.includes('budget_from') || key.includes('budget_to'))) {
+      return 
+    }
+        if (!isEoiStage && (key.includes('budget_from') || key.includes('budget_to'))) {
       return 
     }
     if (key.includes('_document_')) {
@@ -2196,6 +2204,18 @@ async function submitForm() {
     firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     return
   }
+  console.log('Form Data before submit:', {
+  formData: formData.value,
+  properties: localProperties.value,
+  documents: {
+    buyer: formData.value.buyer_documents,
+    seller: formData.value.seller_documents
+  }
+})
+
+// وللتحقق من missing fields:
+console.log('Missing fields:', effectiveMissingFields.value)
+console.log('Unresolved keys:', unresolvedMissingKeys.value)
 
   submitting.value = true
 
@@ -2271,33 +2291,50 @@ if (localProperties.value.length > 0) {
 }
   
   // Add properties to payload
-  if (localProperties.value.length > 0) {
+  // في submitForm()، أضف:
+if (localProperties.value.length > 0) {
+    // ✅ تأكد من تحويل documents إلى format مناسب
     payload.properties = localProperties.value.map((prop, index) => ({
-      sort_order: index,
-      unit_no: prop.unit_no || '',
-      property_type_id: prop.property_type_id || null,
-      bedrooms: prop.bedrooms || null,
-      unit_size: prop.unit_size || '',
-      area_id: prop.area_id || null,
-      developer_id: prop.developer_id || null,
-      developer_name: prop.developer_name || '',
-      developer_phone: prop.developer_phone || '',
-      budget_from: prop.budget_from || null,
-      budget_to: prop.budget_to || null,
-      purchase_price: prop.purchase_price || null,
-      commission: prop.commission || null,
-      payment_proof: (prop.payment_proof || [])
-        .filter(doc => doc?.file instanceof File)
-        .map(doc => doc.file),
-      spa_document: (prop.spa_document || [])
-        .filter(doc => doc?.file instanceof File)
-        .map(doc => doc.file),
+        sort_order: index,
+        unit_no: prop.unit_no || '',
+        property_type_id: prop.property_type_id || null,
+        bedrooms: prop.bedrooms || null,
+        unit_size: prop.unit_size || '',
+        area_id: prop.area_id || null,
+        developer_id: prop.developer_id || null,
+        developer_name: prop.developer_name || '',
+        developer_phone: prop.developer_phone || '',
+        budget_from: prop.budget_from || null,
+        budget_to: prop.budget_to || null,
+        purchase_price: prop.purchase_price || null,
+        commission: prop.commission || null,
+        // ⚠️ تأكد من إرسال الملفات بشكل صحيح
+        payment_proof: (prop.payment_proof || [])
+            .filter(doc => doc?.file instanceof File)
+            .map(doc => doc.file),
+        spa_document: (prop.spa_document || [])
+            .filter(doc => doc?.file instanceof File)
+            .map(doc => doc.file),
     }))
-  }
+}
 
-  console.log('Final payload:', { payload, documents, stage_id: props.targetStageId })
-  
-  emit('save', { payload, documents, stage_id: props.targetStageId })
+console.log('Properties type:', typeof payload.properties, payload.properties)
+if (payload.properties && typeof payload.properties === 'string') {
+    console.warn('Properties is string, trying to parse')
+    try {
+        payload.properties = JSON.parse(payload.properties)
+    } catch(e) {
+        console.error('Failed to parse properties', e)
+    }
+}
+const finalPayload = {
+    ...payload,
+    properties: payload.properties // تأكد من أنه array
+}
+  console.log('Final payload:', finalPayload)
+
+  emit('save', {     payload: finalPayload, 
+ documents, stage_id: props.targetStageId })
 
   submitResetTimer = setTimeout(() => {
     submitting.value = false
