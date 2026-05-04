@@ -12,10 +12,77 @@
       <span class="document-upload-pill" v-if="missingRequiredDocs.length > 0">Required documents missing: {{ missingRequiredDocs.join(', ') }}</span>
     </div>
 
-    <!-- كل نوع في صف لوحده -->
-    <div class="document-box-grid">
+    <!-- Property: one section per type; each file on its own row; Add at bottom of that section -->
+    <div v-if="category === 'property'" class="document-box-grid document-box-grid--property-sections">
+      <div
+        v-for="type in documentTypes"
+        :key="'prop-' + type.id"
+        class="document-type-group document-type-group--property-block"
+      >
+        <div class="document-type-header document-type-header--property-section">
+          <div class="document-box-label">
+            <div>
+              {{ type.name }}
+              <span v-if="type.required" class="text-danger">*</span>
+            </div>
+          </div>
+        </div>
+        <div class="document-property-section-body">
+          <template v-for="box in getBoxesForType(type.id)" :key="box.id">
+            <div
+              v-for="pf in box.files"
+              :key="pf.id"
+              class="document-property-line-row"
+            >
+              <button
+                type="button"
+                class="document-property-line-thumb"
+                aria-label="Preview"
+                @click.stop="viewFile(pf)"
+              >
+                <img
+                  v-if="isImageFile(pf)"
+                  :src="resolveViewTarget(pf)"
+                  alt=""
+                  class="document-property-line-thumb-img"
+                />
+                <iconify-icon
+                  v-else
+                  :icon="getFileIcon(pf?.type || pf?.mime_type)"
+                  class="document-property-line-thumb-icon"
+                />
+              </button>
+              <span class="document-property-line-name text-truncate">{{ pf.name || 'File' }}</span>
+              <div class="document-property-line-actions">
+                <button type="button" class="document-property-line-btn" title="View" @click.stop="viewFile(pf)">
+                  <iconify-icon icon="lucide:eye" />
+                </button>
+                <button
+                  type="button"
+                  class="document-property-line-btn document-property-line-btn--danger"
+                  title="Remove"
+                  @click.stop="removeFile(type.id, box.id, pf.id)"
+                >
+                  <iconify-icon icon="lucide:trash-2" />
+                </button>
+              </div>
+            </div>
+          </template>
+          <button
+            type="button"
+            class="document-property-section-add"
+            @click.stop="triggerFileInput(type.id, getFirstBoxId(type.id))"
+          >
+            <iconify-icon icon="lucide:plus" />
+            <span>Add {{ type.name }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buyer/Seller/Tenant/Landlord: per-type groups -->
+    <div v-else class="document-box-grid">
       <div v-for="type in documentTypes" :key="type.id" class="document-type-group">
-        <!-- Header with title and add button -->
         <div class="document-type-header">
           <div class="document-box-label">
             <div>
@@ -23,7 +90,6 @@
               <span v-if="type.required" class="text-danger">*</span>
             </div>
             <button
-              v-if="category !== 'property'"
               type="button"
               class="add-box-btn"
               @click="addNewBox(type.id)"
@@ -34,19 +100,18 @@
           </div>
         </div>
 
-        <!-- Boxes for this document type (جنب بعض) -->
         <div class="document-boxes-container">
-          <div 
+          <div
             v-for="box in getBoxesForType(type.id)"
             :key="box.id"
             class="document-box-wrapper"
           >
-            <div 
+            <div
               class="document-box"
               :class="{ required: type.required, uploaded: box.files.length > 0 }"
             >
               <button
-                v-if="category !== 'property' && getBoxesForType(type.id).length > 1"
+                v-if="getBoxesForType(type.id).length > 1"
                 type="button"
                 class="remove-box-btn"
                 @click.stop="removeBox(type.id, box.id)"
@@ -55,69 +120,7 @@
                 <iconify-icon icon="lucide:x" />
               </button>
 
-              <!-- Property docs: small cards in one horizontal row (wraps on narrow screens) -->
-              <div
-                v-if="category === 'property' && box.files.length > 0"
-                class="document-box-content document-property-filled"
-              >
-                <div class="document-property-files-row">
-                  <div
-                    v-for="pf in box.files"
-                    :key="pf.id"
-                    class="document-property-mini-card"
-                    :title="pf.name || 'File'"
-                  >
-                    <button
-                      type="button"
-                      class="document-property-mini-thumb"
-                      aria-label="Preview"
-                      @click.stop="viewFile(pf)"
-                    >
-                      <img
-                        v-if="isImageFile(pf)"
-                        :src="resolveViewTarget(pf)"
-                        alt=""
-                        class="document-property-mini-thumb-img"
-                      />
-                      <iconify-icon
-                        v-else
-                        :icon="getFileIcon(pf?.type || pf?.mime_type)"
-                        class="document-property-mini-thumb-icon"
-                      />
-                    </button>
-                    <span class="document-property-mini-name">{{ pf.name || 'File' }}</span>
-                    <div class="document-property-mini-actions">
-                      <button
-                        type="button"
-                        class="document-property-mini-btn"
-                        title="View"
-                        @click.stop="viewFile(pf)"
-                      >
-                        <iconify-icon icon="lucide:eye" />
-                      </button>
-                      <button
-                        type="button"
-                        class="document-property-mini-btn document-property-mini-btn--danger"
-                        title="Remove"
-                        @click.stop="removeFile(type.id, box.id, pf.id)"
-                      >
-                        <iconify-icon icon="lucide:trash-2" />
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    class="document-property-add-chip"
-                    title="Add file"
-                    @click.stop="triggerFileInput(type.id, box.id)"
-                  >
-                    <iconify-icon icon="lucide:plus" />
-                    <span>Add</span>
-                  </button>
-                </div>
-              </div>
-
-              <div v-else class="document-box-content" @click="triggerFileInput(type.id, box.id)">
+              <div class="document-box-content" @click="triggerFileInput(type.id, box.id)">
                 <template v-if="box.files.length > 0">
                   <img
                     v-if="isImageFile(box.files[0])"
@@ -251,6 +254,11 @@ function initializeBoxes() {
 // Get boxes for a specific document type
 function getBoxesForType(typeId) {
   return boxesByType.value[typeId] || []
+}
+
+function getFirstBoxId(typeId) {
+  const boxes = getBoxesForType(typeId)
+  return boxes[0]?.id ?? null
 }
 
 // Add a new box for a document type
@@ -1058,6 +1066,128 @@ const $showNotification = (message, type = 'success') => {
 
 .document-property-add-chip iconify-icon {
   font-size: 16px;
+}
+
+.document-box-grid--property-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.document-type-group--property-block {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.document-type-header--property-section {
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 0;
+}
+
+.document-property-section-body {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.document-property-line-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  box-sizing: border-box;
+}
+
+.document-property-line-thumb {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  background: #f8fafc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.document-property-line-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.document-property-line-thumb-icon {
+  font-size: 18px;
+  color: #64748b;
+}
+
+.document-property-line-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.document-property-line-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.document-property-line-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.document-property-line-btn--danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.document-property-section-add {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.document-property-section-add:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .document-box-actions {

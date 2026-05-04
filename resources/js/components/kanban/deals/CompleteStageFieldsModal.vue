@@ -1085,36 +1085,27 @@
               <div v-show="isSectionOpen('financials')" class="section-content">
                 <div class="form-card p-3 radius-12">
                   <div class="row g-3">
-                    <div class="col-md-4" v-if="shouldShowField('deal_commission')">
+                    <div class="col-md-6" v-if="shouldShowField('deal_total_amount')">
+                      <label class="form-label-custom">Deal amount <span v-if="hasField('deal_total_amount')" class="text-danger">*</span></label>
+                      <div class="input-group">
+                        <span class="input-group-text">AED</span>
+                        <b-form-input
+                          v-model="formData.deal_total_amount"
+                          type="number"
+                          placeholder="Enter deal amount"
+                          class="custom-input compact-placeholder-field"
+                          :class="{ 'is-invalid': isFieldInvalid('deal_total_amount') }"
+                        />
+                      </div>
+                    </div>
+                    <div class="col-md-6" v-if="shouldShowField('deal_commission')">
                       <label class="form-label-custom">Deal Commission % <span v-if="hasField('deal_commission')" class="text-danger">*</span></label>
-                      <b-form-input 
-                        v-model="formData.deal_commission" 
-                        type="number" 
-                        placeholder="Enter Commission %" 
+                      <b-form-input
+                        v-model="formData.deal_commission"
+                        type="number"
+                        placeholder="Enter Commission %"
                         class="custom-input compact-placeholder-field"
                         :class="{ 'is-invalid': isFieldInvalid('deal_commission') }"
-                      />
-                    </div>
-                    
-                    <div class="col-md-4" v-if="shouldShowField('agent_share')">
-                      <label class="form-label-custom">Agent Share % <span v-if="hasField('agent_share')" class="text-danger">*</span></label>
-                      <b-form-input 
-                        v-model="formData.agent_share" 
-                        type="number" 
-                        placeholder="Enter Agent Share %" 
-                        class="custom-input"
-                        :class="{ 'is-invalid': isFieldInvalid('agent_share') }"
-                      />
-                    </div>
-                    
-                    <div class="col-md-4" v-if="shouldShowField('company_share')">
-                      <label class="form-label-custom">Company Share % <span v-if="hasField('company_share')" class="text-danger">*</span></label>
-                      <b-form-input 
-                        v-model="formData.company_share" 
-                        type="number" 
-                        placeholder="Enter Company Share %" 
-                        class="custom-input"
-                        :class="{ 'is-invalid': isFieldInvalid('company_share') }"
                       />
                     </div>
                   </div>
@@ -1225,8 +1216,8 @@ function hasRequiredInSection(section) {
         f.startsWith('property_') || f === 'at_least_one_property'
       )
     case 'financials':
-      return effectiveMissingFields.value.some(f => 
-        ['deal_commission', 'agent_share', 'company_share', 'deal_total_amount'].includes(f)
+      return effectiveMissingFields.value.some(f =>
+        ['deal_commission', 'deal_total_amount'].includes(f)
       )
     default:
       return false
@@ -1948,7 +1939,7 @@ function shouldShowField(fieldKey) {
   if (fieldKey.startsWith('seller_')) return dt === 'secondary'
   if (fieldKey.startsWith('tenant_')) return dt === 'rental'
   if (fieldKey.startsWith('landlord_')) return dt === 'rental'
-  if (['deal_commission', 'agent_share', 'company_share', 'deal_total_amount'].includes(fieldKey)) return true
+  if (['deal_commission', 'deal_total_amount'].includes(fieldKey)) return true
   return false
 }
 
@@ -2015,11 +2006,11 @@ function hasPartyFields(partyType) {
 
 function hasFinancialFields() {
   const missingKeys = effectiveMissingFields.value || []
-  return missingKeys.some(key => ['deal_commission', 'agent_share', 'company_share'].includes(key))
+  return missingKeys.some(key => ['deal_commission', 'deal_total_amount'].includes(key))
 }
 
 const shouldShowFinancialSection = computed(() =>
-  ['deal_commission', 'agent_share', 'company_share'].some((k) => shouldShowField(k))
+  ['deal_commission', 'deal_total_amount'].some((k) => shouldShowField(k))
 )
 
 const hasPropertyRequirements = computed(() => {
