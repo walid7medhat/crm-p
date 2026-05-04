@@ -1,6 +1,6 @@
 /**
  * vue-select global tweaks:
- * - Hide clear (×) on plain selects; show it on .custom-v-select (deal/lead styled clears)
+ * - Hide clear (×) on all vue-select instances (including custom-v-select / deal / lead)
  * - Single-select: centered row in the toggle (fixes “text stuck to top”)
  * - Multiple-select: keep centered wrapping chips
  */
@@ -10,28 +10,25 @@
   --vs-actions-padding: 0 6px;
 }
 
-.v-select:not(.custom-v-select):not(.client-req-vselect) .vs__clear,
-.v-select:not(.custom-v-select):not(.client-req-vselect) button.vs__clear {
-  display: none !important;
-}
-
-/*
- * Opt-in: show clear (×) when the control adds a hook class on the vue-select root.
- * (Using :not() above avoids a global `display: none` on every .vs__clear, which
- * was impossible to override from scoped SFC styles.)
- */
+/* High-specificity: beats scoped SFC :deep(.custom-v-select .vs__clear) { display: flex } */
+.v-select .vs__clear,
+.v-select button.vs__clear,
 .v-select.custom-v-select .vs__clear,
 .v-select.custom-v-select button.vs__clear,
 .v-select.client-req-vselect .vs__clear,
 .v-select.client-req-vselect button.vs__clear,
 .deal-figma-ui .v-select .vs__clear,
-.deal-figma-ui .v-select button.vs__clear {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
+.deal-figma-ui .v-select button.vs__clear,
+button.vs__clear {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
 }
 
 .v-select .vs__dropdown-toggle {
