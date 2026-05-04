@@ -60,9 +60,9 @@
           <div v-else class="complete-fields-form">
             
             <!-- Lost Reason Section -->
-            <section v-if="hasField('lost_reason')" class="form-section">
+            <section v-if="shouldShowField('lost_reason')" class="form-section">
               <div class="form-card p-3 radius-12">
-                <label class="form-label-custom">Enter Reason For Deal Lost</label>
+                <label class="form-label-custom">Enter Reason For Deal Lost <span v-if="hasField('lost_reason')" class="text-danger">*</span></label>
                 <textarea
                   v-model="formData.lost_reason"
                   class="lost-reason-textarea"
@@ -74,7 +74,7 @@
             </section>
 
             <!-- Buyer Section with Collapsible -->
-            <section v-if="!shouldHideBuyer && (hasPartyFields('buyer') || documentTypesByParty.buyer.length > 0)" class="form-section">
+            <section v-if="!shouldHideBuyer && (showPartyDetailFields('buyer') || documentTypesByParty.buyer.length > 0)" class="form-section">
               <div 
                 class="section-collapsible-header" 
                 :class="{ 'has-required': hasRequiredInSection('buyer') }"
@@ -86,11 +86,11 @@
               </div>
               
               <div v-show="isSectionOpen('buyer')" class="section-content">
-                <div class="form-card p-3 radius-12" v-if="hasPartyFields('buyer')">
+                <div class="form-card p-3 radius-12" v-if="showPartyDetailFields('buyer')">
                   <div class="row g-3">
                     <!-- Buyer fields -->
-                    <div class="col-md-6" v-if="hasField('buyer_first_name')">
-                      <label class="form-label-custom">Buyer First Name <span class="text-danger">*</span></label>
+                    <div class="col-md-6" v-if="shouldShowField('buyer_first_name')">
+                      <label class="form-label-custom">Buyer First Name <span v-if="hasField('buyer_first_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.buyer_first_name" 
                         placeholder="Enter First Name" 
@@ -99,8 +99,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-6" v-if="hasField('buyer_last_name')">
-                      <label class="form-label-custom">Buyer Last Name <span class="text-danger">*</span></label>
+                    <div class="col-md-6" v-if="shouldShowField('buyer_last_name')">
+                      <label class="form-label-custom">Buyer Last Name <span v-if="hasField('buyer_last_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.buyer_last_name" 
                         placeholder="Enter Last Name" 
@@ -109,18 +109,18 @@
                       />
                     </div>
                     
-                    <div class="col-md-6" v-if="hasField('buyer_phone')">
-                      <label class="form-label-custom">Buyer Phone Number <span class="text-danger">*</span></label>
+                    <div class="col-md-6" v-if="shouldShowField('buyer_phone')">
+                      <label class="form-label-custom">Buyer Phone Number <span v-if="hasField('buyer_phone')" class="text-danger">*</span></label>
                       <CrmPhoneInput 
                         v-model="formData.buyer_phone" 
                         placeholder="Enter Phone Number" 
-                        :invalid="isFieldInvalid('buyer_phone')"
-                        :show-errors="isFieldInvalid('buyer_phone')"
+                        :invalid="validationAttempted && hasField('buyer_phone') && isFieldInvalid('buyer_phone')"
+                        :show-errors="validationAttempted && hasField('buyer_phone')"
                       />
                     </div>
                     
-                    <div class="col-md-6" v-if="hasField('buyer_email')">
-                      <label class="form-label-custom">Buyer Email <span class="text-danger">*</span></label>
+                    <div class="col-md-6" v-if="shouldShowField('buyer_email')">
+                      <label class="form-label-custom">Buyer Email <span v-if="hasField('buyer_email')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.buyer_email" 
                         type="email" 
@@ -130,8 +130,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-6" v-if="hasField('buyer_nationality')">
-                      <label class="form-label-custom">Buyer Nationality <span class="text-danger">*</span></label>
+                    <div class="col-md-6" v-if="shouldShowField('buyer_nationality')">
+                      <label class="form-label-custom">Buyer Nationality <span v-if="hasField('buyer_nationality')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.buyer_nationality" 
@@ -150,8 +150,8 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-6" v-if="hasField('buyer_residency_status') || (documentTypesByParty.buyer.length > 0 && ['primary', 'secondary'].includes(effectiveDealTypeForDocs))">
-                      <label class="form-label-custom">Buyer Residency Status <span class="text-danger">*</span></label>
+                    <div class="col-md-6" v-if="shouldShowField('buyer_residency_status') || (documentTypesByParty.buyer.length > 0 && ['primary', 'secondary'].includes(effectiveDealTypeForDocs))">
+                      <label class="form-label-custom">Buyer Residency Status <span v-if="hasField('buyer_residency_status')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body
                         v-model="formData.buyer_residency_status"
@@ -171,8 +171,8 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-6" v-if="hasField('buyer_country') && showBuyerCountryField">
-                      <label class="form-label-custom">Buyer Country Of Residence <span class="text-danger">*</span></label>
+                    <div class="col-md-6" v-if="shouldShowField('buyer_country') && showBuyerCountryField">
+                      <label class="form-label-custom">Buyer Country Of Residence <span v-if="hasField('buyer_country')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.buyer_country" 
@@ -191,8 +191,8 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-6" v-if="hasField('buyer_city') && showBuyerCityField">
-                      <label class="form-label-custom">Buyer City Of Residence <span class="text-danger">*</span></label>
+                    <div class="col-md-6" v-if="shouldShowField('buyer_city') && showBuyerCityField">
+                      <label class="form-label-custom">Buyer City Of Residence <span v-if="hasField('buyer_city')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.buyer_city" 
@@ -211,8 +211,8 @@
                       </v-select>
                     </div>
 
-                    <div class="col-md-6" v-if="hasField('buyer_dob')">
-                      <label class="form-label-custom">Buyer Date Of Birth <span class="text-danger">*</span></label>
+                    <div class="col-md-6" v-if="shouldShowField('buyer_dob')">
+                      <label class="form-label-custom">Buyer Date Of Birth <span v-if="hasField('buyer_dob')" class="text-danger">*</span></label>
                       <AdvancedDatePicker
                         v-model="formData.buyer_dob"
                         date-only
@@ -222,8 +222,8 @@
                       />
                     </div>
 
-                    <div class="col-md-6" v-if="hasField('buyer_language')">
-                      <label class="form-label-custom">Buyer Language <span class="text-danger">*</span></label>
+                    <div class="col-md-6" v-if="shouldShowField('buyer_language')">
+                      <label class="form-label-custom">Buyer Language <span v-if="hasField('buyer_language')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         :model-value="normalizeLanguageSelection(formData.buyer_language)"
@@ -256,7 +256,7 @@
                     category="buyer"
                     compact
                     :document-types="documentTypesByParty.buyer"
-                    :show-errors="true"
+                    :show-errors="validationAttempted"
                     :missing-document-types="missingDocumentTypesByParty.buyer"
                     ref="buyerDocUploadRef"
                     class="form-card p-3 radius-12"
@@ -266,7 +266,7 @@
             </section>
 
             <!-- Seller Section -->
-            <section v-if="!shouldHideSeller && (hasPartyFields('seller') || documentTypesByParty.seller.length > 0)" class="form-section">
+            <section v-if="!shouldHideSeller && (showPartyDetailFields('seller') || documentTypesByParty.seller.length > 0)" class="form-section">
               <div 
                 class="section-collapsible-header"
                 :class="{ 'has-required': hasRequiredInSection('seller') }"
@@ -278,11 +278,11 @@
               </div>
               
               <div v-show="isSectionOpen('seller')" class="section-content">
-                <div class="form-card p-3 radius-12" v-if="hasPartyFields('seller')">
+                <div class="form-card p-3 radius-12" v-if="showPartyDetailFields('seller')">
                   <div class="row g-3">
                     <!-- Seller fields -->
-                    <div class="col-md-4" v-if="hasField('seller_first_name')">
-                      <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('seller_first_name')">
+                      <label class="form-label-custom">First Name <span v-if="hasField('seller_first_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.seller_first_name" 
                         placeholder="Enter First Name" 
@@ -291,8 +291,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('seller_last_name')">
-                      <label class="form-label-custom">Last Name <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('seller_last_name')">
+                      <label class="form-label-custom">Last Name <span v-if="hasField('seller_last_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.seller_last_name" 
                         placeholder="Enter Last Name" 
@@ -301,8 +301,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('seller_dob')">
-                      <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('seller_dob')">
+                      <label class="form-label-custom">Date Of Birth <span v-if="hasField('seller_dob')" class="text-danger">*</span></label>
                       <AdvancedDatePicker
                         v-model="formData.seller_dob"
                         date-only
@@ -312,18 +312,18 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('seller_phone')">
-                      <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('seller_phone')">
+                      <label class="form-label-custom">Phone <span v-if="hasField('seller_phone')" class="text-danger">*</span></label>
                       <CrmPhoneInput 
                         v-model="formData.seller_phone" 
                         placeholder="Enter Phone" 
-                        :invalid="isFieldInvalid('seller_phone')"
-                        :show-errors="isFieldInvalid('seller_phone')"
+                        :invalid="validationAttempted && hasField('seller_phone') && isFieldInvalid('seller_phone')"
+                        :show-errors="validationAttempted && hasField('seller_phone')"
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('seller_email')">
-                      <label class="form-label-custom">Email <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('seller_email')">
+                      <label class="form-label-custom">Email <span v-if="hasField('seller_email')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.seller_email" 
                         type="email" 
@@ -333,8 +333,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('seller_nationality')">
-                      <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('seller_nationality')">
+                      <label class="form-label-custom">Nationality <span v-if="hasField('seller_nationality')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.seller_nationality" 
@@ -353,8 +353,8 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('seller_residency_status')">
-                      <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('seller_residency_status')">
+                      <label class="form-label-custom">Residency Status <span v-if="hasField('seller_residency_status')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.seller_residency_status" 
@@ -373,7 +373,7 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('seller_country') && showSellerCountryField">
+                    <div class="col-md-4" v-if="shouldShowField('seller_country') && showSellerCountryField">
                       <label class="form-label-custom">Country Of Residence</label>
                       <v-select
                         append-to-body 
@@ -393,8 +393,8 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('seller_city') && showSellerCityField">
-                      <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('seller_city') && showSellerCityField">
+                      <label class="form-label-custom">City Of Residence <span v-if="hasField('seller_city')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.seller_city" 
@@ -413,8 +413,8 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('seller_language')">
-                      <label class="form-label-custom">Language <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('seller_language')">
+                      <label class="form-label-custom">Language <span v-if="hasField('seller_language')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.seller_language" 
@@ -443,7 +443,7 @@
                     category="seller"
                     compact
                     :document-types="documentTypesByParty.seller"
-                    :show-errors="true"
+                    :show-errors="validationAttempted"
                     :missing-document-types="missingDocumentTypesByParty.seller"
                     ref="sellerDocUploadRef"
                     class="form-card p-3 radius-12"
@@ -453,7 +453,7 @@
             </section>
 
             <!-- Tenant Section -->
-            <section v-if="!shouldHideTenant && (hasPartyFields('tenant') || documentTypesByParty.tenant.length > 0)" class="form-section">
+            <section v-if="!shouldHideTenant && (showPartyDetailFields('tenant') || documentTypesByParty.tenant.length > 0)" class="form-section">
               <div 
                 class="section-collapsible-header"
                 :class="{ 'has-required': hasRequiredInSection('tenant') }"
@@ -465,10 +465,10 @@
               </div>
               
               <div v-show="isSectionOpen('tenant')" class="section-content">
-                <div class="form-card p-3 radius-12" v-if="hasPartyFields('tenant')">
+                <div class="form-card p-3 radius-12" v-if="showPartyDetailFields('tenant')">
                   <div class="row g-3">
-                    <div class="col-md-4" v-if="hasField('tenant_first_name')">
-                      <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('tenant_first_name')">
+                      <label class="form-label-custom">First Name <span v-if="hasField('tenant_first_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.tenant_first_name" 
                         placeholder="Enter First Name" 
@@ -477,8 +477,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('tenant_last_name')">
-                      <label class="form-label-custom">Last Name <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('tenant_last_name')">
+                      <label class="form-label-custom">Last Name <span v-if="hasField('tenant_last_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.tenant_last_name" 
                         placeholder="Enter Last Name" 
@@ -487,18 +487,18 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('tenant_phone')">
-                      <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('tenant_phone')">
+                      <label class="form-label-custom">Phone <span v-if="hasField('tenant_phone')" class="text-danger">*</span></label>
                       <CrmPhoneInput 
                         v-model="formData.tenant_phone" 
                         placeholder="Enter Phone" 
-                        :invalid="isFieldInvalid('tenant_phone')"
-                        :show-errors="isFieldInvalid('tenant_phone')"
+                        :invalid="validationAttempted && hasField('tenant_phone') && isFieldInvalid('tenant_phone')"
+                        :show-errors="validationAttempted && hasField('tenant_phone')"
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('tenant_email')">
-                      <label class="form-label-custom">Email <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('tenant_email')">
+                      <label class="form-label-custom">Email <span v-if="hasField('tenant_email')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.tenant_email" 
                         type="email" 
@@ -508,8 +508,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('tenant_nationality')">
-                      <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('tenant_nationality')">
+                      <label class="form-label-custom">Nationality <span v-if="hasField('tenant_nationality')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.tenant_nationality" 
@@ -528,8 +528,8 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('tenant_residency_status')">
-                      <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('tenant_residency_status')">
+                      <label class="form-label-custom">Residency Status <span v-if="hasField('tenant_residency_status')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.tenant_residency_status" 
@@ -548,7 +548,7 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('tenant_country') && showTenantCountryField">
+                    <div class="col-md-4" v-if="shouldShowField('tenant_country') && showTenantCountryField">
                       <label class="form-label-custom">Country Of Residence</label>
                       <v-select
                         append-to-body 
@@ -568,8 +568,8 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('tenant_city') && showTenantCityField">
-                      <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('tenant_city') && showTenantCityField">
+                      <label class="form-label-custom">City Of Residence <span v-if="hasField('tenant_city')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.tenant_city" 
@@ -588,8 +588,8 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('tenant_language')">
-                      <label class="form-label-custom">Language <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('tenant_language')">
+                      <label class="form-label-custom">Language <span v-if="hasField('tenant_language')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.tenant_language" 
@@ -618,7 +618,7 @@
                     category="tenant"
                     compact
                     :document-types="documentTypesByParty.tenant"
-                    :show-errors="true"
+                    :show-errors="validationAttempted"
                     :missing-document-types="missingDocumentTypesByParty.tenant"
                     ref="tenantDocUploadRef"
                     class="form-card p-3 radius-12"
@@ -628,7 +628,7 @@
             </section>
 
             <!-- Landlord Section -->
-            <section v-if="!shouldHideLandlord && (hasPartyFields('landlord') || documentTypesByParty.landlord.length > 0)" class="form-section">
+            <section v-if="!shouldHideLandlord && (showPartyDetailFields('landlord') || documentTypesByParty.landlord.length > 0)" class="form-section">
               <div 
                 class="section-collapsible-header"
                 :class="{ 'has-required': hasRequiredInSection('landlord') }"
@@ -640,10 +640,10 @@
               </div>
               
               <div v-show="isSectionOpen('landlord')" class="section-content">
-                <div class="form-card p-3 radius-12" v-if="hasPartyFields('landlord')">
+                <div class="form-card p-3 radius-12" v-if="showPartyDetailFields('landlord')">
                   <div class="row g-3">
-                    <div class="col-md-4" v-if="hasField('landlord_first_name')">
-                      <label class="form-label-custom">First Name <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('landlord_first_name')">
+                      <label class="form-label-custom">First Name <span v-if="hasField('landlord_first_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.landlord_first_name" 
                         placeholder="Enter First Name" 
@@ -652,8 +652,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('landlord_last_name')">
-                      <label class="form-label-custom">Last Name <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('landlord_last_name')">
+                      <label class="form-label-custom">Last Name <span v-if="hasField('landlord_last_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.landlord_last_name" 
                         placeholder="Enter Last Name" 
@@ -662,8 +662,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('landlord_dob')">
-                      <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('landlord_dob')">
+                      <label class="form-label-custom">Date Of Birth <span v-if="hasField('landlord_dob')" class="text-danger">*</span></label>
                       <AdvancedDatePicker
                         v-model="formData.landlord_dob"
                         date-only
@@ -673,8 +673,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('landlord_phone')">
-                      <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('landlord_phone')">
+                      <label class="form-label-custom">Phone <span v-if="hasField('landlord_phone')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.landlord_phone" 
                         placeholder="Enter Phone" 
@@ -683,8 +683,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('landlord_email')">
-                      <label class="form-label-custom">Email <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('landlord_email')">
+                      <label class="form-label-custom">Email <span v-if="hasField('landlord_email')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.landlord_email" 
                         type="email" 
@@ -694,8 +694,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('landlord_nationality')">
-                      <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('landlord_nationality')">
+                      <label class="form-label-custom">Nationality <span v-if="hasField('landlord_nationality')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.landlord_nationality" 
@@ -714,8 +714,8 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('landlord_residency_status')">
-                      <label class="form-label-custom">Residency Status <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('landlord_residency_status')">
+                      <label class="form-label-custom">Residency Status <span v-if="hasField('landlord_residency_status')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.landlord_residency_status" 
@@ -734,7 +734,7 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('landlord_country') && showLandlordCountryField">
+                    <div class="col-md-4" v-if="shouldShowField('landlord_country') && showLandlordCountryField">
                       <label class="form-label-custom">Country Of Residence</label>
                       <v-select
                         append-to-body 
@@ -754,8 +754,8 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('landlord_city') && showLandlordCityField">
-                      <label class="form-label-custom">City Of Residence <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('landlord_city') && showLandlordCityField">
+                      <label class="form-label-custom">City Of Residence <span v-if="hasField('landlord_city')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.landlord_city" 
@@ -774,8 +774,8 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('landlord_language')">
-                      <label class="form-label-custom">Language <span class="text-danger">*</span></label>
+                    <div class="col-md-4" v-if="shouldShowField('landlord_language')">
+                      <label class="form-label-custom">Language <span v-if="hasField('landlord_language')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.landlord_language" 
@@ -804,7 +804,7 @@
                     category="landlord"
                     compact
                     :document-types="documentTypesByParty.landlord"
-                    :show-errors="true"
+                    :show-errors="validationAttempted"
                     :missing-document-types="missingDocumentTypesByParty.landlord"
                     ref="landlordDocUploadRef"
                     class="form-card p-3 radius-12"
@@ -814,7 +814,7 @@
             </section>
 
             <!-- Multi Properties Section -->
-            <section v-if="hasPropertyRequirements && dealProperties.length > 0" class="form-section">
+            <section v-if="dealProperties.length > 0" class="form-section">
                 <div 
                     class="section-collapsible-header"
                     :class="{ 'has-required': true }"
@@ -839,19 +839,19 @@
                             v-for="(property, propIndex) in dealProperties" 
                             :key="property.id || propIndex"
                             class="property-card-in-modal mb-4"
-                            :class="{ 'property-missing': hasPropertyMissing(propIndex) }"
+                            :class="{ 'property-missing': validationAttempted && hasPropertyMissing(propIndex) }"
                         >
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span class="badge bg-secondary">Property {{ propIndex + 1 }}</span>
-                                <span v-if="hasPropertyMissing(propIndex)" class="badge bg-danger text-white">
+                                <span v-if="validationAttempted && hasPropertyMissing(propIndex)" class="badge bg-danger text-white">
                                     Missing Required Fields
                                 </span>
                             </div>
                             
                             <div class="row g-3">
                                 <!-- Unit No -->
-                                <div class="col-md-6" v-if="isPropertyFieldRequired('unit_no')">
-                                    <label class="form-label-custom">Unit No <span class="text-danger">*</span></label>
+                                <div class="col-md-6" v-if="shouldShowPropertyField('unit_no', property)">
+                                    <label class="form-label-custom">Unit No <span v-if="isPropertyFieldRequired('unit_no')" class="text-danger">*</span></label>
                                     <b-form-input 
                                         :value="property.unit_no"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'unit_no', val)"
@@ -862,8 +862,8 @@
                                 </div>
                                 
                                 <!-- Property Type -->
-                                <div class="col-md-6" v-if="isPropertyFieldRequired('property_type_id')">
-                                    <label class="form-label-custom">Property Type <span class="text-danger">*</span></label>
+                                <div class="col-md-6" v-if="shouldShowPropertyField('property_type_id', property)">
+                                    <label class="form-label-custom">Property Type <span v-if="isPropertyFieldRequired('property_type_id')" class="text-danger">*</span></label>
                                     <v-select
                                         :model-value="property.property_type_id"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'property_type_id', val)"
@@ -881,8 +881,8 @@
                                 </div>
                                 
                                 <!-- Bedrooms -->
-                                <div class="col-md-6" v-if="isPropertyFieldRequired('bedrooms') && showBedroomsForProperty(property)">
-                                    <label class="form-label-custom">Bedrooms <span class="text-danger">*</span></label>
+                                <div class="col-md-6" v-if="shouldShowPropertyField('bedrooms', property)">
+                                    <label class="form-label-custom">Bedrooms <span v-if="isPropertyFieldRequired('bedrooms')" class="text-danger">*</span></label>
                                     <v-select
                                         :model-value="property.bedrooms"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'bedrooms', val)"
@@ -900,8 +900,8 @@
                                 </div>
                                 
                                 <!-- Unit Size -->
-                                <div class="col-md-6" v-if="isPropertyFieldRequired('unit_size')">
-                                    <label class="form-label-custom">Unit Size (sq.ft) <span class="text-danger">*</span></label>
+                                <div class="col-md-6" v-if="shouldShowPropertyField('unit_size', property)">
+                                    <label class="form-label-custom">Unit Size (sq.ft) <span v-if="isPropertyFieldRequired('unit_size')" class="text-danger">*</span></label>
                                     <b-form-input 
                                         :value="property.unit_size"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'unit_size', val)"
@@ -913,8 +913,8 @@
                                 </div>
                                 
                                 <!-- Rental Price (للصفقات الإيجارية) -->
-                                <div class="col-md-6" v-if="isPropertyFieldRequired('rental_price') && dealType === 'rental'">
-                                    <label class="form-label-custom">Rental Price <span class="text-danger">*</span></label>
+                                <div class="col-md-6" v-if="shouldShowPropertyField('rental_price', property)">
+                                    <label class="form-label-custom">Rental Price <span v-if="isPropertyFieldRequired('rental_price')" class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <b-form-input 
                                             :value="property.rental_price"
@@ -929,8 +929,8 @@
                                 </div>
                                 
                                 <!-- Purchase Price -->
-                                <div class="col-md-6" v-if="isPropertyFieldRequired('purchase_price') && showPurchasePrice && dealType !== 'rental'">
-                                    <label class="form-label-custom">Purchase Price <span class="text-danger">*</span></label>
+                                <div class="col-md-6" v-if="shouldShowPropertyField('purchase_price', property)">
+                                    <label class="form-label-custom">Purchase Price <span v-if="isPropertyFieldRequired('purchase_price')" class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <b-form-input 
                                             :value="property.purchase_price"
@@ -945,8 +945,8 @@
                                 </div>
                                 
                                 <!-- Area / Address -->
-                                <div class="col-md-6" v-if="isPropertyFieldRequired('area_id')">
-                                    <label class="form-label-custom">Property Address <span class="text-danger">*</span></label>
+                                <div class="col-md-6" v-if="shouldShowPropertyField('area_id', property)">
+                                    <label class="form-label-custom">Property Address <span v-if="isPropertyFieldRequired('area_id')" class="text-danger">*</span></label>
                                     <v-select
                                         :model-value="property.area_id"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'area_id', val)"
@@ -973,8 +973,8 @@
                                 </div>
                                 
                                 <!-- Developer -->
-                                <div class="col-md-6" v-if="isPropertyFieldRequired('developer_id')">
-                                    <label class="form-label-custom">Developer <span class="text-danger">*</span></label>
+                                <div class="col-md-6" v-if="shouldShowPropertyField('developer_id', property)">
+                                    <label class="form-label-custom">Developer <span v-if="isPropertyFieldRequired('developer_id')" class="text-danger">*</span></label>
                                     <v-select
                                         :model-value="property.developer_id"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'developer_id', val)"
@@ -992,8 +992,8 @@
                                 </div>
                                 
                                 <!-- Developer Name (لـ Secondary) -->
-                                <div class="col-md-6" v-if="isPropertyFieldRequired('developer_name')">
-                                    <label class="form-label-custom">Developer Name <span class="text-danger">*</span></label>
+                                <div class="col-md-6" v-if="shouldShowPropertyField('developer_name', property)">
+                                    <label class="form-label-custom">Developer Name <span v-if="isPropertyFieldRequired('developer_name')" class="text-danger">*</span></label>
                                     <b-form-input 
                                         :value="property.developer_name"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'developer_name', val)"
@@ -1004,8 +1004,8 @@
                                 </div>
                                 
                                 <!-- Developer Phone (لـ Secondary) -->
-                                <div class="col-md-6" v-if="isPropertyFieldRequired('developer_phone')">
-                                    <label class="form-label-custom">Developer Phone <span class="text-danger">*</span></label>
+                                <div class="col-md-6" v-if="shouldShowPropertyField('developer_phone', property)">
+                                    <label class="form-label-custom">Developer Phone <span v-if="isPropertyFieldRequired('developer_phone')" class="text-danger">*</span></label>
                                     <b-form-input 
                                         :value="property.developer_phone"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'developer_phone', val)"
@@ -1016,8 +1016,8 @@
                                 </div>
                                 
                                 <!-- Budget From/To (for EOI stages) -->
-                                <div class="col-md-6" v-if="isPropertyFieldRequired('budget_from') && showBudgetFields">
-                                    <label class="form-label-custom">Budget From <span class="text-danger">*</span></label>
+                                <div class="col-md-6" v-if="shouldShowPropertyField('budget_from', property)">
+                                    <label class="form-label-custom">Budget From <span v-if="isPropertyFieldRequired('budget_from')" class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text">AED</span>
                                         <b-form-input 
@@ -1031,8 +1031,8 @@
                                     </div>
                                 </div>
                                 
-                                <div class="col-md-6" v-if="isPropertyFieldRequired('budget_to') && showBudgetFields">
-                                    <label class="form-label-custom">Budget To <span class="text-danger">*</span></label>
+                                <div class="col-md-6" v-if="shouldShowPropertyField('budget_to', property)">
+                                    <label class="form-label-custom">Budget To <span v-if="isPropertyFieldRequired('budget_to')" class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text">AED</span>
                                         <b-form-input 
@@ -1046,16 +1046,16 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Property Documents -->
-                                <div class="col-12 mt-2" v-if="hasPropertyDocumentRequirements">
-                                    <label class="form-label-custom">Property Documents</label>
+                                <!-- Property Documents (Payment Proof + SPA — same idea as Create Deal / PropertyCard) -->
+                                <div class="col-12 mt-3 property-documents-block">
+                                    <label class="section-title mb-2">Property Documents</label>
                                     <DocumentUpload
                                         :modelValue="propertyDocumentsCombined[propIndex]"
                                         @update:modelValue="(val) => updatePropertyDocuments(propIndex, val)"
                                         category="property"
-                                        :document-types="propertyDocumentTypes"
+                                        :document-types="propertyDocTypesForModal"
                                         compact
-                                        :show-errors="true"
+                                        :show-errors="validationAttempted"
                                         :missing-document-types="missingPropertyDocumentTypes"
                                     />
                                 </div>
@@ -1071,7 +1071,7 @@
             </section>
             
             <!-- Deal Financials Section -->
-            <section v-if="hasFinancialFields()" class="form-section">
+            <section v-if="shouldShowFinancialSection" class="form-section">
               <div 
                 class="section-collapsible-header"
                 :class="{ 'has-required': hasRequiredInSection('financials') }"
@@ -1085,8 +1085,8 @@
               <div v-show="isSectionOpen('financials')" class="section-content">
                 <div class="form-card p-3 radius-12">
                   <div class="row g-3">
-                    <div class="col-md-4" v-if="hasField('deal_commission')">
-                      <label class="form-label-custom">Deal Commission %</label>
+                    <div class="col-md-4" v-if="shouldShowField('deal_commission')">
+                      <label class="form-label-custom">Deal Commission % <span v-if="hasField('deal_commission')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.deal_commission" 
                         type="number" 
@@ -1096,8 +1096,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('agent_share')">
-                      <label class="form-label-custom">Agent Share %</label>
+                    <div class="col-md-4" v-if="shouldShowField('agent_share')">
+                      <label class="form-label-custom">Agent Share % <span v-if="hasField('agent_share')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.agent_share" 
                         type="number" 
@@ -1107,8 +1107,8 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="hasField('company_share')">
-                      <label class="form-label-custom">Company Share %</label>
+                    <div class="col-md-4" v-if="shouldShowField('company_share')">
+                      <label class="form-label-custom">Company Share % <span v-if="hasField('company_share')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.company_share" 
                         type="number" 
@@ -1132,7 +1132,12 @@
           </div>
           <div class="d-flex align-items-center justify-content-end gap-3">
             <button class="btn-clear" @click="closeModal" :disabled="submitting">Cancel</button>
-            <button class="btn-next-step" @click="submitForm" :disabled="!canSubmit">
+            <button
+              class="btn-next-step"
+              type="button"
+              @click="submitForm"
+              :disabled="loading || submitting"
+            >
               <span v-if="submitting">
                 <b-spinner small></b-spinner> Saving...
               </span>
@@ -1146,7 +1151,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { BFormInput, BSpinner } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -1174,6 +1179,9 @@ const props = defineProps({
   groupedMissing: { type: Object, default: () => ({ sections: [], by_stage: [] }) },
   deal: { type: Object, default: null }
 })
+
+/** After clicking Save: show red borders + scroll to first invalid (not before). */
+const validationAttempted = ref(false)
 
 // ========== Collapsible Sections State ==========
 const openSections = ref({
@@ -1344,8 +1352,9 @@ function getRequiredFieldsForProperty() {
   console.log('Required property fields:', Array.from(requiredFields))
   return Array.from(requiredFields)
 }
-// Check if specific property field is invalid
+// Check if specific property field is invalid (only after Save)
 function isPropertyFieldInvalid(property, fieldName) {
+  if (!validationAttempted.value) return false
   const isRequired = isPropertyFieldRequired(fieldName)
   if (!isRequired) return false
   
@@ -1923,11 +1932,78 @@ const missingDocumentTypesByParty = computed(() => {
   return result
 })
 
-// Check if field is required
+// Check if field is required (stage rules)
 function hasField(fieldKey) {
   const missingKeys = effectiveMissingFields.value || []
   return missingKeys.includes(fieldKey)
 }
+
+/** Show full party / deal forms (not only “missing” keys) so users can see and edit existing data. */
+function shouldShowField(fieldKey) {
+  if (!fieldKey) return false
+  if (fieldKey === 'lost_reason') return hasField('lost_reason')
+  if (hasField(fieldKey)) return true
+  const dt = props.dealType || 'primary'
+  if (fieldKey.startsWith('buyer_')) return dt === 'primary' || dt === 'secondary'
+  if (fieldKey.startsWith('seller_')) return dt === 'secondary'
+  if (fieldKey.startsWith('tenant_')) return dt === 'rental'
+  if (fieldKey.startsWith('landlord_')) return dt === 'rental'
+  if (['deal_commission', 'agent_share', 'company_share', 'deal_total_amount'].includes(fieldKey)) return true
+  return false
+}
+
+function showPartyDetailFields(partyType) {
+  const dt = props.dealType || 'primary'
+  if (partyType === 'buyer') return dt === 'primary' || dt === 'secondary'
+  if (partyType === 'seller') return dt === 'secondary'
+  if (partyType === 'tenant') return dt === 'rental'
+  if (partyType === 'landlord') return dt === 'rental'
+  return false
+}
+
+function shouldShowPropertyField(fieldName, property) {
+  const dt = props.dealType || 'primary'
+  switch (fieldName) {
+    case 'unit_no':
+    case 'property_type_id':
+    case 'area_id':
+    case 'unit_size':
+    case 'developer_id':
+    case 'developer_name':
+    case 'developer_phone':
+      return true
+    case 'bedrooms':
+      return showBedroomsForProperty(property)
+    case 'rental_price':
+      return dt === 'rental'
+    case 'purchase_price':
+      return showPurchasePrice.value && dt !== 'rental'
+    case 'budget_from':
+    case 'budget_to':
+      return showBudgetFields.value
+    default:
+      return isPropertyFieldRequired(fieldName)
+  }
+}
+
+const propertyDocTypesForModal = computed(() => {
+  const mk = effectiveMissingFields.value || []
+  const paymentRequired = mk.some(
+    (k) =>
+      k.includes('property_document_payment') ||
+      (k.includes('payment_proof') && k.includes('property'))
+  )
+  const spaRequired = mk.some(
+    (k) =>
+      k.includes('property_document_spa') ||
+      k.includes('spa_document') ||
+      (k.includes('spa') && k.includes('property'))
+  )
+  return [
+    { id: 'payment_proof', name: 'Payment Proof', required: paymentRequired },
+    { id: 'spa', name: 'SPA Document', required: spaRequired }
+  ]
+})
 
 function hasPartyFields(partyType) {
   const missingKeys = effectiveMissingFields.value || []
@@ -1942,14 +2018,18 @@ function hasFinancialFields() {
   return missingKeys.some(key => ['deal_commission', 'agent_share', 'company_share'].includes(key))
 }
 
+const shouldShowFinancialSection = computed(() =>
+  ['deal_commission', 'agent_share', 'company_share'].some((k) => shouldShowField(k))
+)
+
 const hasPropertyRequirements = computed(() => {
   const missingKeys = effectiveMissingFields.value || []
   return missingKeys.some(key => key.includes('property_') || key === 'at_least_one_property')
 })
 
-// Field invalid check
+// Field invalid check (only after Save)
 function isFieldInvalid(fieldKey) {
-  if (!fieldKey) return false
+  if (!fieldKey || !validationAttempted.value) return false
   
   const isRequired = hasField(fieldKey)
   if (!isRequired) return false
@@ -2096,9 +2176,20 @@ const canSubmit = computed(() => {
   return !loading.value && !submitting.value && unresolvedMissingKeys.value.length === 0
 })
 
-// Submit form
-function submitForm() {
-  if (!canSubmit.value) return
+// Submit form — validate on click: scroll to first error, then save when complete
+async function submitForm() {
+  if (loading.value || submitting.value) return
+
+  validationAttempted.value = true
+  await nextTick()
+
+  if (unresolvedMissingKeys.value.length > 0) {
+    const modalEl = document.querySelector('.complete-fields-modal')
+    const firstInvalid = modalEl?.querySelector('.is-invalid')
+    firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return
+  }
+
   submitting.value = true
 
   const payload = {}
@@ -2209,6 +2300,7 @@ if (localProperties.value.length > 0) {
 
 // Close modal
 function closeModal() {
+  validationAttempted.value = false
   formData.value = {}
   localProperties.value = []
   submitting.value = false
@@ -2222,6 +2314,7 @@ function closeModal() {
 // Watch for modal show
 watch(() => props.show, async (val) => {
     if (val) {
+        validationAttempted.value = false
         // إعادة تعيين حالة تحميل الـ Properties
         isLoadingPropertyData.value = true
         
