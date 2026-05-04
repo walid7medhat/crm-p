@@ -1225,7 +1225,15 @@ function hasRequiredInSection(section) {
 }
 
 // ========== Helper Functions ==========
+// تعديل showBudgetFields - تشمل الحقول دي أياً كان الـ stage
 const showBudgetFields = computed(() => {
+  // لو الحقول دي موجودة في missing fields، اظهرها
+  const missingKeys = effectiveMissingFields.value || []
+  const hasBudgetFrom = missingKeys.some(key => key.includes('budget_from'))
+  const hasBudgetTo = missingKeys.some(key => key.includes('budget_to'))
+  
+  if (hasBudgetFrom || hasBudgetTo) return true
+  
   const stageName = props.targetStageName?.toLowerCase() || ''
   return stageName.includes('eoi')
 })
@@ -1953,6 +1961,9 @@ function showPartyDetailFields(partyType) {
 }
 
 function shouldShowPropertyField(fieldName, property) {
+   if (fieldName === 'budget_from' || fieldName === 'budget_to') {
+    return showBudgetFields.value
+  }
   const dt = props.dealType || 'primary'
   switch (fieldName) {
     case 'unit_no':
@@ -2118,8 +2129,13 @@ const effectiveMissingFields = computed(() => {
 const unresolvedMissingKeys = computed(() => {
   const unresolved = []
   const missingKeys = effectiveMissingFields.value || []
-  
+       const isEoiStage = props.targetStageName?.toLowerCase().includes('eoi')
+
   missingKeys.forEach(key => {
+  
+    if (!isEoiStage && (key.includes('budget_from') || key.includes('budget_to'))) {
+      return 
+    }
     if (key.includes('_document_')) {
       const [partyType, docType] = key.split('_document_')
       const docs = formData.value?.[`${partyType}_documents`] || []
@@ -2381,34 +2397,59 @@ const bedroomOptions = [
 // City options based on country
 const citiesByCountry = {
   'United Arab Emirates': [
-    { value: 'Abu Dhabi', text: 'Abu Dhabi' }, { value: 'Dubai', text: 'Dubai' },
-    { value: 'Sharjah', text: 'Sharjah' }, { value: 'Ajman', text: 'Ajman' }
+    { value: 'Abu Dhabi', text: 'Abu Dhabi' },
+    { value: 'Dubai', text: 'Dubai' },
+    { value: 'Sharjah', text: 'Sharjah' },
+    { value: 'Ajman', text: 'Ajman' },
+    { value: 'Ras Al Khaimah', text: 'Ras Al Khaimah' },
+    { value: 'Fujairah', text: 'Fujairah' },
+    { value: 'Umm Al Quwain', text: 'Umm Al Quwain' }
   ]
 }
 
 const buyerCityOptions = computed(() => {
+  const residencyStatus = formData.value?.buyer_residency_status
+  
+  if (residencyStatus === 'resident') {
+    return citiesByCountry['United Arab Emirates'] || []
+  }
+  
   const country = formData.value?.buyer_country
   if (country && citiesByCountry[country]) return citiesByCountry[country]
+  
   return []
 })
 
 const sellerCityOptions = computed(() => {
+  const residencyStatus = formData.value?.seller_residency_status
+  if (residencyStatus === 'resident') {
+    return citiesByCountry['United Arab Emirates'] || []
+  }
   const country = formData.value?.seller_country
   if (country && citiesByCountry[country]) return citiesByCountry[country]
   return []
 })
 
 const tenantCityOptions = computed(() => {
+  const residencyStatus = formData.value?.tenant_residency_status
+  if (residencyStatus === 'resident') {
+    return citiesByCountry['United Arab Emirates'] || []
+  }
   const country = formData.value?.tenant_country
   if (country && citiesByCountry[country]) return citiesByCountry[country]
   return []
 })
 
 const landlordCityOptions = computed(() => {
+  const residencyStatus = formData.value?.landlord_residency_status
+  if (residencyStatus === 'resident') {
+    return citiesByCountry['United Arab Emirates'] || []
+  }
   const country = formData.value?.landlord_country
   if (country && citiesByCountry[country]) return citiesByCountry[country]
   return []
 })
+
 
 // Show city/country based on residency
 const showBuyerCityField = computed(() => formData.value?.buyer_residency_status === 'resident')

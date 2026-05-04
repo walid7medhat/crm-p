@@ -42,8 +42,7 @@ return [
                     'unit_size' => false,
                     'developer_id' => false,
                     'purchase_price' => true,     
-                      'budget_from' => false,       // Budget From (لكل Property)
-                    'budget_to' => false, 
+               
                 ],
             ],
             
@@ -65,8 +64,7 @@ return [
                     'unit_size' => false,
                     'developer_id' => false,
                     'purchase_price' => true,
-                     'budget_from' => false,      
-                    'budget_to' => false, 
+             
                 ],
                 'property_documents' => ['payment_proof', 'spa'],
             ],
@@ -89,8 +87,7 @@ return [
                     'unit_size' => false,
                     'developer_id' => false,
                     'purchase_price' => true,
-                     'budget_from' => false,       // Budget From (لكل Property)
-                    'budget_to' => false, 
+           
                 ],
                 'property_documents' => ['payment_proof', 'spa'],
             ],
