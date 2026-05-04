@@ -1,50 +1,34 @@
 <template>
-  <div class="property-card-readonly border rounded-3 p-3 mb-3" :class="{ 'border-warning bg-light': isEditing }">
+  <div
+    class="property-card-readonly border rounded-3 p-3 mb-3"
+    :class="{ 'property-card-readonly--editing': isEditing }"
+  >
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div class="d-flex align-items-center gap-2">
         <span class="badge" :class="isEditing ? 'bg-warning text-dark' : 'bg-secondary'">
           Property {{ index + 1 }}
         </span>
-        <!-- <span v-if="isEditing" class="badge bg-warning text-dark">Editing Mode</span> -->
       </div>
-      <div class="d-flex gap-2">
-        <button 
-          v-if="!isEditing && !readonly" 
-          type="button" 
-          class="section-edit-btn" 
+      <div class="d-flex gap-2 align-items-center">
+        <button
+          v-if="!readonly && !isEditing"
+          type="button"
+          class="section-edit-btn"
+          title="Edit property"
           @click="startEdit"
-          title="Edit this Property"
         >
           <iconify-icon icon="lucide:pencil" />
-        </button>
-        <button 
-          v-if="isEditing" 
-          type="button" 
-          class="btn btn-sm btn-success" 
-          @click="saveEdit"
-          :disabled="saving"
-        >
-          <span v-if="saving"><b-spinner small></b-spinner> Saving...</span>
-          <span v-else><iconify-icon icon="lucide:check" /> Save</span>
-        </button>
-        <button 
-          v-if="isEditing" 
-          type="button" 
-          class="btn btn-sm btn-secondary" 
-          @click="cancelEdit"
-        >
-          <iconify-icon icon="lucide:x" /> Cancel
         </button>
       </div>
     </div>
 
-    <!-- ========== VIEW MODE ========== -->
-    <div v-if="!isEditing">
+    <!-- ========== VIEW MODE (one edit icon in header → in-place edit) ========== -->
+    <div v-if="!isEditing" key="prop-view" class="property-card-view">
       <div class="row g-3">
         <div class="col-md-6">
           <div class="info-group">
             <label class="info-label">Property Address</label>
-            <p class="info-value mb-0">{{property.area_name||'----' }}</p>
+            <p class="info-value mb-0">{{ property.area_name || '----' }}</p>
           </div>
         </div>
         <div class="col-md-6">
@@ -115,77 +99,80 @@
         </div>
       </div>
 
-      <!-- Payment Proof Documents -->
-      <div class="row mt-3" v-if="hasDocuments(property.payment_proof)">
-        <div class="col-12">
-          <div class="info-group">
-            <label class="info-label">Payment Proof</label>
-            <div class="documents-grid">
-              <div 
-                v-for="(doc, idx) in getDocumentsArray(property.payment_proof)" 
-                :key="idx" 
-                class="document-card"
-              >
-                <div class="document-preview" @click="previewDocument(doc)">
-                  <img
-                    v-if="isImageDocument(doc)"
-                    :src="getDocumentUrl(doc)"
-                    :alt="doc.original_name || doc.name"
-                    class="document-thumbnail"
-                    @error="handleImageError"
-                  />
-                  <div v-else class="document-icon-placeholder">
-                    <iconify-icon :icon="getFileIcon(doc)" class="document-icon-large" />
+      <!-- Payment Proof + SPA — always visible at booking/spa/won so they sit next to property details -->
+      <template v-if="showStagePropertyDocs">
+        <div class="row mt-3">
+          <div class="col-12">
+            <div class="info-group">
+              <label class="info-label">Payment Proof</label>
+              <div v-if="hasPropertyDocs(property, 'payment_proof')" class="documents-grid">
+                <div
+                  v-for="(doc, idx) in getPropertyDocsList(property, 'payment_proof')"
+                  :key="idx"
+                  class="document-card"
+                >
+                  <div class="document-preview" @click="previewDocument(doc)">
+                    <img
+                      v-if="isImageDocument(doc)"
+                      :src="getDocumentUrl(doc)"
+                      :alt="doc.original_name || doc.name"
+                      class="document-thumbnail"
+                      @error="handleImageError"
+                    />
+                    <div v-else class="document-icon-placeholder">
+                      <iconify-icon :icon="getFileIcon(doc)" class="document-icon-large" />
+                    </div>
+                    <div class="document-name">{{ truncateName(doc.original_name || doc.name) }}</div>
                   </div>
-                  <div class="document-name">{{ truncateName(doc.original_name || doc.name) }}</div>
-                </div>
-                <div class="document-actions">
-                  <button class="doc-action-btn view" @click.stop="previewDocument(doc)">View</button>
-                  <button class="doc-action-btn delete" @click.stop="deleteDocument(doc, 'payment_proof')">Delete</button>
+                  <div class="document-actions">
+                    <button class="doc-action-btn view" @click.stop="previewDocument(doc)">View</button>
+                    <button class="doc-action-btn delete" @click.stop="deleteDocument(doc, 'payment_proof')">Delete</button>
+                  </div>
                 </div>
               </div>
+              <p v-else class="text-muted small mb-0">No documents uploaded.</p>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- SPA Documents -->
-      <div class="row mt-3" v-if="hasDocuments(property.spa_document)">
-        <div class="col-12">
-          <div class="info-group">
-            <label class="info-label">SPA Document</label>
-            <div class="documents-grid">
-              <div 
-                v-for="(doc, idx) in getDocumentsArray(property.spa_document)" 
-                :key="idx" 
-                class="document-card"
-              >
-                <div class="document-preview" @click="previewDocument(doc)">
-                  <img
-                    v-if="isImageDocument(doc)"
-                    :src="getDocumentUrl(doc)"
-                    :alt="doc.original_name || doc.name"
-                    class="document-thumbnail"
-                    @error="handleImageError"
-                  />
-                  <div v-else class="document-icon-placeholder">
-                    <iconify-icon :icon="getFileIcon(doc)" class="document-icon-large" />
+        <div class="row mt-3">
+          <div class="col-12">
+            <div class="info-group">
+              <label class="info-label">SPA Document</label>
+              <div v-if="hasPropertyDocs(property, 'spa_document')" class="documents-grid">
+                <div
+                  v-for="(doc, idx) in getPropertyDocsList(property, 'spa_document')"
+                  :key="idx"
+                  class="document-card"
+                >
+                  <div class="document-preview" @click="previewDocument(doc)">
+                    <img
+                      v-if="isImageDocument(doc)"
+                      :src="getDocumentUrl(doc)"
+                      :alt="doc.original_name || doc.name"
+                      class="document-thumbnail"
+                      @error="handleImageError"
+                    />
+                    <div v-else class="document-icon-placeholder">
+                      <iconify-icon :icon="getFileIcon(doc)" class="document-icon-large" />
+                    </div>
+                    <div class="document-name">{{ truncateName(doc.original_name || doc.name) }}</div>
                   </div>
-                  <div class="document-name">{{ truncateName(doc.original_name || doc.name) }}</div>
-                </div>
-                <div class="document-actions">
-                  <button class="doc-action-btn view" @click.stop="previewDocument(doc)">View</button>
-                  <button class="doc-action-btn delete" @click.stop="deleteDocument(doc, 'spa_document')">Delete</button>
+                  <div class="document-actions">
+                    <button class="doc-action-btn view" @click.stop="previewDocument(doc)">View</button>
+                    <button class="doc-action-btn delete" @click.stop="deleteDocument(doc, 'spa_document')">Delete</button>
+                  </div>
                 </div>
               </div>
+              <p v-else class="text-muted small mb-0">No documents uploaded.</p>
             </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
 
-    <!-- ========== EDIT MODE (كل Property لوحدها) ========== -->
-    <div v-else>
+    <!-- ========== EDIT MODE (same card, replaces view) ========== -->
+    <div v-else key="prop-edit" class="property-card-edit">
       <div class="row g-3">
         <div class="col-md-6">
           <label class="form-label-custom">Property Address</label>
@@ -312,31 +299,34 @@
           </div>
         </div>
 
-        <!-- Documents Upload in Edit Mode -->
-        <div class="col-12 mt-3">
-          <label class="form-label-custom">Payment Proof</label>
+        <!-- Same as Create Deal: Payment Proof + SPA, multi-file, always in edit -->
+        <div class="col-12 mt-3 pt-3 property-edit-documents">
+          <div class="property-documents-heading">Property Documents</div>
           <DocumentUpload
-            v-model="paymentProofCombined"
+            v-model="propertyEditDocs"
             category="property"
-            :document-types="[{ id: 'payment_proof', name: 'Payment Proof' }]"
-            :compact="true"
+            :document-types="propertyEditDocTypes"
+            :deal-id="dealId"
+            :property-id="property.id"
           />
-        </div>
-
-        <div class="col-12">
-          <label class="form-label-custom">SPA Document</label>
-          <DocumentUpload
-            v-model="spaDocumentCombined"
-            category="property"
-            :document-types="[{ id: 'spa', name: 'SPA Document' }]"
-            :compact="true"
-          />
-        </div>
-
-        <div class="col-12 text-muted small mt-2">
-          <iconify-icon icon="lucide:info" /> Upload new documents to replace existing ones
+          <div class="col-12 text-muted small mt-2 px-0">
+            <iconify-icon icon="lucide:info" /> Add multiple files per type. Existing files remain unless removed in view mode.
+          </div>
         </div>
       </div>
+      <!-- Space for fixed Save/Cancel bar (same idea as ViewDealModal edit-lead-bottom-bar) -->
+      <div v-if="isEditing" class="property-edit-bar-spacer" aria-hidden="true" />
+    </div>
+
+    <!-- Fixed bottom bar while editing (matches deal / buyer modal save row) -->
+    <div v-if="isEditing" class="property-card-edit-bottom-bar">
+      <button type="button" class="edit-bar-btn edit-bar-cancel" @click="cancelEdit">
+        Cancel
+      </button>
+      <button type="button" class="edit-bar-btn edit-bar-save" :disabled="saving" @click="saveEdit">
+        <span v-if="saving"><b-spinner small class="align-middle me-1" /> Saving...</span>
+        <span v-else>Save</span>
+      </button>
     </div>
 
     <!-- Preview Modal -->
@@ -370,11 +360,12 @@
 
 <script setup>
 import { ref, computed ,watch,onMounted} from 'vue'
-import { BFormInput } from 'bootstrap-vue-3'
+import { BFormInput, BSpinner } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import DocumentUpload from './DocumentUpload.vue'
 import axios from 'axios'
 import Swal from 'sweetalert2'
+import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl'
 
 const props = defineProps({
   property: { type: Object, required: true },
@@ -392,8 +383,8 @@ const emit = defineEmits(['property-updated', 'refresh-deal'])
 const isEditing = ref(false)
 const saving = ref(false)
 const editData = ref({})
-const paymentProofCombined = ref([])
-const spaDocumentCombined = ref([])
+/** Hydrated existing + new picks for SPA / Payment Proof (same shape as Create Deal PropertyCard). */
+const propertyEditDocs = ref([])
 const previewDoc = ref(null)
 
 // Stage detection
@@ -408,6 +399,27 @@ const showPurchasePrice = computed(() => {
 const showPropertyCommission = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
   return stageName.includes('won') || stageName.includes('deal won')
+})
+
+/**
+ * Always show property document rows in deal view. Pipeline stage titles vary (e.g. "Reservation", "Deposit")
+ * and must not hide files the user already uploaded.
+ */
+const showStagePropertyDocs = computed(() => true)
+
+/** Required for DocumentUpload: must be defined (was missing — only header showed, no Payment Proof / SPA rows). */
+const propertyEditDocTypes = computed(() => {
+  const s = (props.selectedStageName || '').toLowerCase()
+  const spaOrWon =
+    s.includes('spa') ||
+    s.includes('won') ||
+    s.includes('deal won') ||
+    s.includes('transfer') ||
+    s.includes('closed')
+  return [
+    { id: 'payment_proof', name: 'Payment Proof', required: spaOrWon },
+    { id: 'spa', name: 'SPA Document', required: spaOrWon },
+  ]
 })
 
 const bedroomOptions = [
@@ -438,9 +450,49 @@ function hasDocuments(docs) {
   return getDocumentsArray(docs).length > 0
 }
 
+/** Prefer API `payment_proof` / `spa_document`; fall back to `*_raw` if ever empty or missing. */
+function getPropertyDocsList(property, field) {
+  if (!property) return []
+  const primary = getDocumentsArray(property[field])
+  if (primary.length > 0) return primary
+  return getDocumentsArray(property[`${field}_raw`])
+}
+
+function hasPropertyDocs(property, field) {
+  return getPropertyDocsList(property, field).length > 0
+}
+
+/** Map API property JSON attachments into DocumentUpload items */
+function mapPropertyDocsForEditor(docs, documentTypeSlug) {
+  const arr = getDocumentsArray(docs)
+  const dt = documentTypeSlug === 'spa' ? 'spa' : 'payment_proof'
+  return arr.map((doc, idx) => ({
+    id: doc.id || `existing-${dt}-${idx}`,
+    name: doc.original_name || doc.file_name || doc.name || `File ${idx + 1}`,
+    url: doc.url || null,
+    path: doc.path || null,
+    mime_type: doc.mime_type || doc.type || '',
+    type: doc.mime_type || doc.type || '',
+    document_type: dt,
+    category: 'property',
+    is_existing: true,
+    status: 'existing',
+    raw: doc,
+  }))
+}
+
 function getDocumentUrl(doc) {
   if (!doc) return null
-  return doc.url || doc.path || doc.file_url || null
+  if (doc.url && String(doc.url).startsWith('blob:')) return doc.url
+
+  for (const key of ['path', 'file_url', 'url']) {
+    const v = doc[key]
+    if (v && typeof v === 'string') {
+      const n = normalizePublicStorageUrl(v)
+      if (n) return n
+    }
+  }
+  return null
 }
 
 function isImageDocument(doc) {
@@ -549,16 +601,17 @@ function startEdit() {
     purchase_price: props.property.purchase_price || null,
     commission: props.property.commission || null,
   }
-  paymentProofCombined.value = []
-  spaDocumentCombined.value = []
+  propertyEditDocs.value = [
+    ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'payment_proof'), 'payment_proof'),
+    ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'spa_document'), 'spa'),
+  ]
   isEditing.value = true
 }
 
 function cancelEdit() {
   isEditing.value = false
   editData.value = {}
-  paymentProofCombined.value = []
-  spaDocumentCombined.value = []
+  propertyEditDocs.value = []
 }
 
 async function saveEdit() {
@@ -575,21 +628,18 @@ async function saveEdit() {
       }
     })
     
-    if (paymentProofCombined.value && paymentProofCombined.value.length) {
-      paymentProofCombined.value.forEach((doc, idx) => {
-        if (doc.file) {
-          formData.append(`payment_proof[${idx}]`, doc.file)
-        }
-      })
-    }
-    
-    if (spaDocumentCombined.value && spaDocumentCombined.value.length) {
-      spaDocumentCombined.value.forEach((doc, idx) => {
-        if (doc.file) {
-          formData.append(`spa_document[${idx}]`, doc.file)
-        }
-      })
-    }
+    let ppIdx = 0
+    propertyEditDocs.value.forEach((doc) => {
+      if ((doc.document_type || '') === 'payment_proof' && doc.file instanceof File) {
+        formData.append(`payment_proof[${ppIdx++}]`, doc.file)
+      }
+    })
+    let spaIdx = 0
+    propertyEditDocs.value.forEach((doc) => {
+      if ((doc.document_type || '') === 'spa' && doc.file instanceof File) {
+        formData.append(`spa_document[${spaIdx++}]`, doc.file)
+      }
+    })
     
     const response = await axios.post(`/api/deals/${props.dealId}/properties/${props.property.id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
@@ -679,11 +729,43 @@ watch(() => props.property.property_type_id, (newTypeId) => {
 .property-card-readonly {
   background: #fff;
   border-color: #e5e7eb !important;
-  transition: all 0.2s;
+  transition: box-shadow 0.2s, outline 0.2s, border-color 0.2s, background 0.2s;
 }
-.property-card-readonly.border-warning {
-  border-color: #faa300 !important;
-  background: #fffbeb !important;
+
+.property-card-readonly--editing {
+  outline: 2px solid #fcb600;
+  box-shadow: 0 0 0 6px rgba(252, 182, 0, 0.14);
+  background: #fffef7 !important;
+  border-color: #f59e0b !important;
+}
+
+.property-edit-documents {
+  border-top: 1px solid #e2e8f0;
+}
+
+.property-documents-heading {
+  font-size: 16px;
+  font-weight: 600;
+  color: #01062c;
+  margin-bottom: 10px;
+}
+
+/* Match Buyer / Deal section edit (gold pencil) — easy to spot inside the card */
+.section-edit-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #fcb600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.section-edit-btn:hover {
+  background: rgba(252, 182, 0, 0.15);
 }
 .info-label {
   font-size: 12px !important;
@@ -894,5 +976,62 @@ watch(() => props.property.property_type_id, (newTypeId) => {
   color: #fff;
   border-radius: 8px;
   text-decoration: none;
+}
+
+/* Fixed Save/Cancel — same pattern as ViewDealModal .edit-lead-bottom-bar */
+.property-edit-bar-spacer {
+  height: 56px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.property-card-edit-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 1rem;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  z-index: 1060;
+}
+
+.property-card-edit-bottom-bar .edit-bar-btn {
+  padding: 8px 20px;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.property-card-edit-bottom-bar .edit-bar-cancel {
+  background: #f4f4f4;
+  color: #01062c;
+}
+
+.property-card-edit-bottom-bar .edit-bar-cancel:hover {
+  background: #e2e8f0;
+}
+
+.property-card-edit-bottom-bar .edit-bar-save {
+  background: #01062c;
+  color: #fff;
+}
+
+.property-card-edit-bottom-bar .edit-bar-save:hover:not(:disabled) {
+  background: #060a2b;
+}
+
+.property-card-edit-bottom-bar .edit-bar-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

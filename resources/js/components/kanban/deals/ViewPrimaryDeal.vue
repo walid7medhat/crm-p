@@ -215,109 +215,159 @@
       </div>
     </div>
 
-    <!-- Property Details -->
-      <div class="col-12">
-        <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'property_details' }">
-          <div class="section-head mb-3">
-            <h6 class="section-title mb-0">Property Details</h6>
-            <!-- <button type="button" class="section-edit-btn" @click="requestEdit('property_details')">
+    <!-- Property Details: title + Add Property outside property cards -->
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 property-details-toolbar px-1">
+        <h6 class="section-title mb-0">Property Details</h6>
+        <button
+          v-if="deal.id"
+          type="button"
+          class="btn-add-property-sm"
+          title="Add another property"
+          @click="showInlineAddProperty = true"
+        >
+          <iconify-icon icon="lucide:plus" /> Add Property
+        </button>
+      </div>
+
+      <template v-if="deal.properties && deal.properties.length > 0">
+        <PropertyCardReadonly
+          v-for="(property, idx) in deal.properties"
+          :key="property.id"
+          :property="property"
+          :index="idx"
+          :deal-id="deal.id"
+          :areas="inlineEditLookup.areas || []"
+          :property-types="inlineEditLookup.propertyTypes || []"
+          :developers="inlineEditLookup.developers || []"
+          :selected-stage-name="selectedStageName"
+          :readonly="false"
+          @property-updated="handlePropertyUpdated"
+          @refresh-deal="() => emit('refresh-deal')"
+        />
+      </template>
+
+      <div
+        v-else
+        class="view-card p-3 radius-12 mb-3"
+        :class="{ 'section-highlight': activeEditSection === 'property_details' }"
+      >
+        <InlineSectionEditor
+          v-if="isEditingSection('property_details')"
+          :model-value="inlineEditData"
+          section-key="property_details"
+          deal-type="primary"
+          :lookup="inlineEditLookup"
+          :selected-stage-id="selectedStageId"
+          :selected-stage-name="selectedStageName || ''"
+          :show-errors="inlineEditShowErrors"
+          :field-errors="inlineEditFieldErrors"
+          :saving="inlineEditSaving"
+          :loading="inlineEditLoading"
+          :hide-footer-actions="hideInlineEditActions"
+          @update:model-value="(v) => emit('update:inline-edit-data', v)"
+          @save="emit('inline-edit-save')"
+          @cancel="emit('inline-edit-cancel')"
+          @search-areas="(v) => emit('search-areas', v)"
+          @search-subcommunities="(v) => emit('search-subcommunities', v)"
+        />
+        <template v-else>
+          <div class="property-fallback-card-head d-flex justify-content-end mb-2">
+            <button
+              type="button"
+              class="section-edit-btn"
+              title="Edit property details"
+              @click="requestEdit('property_details')"
+            >
               <iconify-icon icon="lucide:pencil" />
-            </button> -->
-             <div class="d-flex gap-2">
-              <button 
-                type="button" 
-                class="btn-add-property-sm" 
-                  @click="showAddPropertyModal = true"  
-                title="Add New Property"
-              >
-                <iconify-icon icon="lucide:plus" /> Add Property
-              </button>
+            </button>
+          </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Property Address</label>
+              <p class="info-value mb-0">{{ getAreaName() }}</p>
             </div>
           </div>
-          
-          <!-- ========== MULTI PROPERTIES MODE ========== -->
-          <div v-if="deal.properties && deal.properties.length > 0">
-            <PropertyCardReadonly
-              v-for="(property, idx) in deal.properties"
-              :key="property.id"
-              :property="property"
-              :index="idx"
-              :deal-id="deal.id"
-              :areas="inlineEditLookup.areas || []"
-              :property-types="inlineEditLookup.propertyTypes || []"
-              :developers="inlineEditLookup.developers || []"
-              :selected-stage-name="selectedStageName"
-              :readonly="false"
-              @property-updated="handlePropertyUpdated"
-              @refresh-deal="() => emit('refresh-deal')"
-            />
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Unit No</label>
+              <p class="info-value mb-0">{{ val(deal.unit_no) }}</p>
+            </div>
           </div>
-          
-          <!-- ========== SINGLE PROPERTY MODE (FALLBACK) ========== -->
-          <div v-else class="row g-3">
-            <div class="col-md-6">
-              <div class="info-group">
-                <label class="info-label">Property Address</label>
-                <p class="info-value mb-0">{{ getAreaName() }}</p>
-              </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Property Type</label>
+              <p class="info-value mb-0">{{ val(deal.property_type?.name) }}</p>
             </div>
-            <div class="col-md-6">
-              <div class="info-group">
-                <label class="info-label">Unit No</label>
-                <p class="info-value mb-0">{{ val(deal.unit_no) }}</p>
-              </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Bedrooms</label>
+              <p class="info-value mb-0">{{ val(deal.bedrooms) }}</p>
             </div>
-            <div class="col-md-6">
-              <div class="info-group">
-                <label class="info-label">Property Type</label>
-                <p class="info-value mb-0">{{ val(deal.property_type?.name) }}</p>
-              </div>
+          </div>
+          <div class="col-md-6" v-if="deal.listing">
+            <div class="info-group">
+              <label class="info-label">Listing</label>
+              <p class="info-value mb-0">{{ deal.listing?.name }}</p>
             </div>
-            <div class="col-md-6">
-              <div class="info-group">
-                <label class="info-label">Bedrooms</label>
-                <p class="info-value mb-0">{{ val(deal.bedrooms) }}</p>
-              </div>
+          </div>
+          <div class="col-md-6" v-if="deal.listing">
+            <div class="info-group">
+              <label class="info-label">Agent</label>
+              <p class="info-value mb-0">{{ deal.listing?.agent }}</p>
             </div>
-            <div class="col-md-6" v-if="deal.listing">
-              <div class="info-group">
-                <label class="info-label">Listing</label>
-                <p class="info-value mb-0">{{ deal.listing?.name }}</p>
-              </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Developer Name</label>
+              <p class="info-value mb-0">{{ getDeveloperName() }}</p>
             </div>
-            <div class="col-md-6" v-if="deal.listing">
-              <div class="info-group">
-                <label class="info-label">Agent</label>
-                <p class="info-value mb-0">{{ deal.listing?.agent }}</p>
-              </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Developer sales person name</label>
+              <p class="info-value mb-0">{{ val(deal.developer_name) }}</p>
             </div>
-            <div class="col-md-6">
-              <div class="info-group">
-                <label class="info-label">Developer Name</label>
-                <p class="info-value mb-0">{{ getDeveloperName() }}</p>
-              </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Developer sales person phone</label>
+              <p class="info-value mb-0">{{ val(deal.developer_phone) }}</p>
             </div>
-            <div class="col-md-6">
-              <div class="info-group">
-                <label class="info-label">Developer sales person name</label>
-                <p class="info-value mb-0">{{ val(deal.developer_name) }}</p>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="info-group">
-                <label class="info-label">Developer sales person phone</label>
-                <p class="info-value mb-0">{{ val(deal.developer_phone) }}</p>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="info-group">
-                <label class="info-label">Unit Size</label>
-                <p class="info-value mb-0">{{ val(deal.unit_size) }}</p>
-              </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Unit Size</label>
+              <p class="info-value mb-0">{{ val(deal.unit_size) }}</p>
             </div>
           </div>
         </div>
+        </template>
       </div>
+
+      <div
+        v-if="deal.id && showInlineAddProperty"
+        class="view-card p-3 radius-12 mb-3 property-inline-add-highlight"
+      >
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <span class="inline-add-property-title">New property</span>
+          <button type="button" class="btn btn-sm btn-link text-secondary text-decoration-none p-0" @click="showInlineAddProperty = false">
+            Close
+          </button>
+        </div>
+        <AddPropertyForm
+          :deal-id="deal.id"
+          :areas="inlineEditLookup.areas || []"
+          :property-types="inlineEditLookup.propertyTypes || []"
+          :developers="inlineEditLookup.developers || []"
+          :selected-stage-name="selectedStageName"
+          @property-added="onInlinePropertyAdded"
+          @cancel="showInlineAddProperty = false"
+        />
+      </div>
+    </div>
 
     <!-- Deal Financials -->
     <div class="col-12" v-if="showFinancialsSection || (deal.deal_total_amount && deal.deal_commission)">
@@ -376,16 +426,6 @@
         </div>
       </div>
     </div>
-<AddPropertyModal
-    v-model="showAddPropertyModal"
-    :deal-id="deal.id"
-    :areas="inlineEditLookup.areas || []"
-    :property-types="inlineEditLookup.propertyTypes || []"
-    :developers="inlineEditLookup.developers || []"
-    :selected-stage-name="selectedStageName"
-    @property-added="handlePropertyAdded"
-    @refresh="() => emit('refresh-deal')"
-  />
   </template>
 </template>
 
@@ -394,7 +434,7 @@ import { ref, computed, watch  } from 'vue'
 import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
 import InlineSectionEditor from './InlineSectionEditor.vue'
 import PropertyCardReadonly from './PropertyCardReadonly.vue'
-import AddPropertyModal from './AddPropertyModal.vue'
+import AddPropertyForm from './AddPropertyForm.vue'
 import { formatLanguageSelection } from '@/composables/useLanguageMultiSelect'
 
 const props = defineProps({
@@ -413,15 +453,20 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['edit-section', 'update:inline-edit-data', 'inline-edit-save', 'inline-edit-cancel', 'search-areas', 'search-subcommunities', 'refresh-deal'])
-const showAddPropertyModal = ref(false)
+const showInlineAddProperty = ref(false)
 
 function handlePropertyAdded(newProperty) {
   if (props.deal && props.deal.properties) {
     props.deal.properties.push(newProperty)
-  } else {
+  } else if (props.deal) {
     props.deal.properties = [newProperty]
   }
   emit('refresh-deal')
+}
+
+function onInlinePropertyAdded(newProperty) {
+  handlePropertyAdded(newProperty)
+  showInlineAddProperty.value = false
 }
 function requestEdit(sectionKey) {
   emit('edit-section', sectionKey)
@@ -432,11 +477,15 @@ function isEditingSection(...keys) {
 }
 
 function handlePropertyUpdated(updatedProperty) {
-  if (props.deal && props.deal.properties) {
-    const index = props.deal.properties.findIndex(p => p.id === updatedProperty.id)
-    if (index !== -1) {
-      props.deal.properties[index] = updatedProperty
-    }
+  if (!props.deal?.properties?.length || !updatedProperty?.id) return
+  const index = props.deal.properties.findIndex(
+    (p) => Number(p.id) === Number(updatedProperty.id)
+  )
+  if (index !== -1) {
+    props.deal.properties.splice(index, 1, {
+      ...props.deal.properties[index],
+      ...updatedProperty
+    })
   }
 }
 
@@ -585,5 +634,20 @@ h6.section-title {
 .btn-add-property-sm:hover {
   background: #01062C;
   color: #fff;
+}
+
+.property-details-toolbar .section-title {
+  margin-bottom: 0 !important;
+}
+
+.inline-add-property-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--deal-navy-deep, #01062c);
+}
+
+.property-inline-add-highlight {
+  border: 2px solid rgba(252, 182, 0, 0.55);
+  box-shadow: 0 0 0 4px rgba(252, 182, 0, 0.1);
 }
 </style>

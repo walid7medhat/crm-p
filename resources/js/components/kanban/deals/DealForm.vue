@@ -518,8 +518,9 @@ const isPurchasePriceRequired = computed(() => {
 })
 const showPropertyDocuments = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
-  return  stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
+  return stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
 })
+
 const shouldHideSeller = computed(() => hasListingId.value && props.dealType === 'secondary')
 const shouldHideLandlord = computed(() => hasListingId.value && props.dealType === 'rental')
 

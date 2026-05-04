@@ -563,12 +563,41 @@ function mapPartyDocuments(party, category) {
   }))
 }
 
+function mapPropertyDocsForUpload(docs, documentTypeSlug) {
+  let list = docs
+  if (list && typeof list === 'string') {
+    try {
+      list = JSON.parse(list)
+    } catch {
+      list = []
+    }
+  }
+  if (!Array.isArray(list)) list = []
+  const dt = documentTypeSlug === 'spa' ? 'spa' : 'payment_proof'
+  return list.map((doc, idx) => ({
+    id: doc.id || `property-${dt}-${idx}`,
+    name: doc.original_name || doc.file_name || doc.name || `document-${idx + 1}`,
+    url: doc.url || doc.file_url || null,
+    size: doc.size || doc.file_size || 0,
+    type: doc.mime_type || '',
+    mime_type: doc.mime_type || '',
+    document_type: dt,
+    category: 'property',
+    party_type: 'property',
+    status: doc.status || 'existing',
+    is_existing: true,
+    raw: doc,
+    path: doc.path ?? null,
+  }))
+}
+
 function dealToFormData(deal) {
   if (!deal) return {}
   const buyer = getParty(deal, 'buyer')
   const seller = getParty(deal, 'seller')
   const tenant = getParty(deal, 'tenant')
   const landlord = getParty(deal, 'landlord')
+  const firstProp = Array.isArray(deal.properties) && deal.properties.length > 0 ? deal.properties[0] : null
   return {
     source: deal.source ?? '',
     deal_name: deal.deal_name ?? '',
@@ -623,6 +652,21 @@ function dealToFormData(deal) {
     landlord_language: landlord.language ?? '',
     landlord_documents: mapPartyDocuments(landlord, 'landlord'),
     responsible_person: deal.responsible_person ?? null,
+
+    area_id: firstProp?.area_id ?? deal.area?.id ?? deal.area_id ?? null,
+    unit_no: firstProp?.unit_no ?? deal.unit_no ?? '',
+    property_type_id: firstProp?.property_type_id ?? null,
+    bedrooms: firstProp?.bedrooms ?? deal.bedrooms ?? null,
+    unit_size: firstProp?.unit_size ?? deal.unit_size ?? '',
+    developer_id: firstProp?.developer_id ?? deal.developer?.id ?? null,
+    developer_name: firstProp?.developer_name ?? deal.developer_name ?? '',
+    developer_phone: firstProp?.developer_phone ?? deal.developer_phone ?? '',
+    budget_from: firstProp?.budget_from ?? null,
+    budget_to: firstProp?.budget_to ?? null,
+    purchase_price: firstProp?.purchase_price ?? null,
+    listing_id: deal.listing_id ?? null,
+    payment_proof: mapPropertyDocsForUpload(firstProp?.payment_proof, 'payment_proof'),
+    spa_document: mapPropertyDocsForUpload(firstProp?.spa_document, 'spa'),
   }
 }
 

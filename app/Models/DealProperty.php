@@ -31,6 +31,7 @@ class DealProperty extends Model
         'budget_to',
         'purchase_price',
         'rental_price',
+        'commission',
         // Documents (JSON)
         'payment_proof',
         'spa_document',

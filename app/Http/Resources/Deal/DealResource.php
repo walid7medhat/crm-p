@@ -64,8 +64,8 @@ class DealResource extends JsonResource
             ],
             
             // ========== MULTI PROPERTIES ==========
-            'properties' => $this->whenLoaded('properties', function() {
-                return $this->properties->map(function($property) {
+            'properties' => $this->whenLoaded('properties', function () use ($request) {
+                return $this->properties->map(function ($property) use ($request) {
                     return [
                         'id' => $property->id,
                         'sort_order' => $property->sort_order,
@@ -90,8 +90,8 @@ class DealResource extends JsonResource
                         'payment_proof_raw' => $property->payment_proof,
                         'spa_document_raw' => $property->spa_document,
                         
-                        'payment_proof' => PropertyDocumentResource::make($property->payment_proof),
-                        'spa_document' => PropertyDocumentResource::make($property->spa_document),
+                        'payment_proof' => (new PropertyDocumentResource($property->payment_proof, 'payment_proof'))->resolve($request),
+                        'spa_document' => (new PropertyDocumentResource($property->spa_document, 'spa'))->resolve($request),
                         
                         'display_name' => $property->display_name,
                         'budget_range' => $property->budget_range,

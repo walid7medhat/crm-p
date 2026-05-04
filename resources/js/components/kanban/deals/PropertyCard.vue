@@ -351,7 +351,7 @@ const showPurchasePrice = computed(() => {
 
 const showPropertyDocuments = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
-  return  stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
+  return stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
 })
 
 // Check if a field is required

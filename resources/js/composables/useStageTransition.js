@@ -20,15 +20,31 @@ export function useStageTransition() {
     return axios.post(`/deals/${dealId}/change-stage`, payload)
   }
 
+  function appendRootPropertyDocFiles(payload, formData) {
+    ;['payment_proof', 'spa_document'].forEach((key) => {
+      const arr = payload[key]
+      if (!Array.isArray(arr)) return
+      arr.forEach((doc, idx) => {
+        if (doc?.file instanceof File) {
+          formData.append(`${key}[${idx}]`, doc.file)
+        }
+      })
+    })
+  }
+
   function buildUpdateAndStageFormData({ payload = {}, documents = [], stageId }) {
     const formData = new FormData()
 
     Object.keys(payload).forEach((key) => {
       const value = payload[key]
-      if (!key.includes('_documents') && value !== null && value !== undefined && value !== '') {
+      if (key.includes('_documents')) return
+      if (key === 'payment_proof' || key === 'spa_document') return
+      if (value !== null && value !== undefined && value !== '') {
         formData.append(key, value)
       }
     })
+
+    appendRootPropertyDocFiles(payload, formData)
 
     documents.forEach((doc, index) => {
       if (!doc?.file) return

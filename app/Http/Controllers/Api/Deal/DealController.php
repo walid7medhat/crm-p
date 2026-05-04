@@ -25,6 +25,7 @@ use App\Models\DealParty;
 use App\Models\User;
 use App\Helpers\ImageHelper;
 use App\Http\Requests\Deal\UpdatePropertyRequest;
+use App\Http\Resources\Deal\PropertyDocumentResource;
 use App\Models\DealProperty;
 use Illuminate\Http\JsonResponse;
 
@@ -1000,9 +1001,16 @@ class DealController extends Controller
             // 2. تحديث الأطراف
             $this->updatePartiesFromRequest($deal, $request);
 
-            // 3. تحديث الـ Properties
+            // 3. تحديث الـ Properties — مصفوفة كاملة، أو حقول مسطحة من مودال عرض الصفقة (property_details)
             if ($request->has('properties')) {
                 $this->syncProperties($deal, $request->properties);
+            } else {
+                $this->syncPrimaryPropertyFromFlatRequest($deal, $request);
+            }
+
+            // 3b. Root-level property files (inline deal form / legacy single-property: payment_proof[], spa_document[])
+            if (!$request->has('properties') && ($request->hasFile('payment_proof') || $request->hasFile('spa_document'))) {
+                $this->mergeRootPropertyFilesOntoPrimaryProperty($deal, $request);
             }
 
             // 4. رفع المستندات
@@ -1175,6 +1183,117 @@ class DealController extends Controller
     }
 
     /**
+     * Update or create the primary deal_property row from flat multipart fields (view-deal inline save).
+     * Only keys present on the request are applied so other sections can save without wiping property data.
+     */
+    private function syncPrimaryPropertyFromFlatRequest(Deal $deal, Request $request): void
+    {
+        $scalarKeys = [
+            'unit_no',
+            'property_type_id',
+            'bedrooms',
+            'unit_size',
+            'area_id',
+            'project_id',
+            'developer_id',
+            'developer_name',
+            'developer_phone',
+            'budget_from',
+            'budget_to',
+            'purchase_price',
+            'rental_price',
+            'commission',
+        ];
+
+        $data = [];
+        foreach ($scalarKeys as $key) {
+            if (!$request->has($key)) {
+                continue;
+            }
+            $val = $request->input($key);
+            if ($val === '' || $val === null) {
+                $data[$key] = null;
+            } else {
+                $data[$key] = $val;
+            }
+        }
+
+        if (empty($data)) {
+            return;
+        }
+
+        $property = $deal->properties()->orderBy('sort_order')->orderBy('id')->first();
+
+        if ($property) {
+            $property->update($data);
+
+            return;
+        }
+
+        // No row yet: create if we have enough to show as a property (area and/or unit)
+        if (($data['area_id'] ?? null) || ($data['unit_no'] ?? null)) {
+            $deal->properties()->create(array_merge($data, [
+                'sort_order' => 0,
+            ]));
+        }
+    }
+
+    /**
+     * Append SPA / Payment Proof uploads from multipart root keys onto the primary deal property (no properties[] payload).
+     */
+    private function mergeRootPropertyFilesOntoPrimaryProperty(Deal $deal, Request $request): void
+    {
+        $property = $deal->properties()->orderBy('sort_order')->orderBy('id')->first();
+        if (!$property) {
+            return;
+        }
+
+        $changed = false;
+
+        if ($request->hasFile('payment_proof')) {
+            $existing = is_array($property->payment_proof) ? $property->payment_proof : [];
+            $files = $request->file('payment_proof');
+            $list = is_array($files) ? $files : [$files];
+            foreach ($list as $file) {
+                if ($file instanceof \Illuminate\Http\UploadedFile && $file->isValid()) {
+                    $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                    $existing[] = [
+                        'original_name' => $file->getClientOriginalName(),
+                        'path' => $path,
+                        'mime_type' => $file->getMimeType(),
+                        'size' => $file->getSize(),
+                    ];
+                }
+            }
+            $property->payment_proof = $existing;
+            $changed = true;
+        }
+
+        if ($request->hasFile('spa_document')) {
+            $existing = is_array($property->spa_document) ? $property->spa_document : [];
+            $files = $request->file('spa_document');
+            $list = is_array($files) ? $files : [$files];
+            foreach ($list as $file) {
+                if ($file instanceof \Illuminate\Http\UploadedFile && $file->isValid()) {
+                    $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
+                    $existing[] = [
+                        'original_name' => $file->getClientOriginalName(),
+                        'path' => $path,
+                        'mime_type' => $file->getMimeType(),
+                        'size' => $file->getSize(),
+                    ];
+                }
+            }
+            $property->spa_document = $existing;
+            $changed = true;
+        }
+
+        if ($changed) {
+            $property->save();
+        }
+    }
+
+    /**
      * مزامنة الـ Properties (Multi Properties)
      */
     private function syncProperties(Deal $deal, array $propertiesData)
@@ -1237,34 +1356,36 @@ class DealController extends Controller
                 'budget_from', 'budget_to', 'purchase_price', 'commission'
             ]));
 
-            // Handle payment_proof files
+            // Handle payment_proof files (append — keep existing when adding more)
             if ($request->hasFile('payment_proof')) {
-                $paymentProofPaths = [];
+                $existing = is_array($property->payment_proof) ? $property->payment_proof : [];
+                $newProof = [];
                 foreach ($request->file('payment_proof') as $file) {
                     $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
-                    $paymentProofPaths[] = [
+                    $newProof[] = [
                         'original_name' => $file->getClientOriginalName(),
                         'path' => $path,
                         'mime_type' => $file->getMimeType(),
                         'size' => $file->getSize(),
                     ];
                 }
-                $property->payment_proof = json_encode($paymentProofPaths);
+                $property->payment_proof = array_values(array_merge($existing, $newProof));
             }
 
-            // Handle spa_document files
+            // Handle spa_document files (append)
             if ($request->hasFile('spa_document')) {
-                $spaDocumentPaths = [];
+                $existing = is_array($property->spa_document) ? $property->spa_document : [];
+                $newSpa = [];
                 foreach ($request->file('spa_document') as $file) {
                     $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
-                    $spaDocumentPaths[] = [
+                    $newSpa[] = [
                         'original_name' => $file->getClientOriginalName(),
                         'path' => $path,
                         'mime_type' => $file->getMimeType(),
                         'size' => $file->getSize(),
                     ];
                 }
-                $property->spa_document = json_encode($spaDocumentPaths);
+                $property->spa_document = array_values(array_merge($existing, $newSpa));
             }
 
             $property->save();
@@ -1274,9 +1395,13 @@ class DealController extends Controller
             // Load relationships for response
             $property->load(['propertyType', 'area', 'developer']);
 
+            $payload = $property->toArray();
+            $payload['payment_proof'] = (new PropertyDocumentResource($property->payment_proof, 'payment_proof'))->resolve($request);
+            $payload['spa_document'] = (new PropertyDocumentResource($property->spa_document, 'spa'))->resolve($request);
+
             return response()->json([
                 'success' => true,
-                'data' => $property,
+                'data' => $payload,
                 'message' => 'Property updated successfully'
             ]);
 
@@ -1317,8 +1442,16 @@ public function deletePropertyDocument(Request $request)
         if (!$deal || !$property) {
             return response()->json(['success' => false, 'message' => 'Not found'], 404);
         }
+
+        if (!$this->authorizeAccess($deal)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
         
-        $documentType = $request->document_type; // 'payment_proof' or 'spa_document'
+        $documentType = $request->document_type;
+        if (! in_array($documentType, ['payment_proof', 'spa_document'], true)) {
+            return response()->json(['success' => false, 'message' => 'Invalid document type'], 422);
+        }
+
         $filePath = $request->file_path;
         
         // حذف الملف من التخزين
@@ -1326,13 +1459,22 @@ public function deletePropertyDocument(Request $request)
             \Storage::disk('public')->delete($filePath);
         }
         
-        // حذف من JSON في قاعدة البيانات
-        $currentDocs = json_decode($property->$documentType, true) ?? [];
-        $filteredDocs = array_filter($currentDocs, function($doc) use ($filePath) {
-            return $doc['path'] !== $filePath;
-        });
+        // DealProperty casts payment_proof/spa_document to array — never json_decode the attribute.
+        $currentDocs = $property->{$documentType};
+        if (! is_array($currentDocs)) {
+            if (is_string($currentDocs) && $currentDocs !== '') {
+                $decoded = json_decode($currentDocs, true);
+                $currentDocs = is_array($decoded) ? $decoded : [];
+            } else {
+                $currentDocs = [];
+            }
+        }
+
+        $filteredDocs = array_values(array_filter($currentDocs, function ($doc) use ($filePath) {
+            return ($doc['path'] ?? null) !== $filePath;
+        }));
         
-        $property->$documentType = !empty($filteredDocs) ? json_encode(array_values($filteredDocs)) : null;
+        $property->{$documentType} = ! empty($filteredDocs) ? $filteredDocs : null;
         $property->save();
         
         return response()->json([

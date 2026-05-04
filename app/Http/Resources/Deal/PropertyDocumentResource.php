@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\Storage;
 
 class PropertyDocumentResource extends JsonResource
 {
+    public function __construct($resource, private string $documentKind = 'payment_proof')
+    {
+        parent::__construct($resource);
+    }
+
     public function toArray($request)
     {
         // لو جاتلك كـ string (JSON) decodeها
@@ -21,7 +26,9 @@ class PropertyDocumentResource extends JsonResource
             return [];
         }
         
-        return array_map(function($doc) {
+        $kind = $this->documentKind;
+
+        return array_map(function ($doc) use ($kind) {
             return [
                 'id' => $doc['id'] ?? null,
                 'original_name' => $doc['original_name'] ?? 'Document',
@@ -32,7 +39,7 @@ class PropertyDocumentResource extends JsonResource
                 'mime_type' => $doc['mime_type'] ?? 'application/octet-stream',
                 'size' => $doc['size'] ?? 0,
                 'file_size' => $doc['size'] ?? 0,
-                'document_type' => 'payment_proof',
+                'document_type' => $doc['document_type'] ?? $kind,
                 'document_category' => 'property',
                 'created_at' => now()->toISOString(),
             ];

@@ -1,5 +1,9 @@
 <template>
-  <div class="document-upload-container deal-figma-ui" :class="{ 'is-compact': compact }" ref="filesSection">
+  <div
+    class="document-upload-container deal-figma-ui"
+    ref="filesSection"
+    :class="{ 'is-compact': compact, 'category-property': category === 'property' }"
+  >
     <div class="document-upload-head">
       <div class="document-upload-title">
         <iconify-icon icon="lucide:file-text" />
@@ -19,6 +23,7 @@
               <span v-if="type.required" class="text-danger">*</span>
             </div>
             <button
+              v-if="category !== 'property'"
               type="button"
               class="add-box-btn"
               @click="addNewBox(type.id)"
@@ -50,7 +55,69 @@
                 <iconify-icon icon="lucide:x" />
               </button>
 
-              <div class="document-box-content" @click="triggerFileInput(type.id, box.id)">
+              <!-- Property docs: small cards in one horizontal row (wraps on narrow screens) -->
+              <div
+                v-if="category === 'property' && box.files.length > 0"
+                class="document-box-content document-property-filled"
+              >
+                <div class="document-property-files-row">
+                  <div
+                    v-for="pf in box.files"
+                    :key="pf.id"
+                    class="document-property-mini-card"
+                    :title="pf.name || 'File'"
+                  >
+                    <button
+                      type="button"
+                      class="document-property-mini-thumb"
+                      aria-label="Preview"
+                      @click.stop="viewFile(pf)"
+                    >
+                      <img
+                        v-if="isImageFile(pf)"
+                        :src="resolveViewTarget(pf)"
+                        alt=""
+                        class="document-property-mini-thumb-img"
+                      />
+                      <iconify-icon
+                        v-else
+                        :icon="getFileIcon(pf?.type || pf?.mime_type)"
+                        class="document-property-mini-thumb-icon"
+                      />
+                    </button>
+                    <span class="document-property-mini-name">{{ pf.name || 'File' }}</span>
+                    <div class="document-property-mini-actions">
+                      <button
+                        type="button"
+                        class="document-property-mini-btn"
+                        title="View"
+                        @click.stop="viewFile(pf)"
+                      >
+                        <iconify-icon icon="lucide:eye" />
+                      </button>
+                      <button
+                        type="button"
+                        class="document-property-mini-btn document-property-mini-btn--danger"
+                        title="Remove"
+                        @click.stop="removeFile(type.id, box.id, pf.id)"
+                      >
+                        <iconify-icon icon="lucide:trash-2" />
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="document-property-add-chip"
+                    title="Add file"
+                    @click.stop="triggerFileInput(type.id, box.id)"
+                  >
+                    <iconify-icon icon="lucide:plus" />
+                    <span>Add</span>
+                  </button>
+                </div>
+              </div>
+
+              <div v-else class="document-box-content" @click="triggerFileInput(type.id, box.id)">
                 <template v-if="box.files.length > 0">
                   <img
                     v-if="isImageFile(box.files[0])"
@@ -67,8 +134,16 @@
                     {{ box.files[0]?.name || 'Uploaded' }}
                   </div>
                   <div class="document-box-actions">
-                    <button type="button" class="document-box-action-btn" @click.stop="viewFile(box.files[0])">View</button>
-                    <button type="button" class="document-box-action-btn danger" @click.stop="removeFile(type.id, box.id, box.files[0]?.id)">Delete</button>
+                    <button type="button" class="document-box-action-btn" @click.stop="viewFile(box.files[0])">
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      class="document-box-action-btn danger"
+                      @click.stop="removeFile(type.id, box.id, box.files[0]?.id)"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </template>
 
@@ -88,6 +163,7 @@
       ref="fileInput"
       type="file"
       class="d-none"
+      :multiple="category === 'property'"
       @change="handleFileSelect"
       accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
     />
@@ -121,12 +197,16 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import axios from 'axios'
 import Swal from 'sweetalert2'
+import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
   category: { type: String, default: 'buyer' },
   documentTypes: { type: Array, default: () => [] },
   compact: { type: Boolean, default: false },
+  /** Required for category "property" when deleting existing files from the server */
+  dealId: { type: [Number, String], default: null },
+  propertyId: { type: [Number, String], default: null },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -191,6 +271,29 @@ function addNewBox(typeId) {
   })
 }
 
+async function deleteExistingServerFile(typeId, file) {
+  if (props.category === 'property' && props.dealId != null && props.propertyId != null) {
+    const filePath = file.path || file.raw?.path
+    if (!filePath) {
+      throw new Error('Missing file path for property document')
+    }
+    const documentType = typeId === 'spa' ? 'spa_document' : 'payment_proof'
+    await axios.delete('/api/deals/property-document', {
+      data: {
+        deal_id: props.dealId,
+        property_id: props.propertyId,
+        document_type: documentType,
+        file_path: filePath,
+      },
+    })
+    return
+  }
+  if (file.id == null || (typeof file.id === 'string' && !/^\d+$/.test(String(file.id)))) {
+    throw new Error('Missing document id')
+  }
+  await axios.delete(`/api/deals/documents/${file.id}`)
+}
+
 // Remove a box
 function removeBox(typeId, boxId) {
   const boxes = boxesByType.value[typeId]
@@ -223,9 +326,9 @@ function removeBox(typeId, boxId) {
       if (result.isConfirmed) {
         // Delete existing files from server
         for (const file of boxToRemove.files) {
-          if (file.is_existing && file.id) {
+          if (file.is_existing) {
             try {
-              await axios.delete(`/api/deals/documents/${file.id}`)
+              await deleteExistingServerFile(typeId, file)
             } catch (err) {
               console.error(err)
             }
@@ -267,8 +370,10 @@ function addFilesToBox(newFiles, typeId, boxId) {
   
   if (!targetBox) return
   
-  // Replace existing files in the box (keep only one primary file per box as before)
-  targetBox.files = []
+  // Property: keep existing files and append (multi-file per type). Other categories: one file per box.
+  if (props.category !== 'property') {
+    targetBox.files = []
+  }
   
   newFiles.forEach(file => {
     targetBox.files.push({
@@ -309,7 +414,7 @@ async function removeFile(typeId, boxId, fileId) {
   // If file from server
   if (file.is_existing) {
     try {
-      await axios.delete(`/api/deals/documents/${file.id}`)
+      await deleteExistingServerFile(typeId, file)
     } catch (err) {
       console.error(err)
       $showNotification('Delete failed', 'error')
@@ -353,23 +458,35 @@ function hydrateFilesFromModelValue(model) {
   
   // Create boxes for each document type
   Object.keys(docsByType).forEach(typeId => {
-    next[typeId] = docsByType[typeId].map(doc => ({
-      id: doc.box_id || generateId(),
-      files: [{
-        id: doc.id || generateId(),
-        file: doc.file || null,
-        name: doc.name || doc.file_name || 'document',
-        size: doc.size || doc.file_size || 0,
-        type: doc.type || doc.mime_type || '',
-        mime_type: doc.mime_type || doc.type || '',
-        url: doc.url || doc.file_url || doc.path || null,
-        document_type: typeId,
-        category: doc.category || props.category,
-        party_type: doc.party_type || props.category,
-        status: doc.status || (doc.url ? 'existing' : 'pending'),
-        is_existing: !!doc.url && !doc.file
-      }]
-    }))
+    next[typeId] = docsByType[typeId].map(doc => {
+      const p = doc.path
+      let resolvedUrl = doc.url || doc.file_url || null
+      if (resolvedUrl) {
+        resolvedUrl = normalizePublicStorageUrl(resolvedUrl) || resolvedUrl
+      } else if (p && typeof p === 'string') {
+        resolvedUrl = normalizePublicStorageUrl(p)
+      }
+      const hasServerFile = !!(resolvedUrl || p) && !doc.file
+      return {
+        id: doc.box_id || generateId(),
+        files: [{
+          id: doc.id || generateId(),
+          file: doc.file || null,
+          name: doc.name || doc.file_name || 'document',
+          size: doc.size || doc.file_size || 0,
+          type: doc.type || doc.mime_type || '',
+          mime_type: doc.mime_type || doc.type || '',
+          url: resolvedUrl,
+          path: p || doc.path || null,
+          raw: doc.raw ?? doc,
+          document_type: typeId,
+          category: doc.category || props.category,
+          party_type: doc.party_type || props.category,
+          status: doc.status || (hasServerFile ? 'existing' : 'pending'),
+          is_existing: hasServerFile
+        }]
+      }
+    })
     
     // Ensure at least one empty box if no documents
     if (next[typeId].length === 0) {
@@ -465,9 +582,14 @@ function isImageFile(file) {
 
 function resolveViewTarget(file) {
   if (!file) return null
-  if (file.url) return file.url
-  if (typeof file.file === 'string') return file.file
   if (file.file instanceof Blob) return URL.createObjectURL(file.file)
+  if (typeof file.file === 'string') {
+    return normalizePublicStorageUrl(file.file) || file.file
+  }
+  const raw = file.path || file.file_url || file.url
+  if (raw && typeof raw === 'string') {
+    return normalizePublicStorageUrl(raw) || raw
+  }
   return null
 }
 
@@ -779,6 +901,163 @@ const $showNotification = (message, type = 'success') => {
 .document-box-upload-hint {
   font-size: 11px;
   color: #94a3b8;
+}
+
+.category-property.document-upload-container .document-boxes-container {
+  grid-template-columns: 1fr;
+}
+
+.category-property.document-upload-container .document-type-group:last-child {
+  border-bottom: none;
+}
+
+.category-property.document-upload-container .document-box-label > div:first-child {
+  font-size: 13px;
+  font-weight: 600;
+  color: #01062c;
+}
+
+.category-property.document-upload-container .document-box.uploaded {
+  min-height: auto;
+  justify-content: flex-start;
+}
+
+.category-property.document-upload-container .document-box.uploaded .document-box-content.document-property-filled {
+  min-height: 0;
+  padding-top: 2px;
+}
+
+.document-box-content.document-property-filled {
+  align-items: flex-start;
+  cursor: default;
+}
+
+/* One line of small cards + add chip; wraps to next line only when needed */
+.document-property-files-row {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.document-property-mini-card {
+  flex: 0 0 auto;
+  width: 92px;
+  padding: 6px 6px 4px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.document-property-mini-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  background: #f8fafc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.document-property-mini-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.document-property-mini-thumb-icon {
+  font-size: 18px;
+  color: #64748b;
+}
+
+.document-property-mini-name {
+  font-size: 9px;
+  font-weight: 500;
+  color: #475569;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+
+.document-property-mini-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.document-property-mini-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.document-property-mini-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.document-property-mini-btn--danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.document-property-mini-btn--danger:hover {
+  background: #fef2f2;
+}
+
+.document-property-add-chip {
+  flex: 0 0 auto;
+  width: 92px;
+  min-height: 104px;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  color: #64748b;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.document-property-add-chip:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.document-property-add-chip iconify-icon {
+  font-size: 16px;
 }
 
 .document-box-actions {
