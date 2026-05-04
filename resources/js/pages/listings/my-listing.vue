@@ -1402,6 +1402,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
   display: flex;
   flex-direction: row;
   gap: 5px;
+  flex-wrap: wrap;
 }
 
 .badge-sold {

@@ -696,7 +696,7 @@
                           Remove Approval / Reject
                         </button>
                           <!-- Create Offer -->
-                              <button  
+                              <button   v-if="canGenerateOffer"
                                 class="dropdown-item"
                                 @click="generatePDF"
                               >
@@ -2098,6 +2098,9 @@ import html2pdf from 'html2pdf.js';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 
+  const starIcon = '/assets/images/star.png';
+
+
 export default {
   name: "PropertyDetails",
    components: {
@@ -2111,9 +2114,10 @@ export default {
   const bedIcon = '/assets/icons/bedroom-icon.svg';
   const bathIcon = '/assets/icons/bathroom-icon.svg';
   const sqftIcon = '/assets/icons/area-size.svg';
-      const footerLogo = '/assets/images/LogoWhite.png';
+      
 const logo  =  '/assets/images/oiaLogo.jpg';
 const locationIcon  =  '/assets/images/Location.png';
+      const OiaLogo = '/assets/images/LogoWhite.png';
 
         onMounted(() => {
       setTimeout(() => {
@@ -2421,6 +2425,9 @@ const formatRejectionDate = (dateString) => {
     });
     const canShowOffers = computed(() => {
       return property.value?.user_permissions?.show_offers || false;
+    });
+      const canGenerateOffer = computed(() => {
+      return property.value?.user_permissions?.genertae_offers || false;
     });
 
     const canDeleteProperty = computed(() => {
@@ -2733,7 +2740,7 @@ const canAssignAgent = computed(() => {
 const canUsePropertyChat = computed(() => {
   const userRoles = Array.isArray(getCurrentUser()?.roles) ? getCurrentUser().roles : [];
   return true
-//   return userRoles.includes('super_admin') || userRoles.includes('admin') ||  getCurrentUser()?.is_listing_team;
+  return userRoles.includes('super_admin') ;
 
 });
 
@@ -5079,753 +5086,254 @@ const showOfferHistory = async () => {
 
 const createNewDesignContent = (currentUser) => {
   const container = document.createElement('div');
-  container.style.cssText =
-    'margin:0 !important; font-family:Arial, sans-serif !important; background:#ffffff !important; width:100% !important; height:100% !important;';
+  container.style.cssText = 'margin:0 !important; font-family:Arial, sans-serif !important; background:#ffffff !important; width:100% !important; height:100% !important;';
 
-  const hasFloorPlans =
-    property.value?.floor_plans &&
-    Array.isArray(property.value.floor_plans) &&
-    property.value.floor_plans.length > 0;
+  const hasFloorPlans = property.value?.floor_plans && Array.isArray(property.value.floor_plans) && property.value.floor_plans.length > 0;
   const hasProject = property.value?.project && property.value.project.id;
+  const features = hasProject ? (Array.isArray(property.value.project?.features) ? property.value.project.features.map(f => f?.name || f?.title || f).filter(Boolean) : []) : [];
+
   container.innerHTML = `
-    <!-- Slide 1 - Cover -->
+ <!-- Slide 1 - Cover -->
     ${createSlide1(currentUser)}
-    
-    <!-- Slide 2 - Property Details -->
+<!-- Slide 2 - Property Details -->
     ${createSlide2()}
-    
-    <!-- Slide 3 - Property Images -->
-    ${createSlide3()}
-    
-    <!-- Slide 4 - Additional Images -->
-    ${createSlide4()}
-    
+
     <!-- Slide 5 - Floor Plan (optional) -->
     ${hasFloorPlans ? createSlide5() : ''}
-    
-    ${createSlide7ProjectDetails()}
-    
-    <!-- Slide 6 - Thank You (Full Blue Page) -->
-    ${createSlide6(currentUser)}
+
+      <!-- Slide 6 - Additional Images -->
+    ${createSlide6()}
+<!-- Slide 7 - Additional Images -->
+    ${createSlide7()}
+
+    ${hasProject ? createSlide4() : ''}
+
+    ${features.length > 0 ? createSlide3() : ''}
+
+    <!-- Slide 9 - Thank You Page -->
+    ${createSlide9(currentUser)}
   `;
 
   return container;
 };
+
+
 const createSlide1 = (currentUser) => {
+  const bedroomsText = property.value?.number_of_bedrooms === 0 ? 'Studio' : `${property.value?.number_of_bedrooms || ''} Bedrooms`;
+  const propertyTypeName = property.value?.property_type?.name || '';
+  const location = property.value?.area?.title || property.value?.area?.area_title || 'Abu Dhabi, UAE';
+  const price = formatPrice(property.value?.price) || '';
+  const listingStatus = property.value?.listing_status || 'Sale';
+  const bgImage = getMainImage();
+  const projectTitle = property.value?.project?.title || property.value?.project?.name || '';
+
   return `
-    <div  style="width:${PDF_CONFIG.pageWidth}mm !important; height:${PDF_CONFIG.pageHeight}mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:white !important; position:relative !important; overflow:hidden !important;">
-      <div style="width:100% !important; height:90% !important; overflow:hidden !important; display:flex !important;padding:0  !important;">
-        <div style="width:50% !important; height:100% !important; display:flex !important; align-items:center !important; justify-content:center !important; padding:0 10mm !important;">
-          <div style="width:100% !important;">
-            <div style="margin-bottom:8mm !important; width:15mm !important;">
-              <img src="${logo}" style="width:100% !important; height:auto !important; max-height:15mm !important;" />
-            </div>
-            <p style="font-size:3mm !important; line-height:4mm !important; background:#faa300 !important; display:inline-block !important; padding:1mm 3mm 3mm 3mm !important; text-transform:uppercase !important; border-radius:1.5mm !important; color:#fff !important; margin:0 0 3mm 0 !important;">For ${property.value.listing_status}</p>
-            <h1 style="font-size:6mm !important; margin:0 0 3mm 0 !important; text-align:left !important; line-height:1.2 !important;">
-              ${
-                property.value?.number_of_bedrooms === 0
-                  ? 'Studio'
-                  : `${property.value?.number_of_bedrooms || ''} Bedrooms`
-              }
-              ${property.value?.property_type?.name || ''}
-            </h1>
-            <p style="font-size:3mm !important; line-height:4mm !important; margin:0 !important;">
-              <span style="display:inline-block !important; width:5% !important; vertical-align:top !important;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 30" style="vertical-align:middle !important; margin-right:1mm !important;" fill="#FAA300">
-            <path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/>
-          </svg></span>
-              <span style="display:inline-block !important; width:85% !important; color:#000000 !important">${property.value?.area?.title || 'Park Valley, Reem Hills, Al Reem Island, Abu Dhabi, UAE'}</span>
-            </p>
-            <h1 style="font-size:6mm !important; margin:3mm 0 0 0 !important; color:#faa300 !important; font-weight:bold !important; text-align:left !important;">AED ${formatPrice(property.value?.price) || '1,345,673'}</h1>
-          </div>
-        </div>
-        
-        <div style="
-  width:50%;
-  height:100%;
-  background-image:url('${getMainImage()}');
-  background-size:cover;
-  background-position:center;
-  background-repeat:no-repeat;
-  float:right;
-">
-</div>
-      </div>
-      ${createFooter()}
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(0,0,0,0.40) !important;"></div>
+    <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
+      <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
     </div>
+    <div style="position:absolute !important; bottom:16% !important; left:10mm !important; width:42% !important; background:#fff !important; border-radius:5mm !important; padding:7mm 9mm 7mm 9mm !important; box-sizing:border-box !important;">
+      <p style="font-size:16px; line-height: 25px; font-weight:normal; background:#FAA300; display:inline-block; padding:0px 20px 10px 20px; text-transform:uppercase; border-radius:6px; color:#fff; margin:0px 0 18px 0; position:absolute !important; top:-10px !important;  font-family: 'Montserrat', sans-serif; ">For ${listingStatus}</p>
+      <h1 style="color:#01062C !important; font-size:7mm !important; font-weight:bold; margin:0 0 12px 0; line-height:1.1; text-transform:uppercase;font-family: 'Montserrat', sans-serif;">${projectTitle}</h1>
+      <p  style="font-size:20px; color:#FAA300; font-weight:600; margin:0 0 18px 0;font-family: 'Montserrat', sans-serif;">${bedroomsText} ${propertyTypeName}</p>
+      <p style="font-size:3.2mm !important; line-height:5mm !important; margin:0 0 4mm 0 !important; color:#818181 !important; display:flex !important; align-items:flex-start !important; gap:2mm !important;">
+       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 24 30" style="flex-shrink:0 !important; margin-top:2px !important;" fill="#FAA300"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/></svg>
+        <span  style="font-size: 14px; color: #818181;font-family: 'Montserrat', sans-serif;" >${location}</span>
+      </p>
+      <div style="border-top:0.3mm solid #ddd !important; margin-bottom:5mm !important; margin-top:15mm !important;"></div>
+      <h2 style="font-size:7mm !important; color:#FAA300 !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">AED ${price}</h2>
+    </div>
+    ${createFooter()}
+  </div>
   `;
 };
 
 const createSlide2 = () => {
-  const paymentPlans = property.value?.payment_plan_json || property.value?.payment_plan;
-  
-  let paymentPlanText = '';
-  if (paymentPlans) {
-    if (typeof paymentPlans === 'string') {
-      try {
-        const parsed = JSON.parse(paymentPlans);
-        if (Array.isArray(parsed)) {
-          paymentPlanText = parsed.join(', ');
-        } else {
-          paymentPlanText = paymentPlans;
-        }
-      } catch {
-        paymentPlanText = paymentPlans;
-      }
-    } else if (Array.isArray(paymentPlans)) {
-      paymentPlanText = paymentPlans.join(', '); 
-    } else {
-      paymentPlanText = String(paymentPlans);
-    }
-  }
-   // ✅ Get Additional Features
-  const additionalFeatures = property.value?.additional_features || {};
-  const additionalFeaturesList = [];
-  
-  if (additionalFeatures.maid) additionalFeaturesList.push('Maid Room');
-  if (additionalFeatures.storage) additionalFeaturesList.push('Storage Room');
-  if (additionalFeatures.study) additionalFeaturesList.push('Study Room');
-  if (additionalFeatures.store) additionalFeaturesList.push('Store Room');
-  if (additionalFeatures.laundry) additionalFeaturesList.push('Laundry Room');
-  if (additionalFeatures.driver) additionalFeaturesList.push('Driver Room');
-  
-  const additionalFeaturesText = additionalFeaturesList.join(', ');
+  const galleryImages = property.value?.gallery_images || [];
+  const bgImage = galleryImages.length > 1
+    ? getImageUrl(galleryImages[1].image_url)
+    : galleryImages.length > 0
+      ? getImageUrl(galleryImages[0].image_url)
+      : getMainImage();
+  const propertyType = property.value?.property_type?.name || 'N/A';
+  const furnitureStatus = property.value?.furnished_status || 'N/A';
+  const bedrooms = property.value?.number_of_bedrooms === 0 ? 'Studio' : (property.value?.number_of_bedrooms ?? 'N/A');
+  const bathrooms = property.value?.number_of_bathrooms ?? 'N/A';
+  const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
+  const ownershipType = property.value?.ownership_type || 'Freehold';
+  const completionStatus = property.value?.completion_status || 'Under Construction';
 
   return `
-    <div style="width:${PDF_CONFIG.pageWidth}mm !important; height:${PDF_CONFIG.pageHeight}mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:white !important; position:relative !important; overflow:hidden !important;">
-      <div style="width:100% !important; height:90% !important; overflow:hidden !important; padding:5mm !important;">
-        <div style="height:20% !important; width:100% !important; text-align:left !important;">
-          <h1 style="font-size:6mm !important; margin:0 0 2mm 0 !important;">Property Details</h1>
-        </div>
-        
-        <div style="width:100% !important; height:68% !important; overflow:hidden !important; display:flex !important;">
-          <div style="width:48% !important; padding:0 4% !important; border-right:1px solid #E9E9E9 !important">
-            <ul style="list-style:none !important; margin:0 !important; padding:0 !important; width:100% !important;">
-              <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
-                <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Property Type</span>
-                <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${property.value?.property_type?.name || ''}</span>
-              </li>
-              <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
-                <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Bedrooms</span>
-                <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${
-                property.value?.number_of_bedrooms === 0
-                  ? 'Studio'
-                  : `${property.value?.number_of_bedrooms || ''} Bedrooms`
-              }</span>
-              </li>
-              <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
-                <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Bathrooms</span>
-                <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${property.value?.number_of_bathrooms || '1'}</span>
-              </li>
-            </ul>
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(0,0,0,0.68) !important;"></div>
+    <div style="position:relative !important; z-index:5 !important; width:100% !important; height:90% !important; box-sizing:border-box !important; padding:12mm 16mm 10mm 16mm !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important;">
+      <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important;">
+        <h1 style="color:#fff !important; font-size:7mm !important; font-weight:700 !important; margin:0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">Property<br>Details</h1>
+        <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
+      </div>
+      <div style="width:100% !important;">
+        <div style="display:flex !important; padding-bottom:5mm !important; margin-bottom:5mm !important;">
+          <div style="flex:1 !important; padding-right:6mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
+            <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;  font-family: 'Montserrat', sans-serif;">Property Type</p>
+            <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif;">${propertyType}</p>
           </div>
-          
-          <div style="width:48% !important; padding:0 4% !important;">
-            <ul style="list-style:none !important; margin:0 !important; padding:0 !important; width:100% !important;">
-              <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
-                <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Area Size</span>
-                <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${property.value?.size_sqft || '11'} sqft</span>
-              </li>
-              <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
-                <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Completion Status</span>
-                <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${property.value?.completion_status || 'Under Construction'}</span>
-              </li>
-              
-              ${paymentPlanText ? `
-                <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
-                  <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Payment Plans</span>
-                  <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${paymentPlanText}</span>
-                </li>
-              ` : ''}
-                 ${additionalFeaturesText ? `
-                <li style="background:#f5f5f5 !important; margin:2mm 0 !important; padding:2mm 2mm 4mm 2mm !important; border:1px solid #d7dedd !important; border-radius:2mm !important; width:100% !important; display:table !important;">
-                  <span style="font-size:3mm !important; line-height:4mm !important; display:table-cell !important; vertical-align:middle !important;">Additional Features</span>
-                  <span style="font-weight:bold !important; display:table-cell !important; vertical-align:middle !important; text-align:right !important; font-size:3mm !important;">${additionalFeaturesText}</span>
-                </li>
-              ` : ''}
-            </ul>
+          <div style="flex:1 !important; padding:0 6mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
+            <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;font-family: 'Montserrat', sans-serif;">Bedrooms</p>
+            <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif;">${bedrooms}</p>
+          </div>
+          <div style="flex:1 !important; padding:0 6mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
+            <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;font-family: 'Montserrat', sans-serif;">Bathrooms</p>
+            <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important;font-family: 'Montserrat', sans-serif;">${bathrooms}</p>
+          </div>
+          <div style="flex:1 !important; padding-left:6mm !important;">
+            <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;font-family: 'Montserrat', sans-serif;">Area Size</p>
+            <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important;font-family: 'Montserrat', sans-serif;">${areaSize}</p>
+          </div>
+        </div>
+        <div style="display:flex !important;">
+         
+          <div style="flex:1 !important;  border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
+            <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;font-family: 'Montserrat', sans-serif !important;">Ownership Type</p>
+            <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">${ownershipType}</p>
+          </div>
+          <div style="flex:2 !important; padding-left:6mm !important;">
+            <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;font-family: 'Montserrat', sans-serif !important;">Completion Status</p>
+            <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">${completionStatus}</p>
           </div>
         </div>
       </div>
-      ${createFooter()}
     </div>
+    ${createFooter()}
+  </div>
   `;
 };
 
 const createSlide3 = () => {
-  const images = property.value?.gallery_images || [];
-  const mainImage = images.length > 0 ? getImageUrl(images[0].image_url) : 'placeholder.png';
-  const sideImage1 = images.length > 1 ? getImageUrl(images[1].image_url) : 'placeholder.png';
-  const sideImage2 = images.length > 2 ? getImageUrl(images[2].image_url) : 'placeholder.png';
-  
+  const project = property.value?.project;
+  const features = Array.isArray(project?.features) ? project.features.map(f => f?.name || f?.title || f).filter(Boolean) : [];
+  const half = Math.ceil(features.length / 2);
+  const col1 = features.slice(0, half);
+  const col2 = features.slice(half);
+  const projectImage = project?.image ? getImageUrl(project.image) : getMainImage();
+  const renderItem = (text) => `<p style="margin:0 0 2mm 0 !important; font-size:3.2mm !important; line-height:4.5mm !important; color:#333 !important; display:flex !important; align-items:flex-start !important; gap:2mm !important;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FAA300" style="width:3mm !important; height:3mm !important; flex-shrink:0 !important; margin-top:0.5mm !important;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>${text}</p>`;
+
   return `
-    <div style="
-      width: ${PDF_CONFIG.pageWidth}mm !important; 
-      height: ${PDF_CONFIG.pageHeight}mm !important; 
-      padding: 0 !important; 
-      margin: 0 !important; 
-      box-sizing: border-box !important; 
-      background: white !important; 
-      position: relative !important; 
-      overflow: hidden !important;
-    ">
-      <div style="
-        width: 100% !important; 
-        height: 90% !important; 
-        overflow: hidden !important; 
-        display: flex !important; 
-        gap: 1 !important;
-        padding: 0 !important;
-      ">
-        
-        <div style="
-          width: 50% !important; 
-          height: 100% !important; 
-          overflow: hidden !important;
-          display: flex !important;
-          flex-direction: column !important;
-           margin-right: 1mm  !important;
-        ">
-         
-      
-          
-          <div style="
-            width: 100% !important; 
-            height: 100% !important; 
-            overflow: hidden !important;
-            background: #f5f5f5 !important;
-          ">
-
-                        <div style="
-                width: 100% !important;
-                height: 100% !important;
-                margin-bottom: 1mm !important;
-                background-image: url('${mainImage}');
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-                background-color: #f5f5f5;
-              ">
-              </div>
- 
-          </div>
-        </div>
-        
-       
-        <div style="
-          width: calc(50% - 1mm) !important; 
-          height: 100% !important; 
-          display: flex !important; 
-          flex-direction: column !important; 
-          gap: 0 !important;
-        ">
-          <div style="
-            width: 100% !important; 
-            height: calc(50% - 0.5mm) !important; 
-            overflow: hidden !important;
-            background: #f5f5f5 !important;
-            margin-bottom: 1mm !important;
-          ">
-                        <div style="
-                width: 100% !important;
-                height: 100% !important;
-                margin-bottom: 1mm !important;
-                background-image: url('${sideImage1}');
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-                background-color: #f5f5f5;
-              ">
-              </div>
- 
-          </div>
-          <div style="
-            width: 100% !important; 
-            height: calc(50% - 0.5mm) !important;  
-            overflow: hidden !important;
-            background: #f5f5f5 !important;
-          ">
-
-          <div style="
-                width: 100% !important;
-                height: 100% !important;
-                margin-bottom: 1mm !important;
-                background-image: url('${sideImage2}');
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-                background-color: #f5f5f5;
-              ">
-              </div>
-
-          </div>
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; display:flex !important; flex-direction:column !important;">
+    <div style="width:100% !important; height:90% !important; display:flex !important; overflow:hidden !important;">
+      <div style="width:50% !important; height:100% !important; background:#fff !important; padding:8mm 8mm 10mm 8mm !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important;">
+        <h1 style="color:#01062C !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 10mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">Amenities &amp;<br>Features</h1>
+        <div style="display:flex !important; gap:5mm !important; flex:1 !important;">
+          <div style="flex:1 !important;">${col1.map(renderItem).join('')}</div>
+          <div style="flex:1 !important;">${col2.map(renderItem).join('')}</div>
         </div>
       </div>
-      
-      
-      ${createFooter()}
+      <div style="width:50% !important; height:100% !important; position:relative !important;">
+        <div style="width:100% !important; height:100% !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+        <div style="position:absolute !important; top:7mm !important; right:7mm !important;">
+          <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
+        </div>
+      </div>
     </div>
+    ${createFooter()}
+  </div>
   `;
 };
-        //   <div style="
-        //     height: 15% !important; 
-        //     min-height: 15mm !important;
-        //     width: 100% !important; 
-        //     padding: 5mm !important; 
-        //     display: flex !important; 
-        //     align-items: center !important;
-        //     box-sizing: border-box !important;
-        //   ">
-        //     <h1 style="
-        //       font-size: 6mm !important; 
-        //       margin: 0 !important;
-        //       font-weight: bold !important;
-        //     ">
-        //       Property Images
-        //     </h1>
-        //   </div>
           
 const createSlide4 = () => {
-  const images = property.value?.gallery_images || [];
-  const mainImage = images.length > 3 ? getImageUrl(images[3].image_url) : 'placeholder.png';
-  const sideImage1 = images.length > 4 ? getImageUrl(images[4].image_url) : 'placeholder.png';
-  const sideImage2 = images.length > 5 ? getImageUrl(images[5].image_url) : 'placeholder.png';
-  
-  return `
-    <div style="
-      width: ${PDF_CONFIG.pageWidth}mm !important; 
-      height: ${PDF_CONFIG.pageHeight}mm !important; 
-      padding: 0 !important; 
-      margin: 0 !important; 
-      box-sizing: border-box !important; 
-      background: white !important; 
-      position: relative !important; 
-      overflow: hidden !important;
-    ">
-      <div style="
-        width: 100% !important; 
-        height: 90% !important; 
-        overflow: hidden !important; 
-        display: flex !important; 
-        gap: 1 !important; 
-        padding: 0 !important;
-      ">
-       
-        <div style="
-          width: 50% !important; 
-          height: 100% !important; 
-          overflow: hidden !important;
-          display: flex !important;
-          flex-direction: column !important;
-           margin-right: 1mm  !important;
-        ">
-          
+  const project = property.value?.project;
+  const projectTitle    = project?.title || project?.name || '';
+  const projectAbout = project?.about || '';
+  const projectImage = project?.image ? getImageUrl(project.image) : getMainImage();
+  const aboutLimited = limitText(projectAbout, 400);
 
-        
-          <div style="
-            width: 100% !important; 
-            height: 100% !important; 
-            overflow: hidden !important;
-            background: #f5f5f5 !important;
-          ">
-<div style="
-                width: 100% !important;
-                height: 100% !important;
-                margin-bottom: 1mm !important;
-                background-image: url('${mainImage}');
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-                background-color: #f5f5f5;
-              ">
-              </div>
-          </div>
-        </div>
-        
-       
-        <div style="
-          width: calc(50% - 1mm) !important; 
-          height: 100% !important; 
-          display: flex !important; 
-          flex-direction: column !important; 
-          gap: 0 !important;
-        ">
-          <div style="
-            width: 100% !important; 
-            height: calc(50% - 0.5mm) !important; 
-            overflow: hidden !important;
-            background: #f5f5f5 !important;
-            margin-bottom: 1mm !important;
-          ">
-          <div style="
-                width: 100% !important;
-                height: 100% !important;
-                margin-bottom: 1mm !important;
-                background-image: url('${sideImage1}');
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-                background-color: #f5f5f5;
-              ">
-              </div>
-          </div>
-          <div style="
-            width: 100% !important; 
-            height: calc(50% - 0.5mm) !important;  
-            overflow: hidden !important;
-            background: #f5f5f5 !important;
-          ">
-          <div style="
-                width: 100% !important;
-                height: 100% !important;
-                margin-bottom: 1mm !important;
-                background-image: url('${sideImage2}');
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-                background-color: #f5f5f5;
-              ">
-              </div>
-          </div>
-        </div>
+  return `
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#01062c !important; position:relative !important; display:flex !important; align-items:center !important; justify-content:center !important;">
+    <div style="width:95% !important; height:90% !important; background:#fff !important; border-radius:5mm !important; overflow:hidden !important; display:flex !important;">
+      <div style="width:50% !important; padding:8mm !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:flex-start !important; overflow:hidden !important;">
+        <h1 style="color:#01062C !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">About<br>Project</h1>
+        <div style="width:20mm !important; height:1mm !important; background:#FAA300 !important; margin-bottom:5mm !important;"></div>
+        <p style="font-size:5mm !important; font-weight:bold !important; line-height:10mm !important; color:#01062C !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important; margin-bottom:2mm !important;">${projectTitle}</p>
+        <p style="font-size:3.2mm !important; line-height:5.5mm !important; color:#444 !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important;">${formatTextForPDF(aboutLimited)}</p>
       </div>
-      
-     
-      ${createFooter()}
+      <div style="width:50% !important; height:100% !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
     </div>
+  </div>
   `;
 };
+
+
+
+
 const createSlide5 = () => {
   const floorPlans = property.value?.floor_plans || [];
-    if (floorPlans.length >0) {
-  if (floorPlans.length === 1) {
-    const floorPlan1 = getImageUrl(floorPlans[0].image_url);
-    return `
-<div style="width:${PDF_CONFIG.pageWidth}mm !important; height:${PDF_CONFIG.pageHeight}mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:white !important; position:relative !important;">
-        <div style="width:100% !important; height:90% !important; overflow:hidden !important; padding:5mm !important;">
-          <div style="height:15% !important; width:100% !important; text-align:left !important;">
-            <h1 style="font-size:6mm !important; margin:0 !important;">Floor Plan</h1>
-          </div>
-<div style="
-  width: 100% !important;
-  height: 80% !important;
-  display: table !important;
-">
+  if (!floorPlans.length) return '';
+  const floorPlan1 = getImageUrl(floorPlans[0].image_url);
+  const floorPlan2 = floorPlans.length > 1 ? getImageUrl(floorPlans[1].image_url) : null;
 
-  <div style="
-    display: table-cell !important;
-    vertical-align: middle !important;
-    text-align: center !important;
-  ">
-
-    <div style="
-      width: 100% !important;
-      height: 100% !important;
-      margin: 0 auto !important;
-      background-image: url('${floorPlan1}');
-      background-size: contain;
-      background-position: center center;
-      background-repeat: no-repeat;
-    ">
-    </div>
-
-  </div>
-
-</div>
-        </div>
-        ${createFooter()}
-      </div>
-    `;
-  }
-  
-  const floorPlan1 = floorPlans.length > 0 ? getImageUrl(floorPlans[0].image_url) : 'placeholder.png';
-  const floorPlan2 = floorPlans.length > 1 ? getImageUrl(floorPlans[1].image_url) : 'placeholder.png';
-  
   return `
-<div style="width:${PDF_CONFIG.pageWidth}mm !important; height:${PDF_CONFIG.pageHeight}mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:white !important; position:relative !important;">
-      <div style="width:100% !important; height:90% !important; overflow:hidden !important; padding:5mm !important;">
-        <div style="height:15% !important; width:100% !important; text-align:left !important;">
-          <h1 style="font-size:6mm !important; margin:0 !important;">Floor Plan</h1>
-        </div>
-<div style="
-  width: 100% !important;
-  height: 75% !important;
-  display: table !important;
-  background-color: #f5f5f5;
-">
-
-  <div style="
-    display: table-row !important;
-  ">
-
-    <!-- LEFT FLOOR PLAN -->
-    <div style="
-      display: table-cell !important;
-      width: 50% !important;
-      vertical-align: middle !important;
-      text-align: center !important;
-      padding-right: 2.5mm !important;
-    ">
-      <div style="
-        width: 90% !important;
-        height: 100% !important;
-        margin: 0 auto !important;
-        background-image: url('${floorPlan1}');
-        background-size: contain;
-        background-position: center center;
-        background-repeat: no-repeat;
-      ">
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important;">
+    <div style="width:100% !important; height:90% !important; padding:10mm 14mm 7mm 14mm !important; box-sizing:border-box !important;">
+      <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important; margin-bottom:8mm !important;">
+        <h1 style="color:#01062C !important;  font-size:6mm !important; font-weight:700 !important;  margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">Floor Plan</h1>
+        <img src="${logo}" style="width:18mm !important; display:block !important;" />
+      </div>
+      <div style="display:flex !important; gap:6mm !important; height:75% !important;">
+        <div style="flex:1 !important; background-image:url('${floorPlan1}') !important; background-size:contain !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+        ${floorPlan2 ? `
+        <div style="flex:1 !important; background-image:url('${floorPlan2}') !important; background-size:contain !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+        ` : ''}
       </div>
     </div>
-
-    <!-- RIGHT FLOOR PLAN -->
-    <div style="
-      display: table-cell !important;
-      width: 50% !important;
-      vertical-align: middle !important;
-      text-align: center !important;
-      padding-left: 2.5mm !important;
-    ">
-      <div style="
-        width: 90% !important;
-        height: 100% !important;
-        margin: 0 auto !important;
-        background-image: url('${floorPlan2}');
-        background-size: contain;
-        background-position: center center;
-        background-repeat: no-repeat;
-      ">
-      </div>
-    </div>
-
+    ${createFooter()}
   </div>
-
-</div>
-
-      </div>
-      ${createFooter()}
-    </div>
-  `;
-    }
-};
-
-const createSlide6 = (currentUser) => {
-  return `
-    <div style="
-      width: ${PDF_CONFIG.pageWidth}mm !important; 
-      height: ${PDF_CONFIG.pageHeight}mm !important; 
-      padding: 0 !important; 
-      margin: 0 !important; 
-      box-sizing: border-box !important; 
-      background: #01062c !important; 
-      position: relative !important; 
-      overflow: hidden !important;
-    ">
-      <div style="
-        width: 100% !important; 
-        height: 90% !important; 
-        display: flex !important; 
-        flex-direction: column !important; 
-        justify-content: flex-start !important;
-        align-items: flex-start !important;
-        color: #fff !important; 
-        padding: 20mm 15mm !important;
-      ">
-
-        <div style="
-          width: 100% !important;
-          text-align: center !important;
-          margin-bottom: 25mm !important; 
-        ">
-          <h1 style="
-            font-size: 8mm !important; 
-            text-transform: uppercase !important; 
-            font-weight: 700 !important; 
-            color: #fff !important;
-            letter-spacing: 2mm !important;
-            margin: 0 !important;
-            line-height: 1.2 !important;
-          ">
-            THANK YOU
-          </h1>
-        </div>
-        
-        <div style="
-          width: 100% !important;
-          text-align: left !important;
-          margin-top: auto !important;
-        ">
-          <p style="
-            font-size: 4mm !important; 
-            margin-bottom: 8mm !important; 
-            color: rgba(255, 255, 255, 0.7) !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1mm !important;
-            font-weight: 300 !important;
-          ">
-            Listed by
-          </p>
-         </div>
-          <div style="
-          width: 100% !important;
-          text-align: center !important;
-          margin-top: auto !important;
-        ">
-          <ul style="
-            list-style: none !important; 
-            margin: 0 !important; 
-            padding: 0 !important;
-          ">
-            <li style="
-              margin-bottom: 5mm !important; 
-              font-size: 6mm !important; 
-              font-weight: 700 !important; 
-              text-transform: uppercase !important;
-              letter-spacing: 0.5mm !important;
-            ">
-              ${currentUser?.name || ' '}
-            </li>
-            <li style="
-              margin-bottom: 5mm !important; 
-              font-size: 6mm !important; 
-              font-weight: 700 !important; 
-              text-transform: uppercase !important;
-              letter-spacing: 0.5mm !important;
-            ">
-              ${currentUser?.phone || ' '}
-            </li>
-           
-          </ul>
-        </div>
-      </div>
-      ${createFooter()}
-    </div>
   `;
 };
+
+const createSlide6 = () => {
+  const images = property.value?.gallery_images || [];
+  const img1 = images.length > 0 ? getImageUrl(images[0].image_url) : 'placeholder.png';
+  const img2 = images.length > 1 ? getImageUrl(images[1].image_url) : 'placeholder.png';
+  const img3 = images.length > 2 ? getImageUrl(images[2].image_url) : 'placeholder.png';
+
+  return `
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important; display:flex !important; flex-direction:column !important;">
+    <div style="width:100% !important; height:90% !important; padding:4mm !important; box-sizing:border-box !important; display:flex !important; gap:3mm !important; overflow:hidden !important;">
+      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img1}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img2}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; position:relative !important; background-image:url('${img3}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
+        <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
+          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+        </div>
+      </div>
+    </div>
+    ${createFooter()}
+  </div>
+  `;
+};
+
 
  
-const createSlide7ProjectDetails = () => {
-  const project = property.value?.project;
-  if (!project) return '';
 
-  const projectTitle    = project?.title || project?.name || '';
-  const projectLocation = (project?.area?.area_parents_title || project?.area?.name || '').toUpperCase();
-  const projectAbout    = project?.about || '';
-  const projectImage    = project?.image || '';
-  const propertyType    = property.value?.property_type?.name || '';
-
-  const features = Array.isArray(project?.features)
-    ? project.features.map(f => f?.name || f?.title || f).filter(Boolean)
-    : [];
-
-  const hasAbout    = projectAbout.trim().length > 0;
-  const hasLocation = projectLocation.trim().length > 0;
-
-  if (!projectImage && !hasAbout) return '';
-
-  const projectAboutLimited = limitText(projectAbout, 200);
-
-  const featuresLimited = features.slice(0, 20);
+const createSlide7 = () => {
+  const images = property.value?.gallery_images || [];
+  const img1 = images.length > 3 ? getImageUrl(images[3].image_url) : 'placeholder.png';
+  const img2 = images.length > 4 ? getImageUrl(images[4].image_url) : 'placeholder.png';
+  const img3 = images.length > 5 ? getImageUrl(images[5].image_url) : 'placeholder.png';
 
   return `
-<div style="
-    width:${PDF_CONFIG.pageWidth}mm !important;
-    height:${PDF_CONFIG.pageHeight}mm !important;
-    margin:0 !important;
-    padding:0 !important;
-    background:#fff !important;
-    position:relative !important;
-    overflow:hidden !important;
-  ">
-
-    <!-- CONTENT WRAPPER: 90% height, flex row — same pattern as all other slides -->
-    <div style="
-      width:100% !important;
-      height:90% !important;
-      display:flex !important;
-      overflow:hidden !important;
-    ">
-
-      <!-- LEFT: full height project image -->
-      <div style="width:50% !important; height:100% !important; flex-shrink:0 !important; overflow:hidden !important;">
-        ${projectImage ? `
-        <div style="
-          width:100%;
-          height:100%;
-          background-image:url('${projectImage}');
-          background-size:cover;
-          background-position:center;
-          background-repeat:no-repeat;
-          background-color:#f5f5f5;
-        "></div>` : `<div style="width:100%;height:100%;background:#f0f0f0;"></div>`}
-      </div>
-
-      <!-- RIGHT: content panel -->
-      <div style="
-        width:50% !important;
-        height:100% !important;
-        padding:10mm 7mm 12mm 7mm !important;
-        box-sizing:border-box !important;
-        display:flex !important;
-        justify-content: center !important;
-        flex-direction:column !important;
-        overflow:hidden !important;
-        font-size:2.8mm !important;
-        font-family:Arial, sans-serif !important;
-      ">
-
-        <!-- LOCATION -->
-        ${hasLocation ? `
-        <div style="display:flex; align-items:center; gap:2.5mm; margin-bottom:5mm;">
-          <div style="width:6mm; height:0.7mm; background:#faa300; flex-shrink:0;"></div>
-          <span style="font-size:2.3mm; font-weight:bold; color:#faa300; letter-spacing:0.4mm;">${projectLocation}</span>
-        </div>` : ''}
-
-        <!-- TITLE -->
-        <div style="font-size:6mm; font-weight:bold; text-transform:uppercase; color:#1c2230; margin:0 0 5mm 0; line-height:1.15;">
-          ${projectTitle}
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important; display:flex !important; flex-direction:column !important;">
+    <div style="width:100% !important; height:90% !important; padding:4mm !important; box-sizing:border-box !important; display:flex !important; gap:3mm !important; overflow:hidden !important;">
+      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img1}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img2}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; position:relative !important; background-image:url('${img3}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
+        <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
+          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
         </div>
-
-        <!-- ABOUT -->
-        ${hasAbout ? `
-        <div style="margin-bottom:4mm;">
-          <div style="display:flex; align-items:center; gap:2mm; margin-bottom:4mm;">
-            <div style="width:2mm; height:2mm; border-radius:50%; padding-top:2mm; background:#faa300; flex-shrink:0;"></div>
-            <span style="font-size:3mm; font-weight:bold; color:#1c2230;">About Project</span>
-          </div>
-          <p style="
-            font-size:2.6mm; line-height:4.2mm; color:#444;
-            margin:0; text-align:justify;
-            overflow:hidden; word-break:break-word;
-          ">${formatTextForPDF(projectAboutLimited)}</p>
-        </div>` : ''}
-
-   
-       ${features.length ? `
-        <div>
-          <div style="display:flex; align-items:center; gap:2mm; margin-bottom:4mm;">
-            <div style="width:2mm; height:2mm; border-radius:50%; padding-top:2mm; background:#faa300; flex-shrink:0;"></div>
-            <span style="font-size:3mm; font-weight:bold; color:#1c2230;"> Amenities & Features</span>
-          </div>
-          ${featuresLimited.map(f => `
-            <span style="
-              display:inline-block !important;
-              background:#f5f5f5 !important;
-              border:1px solid #d7dedd !important;
-              border-radius:0.8mm !important;
-              padding:0.5mm 2mm 2mm 2mm !important;
-              font-size:2.5mm !important;
-              margin:0 2mm 2mm 0 !important;
-            ">
-              ${f}
-            </span>
-          `).join('')}
-        </div>` : ''}
-     
-
       </div>
     </div>
-    <!-- END CONTENT WRAPPER -->
-
     ${createFooter()}
   </div>
   `;
@@ -5833,9 +5341,39 @@ const createSlide7ProjectDetails = () => {
 
  
 
+const createSlide9 = (currentUser) => {
+  const galleryImages = property.value?.gallery_images || [];
+  const bgImage = galleryImages.length > 1
+    ? getImageUrl(galleryImages[galleryImages.length - 1].image_url)
+    : galleryImages.length > 0
+      ? getImageUrl(galleryImages[0].image_url)
+      : getMainImage();
+  return `
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(1,6,44,0.82) !important;"></div>
+    <div style="position:relative !important; z-index:5 !important; width:100% !important; height:90% !important; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; margin-top: 50px;">
+      <div style="text-align:center !important; margin-bottom:10mm !important;">
+        <img src="${OiaLogo}" style="width:18mm !important; display:block !important;  margin:0 auto; filter:invert(1) brightness(100);" />
+      </div>
+      <h1 style="color:#fff !important; font-size:9mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important; text-align:center !important; letter-spacing:0.5mm !important;font-family: 'Montserrat', sans-serif;">Thank You!</h1>
+      <div style="position:absolute !important; bottom:12mm !important; right:14mm !important; text-align:left !important;">
+        <p style="color:rgba(255,255,255,1) !important; font-size:4mm !important; margin:0 0 1.5mm 0 !important;">Contact</p> 
+        <p style="color:#fff !important; font-size:5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif;">${currentUser?.name || ''}</p> 
+        <p style="color:#fff !important; font-size:5mm !important; font-weight:700 !important; margin:2mm 0 0 0 !important;font-family: 'Montserrat', sans-serif;">${currentUser?.phone || ''}</p>
+      </div>
+    </div>
+    ${createFooter2()}
+  </div>
+  `;
+};
+
+
+ 
+
 
 // Helper function to format text
-const limitText = (text = '', max = 600) => {
+const limitText = (text = '', max = 3000) => {
   if (!text) return '';
   return text.length > max
     ? text.slice(0, max) + '...'
@@ -5846,36 +5384,19 @@ const formatTextForPDF = (text) => {
   if (!text) return '';
   return text.replace(/\n/g, '<br>');
 };
+
 const createFooter = () => {
   return `
-  <div style="
-    position: absolute !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 10% !important;
-    background: #01062c !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    padding: 0 5mm !important;
-    box-sizing: border-box !important;
-    z-index: 100 !important;
-  ">
-   
-    <img src="${footerLogo}" style="height: 10mm !important; width: auto !important;" />
-    
- 
-    <div style="
-      color: white !important;
-      font-size: 2.8mm !important;
-      font-family: Arial, sans-serif !important;
-      font-weight: 400 !important;
-      opacity: 0.9 !important;
-      letter-spacing: 0.1mm !important;
-    ">
-      Powered By Oia Properties
-    </div>
+  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#01062c !important; display:flex !important; align-items:center !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
+    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Powered By Oia Properties</p>
+  </div>
+  `;
+};
+
+const createFooter2 = () => {
+  return `
+  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:transparent !important; display:flex !important; align-items:center !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
+    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Powered By Oia Properties</p>
   </div>
   `;
 };
@@ -6111,6 +5632,7 @@ const openDriveLink = () => {
       canDeleteProperty,
       canEditOrDelete,
       canShowOffers,
+      canGenerateOffer,
       hasMortgageInfo,
       canRequestUnitNumber,
       canRequestOwnerInfo,
@@ -6385,9 +5907,13 @@ const openDriveLink = () => {
     this.cleanup();
   }
 };
+
+
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
 .property-actions-dropdown {
   position: relative;
   margin-bottom: 16px;

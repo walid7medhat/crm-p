@@ -166,7 +166,8 @@ $allowedAgentIds = [];
                 'is_owner' => $this->isOwner($user) || ($canAssignAgent && $user->hasRole('manager') && $user->listing_team == 1),
                    'can_assign_agent' => $canAssignAgent && $user->hasPermissionTo('listings-assign'), 
                  'showDocuments'=>$showDocuments,
-                  'show_offers'=>$user->hasRole('super_admin'),
+                  'show_offers'=>$user->hasRole('super_admin')  ,
+                  'genertae_offers'=>true ,
             ],
             'canShowOwner' => $user && ($user->hasRole('super_admin') || $this->agent_id == $user->id) || ($user->hasRole('manager') && $user->listing_team == 1),
 

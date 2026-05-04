@@ -1023,6 +1023,8 @@ export default {
     display: flex;
     flex-direction: row;
     gap: 0.25rem;
+      flex-wrap: wrap;
+
 }
 
 .status-badges .badge {

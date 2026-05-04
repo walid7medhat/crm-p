@@ -14,6 +14,9 @@ import 'bootstrap'
 import 'vue-slick-carousel/dist/vue-slick-carousel.css'
 import 'vue-slick-carousel/dist/vue-slick-carousel-theme.css'
 
+import 'vue-select/dist/vue-select.css'
+import '../css/vue-select-overrides.css'
+import '../css/form-placeholders.css'
 
 const addCSS = (url) => {
   const link = document.createElement('link')

@@ -1144,6 +1144,7 @@ const decodeFiltersFromQuery = async (query) => {
   display: flex;
   flex-direction: row;
   gap: 5px;
+        flex-wrap: wrap;
 }
 
 .badge-sold {
