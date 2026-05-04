@@ -123,7 +123,7 @@
 
       <div class="col-md-6">
         <label class="form-label-custom">Developer Contact Phone</label>
-        <b-form-input v-model="formData.developer_phone" placeholder="Phone Number" class="custom-input" />
+        <CrmPhoneInput v-model="formData.developer_phone" placeholder="Phone Number" />
       </div>
     </div>
 
@@ -140,6 +140,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { BFormInput, BSpinner } from 'bootstrap-vue-3'
+import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import vSelect from 'vue-select'
 import axios from 'axios'
 import Swal from 'sweetalert2'

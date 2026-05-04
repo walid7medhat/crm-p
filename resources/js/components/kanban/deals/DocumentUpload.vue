@@ -46,7 +46,7 @@
               :class="{ required: type.required, uploaded: box.files.length > 0 }"
             >
               <button
-                v-if="getBoxesForType(type.id).length > 1"
+                v-if="category !== 'property' && getBoxesForType(type.id).length > 1"
                 type="button"
                 class="remove-box-btn"
                 @click.stop="removeBox(type.id, box.id)"

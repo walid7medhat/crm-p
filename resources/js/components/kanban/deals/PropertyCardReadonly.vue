@@ -288,7 +288,7 @@
 
         <div class="col-md-6">
           <label class="form-label-custom">Developer Contact Phone</label>
-          <b-form-input v-model="editData.developer_phone" placeholder="Phone Number" class="custom-input" />
+          <CrmPhoneInput v-model="editData.developer_phone" placeholder="Phone Number" />
         </div>
 
         <div class="col-md-6" v-if="showPropertyCommission">
@@ -361,6 +361,7 @@
 <script setup>
 import { ref, computed ,watch,onMounted} from 'vue'
 import { BFormInput, BSpinner } from 'bootstrap-vue-3'
+import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import vSelect from 'vue-select'
 import DocumentUpload from './DocumentUpload.vue'
 import axios from 'axios'
@@ -791,16 +792,59 @@ watch(() => props.property.property_type_id, (newTypeId) => {
   min-height: 40px;
   border-radius: 8px !important;
   border: 1px solid #E2E8F0 !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   width: 100%;
   padding: 0 12px;
+  box-sizing: border-box;
 }
+
+/* Edit form: center text in box; keep placeholders visually smaller than labels */
+.property-card-edit .custom-input {
+  line-height: 40px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.property-card-edit .custom-input::placeholder {
+  font-size: 10px !important;
+  line-height: normal !important;
+  color: #94a3b8 !important;
+}
+
+.property-card-edit :deep(.custom-v-select.v-select) {
+  --vs-actions-padding: 0 4px;
+}
+.property-card-edit :deep(.custom-v-select .vs__dropdown-toggle) {
+  padding: 0 10px !important;
+}
+.property-card-edit :deep(.custom-v-select.vs--single .vs__selected-options) {
+  align-items: stretch !important;
+  align-self: stretch !important;
+  flex-wrap: nowrap !important;
+  min-height: 0;
+  height: 100% !important;
+}
+.property-card-edit :deep(.custom-v-select.vs--single .vs__selected) {
+  margin: 0 !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+}
+.property-card-edit :deep(.custom-v-select .vs__search) {
+  margin: 0 !important;
+}
+.property-card-edit :deep(.custom-v-select .vs__actions) {
+  padding: 0 4px !important;
+}
+
 :deep(.custom-v-select .vs__dropdown-toggle) {
   border: 1px solid #E2E8F0;
   border-radius: 8px;
   min-height: 40px !important;
   height: 40px !important;
-  font-size: 13px;
+  font-size: 12px !important;
+  display: flex !important;
+  align-items: stretch !important;
 }
 .section-edit-btn {
   width: 28px;

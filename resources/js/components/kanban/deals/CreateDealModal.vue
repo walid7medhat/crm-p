@@ -125,6 +125,7 @@ import DealForm from './DealForm.vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import { normalizeLanguageSelection, hasLanguageSelection } from '@/composables/useLanguageMultiSelect'
+import { isNonEmptyPhoneValid } from '@/utils/phone'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -667,6 +668,10 @@ function validateForm() {
       errors.push('Buyer language is required')
       fieldErrorsObj.buyer_language = 'Language is required'
     }
+    if (formData.value.buyer_phone && !isNonEmptyPhoneValid(formData.value.buyer_phone)) {
+      errors.push('Buyer phone is invalid')
+      fieldErrorsObj.buyer_phone = 'Invalid phone number'
+    }
   }
   
   if (dealType.value === 'secondary') {
@@ -720,6 +725,10 @@ function validateForm() {
         errors.push('Seller language is required')
         fieldErrorsObj.seller_language = 'Language is required'
       }
+      if (formData.value.seller_phone && !isNonEmptyPhoneValid(formData.value.seller_phone)) {
+        errors.push('Seller phone is invalid')
+        fieldErrorsObj.seller_phone = 'Invalid phone number'
+      }
     }
   }
   
@@ -770,6 +779,10 @@ function validateForm() {
       if (!formData.value.tenant_language) {
         errors.push('Tenant language is required')
         fieldErrorsObj.tenant_language = 'Language is required'
+      }
+      if (formData.value.tenant_phone && !isNonEmptyPhoneValid(formData.value.tenant_phone)) {
+        errors.push('Tenant phone is invalid')
+        fieldErrorsObj.tenant_phone = 'Invalid phone number'
       }
       
       // Landlord validation
@@ -822,7 +835,16 @@ function validateForm() {
         errors.push('Landlord language is required')
         fieldErrorsObj.landlord_language = 'Language is required'
       }
+      if (formData.value.landlord_phone && !isNonEmptyPhoneValid(formData.value.landlord_phone)) {
+        errors.push('Landlord phone is invalid')
+        fieldErrorsObj.landlord_phone = 'Invalid phone number'
+      }
     }
+  }
+
+  if (formData.value.developer_phone && !isNonEmptyPhoneValid(formData.value.developer_phone)) {
+    errors.push('Developer phone is invalid')
+    fieldErrorsObj.developer_phone = 'Invalid phone number'
   }
   
   // Set field errors
@@ -1357,6 +1379,8 @@ onMounted(() => {
   border-radius: 8px;
   border: 1px solid #E2E8F0;
   font-size: 13px;
+  display: flex !important;
+  align-items: stretch !important;
 }
 
 :deep(.deal-form-container .custom-v-select .vs__selected),

@@ -145,11 +145,11 @@
                   
                   <div class="col-md-6" v-if="hasField('buyer_phone')">
                     <label class="form-label-custom">Buyer Phone Number <span class="text-danger">*</span></label>
-                    <b-form-input 
+                    <CrmPhoneInput 
                       v-model="formData.buyer_phone" 
                       placeholder="Enter Phone Number" 
-                      class="custom-input"
-                      :class="{ 'is-invalid': isFieldInvalid('buyer_phone') }"
+                      :invalid="isFieldInvalid('buyer_phone')"
+                      :show-errors="isFieldInvalid('buyer_phone')"
                     />
                   </div>
                   
@@ -349,11 +349,11 @@
                   
                   <div class="col-md-4" v-if="hasField('seller_phone')">
                     <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
-                    <b-form-input 
+                    <CrmPhoneInput 
                       v-model="formData.seller_phone" 
                       placeholder="Enter Phone" 
-                      class="custom-input"
-                      :class="{ 'is-invalid': isFieldInvalid('seller_phone') }"
+                      :invalid="isFieldInvalid('seller_phone')"
+                      :show-errors="isFieldInvalid('seller_phone')"
                     />
                   </div>
                   
@@ -520,11 +520,11 @@
                   
                   <div class="col-md-4" v-if="hasField('tenant_phone')">
                     <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
-                    <b-form-input 
+                    <CrmPhoneInput 
                       v-model="formData.tenant_phone" 
                       placeholder="Enter Phone" 
-                      class="custom-input"
-                      :class="{ 'is-invalid': isFieldInvalid('tenant_phone') }"
+                      :invalid="isFieldInvalid('tenant_phone')"
+                      :show-errors="isFieldInvalid('tenant_phone')"
                     />
                   </div>
                   
@@ -1018,12 +1018,11 @@
 
                   <div class="col-md-6" v-if="hasField('developer_phone')">
                     <label class="form-label-custom">Developer sales person phone</label>
-                    <b-form-input 
+                    <CrmPhoneInput 
                       v-model="formData.developer_phone" 
-                      type="tel"
                       placeholder="Enter Developer Phone Number" 
-                      class="custom-input"
-                      :class="{ 'is-invalid': isFieldInvalid('developer_phone') }"
+                      :invalid="isFieldInvalid('developer_phone')"
+                      :show-errors="isFieldInvalid('developer_phone')"
                     />
                   </div>
                 </div>
@@ -1112,7 +1111,9 @@ import 'vue-select/dist/vue-select.css'
 import DocumentUpload from './DocumentUpload.vue'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
+import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import api from '@/plugins/axios'
+import { isNonEmptyPhoneValid } from '@/utils/phone'
 import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
 
 const props = defineProps({
@@ -1417,12 +1418,11 @@ const fetchAvailableListings = async (areaId) => {
 }
 function isFieldInvalid(fieldKey) {
   if (!fieldKey) return false
+
+  const phoneKeys = ['buyer_phone', 'seller_phone', 'tenant_phone', 'landlord_phone', 'developer_phone']
   
   // Check if this field is required for the current stage
   const isRequired = effectiveMissingFields.value.includes(fieldKey)
-  
-  // If not required, no need to show error
-  if (!isRequired) return false
   
   // For document fields
   if (fieldKey.includes('_document_')) {
@@ -1434,6 +1434,16 @@ function isFieldInvalid(fieldKey) {
   const value = formData.value?.[fieldKey]
   const isEmpty = value === null || value === undefined || value === '' || 
                   (typeof value === 'string' && value.trim() === '')
+
+  if (phoneKeys.includes(fieldKey)) {
+    if (isRequired && isEmpty) return true
+    if (!isEmpty && !isNonEmptyPhoneValid(value)) return true
+    if (!isRequired && !isEmpty && !isNonEmptyPhoneValid(value)) return true
+    return false
+  }
+  
+  // If not required, no need to show error
+  if (!isRequired) return false
   
   // Field is invalid if it's required AND empty
   return isEmpty

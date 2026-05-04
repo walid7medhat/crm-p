@@ -110,7 +110,7 @@
               </div>
               <div v-if="fieldSettings.buyer_phone" class="col-md-6">
                 <label class="form-label-custom">Phone Number</label>
-                <b-form-input v-model="form.buyer_phone" class="custom-input" placeholder="Enter Phone Number" />
+                <CrmPhoneInput v-model="form.buyer_phone" placeholder="Enter Phone Number" />
               </div>
               <div v-if="fieldSettings.buyer_date_of_birth" class="col-md-6">
                 <label class="form-label-custom">Date Of Birth</label>
@@ -204,6 +204,7 @@
                   label="name"
                   class="custom-v-select deal-select-placeholder"
                   placeholder="Select Property Type"
+                  data-placeholder="Select Property Type"
                   :clearable="true"
                     append-to-body
                 >
@@ -244,6 +245,7 @@
                   label="name"
                   class="custom-v-select deal-select-placeholder"
                   placeholder="Search Project.."
+                  data-placeholder="Search Project.."
                   :filterable="true"
                   :searchable="true"
                   @search="searchProjects"
@@ -473,6 +475,7 @@ import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
 import DealFilterFieldSettingsModal from './DealFilterFieldSettingsModal.vue'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
+import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import DateTimePicker from '../shared/DateTimePicker.vue'
 import {
   parseToDate,
@@ -1210,18 +1213,24 @@ onMounted(async () => {
   margin-bottom: 4px;
 }
 
-.custom-input {
+/* Match control height so text + placeholders sit vertically centered (Bootstrap form-control padding fights fixed height) */
+.custom-input:not(textarea) {
   height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 12px !important;
+  line-height: 38px !important;
   border-radius: 9px !important;
   border: 1px solid #e2e8f0 !important;
   font-size: 12px !important;
   color: #64748b !important;
   font-family: var(--deal-font, 'Montserrat', sans-serif);
+  box-sizing: border-box !important;
 }
 
 .custom-input::placeholder {
   color: #94a3b8 !important;
   font-size: 12px !important;
+  line-height: 38px !important;
 }
 
 .deal-input-placeholder::placeholder {
@@ -1232,27 +1241,34 @@ onMounted(async () => {
   opacity: 1 !important;
 }
 
-::deep(.custom-v-select.deal-select-placeholder) {
+:deep(.custom-v-select.deal-select-placeholder) {
   font-family: 'Montserrat', sans-serif;
 }
 
-::deep(.custom-v-select .vs__dropdown-toggle) {
-  height: 40px;
+:deep(.custom-v-select .vs__dropdown-toggle) {
+  height: 40px !important;
+  min-height: 40px !important;
   border-radius: 9px;
   border: 1px solid #e2e8f0;
   background: #fff;
-  padding: 0 8px;
+  padding: 0 8px !important;
+  display: flex !important;
+  align-items: stretch !important;
+  box-sizing: border-box !important;
 }
 
-
-::deep(.custom-v-select .vs__selected-options) {
+:deep(.custom-v-select .vs__selected-options) {
   flex-wrap: nowrap;
   overflow: hidden;
   max-width: calc(100% - 30px);
   min-width: 0;
+  align-items: stretch !important;
+  align-self: stretch !important;
+  height: 100% !important;
 }
 
-::deep(.custom-v-select .vs__selected) {
+/* Single-line selects: flex + line-height matches inner box height for optical center */
+:deep(.custom-v-select .vs__selected) {
   font-size: 12px;
   color: #64748b;
   margin: 0;
@@ -1260,72 +1276,96 @@ onMounted(async () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: block;
   max-width: 100%;
-  line-height: 38px;
+  display: flex !important;
+  align-items: center !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  min-width: 0;
+  line-height: 38px !important;
+  box-sizing: border-box;
 }
 
-::deep(.custom-v-select .vs__selected.vs__selected--disabled),
-::deep(.custom-v-select .vs__selected:empty) {
+:deep(.custom-v-select .vs__selected.vs__selected--disabled),
+:deep(.custom-v-select .vs__selected:empty) {
   color: #94a3b8;
   font-size: 12px;
 }
 
-::deep(.custom-v-select .vs__search) {
+/* Let the search field share the row with the label; 100% width was forcing layout and off-center text */
+:deep(.custom-v-select .vs__search) {
   font-size: 12px;
   color: #64748b;
   margin: 0;
-  padding: 0;
-  min-width: 100% !important;
-  width: 100% !important;
-  flex: 1 0 auto !important;
+  padding: 0 4px;
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  width: auto !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
   opacity: 1 !important;
 }
 
-::deep(.custom-v-select .vs__search::placeholder) {
+:deep(.custom-v-select .vs__search::placeholder) {
   color: #94a3b8;
   font-size: 12px;
   opacity: 1;
 }
 
-::deep(.custom-v-select.deal-select-placeholder.vs--unsearchable:not(.vs--disabled) .vs__search) {
+:deep(.custom-v-select.deal-select-placeholder.vs--unsearchable:not(.vs--disabled) .vs__search) {
   cursor: pointer !important;
   color: #64748b !important;
   font-size: 12px !important;
 }
 
-::deep(.custom-v-select .vs__placeholder) {
+:deep(.custom-v-select .vs__placeholder) {
   color: #94a3b8 !important;
   font-size: 12px !important;
   opacity: 1 !important;
+  align-self: stretch !important;
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 38px !important;
 }
 
-::deep(.custom-v-select.deal-select-placeholder.vs--single .vs__selected) {
-  color: #64748b;
+/* Inner line box = 40px row − borders — centers placeholder + typed value in the search field */
+:deep(.custom-v-select.vs--single input.vs__search) {
+  line-height: 38px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border: none !important;
+  background: transparent !important;
 }
 
-::deep(.custom-v-select.deal-select-placeholder.vs--single:not(.vs--has-value) .vs__selected) {
-  color: #94a3b8 !important;
-  font-size: 12px !important;
+/*
+ * vue-select does not add .vs--has-value — old :not(.vs--has-value) matched always, so the
+ * ::before overlay + opacity:0 on .vs__search ran even when a value was selected (broken).
+ */
+:deep(.deal-select-placeholder.vs--single) {
+  position: relative !important;
 }
 
-::deep(.custom-v-select.deal-select-placeholder.vs--single .vs__selected),
-::deep(.custom-v-select.deal-select-placeholder.vs--single .vs__placeholder),
-::deep(.custom-v-select.deal-select-placeholder.vs--unsearchable .vs__search),
-::deep(.custom-v-select .vs__search::placeholder) {
+:deep(.custom-v-select.deal-select-placeholder.vs--single .vs__selected) {
   color: #64748b !important;
+}
+
+:deep(.custom-v-select.deal-select-placeholder.vs--single .vs__placeholder),
+:deep(.custom-v-select.deal-select-placeholder.vs--unsearchable .vs__search) {
+  color: #94a3b8 !important;
   font-size: 12px !important;
 }
 
-::deep(.custom-v-select.deal-select-placeholder.vs--single:not(.vs--has-value) .vs__selected),
-::deep(.custom-v-select.deal-select-placeholder.vs--single .vs__placeholder),
-::deep(.custom-v-select.deal-select-placeholder.vs--unsearchable.vs--single:not(.vs--has-value) .vs__search::placeholder) {
+:deep(.custom-v-select.deal-select-placeholder.vs--single .vs__search::placeholder) {
   color: #94a3b8 !important;
+  font-size: 12px !important;
 }
 
-::deep(.vs__placeholder),
-::deep(.vs__search::placeholder),
-::deep(.deal-select-placeholder.vs--single:not(.vs--has-value) .vs__selected) {
+:deep(.vs__placeholder),
+:deep(.vs__search::placeholder) {
   color: #94a3b8 !important;
   font-size: 12px !important;
   font-weight: 500 !important;
@@ -1349,75 +1389,67 @@ onMounted(async () => {
   opacity: 1 !important;
 }
 
-/* Hard fallback: always show placeholders for empty single selects */
-::deep(.deal-select-placeholder.vs--single:not(.vs--has-value) .vs__selected-options) {
-  position: relative;
-}
-
-::deep(.deal-select-placeholder.vs--single:not(.vs--has-value)::before) {
-  content: attr(data-placeholder);
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #94a3b8 !important;
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  font-family: 'Montserrat', sans-serif !important;
-  pointer-events: none;
-  z-index: 3;
-}
-
-::deep(.deal-select-placeholder.vs--single:not(.vs--has-value) .vs__search) {
-  opacity: 0 !important;
-}
-
-::deep(.custom-v-select .vs__actions) {
+:deep(.custom-v-select .vs__actions) {
   padding: 0 8px;
+  align-self: stretch !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
-::deep(.custom-v-select .vs__open-indicator-icon) {
+:deep(.custom-v-select .vs__open-indicator-icon) {
   font-size: 13px;
   color: #cfdbec;
 }
 
-::deep(.custom-v-select .vs__dropdown-menu) {
+:deep(.custom-v-select .vs__dropdown-menu) {
   border: 1px solid #e2e8f0;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   padding: 0;
   z-index: 12050;
 }
 
-::deep(.custom-v-select .vs__dropdown-option) {
+:deep(.custom-v-select .vs__dropdown-option) {
   padding: 5px 10px;
   font-size: 12px;
   color: #475569 !important;
   transition: all 0.2s;
 }
 
-::deep(.custom-v-select .vs__dropdown-option--highlight),
-::deep(.custom-v-select .vs__dropdown-option--selected) {
+:deep(.custom-v-select .vs__dropdown-option--highlight),
+:deep(.custom-v-select .vs__dropdown-option--selected) {
   background: #faa300 !important;
   color: #fff !important;
 }
 
-::deep(.deal-search-rp-select .vs__dropdown-menu) {
+:deep(.deal-search-rp-select .vs__dropdown-menu) {
   max-height: min(360px, 55vh) !important;
 }
 
-::deep(.deal-search-rp-select .vs__dropdown-option) {
+:deep(.deal-search-rp-select .vs__dropdown-option) {
   padding: 8px 10px !important;
   white-space: normal !important;
 }
 
-::deep(.deal-search-rp-select .vs__selected) {
+/* Same 40px toggle as other fields — do not force 44px min-height (pushes content off-center) */
+:deep(.deal-search-rp-select .vs__selected) {
   line-height: 1.25 !important;
   white-space: normal !important;
-  min-height: 44px;
+  min-height: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
   display: flex !important;
   align-items: center !important;
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
+  align-self: stretch !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+:deep(.deal-search-rp-select .vs__selected .deal-rp-sel),
+:deep(.deal-search-rp-select .vs__selected .deal-rp-opt-placeholder) {
+  width: 100%;
+  min-width: 0;
 }
 
 .deal-rp-opt-avatar {
@@ -1606,23 +1638,44 @@ onMounted(async () => {
   color: #94a3b8 !important;
   font-size: 12px !important;
   opacity: 1 !important;
+  align-self: stretch !important;
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  margin: 0 !important;
+  line-height: 38px !important;
+}
+
+.custom-v-select.vs--single input.vs__search {
+  line-height: 38px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border: none !important;
+  background: transparent !important;
 }
 
 .custom-v-select .vs__dropdown-toggle {
-  height: 40px;
+  height: 40px !important;
+  min-height: 40px !important;
   border-radius: 9px;
   border: 1px solid #e2e8f0;
   background: #fff;
-  padding: 0 8px;
+  padding: 0 8px !important;
+  display: flex !important;
+  align-items: stretch !important;
+  box-sizing: border-box !important;
 }
 .custom-v-select .vs__search {
   font-size: 12px;
   color: #64748b;
   margin: 0;
-  padding: 0;
-  min-width: 100% !important;
-  width: 100% !important;
-  flex: 1 0 auto !important;
+  padding: 0 4px !important;
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  width: auto !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
   opacity: 1 !important;
 }
 

@@ -40,7 +40,7 @@
             <AdvancedDatePicker type="date" date-only placeholder="Select date" v-model="form.buyer_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.buyer_dob" />
             <div v-if="showErrors && fieldErrors.buyer_dob" class="invalid-feedback d-block">{{ fieldErrors.buyer_dob }}</div>
           </div>
-          <div class="col-md-4"><label class="form-label-custom">Buyer Phone Number <span class="text-danger">*</span></label><b-form-input v-model="form.buyer_phone" placeholder="Enter Phone" class="custom-input" :class="{ 'is-invalid': showErrors && !form.buyer_phone }" /><div v-if="showErrors && fieldErrors.buyer_phone" class="invalid-feedback d-block">{{ fieldErrors.buyer_phone }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Buyer Phone Number <span class="text-danger">*</span></label><CrmPhoneInput v-model="form.buyer_phone" placeholder="Enter Phone" :invalid="showErrors && (!!fieldErrors.buyer_phone || !form.buyer_phone)" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.buyer_phone" class="invalid-feedback d-block">{{ fieldErrors.buyer_phone }}</div></div>
           <div class="col-md-4"><label class="form-label-custom">Buyer Email <span class="text-danger">*</span></label><b-form-input v-model="form.buyer_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !form.buyer_email }" /><div v-if="showErrors && fieldErrors.buyer_email" class="invalid-feedback d-block">{{ fieldErrors.buyer_email }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Nationality <span class="text-danger">*</span></label>
@@ -114,7 +114,7 @@
             <AdvancedDatePicker type="date" date-only placeholder="Select date" v-model="form.seller_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.seller_dob" />
             <div v-if="showErrors && fieldErrors.seller_dob" class="invalid-feedback d-block">{{ fieldErrors.seller_dob }}</div>
           </div>
-          <div class="col-md-4"><label class="form-label-custom">Phone <span class="text-danger">*</span></label><b-form-input v-model="form.seller_phone" placeholder="Enter Phone" class="custom-input" :class="{ 'is-invalid': showErrors && !form.seller_phone }" /><div v-if="showErrors && fieldErrors.seller_phone" class="invalid-feedback d-block">{{ fieldErrors.seller_phone }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Phone <span class="text-danger">*</span></label><CrmPhoneInput v-model="form.seller_phone" placeholder="Enter Phone" :invalid="showErrors && (!!fieldErrors.seller_phone || !form.seller_phone)" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.seller_phone" class="invalid-feedback d-block">{{ fieldErrors.seller_phone }}</div></div>
           <div class="col-md-4"><label class="form-label-custom">Email <span class="text-danger">*</span></label><b-form-input v-model="form.seller_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !form.seller_email }" /><div v-if="showErrors && fieldErrors.seller_email" class="invalid-feedback d-block">{{ fieldErrors.seller_email }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
@@ -178,7 +178,7 @@
             <AdvancedDatePicker type="date" date-only placeholder="Select date" v-model="form.tenant_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.tenant_dob" />
             <div v-if="showErrors && fieldErrors.tenant_dob" class="invalid-feedback d-block">{{ fieldErrors.tenant_dob }}</div>
           </div>
-          <div class="col-md-4"><label class="form-label-custom">Phone <span class="text-danger">*</span></label><b-form-input v-model="form.tenant_phone" placeholder="Enter Phone" class="custom-input" :class="{ 'is-invalid': showErrors && !form.tenant_phone }" /><div v-if="showErrors && fieldErrors.tenant_phone" class="invalid-feedback d-block">{{ fieldErrors.tenant_phone }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Phone <span class="text-danger">*</span></label><CrmPhoneInput v-model="form.tenant_phone" placeholder="Enter Phone" :invalid="showErrors && (!!fieldErrors.tenant_phone || !form.tenant_phone)" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.tenant_phone" class="invalid-feedback d-block">{{ fieldErrors.tenant_phone }}</div></div>
           <div class="col-md-4"><label class="form-label-custom">Email <span class="text-danger">*</span></label><b-form-input v-model="form.tenant_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !form.tenant_email }" /><div v-if="showErrors && fieldErrors.tenant_email" class="invalid-feedback d-block">{{ fieldErrors.tenant_email }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
@@ -242,7 +242,7 @@
             <AdvancedDatePicker type="date" date-only placeholder="Select date" v-model="form.landlord_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.landlord_dob" />
             <div v-if="showErrors && fieldErrors.landlord_dob" class="invalid-feedback d-block">{{ fieldErrors.landlord_dob }}</div>
           </div>
-          <div class="col-md-4"><label class="form-label-custom">Phone <span class="text-danger">*</span></label><b-form-input v-model="form.landlord_phone" placeholder="Enter Phone" class="custom-input" :class="{ 'is-invalid': showErrors && !form.landlord_phone }" /><div v-if="showErrors && fieldErrors.landlord_phone" class="invalid-feedback d-block">{{ fieldErrors.landlord_phone }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Phone <span class="text-danger">*</span></label><CrmPhoneInput v-model="form.landlord_phone" placeholder="Enter Phone" :invalid="showErrors && (!!fieldErrors.landlord_phone || !form.landlord_phone)" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.landlord_phone" class="invalid-feedback d-block">{{ fieldErrors.landlord_phone }}</div></div>
           <div class="col-md-4"><label class="form-label-custom">Email <span class="text-danger">*</span></label><b-form-input v-model="form.landlord_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !form.landlord_email }" /><div v-if="showErrors && fieldErrors.landlord_email" class="invalid-feedback d-block">{{ fieldErrors.landlord_email }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
@@ -390,7 +390,7 @@
             </v-select>
           </div>
           <div class="col-md-4"><label class="form-label-custom">Developer sales person name</label><b-form-input v-model="form.developer_name" placeholder="Enter Developer Name" class="custom-input" /></div>
-          <div class="col-md-4"><label class="form-label-custom">Developer sales person phone</label><b-form-input v-model="form.developer_phone" type="tel" placeholder="Enter Developer Phone Number" class="custom-input" /></div>
+          <div class="col-md-4"><label class="form-label-custom">Developer sales person phone</label><CrmPhoneInput v-model="form.developer_phone" placeholder="Enter Developer Phone Number" :invalid="showErrors && !!fieldErrors.developer_phone" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.developer_phone" class="invalid-feedback d-block">{{ fieldErrors.developer_phone }}</div></div>
         </div>
       </div>
     </section>
@@ -440,7 +440,9 @@ import DocumentUpload from './DocumentUpload.vue'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
 import PropertyList from './PropertyList.vue'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
+import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import api from '@/plugins/axios'
+import { isNonEmptyPhoneValid } from '@/utils/phone'
 import { getCurrentInstance } from 'vue'
 import { normalizeLanguageSelection, hasLanguageSelection } from '@/composables/useLanguageMultiSelect'
 
@@ -741,6 +743,10 @@ function validateForm() {
       errors.push('Buyer language is required')
       fieldErrorsObj.buyer_language = 'Language is required'
     }
+    if (form.value.buyer_phone && !isNonEmptyPhoneValid(form.value.buyer_phone)) {
+      errors.push('Buyer phone is invalid')
+      fieldErrorsObj.buyer_phone = 'Invalid phone number'
+    }
   }
   
   if (props.dealType === 'secondary' && !shouldHideSeller.value) {
@@ -769,6 +775,10 @@ function validateForm() {
     }
     
     if (!form.value.seller_language) { errors.push('Seller language is required'); fieldErrorsObj.seller_language = 'Language is required' }
+    if (form.value.seller_phone && !isNonEmptyPhoneValid(form.value.seller_phone)) {
+      errors.push('Seller phone is invalid')
+      fieldErrorsObj.seller_phone = 'Invalid phone number'
+    }
   }
   
   if (props.dealType === 'rental') {
@@ -796,6 +806,10 @@ function validateForm() {
     }
     
     if (!form.value.tenant_language) { errors.push('Tenant language is required'); fieldErrorsObj.tenant_language = 'Language is required' }
+    if (form.value.tenant_phone && !isNonEmptyPhoneValid(form.value.tenant_phone)) {
+      errors.push('Tenant phone is invalid')
+      fieldErrorsObj.tenant_phone = 'Invalid phone number'
+    }
     
     if (!shouldHideLandlord.value) {
       if (!form.value.landlord_first_name) { errors.push('Landlord first name is required'); fieldErrorsObj.landlord_first_name = 'First name is required' }
@@ -823,7 +837,16 @@ function validateForm() {
       }
       
       if (!form.value.landlord_language) { errors.push('Landlord language is required'); fieldErrorsObj.landlord_language = 'Language is required' }
+      if (form.value.landlord_phone && !isNonEmptyPhoneValid(form.value.landlord_phone)) {
+        errors.push('Landlord phone is invalid')
+        fieldErrorsObj.landlord_phone = 'Invalid phone number'
+      }
     }
+  }
+
+  if (form.value.developer_phone && !isNonEmptyPhoneValid(form.value.developer_phone)) {
+    errors.push('Developer phone is invalid')
+    fieldErrorsObj.developer_phone = 'Invalid phone number'
   }
   
   return { errors, fieldErrorsObj }
@@ -1063,7 +1086,7 @@ onMounted(() => {
 .input-group-custom { display: flex; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
 .input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 8px 0 0 8px !important; }
 :deep(.custom-v-select) { font-size: 13px; }
-:deep(.custom-v-select .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 13px; padding: 2px 8px;overflow: hidden; }
+:deep(.custom-v-select .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 13px; padding: 0 8px; overflow: hidden; display: flex !important; align-items: stretch !important; }
 :deep(.custom-v-select.is-invalid .vs__dropdown-toggle) { border-color: #dc3545 !important; }
 :deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 13px; }
 :deep(.custom-v-select .vs__search::placeholder) { font-size: 10px !important; color: #9ca3af; }
@@ -1177,12 +1200,15 @@ onMounted(() => {
   border: none !important;
   box-shadow: none !important;
 }
-:deep(.custom-v-select .vs__selected) {
+:deep(.custom-v-select.vs--single .vs__selected) {
   text-align: left !important;
   font-size: 13px;
   padding-left: 8px;
-  height: 100%;
-  margin: 0px;
+  margin: 0 !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 :deep(.custom-v-select .vs__search::placeholder),

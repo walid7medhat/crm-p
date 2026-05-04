@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import './vue-select-overrides.css';
+@import './form-placeholders.css';
 
 @tailwind base;
 @tailwind components;
@@ -37,20 +39,71 @@
   color: var(--deal-text);
 }
 
-/* vue-select inside deal surfaces — same height/radius/type as text inputs */
+/* vue-select inside deal surfaces — same height/radius; 12px to match global inputs */
 .deal-figma-ui .vs__dropdown-toggle {
+  display: flex !important;
   min-height: var(--deal-input-h) !important;
   border-radius: var(--deal-input-r) !important;
   border-color: var(--deal-border) !important;
-  font-size: 14px !important;
+  /* stretch so .vs__selected-options can fill height; center value inside it (see vue-select-overrides.css) */
+  align-items: stretch !important;
+  font-size: 12px !important;
   font-family: var(--deal-font) !important;
 }
 
 .deal-figma-ui .vs__selected,
 .deal-figma-ui .vs__search {
-  font-size: 14px !important;
+  font-size: 12px !important;
   font-family: var(--deal-font) !important;
-  margin-top: 0;
+  margin-top: 0 !important;
+}
+
+.deal-figma-ui .vs__selected-options {
+  align-items: center !important;
+  align-self: stretch !important;
+  height: 100% !important;
+}
+
+/* Single-select under deal surfaces: same stretch behavior as vue-select-overrides.css */
+.deal-figma-ui .v-select.vs--single .vs__selected-options {
+  align-items: stretch !important;
+}
+
+/*
+ * Deal Search modal fields are 40px; .deal-figma-ui would otherwise force 44px min-height and
+ * break vertical centering for placeholder/selected text.
+ */
+.deal-figma-ui.deal-search-dropdown-panel .vs__dropdown-toggle {
+  min-height: 40px !important;
+  height: 40px !important;
+  max-height: 40px !important;
+}
+.deal-figma-ui.deal-search-dropdown-panel .vs__selected-options {
+  align-items: stretch !important;
+}
+.deal-figma-ui.deal-search-dropdown-panel .vs__selected,
+.deal-figma-ui.deal-search-dropdown-panel input.vs__search {
+  line-height: 38px !important;
+}
+.deal-figma-ui.deal-search-dropdown-panel .vs__placeholder {
+  line-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  margin: 0 !important;
+}
+
+.deal-figma-ui.deal-search-dropdown-panel input.custom-input:not(textarea),
+.deal-figma-ui.deal-search-dropdown-panel .form-control.custom-input:not(textarea) {
+  height: 40px !important;
+  min-height: 40px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  line-height: 38px !important;
+  box-sizing: border-box !important;
 }
 
 /* ---------- Global UI polish: headings (h6-only hierarchy) ---------- */
@@ -113,4 +166,13 @@ h6.ui-h-mini {
 .deal-figma-ui .view-deal-title,
 .deal-figma-ui .info-card-title {
   font-family: var(--deal-font);
+}
+
+/* CrmPhoneInput / vue-tel-input: country picker inside Bootstrap modals must not sit under or be clipped */
+.modal.show .modal-body:has(.crm-phone-input--dropdown-open) {
+  overflow: visible !important;
+}
+/* Some modals use overflow on the dialog wrapper instead of .modal-body */
+.modal.show .modal-dialog:has(.crm-phone-input--dropdown-open) {
+  overflow: visible !important;
 }

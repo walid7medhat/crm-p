@@ -19,7 +19,7 @@
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Phone Number <span class="text-danger">*</span></label>
-            <b-form-input v-model="form.buyer_phone" placeholder="Enter Phone Number" class="custom-input" />
+            <CrmPhoneInput v-model="form.buyer_phone" placeholder="Enter Phone Number" />
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Email <span class="text-danger">*</span></label>
@@ -141,7 +141,7 @@
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Seller Phone Number <span class="text-danger">*</span></label>
-            <b-form-input v-model="form.seller_phone" placeholder="Enter Phone Number" class="custom-input" />
+            <CrmPhoneInput v-model="form.seller_phone" placeholder="Enter Phone Number" />
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Seller Email <span class="text-danger">*</span></label>
@@ -213,6 +213,7 @@ import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
+import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
 
 const props = defineProps({

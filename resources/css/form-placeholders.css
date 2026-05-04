@@ -1,0 +1,66 @@
+/**
+ * Global inputs: smaller font (12px), placeholders left-aligned.
+ * vue-select layout lives in vue-select-overrides.css (center value vertically).
+ */
+
+/* Native inputs & textareas — placeholder left, small */
+input::placeholder,
+textarea::placeholder {
+  font-size: 11px !important;
+  text-align: left !important;
+  color: #94a3b8;
+  font-weight: 400;
+  opacity: 1;
+}
+
+input::-webkit-input-placeholder,
+textarea::-webkit-input-placeholder {
+  font-size: 11px !important;
+  text-align: left !important;
+  color: #94a3b8;
+}
+
+input::-moz-placeholder,
+textarea::-moz-placeholder {
+  font-size: 11px !important;
+  text-align: left !important;
+  color: #94a3b8;
+  opacity: 1;
+}
+
+input:-ms-input-placeholder,
+textarea:-ms-input-placeholder {
+  font-size: 11px !important;
+  text-align: left !important;
+  color: #94a3b8;
+}
+
+/* Typed value: small, left (default) */
+.form-control,
+.form-select,
+.form-control-sm,
+textarea.form-control,
+input.form-control {
+  font-size: 12px !important;
+}
+
+/* vue-select: search placeholder + empty label — left */
+.v-select .vs__search::placeholder,
+.vs__search::placeholder,
+.v-select input.vs__search::placeholder {
+  font-size: 11px !important;
+  text-align: left !important;
+  color: #94a3b8 !important;
+  opacity: 1;
+}
+
+.v-select .vs__placeholder,
+.vs__placeholder {
+  font-size: 11px !important;
+  text-align: left !important;
+  color: #94a3b8 !important;
+}
+
+.v-select .vs__selected-options:has(.vs__placeholder) {
+  justify-content: flex-start;
+}

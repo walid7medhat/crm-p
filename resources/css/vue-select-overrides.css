@@ -1,0 +1,131 @@
+/**
+ * vue-select global tweaks:
+ * - Hide clear (×)
+ * - Single-select: centered row in the toggle (fixes “text stuck to top”)
+ * - Multiple-select: keep centered wrapping chips
+ */
+.v-select {
+  --vs-font-size: 12px;
+  --vs-line-height: 1.25;
+  --vs-actions-padding: 0 6px;
+}
+
+.v-select .vs__clear,
+button.vs__clear,
+.vs__clear {
+  display: none !important;
+}
+
+.v-select .vs__dropdown-toggle {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  padding: 0 6px !important;
+  min-height: 2.5rem;
+}
+
+/* Multiple tags + default: center chips vertically in the row */
+.v-select .vs__selected-options {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 2px !important;
+  align-self: center !important;
+  min-height: 0;
+  height: auto !important;
+}
+
+/*
+ * Single-select: center the value / placeholder vertically in the control (fixed-height toggle).
+ * Stretch + inner height 100% leaves native input text hugging the top; centering the row fixes it.
+ */
+.v-select.vs--single .vs__dropdown-toggle {
+  align-items: center !important;
+}
+
+.v-select.vs--single .vs__selected-options {
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  height: auto !important;
+  align-self: center !important;
+}
+
+/*
+ * Label + search share one row (search has flex-grow). Without nowrap, the label flex item
+ * narrows and the value wraps (“Abu” / “Dhabi”). nowrap + min-width:0 + ellipsis when tight.
+ */
+.v-select.vs--single .vs__selected {
+  margin: 0 !important;
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+  align-self: center !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  box-sizing: border-box !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.v-select .vs__selected {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  font-size: 12px !important;
+  /* do not set line-height here — it competes with flex + fixed-height fields (deal-figma, modals) */
+}
+
+.v-select .vs__search,
+.v-select input.vs__search {
+  margin: 0 !important;
+  padding: 0 6px !important;
+  font-size: 12px !important;
+  text-align: left !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.v-select.vs--single .vs__search,
+.v-select.vs--single input.vs__search {
+  align-self: center !important;
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  line-height: 1.35 !important;
+}
+
+.v-select .vs__actions {
+  align-self: center !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 4px !important;
+  margin-top: 0 !important;
+}
+
+.v-select .vs__placeholder {
+  font-size: 12px !important;
+}
+
+.v-select.vs--single .vs__placeholder {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  align-self: center !important;
+  display: flex !important;
+  align-items: center !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding-left: 2px !important;
+}
+

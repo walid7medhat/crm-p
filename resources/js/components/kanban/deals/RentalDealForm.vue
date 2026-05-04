@@ -28,7 +28,7 @@
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Phone</label>
-            <b-form-input v-model="form.client_phone" placeholder="Enter Phone Number" class="custom-input" />
+            <CrmPhoneInput v-model="form.client_phone" placeholder="Enter Phone Number" />
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Email</label>
@@ -53,7 +53,7 @@
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Tenant Phone Number</label>
-            <b-form-input v-model="form.tenant_phone" placeholder="Enter Phone Number" class="custom-input" />
+            <CrmPhoneInput v-model="form.tenant_phone" placeholder="Enter Phone Number" />
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Tenant Email</label>
@@ -98,7 +98,7 @@
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Landlord Phone Number</label>
-            <b-form-input v-model="form.landlord_phone" placeholder="Enter Phone Number" class="custom-input" />
+            <CrmPhoneInput v-model="form.landlord_phone" placeholder="Enter Phone Number" />
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Landlord Email</label>
@@ -247,6 +247,7 @@ import { BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
+import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 
 const props = defineProps({
   modelValue: { type: Object, default: () => ({}) },

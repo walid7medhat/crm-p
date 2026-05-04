@@ -247,10 +247,9 @@
 
       <div class="col-md-4">
         <label class="form-label-custom">Developer Contact Phone</label>
-        <b-form-input
+        <CrmPhoneInput
           v-model="localProperty.developer_phone"
           placeholder="Phone Number"
-          class="custom-input"
         />
       </div>
 
@@ -271,6 +270,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { BFormInput } from 'bootstrap-vue-3'
+import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import vSelect from 'vue-select'
 import DocumentUpload from './DocumentUpload.vue'
 import api from '@/plugins/axios'
@@ -580,7 +580,7 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
   min-height: 40px;
   border-radius: 8px !important;
   border: 1px solid #E2E8F0 !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   width: 100%;
   padding: 0 12px;
 }
@@ -592,8 +592,10 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
   border-radius: 8px;
   min-height: 40px !important;
   height: 40px !important;
-  font-size: 13px;
+  font-size: 12px !important;
   overflow: hidden;
+  display: flex !important;
+  align-items: stretch !important;
 }
 :deep(.custom-v-select.is-invalid .vs__dropdown-toggle) {
   border-color: #dc3545 !important;
@@ -618,17 +620,17 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
 .form-card { background: #fff; border: 1px solid #e5e7eb; box-shadow: none; padding: 0.875rem 1rem !important; }
 .radius-12 { border-radius: 8px; }
 .form-label-custom { font-size: 12px !important; font-weight: 500; color: var(--deal-text-muted, #64748b); margin-bottom: 4px; display: block; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
-.custom-input { height: 42px !important; min-height: 42px; border-radius: 8px !important; border: 1px solid #e5e7eb !important; font-size: 13px !important; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
-.custom-input::placeholder { font-size: 10px !important; color: #9ca3af; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.custom-input { height: 42px !important; min-height: 42px; border-radius: 8px !important; border: 1px solid #e5e7eb !important; font-size: 12px !important; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.custom-input::placeholder { font-size: 12px !important; color: #9ca3af; text-align: left; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .custom-input.is-invalid { border-color: #dc3545 !important; }
 .input-group-custom { display: flex; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
 .input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 8px 0 0 8px !important; }
-:deep(.custom-v-select) { font-size: 13px; }
-:deep(.custom-v-select .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 13px; padding: 2px 8px;overflow: hidden; }
+:deep(.custom-v-select) { font-size: 12px !important; }
+:deep(.custom-v-select .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 12px !important; padding: 2px 8px; overflow: hidden; display: flex !important; align-items: stretch !important; }
 :deep(.custom-v-select.is-invalid .vs__dropdown-toggle) { border-color: #dc3545 !important; }
-:deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 13px; }
-:deep(.custom-v-select .vs__search::placeholder) { font-size: 10px !important; color: #9ca3af; }
-:deep(.custom-v-select .vs__placeholder) { font-size: 10px !important; color: #9ca3af; }
+:deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 12px !important; }
+:deep(.custom-v-select .vs__search::placeholder) { font-size: 12px !important; color: #9ca3af; text-align: left; }
+:deep(.custom-v-select .vs__placeholder) { font-size: 12px !important; color: #9ca3af; text-align: left; }
 :deep(.buyer-language-select .vs__selected) {     height: 26px !important;background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; margin:5px !important}
 :deep(.buyer-language-select .vs__dropdown-option--highlight) { background: #eff6ff; color: #1e3a8a; }
 :deep(.buyer-language-select .vs__dropdown-option--selected) { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
@@ -738,12 +740,15 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
   border: none !important;
   box-shadow: none !important;
 }
-:deep(.custom-v-select .vs__selected) {
+:deep(.custom-v-select.vs--single .vs__selected) {
   text-align: left !important;
   font-size: 13px;
   padding-left: 8px;
-  height: 100%;
-  margin: 0px;
+  margin: 0 !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 :deep(.custom-v-select .vs__search::placeholder),
