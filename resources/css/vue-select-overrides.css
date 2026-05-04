@@ -10,17 +10,28 @@
   --vs-actions-padding: 0 6px;
 }
 
-.v-select:not(.custom-v-select) .vs__clear,
-.v-select:not(.custom-v-select) button.vs__clear {
+.v-select:not(.custom-v-select):not(.client-req-vselect) .vs__clear,
+.v-select:not(.custom-v-select):not(.client-req-vselect) button.vs__clear {
   display: none !important;
 }
 
-/* Opt-in: clearable × visible (deal/lead `class="custom-v-select"`) */
+/*
+ * Opt-in: show clear (×) when the control adds a hook class on the vue-select root.
+ * (Using :not() above avoids a global `display: none` on every .vs__clear, which
+ * was impossible to override from scoped SFC styles.)
+ */
 .v-select.custom-v-select .vs__clear,
-.v-select.custom-v-select button.vs__clear {
+.v-select.custom-v-select button.vs__clear,
+.v-select.client-req-vselect .vs__clear,
+.v-select.client-req-vselect button.vs__clear,
+.deal-figma-ui .v-select .vs__clear,
+.deal-figma-ui .v-select button.vs__clear {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 .v-select .vs__dropdown-toggle {
