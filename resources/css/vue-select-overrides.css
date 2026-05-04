@@ -1,6 +1,6 @@
 /**
  * vue-select global tweaks:
- * - Hide clear (×)
+ * - Hide clear (×) on plain selects; show it on .custom-v-select (deal/lead styled clears)
  * - Single-select: centered row in the toggle (fixes “text stuck to top”)
  * - Multiple-select: keep centered wrapping chips
  */
@@ -10,10 +10,17 @@
   --vs-actions-padding: 0 6px;
 }
 
-.v-select .vs__clear,
-button.vs__clear,
-.vs__clear {
+.v-select:not(.custom-v-select) .vs__clear,
+.v-select:not(.custom-v-select) button.vs__clear {
   display: none !important;
+}
+
+/* Opt-in: clearable × visible (deal/lead `class="custom-v-select"`) */
+.v-select.custom-v-select .vs__clear,
+.v-select.custom-v-select button.vs__clear {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .v-select .vs__dropdown-toggle {
