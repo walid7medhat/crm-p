@@ -1236,6 +1236,16 @@ const handleStageChanged = (deal, changes) => {
     }
   }
 }
+// أضف هذه الدالة في DealsKanban.vue
+async function fetchDealDetails(dealId) {
+  try {
+    const response = await axios.get(`/deals/${dealId}`)
+    return response.data?.data || response.data
+  } catch (error) {
+    console.error('Error fetching deal details:', error)
+    return null
+  }
+}
 
 const showDealNotification = (event) => {
   const Toast = Swal.mixin({
@@ -1451,15 +1461,28 @@ async function onDealDragChange(evt, targetColumn) {
 
   if (oldStageId === newStageId) return
 
-  // احتفظ بنسخة قبل أي تعديل
   const originalDeal = { ...deal }
   const sourceColumn = columns.value.find(c => c.stage_id === oldStageId)
+
+
+
+
+  let fullDealData = deal
+  if (!fullDealData?.properties) {
+    fullDealData = await fetchDealDetails(deal.id)
+    if (!fullDealData) {
+      revertDealDrag(deal, targetColumn, oldStageId)
+      showNotification('Failed to load deal details', 'error')
+      return
+    }
+  }
 
   try {
     const res = await checkStageRequirements({
       dealId: deal.id,
       targetStageId: newStageId,
       dealType: activeTypeTab.value,
+       dealData: fullDealData
     })
 
     const valid = res.valid
@@ -1803,7 +1826,14 @@ function normalizeStageName(value) {
 async function handleStageChangeFromModal({ dealId, originalStageId, targetStageId, targetStageName, dealData }) {
   if (!dealId || targetStageId == null) return
   if (String(originalStageId) === String(targetStageId)) return
-
+    let fullDealData = dealData
+  if (!fullDealData?.properties) {
+    fullDealData = await fetchDealDetails(dealId)
+    if (!fullDealData) {
+      showNotification('Failed to load deal details', 'error')
+      return
+    }
+  }
   const targetColumn =
     columns.value.find((c) => String(c.stage_id) === String(targetStageId)) ||
     columns.value.find((c) => normalizeStageName(c.title) === normalizeStageName(targetStageName))
@@ -1835,7 +1865,7 @@ async function handleStageChangeFromModal({ dealId, originalStageId, targetStage
           targetStageName: targetColumn.title,
           originalStageId,
           originalStageName: columns.value.find((c) => String(c.stage_id) === String(originalStageId))?.title || 'Previous Stage',
-          dealData: { ...(dealData || selectedDeal.value || {}) },
+           dealData: fullDealData 
         }
         return
       }

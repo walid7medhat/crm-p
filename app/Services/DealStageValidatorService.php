@@ -95,7 +95,6 @@ class DealStageValidatorService
             return [];
         }
         
-        // ✅ إذا لم يكن هناك listing_id، نرجع كل الحقول
         if (is_null($listingId)) {
             Log::info('No listing_id in request, returning all fields');
             return $fields;
@@ -121,6 +120,10 @@ class DealStageValidatorService
                 return !str_starts_with($field, 'landlord_') && !str_contains($field, 'landlord_document_');
             });
         }
+        $filtered = array_filter($filtered, function($field) {
+            if (!str_starts_with($field, 'property_')) return true;
+                return true;
+        });
         
         return array_values($filtered);
     }

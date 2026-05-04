@@ -157,10 +157,11 @@ class DealStageValidator
                 // Check property fields (first property must be complete)
                 foreach ($requirements['properties'] ?? [] as $field => $isRequired) {
                     if ($isRequired) {
-                        $firstProperty = $properties->first();
-                        if (!$firstProperty || empty($firstProperty->$field)) {
-                            $stageMissing[] = "property_{$field}";
-                            $missingFields[] = "property_{$field}";
+                        foreach ($properties as $propIndex => $property) {
+                            if (empty($property->$field)) {
+                                $stageMissing[] = "property_{$propIndex}_{$field}";
+                                $missingFields[] = "property_{$propIndex}_{$field}";
+                            }
                         }
                     }
                 }
@@ -428,5 +429,29 @@ public function getMissingFieldsGroupedByStageForUI(array $missingByStage): arra
 public function getMissingFieldsGroupedByStage($missingFieldsByStage): array
 {
     return $this->getMissingFieldsGroupedByStageForUI($missingFieldsByStage);
+}
+public function validateProperties(Deal $deal, array $requirements, array &$missingFields, array &$stageMissing): void
+{
+    $properties = $deal->properties ?? collect();
+    
+    // Check if at least one property exists
+    if (($requirements['requires_properties'] ?? false) && $properties->isEmpty()) {
+        $stageMissing[] = 'at_least_one_property';
+        $missingFields[] = 'at_least_one_property';
+        return;
+    }
+    
+    // Check each property's fields
+    foreach ($requirements['properties'] ?? [] as $field => $isRequired) {
+        if ($isRequired) {
+            foreach ($properties as $propIndex => $property) {
+                if (empty($property->$field)) {
+                    $key = "property_{$propIndex}_{$field}";
+                    $stageMissing[] = $key;
+                    $missingFields[] = $key;
+                }
+            }
+        }
+    }
 }
 }
