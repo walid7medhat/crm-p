@@ -41,6 +41,8 @@ return [
                     'unit_no' => true,
                     'unit_size' => false,
                     'developer_id' => false,
+                     'developer_name'=>false,
+                    'developer_phone'=>false,
                     'purchase_price' => true,     
                
                 ],
@@ -63,6 +65,8 @@ return [
                     'unit_no' => true,
                     'unit_size' => false,
                     'developer_id' => false,
+                     'developer_name'=>true,
+                    'developer_phone'=>true,
                     'purchase_price' => true,
              
                 ],
@@ -86,6 +90,8 @@ return [
                     'unit_no' => true,
                     'unit_size' => false,
                     'developer_id' => false,
+                     'developer_name'=>true,
+                    'developer_phone'=>true,
                     'purchase_price' => true,
            
                 ],
