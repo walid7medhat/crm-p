@@ -703,11 +703,8 @@ const leadStatusOptions = computed(() => {
             { value: 'job_seeker', text: 'Job Seeker' },
             { value: 'broker', text: 'Broker' },
             { value: 'registered_by_mistake', text: 'Registered by Mistake' },
-            { value: 'spam_leads', text: 'Spam Leads' },
-            { value: 'already_assigned_to_another_agent', text: 'Already Assigned to Another Agent' },
-            { value: 'client_was_just_searching_online', text: 'Client Was Just Searching Online' },
-            { value: 'number_does_not_exist', text: 'Number Does Not Exist' },
-            { value: 'service_provide', text: 'service provide' },
+          
+                { value: 'blacklist', text: 'blacklist' },
 
         ]
     }
@@ -739,8 +736,9 @@ const branchOptions = [
 
 // Lost Reason Options
 const lostReasonOptions = [
-    { value: 'lost_by_other_company', text: 'Lost by Other Company' },
-    { value: 'lost_by_our_company', text: 'Lost by Our Company' }
+    // { value: 'lost_by_other_company', text: 'Lost by Other Company' },
+    // { value: 'lost_by_our_company', text: 'Lost by Our Company' }
+    { value: 'already_bought', text: "Already bought" }
 ]
 
 const isPlotsOrLand = computed(() => {

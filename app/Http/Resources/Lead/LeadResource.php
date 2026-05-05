@@ -218,7 +218,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
 {
     return Lead::query()
         ->where('id', '!=', $this->id)
-        ->where('status_lead', 'service_provide')
+        ->where('status_lead', 'blacklist')
         ->where(function ($q) {
             if ($this->work_phone) {
                 $q->orWhere('work_phone', $this->work_phone);

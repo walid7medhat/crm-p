@@ -1253,10 +1253,9 @@ function mapApiStatusToFormValue(apiValue, stageId) {
         options = ['no_answer', 'contacted', 'wrong_person']
     } else if (stageOrder === 10) {
         options = [
+          
             'not_interested', 'wrong_contact_details', 'no_answer_multiple_calls',
-            'job_seeker', 'broker', 'registered_by_mistake', 'spam_leads',
-            'already_assigned_to_another_agent', 'client_was_just_searching_online',
-            'number_does_not_exist'
+            'job_seeker', 'broker', 'registered_by_mistake', 'blacklist'
         ]
     }
     
@@ -1315,8 +1314,7 @@ const qualityStatusOptions = computed(() => {
     if (stageOrder === 8) {
         return [
             { value: null, text: 'Select Why Lost' },
-            { value: 'Bought Direct from Developer', text: 'Bought Direct from Developer' },
-            { value: 'Clients Budget Is Too Low', text: 'Clients Budget Is Too Low' }
+              { value: 'already_bought', text: "Already bought" }
         ]
     }
 

@@ -700,17 +700,14 @@ const leadPoolStatusOptions = [
 ]
 
 const unqualifiedStatusOptions = [
-    { value: 'not_interested', text: 'Not Interested' },
-    { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
-    { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
-    { value: 'job_seeker', text: 'Job Seeker' },
-    { value: 'broker', text: 'Broker' },
-    { value: 'registered_by_mistake', text: 'Registered by Mistake' },
-    { value: 'spam_leads', text: 'Spam Leads' },
-    { value: 'already_assigned_to_another_agent', text: 'Already Assigned to Another Agent' },
-    { value: 'client_was_just_searching_online', text: 'Client Was Just Searching Online' },
-    { value: 'number_does_not_exist', text: 'Number Does Not Exist' },
-    { value: 'service_provide', text: 'service provide' },
+
+        { value: 'not_interested', text: 'Not Interested' },
+        { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+        { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
+        { value: 'job_seeker', text: 'Job Seeker' },
+        { value: 'broker', text: 'Broker' },
+        { value: 'registered_by_mistake', text: 'Registered by Mistake' },
+        { value: 'blacklist', text: 'blacklist' },
     
 ]
 
@@ -916,9 +913,11 @@ const branchOptions = [
 ]
 
 const lostReasonOptions = [
-    { value: 'bought_direct_from_developer', text: 'Bought Direct from Developer' },
-    { value: 'changed_decision', text: 'Changed Decision' },
-    { value: 'clients_budget_is_too_low', text: "Client's Budget Is Too Low" }
+    // { value: 'bought_direct_from_developer', text: 'Bought Direct from Developer' },
+    // { value: 'changed_decision', text: 'Changed Decision' },
+    // { value: 'clients_budget_is_too_low', text: "Client's Budget Is Too Low" }
+    { value: 'already bought', text: "Already bought" }
+  
 ]
 
 const salutationOptions = [

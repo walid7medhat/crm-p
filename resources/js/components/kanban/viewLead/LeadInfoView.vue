@@ -923,8 +923,9 @@ const formatText = (raw) => {
 const formatLostReason = (reason) => {
     if (!reason) return '—'
     const mapping = {
-        'lost_by_other_company': 'Lost by Other Company',
-        'lost_by_our_company': 'Lost by Our Company'
+        // 'lost_by_other_company': 'Lost by Other Company',
+        // 'lost_by_our_company': 'Lost by Our Company'
+        'already_bought': "Already bought" 
     }
     return mapping[reason] || formatText(reason)
 }
@@ -976,15 +977,11 @@ const formatLeadStatus = (status, stageOrder = null) => {
         const unqualifiedMapping = {
             'not_interested': 'Not Interested',
             'wrong_contact_details': 'Wrong Contact Details',
-            'no_answer_multiple_calls': 'No Answer — Multiple Calls',
             'job_seeker': 'Job Seeker',
             'broker': 'Broker',
             'registered_by_mistake': 'Registered by Mistake',
-            'spam_leads': 'Spam Leads',
-            'already_assigned_to_another_agent': 'Already Assigned to Another Agent',
-            'client_was_just_searching_online': 'Client Was Just Searching Online',
-            'number_does_not_exist': 'Number Does Not Exist',
-            'service_provide':'service provide',
+            
+            'blacklist':'blacklist',
         }
         return unqualifiedMapping[status] || formatText(status)
     }
