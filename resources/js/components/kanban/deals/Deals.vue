@@ -1762,11 +1762,11 @@ async function handleCompleteFieldsSave({ payload, documents, stage_id }) {
         groupedMissing: normalizedMissing.groupedMissing,
       }
       showCompleteFieldsModal.value = true
-      throw err
+      return
     }
     
     showNotification(err.response?.data?.message || 'Failed to update deal', 'error')
-    throw err
+    return
   }
 }
 function openDealById(dealId) {

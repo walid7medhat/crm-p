@@ -1008,8 +1008,9 @@ class DealController extends Controller
                 $this->syncPrimaryPropertyFromFlatRequest($deal, $request);
             }
 
-            // 3b. Root-level property files (inline deal form / legacy single-property: payment_proof[], spa_document[])
-            if (!$request->has('properties') && ($request->hasFile('payment_proof') || $request->hasFile('spa_document'))) {
+            // 3b. Root-level property files (payment_proof[], spa_document[]) should
+            // be merged onto the primary property even when properties payload exists.
+            if ($request->hasFile('payment_proof') || $request->hasFile('spa_document')) {
                 $this->mergeRootPropertyFilesOntoPrimaryProperty($deal, $request);
             }
 

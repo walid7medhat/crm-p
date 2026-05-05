@@ -171,7 +171,7 @@
                       </v-select>
                     </div>
                     
-                    <div class="col-md-6" v-if="shouldShowField('buyer_country') && showBuyerCountryField">
+                    <div class="col-md-6" v-if="shouldShowField('buyer_country') && (showBuyerCountryField || hasField('buyer_country'))">
                       <label class="form-label-custom">Buyer Country Of Residence <span v-if="hasField('buyer_country')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
@@ -217,7 +217,7 @@
                         v-model="formData.buyer_dob"
                         date-only
                         placeholder="Select date"
-                        class="custom-input"
+                        :class="['custom-input', { 'is-invalid': isFieldInvalid('buyer_dob') }]"
                         :invalid="isFieldInvalid('buyer_dob')"
                       />
                     </div>
@@ -991,22 +991,21 @@
                                         </template>
                                     </v-select>
                                 </div>
-                                
-                                <!-- Developer Name (لـ Secondary) -->
+
                                 <div class="col-md-6" v-if="shouldShowPropertyField('developer_name', property)">
-                                    <label class="form-label-custom">Developer Name <span v-if="isPropertyFieldRequired('developer_name')" class="text-danger">*</span></label>
-                                    <b-form-input 
+                                    <label class="form-label-custom">Developer Sales Person Name <span v-if="isPropertyFieldRequired('developer_name')" class="text-danger">*</span></label>
+                                    <b-form-input
                                         :value="property.developer_name"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'developer_name', val)"
-                                        placeholder="Enter Developer Name" 
+                                        placeholder="Enter Sales Person Name"
                                         class="custom-input"
                                         :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'developer_name') }"
                                     />
                                 </div>
                                 
-                                <!-- Developer Phone (لـ Secondary) -->
+                                <!-- Developer Sales Person Phone (لـ Secondary) -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('developer_phone', property)">
-                                    <label class="form-label-custom">Developer Phone <span v-if="isPropertyFieldRequired('developer_phone')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom">Developer Sales Person Phone <span v-if="isPropertyFieldRequired('developer_phone')" class="text-danger">*</span></label>
                                   
                                     <CrmPhoneInput 
                                     v-model="property.developer_phone" 
@@ -1016,34 +1015,56 @@
                                   />
                                 </div>
                                 
-                                <!-- Budget From/To (for EOI stages) -->
-                                <div class="col-md-6" v-if="shouldShowPropertyField('budget_from', property)">
-                                    <label class="form-label-custom">Budget From <span v-if="isPropertyFieldRequired('budget_from')" class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">AED</span>
-                                        <b-form-input 
-                                            :value="property.budget_from"
-                                            @update:modelValue="(val) => updateProperty(propIndex, 'budget_from', val)"
-                                            type="number"
-                                            placeholder="Min" 
-                                            class="custom-input"
-                                            :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'budget_from') }"
-                                        />
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-6" v-if="shouldShowPropertyField('budget_to', property)">
-                                    <label class="form-label-custom">Budget To <span v-if="isPropertyFieldRequired('budget_to')" class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">AED</span>
-                                        <b-form-input 
-                                            :value="property.budget_to"
-                                            @update:modelValue="(val) => updateProperty(propIndex, 'budget_to', val)"
-                                            type="number"
-                                            placeholder="Max" 
-                                            class="custom-input"
-                                            :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'budget_to') }"
-                                        />
+                                <!-- Budget (CreateLead style) -->
+                                <div class="col-md-6" v-if="shouldShowPropertyField('budget_from', property) || shouldShowPropertyField('budget_to', property)">
+                                    <label class="form-label-custom">
+                                      Budget (AED)
+                                      <span v-if="isPropertyFieldRequired('budget_from') || isPropertyFieldRequired('budget_to')" class="text-danger">*</span>
+                                    </label>
+                                    <div
+                                      class="budget-field-wrap-stage"
+                                      :class="{
+                                        'is-invalid-group': isPropertyFieldInvalid(property, 'budget_from') || isPropertyFieldInvalid(property, 'budget_to')
+                                      }"
+                                    >
+                                      <button
+                                        type="button"
+                                        class="custom-date-trigger-stage"
+                                        @click.stop="togglePropertyBudgetDropdown(propIndex)"
+                                      >
+                                        <span>{{ getPropertyBudgetDisplay(property) }}</span>
+                                        <iconify-icon :icon="openBudgetDropdownIndex === propIndex ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+                                      </button>
+                                      <div v-if="openBudgetDropdownIndex === propIndex" class="budget-dropdown-stage">
+                                        <div class="budget-from-to-row-stage">
+                                          <div class="budget-col-stage">
+                                            <label class="budget-input-label-stage">From</label>
+                                            <input
+                                              :value="property.budget_from ?? ''"
+                                              type="number"
+                                              inputmode="numeric"
+                                              autocomplete="off"
+                                              placeholder="0"
+                                              class="form-control custom-input budget-dropdown-input-stage"
+                                              :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'budget_from') }"
+                                              @input="updateProperty(propIndex, 'budget_from', $event.target.value)"
+                                            />
+                                          </div>
+                                          <div class="budget-col-stage">
+                                            <label class="budget-input-label-stage">To</label>
+                                            <input
+                                              :value="property.budget_to ?? ''"
+                                              type="number"
+                                              inputmode="numeric"
+                                              autocomplete="off"
+                                              placeholder="0"
+                                              class="form-control custom-input budget-dropdown-input-stage"
+                                              :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'budget_to') }"
+                                              @input="updateProperty(propIndex, 'budget_to', $event.target.value)"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
                                     </div>
                                 </div>
                                 
@@ -1230,9 +1251,9 @@ const showBudgetFields = computed(() => {
   const missingKeys = effectiveMissingFields.value || []
   const hasBudgetFrom = missingKeys.some(key => key.includes('budget_from'))
   const hasBudgetTo = missingKeys.some(key => key.includes('budget_to'))
-    if (hasBudgetFrom || hasBudgetTo) {
+  if (hasBudgetFrom || hasBudgetTo) {
     const stageName = props.targetStageName?.toLowerCase() || ''
-    return stageName.includes('eoi')
+    return stageName.includes('eoi') || stageName.includes('spa')
   }
   
   return false
@@ -1240,7 +1261,7 @@ const showBudgetFields = computed(() => {
 
 const showPurchasePrice = computed(() => {
   const stageName = props.targetStageName?.toLowerCase() || ''
-  return stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
+  return stageName.includes('booking') || stageName.includes('won')
 })
 
 // Property documents
@@ -1310,25 +1331,21 @@ function hasPropertyMissing(propIndex) {
 // Check if property field is required for ANY property
 function isPropertyFieldRequired(fieldName) {
   const missingKeys = effectiveMissingFields.value || []
-  
-  console.log('Checking property field:', fieldName)
-  console.log('All missing keys:', missingKeys)
+  const normalizedFieldName = normalizePropertyFieldKey(fieldName)
   
   // Check if any missing key matches pattern property_X_fieldName
   const result = missingKeys.some(key => {
     const match = key.match(/property_\d+_(.+)/)
     if (match) {
-      const field = match[1]
-      return field === fieldName
+      const field = normalizePropertyFieldKey(match[1])
+      return field === normalizedFieldName
     }
     // Also check for property_fieldName without index
-    if (key === `property_${fieldName}`) {
+    if (normalizePropertyFieldKey(key.replace('property_', '')) === normalizedFieldName) {
       return true
     }
     return false
   })
-  
-  console.log(`Field ${fieldName} is required:`, result)
   return result
 }
 function getRequiredFieldsForProperty() {
@@ -1357,7 +1374,11 @@ function isPropertyFieldInvalid(property, fieldName) {
   const isRequired = isPropertyFieldRequired(fieldName)
   if (!isRequired) return false
   
-  const value = property[fieldName]
+  const normalizedFieldName = normalizePropertyFieldKey(fieldName)
+  const value =
+    normalizedFieldName === 'developer_phone'
+      ? (property.developer_phone ?? property.developer_sales_phone)
+      : property[normalizedFieldName]
   return value === null || value === undefined || value === ''
 }
 
@@ -1365,6 +1386,31 @@ function isPropertyFieldInvalid(property, fieldName) {
 function updateProperty(propIndex, field, value) {
   if (dealProperties.value[propIndex]) {
     dealProperties.value[propIndex][field] = value
+
+    if (field === 'developer_id') {
+      const selectedDeveloper = developers.value.find(dev => String(dev?.id) === String(value))
+      if (selectedDeveloper) {
+        const normalizedName =
+          selectedDeveloper.name ||
+          selectedDeveloper.developer_name ||
+          selectedDeveloper.contact_person ||
+          ''
+        const normalizedPhone =
+          selectedDeveloper.developer_phone ||
+          selectedDeveloper.sales_phone ||
+          selectedDeveloper.phone ||
+          selectedDeveloper.contact_phone ||
+          selectedDeveloper.mobile ||
+          ''
+
+        if (normalizedName) {
+          dealProperties.value[propIndex].developer_name = normalizedName
+        }
+        if (normalizedPhone) {
+          dealProperties.value[propIndex].developer_phone = normalizedPhone
+        }
+      }
+    }
     
     if (!formData.value.properties) {
       formData.value.properties = []
@@ -1430,7 +1476,7 @@ function initializePropertyDocuments() {
   })
 }
 
-const emit = defineEmits(['save', 'closed'])
+const emit = defineEmits(['save', 'closed', 'openDeal'])
 
 // State
 const formData = ref({})
@@ -1462,6 +1508,7 @@ const currentUser = ref(null)
 const dealProperties = computed(() => {
   return localProperties.value
 })
+const openBudgetDropdownIndex = ref(null)
 
 // Helper functions
 function getDealTypeName(type) {
@@ -1486,6 +1533,8 @@ function normalizeDealTypeForDocuments(raw) {
 const effectiveDealTypeForDocs = computed(() =>
   normalizeDealTypeForDocuments(props.deal?.deal_type ?? props.deal?.type ?? props.dealType)
 )
+
+const normalizedDealType = computed(() => effectiveDealTypeForDocs.value)
 
 // Get existing field value from deal
 function getExistingFieldValue(key) {
@@ -1903,7 +1952,7 @@ const documentTypesByParty = computed(() => {
 
 // أضف هذه الدالة المساعدة
 function isPartyAllowed(party) {
-    const dealType = props.dealType || 'primary'
+    const dealType = normalizedDealType.value
     if (dealType === 'primary') {
         return party === 'buyer' // فقط buyer مسموح به
     }
@@ -1942,7 +1991,7 @@ function shouldShowField(fieldKey) {
   if (!fieldKey) return false
   if (fieldKey === 'lost_reason') return hasField('lost_reason')
   if (hasField(fieldKey)) return true
-  const dt = props.dealType || 'primary'
+  const dt = normalizedDealType.value
   if (fieldKey.startsWith('buyer_')) return dt === 'primary' || dt === 'secondary'
   if (fieldKey.startsWith('seller_')) return dt === 'secondary'
   if (fieldKey.startsWith('tenant_')) return dt === 'rental'
@@ -1952,7 +2001,7 @@ function shouldShowField(fieldKey) {
 }
 
 function showPartyDetailFields(partyType) {
-  const dt = props.dealType || 'primary'
+  const dt = normalizedDealType.value
   if (partyType === 'buyer') return dt === 'primary' || dt === 'secondary'
   if (partyType === 'seller') return dt === 'secondary'
   if (partyType === 'tenant') return dt === 'rental'
@@ -1963,10 +2012,12 @@ function showPartyDetailFields(partyType) {
 function shouldShowPropertyField(fieldName, property) {
   // معالجة budget fields أولاً
   if (fieldName === 'budget_from' || fieldName === 'budget_to') {
-    return showBudgetFields.value
+    const stageName = props.targetStageName?.toLowerCase() || ''
+    const isSpaStage = stageName.includes('spa')
+    return isSpaStage || showBudgetFields.value || isPropertyFieldRequired(fieldName) || !!property?.[fieldName]
   }
   
-  const dt = props.dealType || 'primary'
+  const dt = normalizedDealType.value
   const stageName = props.targetStageName?.toLowerCase() || ''
   
   switch (fieldName) {
@@ -1979,7 +2030,7 @@ function shouldShowPropertyField(fieldName, property) {
     case 'developer_id':
     case 'developer_name':
     case 'developer_phone':
-      return dt === 'secondary'
+      return dt === 'secondary' || isPropertyFieldRequired(fieldName) || !!property?.[fieldName]
     case 'bedrooms':
       return showBedroomsForProperty(property)
     case 'rental_price':
@@ -1989,6 +2040,19 @@ function shouldShowPropertyField(fieldName, property) {
     default:
       return isPropertyFieldRequired(fieldName)
   }
+}
+
+function getPropertyBudgetDisplay(property) {
+  const from = property?.budget_from
+  const to = property?.budget_to
+  if (!from && !to) return 'Select budget range'
+  if (from && to) return `${from} - ${to}`
+  if (from) return `From ${from}`
+  return `To ${to}`
+}
+
+function togglePropertyBudgetDropdown(propIndex) {
+  openBudgetDropdownIndex.value = openBudgetDropdownIndex.value === propIndex ? null : propIndex
 }
 
 const propertyDocTypesForModal = computed(() => {
@@ -2048,6 +2112,54 @@ function isFieldInvalid(fieldKey) {
 // Effective missing fields
 
 // Effective missing fields - مع فلترة صارمة حسب نوع الصفقة
+function normalizeMissingFieldKey(field) {
+  if (typeof field !== 'string') return field
+
+  const normalized = field.trim().toLowerCase()
+  const partyPrefixes = ['buyer', 'seller', 'tenant', 'landlord']
+
+  for (const party of partyPrefixes) {
+    if (normalized === `${party}_date_of_birth`) return `${party}_dob`
+    if (normalized === `${party}_country_of_residence`) return `${party}_country`
+    if (normalized === `${party}_city_of_residence`) return `${party}_city`
+  }
+
+  return normalizePropertyFieldKey(normalized)
+}
+
+function normalizePropertyFieldKey(field) {
+  if (typeof field !== 'string') return field
+  const normalized = field.trim().toLowerCase()
+
+  const propertyPrefixMatch = normalized.match(/^property_(\d+_)?(.+)$/)
+  if (propertyPrefixMatch) {
+    const indexPrefix = propertyPrefixMatch[1] || ''
+    const fieldName = propertyPrefixMatch[2]
+    if (fieldName === 'developer_sales_phone') {
+      return `property_${indexPrefix}developer_phone`
+    }
+    if (fieldName === 'developer_sales_person_phone') {
+      return `property_${indexPrefix}developer_phone`
+    }
+    if (fieldName === 'developer_sales_person_name') {
+      return `property_${indexPrefix}developer_name`
+    }
+    return normalized
+  }
+
+  if (normalized === 'developer_sales_phone') {
+    return 'developer_phone'
+  }
+  if (normalized === 'developer_sales_person_phone') {
+    return 'developer_phone'
+  }
+  if (normalized === 'developer_sales_person_name') {
+    return 'developer_name'
+  }
+
+  return normalized
+}
+
 const effectiveMissingFields = computed(() => {
   const direct = Array.isArray(props.missingFields) ? props.missingFields : []
   const byStage = props.groupedMissing?.by_stage || props.missingFieldsGroupedByStage?.stages || []
@@ -2075,18 +2187,21 @@ const effectiveMissingFields = computed(() => {
         const fields = stage?.fields || stage?.missing_fields || []
         fields.forEach(field => {
           if (typeof field === 'string') {
-            cumulative.add(field)
+            cumulative.add(normalizeMissingFieldKey(field))
           }
         })
       }
     })
     
-    direct.forEach(key => cumulative.add(key))
+    direct.forEach(key => cumulative.add(normalizeMissingFieldKey(key)))
     allFields = Array.from(cumulative)
+  }
+  if (!Array.isArray(byStage) || byStage.length === 0) {
+    allFields = allFields.map(normalizeMissingFieldKey)
   }
   
   // ✅ فلترة صارمة حسب نوع الصفقة
-  const dealType = props.dealType || 'primary'
+  const dealType = normalizedDealType.value
   
   const filteredFields = allFields.filter(field => {
     if (typeof field !== 'string') return true
@@ -2137,12 +2252,29 @@ const unresolvedMissingKeys = computed(() => {
   const isWonOrLostStage = stageName.includes('won') || stageName.includes('lost') || stageName.includes('booking') || stageName.includes('spa')
 
   missingKeys.forEach(key => {
-  
-     if (isWonOrLostStage && (key.includes('budget_from') || key.includes('budget_to'))) {
-      return 
-    }
-        if (!isEoiStage && (key.includes('budget_from') || key.includes('budget_to'))) {
-      return 
+    if (key.startsWith('property_document_')) {
+      const rawDocType = key.replace('property_document_', '')
+      const normalizedDocType =
+        rawDocType === 'spa'
+          ? 'spa_document'
+          : rawDocType === 'payment'
+            ? 'payment_proof'
+            : rawDocType
+
+      const hasPropertyDoc = localProperties.value.some((_, propIndex) => {
+        const docs = propertyDocumentsCombined.value?.[propIndex] || []
+        if (!Array.isArray(docs)) return false
+        return docs.some(doc => {
+          const docType = doc?.document_type || ''
+          const hasFileOrUrl = !!(doc?.file || doc?.url)
+          return hasFileOrUrl && (docType === normalizedDocType || docType === rawDocType)
+        })
+      })
+
+      if (!hasPropertyDoc) {
+        unresolved.push(key)
+      }
+      return
     }
     if (key.includes('_document_')) {
       const [partyType, docType] = key.split('_document_')
@@ -2158,10 +2290,13 @@ const unresolvedMissingKeys = computed(() => {
       const match = key.match(/property_(\d+)_(.+)/)
       if (match) {
         const propIndex = parseInt(match[1])
-        const fieldName = match[2]
+        const fieldName = normalizePropertyFieldKey(match[2])
         const property = localProperties.value[propIndex]
         if (property) {
-          const value = property[fieldName]
+          const value =
+            fieldName === 'developer_phone'
+              ? (property.developer_phone ?? property.developer_sales_phone)
+              : property[fieldName]
           if (value === null || value === undefined || value === '') {
             unresolved.push(key)
           }
@@ -2302,8 +2437,15 @@ if (localProperties.value.length > 0) {
         unit_size: prop.unit_size || '',
         area_id: prop.area_id || null,
         developer_id: prop.developer_id || null,
-        developer_name: prop.developer_name || '',
-        developer_phone: prop.developer_phone || '',
+        developer_name: typeof prop.developer_name === 'string' ? prop.developer_name.trim() : (prop.developer_name || ''),
+        developer_phone: typeof prop.developer_phone === 'string' ? prop.developer_phone.trim() : (prop.developer_phone || ''),
+        developer_sales_person_name: typeof prop.developer_name === 'string' ? prop.developer_name.trim() : (prop.developer_name || ''),
+        developer_sales_person_phone: typeof (prop.developer_phone ?? prop.developer_sales_phone) === 'string'
+          ? (prop.developer_phone ?? prop.developer_sales_phone).trim()
+          : ((prop.developer_phone ?? prop.developer_sales_phone) || ''),
+        developer_sales_phone: typeof (prop.developer_phone ?? prop.developer_sales_phone) === 'string'
+          ? (prop.developer_phone ?? prop.developer_sales_phone).trim()
+          : ((prop.developer_phone ?? prop.developer_sales_phone) || ''),
         budget_from: prop.budget_from || null,
         budget_to: prop.budget_to || null,
         purchase_price: prop.purchase_price || null,
@@ -2333,13 +2475,8 @@ const finalPayload = {
 }
   console.log('Final payload:', finalPayload)
 
-  emit('save', {     payload: finalPayload, 
- documents, stage_id: props.targetStageId })
-
-  submitResetTimer = setTimeout(() => {
-    submitting.value = false
-    submitResetTimer = null
-  }, 12000)
+  emit('save', { payload: finalPayload, documents, stage_id: props.targetStageId })
+  submitting.value = false
 }
 
 // Close modal
@@ -2500,7 +2637,7 @@ const showLandlordCountryField = computed(() => formData.value?.landlord_residen
 
 // في Primary، يجب إخفاء Seller, Tenant, Landlord تماماً
 const shouldHideBuyer = computed(() => {
-  const dealType = props.dealType || 'primary'
+  const dealType = normalizedDealType.value
   // Rental: إخفاء Buyer
   if (dealType === 'rental') return true
   // Primary و Secondary: إظهار Buyer
@@ -2508,21 +2645,21 @@ const shouldHideBuyer = computed(() => {
 })
 
 const shouldHideSeller = computed(() => {
-  const dealType = props.dealType || 'primary'
+  const dealType = normalizedDealType.value
   // في Primary، أخفِ Seller
   if (dealType === 'primary' || dealType === 'rental') return true
   return hasListingId.value && formData.value?.deal_type === 'secondary'
 })
 
 const shouldHideLandlord = computed(() => {
-  const dealType = props.dealType || 'primary'
+  const dealType = normalizedDealType.value
   // في Primary، أخفِ Landlord
   if (dealType === 'primary' || dealType === 'secondary') return true
   return hasListingId.value && formData.value?.deal_type === 'rental'
 })
 
 const shouldHideTenant = computed(() => {
-  const dealType = props.dealType || 'primary'
+  const dealType = normalizedDealType.value
   // في Primary، أخفِ Tenant
   if (dealType === 'primary' || dealType === 'secondary') return true
   return hasListingId.value && formData.value?.deal_type !== 'rental'
@@ -2704,6 +2841,68 @@ onMounted(async () => {
 .custom-input::placeholder {
   font-size: 10px;
   color: #9ca3af;
+}
+
+.budget-field-wrap-stage {
+  position: relative;
+  overflow: visible;
+  background: transparent;
+}
+
+.budget-field-wrap-stage.is-invalid-group {
+  border-radius: 10px;
+}
+
+.custom-date-trigger-stage {
+  width: 100%;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #64748B;
+  font-family: 'Montserrat';
+  cursor: pointer;
+}
+
+.budget-dropdown-stage {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  min-width: 220px;
+  z-index: 60;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
+  padding: 10px;
+}
+
+.budget-from-to-row-stage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.budget-col-stage {
+  min-width: 0;
+}
+
+.budget-input-label-stage {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.budget-dropdown-input-stage {
+  height: 38px !important;
 }
 
 .custom-input.is-invalid,
