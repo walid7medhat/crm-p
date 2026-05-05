@@ -980,7 +980,7 @@ const formatLeadStatus = (status, stageOrder = null) => {
             'job_seeker': 'Job Seeker',
             'broker': 'Broker',
             'registered_by_mistake': 'Registered by Mistake',
-            
+            'spam_leads':'Spam Leads',
             'blacklist':'blacklist',
         }
         return unqualifiedMapping[status] || formatText(status)

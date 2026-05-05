@@ -1102,7 +1102,7 @@ onMounted(() => {
 <style>
 #create-deal-modal .modal-content {
   border-radius: 12px !important;
-  overflow: hidden !important;
+  /* overflow: hidden !important; */
   border: 1px solid #e5e7eb !important;
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08) !important;
 }
@@ -1118,7 +1118,7 @@ onMounted(() => {
 }
 :deep(.create-deal-modal-body) {
   max-height: var(--deal-modal-max-h, 92vh);
-  overflow: hidden;
+  /* overflow: hidden; */
   display: flex;
   flex-direction: column;
 }
@@ -1193,22 +1193,30 @@ onMounted(() => {
 }
 
 .close-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-  color: #64748B;
-  font-size: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s, color 0.2s;
+      position: absolute;
+    top: 8px;
+    right: -61px;
+    width: 83px;
+    height: 49px;
+    color: #fff;
+    font-size: 18px;
+    line-height: 1;
+    box-shadow: #0f172a33 0 8px 16px;
+    z-index: -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #4fa5f7;
+    border-image: initial;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2f88ef, #5db8ff);
+    padding: 0;
+    transition: filter .2s;
 }
 
-.close-btn:hover {
-  background: #F1F5F9;
-  color: #1E293B;
-}
+
 
 .deal-progress-label {
   display: none;

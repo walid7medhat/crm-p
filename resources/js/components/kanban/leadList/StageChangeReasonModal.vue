@@ -701,12 +701,13 @@ const leadPoolStatusOptions = [
 
 const unqualifiedStatusOptions = [
 
-        { value: 'not_interested', text: 'Not Interested' },
+        // { value: 'not_interested', text: 'Not Interested' },
         { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
         { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
         { value: 'job_seeker', text: 'Job Seeker' },
         { value: 'broker', text: 'Broker' },
         { value: 'registered_by_mistake', text: 'Registered by Mistake' },
+        { value: 'spam_leads', text: 'Spam Leads' },
         { value: 'blacklist', text: 'blacklist' },
     
 ]
@@ -1424,7 +1425,9 @@ defineExpose({
     color: #0f172a;
     letter-spacing: 0.1px;
 }
-
+.form-control::placeholder {
+  font-size: 12px !important; 
+}
 .btn-close {
      position: absolute;
     top: 8px;

@@ -1045,8 +1045,10 @@ function close() {
   max-width: 100%;
   border: none !important;
   height: 35px;
-  border: 1px solid #0d6efd !important; 
-  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.2);
+  border: 1px solid #dc3545 !important; 
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+  min-width: 300px;
+    width: auto;
 }
 
 
