@@ -5213,13 +5213,41 @@ const createSlide2 = () => {
 
 const createSlide3 = () => {
   const project = property.value?.project;
-  const features = Array.isArray(project?.features) ? project.features.map(f => f?.name || f?.title || f).filter(Boolean) : [];
+  const features = Array.isArray(project?.features)
+  ? project.features
+      .map(f => ({
+        name: f?.name || f?.title || f,
+        image: f?.img || f?.icon || null
+      }))
+      .filter(f => f.name)
+  : [];
   const half = Math.ceil(features.length / 2);
   const col1 = features.slice(0, half);
   const col2 = features.slice(half);
   const projectImage = project?.image ? getImageUrl(project.image) : getMainImage();
-  const renderItem = (text) => `<p style="margin:0 0 2mm 0 !important; font-size:3.2mm !important; line-height:4.5mm !important; color:#333 !important; display:flex !important; align-items:flex-start !important; gap:2mm !important;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FAA300" style="width:3mm !important; height:3mm !important; flex-shrink:0 !important; margin-top:0.5mm !important;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>${text}</p>`;
+  const renderItem = (feature) => {
+      console.log(feature);
+    const imageUrl = feature.image ? getImageUrl(feature.image) : null;
 
+    return `
+      <div style="display:flex !important; align-items:flex-start !important; gap:2mm !important; margin:0 0 3mm 0 !important;">
+        
+        ${
+          imageUrl
+            ? `<img src="${imageUrl}" 
+                  style="width:4mm !important; height:4mm !important; object-fit:contain !important; flex-shrink:0 !important; margin-top:0.5mm !important;" />`
+            : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FAA300"
+                  style="width:3mm !important; height:3mm !important; flex-shrink:0 !important; margin-top:0.5mm !important;">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>`
+        }
+
+        <p style="margin:0 !important; font-size:3.2mm !important; line-height:4.5mm !important; color:#333 !important;">
+          ${feature.name}
+        </p>
+      </div>
+    `;
+  };
   return `
   <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; display:flex !important; flex-direction:column !important;">
     <div style="width:100% !important; height:90% !important; display:flex !important; overflow:hidden !important;">
@@ -5246,7 +5274,7 @@ const createSlide4 = () => {
   const project = property.value?.project;
   const projectTitle    = project?.title || project?.name || '';
   const projectAbout = project?.about || '';
-  const projectImage = project?.image ? getImageUrl(project.image) : getMainImage();
+  const projectImage = project?.image2 ? getImageUrl(project.image2) : getMainImage();
   const aboutLimited = limitText(projectAbout, 400);
 
   return `

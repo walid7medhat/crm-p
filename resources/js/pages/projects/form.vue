@@ -502,7 +502,7 @@
                                 <div class="card-header bg-light">
                                     <h6 class="mb-0 text-dark card-title">
                                         <i class="fas fa-image me-2"></i>
-                                        Project Image
+                                        Project Main Image
                                     </h6>
                                 </div>
                                 <div class="card-body">
@@ -560,7 +560,72 @@
                                     </div>
                                 </div>
                             </div>
+                              <!-- 🖼️ Gallery Images Section -->
+                            <div class="card mb-4">
+                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 text-dark card-title">
+                                    <i class="fas fa-images me-2"></i>
+                                    Gallery Images
+                                    <span v-if="galleryImages.length > 0" class="badge bg-primary ms-2">
+                                        {{ galleryImages.length }}
+                                    </span>
+                                </h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary" @click="$refs.galleryInput.click()">
+                                    <i class="fas fa-plus"></i> Add Images
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <!-- Gallery Images Grid -->
+                                <div v-if="galleryImages.length > 0 || existingGalleryImages.length > 0" class="gallery-grid">
+                                    <!-- Existing Gallery Images -->
+                                    <div v-for="(image, idx) in existingGalleryImages" 
+                                        :key="'existing-gallery-' + image.id" 
+                                        class="gallery-item"
+                                        :class="{'marked-for-delete': galleryImagesToDelete.includes(image.id)}">
+                                        <div class="gallery-image-wrapper">
+                                            <img :src="image.image_url" :alt="'Gallery ' + (idx + 1)" class="gallery-img">
+                                            <div class="gallery-overlay">
+                                                <button type="button" class="btn btn-sm btn-danger" 
+                                                        @click="toggleDeleteGalleryImage(image.id)"
+                                                        :title="galleryImagesToDelete.includes(image.id) ? 'Restore' : 'Delete'">
+                                                    <i :class="galleryImagesToDelete.includes(image.id) ? 'fas fa-undo' : 'fas fa-trash'"></i>
+                                                </button>
+                                            </div>
+                                            <span v-if="galleryImagesToDelete.includes(image.id)" class="delete-badge">
+                                                Will delete
+                                            </span>
+                                        </div>
+                                    </div>
 
+                                    <!-- New Gallery Images Preview -->
+                                    <div v-for="(image, idx) in galleryImages" 
+                                        :key="'new-gallery-' + idx" 
+                                        class="gallery-item new">
+                                        <div class="gallery-image-wrapper">
+                                            <img :src="image.preview" :alt="'Gallery ' + (idx + 1)" class="gallery-img">
+                                            <div class="gallery-overlay">
+                                                <button type="button" class="btn btn-sm btn-danger" 
+                                                        @click="removeGalleryImage(idx)">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                            <span class="new-badge">New</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Empty State -->
+                                <div v-else class="empty-gallery text-center py-4">
+                                    <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted mb-0">No gallery images added yet</p>
+                                    <small class="text-muted">Click "Add Images" to upload</small>
+                                </div>
+
+                                <!-- Hidden File Input -->
+                                <input ref="galleryInput" type="file" class="d-none" @change="handleGalleryImages" 
+                                    multiple accept="image/jpeg,image/png,image/jpg,image/gif">
+                            </div>
+                        </div>
                           
                             
                         </div>
@@ -632,13 +697,64 @@ export default {
         const existingFloorPlanImages = ref([]);
         const floorPlanImagesToDelete = ref([]);
         const floorPlanImagesInput = ref(null);
-const selectedAreaName = ref('');
+        const galleryImages = ref([]);
+        const existingGalleryImages = ref([]); 
+        const galleryImagesToDelete = ref([]);
+        const selectedAreaName = ref('');
 
         // Status options with icons
         const statusOptions = ref([
             { value: 'Under Construction', label: 'Under Construction', icon: 'fas fa-hourglass-start text-warning' },
             { value: 'Ready', label: 'Ready', icon: 'fas fa-check-circle text-success' }
         ]);
+        const handleGalleryImages = (event) => {
+            const files = Array.from(event.target.files);
+            
+            if (files.length === 0) return;
+        
+            const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            
+            files.forEach(file => {
+                if (!validTypes.includes(file.type)) {
+                    showNotification('Please upload valid image files (JPEG, PNG, JPG, GIF)', 'error');
+                    return;
+                }
+        
+                if (file.size > maxSize) {
+                    showNotification('Image size should be less than 5MB', 'error');
+                    return;
+                }
+        
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    galleryImages.value.push({
+                        file: file,
+                        preview: e.target.result
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+        
+            event.target.value = '';
+        };
+        
+        // Remove new gallery image
+        const removeGalleryImage = (index) => {
+            galleryImages.value.splice(index, 1);
+        };
+        
+        // Toggle delete existing gallery image
+        const toggleDeleteGalleryImage = (imageId) => {
+            const index = galleryImagesToDelete.value.indexOf(imageId);
+            if (index === -1) {
+                galleryImagesToDelete.value.push(imageId);
+                showNotification('Image marked for deletion', 'warning');
+            } else {
+                galleryImagesToDelete.value.splice(index, 1);
+                showNotification('Image restored', 'success');
+            }
+        };
 
         // Project Form Data (removed price and sqft fields)
         const projectForm = ref({
@@ -648,7 +764,8 @@ const selectedAreaName = ref('');
             status: null,
             about: "",
             features: [],
-            floor_plan_images: []
+            floor_plan_images: [],
+            gallery_images: []
         });
      const updateTitleFromArea = (selectedId) => {
             console.log('🟢 Selected ID:', selectedId);
@@ -1047,6 +1164,9 @@ const selectedAreaName = ref('');
                         if (projectData.main_image) {
                             currentImage.value = projectData.main_image;
                         }
+                        if (projectData.images) {
+                            existingGalleryImages.value = projectData.images.filter(img => !img.is_main);
+                        }
                     
                         // Set existing floor plan images
                         // if (projectData.floor_plan_images) {
@@ -1213,6 +1333,17 @@ const selectedAreaName = ref('');
                 } else if (isEditMode.value && !selectedImage.value) {
                     formData.append('keep_current_image', 'true');
                 }  
+                // Add gallery images (multiple)
+                galleryImages.value.forEach((image, index) => {
+                    formData.append('images[]', image.file);
+                });
+                
+                // Add gallery images to delete (if any)
+                if (galleryImagesToDelete.value.length > 0) {
+                    galleryImagesToDelete.value.forEach((imageId, index) => {
+                        formData.append(`delete_images[${index}]`, imageId);
+                    });
+                }
                
                 if (floorPlanImagesToDelete.value.length > 0) {
                     floorPlanImagesToDelete.value.forEach((imageId, index) => {
@@ -1428,7 +1559,13 @@ const selectedAreaName = ref('');
             formatFileSize,
             formatDate,
             toggleDeleteImage ,
-            updateTitleFromArea 
+            updateTitleFromArea ,
+            galleryImages,
+            existingGalleryImages,
+            galleryImagesToDelete,
+            handleGalleryImages,
+            removeGalleryImage,
+            toggleDeleteGalleryImage
         };
     }
 };
@@ -2159,5 +2296,107 @@ const selectedAreaName = ref('');
     display: block;
     font-size: 0.7rem;
     margin-top: 2px;
+}
+/* Gallery Images Styling */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+.gallery-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e9ecef;
+    background: #f8f9fa;
+}
+
+.gallery-image-wrapper {
+    position: relative;
+    padding-bottom: 100%; /* 1:1 Aspect Ratio */
+    height: 0;
+    overflow: hidden;
+}
+
+.gallery-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.gallery-item:hover .gallery-img {
+    transform: scale(1.05);
+}
+
+.gallery-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.gallery-image-wrapper:hover .gallery-overlay {
+    opacity: 1;
+}
+
+.gallery-overlay .btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.gallery-item.marked-for-delete {
+    opacity: 0.6;
+    filter: grayscale(0.3);
+}
+
+.delete-badge, .new-badge {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    z-index: 2;
+}
+
+.delete-badge {
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+}
+
+.new-badge {
+    background: rgba(40, 167, 69, 0.9);
+    color: white;
+}
+
+.empty-gallery {
+    border: 1px dashed #dee2e6;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+@media (max-width: 768px) {
+    .gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
 }
 </style>

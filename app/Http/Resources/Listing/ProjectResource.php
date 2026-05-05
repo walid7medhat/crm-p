@@ -66,7 +66,7 @@ $duplicatedProject = Project::whereRaw(
             'images' => $this->images->map(function ($image) {
                 return [
                     'id' => $image->id,
-                    'url' => asset('storage/' . $image->image_path),
+                    'image_url' => asset('storage/' . $image->image_path),
                     'is_main' => $image->is_main,
                     'sort_order' => $image->sort_order
                 ];

@@ -103,6 +103,26 @@ $allowedAgentIds = [];
             'rented_until' => $this->rented_until,
              'payment_plan_json' => $this->getRawOriginal('payment_plan'),
             'project' => $this->whenLoaded('project', function () {
+                 $projectGalleryImages = $this->project->images->sortBy('sort_order')->values();
+                    $projectMainImage = $projectGalleryImages->firstWhere('is_main', true);
+                    $projectSecondImage = null;
+                    
+                    // If we have main image and at least 2 images total, get the second one
+                    if ($projectGalleryImages->count() >= 2) {
+                        if ($projectMainImage && $projectGalleryImages->count() >= 2) {
+                            // Get the next image after main
+                            $mainIndex = $projectGalleryImages->search(function($img) use ($projectMainImage) {
+                                return $img->id === $projectMainImage->id;
+                            });
+                            if ($mainIndex !== false && isset($projectGalleryImages[$mainIndex + 1])) {
+                                $projectSecondImage = $projectGalleryImages[$mainIndex + 1];
+                            }
+                        } else {
+                            // If no main image, just take first two
+                            $projectSecondImage = $projectGalleryImages[1] ?? null;
+                        }
+                    }
+    
                 return [
                     'id' => $this->project->id,
                     'title' => $this->project->title,
@@ -115,11 +135,20 @@ $allowedAgentIds = [];
                         'area_parents_title' => $this->project->area->area_parents_title
                     ] : null,
                     'project_id' => $this->project->id,
-                    'features' => $this->project->features->pluck('name'),
+                     'features' => $this->project->features->map(function ($feature) {
+                        return [
+                            'id' => $feature->id,
+                            'name' => $feature->name,
+                            'img' => $feature->img ? asset('storage/' . $feature->img) : null,
+                            'category' => $feature->category ?? null
+                        ];
+                    }),
 
                     'developer'=>$this->project->developer_id,
-                     'developer_name'=>$this->project->developer?->name,
-                        'image' => $this->project->mainImage ? asset('storage/' . $this->project->mainImage->image_path) : null,
+                    'developer_name'=>$this->project->developer?->name,
+                        // 'image' => $this->project->mainImage ? asset('storage/' . $this->project->mainImage->image_path) : null,
+                    'image' => $projectMainImage ? asset('storage/' . $projectMainImage->image_path) : null,
+                    'image2' => $projectSecondImage ? asset('storage/' . $projectSecondImage->image_path) : null,
                     'floor_plan_images' => FloorPlanImageResource::collection($this->project->floorPlanImages),
                 ];
             }),

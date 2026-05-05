@@ -191,28 +191,27 @@ class ProjectController extends Controller
                 Log::info('Main image uploaded', ['path' => $compressionResult['path']]);
             }
 
+
             // Handle additional images upload
-            if ($request->hasFile('images')) {
-                Log::info('Processing additional images', ['count' => count($request->file('images'))]);
-                
-                // Get current max order
-                $maxOrder = $project->images()->max('sort_order') ?? 0;
-                
-                foreach ($request->file('images') as $index => $imageFile) {
-                    $compressionResult = ImageHelper::compressAndConvertToWebP(
-                        $imageFile, 
-                        "projects/{$project->id}/gallery",
-                        ['quality' => 85, 'max_width' => 1920]
-                    );
+                if ($request->hasFile('images')) {
+                    Log::info('Processing additional images', ['count' => count($request->file('images'))]);
                     
-                    $project->images()->create([
-                        'image_path' => $compressionResult['path'],
-                        'is_main' => false,
-                        'sort_order' => $maxOrder + $index + 1
-                    ]);
+                    $maxOrder = $project->images()->max('sort_order') ?? 0;
+                    
+                    foreach ($request->file('images') as $index => $imageFile) {
+                        $compressionResult = ImageHelper::compressAndConvertToWebP(
+                            $imageFile, 
+                            "projects/{$project->id}/gallery",
+                            ['quality' => 85, 'max_width' => 1920]
+                        );
+                        
+                        $project->images()->create([
+                            'image_path' => $compressionResult['path'],
+                            'is_main' => false,
+                            'sort_order' => $maxOrder + $index + 1
+                        ]);
+                    }
                 }
-                Log::info('Additional images uploaded');
-            }
              // Handle floor plan images upload
           if ($request->has('floor_plan_images') && count($request->floor_plan_images)>0) {
                 Log::info('Processing floor plan images upload', [
@@ -419,10 +418,18 @@ class ProjectController extends Controller
             ]);
 
             // Handle additional images upload
+            if ($request->has('delete_images') && is_array($request->delete_images)) {
+                foreach ($request->delete_images as $imageId) {
+                    $image = ProjectImage::find($imageId);
+                    if ($image && $image->project_id === $project->id && !$image->is_main) {
+                        ImageHelper::deleteImage($image->image_path);
+                        $image->delete();
+                    }
+                }
+            }
+            
+            // Handle new gallery images upload
             if ($request->hasFile('images')) {
-                Log::info('🖼️ Processing additional images update', ['count' => count($request->file('images'))]);
-                
-                // Get current max order
                 $maxOrder = $project->images()->max('sort_order') ?? 0;
                 
                 foreach ($request->file('images') as $index => $imageFile) {
@@ -438,7 +445,6 @@ class ProjectController extends Controller
                         'sort_order' => $maxOrder + $index + 1
                     ]);
                 }
-                Log::info('✅ Additional images uploaded');
             }
               // Handle floor plan images
         if ($request->has('floor_plan_images') && count($request->floor_plan_images)>0) {
