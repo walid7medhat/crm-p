@@ -1071,6 +1071,18 @@
                                 <!-- Property Documents (Payment Proof + SPA — same idea as Create Deal / PropertyCard) -->
                                 <div class="col-12 mt-3 property-documents-block">
                                     <label class="section-title mb-2">Property Documents</label>
+                                    <div
+                                      v-if="validationAttempted && needsSecondPaymentProofOnSpa && missingPropertyDocumentTypes.includes('payment_proof')"
+                                      class="small text-danger mb-2"
+                                    >
+                                      Please add one more Payment Proof for the SPA stage.
+                                    </div>
+                                    <div
+                                      v-if="validationAttempted && !needsSecondPaymentProofOnSpa && missingPropertyDocumentTypes.some(t => t === 'spa' || t === 'spa_document')"
+                                      class="small text-danger mb-2"
+                                    >
+                                      SPA Document is required. Please add SPA Document.
+                                    </div>
                                     <DocumentUpload
                                         :modelValue="propertyDocumentsCombined[propIndex]"
                                         @update:modelValue="(val) => updatePropertyDocuments(propIndex, val)"
@@ -1197,6 +1209,8 @@ const props = defineProps({
 const validationAttempted = ref(false)
 
 // ========== Collapsible Sections State ==========
+const COLLAPSIBLE_SECTION_KEYS = ['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials']
+
 const openSections = ref({
   buyer: true,
   seller: true,
@@ -1205,6 +1219,24 @@ const openSections = ref({
   properties: true,
   financials: true
 })
+
+/** Tracks last unresolved state per accordion; used to collapse only on true→false (avoids closing while typing, e.g. budget on EOI). */
+const sectionUnresolvedSnapshot = ref(null)
+
+function syncSectionUnresolvedSnapshot() {
+  const snap = {}
+  COLLAPSIBLE_SECTION_KEYS.forEach((section) => {
+    snap[section] = sectionHasUnresolved(section)
+  })
+  sectionUnresolvedSnapshot.value = snap
+}
+
+function resetCollapsibleSectionsOpen() {
+  COLLAPSIBLE_SECTION_KEYS.forEach((k) => {
+    openSections.value[k] = true
+  })
+  sectionUnresolvedSnapshot.value = null
+}
 
 function toggleSection(section) {
   openSections.value[section] = !openSections.value[section]
@@ -1275,6 +1307,50 @@ const showPurchasePrice = computed(() => {
 // Property documents
 const propertyDocumentsCombined = ref({})
 
+// SPA target helper: Stage 4 / SPA needs an extra PAYMENT PROOF upload (second file),
+// but should NOT require another SPA document.
+const isTargetSpaStageAny = computed(() => {
+  const name = String(props.targetStageName || '').toLowerCase().trim()
+  const num = Number((name.match(/\d+/) || [])[0] || NaN)
+  return name.includes('spa') || num === 4
+})
+
+const needsSecondPaymentProofOnSpa = computed(() => {
+  if (!isTargetSpaStageAny.value) return false
+
+  const docsForPayment = (docs) => {
+    if (!Array.isArray(docs)) return []
+    return docs.filter((doc) => {
+      const docType = String(doc?.document_type || '').toLowerCase()
+      const isPaymentType = docType === 'payment_proof' || docType === 'payment'
+      return isPaymentType
+    })
+  }
+
+  const hasExistingPaymentProof = localProperties.value.some((_, propIndex) => {
+    const docs = propertyDocumentsCombined.value?.[propIndex] || []
+    const paymentDocs = docsForPayment(docs)
+    return paymentDocs.some((doc) => {
+      // Existing docs normally have no File, but do have url/path/original_name.
+      const hasStoredRef =
+        !!doc?.url || !!doc?.path || !!doc?.original_name || !!doc?.name
+      return !!(doc?.existing || doc?.is_existing) || hasStoredRef
+    })
+  })
+
+  const hasNewPaymentProofUpload = localProperties.value.some((_, propIndex) => {
+    const docs = propertyDocumentsCombined.value?.[propIndex] || []
+    const paymentDocs = docsForPayment(docs)
+    return paymentDocs.some((doc) => {
+      const f = doc?.file
+      if (f instanceof File) return true
+      return doc?.status === 'pending' && f instanceof Blob && !doc?.is_existing
+    })
+  })
+
+  return hasExistingPaymentProof && !hasNewPaymentProofUpload
+})
+
 const propertyDocumentTypes = computed(() => {
   const docTypes = []
   const missingKeys = effectiveMissingFields.value || []
@@ -1303,7 +1379,13 @@ const missingPropertyDocumentTypes = computed(() => {
       missing.push(docType)
     }
   })
-  
+
+  // UI enforcement on SPA stage: if we already have 1 Payment Proof but no NEW second one,
+  // highlight Payment Proof as missing even if backend filtered it out.
+  if (needsSecondPaymentProofOnSpa.value && !missing.includes('payment_proof')) {
+    missing.push('payment_proof')
+  }
+
   return missing
 })
 
@@ -1340,11 +1422,6 @@ function hasPropertyMissing(propIndex) {
 function isPropertyFieldRequired(fieldName) {
   const missingKeys = effectiveMissingFields.value || []
   const normalizedFieldName = normalizePropertyFieldKey(fieldName)
-   if (fieldName === 'budget_from' || fieldName === 'budget_to') {
-    const stageName = props.targetStageName?.toLowerCase() || ''
-    const isEOIStage = stageName.includes('eoi')
-    return isEOIStage
-  }
   // Check if any missing key matches pattern property_X_fieldName
   const result = missingKeys.some(key => {
     const match = key.match(/property_\d+_(.+)/)
@@ -1516,6 +1593,7 @@ const availableListings = ref([])
 const selectedListing = ref(null)
 const isLoadingListings = ref(false)
 const currentUser = ref(null)
+const currentDealData = ref(null)
 
 const dealProperties = computed(() => {
   return localProperties.value
@@ -1548,9 +1626,17 @@ const effectiveDealTypeForDocs = computed(() =>
 
 const normalizedDealType = computed(() => effectiveDealTypeForDocs.value)
 
+/** Primary pipeline: target column is SPA (name or stage 4) — extra payment proof only, not a new SPA file. */
+const isPrimaryTargetSpaStage = computed(() => {
+  const dt = normalizedDealType.value
+  const name = String(props.targetStageName || '').toLowerCase().trim()
+  const num = Number((name.match(/\d+/) || [])[0] || NaN)
+  return dt === 'primary' && (name.includes('spa') || (!Number.isNaN(num) && num === 4))
+})
+
 // Get existing field value from deal
 function getExistingFieldValue(key) {
-  const deal = props.deal
+  const deal = currentDealData.value || props.deal
   if (!deal) return ''
   
   if (deal[key] !== undefined && deal[key] !== null) return deal[key]
@@ -1581,9 +1667,10 @@ function getExistingFieldValue(key) {
 
 // Get existing documents from deal
 function getExistingDocuments(partyType) {
-  if (!props.deal?.parties) return []
+  const deal = currentDealData.value || props.deal
+  if (!deal?.parties) return []
   
-  const party = props.deal.parties.find(p => p.party_type === partyType)
+  const party = deal.parties.find(p => p.party_type === partyType)
   if (!party?.documents) return []
   
   return party.documents.map(doc => ({
@@ -1596,6 +1683,124 @@ function getExistingDocuments(partyType) {
     uploaded: true,
     existing: true
   }))
+}
+
+function hydratePropertyDocsFromDealDocuments(deal) {
+  if (!deal || !Array.isArray(deal.documents) || localProperties.value.length === 0) return
+
+  const propertyDocs = deal.documents.filter((doc) => {
+    const category = String(doc?.document_category || doc?.category || '').toLowerCase()
+    const docType = String(doc?.document_type || doc?.type || '').toLowerCase()
+    const isSpaOrPayment = docType.includes('spa') || docType.includes('payment')
+    return (
+      category === 'property' ||
+      category === 'properties' ||
+      category.includes('property') ||
+      (!category && isSpaOrPayment)
+    )
+  })
+  if (propertyDocs.length === 0) return
+
+  // Stage-change modal currently edits one property block at a time in primary flow.
+  // If docs come from deal-level "documents", merge them onto first property arrays.
+  const firstProperty = localProperties.value[0]
+  if (!firstProperty) return
+
+  const existingPayment = Array.isArray(firstProperty.payment_proof) ? [...firstProperty.payment_proof] : []
+  const existingSpa = Array.isArray(firstProperty.spa_document) ? [...firstProperty.spa_document] : []
+
+  propertyDocs.forEach((doc) => {
+    const rawType = String(doc?.document_type || doc?.type || '').toLowerCase()
+    const labelHint = String(doc?.file_name || doc?.name || doc?.original_name || '').toLowerCase()
+    let normalizedType = rawType
+    if (rawType === 'spa' || rawType === 'spa_document' || rawType.includes('spa') || labelHint.includes('spa')) {
+      normalizedType = 'spa_document'
+    } else if (
+      rawType === 'payment' ||
+      rawType === 'payment_proof' ||
+      rawType.includes('payment') ||
+      labelHint.includes('payment') ||
+      labelHint.includes('proof')
+    ) {
+      normalizedType = 'payment_proof'
+    }
+
+    const normalizedDoc = {
+      document_type: normalizedType,
+      name: doc?.file_name || doc?.name || normalizedType,
+      original_name: doc?.file_name || doc?.original_name || doc?.name || normalizedType,
+      url: doc?.url || doc?.file_url || doc?.file_path || doc?.path || null,
+      path: doc?.file_path || doc?.path || null,
+      existing: true,
+      uploaded: true,
+    }
+
+    if (normalizedType === 'payment_proof') {
+      const key = getPropertyDocIdentityKey(normalizedDoc)
+      const alreadyExists = existingPayment.some((d) => getPropertyDocIdentityKey(d) === key)
+      if (!alreadyExists) existingPayment.push(normalizedDoc)
+    }
+    if (normalizedType === 'spa_document') {
+      const key = getPropertyDocIdentityKey(normalizedDoc)
+      const alreadyExists = existingSpa.some((d) => getPropertyDocIdentityKey(d) === key)
+      if (!alreadyExists) existingSpa.push(normalizedDoc)
+    }
+  })
+
+  firstProperty.payment_proof = existingPayment
+  firstProperty.spa_document = existingSpa
+}
+
+/**
+ * Stable identity key for deduping property documents (payment_proof / spa).
+ * We dedupe by type + storage identifiers (url/path/original name) and for Files by file name/size/lastModified.
+ */
+function getPropertyDocIdentityKey(doc) {
+  const type = doc?.document_type || doc?.type || ''
+  const url = doc?.url || doc?.file_url || doc?.path || doc?.file_path || ''
+  const path = doc?.path || doc?.file_path || ''
+  const originalName = doc?.original_name || ''
+  const name = doc?.name || ''
+
+  const file = doc?.file
+  const fileKey =
+    file instanceof File
+      ? `${file.name}|${file.size}|${file.lastModified}`
+      : ''
+
+  const base = [type, url, path, originalName, name, fileKey].filter(Boolean).join('||')
+  // Fallback (very unlikely): JSON signature.
+  return base || JSON.stringify(doc || {})
+}
+
+function dedupePropertyDocs(docs) {
+  const list = Array.isArray(docs) ? docs : []
+  const seen = new Set()
+  const out = []
+  list.forEach((d) => {
+    const key = getPropertyDocIdentityKey(d)
+    if (seen.has(key)) return
+    seen.add(key)
+    out.push(d)
+  })
+  return out
+}
+
+function normalizeStoredDocs(raw) {
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed
+      if (parsed && typeof parsed === 'object') return [parsed]
+      return []
+    } catch {
+      return []
+    }
+  }
+  if (typeof raw === 'object') return [raw]
+  return []
 }
 
 // Fetch functions
@@ -1679,18 +1884,19 @@ function onSearchAreas(search) {
 }
 // Update property documents - دالة محدثة
 function updatePropertyDocuments(propIndex, newDocuments) {
-    // تحديث الحالة المحلية
-    propertyDocumentsCombined.value[propIndex] = newDocuments
+    const deduped = dedupePropertyDocs(newDocuments || [])
+    // تحديث الحالة المحلية (dedupe to avoid double-render after hydration/save)
+    propertyDocumentsCombined.value[propIndex] = deduped
     
     // تحديث property في localProperties
     if (localProperties.value[propIndex]) {
         // تجميع المستندات حسب النوع
-        const paymentProofs = newDocuments.filter(doc => 
+        const paymentProofs = deduped.filter(doc => 
             doc.document_type === 'payment_proof' || 
             (doc.file && doc.original_name && doc.original_name.includes('payment'))
         )
         
-        const spaDocuments = newDocuments.filter(doc => 
+        const spaDocuments = deduped.filter(doc => 
             doc.document_type === 'spa_document' || 
             doc.document_type === 'spa' ||
             (doc.file && doc.original_name && doc.original_name.includes('spa'))
@@ -1712,8 +1918,29 @@ function reinitializePropertyDocuments() {
     if (!localProperties.value.length) return
     
     localProperties.value.forEach((property, idx) => {
-        const paymentProof = property.payment_proof || []
-        const spaDocument = property.spa_document || []
+        const propertyDocs = normalizeStoredDocs(property.documents)
+        const paymentFromPropertyDocs = propertyDocs.filter((d) => {
+          const t = String(d?.document_type || d?.type || '').toLowerCase()
+          return t.includes('payment') || t.includes('proof')
+        })
+        const spaFromPropertyDocs = propertyDocs.filter((d) => {
+          const t = String(d?.document_type || d?.type || '').toLowerCase()
+          return t.includes('spa')
+        })
+
+        const paymentProof = normalizeStoredDocs(
+          property.payment_proof ||
+          property.payment_proofs ||
+          property.payment_proof_raw ||
+          paymentFromPropertyDocs
+        )
+        const spaDocument = normalizeStoredDocs(
+          property.spa_document ||
+          property.spa_documents ||
+          property.spa_document_raw ||
+          property.spa ||
+          spaFromPropertyDocs
+        )
         
         let docs = []
         
@@ -1730,25 +1957,6 @@ function reinitializePropertyDocuments() {
                     existing: true
                 })
             })
-        } else if (typeof paymentProof === 'string' && paymentProof) {
-            try {
-                const parsed = JSON.parse(paymentProof)
-                if (Array.isArray(parsed)) {
-                    parsed.forEach(doc => {
-                        docs.push({
-                            ...doc,
-                            document_type: 'payment_proof',
-                            url: doc.url || doc.path || null,
-                            file: doc.file || null,
-                            name: doc.original_name || doc.name || 'Payment Proof',
-                            uploaded: true,
-                            existing: true
-                        })
-                    })
-                }
-            } catch(e) {
-                console.error('Error parsing payment_proof:', e)
-            }
         }
         
         // معالجة spa_document
@@ -1756,7 +1964,7 @@ function reinitializePropertyDocuments() {
             spaDocument.forEach(doc => {
                 docs.push({
                     ...doc,
-                    document_type: 'spa_document',
+                    document_type: 'spa',
                     url: doc.url || doc.path || null,
                     file: doc.file || null,
                     name: doc.original_name || doc.name || 'SPA Document',
@@ -1764,28 +1972,12 @@ function reinitializePropertyDocuments() {
                     existing: true
                 })
             })
-        } else if (typeof spaDocument === 'string' && spaDocument) {
-            try {
-                const parsed = JSON.parse(spaDocument)
-                if (Array.isArray(parsed)) {
-                    parsed.forEach(doc => {
-                        docs.push({
-                            ...doc,
-                            document_type: 'spa_document',
-                            url: doc.url || doc.path || null,
-                            file: doc.file || null,
-                            name: doc.original_name || doc.name || 'SPA Document',
-                            uploaded: true,
-                            existing: true
-                        })
-                    })
-                }
-            } catch(e) {
-                console.error('Error parsing spa_document:', e)
-            }
         }
         
-        propertyDocumentsCombined.value[idx] = docs
+        // Avoid duplicates when backend returns the same file in both:
+        // - property.payment_proof / property.spa_document
+        // - property.documents (deal-level doc merge)
+        propertyDocumentsCombined.value[idx] = dedupePropertyDocs(docs)
     })
 }
 
@@ -1803,7 +1995,18 @@ async function initializeForm() {
     console.log('Initializing form with missing fields:', missingFieldKeys)
     
     const initial = {}
-    const deal = props.deal
+    let deal = props.deal
+    // Always use fresh full deal data (with documents/properties) to avoid
+    // false "required again" on already uploaded property docs.
+    if (deal?.id) {
+      try {
+        const resp = await api.get(`/deals/${deal.id}`)
+        deal = resp?.data?.data || deal
+      } catch (e) {
+        console.warn('Could not refresh full deal data, using passed deal:', e)
+      }
+    }
+    currentDealData.value = deal
     
     if (deal) {
       Object.keys(deal).forEach(key => {
@@ -1865,8 +2068,12 @@ async function initializeForm() {
       propertiesCount: props.deal?.properties?.length || 0
     })
 
-    if (props.deal?.properties && props.deal.properties.length > 0) {
-      localProperties.value = JSON.parse(JSON.stringify(props.deal.properties))
+    if (deal?.properties && deal.properties.length > 0) {
+      localProperties.value = JSON.parse(JSON.stringify(deal.properties)).map((p) => ({
+        ...p,
+        developer_name: p?.developer_name || p?.developer_contact_name || '',
+        developer_phone: p?.developer_phone || p?.developer_contact_phone || '',
+      }))
       console.log('Loaded existing properties:', localProperties.value)
     } else if (requiresProperties) {
       console.log('Creating default property')
@@ -1890,6 +2097,8 @@ async function initializeForm() {
       }]
     }
 
+    hydratePropertyDocsFromDealDocuments(deal)
+
     if (localProperties.value.length > 0) {
       formData.value.properties = [...localProperties.value]
     }
@@ -1908,6 +2117,8 @@ if (localProperties.value.length > 0) {
             isLoadingPropertyData.value = false
         }
     }, 500)
+    await nextTick()
+    collapseCompletedSections()
   }
 }
 
@@ -2052,6 +2263,11 @@ function shouldShowPropertyField(fieldName, property) {
   
   const dt = normalizedDealType.value
   const stageName = props.targetStageName?.toLowerCase() || ''
+  const isSpaStage = stageName.includes('spa')
+  const isBookingStage = stageName.includes('booking')
+  if (isSpaStage && ['unit_no', 'unit_size', 'developer_name', 'developer_phone', 'purchase_price'].includes(fieldName)) {
+    return true
+  }
   
   switch (fieldName) {
     case 'unit_no':
@@ -2063,7 +2279,7 @@ function shouldShowPropertyField(fieldName, property) {
     case 'developer_id':
     case 'developer_name':
     case 'developer_phone':
-      return dt === 'secondary' || isPropertyFieldRequired(fieldName) || !!property?.[fieldName]
+      return dt === 'secondary' || isBookingStage || isSpaStage || isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || !!property?.developer_contact_name || !!property?.developer_contact_phone
     case 'bedrooms':
       return showBedroomsForProperty(property)
     case 'rental_price':
@@ -2102,7 +2318,7 @@ const propertyDocTypesForModal = computed(() => {
       (k.includes('spa') && k.includes('property'))
   )
   return [
-    { id: 'payment_proof', name: 'Payment Proof', required: paymentRequired },
+    { id: 'payment_proof', name: 'Payment Proof', required: paymentRequired || needsSecondPaymentProofOnSpa.value },
     { id: 'spa', name: 'SPA Document', required: spaRequired }
   ]
 })
@@ -2246,20 +2462,11 @@ const effectiveMissingFields = computed(() => {
   // ✅ فلترة صارمة حسب نوع الصفقة
   const dealType = normalizedDealType.value
   const currentStageName = String(props.targetStageName || '').toLowerCase().trim()
-  const isEoiStage = currentStageName.includes('eoi')
+  const targetStageNumber = Number((currentStageName.match(/\d+/) || [])[0] || NaN)
   
   const filteredFields = allFields.filter(field => {
     if (typeof field !== 'string') return true
     
-    // ✅ إزالة budget fields من أي مرحلة غير EOI
-    if (!isEoiStage) {
-      if (field === 'budget_from' || field === 'budget_to' || 
-          field.includes('budget_from') || field.includes('budget_to')) {
-        console.log(`🚫 Removing budget field "${field}" because stage is not EOI (stage: ${currentStageName})`)
-        return false
-      }
-    }
-                
     if (dealType === 'primary') {
       // إخفاء Seller, Tenant, Landlord
       if (field.startsWith('seller_') || field.includes('seller_document_')) return false
@@ -2285,15 +2492,56 @@ const effectiveMissingFields = computed(() => {
     return true
   })
   
-  console.log('=== effectiveMissingFields Debug ===')
-  console.log('Stage:', currentStageName)
-  console.log('Is EOI Stage:', isEoiStage)
-  console.log('Deal Type:', dealType)
-  console.log('All fields before filter:', allFields)
-  console.log('Filtered fields:', filteredFields)
-  console.log('===================================')
-  
-  return filteredFields
+  // Enforce stage-based property requirements for primary flow
+  const enforced = new Set(filteredFields)
+  const isStage2Primary = dealType === 'primary' && (targetStageNumber === 2 || currentStageName.includes('eoi'))
+  const isBookingOrLaterPrimary =
+    dealType === 'primary' &&
+    (
+      currentStageName.includes('booking') ||
+      currentStageName.includes('spa') ||
+      (!Number.isNaN(targetStageNumber) && targetStageNumber >= 3)
+    )
+  // SPA column: ask for one more payment proof only — not another SPA file if booking already had one.
+  const isTargetSpaPrimary =
+    dealType === 'primary' &&
+    (currentStageName.includes('spa') || (!Number.isNaN(targetStageNumber) && targetStageNumber === 4))
+
+  if (isStage2Primary) {
+    ;[
+      'at_least_one_property',
+      'property_0_area_id',
+      'property_0_property_type_id',
+      'property_0_bedrooms',
+      'property_0_budget_from',
+      'property_0_budget_to',
+    ].forEach((k) => enforced.add(k))
+  }
+
+  if (isBookingOrLaterPrimary) {
+    ;[
+      'at_least_one_property',
+      'property_0_unit_no',
+      'property_0_property_type_id',
+      'property_0_bedrooms',
+      'property_0_unit_size',
+      'property_0_area_id',
+      'property_0_developer_id',
+      'property_0_developer_name',
+      'property_0_developer_phone',
+      'property_0_purchase_price',
+      'property_document_payment_proof',
+    ].forEach((k) => enforced.add(k))
+    if (!isTargetSpaPrimary) {
+      enforced.add('property_document_spa')
+    }
+  }
+
+  let result = Array.from(enforced)
+  if (isTargetSpaPrimary) {
+    result = result.filter((k) => k !== 'property_document_spa')
+  }
+  return result
 })
 
 // Unresolved missing keys for submit button
@@ -2302,7 +2550,6 @@ const unresolvedMissingKeys = computed(() => {
   const unresolved = []
   const missingKeys = effectiveMissingFields.value || []
   const stageName = props.targetStageName?.toLowerCase() || ''
-  const isEoiStage = stageName.includes('eoi')
   const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
   
   // ✅ في مرحلة Won، تحقق من financial fields
@@ -2322,9 +2569,6 @@ const unresolvedMissingKeys = computed(() => {
     }
   }
   
-  // ✅ في مرحلة EOI، تحقق من budget fields
-  const shouldCheckBudget = isEoiStage
-
   missingKeys.forEach(key => {
     // ✅ معالجة property_document_ fields
     if (key.startsWith('property_document_')) {
@@ -2362,7 +2606,10 @@ const unresolvedMissingKeys = computed(() => {
               existingDocsArray = []
             }
           }
-          if (Array.isArray(existingDocsArray) && existingDocsArray.length > 0) {
+          if (Array.isArray(existingDocsArray) && existingDocsArray.some(doc => !!(doc?.file || doc?.url || doc?.path || doc?.original_name))) {
+            return true
+          }
+          if (existingDocsArray && typeof existingDocsArray === 'object' && !!(existingDocsArray.file || existingDocsArray.url || existingDocsArray.path || existingDocsArray.original_name)) {
             return true
           }
         }
@@ -2383,7 +2630,10 @@ const unresolvedMissingKeys = computed(() => {
                 existingDocsArray = []
               }
             }
-            if (Array.isArray(existingDocsArray) && existingDocsArray.length > 0) {
+            if (Array.isArray(existingDocsArray) && existingDocsArray.some(doc => !!(doc?.file || doc?.url || doc?.path || doc?.original_name))) {
+              return true
+            }
+            if (existingDocsArray && typeof existingDocsArray === 'object' && !!(existingDocsArray.file || existingDocsArray.url || existingDocsArray.path || existingDocsArray.original_name)) {
               return true
             }
           }
@@ -2396,12 +2646,31 @@ const unresolvedMissingKeys = computed(() => {
           unresolved.push(key)
         }
       }
-      return
-    }
-    
-    // ✅ تخطي budget fields إذا لم نكن في EOI
-    if (!shouldCheckBudget && (key === 'budget_from' || key === 'budget_to' || key.includes('budget_from') || key.includes('budget_to'))) {
-      console.log(`⏭️ Skipping budget field "${key}" in unresolved check (not EOI stage)`)
+
+      // SPA / stage 4 (primary): require at least one NEW payment proof upload
+      // even if an older payment proof already exists from booking.
+      const targetStageNumFromTitle = Number(
+        (String(props.targetStageName || '').match(/\d+/) || [])[0] || NaN
+      )
+      const isSpaStageTarget = stageName.includes('spa') || targetStageNumFromTitle === 4
+
+      if (isSpaStageTarget && normalizedDocType === 'payment_proof') {
+        const hasNewPaymentProof = localProperties.value.some((_, propIndex) => {
+          const docs = propertyDocumentsCombined.value?.[propIndex] || []
+          if (!Array.isArray(docs)) return false
+          return docs.some((doc) => {
+            const docType = String(doc?.document_type || '').toLowerCase()
+            const isPaymentType = docType === 'payment_proof' || docType === 'payment'
+            if (!isPaymentType) return false
+            const f = doc?.file
+            if (f instanceof File) return true
+            return doc?.status === 'pending' && f instanceof Blob && !doc?.is_existing
+          })
+        })
+        if (!hasNewPaymentProof && !unresolved.includes(key)) {
+          unresolved.push(key)
+        }
+      }
       return
     }
     
@@ -2467,6 +2736,54 @@ const canSubmit = computed(() => {
   return !loading.value && !submitting.value && unresolvedMissingKeys.value.length === 0
 })
 
+/** Collapse accordion sections whose required work is satisfied (aligned with unresolvedMissingKeys). */
+function sectionHasUnresolved(section) {
+  const keys = unresolvedMissingKeys.value || []
+  switch (section) {
+    case 'buyer':
+      return keys.some((f) => f.startsWith('buyer_') || f.startsWith('buyer_document_'))
+    case 'seller':
+      return keys.some((f) => f.startsWith('seller_') || f.startsWith('seller_document_'))
+    case 'tenant':
+      return keys.some((f) => f.startsWith('tenant_') || f.startsWith('tenant_document_'))
+    case 'landlord':
+      return keys.some((f) => f.startsWith('landlord_') || f.startsWith('landlord_document_'))
+    case 'properties':
+      return keys.some((f) => f.startsWith('property_') || f === 'at_least_one_property')
+    case 'financials':
+      return keys.some((f) => ['deal_commission', 'deal_total_amount'].includes(f))
+    default:
+      return false
+  }
+}
+
+function collapseCompletedSections() {
+  if (!props.show) return
+  COLLAPSIBLE_SECTION_KEYS.forEach((section) => {
+    if (!sectionHasUnresolved(section)) {
+      openSections.value[section] = false
+    }
+  })
+  syncSectionUnresolvedSnapshot()
+}
+
+/** On unresolved changes after load: only auto-close when a section was incomplete and becomes complete */
+function collapseSectionsWhenJustResolved() {
+  if (!props.show || loading.value) return
+  const snap = sectionUnresolvedSnapshot.value
+  if (!snap) {
+    syncSectionUnresolvedSnapshot()
+    return
+  }
+  COLLAPSIBLE_SECTION_KEYS.forEach((section) => {
+    const now = sectionHasUnresolved(section)
+    if (snap[section] === true && now === false) {
+      openSections.value[section] = false
+    }
+  })
+  syncSectionUnresolvedSnapshot()
+}
+
 // Submit form — validate on click: scroll to first error, then save when complete
 async function submitForm() {
   if (loading.value || submitting.value) return
@@ -2474,9 +2791,35 @@ async function submitForm() {
   validationAttempted.value = true
   await nextTick()
 
+  // Hard guard: on SPA target, don't allow stage change until user uploads a second Payment Proof
+  // (even if they already have one from Booking).
+  if (needsSecondPaymentProofOnSpa.value) {
+    const modalEl = document.querySelector('.complete-fields-modal')
+    if (modalEl) {
+      const addButtons = Array.from(modalEl.querySelectorAll('.document-property-section-add'))
+      const paymentBtn =
+        addButtons.find((btn) => String(btn?.textContent || '').toLowerCase().includes('payment proof')) ||
+        modalEl.querySelector('.document-property-section-add--missing')
+      paymentBtn?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+    return
+  }
+
   if (unresolvedMissingKeys.value.length > 0) {
     const modalEl = document.querySelector('.complete-fields-modal')
-    const firstInvalid = modalEl?.querySelector('.is-invalid')
+    const firstMissingPropertyDoc = unresolvedMissingKeys.value.find((k) => k.startsWith('property_document_'))
+    let firstInvalid = null
+    if (firstMissingPropertyDoc && modalEl) {
+      const docTypeRaw = firstMissingPropertyDoc.replace('property_document_', '')
+      const docTypeLabel = docTypeRaw === 'spa' ? 'spa document' : (docTypeRaw === 'payment_proof' ? 'payment proof' : docTypeRaw.replace(/_/g, ' '))
+      const addButtons = Array.from(modalEl.querySelectorAll('.document-property-section-add'))
+      firstInvalid = addButtons.find((btn) =>
+        String(btn?.textContent || '').toLowerCase().includes(`add ${docTypeLabel}`.toLowerCase())
+      ) || modalEl.querySelector('.document-property-section-add--missing')
+    }
+    if (!firstInvalid && modalEl) {
+      firstInvalid = modalEl.querySelector('.is-invalid')
+    }
     firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     return
   }
@@ -2497,13 +2840,42 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
 
   const payload = {}
   const documents = []
+  const allowedPayloadKeys = new Set([
+    'source',
+    'deal_name',
+    'deal_total_amount',
+    'deal_commission',
+    'property_link',
+    'property_reference',
+    'lost_reason',
+    'listing_id',
+    'buyer_first_name', 'buyer_last_name', 'buyer_phone', 'buyer_email', 'buyer_nationality', 'buyer_residency_status', 'buyer_city', 'buyer_country', 'buyer_dob', 'buyer_language',
+    'seller_first_name', 'seller_last_name', 'seller_phone', 'seller_email', 'seller_nationality', 'seller_residency_status', 'seller_city', 'seller_country', 'seller_dob', 'seller_language',
+    'tenant_first_name', 'tenant_last_name', 'tenant_phone', 'tenant_email', 'tenant_nationality', 'tenant_residency_status', 'tenant_city', 'tenant_country', 'tenant_language',
+    'landlord_first_name', 'landlord_last_name', 'landlord_phone', 'landlord_email', 'landlord_nationality', 'landlord_residency_status', 'landlord_city', 'landlord_country', 'landlord_dob', 'landlord_language',
+  ])
   
   // Collect regular fields
   Object.keys(formData.value).forEach(key => {
+    if (!allowedPayloadKeys.has(key)) return
     if (!key.includes('_documents') && 
         formData.value[key] !== null && 
         formData.value[key] !== undefined && 
         formData.value[key] !== '') {
+      if (key === 'deal_commission') {
+        const val = Number(formData.value[key])
+        if (Number.isFinite(val) && val >= 0 && val <= 999.99) {
+          payload[key] = val
+        }
+        return
+      }
+      if (key === 'deal_total_amount') {
+        const val = Number(formData.value[key])
+        if (Number.isFinite(val) && val >= 0 && val <= 9999999999999.99) {
+          payload[key] = val
+        }
+        return
+      }
       payload[key] = formData.value[key]
     }
   })
@@ -2516,23 +2888,10 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
     { ref: landlordDocUploadRef, party: 'landlord', key: 'landlord_documents' }
   ]
   
-  docRefs.forEach(({ ref, party, key }) => {
-    if (ref.value?.modelValue) {
-      ref.value.modelValue.forEach(doc => {
-        if (doc.file) {
-          documents.push({
-            file: doc.file,
-            document_type: doc.document_type,
-            category: party,
-            party_type: party
-          })
-        }
-      })
-    }
-    
+  docRefs.forEach(({ party, key }) => {
     if (formData.value[key] && Array.isArray(formData.value[key])) {
       formData.value[key].forEach(doc => {
-        if (doc.file) {
+        if (doc.file instanceof File) {
           documents.push({
             file: doc.file,
             document_type: doc.document_type,
@@ -2565,6 +2924,25 @@ if (localProperties.value.length > 0) {
         }
     })
 }
+
+  // Guard against oversized multipart uploads (server limit is 8MB).
+  // Keep a safety margin for non-file form fields/boundary bytes.
+  const totalUploadBytes = documents.reduce((sum, doc) => {
+    const size = doc?.file?.size || 0
+    return sum + size
+  }, 0)
+  const maxSafeUploadBytes = 7.5 * 1024 * 1024
+  if (totalUploadBytes > maxSafeUploadBytes) {
+    const mb = (totalUploadBytes / (1024 * 1024)).toFixed(2)
+    const msg = `Uploaded files are too large (${mb} MB). Please reduce file size to under 7.5 MB total.`
+    if (window?.$showNotification) {
+      window.$showNotification(msg, 'warning')
+    } else {
+      alert(msg)
+    }
+    submitting.value = false
+    return
+  }
   
   // Add properties to payload
   // في submitForm()، أضف:
@@ -2637,6 +3015,7 @@ function closeModal() {
 watch(() => props.show, async (val) => {
     if (val) {
         validationAttempted.value = false
+        resetCollapsibleSectionsOpen()
         // إعادة تعيين حالة تحميل الـ Properties
         isLoadingPropertyData.value = true
         
@@ -2671,7 +3050,8 @@ watch(unresolvedMissingKeys, (newVal, oldVal) => {
   if (newVal && newVal.length > 0) {
     console.log('New values:', [...newVal]);
   }
-}, { deep: true, immediate: true });
+  collapseSectionsWhenJustResolved()
+}, { deep: true });
 const isLoadingComplete = computed(() => {
     return loading.value || isLoadingPropertyData.value
 })
@@ -3220,8 +3600,20 @@ onMounted(async () => {
 }
 
 .custom-input::placeholder {
-  font-size: 10px;
+  font-size: 9px;
   color: #9ca3af;
+}
+
+/* Smaller placeholders across this modal (inputs + selects + phone input) */
+.complete-fields-modal ::placeholder {
+  font-size: 9px !important;
+}
+
+:deep(.custom-v-select .vs__search::placeholder),
+:deep(.custom-v-select .vs__selected-options .vs__search::placeholder),
+:deep(.crm-phone-input .vti__input::placeholder) {
+  font-size: 9px !important;
+  color: #9ca3af !important;
 }
 
 .budget-field-wrap-stage {
