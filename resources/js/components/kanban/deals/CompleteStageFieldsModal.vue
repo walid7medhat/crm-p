@@ -1215,6 +1215,9 @@ function isSectionOpen(section) {
 }
 
 function hasRequiredInSection(section) {
+    const stageName = props.targetStageName?.toLowerCase() || ''
+    const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
+
   // Check if any field in this section is required (has missing)
   switch(section) {
     case 'buyer':
@@ -1238,6 +1241,11 @@ function hasRequiredInSection(section) {
         f.startsWith('property_') || f === 'at_least_one_property'
       )
     case 'financials':
+      if (isWonStage) {
+        const totalAmountMissing = !formData.value?.deal_total_amount || formData.value.deal_total_amount === ''
+        const commissionMissing = !formData.value?.deal_commission || formData.value.deal_commission === ''
+        return totalAmountMissing || commissionMissing
+      }
       return effectiveMissingFields.value.some(f =>
         ['deal_commission', 'deal_total_amount'].includes(f)
       )
@@ -1253,7 +1261,7 @@ const showBudgetFields = computed(() => {
   const hasBudgetTo = missingKeys.some(key => key.includes('budget_to'))
   if (hasBudgetFrom || hasBudgetTo) {
     const stageName = props.targetStageName?.toLowerCase() || ''
-    return stageName.includes('eoi') || stageName.includes('spa')
+    return stageName.includes('eoi') || stageName.includes('new')
   }
   
   return false
@@ -1261,7 +1269,7 @@ const showBudgetFields = computed(() => {
 
 const showPurchasePrice = computed(() => {
   const stageName = props.targetStageName?.toLowerCase() || ''
-  return stageName.includes('booking') || stageName.includes('won')
+  return !stageName.includes('new') && !stageName.includes('eoi')
 })
 
 // Property documents
@@ -1332,7 +1340,11 @@ function hasPropertyMissing(propIndex) {
 function isPropertyFieldRequired(fieldName) {
   const missingKeys = effectiveMissingFields.value || []
   const normalizedFieldName = normalizePropertyFieldKey(fieldName)
-  
+   if (fieldName === 'budget_from' || fieldName === 'budget_to') {
+    const stageName = props.targetStageName?.toLowerCase() || ''
+    const isEOIStage = stageName.includes('eoi')
+    return isEOIStage
+  }
   // Check if any missing key matches pattern property_X_fieldName
   const result = missingKeys.some(key => {
     const match = key.match(/property_\d+_(.+)/)
@@ -1983,6 +1995,15 @@ const missingDocumentTypesByParty = computed(() => {
 // Check if field is required (stage rules)
 function hasField(fieldKey) {
   const missingKeys = effectiveMissingFields.value || []
+  const stageName = props.targetStageName?.toLowerCase() || ''
+  const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
+  
+  if (isWonStage && (fieldKey === 'deal_total_amount' || fieldKey === 'deal_commission')) {
+    const value = formData.value?.[fieldKey]
+    const isEmpty = value === null || value === undefined || value === '' || value === 0
+    return isEmpty 
+  }
+  
   return missingKeys.includes(fieldKey)
 }
 
@@ -1991,7 +2012,15 @@ function shouldShowField(fieldKey) {
   if (!fieldKey) return false
   if (fieldKey === 'lost_reason') return hasField('lost_reason')
   if (hasField(fieldKey)) return true
+  
   const dt = normalizedDealType.value
+  const stageName = props.targetStageName?.toLowerCase() || ''
+  const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
+  
+  if (isWonStage && (fieldKey === 'deal_total_amount' || fieldKey === 'deal_commission')) {
+    return true
+  }
+  
   if (fieldKey.startsWith('buyer_')) return dt === 'primary' || dt === 'secondary'
   if (fieldKey.startsWith('seller_')) return dt === 'secondary'
   if (fieldKey.startsWith('tenant_')) return dt === 'rental'
@@ -2010,11 +2039,15 @@ function showPartyDetailFields(partyType) {
 }
 
 function shouldShowPropertyField(fieldName, property) {
-  // معالجة budget fields أولاً
   if (fieldName === 'budget_from' || fieldName === 'budget_to') {
     const stageName = props.targetStageName?.toLowerCase() || ''
-    const isSpaStage = stageName.includes('spa')
-    return isSpaStage || showBudgetFields.value || isPropertyFieldRequired(fieldName) || !!property?.[fieldName]
+    const isEOIStage = stageName.includes('eoi')
+    
+    if (isEOIStage) {
+      return true 
+    }
+    
+    return false
   }
   
   const dt = normalizedDealType.value
@@ -2099,6 +2132,16 @@ const hasPropertyRequirements = computed(() => {
 // Field invalid check (only after Save)
 function isFieldInvalid(fieldKey) {
   if (!fieldKey || !validationAttempted.value) return false
+  
+  const stageName = props.targetStageName?.toLowerCase() || ''
+  const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
+  
+  // ✅ في مرحلة Won، تحقق من financial fields
+  if (isWonStage && (fieldKey === 'deal_total_amount' || fieldKey === 'deal_commission')) {
+    const value = formData.value?.[fieldKey]
+    const isEmpty = value === null || value === undefined || value === '' || value === 0
+    return isEmpty
+  }
   
   const isRequired = hasField(fieldKey)
   if (!isRequired) return false
@@ -2202,39 +2245,49 @@ const effectiveMissingFields = computed(() => {
   
   // ✅ فلترة صارمة حسب نوع الصفقة
   const dealType = normalizedDealType.value
+  const currentStageName = String(props.targetStageName || '').toLowerCase().trim()
+  const isEoiStage = currentStageName.includes('eoi')
   
   const filteredFields = allFields.filter(field => {
     if (typeof field !== 'string') return true
-              
-          if (dealType === 'primary') {
-            // إخفاء Seller, Tenant, Landlord
-            if (field.startsWith('seller_') || field.includes('seller_document_')) return false
-            if (field.startsWith('tenant_') || field.includes('tenant_document_')) return false
-            if (field.startsWith('landlord_') || field.includes('landlord_document_')) return false
-            // Buyer و Properties مسموح بها
-            return true
-          }
+    
+    // ✅ إزالة budget fields من أي مرحلة غير EOI
+    if (!isEoiStage) {
+      if (field === 'budget_from' || field === 'budget_to' || 
+          field.includes('budget_from') || field.includes('budget_to')) {
+        console.log(`🚫 Removing budget field "${field}" because stage is not EOI (stage: ${currentStageName})`)
+        return false
+      }
+    }
+                
+    if (dealType === 'primary') {
+      // إخفاء Seller, Tenant, Landlord
+      if (field.startsWith('seller_') || field.includes('seller_document_')) return false
+      if (field.startsWith('tenant_') || field.includes('tenant_document_')) return false
+      if (field.startsWith('landlord_') || field.includes('landlord_document_')) return false
+      return true
+    }
 
-          if (dealType === 'secondary') {
-            // إخفاء Tenant, Landlord
-            if (field.startsWith('tenant_') || field.includes('tenant_document_')) return false
-            if (field.startsWith('landlord_') || field.includes('landlord_document_')) return false
-            // Buyer, Seller, Properties مسموح بها
-            return true
-          }
+    if (dealType === 'secondary') {
+      // إخفاء Tenant, Landlord
+      if (field.startsWith('tenant_') || field.includes('tenant_document_')) return false
+      if (field.startsWith('landlord_') || field.includes('landlord_document_')) return false
+      return true
+    }
 
-          if (dealType === 'rental') {
-            // إخفاء Buyer, Seller
-            if (field.startsWith('buyer_') || field.includes('buyer_document_')) return false
-            if (field.startsWith('seller_') || field.includes('seller_document_')) return false
-            // Tenant, Landlord, Properties مسموح بها
-            return true
-          }
+    if (dealType === 'rental') {
+      // إخفاء Buyer, Seller
+      if (field.startsWith('buyer_') || field.includes('buyer_document_')) return false
+      if (field.startsWith('seller_') || field.includes('seller_document_')) return false
+      return true
+    }
     
     return true
   })
   
   console.log('=== effectiveMissingFields Debug ===')
+  console.log('Stage:', currentStageName)
+  console.log('Is EOI Stage:', isEoiStage)
   console.log('Deal Type:', dealType)
   console.log('All fields before filter:', allFields)
   console.log('Filtered fields:', filteredFields)
@@ -2244,14 +2297,36 @@ const effectiveMissingFields = computed(() => {
 })
 
 // Unresolved missing keys for submit button
+// Unresolved missing keys for submit button
 const unresolvedMissingKeys = computed(() => {
   const unresolved = []
   const missingKeys = effectiveMissingFields.value || []
   const stageName = props.targetStageName?.toLowerCase() || ''
   const isEoiStage = stageName.includes('eoi')
-  const isWonOrLostStage = stageName.includes('won') || stageName.includes('lost') || stageName.includes('booking') || stageName.includes('spa')
+  const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
+  
+  // ✅ في مرحلة Won، تحقق من financial fields
+  if (isWonStage) {
+    const totalAmount = formData.value?.deal_total_amount
+    const commission = formData.value?.deal_commission
+    
+    if (!totalAmount || totalAmount === '' || totalAmount === 0) {
+      if (!unresolved.includes('deal_total_amount')) {
+        unresolved.push('deal_total_amount')
+      }
+    }
+    if (!commission || commission === '' || commission === 0) {
+      if (!unresolved.includes('deal_commission')) {
+        unresolved.push('deal_commission')
+      }
+    }
+  }
+  
+  // ✅ في مرحلة EOI، تحقق من budget fields
+  const shouldCheckBudget = isEoiStage
 
   missingKeys.forEach(key => {
+    // ✅ معالجة property_document_ fields
     if (key.startsWith('property_document_')) {
       const rawDocType = key.replace('property_document_', '')
       const normalizedDocType =
@@ -2261,28 +2336,82 @@ const unresolvedMissingKeys = computed(() => {
             ? 'payment_proof'
             : rawDocType
 
-      const hasPropertyDoc = localProperties.value.some((_, propIndex) => {
+      // ✅ التحقق من المستندات في propertyDocumentsCombined (الجديدة) وفي الـ property نفسه (الموجودة)
+      let hasPropertyDoc = false
+      
+      // التحقق من المستندات الجديدة المرفوعة
+      hasPropertyDoc = localProperties.value.some((property, propIndex) => {
+        // التحقق من المستندات الجديدة في propertyDocumentsCombined
         const docs = propertyDocumentsCombined.value?.[propIndex] || []
-        if (!Array.isArray(docs)) return false
-        return docs.some(doc => {
+        if (Array.isArray(docs) && docs.some(doc => {
           const docType = doc?.document_type || ''
           const hasFileOrUrl = !!(doc?.file || doc?.url)
           return hasFileOrUrl && (docType === normalizedDocType || docType === rawDocType)
-        })
+        })) {
+          return true
+        }
+        
+        // ✅ التحقق من المستندات الموجودة مسبقاً في الـ property
+        const existingDocs = property[normalizedDocType === 'spa_document' ? 'spa_document' : 'payment_proof']
+        if (existingDocs) {
+          let existingDocsArray = existingDocs
+          if (typeof existingDocsArray === 'string') {
+            try {
+              existingDocsArray = JSON.parse(existingDocsArray)
+            } catch(e) {
+              existingDocsArray = []
+            }
+          }
+          if (Array.isArray(existingDocsArray) && existingDocsArray.length > 0) {
+            return true
+          }
+        }
+        
+        return false
       })
+      
+      // ✅ التحقق من المستندات في الـ properties داخل formData
+      if (!hasPropertyDoc && formData.value?.properties) {
+        hasPropertyDoc = formData.value.properties.some(property => {
+          const existingDocs = normalizedDocType === 'spa_document' ? property.spa_document : property.payment_proof
+          if (existingDocs) {
+            let existingDocsArray = existingDocs
+            if (typeof existingDocsArray === 'string') {
+              try {
+                existingDocsArray = JSON.parse(existingDocsArray)
+              } catch(e) {
+                existingDocsArray = []
+              }
+            }
+            if (Array.isArray(existingDocsArray) && existingDocsArray.length > 0) {
+              return true
+            }
+          }
+          return false
+        })
+      }
 
       if (!hasPropertyDoc) {
-        unresolved.push(key)
+        if (!unresolved.includes(key)) {
+          unresolved.push(key)
+        }
       }
       return
     }
+    
+    // ✅ تخطي budget fields إذا لم نكن في EOI
+    if (!shouldCheckBudget && (key === 'budget_from' || key === 'budget_to' || key.includes('budget_from') || key.includes('budget_to'))) {
+      console.log(`⏭️ Skipping budget field "${key}" in unresolved check (not EOI stage)`)
+      return
+    }
+    
     if (key.includes('_document_')) {
       const [partyType, docType] = key.split('_document_')
       const docs = formData.value?.[`${partyType}_documents`] || []
       const hasDoc = Array.isArray(docs) && docs.some(doc => 
         (doc?.file || doc?.url) && doc?.document_type === docType
       )
-      if (!hasDoc) {
+      if (!hasDoc && !unresolved.includes(key)) {
         unresolved.push(key)
       }
     } else if (key.includes('property_')) {
@@ -2298,26 +2427,38 @@ const unresolvedMissingKeys = computed(() => {
               ? (property.developer_phone ?? property.developer_sales_phone)
               : property[fieldName]
           if (value === null || value === undefined || value === '') {
-            unresolved.push(key)
+            if (!unresolved.includes(key)) {
+              unresolved.push(key)
+            }
           }
         } else {
-          unresolved.push(key)
+          if (!unresolved.includes(key)) {
+            unresolved.push(key)
+          }
         }
       } else {
-        unresolved.push(key)
+        if (!unresolved.includes(key)) {
+          unresolved.push(key)
+        }
       }
     } else if (key === 'at_least_one_property') {
-      if (localProperties.value.length === 0) {
+      if (localProperties.value.length === 0 && !unresolved.includes(key)) {
         unresolved.push(key)
       }
     } else {
       const value = formData.value?.[key]
       const isEmpty = value === null || value === undefined || value === ''
-      if (isEmpty) {
+      if (isEmpty && !unresolved.includes(key)) {
         unresolved.push(key)
       }
     }
   })
+  
+  console.log('=== unresolvedMissingKeys Debug ===')
+  console.log('Stage:', stageName)
+  console.log('Is Won Stage:', isWonStage)
+  console.log('Unresolved keys:', unresolved)
+  console.log('===================================')
   
   return unresolved
 })
@@ -2522,9 +2663,19 @@ watch(() => props.show, async (val) => {
         }
     }
 })
+watch(unresolvedMissingKeys, (newVal, oldVal) => {
+  console.log('🔄 unresolvedMissingKeys CHANGED:');
+  console.log('Old length:', oldVal?.length || 0);
+  console.log('New length:', newVal?.length || 0);
+  
+  if (newVal && newVal.length > 0) {
+    console.log('New values:', [...newVal]);
+  }
+}, { deep: true, immediate: true });
 const isLoadingComplete = computed(() => {
     return loading.value || isLoadingPropertyData.value
 })
+
 watch(localProperties, () => {
     if (localProperties.value.length > 0) {
         reinitializePropertyDocuments()
@@ -2532,16 +2683,106 @@ watch(localProperties, () => {
 }, { deep: true, immediate: true })
 // Options for selects
 const languageOptions = [
-  { value: 'english', text: 'English' }, { value: 'arabic', text: 'Arabic' },
-  { value: 'french', text: 'French' }, { value: 'spanish', text: 'Spanish' },
-  { value: 'hindi', text: 'Hindi' }, { value: 'urdu', text: 'Urdu' }
-]
-
+  { value: 'arabic', text: 'Arabic' },
+  { value: 'english', text: 'English' },
+  { value: 'french', text: 'French' },
+  { value: 'spanish', text: 'Spanish' },
+  { value: 'german', text: 'German' },
+  { value: 'italian', text: 'Italian' },
+  { value: 'portuguese', text: 'Portuguese' },
+  { value: 'russian', text: 'Russian' },
+  { value: 'chinese', text: 'Chinese (Mandarin)' },
+  { value: 'japanese', text: 'Japanese' },
+  { value: 'korean', text: 'Korean' },
+  { value: 'hindi', text: 'Hindi' },
+  { value: 'urdu', text: 'Urdu' },
+  { value: 'bengali', text: 'Bengali' },
+  { value: 'turkish', text: 'Turkish' },
+  { value: 'persian', text: 'Persian (Farsi)' },
+  { value: 'swahili', text: 'Swahili' },
+  { value: 'hausa', text: 'Hausa' },
+  { value: 'amharic', text: 'Amharic' },
+  { value: 'dutch', text: 'Dutch' },
+  { value: 'greek', text: 'Greek' },
+  { value: 'hebrew', text: 'Hebrew' },
+  { value: 'thai', text: 'Thai' },
+  { value: 'vietnamese', text: 'Vietnamese' },
+  { value: 'malay', text: 'Malay' },
+  { value: 'indonesian', text: 'Indonesian' },
+  { value: 'filipino', text: 'Filipino (Tagalog)' },
+  { value: 'polish', text: 'Polish' },
+  { value: 'ukrainian', text: 'Ukrainian' },
+  { value: 'czech', text: 'Czech' },
+  { value: 'romanian', text: 'Romanian' },
+  { value: 'hungarian', text: 'Hungarian' },
+  { value: 'swedish', text: 'Swedish' },
+  { value: 'norwegian', text: 'Norwegian' },
+  { value: 'danish', text: 'Danish' },
+  { value: 'finnish', text: 'Finnish' },
+  { value: 'other', text: 'Other' }
+];
 const nationalityOptions = [
-  { value: 'emirati', text: 'Emirati' }, { value: 'saudi', text: 'Saudi' },
-  { value: 'egyptian', text: 'Egyptian' }, { value: 'indian', text: 'Indian' },
-  { value: 'british', text: 'British' }, { value: 'american', text: 'American' }
-]
+  { value: 'emirati', text: 'Emirati' },
+  { value: 'saudi', text: 'Saudi' },
+  { value: 'egyptian', text: 'Egyptian' },
+  { value: 'qatari', text: 'Qatari' },
+  { value: 'kuwaiti', text: 'Kuwaiti' },
+  { value: 'bahraini', text: 'Bahraini' },
+  { value: 'omani', text: 'Omani' },
+
+  { value: 'american', text: 'American' },
+  { value: 'canadian', text: 'Canadian' },
+  { value: 'british', text: 'British' },
+  { value: 'french', text: 'French' },
+  { value: 'german', text: 'German' },
+  { value: 'italian', text: 'Italian' },
+  { value: 'spanish', text: 'Spanish' },
+  { value: 'dutch', text: 'Dutch' },
+  { value: 'swedish', text: 'Swedish' },
+  { value: 'norwegian', text: 'Norwegian' },
+  { value: 'danish', text: 'Danish' },
+  { value: 'finnish', text: 'Finnish' },
+  { value: 'polish', text: 'Polish' },
+  { value: 'ukrainian', text: 'Ukrainian' },
+  { value: 'russian', text: 'Russian' },
+
+  { value: 'indian', text: 'Indian' },
+  { value: 'pakistani', text: 'Pakistani' },
+  { value: 'bangladeshi', text: 'Bangladeshi' },
+  { value: 'sri_lankan', text: 'Sri Lankan' },
+  { value: 'nepali', text: 'Nepali' },
+  { value: 'filipino', text: 'Filipino' },
+  { value: 'indonesian', text: 'Indonesian' },
+  { value: 'malaysian', text: 'Malaysian' },
+  { value: 'chinese', text: 'Chinese' },
+  { value: 'japanese', text: 'Japanese' },
+  { value: 'korean', text: 'Korean' },
+  { value: 'thai', text: 'Thai' },
+  { value: 'vietnamese', text: 'Vietnamese' },
+
+  { value: 'turkish', text: 'Turkish' },
+  { value: 'iranian', text: 'Iranian' },
+
+  { value: 'moroccan', text: 'Moroccan' },
+  { value: 'tunisian', text: 'Tunisian' },
+  { value: 'algerian', text: 'Algerian' },
+  { value: 'sudanese', text: 'Sudanese' },
+  { value: 'ethiopian', text: 'Ethiopian' },
+  { value: 'kenyan', text: 'Kenyan' },
+  { value: 'nigerian', text: 'Nigerian' },
+  { value: 'south_african', text: 'South African' },
+
+  { value: 'brazilian', text: 'Brazilian' },
+  { value: 'argentinian', text: 'Argentinian' },
+  { value: 'mexican', text: 'Mexican' },
+  { value: 'chilean', text: 'Chilean' },
+  { value: 'colombian', text: 'Colombian' },
+
+  { value: 'australian', text: 'Australian' },
+  { value: 'new_zealander', text: 'New Zealander' },
+
+  { value: 'other', text: 'Other' }
+];
 
 const residencyOptions = [
   { value: 'resident', text: 'Resident' },
@@ -2554,13 +2795,153 @@ const buyerResidencyOptions = [
 ]
 
 const countryOptions = [
-  { value: "United Arab Emirates", text: "United Arab Emirates" },
-  { value: "Saudi Arabia", text: "Saudi Arabia" },
+  { value: "Afghanistan", text: "Afghanistan" },
+  { value: "Albania", text: "Albania" },
+  { value: "Algeria", text: "Algeria" },
+  { value: "Andorra", text: "Andorra" },
+  { value: "Angola", text: "Angola" },
+  { value: "Argentina", text: "Argentina" },
+  { value: "Armenia", text: "Armenia" },
+  { value: "Australia", text: "Australia" },
+  { value: "Austria", text: "Austria" },
+  { value: "Azerbaijan", text: "Azerbaijan" },
+  { value: "Bahrain", text: "Bahrain" },
+  { value: "Bangladesh", text: "Bangladesh" },
+  { value: "Belarus", text: "Belarus" },
+  { value: "Belgium", text: "Belgium" },
+  { value: "Belize", text: "Belize" },
+  { value: "Benin", text: "Benin" },
+  { value: "Bhutan", text: "Bhutan" },
+  { value: "Bolivia", text: "Bolivia" },
+  { value: "Bosnia and Herzegovina", text: "Bosnia and Herzegovina" },
+  { value: "Botswana", text: "Botswana" },
+  { value: "Brazil", text: "Brazil" },
+  { value: "Brunei", text: "Brunei" },
+  { value: "Bulgaria", text: "Bulgaria" },
+  { value: "Burkina Faso", text: "Burkina Faso" },
+  { value: "Burundi", text: "Burundi" },
+  { value: "Cambodia", text: "Cambodia" },
+  { value: "Cameroon", text: "Cameroon" },
+  { value: "Canada", text: "Canada" },
+  { value: "Chad", text: "Chad" },
+  { value: "Chile", text: "Chile" },
+  { value: "China", text: "China" },
+  { value: "Colombia", text: "Colombia" },
+  { value: "Comoros", text: "Comoros" },
+  { value: "Congo", text: "Congo" },
+  { value: "Costa Rica", text: "Costa Rica" },
+  { value: "Croatia", text: "Croatia" },
+  { value: "Cuba", text: "Cuba" },
+  { value: "Cyprus", text: "Cyprus" },
+  { value: "Czech Republic", text: "Czech Republic" },
+  { value: "Denmark", text: "Denmark" },
+  { value: "Djibouti", text: "Djibouti" },
+  { value: "Dominican Republic", text: "Dominican Republic" },
+  { value: "Ecuador", text: "Ecuador" },
   { value: "Egypt", text: "Egypt" },
+  { value: "El Salvador", text: "El Salvador" },
+  { value: "Estonia", text: "Estonia" },
+  { value: "Ethiopia", text: "Ethiopia" },
+  { value: "Finland", text: "Finland" },
+  { value: "France", text: "France" },
+  { value: "Gabon", text: "Gabon" },
+  { value: "Georgia", text: "Georgia" },
+  { value: "Germany", text: "Germany" },
+  { value: "Ghana", text: "Ghana" },
+  { value: "Greece", text: "Greece" },
+  { value: "Guatemala", text: "Guatemala" },
+  { value: "Haiti", text: "Haiti" },
+  { value: "Honduras", text: "Honduras" },
+  { value: "Hungary", text: "Hungary" },
+  { value: "Iceland", text: "Iceland" },
   { value: "India", text: "India" },
+  { value: "Indonesia", text: "Indonesia" },
+  { value: "Iran", text: "Iran" },
+  { value: "Iraq", text: "Iraq" },
+  { value: "Ireland", text: "Ireland" },
+  { value: "Israel", text: "Israel" },
+  { value: "Italy", text: "Italy" },
+  { value: "Jamaica", text: "Jamaica" },
+  { value: "Japan", text: "Japan" },
+  { value: "Jordan", text: "Jordan" },
+  { value: "Kazakhstan", text: "Kazakhstan" },
+  { value: "Kenya", text: "Kenya" },
+  { value: "Kuwait", text: "Kuwait" },
+  { value: "Kyrgyzstan", text: "Kyrgyzstan" },
+  { value: "Laos", text: "Laos" },
+  { value: "Latvia", text: "Latvia" },
+  { value: "Lebanon", text: "Lebanon" },
+  { value: "Libya", text: "Libya" },
+  { value: "Lithuania", text: "Lithuania" },
+  { value: "Luxembourg", text: "Luxembourg" },
+  { value: "Madagascar", text: "Madagascar" },
+  { value: "Malaysia", text: "Malaysia" },
+  { value: "Maldives", text: "Maldives" },
+  { value: "Mali", text: "Mali" },
+  { value: "Malta", text: "Malta" },
+  { value: "Mexico", text: "Mexico" },
+  { value: "Moldova", text: "Moldova" },
+  { value: "Monaco", text: "Monaco" },
+  { value: "Mongolia", text: "Mongolia" },
+  { value: "Montenegro", text: "Montenegro" },
+  { value: "Morocco", text: "Morocco" },
+  { value: "Mozambique", text: "Mozambique" },
+  { value: "Myanmar", text: "Myanmar" },
+  { value: "Namibia", text: "Namibia" },
+  { value: "Nepal", text: "Nepal" },
+  { value: "Netherlands", text: "Netherlands" },
+  { value: "New Zealand", text: "New Zealand" },
+  { value: "Nicaragua", text: "Nicaragua" },
+  { value: "Niger", text: "Niger" },
+  { value: "Nigeria", text: "Nigeria" },
+  { value: "North Korea", text: "North Korea" },
+  { value: "Norway", text: "Norway" },
+  { value: "Oman", text: "Oman" },
+  { value: "Pakistan", text: "Pakistan" },
+  { value: "Panama", text: "Panama" },
+  { value: "Paraguay", text: "Paraguay" },
+  { value: "Peru", text: "Peru" },
+  { value: "Philippines", text: "Philippines" },
+  { value: "Poland", text: "Poland" },
+  { value: "Portugal", text: "Portugal" },
+  { value: "Qatar", text: "Qatar" },
+  { value: "Romania", text: "Romania" },
+  { value: "Russia", text: "Russia" },
+  { value: "Rwanda", text: "Rwanda" },
+  { value: "Saudi Arabia", text: "Saudi Arabia" },
+  { value: "Senegal", text: "Senegal" },
+  { value: "Serbia", text: "Serbia" },
+  { value: "Singapore", text: "Singapore" },
+  { value: "Slovakia", text: "Slovakia" },
+  { value: "Slovenia", text: "Slovenia" },
+  { value: "Somalia", text: "Somalia" },
+  { value: "South Africa", text: "South Africa" },
+  { value: "South Korea", text: "South Korea" },
+  { value: "Spain", text: "Spain" },
+  { value: "Sri Lanka", text: "Sri Lanka" },
+  { value: "Sudan", text: "Sudan" },
+  { value: "Sweden", text: "Sweden" },
+  { value: "Switzerland", text: "Switzerland" },
+  { value: "Syria", text: "Syria" },
+  { value: "Taiwan", text: "Taiwan" },
+  { value: "Tanzania", text: "Tanzania" },
+  { value: "Thailand", text: "Thailand" },
+  { value: "Tunisia", text: "Tunisia" },
+  { value: "Turkey", text: "Turkey" },
+  { value: "Uganda", text: "Uganda" },
+  { value: "Ukraine", text: "Ukraine" },
+  { value: "United Arab Emirates", text: "United Arab Emirates" },
   { value: "United Kingdom", text: "United Kingdom" },
-  { value: "United States", text: "United States" }
-]
+  { value: "United States", text: "United States" },
+  { value: "Uruguay", text: "Uruguay" },
+  { value: "Uzbekistan", text: "Uzbekistan" },
+  { value: "Venezuela", text: "Venezuela" },
+  { value: "Vietnam", text: "Vietnam" },
+  { value: "Yemen", text: "Yemen" },
+  { value: "Zambia", text: "Zambia" },
+  { value: "Zimbabwe", text: "Zimbabwe" },
+  { value: "Other", text: "Other" }
+];
 
 const bedroomOptions = [
   { value: 'studio', text: 'Studio' }, { value: '1', text: '1 Bedroom' },
