@@ -54,7 +54,7 @@ class HotDealApprovalController extends Controller
                   return ApiResponse::error('Access Denied' );
             }
             
-            $requests = $query->orderBy('created_at', 'desc')->paginate(20);
+            $requests = $query->orderByRaw("status = 'pending' DESC")->orderBy('created_at', 'desc')->paginate(20);
             
             return ApiResponse::success($requests, 'Pending hot deal requests retrieved');
         } catch (\Exception $e) {

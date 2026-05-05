@@ -774,7 +774,7 @@ public function getPropertyTypesWithListings(Request $request)
             $hot_deals = HotDealRequest::with(['listing', 'requester'])
               ->when(!($user->hasRole('admin') || $user->hasRole('super_admin')), function($q) use ($user_hierarchy) {
                     $q->whereIn('requested_by', $user_hierarchy);
-                })  ->orderBy('created_at', 'desc')
+                })  ->where('status', 'pending')->orderBy('created_at', 'desc')
                 ->count();
             $needApprove=Listing::where('approved', false)
                             ->where('status', 'published')
