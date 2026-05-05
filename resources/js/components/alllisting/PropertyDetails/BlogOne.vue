@@ -2090,6 +2090,7 @@
 
 <script>
 import { ref, onMounted, getCurrentInstance, computed, watch } from 'vue';
+// import lastSlideBgImg from '@/assets/images/lastslide-bg.png';
 
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
@@ -2110,6 +2111,7 @@ export default {
     return {};
   },
   setup() {
+
         const propertyIcon = '/assets/icons/property-icon.svg';
   const bedIcon = '/assets/icons/bedroom-icon.svg';
   const bathIcon = '/assets/icons/bathroom-icon.svg';
@@ -2117,7 +2119,9 @@ export default {
       
 const logo  =  '/assets/images/oiaLogo.jpg';
 const locationIcon  =  '/assets/images/Location.png';
-      const OiaLogo = '/assets/images/LogoWhite.png';
+const OiaLogo = '/assets/images/LogoWhite.png';
+
+const LastSlide_bg = '/assets/images/lastslide-bg.png';  
 
         onMounted(() => {
       setTimeout(() => {
@@ -4939,6 +4943,108 @@ ${owner.address ? `Address: ${owner.address}` : ''}
   contentHeight: 128,
 };
 
+// Cache: stores icon URL → PNG data URL (rasterized via canvas)
+const svgIconCache = {};
+
+// Load any image URL into a canvas and return a PNG data URL.
+// Works for SVG, PNG, JPG. No fetch needed — browser handles loading.
+const imgUrlToPng = (url, size = 80) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        canvas.getContext('2d').drawImage(img, 0, 0, size, size);
+        resolve(canvas.toDataURL('image/png'));
+      } catch (e) {
+        console.warn('Canvas draw failed:', url, e.message);
+        resolve(null);
+      }
+    };
+    img.onerror = () => {
+      console.warn('Image load failed:', url);
+      resolve(null);
+    };
+    img.src = url;
+  });
+};
+
+const preloadSvgIcons = async () => {
+  const features = property.value?.project?.features || [];
+  if (!features.length) return;
+
+  const urls = [...new Set(
+    features.map(f => f?.img || f?.icon_url || f?.icon || null).filter(Boolean)
+  )];
+
+  console.log('Pre-loading icons:', urls);
+
+  await Promise.all(urls.map(async (url) => {
+    if (svgIconCache[url] !== undefined) return;
+    svgIconCache[url] = await imgUrlToPng(url, 80);
+    console.log('Icon', url, svgIconCache[url] ? '✅' : '❌');
+  }));
+};
+// دالة لتحويل SVG URL إلى Base64 PNG
+const convertSvgToPng = async (svgUrl) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // تحديد أبعاد الصورة
+      canvas.width = img.width || 100;
+      canvas.height = img.height || 100;
+      
+      // رسم الصورة على canvas
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      // تحويل إلى PNG
+      const pngDataUrl = canvas.toDataURL('image/png');
+      resolve(pngDataUrl);
+    };
+    
+    img.onerror = () => {
+      console.error('Failed to load SVG:', svgUrl);
+      reject(new Error(`Failed to load SVG: ${svgUrl}`));
+    };
+    
+    img.src = svgUrl;
+  });
+};
+
+// تعديل دالة preloadFeatureImages لتحويل SVG إلى PNG
+const preloadFeatureImages = async () => {
+  const project = property.value?.project;
+  const features = Array.isArray(project?.features) ? project.features : [];
+  
+  const conversionPromises = features
+    .filter(f => f?.img || f?.icon)
+    .map(async (feature) => {
+      const imageUrl = feature.img || feature.icon;
+      if (imageUrl && imageUrl.toLowerCase().endsWith('.svg')) {
+        try {
+          // تحويل SVG إلى PNG Base64
+          const pngBase64 = await convertSvgToPng(getImageUrl(imageUrl));
+          // تخزين الصورة المحولة في ميزة مؤقتة
+          feature.convertedImage = pngBase64;
+          console.log('✅ SVG converted to PNG for:', feature.name);
+        } catch (error) {
+          console.error('Failed to convert SVG:', error);
+          feature.convertedImage = null;
+        }
+      }
+    });
+  
+  await Promise.all(conversionPromises);
+  console.log('✅ All feature images preloaded and converted');
+};
 const generatePDF = async () => {
   try {
     // Show loading
@@ -4954,6 +5060,9 @@ const generatePDF = async () => {
     const userData = localStorage.getItem('user');
     const currentUser = userData ? JSON.parse(userData) : null;
 
+    // Pre-load SVG feature icons as base64 so html2canvas can render them
+    await preloadSvgIcons();
+    await preloadFeatureImages();
     // Prepare offer data
     const offerData = {
       generated_at: new Date().toISOString(),
@@ -5269,13 +5378,16 @@ const createSlide3 = () => {
   </div>
   `;
 };
+
+
           
 const createSlide4 = () => {
   const project = property.value?.project;
   const projectTitle    = project?.title || project?.name || '';
   const projectAbout = project?.about || '';
-  const projectImage = project?.image2 ? getImageUrl(project.image2) : getMainImage();
-  const aboutLimited = limitText(projectAbout, 400);
+  // const projectImage = project?.image2 ? getImageUrl(project.image2) : getMainImage();
+  const projectImage = project?.image ? getImageUrl(project.image) : getMainImage();
+  const aboutLimited = limitText(projectAbout, 1500);
 
   return `
   <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#01062c !important; position:relative !important; display:flex !important; align-items:center !important; justify-content:center !important;">
@@ -5370,32 +5482,25 @@ const createSlide7 = () => {
  
 
 const createSlide9 = (currentUser) => {
-  const galleryImages = property.value?.gallery_images || [];
-  const bgImage = galleryImages.length > 1
-    ? getImageUrl(galleryImages[galleryImages.length - 1].image_url)
-    : galleryImages.length > 0
-      ? getImageUrl(galleryImages[0].image_url)
-      : getMainImage();
   return `
   <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
-    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
-    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(1,6,44,0.82) !important;"></div>
-    <div style="position:relative !important; z-index:5 !important; width:100% !important; height:90% !important; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; margin-top: 50px;">
-      <div style="text-align:center !important; margin-bottom:10mm !important;">
-        <img src="${OiaLogo}" style="width:18mm !important; display:block !important;  margin:0 auto; filter:invert(1) brightness(100);" />
+    <img src="${LastSlide_bg}" crossorigin="anonymous" style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; object-fit:cover !important; display:block !important;" />
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(1,6,44,0.65) !important;"></div>
+    <div style="position:relative !important; z-index:5 !important; width:100% !important; height:90% !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important;">
+      <div style="text-align:center !important; margin-bottom:8mm !important;">
+        <img src="${OiaLogo}" style="width:18mm !important; display:block !important; margin:0 auto !important;" />
       </div>
-      <h1 style="color:#fff !important; font-size:9mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important; text-align:center !important; letter-spacing:0.5mm !important;font-family: 'Montserrat', sans-serif;">Thank You!</h1>
+      <h1 style="color:#fff !important; font-size:9mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important; text-align:center !important; letter-spacing:0.5mm !important; font-family:'Montserrat', sans-serif !important;">Thank You!</h1>
       <div style="position:absolute !important; bottom:12mm !important; right:14mm !important; text-align:left !important;">
-        <p style="color:rgba(255,255,255,1) !important; font-size:4mm !important; margin:0 0 1.5mm 0 !important;">Contact</p> 
-        <p style="color:#fff !important; font-size:5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif;">${currentUser?.name || ''}</p> 
-        <p style="color:#fff !important; font-size:5mm !important; font-weight:700 !important; margin:2mm 0 0 0 !important;font-family: 'Montserrat', sans-serif;">${currentUser?.phone || ''}</p>
+        <p style="color:rgba(255,255,255,0.7) !important; font-size:3.5mm !important; margin:0 0 1.5mm 0 !important;">Contact</p>
+        <p style="color:#fff !important; font-size:5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important; font-family:'Montserrat', sans-serif !important;">${currentUser?.name || ''}</p>
+        <p style="color:#fff !important; font-size:4.5mm !important; font-weight:500 !important; margin:1mm 0 0 0 !important; font-family:'Montserrat', sans-serif !important;">${currentUser?.phone || ''}</p>
       </div>
     </div>
     ${createFooter2()}
   </div>
   `;
 };
-
 
  
 
