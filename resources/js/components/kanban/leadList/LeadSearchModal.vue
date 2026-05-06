@@ -198,6 +198,67 @@
                                 </template>
                             </v-select>
                             <v-select
+                                v-else-if="field.type === 'select' && field.id === 'team'"
+                                v-model="form.team"
+                                :options="computedTeamOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                :placeholder="field.placeholder || 'Select Team'"
+                                :clearable="hasValue(form.team)"
+                                append-to-body
+                                class="custom-v-select lead-search-rp-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                <template #option="option">
+                                    <div v-if="option.value == null" class="lead-rp-opt-placeholder text-muted">
+                                        Select Team
+                                    </div>
+                                    <div v-else class="lead-rp-opt d-flex align-items-center gap-2">
+                                        <img
+                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
+                                            alt=""
+                                            class="lead-rp-opt-avatar"
+                                        />
+                                        <div class="lead-rp-opt-info min-w-0 flex-grow-1">
+                                            <div class="lead-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
+                                                <span class="user-item-name">{{ option.text }}</span>
+                                                <span v-if="option.role_name" class="user-position-badge">{{ option.role_name }}</span>
+                                            </div>
+                                            <div class="user-item-meta-line">
+                                                <span class="meta-value">{{ option.parent_name }}</span>
+                                                <span v-if="option.team_size" class="meta-divider">|</span>
+                                                <span v-if="option.team_size" class="meta-value">{{ option.team_size }} members</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template #selected-option="option">
+                                    <div v-if="!option || option.value == null" class="lead-rp-opt-placeholder text-muted">
+                                        Select Team
+                                    </div>
+                                    <div v-else class="lead-rp-sel d-flex align-items-center gap-2 min-w-0">
+                                        <img
+                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
+                                            alt=""
+                                            class="lead-rp-sel-avatar"
+                                        />
+                                        <div class="min-w-0 flex-grow-1">
+                                            <div class="lead-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
+                                            <div
+                                                v-if="option.parent_name || option.team_size"
+                                                class="lead-rp-sel-meta text-truncate small text-muted"
+                                            >
+                                                {{ [option.parent_name, option.team_size ? `${option.team_size} members` : null].filter(Boolean).join(' | ') }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </v-select>
+                            <v-select
                                 v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person'"
                                 v-model="form[field.formKey]"
                                 :options="field.options"
@@ -233,16 +294,18 @@
                                     </span>
                                 </template>
                             </v-select>
-                            <v-select
+                           <v-select
                                 v-if="field.id === 'source' && form.source === 'portal'"
                                 v-model="form.sourcePortal"
                                 :options="portalSourceOptions"
                                 :reduce="opt => opt.value"
                                 label="text"
-                                placeholder="Select Portal"
-                                :clearable="hasValue(form.sourcePortal)"
+                                placeholder="Select Portals"
+                                :clearable="form.sourcePortal && form.sourcePortal.length > 0"
+                                multiple
+                                filterable
                                 append-to-body
-                                class="custom-v-select mt-2"
+                                class="custom-v-select mt-2 office-multi-select"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -462,6 +525,67 @@
                                 </template>
                             </v-select>
                             <v-select
+                                v-else-if="field.type === 'select' && field.id === 'team'"
+                                v-model="form.team"
+                                :options="computedTeamOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                :placeholder="field.placeholder || 'Select Team'"
+                                :clearable="hasValue(form.team)"
+                                append-to-body
+                                class="custom-v-select lead-search-rp-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                <template #option="option">
+                                    <div v-if="option.value == null" class="lead-rp-opt-placeholder text-muted">
+                                        Select Team
+                                    </div>
+                                    <div v-else class="lead-rp-opt d-flex align-items-center gap-2">
+                                        <img
+                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
+                                            alt=""
+                                            class="lead-rp-opt-avatar"
+                                        />
+                                        <div class="lead-rp-opt-info min-w-0 flex-grow-1">
+                                            <div class="lead-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
+                                                <span class="user-item-name">{{ option.text }}</span>
+                                                <span v-if="option.role_name" class="user-position-badge">{{ option.role_name }}</span>
+                                            </div>
+                                            <div class="user-item-meta-line">
+                                                <span class="meta-value">{{ option.parent_name }}</span>
+                                                <span v-if="option.team_size" class="meta-divider">|</span>
+                                                <span v-if="option.team_size" class="meta-value">{{ option.team_size }} members</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template #selected-option="option">
+                                    <div v-if="!option || option.value == null" class="lead-rp-opt-placeholder text-muted">
+                                        Select Team
+                                    </div>
+                                    <div v-else class="lead-rp-sel d-flex align-items-center gap-2 min-w-0">
+                                        <img
+                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
+                                            alt=""
+                                            class="lead-rp-sel-avatar"
+                                        />
+                                        <div class="min-w-0 flex-grow-1">
+                                            <div class="lead-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
+                                            <div
+                                                v-if="option.parent_name || option.team_size"
+                                                class="lead-rp-sel-meta text-truncate small text-muted"
+                                            >
+                                                {{ [option.parent_name, option.team_size ? `${option.team_size} members` : null].filter(Boolean).join(' | ') }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </v-select>
+                            <v-select
                                 v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person'"
                                 v-model="form[field.formKey]"
                                 :options="field.options"
@@ -504,10 +628,12 @@
                                 :options="portalSourceOptions"
                                 :reduce="opt => opt.value"
                                 label="text"
-                                placeholder="Select Portal"
-                                :clearable="hasValue(form.sourcePortal)"
+                                placeholder="Select Portals"
+                                :clearable="form.sourcePortal && form.sourcePortal.length > 0"
+                                multiple
+                                filterable
                                 append-to-body
-                                class="custom-v-select mt-2"
+                                class="custom-v-select mt-2 office-multi-select"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -724,6 +850,20 @@ function teamBranchId(team) {
     if (!team) return null
     return normalizeOfficeId(team.office_id ?? team.admin_parent_id ?? null)
 }
+const DEFAULT_TEAM_AVATAR = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
+
+function getTeamAvatar(teamId) {
+    if (!teamId) return null
+    const team = allTeams.value.find(t => Number(t.id) === Number(teamId))
+    // console.log('avatar',team?.avatar );
+    return team?.avatar || null
+}
+function getTeamBranchName(teamId) {
+    if (!teamId) return null
+    const team = allTeams.value.find(t => Number(t.id) === Number(teamId))
+    if (!team) return null
+    return team.admin_parent_name || team.name || null
+}
 
 function pruneTeamAndResponsible() {
     const teamOpts = computedTeamOptions.value.filter((o) => o.value != null)
@@ -763,7 +903,7 @@ const isCitySelected = (cityId) => {
 
 // Handle office / branch change — refresh API lists, then drop team/responsible if incompatible
 const handleOfficeChange = async (newOffice) => {
-    console.log('Office changed to:', newOffice)
+    // console.log('Office changed to:', newOffice)
     const normalizedOffices = normalizeOfficeSelection(newOffice)
     form.value.office = normalizedOffices
 
@@ -826,6 +966,8 @@ const queryToFormKeys = {
 
 function normalizeSourceWebsiteForm(next) {
     const siteValues = websiteSourceOptions.value.map(o => o.value).filter(v => v != null)
+    const portalValues = portalSourceOptions.value.map(o => o.value).filter(v => v != null)
+    
     if (Array.isArray(next.source) && next.source.length) {
         next.sourceWebsite = next.source.filter(Boolean)
         next.source = 'website'
@@ -848,6 +990,15 @@ function normalizeSourceWebsiteForm(next) {
             next.sourceWebsite = [next.sourceWebsite]
         } else {
             next.sourceWebsite = []
+        }
+    }
+    if (next.source === 'portal') {
+        if (Array.isArray(next.sourcePortal)) {
+            next.sourcePortal = next.sourcePortal.filter(v => v != null && v !== '')
+        } else if (next.sourcePortal) {
+            next.sourcePortal = [next.sourcePortal]
+        } else {
+            next.sourcePortal = []
         }
     }
 }
@@ -876,6 +1027,7 @@ function syncFormFromQuery(query) {
         leadName: '',
         source: '',
         sourceWebsite: [],
+        sourcePortal: [], 
         interactionResult: '',
         qualityStatus: '',
         team: '',
@@ -911,6 +1063,11 @@ function syncFormFromQuery(query) {
         const sw = query.source_website
         next.sourceWebsite = Array.isArray(sw) ? sw.filter(Boolean) : [sw].filter(Boolean)
         next.source = 'website'
+    }
+    if ((!next.source || next.source === '') && query.source_portal) {
+        const sp = query.source_portal
+        next.sourcePortal = Array.isArray(sp) ? sp.filter(Boolean) : [sp].filter(Boolean)
+        next.source = 'portal'
     }
     normalizeSourceWebsiteForm(next)
     next.budgetFrom = formatBudgetWithCommas(next.budgetFrom)
@@ -1043,7 +1200,7 @@ const form = ref({
     leadName: '',
     source: '',
     sourceWebsite: [],
-    sourcePortal: '',
+    sourcePortal: [],
     interactionResult: '',
     qualityStatus: '',
     createdFrom: '',    
@@ -1126,9 +1283,15 @@ const computedTeamOptions = computed(() => {
 
     filteredTeams.forEach((team) => {
         const id = Number(team.id)
+        console.log("avatar",team.avatar );
         opts.push({
             value: Number.isNaN(id) ? team.id : id,
             text: team.name || `Team ${team.id}`,
+            avatar: team.avatar || null,  
+            role_name: team.role_name || null,  
+            parent_name: team.admin_parent_name || null,  
+            team_size: team.team_size || 0,  
+            email: team.email || null,  
         })
     })
 
@@ -1599,7 +1762,7 @@ const visibleSearchFields = computed(() => {
 })
 const visibleSearchSections = computed(() => {
     // إضافة console.log للتأكد من التحديث
-    console.log('Recalculating visibleSearchSections with selected fields:', selectedLeadFieldIds.value)
+    // console.log('Recalculating visibleSearchSections with selected fields:', selectedLeadFieldIds.value)
     
     return searchFieldSections
         .map(section => ({
@@ -1644,11 +1807,11 @@ const searchFieldSections = [
 
 // أضف هذا بعد تعريف selectedLeadFieldIds
 watch(selectedLeadFieldIds, (newVal, oldVal) => {
-    console.log('selectedLeadFieldIds changed in LeadSearchModal:', {
-        oldLength: oldVal?.length,
-        newLength: newVal?.length,
-        newValues: newVal
-    })
+    // console.log('selectedLeadFieldIds changed in LeadSearchModal:', {
+    //     oldLength: oldVal?.length,
+    //     newLength: newVal?.length,
+    //     newValues: newVal
+    // })
     
     // فرض إعادة حساب visibleSearchSections
     nextTick(() => {
@@ -1666,10 +1829,10 @@ function onFilterApply(payload) {
         selectedLeadFieldIds.value = fieldsToSave
         
         localStorage.setItem(FIELD_STORAGE_KEY, JSON.stringify(fieldsToSave))
-        console.log('Saved fields to localStorage:', fieldsToSave)
+        // console.log('Saved fields to localStorage:', fieldsToSave)
         
         const saved = localStorage.getItem(FIELD_STORAGE_KEY)
-        console.log('Verification - saved fields:', saved)
+        // console.log('Verification - saved fields:', saved)
         if (window.$showNotification) {
             window.$showNotification('Fields saved successfully', 'success')
         }
@@ -1789,13 +1952,17 @@ function getDisplayValue(field, rawValue) {
         }
         return 'Website'
     }
-    if (field.formKey === 'source' && rawValue === 'portal') {
-     const portalValue = form.value.sourcePortal
-        if (portalValue) {
+   if (field.formKey === 'source' && rawValue === 'portal') {
+        const portals = Array.isArray(form.value.sourcePortal)
+            ? form.value.sourcePortal.filter(v => v != null && v !== '')
+            : (form.value.sourcePortal ? [form.value.sourcePortal] : [])
+        if (portals.length) {
             const opts = portalSourceOptions.value
-            const opt = opts.find(o => o.value === portalValue)
-            const portalName = opt ? opt.text : String(portalValue)
-            return `Portal (${portalName})`
+            const names = portals.map(val => {
+                const opt = opts.find(o => o.value === val)
+                return opt ? opt.text : String(val)
+            })
+            return `Portal (${names.join(', ')})`
         }
         return 'Portal'
     }
@@ -2121,13 +2288,17 @@ function applySearch() {
             sourceParam = 'website'
         }
         }else if (form.value.source === 'portal') {
-        // ✅ معالجة Portal
-        if (form.value.sourcePortal && form.value.sourcePortal !== '') {
-            sourceParam = form.value.sourcePortal
-        } else {
-            sourceParam = 'portal'
-        }
-        }  else if (form.value.source) {
+            const portals = Array.isArray(form.value.sourcePortal)
+                ? form.value.sourcePortal.filter(v => v != null && v !== '')
+                : (form.value.sourcePortal ? [form.value.sourcePortal] : [])
+            if (portals.length > 1) {
+                sourceParam = portals
+            } else if (portals.length === 1) {
+                sourceParam = portals[0]
+            } else {
+                sourceParam = 'portal'
+            }
+        } else if (form.value.source) {
             sourceParam = form.value.source
         }
 
@@ -2362,10 +2533,13 @@ async function fetchTeams() {
             allTeams.value = data.map(team => ({
                 id: team.id,
                 name: team.name,
+                avatar: team.avatar,
                 office_id: team.office_id || team.admin_parent_id || null,
                 admin_parent_id: team.admin_parent_id || null,
                 admin_parent_name: team.admin_parent_name || null,
-                city: team.city || null
+                city: team.city || null,
+                team_size:team.team_size,
+                role_name:team.role_name
             }))
         }
     } catch (error) {
@@ -2395,6 +2569,7 @@ async function fetchTeamsWithFilter() {
             allTeams.value = data.map(team => ({
                 id: team.id,
                 name: team.name,
+                avatar: team.avatar,
                 office_id: team.office_id || team.admin_parent_id || null,
                 city: team.city || null,
                 admin_parent_id: team.admin_parent_id || null,
@@ -2472,6 +2647,7 @@ function resetFormValues() {
         bedrooms: '',
         source: '',
         sourceWebsite: [],
+        sourcePortal:[],
         interactionResult: '',
         qualityStatus: '',
         team: '',
@@ -2738,8 +2914,10 @@ watch(() => form.value.assignedOn, (newVal, oldVal) => {
 watch(() => form.value.source, (newVal) => {
     if (newVal === 'website') {
         form.value.sourceWebsite = []
+        form.value.sourcePortal = []  
     } else if (newVal === 'portal') {
         form.value.sourceWebsite = []
+        form.value.sourcePortal = []  
     } else {
         form.value.sourceWebsite = []
         form.value.sourcePortal = []
@@ -3732,4 +3910,7 @@ onBeforeUnmount(() => {
     .vs__dropdown-option{
         font-size: 14px !important;
     }
+
+
+
 </style>

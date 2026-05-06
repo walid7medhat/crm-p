@@ -181,8 +181,23 @@
                </v-select>
               </div>
               <div v-if="fieldSettings.buyer_city_residence" class="col-md-6">
-                <label class="form-label-custom">City Of Residence</label>
-                <b-form-input v-model="form.buyer_city" class="custom-input" placeholder="Enter City" />
+                  <label class="form-label-custom">City Of Residence</label>
+                  <v-select
+                      v-model="form.buyer_city"
+                      :options="uaeCityOptions"
+                      :reduce="opt => opt.value"
+                      label="text"
+                      class="custom-v-select deal-select-placeholder"
+                      placeholder="Select City"
+                      :clearable="true"
+                      append-to-body
+                  >
+                      <template #open-indicator="{ attributes }">
+                          <span v-bind="attributes">
+                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          </span>
+                      </template>
+                  </v-select>
               </div>
             </div>
           </div>
@@ -199,7 +214,7 @@
                 <label class="form-label-custom">Property Type</label>
                 <v-select
                   v-model="form.property_type_id"
-                  :options="propertyTypes"
+                  :options="localPropertyTypes.length ? localPropertyTypes : props.propertyTypes"
                   :reduce="opt => opt.id"
                   label="name"
                   class="custom-v-select deal-select-placeholder"
@@ -240,7 +255,7 @@
                 <label class="form-label-custom">Project Name</label>
                 <v-select
                   v-model="form.project_id"
-                  :options="projects"
+                  :options="props.projects"
                   :reduce="opt => opt.id"
                   label="name"
                   class="custom-v-select deal-select-placeholder"
@@ -259,11 +274,11 @@
                   </template>
               </v-select>
               </div>
-              <!-- <div v-if="fieldSettings.property_developer" class="col-md-6">
+              <div v-if="fieldSettings.property_developer" class="col-md-6">
                 <label class="form-label-custom">Developer</label>
                 <v-select
                   v-model="form.developer_id"
-                  :options="developers"
+                   :options="localDevelopers"
                   :reduce="opt => opt.id"
                   label="name"
                   class="custom-v-select deal-select-placeholder"
@@ -278,16 +293,16 @@
                       </span>
                   </template>
               </v-select>
-              </div> -->
+              </div>
               <div v-if="fieldSettings.property_area" class="col-md-6">
                 <label class="form-label-custom">Property Address</label>
                 <v-select
                   v-model="form.area_id"
-                  :options="areas"
+                  :options="localAreas.length ? localAreas : props.areas"
                   :reduce="opt => opt.id"
                   label="name"
                   class="custom-v-select deal-select-placeholder"
-                  placeholder="Select Area"
+                  placeholder="Select Address"
                   :clearable="true"
                   :filterable="true"
                   :searchable="true"
@@ -527,10 +542,10 @@ const defaultFieldSettings = {
   property_unit_no: true,
   property_type: true,
   property_bedrooms: false,
-  property_project_name: true,
+  // property_project_name: true,
   property_developer: false,
   property_area: false,
-  property_sub_community: false,
+  // property_sub_community: false,
   property_unit_size: false,
 }
 
@@ -616,10 +631,10 @@ const fieldSettingsSections = [
       { id: 'property_unit_no', label: 'Unit No' },
       { id: 'property_type', label: 'Property Type' },
       { id: 'property_bedrooms', label: 'Bedrooms' },
-      { id: 'property_project_name', label: 'Project Name' },
+      // { id: 'property_project_name', label: 'Project Name' },
       { id: 'property_developer', label: 'Developer' },
-      { id: 'property_area', label: 'Area' },
-      { id: 'property_sub_community', label: 'Sub Community' },
+      { id: 'property_area', label: 'Property Address' },
+      // { id: 'property_sub_community', label: 'Sub Community' },
       { id: 'property_unit_size', label: 'Unit Size' },
     ],
   },
@@ -927,7 +942,17 @@ const nationalityOptions = [
 
   { value: 'other', text: 'Other' }
 ];
-
+// UAE City Options
+const uaeCityOptions = [
+    { value: 'Abu Dhabi', text: 'Abu Dhabi' },
+    { value: 'Dubai', text: 'Dubai' },
+    { value: 'Sharjah', text: 'Sharjah' },
+    { value: 'Ajman', text: 'Ajman' },
+    { value: 'Ras Al Khaimah', text: 'Ras Al Khaimah' },
+    { value: 'Umm Al Quwain', text: 'Umm Al Quwain' },
+    { value: 'Fujairah', text: 'Fujairah' },
+    { value: 'Al Ain', text: 'Al Ain' }
+]
 const residencyOptions = [{ value: 'resident', text: 'Resident' }, { value: 'non_resident', text: 'Non Resident' }]
 
 const currencyOptions = [
@@ -984,7 +1009,59 @@ const createdByDatePresetOptions = computed(() => {
   }
   return [...datePresetOptions, { text: customText, value: 'custom' }]
 })
+// إضافة متغيرات لتخزين البيانات
+const localAreas = ref([])
+const localPropertyTypes = ref([])
+const localDevelopers = ref([])
+const isLoadingData = ref(false)
 
+// دالة لجلب المناطق
+const fetchAreasData = async () => {
+    try {
+        const res = await api.get('/listings/areas/?has_listings=true')
+        const data = res.data.data || res.data || []
+        localAreas.value = data.map(area => ({
+            id: area.id,
+            name: area.name || area.title,
+            area_parents_title: area.area_parents_title || ''
+        }))
+        console.log('Areas loaded:', localAreas.value.length)
+    } catch (error) {
+        console.error('Error fetching areas:', error)
+        localAreas.value = []
+    }
+}
+
+// دالة لجلب أنواع العقارات
+const fetchPropertyTypesData = async () => {
+    try {
+        const res = await api.get('/listings/property-types')
+        const data = res.data.data || res.data
+        localPropertyTypes.value = data.map(type => ({
+            id: type.id,
+            name: type.name
+        }))
+        console.log('Property types loaded:', localPropertyTypes.value.length)
+    } catch (error) {
+        console.error('Error fetching property types:', error)
+        localPropertyTypes.value = []
+    }
+}
+
+const fetchDevelopersData = async () => {
+    try {
+        const res = await api.get('/listings/developers')
+        const data = res.data.data || res.data || []
+        localDevelopers.value = data.map(dev => ({
+            id: dev.id,
+            name: dev.name
+        }))
+        console.log('Developers loaded:', localDevelopers.value.length)
+    } catch (error) {
+        console.error('Error fetching developers:', error)
+        localDevelopers.value = []
+    }
+}
 // Search functions for dynamic data
 const searchProjects = async (search) => {
   if (!search && search !== '') return
@@ -1001,7 +1078,7 @@ const searchAreas = async (search) => {
   try {
     const response = await api.get('/listings/areas', { params: { search } })
     // Assuming the response structure
-    const areasData = response.data?.data ?? response.data ?? []
+     const areasData = response.data.data || response.data || []
     // Emit to parent if needed, otherwise update local ref
     if (props.areas?.length) {
       // If areas are passed as prop, we don't override
@@ -1313,7 +1390,13 @@ watch(() => props.dealType, hydrateFieldSettingsFromSession)
 
 onMounted(async () => {
   hydrateFieldSettingsFromSession()
-  await Promise.all([fetchUsers(), fetchStages()])
+    await Promise.all([
+        fetchUsers(), 
+        fetchStages(),
+        fetchAreasData(),
+        fetchPropertyTypesData(),
+        fetchDevelopersData()
+    ])
 })
 </script>
 
@@ -1849,6 +1932,9 @@ onMounted(async () => {
 :deep(.custom-v-select svg) {
     vertical-align: middle !important;
 }
+.advanced-date-trigger{
+  height: 100% !important;
+}
 </style>
 <style>
 
@@ -1908,4 +1994,7 @@ onMounted(async () => {
   color: #94a3b8;
   font-size: 12px;
   opacity: 1;
+}
+.advanced-date-trigger{
+  height: 100% !important;
 }</style>

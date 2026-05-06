@@ -372,9 +372,33 @@
             </v-select>
           </div>
           <div class="col-md-4"><label class="form-label-custom">Unit Size (sq.ft)</label><b-form-input v-model="form.unit_size" placeholder="Enter Unit Size" class="custom-input" /></div>
-          <div class="col-md-3" v-if="showBudgetFields"><label class="form-label-custom">Budget From <span v-if="isBudgetRequired" class="text-danger">*</span></label><div class="input-group"><span class="input-group-text">AED</span><b-form-input v-model="form.budget_from" type="number" placeholder="Min" class="custom-input" :class="{ 'is-invalid': showErrors && isBudgetRequired && !form.budget_from }" /></div></div>
-          <div class="col-md-3" v-if="showBudgetFields"><label class="form-label-custom">Budget To <span v-if="isBudgetRequired" class="text-danger">*</span></label><div class="input-group"><span class="input-group-text">AED</span><b-form-input v-model="form.budget_to" type="number" placeholder="Max" class="custom-input" :class="{ 'is-invalid': showErrors && isBudgetRequired && !form.budget_to }" /></div></div>
-          <div class="col-md-3" v-if="showPurchasePrice">
+          <div v-if="showBudgetFields" class="col-md-4">
+              <label class="form-label-custom">
+                  Budget (AED)
+                  <span v-if="isBudgetRequired" class="text-danger">*</span>
+              </label>
+              <div
+                  ref="budgetTriggerRef"
+                  class="budget-field-wrap"
+                  :class="{ 'is-invalid-group': (showErrors && isBudgetRequired && !form.value.budget_from && !form.value.budget_to) || fieldErrors.budget_from || fieldErrors.budget_to }"
+              >
+                  <button
+                      type="button"
+                      class="custom-date-trigger"
+                      @click.stop="toggleBudgetDropdown"
+                  >
+                      <span>{{ budgetDisplay }}</span>
+                      <iconify-icon icon="lucide:chevron-down" />
+                  </button>
+              </div>
+              <div v-if="showErrors && isBudgetRequired && !form.value.budget_from && !form.value.budget_to" class="invalid-feedback d-block">
+                  Budget range is required
+              </div>
+              <div v-if="fieldErrors.budget_from || fieldErrors.budget_to" class="invalid-feedback d-block">
+                  {{ fieldErrors.budget_from || fieldErrors.budget_to }}
+              </div>
+          </div>
+          <div class="col-md-4" v-if="showPurchasePrice">
           <label class="form-label-custom">  
             <span v-if="isWonStage">Amount</span>
             <span v-else>Purchase Price</span>
@@ -429,10 +453,41 @@
       <div v-if="showErrors && fieldErrors.responsible_person_id" class="invalid-feedback d-block">{{ fieldErrors.responsible_person_id }}</div>
     </div>
   </div>
+  <!-- Budget Dropdown Teleport (نفس نظام Lead Search) -->
+<Teleport to="body">
+    <div
+        v-if="showBudgetDropdown"
+        ref="budgetDropdownPanelRef"
+        class="budget-dropdown budget-dropdown--portal"
+        :style="budgetDropdownStyle"
+        @click.stop
+    >
+        <div class="budget-from-to-row">
+            <div class="budget-col">
+                <label class="budget-input-label">From</label>
+                <b-form-input
+                    :model-value="form.value.budget_from ? formatBudgetWithCommas(form.value.budget_from) : ''"
+                    placeholder="0"
+                    class="custom-input budget-dropdown-input"
+                    @update:model-value="(val) => setBudgetValue('budget_from', val)"
+                />
+            </div>
+            <div class="budget-col">
+                <label class="budget-input-label">To</label>
+                <b-form-input
+                    :model-value="form.value.budget_to ? formatBudgetWithCommas(form.value.budget_to) : ''"
+                    placeholder="0"
+                    class="custom-input budget-dropdown-input"
+                    @update:model-value="(val) => setBudgetValue('budget_to', val)"
+                />
+            </div>
+        </div>
+    </div>
+</Teleport>
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted ,onBeforeUnmount } from 'vue'
 import { BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -477,7 +532,83 @@ const responsiblePerson = computed(() => {
   if (!id || !props.users.length) return null
   return props.users.find(u => u.id === id) || null
 })
+// ========== Budget Dropdown  ==========
+const showBudgetDropdown = ref(false)
+const budgetTriggerRef = ref(null)
+const budgetDropdownPanelRef = ref(null)
+const budgetDropdownStyle = ref({})
 
+const budgetDisplay = computed(() => {
+    const from = form.value.budget_from ? formatBudgetWithCommas(form.value.budget_from) : ''
+    const to = form.value.budget_to ? formatBudgetWithCommas(form.value.budget_to) : ''
+    if (!from && !to) return 'Select budget range'
+    if (from && to) return `${from} - ${to}`
+    if (from) return `From ${from}`
+    return `To ${to}`
+})
+function normalizeBudgetString(value) {
+    return String(value ?? '').replace(/[^\d]/g, '')
+}
+
+function formatBudgetWithCommas(value) {
+    if (!value && value !== 0) return ''
+    const digits = normalizeBudgetString(value)
+    if (!digits) return ''
+    return Number(digits).toLocaleString('en-US')
+}
+
+function setBudgetValue(key, value) {
+    const digits = normalizeBudgetString(value)
+    form.value[key] = digits ? Number(digits) : null
+}
+
+function getBudgetTriggerElement() {
+    let el = budgetTriggerRef.value
+    if (Array.isArray(el)) el = el.find(Boolean)
+    if (el && typeof el.getBoundingClientRect === 'function') return el
+    if (el?.$el && typeof el.$el.getBoundingClientRect === 'function') return el.$el
+    return null
+}
+
+function updateBudgetDropdownPosition() {
+    const el = getBudgetTriggerElement()
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    budgetDropdownStyle.value = {
+        position: 'fixed',
+        top: `${Math.round(r.bottom + 6)}px`,
+        left: `${Math.round(r.left)}px`,
+        width: `${Math.max(Math.round(r.width), 220)}px`,
+        zIndex: '10060'
+    }
+}
+
+function removeBudgetDropdownListeners() {
+    window.removeEventListener('scroll', updateBudgetDropdownPosition, true)
+    window.removeEventListener('resize', updateBudgetDropdownPosition)
+}
+
+async function toggleBudgetDropdown() {
+    const next = !showBudgetDropdown.value
+    showBudgetDropdown.value = next
+    if (next) {
+        await nextTick()
+        updateBudgetDropdownPosition()
+        window.addEventListener('scroll', updateBudgetDropdownPosition, true)
+        window.addEventListener('resize', updateBudgetDropdownPosition)
+    } else {
+        removeBudgetDropdownListeners()
+    }
+}
+
+function onDocumentClick(event) {
+    if (!showBudgetDropdown.value) return
+    const t = event.target
+    const triggerEl = getBudgetTriggerElement()
+    if (triggerEl?.contains(t) || budgetDropdownPanelRef.value?.contains(t)) return
+    showBudgetDropdown.value = false
+    removeBudgetDropdownListeners()
+}
 // ========== Multi Properties ==========
 const propertiesList = ref([])
 const propertyListRef = ref(null)
@@ -1303,6 +1434,13 @@ onMounted(() => {
   // fetchProjects()
   getCurrentUser()
     fetchAllAreas()
+    document.addEventListener('click', onDocumentClick)
+
+
+})
+onBeforeUnmount(() => {
+document.removeEventListener('click', onDocumentClick)
+removeBudgetDropdownListeners()
 
 })
 </script>
@@ -1515,7 +1653,44 @@ onMounted(() => {
   background: #01062C;
   color: #fff;
 }
+/* Budget Dropdown Styles - نفس نظام Lead Search */
+.budget-field-wrap {
+    position: relative;
+}
 
+.budget-dropdown--portal {
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
+    padding: 10px;
+}
+
+.budget-from-to-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.budget-col {
+    min-width: 0;
+}
+
+.budget-input-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.budget-dropdown-input {
+    height: 38px !important;
+}
+
+.is-invalid-group .custom-date-trigger {
+    border-color: #dc3545 !important;
+}
 </style>
 <style>
 .advanced-date-trigger{

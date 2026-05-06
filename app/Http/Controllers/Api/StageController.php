@@ -883,7 +883,9 @@ public function getTeamsWithLeads(Request $request): JsonResponse
                     'role' => $user->roles->pluck('name')->first(),
                     'parent_id' => $user->parent_id,
                     'admin_parent_id' => $adminParent ? $adminParent->id : null,
-                    'admin_parent_name' => $adminParent ? $adminParent->name : null
+                    'admin_parent_name' => $adminParent ? $adminParent->name : null,
+                    'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                    'role_name' => $user->roles()->first()->name,
                 ];
             });
 
