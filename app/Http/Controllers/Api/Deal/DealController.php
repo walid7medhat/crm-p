@@ -1053,6 +1053,22 @@ class DealController extends Controller
 
             // 5. تغيير المرحلة
             if ($request->filled('stage_id')) {
+                $targetStage = Stage::find((int) $request->stage_id);
+                $targetStageName = strtolower((string) ($targetStage?->name ?? ''));
+
+                // Business rule: moving to SPA requires uploading at least one NEW payment proof
+                // in this request (existing old docs are not enough).
+                if (str_contains($targetStageName, 'spa') && !$request->hasFile('payment_proof')) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'valid' => false,
+                        'message' => 'Missing required fields',
+                        'missing_fields' => ['property_document_payment_proof'],
+                        'grouped_missing' => ['sections' => [], 'by_stage' => []],
+                    ], 422);
+                }
+
                 $guard = app(DealStageValidatorService::class);
                 $validation = $guard->validateStageChange($deal, (int) $request->stage_id, $deal->deal_type);
 
@@ -1257,6 +1273,14 @@ class DealController extends Controller
             $list = is_array($files) ? $files : [$files];
             foreach ($list as $file) {
                 if ($file instanceof \Illuminate\Http\UploadedFile && $file->isValid()) {
+                    $alreadyExists = collect($existing)->contains(function ($doc) use ($file) {
+                        return ($doc['original_name'] ?? null) === $file->getClientOriginalName()
+                            && (int) ($doc['size'] ?? 0) === (int) $file->getSize()
+                            && ($doc['mime_type'] ?? null) === $file->getMimeType();
+                    });
+                    if ($alreadyExists) {
+                        continue;
+                    }
                     $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
                     $existing[] = [
                         'original_name' => $file->getClientOriginalName(),
@@ -1276,6 +1300,14 @@ class DealController extends Controller
             $list = is_array($files) ? $files : [$files];
             foreach ($list as $file) {
                 if ($file instanceof \Illuminate\Http\UploadedFile && $file->isValid()) {
+                    $alreadyExists = collect($existing)->contains(function ($doc) use ($file) {
+                        return ($doc['original_name'] ?? null) === $file->getClientOriginalName()
+                            && (int) ($doc['size'] ?? 0) === (int) $file->getSize()
+                            && ($doc['mime_type'] ?? null) === $file->getMimeType();
+                    });
+                    if ($alreadyExists) {
+                        continue;
+                    }
                     $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
                     $existing[] = [
                         'original_name' => $file->getClientOriginalName(),
@@ -1473,7 +1505,13 @@ public function deletePropertyDocument(Request $request)
 {
     try {
         $deal = Deal::find($request->deal_id);
-        $property = DealProperty::find($request->property_id);
+        $property = null;
+        if ($request->filled('property_id')) {
+            $property = DealProperty::find($request->property_id);
+        }
+        if (!$property && $deal) {
+            $property = $deal->properties()->orderBy('sort_order')->orderBy('id')->first();
+        }
         
         if (!$deal || !$property) {
             return response()->json(['success' => false, 'message' => 'Not found'], 404);
@@ -1488,11 +1526,13 @@ public function deletePropertyDocument(Request $request)
             return response()->json(['success' => false, 'message' => 'Invalid document type'], 422);
         }
 
-        $filePath = $request->file_path;
+        $filePath = (string) $request->file_path;
+        $normalizedInputPath = ltrim(parse_url($filePath, PHP_URL_PATH) ?: $filePath, '/');
+        $inputBasename = $normalizedInputPath ? basename($normalizedInputPath) : null;
         
         // حذف الملف من التخزين
-        if (\Storage::disk('public')->exists($filePath)) {
-            \Storage::disk('public')->delete($filePath);
+        if ($normalizedInputPath !== '' && \Storage::disk('public')->exists($normalizedInputPath)) {
+            \Storage::disk('public')->delete($normalizedInputPath);
         }
         
         // DealProperty casts payment_proof/spa_document to array — never json_decode the attribute.
@@ -1506,8 +1546,24 @@ public function deletePropertyDocument(Request $request)
             }
         }
 
-        $filteredDocs = array_values(array_filter($currentDocs, function ($doc) use ($filePath) {
-            return ($doc['path'] ?? null) !== $filePath;
+        $filteredDocs = array_values(array_filter($currentDocs, function ($doc) use ($normalizedInputPath, $inputBasename) {
+            $docPath = (string) ($doc['path'] ?? $doc['file_path'] ?? '');
+            $docUrl = (string) ($doc['url'] ?? $doc['file_url'] ?? '');
+            $docOriginalName = (string) ($doc['original_name'] ?? $doc['file_name'] ?? $doc['name'] ?? '');
+
+            $normalizedDocPath = ltrim(parse_url($docPath, PHP_URL_PATH) ?: $docPath, '/');
+            $normalizedDocUrlPath = ltrim(parse_url($docUrl, PHP_URL_PATH) ?: $docUrl, '/');
+            $docBasename = $normalizedDocPath ? basename($normalizedDocPath) : ($normalizedDocUrlPath ? basename($normalizedDocUrlPath) : null);
+
+            $matchesByPath = $normalizedInputPath !== '' && (
+                $normalizedDocPath === $normalizedInputPath ||
+                $normalizedDocUrlPath === $normalizedInputPath
+            );
+            $matchesByBasename = $inputBasename && $docBasename && $inputBasename === $docBasename;
+            $matchesByOriginalName = $inputBasename && $docOriginalName !== '' && $docOriginalName === $inputBasename;
+
+            // Keep only docs that DO NOT match the delete target.
+            return !($matchesByPath || $matchesByBasename || $matchesByOriginalName);
         }));
         
         $property->{$documentType} = ! empty($filteredDocs) ? $filteredDocs : null;

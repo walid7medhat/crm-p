@@ -28,7 +28,6 @@
               <iconify-icon icon="lucide:x"></iconify-icon>
             </button>
           </div>
-          
         </div>
 
         <!-- Stage progress -->
@@ -1073,13 +1072,7 @@
                                 <div class="col-12 mt-3 property-documents-block">
                                     <label class="section-title mb-2">Property Documents</label>
                                     <div
-                                      v-if="validationAttempted && needsSecondPaymentProofOnSpa && missingPropertyDocumentTypes.includes('payment_proof')"
-                                      class="small text-danger mb-2"
-                                    >
-                                      Please add one more Payment Proof for the SPA stage.
-                                    </div>
-                                    <div
-                                      v-if="validationAttempted && !needsSecondPaymentProofOnSpa && missingPropertyDocumentTypes.some(t => t === 'spa' || t === 'spa_document')"
+                                      v-if="validationAttempted && missingPropertyDocumentTypes.some(t => t === 'spa' || t === 'spa_document')"
                                       class="small text-danger mb-2"
                                     >
                                       SPA Document is required. Please add SPA Document.
@@ -1088,6 +1081,8 @@
                                         :modelValue="propertyDocumentsCombined[propIndex]"
                                         @update:modelValue="(val) => updatePropertyDocuments(propIndex, val)"
                                         category="property"
+                                        :deal-id="props.deal?.id || props.dealId"
+                                        :property-id="property?.id || null"
                                         :document-types="propertyDocTypesForModal"
                                         compact
                                         :show-errors="validationAttempted"
@@ -1210,8 +1205,6 @@ const props = defineProps({
 const validationAttempted = ref(false)
 
 // ========== Collapsible Sections State ==========
-const COLLAPSIBLE_SECTION_KEYS = ['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials']
-
 const openSections = ref({
   buyer: true,
   seller: true,
@@ -1220,24 +1213,6 @@ const openSections = ref({
   properties: true,
   financials: true
 })
-
-/** Tracks last unresolved state per accordion; used to collapse only on true→false (avoids closing while typing, e.g. budget on EOI). */
-const sectionUnresolvedSnapshot = ref(null)
-
-function syncSectionUnresolvedSnapshot() {
-  const snap = {}
-  COLLAPSIBLE_SECTION_KEYS.forEach((section) => {
-    snap[section] = sectionHasUnresolved(section)
-  })
-  sectionUnresolvedSnapshot.value = snap
-}
-
-function resetCollapsibleSectionsOpen() {
-  COLLAPSIBLE_SECTION_KEYS.forEach((k) => {
-    openSections.value[k] = true
-  })
-  sectionUnresolvedSnapshot.value = null
-}
 
 function toggleSection(section) {
   openSections.value[section] = !openSections.value[section]
@@ -1287,6 +1262,32 @@ function hasRequiredInSection(section) {
   }
 }
 
+function hasUnresolvedInSection(section) {
+  const unresolved = unresolvedMissingKeys.value || []
+  const stageName = props.targetStageName?.toLowerCase() || ''
+  const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
+
+  switch (section) {
+    case 'buyer':
+      return unresolved.some((k) => k.startsWith('buyer_') || k.startsWith('buyer_document_'))
+    case 'seller':
+      return unresolved.some((k) => k.startsWith('seller_') || k.startsWith('seller_document_'))
+    case 'tenant':
+      return unresolved.some((k) => k.startsWith('tenant_') || k.startsWith('tenant_document_'))
+    case 'landlord':
+      return unresolved.some((k) => k.startsWith('landlord_') || k.startsWith('landlord_document_'))
+    case 'properties':
+      return unresolved.some((k) => k.startsWith('property_') || k === 'at_least_one_property')
+    case 'financials':
+      if (isWonStage) {
+        return unresolved.includes('deal_total_amount') || unresolved.includes('deal_commission')
+      }
+      return unresolved.some((k) => ['deal_commission', 'deal_total_amount'].includes(k))
+    default:
+      return false
+  }
+}
+
 // ========== Helper Functions ==========
 const showBudgetFields = computed(() => {
   const missingKeys = effectiveMissingFields.value || []
@@ -1307,50 +1308,6 @@ const showPurchasePrice = computed(() => {
 
 // Property documents
 const propertyDocumentsCombined = ref({})
-
-// SPA target helper: Stage 4 / SPA needs an extra PAYMENT PROOF upload (second file),
-// but should NOT require another SPA document.
-const isTargetSpaStageAny = computed(() => {
-  const name = String(props.targetStageName || '').toLowerCase().trim()
-  const num = Number((name.match(/\d+/) || [])[0] || NaN)
-  return name.includes('spa') || num === 4
-})
-
-const needsSecondPaymentProofOnSpa = computed(() => {
-  if (!isTargetSpaStageAny.value) return false
-
-  const docsForPayment = (docs) => {
-    if (!Array.isArray(docs)) return []
-    return docs.filter((doc) => {
-      const docType = String(doc?.document_type || '').toLowerCase()
-      const isPaymentType = docType === 'payment_proof' || docType === 'payment'
-      return isPaymentType
-    })
-  }
-
-  const hasExistingPaymentProof = localProperties.value.some((_, propIndex) => {
-    const docs = propertyDocumentsCombined.value?.[propIndex] || []
-    const paymentDocs = docsForPayment(docs)
-    return paymentDocs.some((doc) => {
-      // Existing docs normally have no File, but do have url/path/original_name.
-      const hasStoredRef =
-        !!doc?.url || !!doc?.path || !!doc?.original_name || !!doc?.name
-      return !!(doc?.existing || doc?.is_existing) || hasStoredRef
-    })
-  })
-
-  const hasNewPaymentProofUpload = localProperties.value.some((_, propIndex) => {
-    const docs = propertyDocumentsCombined.value?.[propIndex] || []
-    const paymentDocs = docsForPayment(docs)
-    return paymentDocs.some((doc) => {
-      const f = doc?.file
-      if (f instanceof File) return true
-      return doc?.status === 'pending' && f instanceof Blob && !doc?.is_existing
-    })
-  })
-
-  return hasExistingPaymentProof && !hasNewPaymentProofUpload
-})
 
 const propertyDocumentTypes = computed(() => {
   const docTypes = []
@@ -1380,13 +1337,7 @@ const missingPropertyDocumentTypes = computed(() => {
       missing.push(docType)
     }
   })
-
-  // UI enforcement on SPA stage: if we already have 1 Payment Proof but no NEW second one,
-  // highlight Payment Proof as missing even if backend filtered it out.
-  if (needsSecondPaymentProofOnSpa.value && !missing.includes('payment_proof')) {
-    missing.push('payment_proof')
-  }
-
+  
   return missing
 })
 
@@ -1482,8 +1433,8 @@ function updateProperty(propIndex, field, value) {
       if (selectedDeveloper) {
         const normalizedName =
           selectedDeveloper.name ||
-          // selectedDeveloper.developer_name ||
-          // selectedDeveloper.contact_person ||
+          selectedDeveloper.developer_name ||
+          selectedDeveloper.contact_person ||
           ''
         const normalizedPhone =
           selectedDeveloper.developer_phone ||
@@ -1494,10 +1445,10 @@ function updateProperty(propIndex, field, value) {
           ''
 
         if (normalizedName) {
-          // dealProperties.value[propIndex].developer_name = normalizedName
+          dealProperties.value[propIndex].developer_name = normalizedName
         }
         if (normalizedPhone) {
-          // dealProperties.value[propIndex].developer_phone = normalizedPhone
+          dealProperties.value[propIndex].developer_phone = normalizedPhone
         }
       }
     }
@@ -1627,14 +1578,6 @@ const effectiveDealTypeForDocs = computed(() =>
 
 const normalizedDealType = computed(() => effectiveDealTypeForDocs.value)
 
-/** Primary pipeline: target column is SPA (name or stage 4) — extra payment proof only, not a new SPA file. */
-const isPrimaryTargetSpaStage = computed(() => {
-  const dt = normalizedDealType.value
-  const name = String(props.targetStageName || '').toLowerCase().trim()
-  const num = Number((name.match(/\d+/) || [])[0] || NaN)
-  return dt === 'primary' && (name.includes('spa') || (!Number.isNaN(num) && num === 4))
-})
-
 // Get existing field value from deal
 function getExistingFieldValue(key) {
   const deal = currentDealData.value || props.deal
@@ -1737,54 +1680,15 @@ function hydratePropertyDocsFromDealDocuments(deal) {
     }
 
     if (normalizedType === 'payment_proof') {
-      const key = getPropertyDocIdentityKey(normalizedDoc)
-      const alreadyExists = existingPayment.some((d) => getPropertyDocIdentityKey(d) === key)
-      if (!alreadyExists) existingPayment.push(normalizedDoc)
+      existingPayment.push(normalizedDoc)
     }
     if (normalizedType === 'spa_document') {
-      const key = getPropertyDocIdentityKey(normalizedDoc)
-      const alreadyExists = existingSpa.some((d) => getPropertyDocIdentityKey(d) === key)
-      if (!alreadyExists) existingSpa.push(normalizedDoc)
+      existingSpa.push(normalizedDoc)
     }
   })
 
   firstProperty.payment_proof = existingPayment
   firstProperty.spa_document = existingSpa
-}
-
-/**
- * Stable identity key for deduping property documents (payment_proof / spa).
- * We dedupe by type + storage identifiers (url/path/original name) and for Files by file name/size/lastModified.
- */
-function getPropertyDocIdentityKey(doc) {
-  const type = doc?.document_type || doc?.type || ''
-  const url = doc?.url || doc?.file_url || doc?.path || doc?.file_path || ''
-  const path = doc?.path || doc?.file_path || ''
-  const originalName = doc?.original_name || ''
-  const name = doc?.name || ''
-
-  const file = doc?.file
-  const fileKey =
-    file instanceof File
-      ? `${file.name}|${file.size}|${file.lastModified}`
-      : ''
-
-  const base = [type, url, path, originalName, name, fileKey].filter(Boolean).join('||')
-  // Fallback (very unlikely): JSON signature.
-  return base || JSON.stringify(doc || {})
-}
-
-function dedupePropertyDocs(docs) {
-  const list = Array.isArray(docs) ? docs : []
-  const seen = new Set()
-  const out = []
-  list.forEach((d) => {
-    const key = getPropertyDocIdentityKey(d)
-    if (seen.has(key)) return
-    seen.add(key)
-    out.push(d)
-  })
-  return out
 }
 
 function normalizeStoredDocs(raw) {
@@ -1885,19 +1789,18 @@ function onSearchAreas(search) {
 }
 // Update property documents - دالة محدثة
 function updatePropertyDocuments(propIndex, newDocuments) {
-    const deduped = dedupePropertyDocs(newDocuments || [])
-    // تحديث الحالة المحلية (dedupe to avoid double-render after hydration/save)
-    propertyDocumentsCombined.value[propIndex] = deduped
+    // تحديث الحالة المحلية
+    propertyDocumentsCombined.value[propIndex] = newDocuments
     
     // تحديث property في localProperties
     if (localProperties.value[propIndex]) {
         // تجميع المستندات حسب النوع
-        const paymentProofs = deduped.filter(doc => 
+        const paymentProofs = newDocuments.filter(doc => 
             doc.document_type === 'payment_proof' || 
             (doc.file && doc.original_name && doc.original_name.includes('payment'))
         )
         
-        const spaDocuments = deduped.filter(doc => 
+        const spaDocuments = newDocuments.filter(doc => 
             doc.document_type === 'spa_document' || 
             doc.document_type === 'spa' ||
             (doc.file && doc.original_name && doc.original_name.includes('spa'))
@@ -1975,10 +1878,7 @@ function reinitializePropertyDocuments() {
             })
         }
         
-        // Avoid duplicates when backend returns the same file in both:
-        // - property.payment_proof / property.spa_document
-        // - property.documents (deal-level doc merge)
-        propertyDocumentsCombined.value[idx] = dedupePropertyDocs(docs)
+        propertyDocumentsCombined.value[idx] = docs
     })
 }
 
@@ -2118,8 +2018,6 @@ if (localProperties.value.length > 0) {
             isLoadingPropertyData.value = false
         }
     }, 500)
-    await nextTick()
-    collapseCompletedSections()
   }
 }
 
@@ -2319,7 +2217,7 @@ const propertyDocTypesForModal = computed(() => {
       (k.includes('spa') && k.includes('property'))
   )
   return [
-    { id: 'payment_proof', name: 'Payment Proof', required: paymentRequired || needsSecondPaymentProofOnSpa.value },
+    { id: 'payment_proof', name: 'Payment Proof', required: paymentRequired },
     { id: 'spa', name: 'SPA Document', required: spaRequired }
   ]
 })
@@ -2503,10 +2401,6 @@ const effectiveMissingFields = computed(() => {
       currentStageName.includes('spa') ||
       (!Number.isNaN(targetStageNumber) && targetStageNumber >= 3)
     )
-  // SPA column: ask for one more payment proof only — not another SPA file if booking already had one.
-  const isTargetSpaPrimary =
-    dealType === 'primary' &&
-    (currentStageName.includes('spa') || (!Number.isNaN(targetStageNumber) && targetStageNumber === 4))
 
   if (isStage2Primary) {
     ;[
@@ -2532,17 +2426,11 @@ const effectiveMissingFields = computed(() => {
       'property_0_developer_phone',
       'property_0_purchase_price',
       'property_document_payment_proof',
+      'property_document_spa',
     ].forEach((k) => enforced.add(k))
-    if (!isTargetSpaPrimary) {
-      enforced.add('property_document_spa')
-    }
   }
 
-  let result = Array.from(enforced)
-  if (isTargetSpaPrimary) {
-    result = result.filter((k) => k !== 'property_document_spa')
-  }
-  return result
+  return Array.from(enforced)
 })
 
 // Unresolved missing keys for submit button
@@ -2648,24 +2536,15 @@ const unresolvedMissingKeys = computed(() => {
         }
       }
 
-      // SPA / stage 4 (primary): require at least one NEW payment proof upload
-      // even if an older payment proof already exists from booking.
-      const targetStageNumFromTitle = Number(
-        (String(props.targetStageName || '').match(/\d+/) || [])[0] || NaN
-      )
-      const isSpaStageTarget = stageName.includes('spa') || targetStageNumFromTitle === 4
-
-      if (isSpaStageTarget && normalizedDocType === 'payment_proof') {
+      // SPA stage rule: require at least one NEW payment proof upload
+      // even if old payment proof exists from previous stages.
+      if (stageName.includes('spa') && normalizedDocType === 'payment_proof') {
         const hasNewPaymentProof = localProperties.value.some((_, propIndex) => {
           const docs = propertyDocumentsCombined.value?.[propIndex] || []
           if (!Array.isArray(docs)) return false
           return docs.some((doc) => {
             const docType = String(doc?.document_type || '').toLowerCase()
-            const isPaymentType = docType === 'payment_proof' || docType === 'payment'
-            if (!isPaymentType) return false
-            const f = doc?.file
-            if (f instanceof File) return true
-            return doc?.status === 'pending' && f instanceof Blob && !doc?.is_existing
+            return (docType === 'payment_proof' || docType === 'payment') && doc?.file instanceof File
           })
         })
         if (!hasNewPaymentProof && !unresolved.includes(key)) {
@@ -2737,74 +2616,12 @@ const canSubmit = computed(() => {
   return !loading.value && !submitting.value && unresolvedMissingKeys.value.length === 0
 })
 
-/** Collapse accordion sections whose required work is satisfied (aligned with unresolvedMissingKeys). */
-function sectionHasUnresolved(section) {
-  const keys = unresolvedMissingKeys.value || []
-  switch (section) {
-    case 'buyer':
-      return keys.some((f) => f.startsWith('buyer_') || f.startsWith('buyer_document_'))
-    case 'seller':
-      return keys.some((f) => f.startsWith('seller_') || f.startsWith('seller_document_'))
-    case 'tenant':
-      return keys.some((f) => f.startsWith('tenant_') || f.startsWith('tenant_document_'))
-    case 'landlord':
-      return keys.some((f) => f.startsWith('landlord_') || f.startsWith('landlord_document_'))
-    case 'properties':
-      return keys.some((f) => f.startsWith('property_') || f === 'at_least_one_property')
-    case 'financials':
-      return keys.some((f) => ['deal_commission', 'deal_total_amount'].includes(f))
-    default:
-      return false
-  }
-}
-
-function collapseCompletedSections() {
-  if (!props.show) return
-  COLLAPSIBLE_SECTION_KEYS.forEach((section) => {
-    if (!sectionHasUnresolved(section)) {
-      openSections.value[section] = false
-    }
-  })
-  syncSectionUnresolvedSnapshot()
-}
-
-/** On unresolved changes after load: only auto-close when a section was incomplete and becomes complete */
-function collapseSectionsWhenJustResolved() {
-  if (!props.show || loading.value) return
-  const snap = sectionUnresolvedSnapshot.value
-  if (!snap) {
-    syncSectionUnresolvedSnapshot()
-    return
-  }
-  COLLAPSIBLE_SECTION_KEYS.forEach((section) => {
-    const now = sectionHasUnresolved(section)
-    if (snap[section] === true && now === false) {
-      openSections.value[section] = false
-    }
-  })
-  syncSectionUnresolvedSnapshot()
-}
-
 // Submit form — validate on click: scroll to first error, then save when complete
 async function submitForm() {
   if (loading.value || submitting.value) return
 
   validationAttempted.value = true
   await nextTick()
-
-  // Hard guard: on SPA target, don't allow stage change until user uploads a second Payment Proof
-  // (even if they already have one from Booking).
-  if (needsSecondPaymentProofOnSpa.value) {
-    const modalEl = document.querySelector('.complete-fields-modal')
-    if (modalEl) {
-      const addButtons = Array.from(modalEl.querySelectorAll('.document-property-section-add'))
-      const paymentBtn =
-        addButtons.find((btn) => String(btn?.textContent || '').toLowerCase().includes('payment proof')) ||
-        modalEl.querySelector('.document-property-section-add--missing')
-      paymentBtn?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-    return
-  }
 
   if (unresolvedMissingKeys.value.length > 0) {
     const modalEl = document.querySelector('.complete-fields-modal')
@@ -3016,7 +2833,6 @@ function closeModal() {
 watch(() => props.show, async (val) => {
     if (val) {
         validationAttempted.value = false
-        resetCollapsibleSectionsOpen()
         // إعادة تعيين حالة تحميل الـ Properties
         isLoadingPropertyData.value = true
         
@@ -3043,16 +2859,17 @@ watch(() => props.show, async (val) => {
         }
     }
 })
-watch(unresolvedMissingKeys, (newVal, oldVal) => {
-  console.log('🔄 unresolvedMissingKeys CHANGED:');
-  console.log('Old length:', oldVal?.length || 0);
-  console.log('New length:', newVal?.length || 0);
-  
-  if (newVal && newVal.length > 0) {
-    console.log('New values:', [...newVal]);
-  }
-  collapseSectionsWhenJustResolved()
-}, { deep: true });
+watch(
+  unresolvedMissingKeys,
+  () => {
+    // Auto-close completed sections after user starts validation flow.
+    if (!validationAttempted.value) return
+    ;['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials'].forEach((section) => {
+      openSections.value[section] = hasUnresolvedInSection(section)
+    })
+  },
+  { deep: true, immediate: true }
+)
 const isLoadingComplete = computed(() => {
     return loading.value || isLoadingPropertyData.value
 })
@@ -3478,18 +3295,16 @@ onMounted(async () => {
   width: min(760px, 94vw);
   max-width: 94vw;
   max-height: 90vh;
-  /* overflow-y: auto; */
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(0, 0, 0, 0.08);
-   position: relative;
 }
 
 .modal-header-deal {
   border-bottom: 1px solid #F4F4F4;
   flex-shrink: 0;
   padding: 14px 18px !important;
-   position: relative;
 }
 
 .modal-title {
@@ -3499,38 +3314,23 @@ onMounted(async () => {
 }
 
 .close-btn {
-      position: absolute;
-    top: 8px;
-    right: -61px;
-    width: 83px;
-    height: 49px;
-    color: #fff;
-    font-size: 18px;
-    line-height: 1;
-    box-shadow: #0f172a33 0 8px 16px;
-    z-index: -1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-width: 1px;
-    border-style: solid;
-    border-color: #4fa5f7;
-    border-image: initial;
-    border-radius: 999px;
-    background: linear-gradient(90deg, #2f88ef, #5db8ff);
-    padding: 0;
-    transition: filter .2s;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
 }
 
 .close-btn:hover {
   background: #F1F5F9;
   color: #1E293B;
 }
-.deal-progress-hint , .modal-footer-custom .text-danger {
-      display: flex;
-    /* justify-content: center; */
-    align-items: center;
-}
+
 .form-scroll-area {
   flex: 1;
   padding: 0 14px 8px;

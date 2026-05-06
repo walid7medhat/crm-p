@@ -599,6 +599,7 @@ function dealToFormData(deal) {
   const landlord = getParty(deal, 'landlord')
   const firstProp = Array.isArray(deal.properties) && deal.properties.length > 0 ? deal.properties[0] : null
   return {
+    deal_id: deal.id ?? null,
     source: deal.source ?? '',
     deal_name: deal.deal_name ?? '',
  
@@ -665,6 +666,7 @@ function dealToFormData(deal) {
     budget_to: firstProp?.budget_to ?? null,
     purchase_price: firstProp?.purchase_price ?? null,
     listing_id: deal.listing_id ?? null,
+    property_id: firstProp?.id ?? null,
     payment_proof: mapPropertyDocsForUpload(firstProp?.payment_proof, 'payment_proof'),
     spa_document: mapPropertyDocsForUpload(firstProp?.spa_document, 'spa'),
   }
@@ -1045,10 +1047,8 @@ function close() {
   max-width: 100%;
   border: none !important;
   height: 35px;
-  border: 1px solid #dc3545 !important; 
-  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
-  min-width: 300px;
-    width: auto;
+  border: 1px solid #0d6efd !important; 
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.2);
 }
 
 

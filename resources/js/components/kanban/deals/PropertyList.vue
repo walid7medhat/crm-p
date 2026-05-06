@@ -14,6 +14,7 @@
     <PropertyCard
       v-for="(property, index) in localProperties"
       :key="property.id"
+      :deal-id="dealId"
       :property="property"
       :index="index"
       :is-main="index === 0"
@@ -42,6 +43,7 @@ import PropertyCard from './PropertyCard.vue'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
+  dealId: { type: [Number, String], default: null },
   propertyTypes: { type: Array, default: () => [] },
   areas: { type: Array, default: () => [] },
   developers: { type: Array, default: () => [] },

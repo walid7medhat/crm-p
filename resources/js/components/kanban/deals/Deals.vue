@@ -1488,6 +1488,25 @@ async function onDealDragChange(evt, targetColumn) {
     const valid = res.valid
     const missingFields = res.missingFields || []
 
+    // SPA rule: always open completion modal and force one NEW payment proof.
+    if (isSpaTargetStage(targetColumn)) {
+      revertDealDrag(deal, targetColumn, oldStageId)
+      pendingCompleteFields.value = {
+        dealId: deal.id,
+        targetStageId: newStageId,
+        targetStageName: targetColumn.title,
+        originalStageId: oldStageId,
+        dealData: fullDealData || originalDeal,
+        missingFields: Array.from(new Set([...(missingFields || []), 'property_document_payment_proof'])),
+        missingFieldsGrouped: res.missingFieldsGrouped,
+        missingFieldsGroupedByStage: res.missingFieldsGroupedByStage,
+        groupedMissing: res.groupedMissing,
+        canProceedWithoutFields: false,
+      }
+      showCompleteFieldsModal.value = true
+      return
+    }
+
     // ❌ case 1: missing fields
     if (!valid && missingFields.length > 0) {
       // تراجع فوري في UI قبل فتح المودال
@@ -1823,6 +1842,11 @@ function normalizeStageName(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 }
 
+function isSpaTargetStage(stageLike) {
+  const stageName = normalizeStageName(stageLike?.title || stageLike?.name || '')
+  return stageName.includes('spa')
+}
+
 async function handleStageChangeFromModal({ dealId, originalStageId, targetStageId, targetStageName, dealData }) {
   if (!dealId || targetStageId == null) return
   if (String(originalStageId) === String(targetStageId)) return
@@ -1852,6 +1876,24 @@ async function handleStageChangeFromModal({ dealId, originalStageId, targetStage
 
     const valid = normalized.valid
     const missingFields = normalized.missingFields || []
+
+    // SPA rule for mobile/sheet flow: always require one NEW payment proof.
+    if (isSpaTargetStage(targetColumn)) {
+      pendingCompleteFields.value = {
+        dealId,
+        targetStageId: targetColumn.stage_id,
+        targetStageName: targetColumn.title,
+        originalStageId,
+        dealData: fullDealData || dealData || selectedDeal.value || {},
+        missingFields: Array.from(new Set([...(missingFields || []), 'property_document_payment_proof'])),
+        missingFieldsGrouped: normalized.missingFieldsGrouped,
+        missingFieldsGroupedByStage: normalized.missingFieldsGroupedByStage,
+        groupedMissing: normalized.groupedMissing,
+        canProceedWithoutFields: false,
+      }
+      showCompleteFieldsModal.value = true
+      return
+    }
 
     if (valid || missingFields.length === 0) {
       const reasonRequired = Boolean(

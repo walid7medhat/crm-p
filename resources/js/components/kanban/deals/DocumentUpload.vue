@@ -18,6 +18,7 @@
         v-for="type in documentTypes"
         :key="'prop-' + type.id"
         class="document-type-group document-type-group--property-block"
+        :class="{ 'is-missing-doc': isDocumentTypeRequired(type.id) }"
       >
         <div class="document-type-header document-type-header--property-section">
           <div class="document-box-label">
@@ -71,6 +72,7 @@
           <button
             type="button"
             class="document-property-section-add"
+            :class="{ 'document-property-section-add--missing': isDocumentTypeRequired(type.id) }"
             @click.stop="triggerFileInput(type.id, getFirstBoxId(type.id))"
           >
             <iconify-icon icon="lucide:plus" />
@@ -1182,6 +1184,18 @@ const $showNotification = (message, type = 'success') => {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.document-type-group--property-block.is-missing-doc {
+  border-color: #fca5a5 !important;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.18) inset;
+}
+
+.document-property-section-add--missing {
+  border-color: #ef4444 !important;
+  color: #b91c1c !important;
+  background: #fef2f2 !important;
+  font-weight: 600;
 }
 
 .document-property-section-add:hover {

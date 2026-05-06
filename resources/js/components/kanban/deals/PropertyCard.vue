@@ -149,63 +149,40 @@
       </div>
 
       <!-- ========== BUDGET FIELDS (EOI Stage) ========== -->
-        <div v-if="showBudgetFields" class="col-md-4">
-                  <label class="form-label-custom">
-                    Budget (AED)
-                    <span v-if="isRequired('budget_from') || isRequired('budget_to')" class="text-danger">*</span>
-                  </label>
-                  <div
-                    ref="budgetTriggerRef"
-                    class="budget-field-wrap"
-                    :class="{ 'is-invalid-group': (showErrors && (isRequired('budget_from') || isRequired('budget_to')) && !localProperty.budget_from && !localProperty.budget_to) }"
-                  >
-                    <button
-                      type="button"
-                      class="custom-date-trigger"
-                      @click.stop="toggleBudgetDropdown"
-                            >
-                    <span>{{ budgetDisplay }}</span>
-                    <iconify-icon icon="lucide:chevron-down" />
-                  </button>
-                </div>
-            <div v-if="showErrors && (isRequired('budget_from') || isRequired('budget_to')) && !localProperty.budget_from && !localProperty.budget_to" class="invalid-feedback d-block">
-              Budget range is required
-            </div>
-                <div
-            v-if="showBudgetDropdown"
-            ref="budgetDropdownPanelRef"
-            class="budget-dropdown budget-dropdown--portal"
-            :style="budgetDropdownStyle"
-            @click.stop
-            @mousedown.stop
-          >
-            <div class="budget-from-to-row" @click.stop @mousedown.stop>
-              <div class="budget-col">
-                <label class="budget-input-label">From (AED)</label>
-                <input
-                  :value="budgetFromDisplay"
-                  placeholder="0"
-                  @click.stop
-                  @mousedown.stop
-                  class="custom-input budget-dropdown-input"
-                  @input="(e) => setBudgetValue('budget_from', e.target.value)"
-                />
-              </div>
-              <div class="budget-col">
-                <label class="budget-input-label">To (AED)</label>
-                <input
-                  :value="budgetToDisplay"
-                  placeholder="0"
-                  @click.stop
-                  @mousedown.stop
-                  class="custom-input budget-dropdown-input"
-                  @input="(e) => setBudgetValue('budget_to', e.target.value)"
-                />
-              </div>
-            </div>
-          </div>
+      <div class="col-md-3" v-if="showBudgetFields">
+        <label class="form-label-custom">
+          Budget From <span v-if="isRequired('budget_from')" class="text-danger">*</span>
+        </label>
+        <div class="input-group">
+          
+          <b-form-input
+            v-model="localProperty.budget_from"
+            type="number"
+            placeholder="Min"
+            class="custom-input"
+            :class="{ 'is-invalid': showErrors && isRequired('budget_from') && !localProperty.budget_from }"
+          />
+          <span class="input-group-text">AED</span>
         </div>
-      
+      </div>
+
+      <div class="col-md-3" v-if="showBudgetFields">
+        <label class="form-label-custom">
+          Budget To <span v-if="isRequired('budget_to')" class="text-danger">*</span>
+        </label>
+        <div class="input-group">
+          
+          <b-form-input
+            v-model="localProperty.budget_to"
+            type="number"
+            placeholder="Max"
+            class="custom-input"
+            :class="{ 'is-invalid': showErrors && isRequired('budget_to') && !localProperty.budget_to }"
+          />
+          <span class="input-group-text">AED</span>
+        </div>
+      </div>
+
       <!-- ========== PURCHASE PRICE (Booking, SPA, Won Stages) ========== -->
       <div class="col-md-3" v-if="showPurchasePrice">
         <label class="form-label-custom">
@@ -260,7 +237,7 @@
       </div>
 
       <div class="col-md-4">
-        <label class="form-label-custom">Developer Sales Person Name</label>
+        <label class="form-label-custom">Developer Contact Name</label>
         <b-form-input
           v-model="localProperty.developer_name"
           placeholder="Contact Person"
@@ -269,7 +246,7 @@
       </div>
 
       <div class="col-md-4">
-        <label class="form-label-custom">Developer Sales Person Phone</label>
+        <label class="form-label-custom">Developer Contact Phone</label>
         <CrmPhoneInput
           v-model="localProperty.developer_phone"
           placeholder="Phone Number"
@@ -282,17 +259,18 @@
         <DocumentUpload
           v-model="propertyDocumentsCombined"
           category="property"
+          :deal-id="dealId"
+          :property-id="localProperty.id || property.id || null"
           :document-types="propertyDocTypes"
           :compact="props.inlineMode"
         />
       </div>
     </div>
   </div>
- 
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted ,onBeforeUnmount ,nextTick } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { BFormInput } from 'bootstrap-vue-3'
 import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import vSelect from 'vue-select'
@@ -300,6 +278,7 @@ import DocumentUpload from './DocumentUpload.vue'
 import api from '@/plugins/axios'
 
 const props = defineProps({
+  dealId: { type: [Number, String], default: null },
   property: { type: Object, required: true },
   index: { type: Number, required: true },
   isMain: { type: Boolean, default: false },
@@ -350,110 +329,7 @@ const propertyDocumentsCombined = computed({
     localProperty.value.spa_document = list.filter((f) => (f.document_type || '') === 'spa')
   }
 })
-// ========== Budget Dropdown (نفس نظام Lead Search) ==========
-const showBudgetDropdown = ref(false)
-const budgetTriggerRef = ref(null)
-const budgetDropdownPanelRef = ref(null)
-const budgetDropdownStyle = ref({})
 
-const budgetFromDisplay = computed(() => {
-    return localProperty.value.budget_from ? formatBudgetWithCommas(localProperty.value.budget_from) : ''
-})
-
-const budgetToDisplay = computed(() => {
-    return localProperty.value.budget_to ? formatBudgetWithCommas(localProperty.value.budget_to) : ''
-})
-
-const budgetDisplay = computed(() => {
-    const from = budgetFromDisplay.value
-    const to = budgetToDisplay.value
-    if (!from && !to) return 'Select budget range'
-    if (from && to) return `${from} - ${to}`
-    if (from) return `From ${from}`
-    return `To ${to}`
-})
-
-function normalizeBudgetString(value) {
-    return String(value ?? '').replace(/[^\d]/g, '')
-}
-
-function formatBudgetWithCommas(value) {
-    if (!value && value !== 0) return ''
-    const digits = normalizeBudgetString(value)
-    if (!digits) return ''
-    return Number(digits).toLocaleString('en-US')
-}
-
-function setBudgetValue(key, value) {
-    const digits = normalizeBudgetString(value)
-    localProperty.value[key] = digits ? Number(digits) : null
-    emitUpdate()
-}
-
-function getBudgetTriggerElement() {
-    let el = budgetTriggerRef.value
-    if (Array.isArray(el)) el = el.find(Boolean)
-    if (el && typeof el.getBoundingClientRect === 'function') return el
-    if (el?.$el && typeof el.$el.getBoundingClientRect === 'function') return el.$el
-    return null
-}
-
-function updateBudgetDropdownPosition() {
-    const el = getBudgetTriggerElement()
-    if (!el) return
-    
-    // استخدام getBoundingClientRect للحصول على الموقع بالنسبة للviewport
-    const rect = el.getBoundingClientRect()
-    
-    // حساب الموقع بالنسبة للصفحة
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
-    
-    budgetDropdownStyle.value = {
-        position: 'fixed',
-        // top: `${rect.bottom + 6}px`,
-        // left: `${rect.left}px`,
-        width: `${Math.max(rect.width, 240)}px`,
-        zIndex: '10060'
-    }
-}
-
-function removeBudgetDropdownListeners() {
-    // window.removeEventListener('scroll', updateBudgetDropdownPosition, true)
-    // window.removeEventListener('resize', updateBudgetDropdownPosition)
-}
-
-async function toggleBudgetDropdown(event) {
-    if (event) {
-        event.stopPropagation()
-        event.preventDefault()
-    }
-    
-    const next = !showBudgetDropdown.value
-    showBudgetDropdown.value = next
-    if (next) {
-        document.body.style.overflow = 'hidden'
-        
-        await nextTick()
-        updateBudgetDropdownPosition()
-        
-  
-    } else {
-        document.body.style.overflow = ''
-        removeBudgetDropdownListeners()
-    }
-}
-
-function onDocumentClick(event) {
-    if (!showBudgetDropdown.value) return
-    const t = event.target
-    const triggerEl = getBudgetTriggerElement()
-    const dropdownEl = budgetDropdownPanelRef.value
-    if (triggerEl?.contains(t) || dropdownEl?.contains(t)) return
-    
-    showBudgetDropdown.value = false
-    removeBudgetDropdownListeners()
-}
 // Track if we're coming from a listing selection
 let isUpdatingFromListing = false
 
@@ -641,13 +517,8 @@ const fetchAllAreas = async () => {
 onMounted(() => {
   ensurePropertyDocumentArrays(localProperty.value)
   fetchAllAreas()
-    document.addEventListener('click', onDocumentClick)
+})
 
-})
-onBeforeUnmount(() => {
-    document.removeEventListener('click', onDocumentClick)
-    removeBudgetDropdownListeners()
-})
 watch(
   () => props.property,
   (p) => {
@@ -954,86 +825,7 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
   background: #01062C;
   color: #fff;
 }
-/* Budget Dropdown Styles - نفس نظام Lead Search */
-.budget-field-wrap {
-    position: relative;
-}
 
-.budget-dropdown--portal {
-    background: #fff;
-    border: 1px solid #E2E8F0;
-    border-radius: 10px;
-    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
-    padding: 10px;
-}
-
-.budget-from-to-row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.budget-col {
-    min-width: 0;
-}
-
-.budget-input-label {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    color: #334155;
-    margin-bottom: 6px;
-}
-
-.budget-dropdown-input {
-    height: 38px !important;
-}
-
-.is-invalid-group .custom-date-trigger {
-    border-color: #dc3545 !important;
-}
-
-.custom-date-trigger {
-    width: 100%;
-    height: 42px;
-    border-radius: 10px;
-    border: 1px solid #E2E8F0;
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 12px;
-    font-size: 13px;
-    color: #64748B;
-    font-family: 'Montserrat';
-}
-
-.custom-date-trigger:hover {
-    border-color: #cbd5e1;
-}
-.budget-dropdown--portal {
-    background: #fff;
-    border: 1px solid #E2E8F0;
-    border-radius: 10px;
-    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
-    padding: 10px;
-}
-/* Budget Dropdown Styles - نفس نظام Lead Search */
-.budget-field-wrap {
-    position: relative;
-}
-
-.budget-dropdown--portal {
-    background: #fff;
-    border: 1px solid #E2E8F0;
-    border-radius: 10px;
-    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
-    padding: 10px;
-}
-
-.budget-dropdown--portal {
-    will-change: top, left;
-}
 </style>
 <style>
 .advanced-date-trigger{
