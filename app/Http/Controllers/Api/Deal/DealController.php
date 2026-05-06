@@ -28,6 +28,7 @@ use App\Http\Requests\Deal\UpdatePropertyRequest;
 use App\Http\Resources\Deal\PropertyDocumentResource;
 use App\Models\DealProperty;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\UploadedFile;
 
 class DealController extends Controller
 {
@@ -533,6 +534,7 @@ class DealController extends Controller
             'valid' => $result['valid'],
             'missing_fields' => $result['missing_fields'] ?? [],
             'grouped_missing' => $result['grouped_missing'] ?? ['sections' => [], 'by_stage' => []],
+            'grouped_by_stage' => $result['grouped_by_stage'] ?? [],
             'message' => $result['message'] ?? ($result['valid'] ? 'Validation passed' : 'Missing required fields'),
             'has_listing_id' => $result['has_listing_id'] ?? false,
             'deal_type' => $result['deal_type'] ?? $request->deal_type,
@@ -789,7 +791,17 @@ class DealController extends Controller
             // 1. تحديث المرحلة
             if ($request->filled('stage_id')) {
                 $guard = app(DealStageValidatorService::class);
-                $validation = $guard->validateStageChange($deal, (int) $request->stage_id, $deal->deal_type);
+                $paymentProofRootCount = count($this->extractRootKeyedValidFiles($request, 'payment_proof'));
+                $newPaymentProofUploads = $paymentProofRootCount > 0
+                    ? $paymentProofRootCount
+                    : $this->countPropertyPaymentProofViaDocumentsSlots($request);
+                $validation = $guard->validateStageChange(
+                    $deal,
+                    (int) $request->stage_id,
+                    $deal->deal_type,
+                    null,
+                    ['new_payment_proof_uploads' => $newPaymentProofUploads]
+                );
 
                 if (!$validation['valid']) {
                     DB::rollBack();
@@ -799,6 +811,7 @@ class DealController extends Controller
                         'message' => $validation['message'] ?? 'Missing required fields',
                         'missing_fields' => $validation['missing_fields'] ?? [],
                         'grouped_missing' => $validation['grouped_missing'] ?? ['sections' => [], 'by_stage' => []],
+                        'grouped_by_stage' => $validation['grouped_by_stage'] ?? ($validation['missing_by_stage'] ?? []),
                     ], 422);
                 }
 
@@ -921,6 +934,7 @@ class DealController extends Controller
                 'message' => $validation['message'] ?? 'Complete all required fields before changing stage.',
                 'missing_fields' => $validation['missing_fields'] ?? [],
                 'grouped_missing' => $validation['grouped_missing'] ?? ['sections' => [], 'by_stage' => []],
+                'grouped_by_stage' => $validation['grouped_by_stage'] ?? ($validation['missing_by_stage'] ?? []),
             ], 422);
         }
 
@@ -1008,11 +1022,9 @@ class DealController extends Controller
                 $this->syncPrimaryPropertyFromFlatRequest($deal, $request);
             }
 
-            // 3b. Root-level property files (payment_proof[], spa_document[]) should
-            // be merged onto the primary property even when properties payload exists.
-            if ($request->hasFile('payment_proof') || $request->hasFile('spa_document')) {
-                $this->mergeRootPropertyFilesOntoPrimaryProperty($deal, $request);
-            }
+            // 3b. Root-level property files (payment_proof[*], spa_document[*]) —
+            // merged onto the primary property even when properties JSON exists.
+            $this->mergeRootPropertyFilesOntoPrimaryProperty($deal, $request);
 
             // 4. رفع المستندات
             if ($request->hasFile('documents')) {
@@ -1053,24 +1065,18 @@ class DealController extends Controller
 
             // 5. تغيير المرحلة
             if ($request->filled('stage_id')) {
-                $targetStage = Stage::find((int) $request->stage_id);
-                $targetStageName = strtolower((string) ($targetStage?->name ?? ''));
-
-                // Business rule: moving to SPA requires uploading at least one NEW payment proof
-                // in this request (existing old docs are not enough).
-                if (str_contains($targetStageName, 'spa') && !$request->hasFile('payment_proof')) {
-                    DB::rollBack();
-                    return response()->json([
-                        'success' => false,
-                        'valid' => false,
-                        'message' => 'Missing required fields',
-                        'missing_fields' => ['property_document_payment_proof'],
-                        'grouped_missing' => ['sections' => [], 'by_stage' => []],
-                    ], 422);
-                }
-
                 $guard = app(DealStageValidatorService::class);
-                $validation = $guard->validateStageChange($deal, (int) $request->stage_id, $deal->deal_type);
+                $paymentProofRootCount = count($this->extractRootKeyedValidFiles($request, 'payment_proof'));
+                $newPaymentProofUploads = $paymentProofRootCount > 0
+                    ? $paymentProofRootCount
+                    : $this->countPropertyPaymentProofViaDocumentsSlots($request);
+                $validation = $guard->validateStageChange(
+                    $deal,
+                    (int) $request->stage_id,
+                    $deal->deal_type,
+                    null,
+                    ['new_payment_proof_uploads' => $newPaymentProofUploads]
+                );
 
                 if (!$validation['valid']) {
                     DB::rollBack();
@@ -1080,6 +1086,7 @@ class DealController extends Controller
                         'message' => $validation['message'] ?? 'Missing required fields',
                         'missing_fields' => $validation['missing_fields'] ?? [],
                         'grouped_missing' => $validation['grouped_missing'] ?? ['sections' => [], 'by_stage' => []],
+                        'grouped_by_stage' => $validation['grouped_by_stage'] ?? ($validation['missing_by_stage'] ?? []),
                     ], 422);
                 }
 
@@ -1256,66 +1263,147 @@ class DealController extends Controller
     }
 
     /**
+     * True when multipart key belongs to root uploads like payment_proof, payment_proof[0], spa_document.1
+     */
+    private function isRootFileFieldKey(string $key, string $prefix): bool
+    {
+        if ($key === $prefix) {
+            return true;
+        }
+        $len = strlen($prefix);
+        if (strlen($key) <= $len || substr($key, 0, $len) !== $prefix) {
+            return false;
+        }
+        $next = $key[$len];
+
+        return $next === '[' || $next === '.';
+    }
+
+    /**
+     * @return list<UploadedFile>
+     */
+    private function flattenValidUploadedFiles(mixed $node): array
+    {
+        if ($node instanceof UploadedFile) {
+            return $node->isValid() ? [$node] : [];
+        }
+        if (! is_array($node)) {
+            return [];
+        }
+        $out = [];
+        foreach ($node as $child) {
+            $out = array_merge($out, $this->flattenValidUploadedFiles($child));
+        }
+
+        return $out;
+    }
+
+    /**
+     * Collect valid uploads for root keys payment_proof* / spa_document* (handles payment_proof[0], payment_proof[], Laravel dot keys).
+     *
+     * @return list<UploadedFile>
+     */
+    private function extractRootKeyedValidFiles(Request $request, string $prefix): array
+    {
+        $out = [];
+        foreach ($request->allFiles() as $key => $payload) {
+            if (! $this->isRootFileFieldKey((string) $key, $prefix)) {
+                continue;
+            }
+            $out = array_merge($out, $this->flattenValidUploadedFiles($payload));
+        }
+
+        return $out;
+    }
+
+    /**
+     * Property payment proofs sent via documents[] + categories + document_types (when not split to root keys).
+     */
+    private function countPropertyPaymentProofViaDocumentsSlots(Request $request): int
+    {
+        if (! $request->hasFile('documents')) {
+            return 0;
+        }
+        $files = $request->file('documents');
+        $types = $request->input('document_types', []);
+        $categories = $request->input('categories', []);
+        $list = is_array($files) && ! ($files instanceof UploadedFile)
+            ? $files
+            : [$files];
+        $count = 0;
+        foreach ($list as $index => $file) {
+            if (! ($file instanceof UploadedFile) || ! $file->isValid()) {
+                continue;
+            }
+            $cat = strtolower((string) ($categories[$index] ?? ''));
+            $typ = strtolower((string) ($types[$index] ?? ''));
+            if ($cat === 'property' && ($typ === 'payment_proof' || $typ === 'payment')) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
      * Append SPA / Payment Proof uploads from multipart root keys onto the primary deal property (no properties[] payload).
      */
     private function mergeRootPropertyFilesOntoPrimaryProperty(Deal $deal, Request $request): void
     {
         $property = $deal->properties()->orderBy('sort_order')->orderBy('id')->first();
-        if (!$property) {
+        if (! $property) {
+            return;
+        }
+
+        $paymentFiles = $this->extractRootKeyedValidFiles($request, 'payment_proof');
+        $spaFiles = $this->extractRootKeyedValidFiles($request, 'spa_document');
+        if ($paymentFiles === [] && $spaFiles === []) {
             return;
         }
 
         $changed = false;
 
-        if ($request->hasFile('payment_proof')) {
+        if ($paymentFiles !== []) {
             $existing = is_array($property->payment_proof) ? $property->payment_proof : [];
-            $files = $request->file('payment_proof');
-            $list = is_array($files) ? $files : [$files];
-            foreach ($list as $file) {
-                if ($file instanceof \Illuminate\Http\UploadedFile && $file->isValid()) {
-                    $alreadyExists = collect($existing)->contains(function ($doc) use ($file) {
-                        return ($doc['original_name'] ?? null) === $file->getClientOriginalName()
-                            && (int) ($doc['size'] ?? 0) === (int) $file->getSize()
-                            && ($doc['mime_type'] ?? null) === $file->getMimeType();
-                    });
-                    if ($alreadyExists) {
-                        continue;
-                    }
-                    $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
-                    $existing[] = [
-                        'original_name' => $file->getClientOriginalName(),
-                        'path' => $path,
-                        'mime_type' => $file->getMimeType(),
-                        'size' => $file->getSize(),
-                    ];
+            foreach ($paymentFiles as $file) {
+                $alreadyExists = collect($existing)->contains(function ($doc) use ($file) {
+                    return ($doc['original_name'] ?? null) === $file->getClientOriginalName()
+                        && (int) ($doc['size'] ?? 0) === (int) $file->getSize()
+                        && ($doc['mime_type'] ?? null) === $file->getMimeType();
+                });
+                if ($alreadyExists) {
+                    continue;
                 }
+                $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                $existing[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
             }
             $property->payment_proof = $existing;
             $changed = true;
         }
 
-        if ($request->hasFile('spa_document')) {
+        if ($spaFiles !== []) {
             $existing = is_array($property->spa_document) ? $property->spa_document : [];
-            $files = $request->file('spa_document');
-            $list = is_array($files) ? $files : [$files];
-            foreach ($list as $file) {
-                if ($file instanceof \Illuminate\Http\UploadedFile && $file->isValid()) {
-                    $alreadyExists = collect($existing)->contains(function ($doc) use ($file) {
-                        return ($doc['original_name'] ?? null) === $file->getClientOriginalName()
-                            && (int) ($doc['size'] ?? 0) === (int) $file->getSize()
-                            && ($doc['mime_type'] ?? null) === $file->getMimeType();
-                    });
-                    if ($alreadyExists) {
-                        continue;
-                    }
-                    $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
-                    $existing[] = [
-                        'original_name' => $file->getClientOriginalName(),
-                        'path' => $path,
-                        'mime_type' => $file->getMimeType(),
-                        'size' => $file->getSize(),
-                    ];
+            foreach ($spaFiles as $file) {
+                $alreadyExists = collect($existing)->contains(function ($doc) use ($file) {
+                    return ($doc['original_name'] ?? null) === $file->getClientOriginalName()
+                        && (int) ($doc['size'] ?? 0) === (int) $file->getSize()
+                        && ($doc['mime_type'] ?? null) === $file->getMimeType();
+                });
+                if ($alreadyExists) {
+                    continue;
                 }
+                $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
+                $existing[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
             }
             $property->spa_document = $existing;
             $changed = true;

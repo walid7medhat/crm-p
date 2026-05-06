@@ -85,7 +85,11 @@
                 <span v-if="hasRequiredInSection('buyer')" class="required-badge">Required</span>
               </div>
               
-              <div v-show="isSectionOpen('buyer')" class="section-content">
+              <div
+                v-show="isSectionOpen('buyer')"
+                class="section-content"
+                @focusout="onCollapsibleSectionFocusOut('buyer', $event)"
+              >
                 <div class="form-card p-3 radius-12" v-if="showPartyDetailFields('buyer')">
                   <div class="row g-3">
                     <!-- Buyer fields -->
@@ -277,7 +281,11 @@
                 <span v-if="hasRequiredInSection('seller')" class="required-badge">Required</span>
               </div>
               
-              <div v-show="isSectionOpen('seller')" class="section-content">
+              <div
+                v-show="isSectionOpen('seller')"
+                class="section-content"
+                @focusout="onCollapsibleSectionFocusOut('seller', $event)"
+              >
                 <div class="form-card p-3 radius-12" v-if="showPartyDetailFields('seller')">
                   <div class="row g-3">
                     <!-- Seller fields -->
@@ -464,7 +472,11 @@
                 <span v-if="hasRequiredInSection('tenant')" class="required-badge">Required</span>
               </div>
               
-              <div v-show="isSectionOpen('tenant')" class="section-content">
+              <div
+                v-show="isSectionOpen('tenant')"
+                class="section-content"
+                @focusout="onCollapsibleSectionFocusOut('tenant', $event)"
+              >
                 <div class="form-card p-3 radius-12" v-if="showPartyDetailFields('tenant')">
                   <div class="row g-3">
                     <div class="col-md-4" v-if="shouldShowField('tenant_first_name')">
@@ -639,7 +651,11 @@
                 <span v-if="hasRequiredInSection('landlord')" class="required-badge">Required</span>
               </div>
               
-              <div v-show="isSectionOpen('landlord')" class="section-content">
+              <div
+                v-show="isSectionOpen('landlord')"
+                class="section-content"
+                @focusout="onCollapsibleSectionFocusOut('landlord', $event)"
+              >
                 <div class="form-card p-3 radius-12" v-if="showPartyDetailFields('landlord')">
                   <div class="row g-3">
                     <div class="col-md-4" v-if="shouldShowField('landlord_first_name')">
@@ -826,7 +842,11 @@
                     <span class="required-badge">Required</span>
                 </div>
                 
-                <div v-show="isSectionOpen('properties')" class="section-content">
+                <div
+                  v-show="isSectionOpen('properties')"
+                  class="section-content"
+                  @focusout="onCollapsibleSectionFocusOut('properties', $event)"
+                >
                     <!-- Loading state for property data -->
                     <div v-if="isLoadingPropertyData" class="text-center py-3">
                         <div class="spinner-border spinner-border-sm text-primary" role="status">
@@ -1035,7 +1055,13 @@
                                         <span>{{ getPropertyBudgetDisplay(property) }}</span>
                                         <iconify-icon :icon="openBudgetDropdownIndex === propIndex ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
                                       </button>
-                                      <div v-if="openBudgetDropdownIndex === propIndex" class="budget-dropdown-stage">
+                                      <div
+                                        v-if="openBudgetDropdownIndex === propIndex"
+                                        class="budget-dropdown-stage"
+                                        @mousedown.stop
+                                        @click.stop
+                                        @focusout="onBudgetDropdownFocusOut(propIndex, $event)"
+                                      >
                                         <div class="budget-from-to-row-stage">
                                           <div class="budget-col-stage">
                                             <label class="budget-input-label-stage">From</label>
@@ -1047,6 +1073,8 @@
                                               placeholder="0"
                                               class="form-control custom-input budget-dropdown-input-stage"
                                               :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'budget_from') }"
+                                              @mousedown.stop
+                                              @click.stop
                                               @input="updateProperty(propIndex, 'budget_from', $event.target.value)"
                                             />
                                           </div>
@@ -1060,6 +1088,8 @@
                                               placeholder="0"
                                               class="form-control custom-input budget-dropdown-input-stage"
                                               :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'budget_to') }"
+                                              @mousedown.stop
+                                              @click.stop
                                               @input="updateProperty(propIndex, 'budget_to', $event.target.value)"
                                             />
                                           </div>
@@ -1071,6 +1101,12 @@
                                 <!-- Property Documents (Payment Proof + SPA — same idea as Create Deal / PropertyCard) -->
                                 <div class="col-12 mt-3 property-documents-block">
                                     <label class="section-title mb-2">Property Documents</label>
+                                    <div
+                                      v-if="validationAttempted && missingPropertyDocumentTypes.some(t => t === 'payment_proof' || t === 'payment')"
+                                      class="small text-danger mb-2"
+                                    >
+                                      Payment Proof is required. Please add Payment Proof Document.
+                                    </div>
                                     <div
                                       v-if="validationAttempted && missingPropertyDocumentTypes.some(t => t === 'spa' || t === 'spa_document')"
                                       class="small text-danger mb-2"
@@ -1112,7 +1148,11 @@
                 <span v-if="hasRequiredInSection('financials')" class="required-badge">Required</span>
               </div>
               
-              <div v-show="isSectionOpen('financials')" class="section-content">
+              <div
+                v-show="isSectionOpen('financials')"
+                class="section-content"
+                @focusout="onCollapsibleSectionFocusOut('financials', $event)"
+              >
                 <div class="form-card p-3 radius-12">
                   <div class="row g-3">
                     <div class="col-md-6" v-if="shouldShowField('deal_total_amount')">
@@ -1222,10 +1262,60 @@ function isSectionOpen(section) {
   return openSections.value[section] !== false
 }
 
-function hasRequiredInSection(section) {
-    const stageName = props.targetStageName?.toLowerCase() || ''
-    const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
+/**
+ * PRIMARY: show budget only before BOOKING (stage order 1–2). BOOKING+ hides it.
+ * Other deal types: unchanged.
+ */
+function isBudgetVisibleForPrimaryDeal() {
+  const dealLike = currentDealData.value || props.deal
+  const dt = normalizeDealTypeForDocuments(dealLike?.deal_type ?? dealLike?.type ?? props.dealType)
+  if (dt !== 'primary') return true
+  const ord = dealLike?.stage?.order
+  if (ord === null || ord === undefined || ord === '') return true
+  const n = Number(ord)
+  if (!Number.isFinite(n)) return true
+  return n < 3
+}
 
+/** Collapse section when focus leaves it and nothing is left missing in that section. */
+function isLikelyUIPortalFocus() {
+  const el = document.activeElement
+  if (!el || !(el instanceof HTMLElement)) return false
+  return Boolean(
+    el.closest('.vs__dropdown-menu')
+    || el.closest('.flatpickr-calendar')
+    || el.closest('.budget-dropdown-stage')
+  )
+}
+
+function onCollapsibleSectionFocusOut(sectionKey, event) {
+  const root = event.currentTarget
+  if (!(root instanceof HTMLElement)) return
+  const related = event.relatedTarget
+  if (related instanceof Node && root.contains(related)) return
+  requestAnimationFrame(() => {
+    if (root.contains(document.activeElement)) return
+    if (isLikelyUIPortalFocus()) return
+    if (!hasUnresolvedInSection(sectionKey)) {
+      openSections.value[sectionKey] = false
+    }
+  })
+}
+
+function onBudgetDropdownFocusOut(propIndex, event) {
+  const root = event.currentTarget
+  if (!(root instanceof HTMLElement)) return
+  const related = event.relatedTarget
+  if (related instanceof Node && root.contains(related)) return
+  requestAnimationFrame(() => {
+    if (root.contains(document.activeElement)) return
+    if (openBudgetDropdownIndex.value === propIndex) {
+      openBudgetDropdownIndex.value = null
+    }
+  })
+}
+
+function hasRequiredInSection(section) {
   // Check if any field in this section is required (has missing)
   switch(section) {
     case 'buyer':
@@ -1249,11 +1339,6 @@ function hasRequiredInSection(section) {
         f.startsWith('property_') || f === 'at_least_one_property'
       )
     case 'financials':
-      if (isWonStage) {
-        const totalAmountMissing = !formData.value?.deal_total_amount || formData.value.deal_total_amount === ''
-        const commissionMissing = !formData.value?.deal_commission || formData.value.deal_commission === ''
-        return totalAmountMissing || commissionMissing
-      }
       return effectiveMissingFields.value.some(f =>
         ['deal_commission', 'deal_total_amount'].includes(f)
       )
@@ -1264,8 +1349,6 @@ function hasRequiredInSection(section) {
 
 function hasUnresolvedInSection(section) {
   const unresolved = unresolvedMissingKeys.value || []
-  const stageName = props.targetStageName?.toLowerCase() || ''
-  const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
 
   switch (section) {
     case 'buyer':
@@ -1279,9 +1362,6 @@ function hasUnresolvedInSection(section) {
     case 'properties':
       return unresolved.some((k) => k.startsWith('property_') || k === 'at_least_one_property')
     case 'financials':
-      if (isWonStage) {
-        return unresolved.includes('deal_total_amount') || unresolved.includes('deal_commission')
-      }
       return unresolved.some((k) => ['deal_commission', 'deal_total_amount'].includes(k))
     default:
       return false
@@ -1290,20 +1370,18 @@ function hasUnresolvedInSection(section) {
 
 // ========== Helper Functions ==========
 const showBudgetFields = computed(() => {
+  if (!isBudgetVisibleForPrimaryDeal()) return false
   const missingKeys = effectiveMissingFields.value || []
   const hasBudgetFrom = missingKeys.some(key => key.includes('budget_from'))
   const hasBudgetTo = missingKeys.some(key => key.includes('budget_to'))
-  if (hasBudgetFrom || hasBudgetTo) {
-    const stageName = props.targetStageName?.toLowerCase() || ''
-    return stageName.includes('eoi') || stageName.includes('new')
-  }
-  
-  return false
+  return hasBudgetFrom || hasBudgetTo
 })
 
 const showPurchasePrice = computed(() => {
-  const stageName = props.targetStageName?.toLowerCase() || ''
-  return !stageName.includes('new') && !stageName.includes('eoi')
+  const missingKeys = effectiveMissingFields.value || []
+  const hasMissingPurchasePrice = missingKeys.some((key) => key.includes('purchase_price'))
+  const hasPurchaseValue = localProperties.value.some((property) => !!property?.purchase_price)
+  return hasMissingPurchasePrice || hasPurchaseValue
 })
 
 // Property documents
@@ -2105,15 +2183,6 @@ const missingDocumentTypesByParty = computed(() => {
 // Check if field is required (stage rules)
 function hasField(fieldKey) {
   const missingKeys = effectiveMissingFields.value || []
-  const stageName = props.targetStageName?.toLowerCase() || ''
-  const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
-  
-  if (isWonStage && (fieldKey === 'deal_total_amount' || fieldKey === 'deal_commission')) {
-    const value = formData.value?.[fieldKey]
-    const isEmpty = value === null || value === undefined || value === '' || value === 0
-    return isEmpty 
-  }
-  
   return missingKeys.includes(fieldKey)
 }
 
@@ -2124,13 +2193,7 @@ function shouldShowField(fieldKey) {
   if (hasField(fieldKey)) return true
   
   const dt = normalizedDealType.value
-  const stageName = props.targetStageName?.toLowerCase() || ''
-  const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
-  
-  if (isWonStage && (fieldKey === 'deal_total_amount' || fieldKey === 'deal_commission')) {
-    return true
-  }
-  
+
   if (fieldKey.startsWith('buyer_')) return dt === 'primary' || dt === 'secondary'
   if (fieldKey.startsWith('seller_')) return dt === 'secondary'
   if (fieldKey.startsWith('tenant_')) return dt === 'rental'
@@ -2150,23 +2213,11 @@ function showPartyDetailFields(partyType) {
 
 function shouldShowPropertyField(fieldName, property) {
   if (fieldName === 'budget_from' || fieldName === 'budget_to') {
-    const stageName = props.targetStageName?.toLowerCase() || ''
-    const isEOIStage = stageName.includes('eoi')
-    
-    if (isEOIStage) {
-      return true 
-    }
-    
-    return false
+    if (!isBudgetVisibleForPrimaryDeal()) return false
+    return showBudgetFields.value || isPropertyFieldRequired(fieldName) || !!property?.[fieldName]
   }
   
   const dt = normalizedDealType.value
-  const stageName = props.targetStageName?.toLowerCase() || ''
-  const isSpaStage = stageName.includes('spa')
-  const isBookingStage = stageName.includes('booking')
-  if (isSpaStage && ['unit_no', 'unit_size', 'developer_name', 'developer_phone', 'purchase_price'].includes(fieldName)) {
-    return true
-  }
   
   switch (fieldName) {
     case 'unit_no':
@@ -2174,11 +2225,11 @@ function shouldShowPropertyField(fieldName, property) {
     case 'area_id':
       return true
     case 'unit_size':
-      return dt !== 'primary' || !stageName.includes('eoi')
+      return isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || dt !== 'primary'
     case 'developer_id':
     case 'developer_name':
     case 'developer_phone':
-      return dt === 'secondary' || isBookingStage || isSpaStage || isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || !!property?.developer_contact_name || !!property?.developer_contact_phone
+      return dt === 'secondary' || isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || !!property?.developer_contact_name || !!property?.developer_contact_phone
     case 'bedrooms':
       return showBedroomsForProperty(property)
     case 'rental_price':
@@ -2247,16 +2298,6 @@ const hasPropertyRequirements = computed(() => {
 // Field invalid check (only after Save)
 function isFieldInvalid(fieldKey) {
   if (!fieldKey || !validationAttempted.value) return false
-  
-  const stageName = props.targetStageName?.toLowerCase() || ''
-  const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
-  
-  // ✅ في مرحلة Won، تحقق من financial fields
-  if (isWonStage && (fieldKey === 'deal_total_amount' || fieldKey === 'deal_commission')) {
-    const value = formData.value?.[fieldKey]
-    const isEmpty = value === null || value === undefined || value === '' || value === 0
-    return isEmpty
-  }
   
   const isRequired = hasField(fieldKey)
   if (!isRequired) return false
@@ -2391,46 +2432,7 @@ const effectiveMissingFields = computed(() => {
     return true
   })
   
-  // Enforce stage-based property requirements for primary flow
-  const enforced = new Set(filteredFields)
-  const isStage2Primary = dealType === 'primary' && (targetStageNumber === 2 || currentStageName.includes('eoi'))
-  const isBookingOrLaterPrimary =
-    dealType === 'primary' &&
-    (
-      currentStageName.includes('booking') ||
-      currentStageName.includes('spa') ||
-      (!Number.isNaN(targetStageNumber) && targetStageNumber >= 3)
-    )
-
-  if (isStage2Primary) {
-    ;[
-      'at_least_one_property',
-      'property_0_area_id',
-      'property_0_property_type_id',
-      'property_0_bedrooms',
-      'property_0_budget_from',
-      'property_0_budget_to',
-    ].forEach((k) => enforced.add(k))
-  }
-
-  if (isBookingOrLaterPrimary) {
-    ;[
-      'at_least_one_property',
-      'property_0_unit_no',
-      'property_0_property_type_id',
-      'property_0_bedrooms',
-      'property_0_unit_size',
-      'property_0_area_id',
-      'property_0_developer_id',
-      'property_0_developer_name',
-      'property_0_developer_phone',
-      'property_0_purchase_price',
-      'property_document_payment_proof',
-      'property_document_spa',
-    ].forEach((k) => enforced.add(k))
-  }
-
-  return Array.from(enforced)
+  return filteredFields
 })
 
 // Unresolved missing keys for submit button
@@ -2438,25 +2440,6 @@ const effectiveMissingFields = computed(() => {
 const unresolvedMissingKeys = computed(() => {
   const unresolved = []
   const missingKeys = effectiveMissingFields.value || []
-  const stageName = props.targetStageName?.toLowerCase() || ''
-  const isWonStage = stageName.includes('won') || stageName.includes('closed_won')
-  
-  // ✅ في مرحلة Won، تحقق من financial fields
-  if (isWonStage) {
-    const totalAmount = formData.value?.deal_total_amount
-    const commission = formData.value?.deal_commission
-    
-    if (!totalAmount || totalAmount === '' || totalAmount === 0) {
-      if (!unresolved.includes('deal_total_amount')) {
-        unresolved.push('deal_total_amount')
-      }
-    }
-    if (!commission || commission === '' || commission === 0) {
-      if (!unresolved.includes('deal_commission')) {
-        unresolved.push('deal_commission')
-      }
-    }
-  }
   
   missingKeys.forEach(key => {
     // ✅ معالجة property_document_ fields
@@ -2530,15 +2513,9 @@ const unresolvedMissingKeys = computed(() => {
         })
       }
 
-      if (!hasPropertyDoc) {
-        if (!unresolved.includes(key)) {
-          unresolved.push(key)
-        }
-      }
-
-      // SPA stage rule: require at least one NEW payment proof upload
-      // even if old payment proof exists from previous stages.
-      if (stageName.includes('spa') && normalizedDocType === 'payment_proof') {
+      // When backend still reports payment proof as missing, require at least one NEW
+      // upload in this modal attempt so SPA/next-stage increment rules can be satisfied.
+      if (normalizedDocType === 'payment_proof') {
         const hasNewPaymentProof = localProperties.value.some((_, propIndex) => {
           const docs = propertyDocumentsCombined.value?.[propIndex] || []
           if (!Array.isArray(docs)) return false
@@ -2550,7 +2527,15 @@ const unresolvedMissingKeys = computed(() => {
         if (!hasNewPaymentProof && !unresolved.includes(key)) {
           unresolved.push(key)
         }
+        return
       }
+
+      if (!hasPropertyDoc) {
+        if (!unresolved.includes(key)) {
+          unresolved.push(key)
+        }
+      }
+
       return
     }
     
@@ -2604,8 +2589,6 @@ const unresolvedMissingKeys = computed(() => {
   })
   
   console.log('=== unresolvedMissingKeys Debug ===')
-  console.log('Stage:', stageName)
-  console.log('Is Won Stage:', isWonStage)
   console.log('Unresolved keys:', unresolved)
   console.log('===================================')
   
@@ -2621,6 +2604,13 @@ async function submitForm() {
   if (loading.value || submitting.value) return
 
   validationAttempted.value = true
+  await nextTick()
+
+  ;['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials'].forEach((section) => {
+    if (hasUnresolvedInSection(section)) {
+      openSections.value[section] = true
+    }
+  })
   await nextTick()
 
   if (unresolvedMissingKeys.value.length > 0) {
@@ -2787,13 +2777,9 @@ if (localProperties.value.length > 0) {
         budget_to: prop.budget_to || null,
         purchase_price: prop.purchase_price || null,
         commission: prop.commission || null,
-        // ⚠️ تأكد من إرسال الملفات بشكل صحيح
-        payment_proof: (prop.payment_proof || [])
-            .filter(doc => doc?.file instanceof File)
-            .map(doc => doc.file),
-        spa_document: (prop.spa_document || [])
-            .filter(doc => doc?.file instanceof File)
-            .map(doc => doc.file),
+        // Keep persisted docs in properties payload; new files go via multipart root keys.
+        payment_proof: Array.isArray(prop.payment_proof) ? prop.payment_proof : [],
+        spa_document: Array.isArray(prop.spa_document) ? prop.spa_document : [],
     }))
 }
 
@@ -2819,6 +2805,15 @@ const finalPayload = {
 // Close modal
 function closeModal() {
   validationAttempted.value = false
+  openBudgetDropdownIndex.value = null
+  openSections.value = {
+    buyer: true,
+    seller: true,
+    tenant: true,
+    landlord: true,
+    properties: true,
+    financials: true,
+  }
   formData.value = {}
   localProperties.value = []
   submitting.value = false
@@ -2859,17 +2854,6 @@ watch(() => props.show, async (val) => {
         }
     }
 })
-watch(
-  unresolvedMissingKeys,
-  () => {
-    // Auto-close completed sections after user starts validation flow.
-    if (!validationAttempted.value) return
-    ;['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials'].forEach((section) => {
-      openSections.value[section] = hasUnresolvedInSection(section)
-    })
-  },
-  { deep: true, immediate: true }
-)
 const isLoadingComplete = computed(() => {
     return loading.value || isLoadingPropertyData.value
 })

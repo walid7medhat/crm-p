@@ -8,12 +8,18 @@ use Illuminate\Support\Facades\Log;
 class DealStageValidatorService
 {
     public function __construct(
-        private readonly DealStageValidator $validator
+        private readonly DealStageValidator $validator,
+        private readonly DealStageRequirementEngine $requirementEngine
     ) {
     }
 
-    public function validateStageChange(Deal $deal, int $targetStageId, ?string $dealType = null, ?int $listingId = null): array
+    public function validateStageChange(Deal $deal, int $targetStageId, ?string $dealType = null, ?int $listingId = null, array $context = []): array
 {
+    // PRIMARY deals: backend-driven single source of truth via engine.
+    if ($deal->deal_type === 'primary') {
+        return $this->requirementEngine->validateStageTransition($deal, $targetStageId, $context);
+    }
+
     $resolvedType = $dealType ?: $deal->deal_type;
     
     // ✅ استخدام listing_id من الـ Request إذا وجد، وإلا استخدم الموجود في الـ Deal

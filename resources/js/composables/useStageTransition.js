@@ -4,6 +4,32 @@ import { useDealValidation } from './useDealValidation'
 export function useStageTransition() {
   const { normalizeMissingPayload } = useDealValidation()
 
+  function normalizeExistingPropertyDocs(rawDocs = [], fallbackType) {
+    if (!Array.isArray(rawDocs)) return []
+    return rawDocs
+      .map((doc) => {
+        if (!doc || typeof doc !== 'object') return null
+        // Existing docs should be preserved in properties payload, but never send File blobs here.
+        if (doc.file instanceof File) return null
+        const path = doc.path || doc.file_path || null
+        const url = doc.url || doc.file_url || null
+        const originalName = doc.original_name || doc.file_name || doc.name || null
+        if (!path && !url && !originalName) return null
+        return {
+          id: doc.id || null,
+          original_name: originalName || 'Document',
+          path,
+          url,
+          file_url: doc.file_url || path || null,
+          mime_type: doc.mime_type || doc.type || null,
+          size: doc.size || doc.file_size || 0,
+          document_type: doc.document_type || fallbackType,
+          document_category: 'property',
+        }
+      })
+      .filter(Boolean)
+  }
+
   async function checkStageRequirements({ dealId, targetStageId, dealType }) {
     const { data } = await axios.post('/deals/check-stage-requirements', {
       deal_id: dealId,
@@ -59,6 +85,8 @@ export function useStageTransition() {
             'budget_from',
             'budget_to',
             'commission',
+            'payment_proof',
+            'spa_document',
           ]
 
           const sanitized = value.map((property) => {
@@ -69,6 +97,9 @@ export function useStageTransition() {
                 lightweight[k] = property[k]
               }
             })
+            // Keep existing persisted property docs so backend syncProperties doesn't wipe them.
+            lightweight.payment_proof = normalizeExistingPropertyDocs(property.payment_proof, 'payment_proof')
+            lightweight.spa_document = normalizeExistingPropertyDocs(property.spa_document, 'spa')
             return lightweight
           })
           formData.append('properties', JSON.stringify(sanitized))

@@ -181,23 +181,8 @@
                </v-select>
               </div>
               <div v-if="fieldSettings.buyer_city_residence" class="col-md-6">
-                  <label class="form-label-custom">City Of Residence</label>
-                  <v-select
-                      v-model="form.buyer_city"
-                      :options="uaeCityOptions"
-                      :reduce="opt => opt.value"
-                      label="text"
-                      class="custom-v-select deal-select-placeholder"
-                      placeholder="Select City"
-                      :clearable="true"
-                      append-to-body
-                  >
-                      <template #open-indicator="{ attributes }">
-                          <span v-bind="attributes">
-                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                          </span>
-                      </template>
-                  </v-select>
+                <label class="form-label-custom">City Of Residence</label>
+                <b-form-input v-model="form.buyer_city" class="custom-input" placeholder="Enter City" />
               </div>
             </div>
           </div>
@@ -214,7 +199,7 @@
                 <label class="form-label-custom">Property Type</label>
                 <v-select
                   v-model="form.property_type_id"
-                  :options="localPropertyTypes.length ? localPropertyTypes : props.propertyTypes"
+                  :options="propertyTypes"
                   :reduce="opt => opt.id"
                   label="name"
                   class="custom-v-select deal-select-placeholder"
@@ -255,7 +240,7 @@
                 <label class="form-label-custom">Project Name</label>
                 <v-select
                   v-model="form.project_id"
-                  :options="props.projects"
+                  :options="projects"
                   :reduce="opt => opt.id"
                   label="name"
                   class="custom-v-select deal-select-placeholder"
@@ -274,11 +259,11 @@
                   </template>
               </v-select>
               </div>
-              <div v-if="fieldSettings.property_developer" class="col-md-6">
+              <!-- <div v-if="fieldSettings.property_developer" class="col-md-6">
                 <label class="form-label-custom">Developer</label>
                 <v-select
                   v-model="form.developer_id"
-                   :options="localDevelopers"
+                  :options="developers"
                   :reduce="opt => opt.id"
                   label="name"
                   class="custom-v-select deal-select-placeholder"
@@ -293,7 +278,7 @@
                       </span>
                   </template>
               </v-select>
-              </div>
+              </div> -->
               <div v-if="fieldSettings.property_area" class="col-md-6">
                 <label class="form-label-custom">Property Address</label>
                   <v-select
@@ -330,7 +315,6 @@
                                     </div>
                                 </template>
                             </v-select>
-                
               </div>
               <div v-if="fieldSettings.property_sub_community" class="col-md-6">
                 <label class="form-label-custom">Sub Community</label>
@@ -558,10 +542,10 @@ const defaultFieldSettings = {
   property_unit_no: true,
   property_type: true,
   property_bedrooms: false,
-  // property_project_name: true,
+  property_project_name: true,
   property_developer: false,
   property_area: false,
-  // property_sub_community: false,
+  property_sub_community: false,
   property_unit_size: false,
 }
 
@@ -647,10 +631,10 @@ const fieldSettingsSections = [
       { id: 'property_unit_no', label: 'Unit No' },
       { id: 'property_type', label: 'Property Type' },
       { id: 'property_bedrooms', label: 'Bedrooms' },
-      // { id: 'property_project_name', label: 'Project Name' },
+      { id: 'property_project_name', label: 'Project Name' },
       { id: 'property_developer', label: 'Developer' },
-      { id: 'property_area', label: 'Property Address' },
-      // { id: 'property_sub_community', label: 'Sub Community' },
+      { id: 'property_area', label: 'Area' },
+      { id: 'property_sub_community', label: 'Sub Community' },
       { id: 'property_unit_size', label: 'Unit Size' },
     ],
   },
@@ -707,269 +691,33 @@ const stages = ref([])
 const projects = ref([])
 
 // Options for selects
-
-const countryOptions = [
-  { value: "Afghanistan", text: "Afghanistan" },
-  { value: "Albania", text: "Albania" },
-  { value: "Algeria", text: "Algeria" },
-  { value: "Andorra", text: "Andorra" },
-  { value: "Angola", text: "Angola" },
-  { value: "Argentina", text: "Argentina" },
-  { value: "Armenia", text: "Armenia" },
-  { value: "Australia", text: "Australia" },
-  { value: "Austria", text: "Austria" },
-  { value: "Azerbaijan", text: "Azerbaijan" },
-  { value: "Bahrain", text: "Bahrain" },
-  { value: "Bangladesh", text: "Bangladesh" },
-  { value: "Belarus", text: "Belarus" },
-  { value: "Belgium", text: "Belgium" },
-  { value: "Belize", text: "Belize" },
-  { value: "Benin", text: "Benin" },
-  { value: "Bhutan", text: "Bhutan" },
-  { value: "Bolivia", text: "Bolivia" },
-  { value: "Bosnia and Herzegovina", text: "Bosnia and Herzegovina" },
-  { value: "Botswana", text: "Botswana" },
-  { value: "Brazil", text: "Brazil" },
-  { value: "Brunei", text: "Brunei" },
-  { value: "Bulgaria", text: "Bulgaria" },
-  { value: "Burkina Faso", text: "Burkina Faso" },
-  { value: "Burundi", text: "Burundi" },
-  { value: "Cambodia", text: "Cambodia" },
-  { value: "Cameroon", text: "Cameroon" },
-  { value: "Canada", text: "Canada" },
-  { value: "Chad", text: "Chad" },
-  { value: "Chile", text: "Chile" },
-  { value: "China", text: "China" },
-  { value: "Colombia", text: "Colombia" },
-  { value: "Comoros", text: "Comoros" },
-  { value: "Congo", text: "Congo" },
-  { value: "Costa Rica", text: "Costa Rica" },
-  { value: "Croatia", text: "Croatia" },
-  { value: "Cuba", text: "Cuba" },
-  { value: "Cyprus", text: "Cyprus" },
-  { value: "Czech Republic", text: "Czech Republic" },
-  { value: "Denmark", text: "Denmark" },
-  { value: "Djibouti", text: "Djibouti" },
-  { value: "Dominican Republic", text: "Dominican Republic" },
-  { value: "Ecuador", text: "Ecuador" },
-  { value: "Egypt", text: "Egypt" },
-  { value: "El Salvador", text: "El Salvador" },
-  { value: "Estonia", text: "Estonia" },
-  { value: "Ethiopia", text: "Ethiopia" },
-  { value: "Finland", text: "Finland" },
-  { value: "France", text: "France" },
-  { value: "Gabon", text: "Gabon" },
-  { value: "Georgia", text: "Georgia" },
-  { value: "Germany", text: "Germany" },
-  { value: "Ghana", text: "Ghana" },
-  { value: "Greece", text: "Greece" },
-  { value: "Guatemala", text: "Guatemala" },
-  { value: "Haiti", text: "Haiti" },
-  { value: "Honduras", text: "Honduras" },
-  { value: "Hungary", text: "Hungary" },
-  { value: "Iceland", text: "Iceland" },
-  { value: "India", text: "India" },
-  { value: "Indonesia", text: "Indonesia" },
-  { value: "Iran", text: "Iran" },
-  { value: "Iraq", text: "Iraq" },
-  { value: "Ireland", text: "Ireland" },
-  { value: "Israel", text: "Israel" },
-  { value: "Italy", text: "Italy" },
-  { value: "Jamaica", text: "Jamaica" },
-  { value: "Japan", text: "Japan" },
-  { value: "Jordan", text: "Jordan" },
-  { value: "Kazakhstan", text: "Kazakhstan" },
-  { value: "Kenya", text: "Kenya" },
-  { value: "Kuwait", text: "Kuwait" },
-  { value: "Kyrgyzstan", text: "Kyrgyzstan" },
-  { value: "Laos", text: "Laos" },
-  { value: "Latvia", text: "Latvia" },
-  { value: "Lebanon", text: "Lebanon" },
-  { value: "Libya", text: "Libya" },
-  { value: "Lithuania", text: "Lithuania" },
-  { value: "Luxembourg", text: "Luxembourg" },
-  { value: "Madagascar", text: "Madagascar" },
-  { value: "Malaysia", text: "Malaysia" },
-  { value: "Maldives", text: "Maldives" },
-  { value: "Mali", text: "Mali" },
-  { value: "Malta", text: "Malta" },
-  { value: "Mexico", text: "Mexico" },
-  { value: "Moldova", text: "Moldova" },
-  { value: "Monaco", text: "Monaco" },
-  { value: "Mongolia", text: "Mongolia" },
-  { value: "Montenegro", text: "Montenegro" },
-  { value: "Morocco", text: "Morocco" },
-  { value: "Mozambique", text: "Mozambique" },
-  { value: "Myanmar", text: "Myanmar" },
-  { value: "Namibia", text: "Namibia" },
-  { value: "Nepal", text: "Nepal" },
-  { value: "Netherlands", text: "Netherlands" },
-  { value: "New Zealand", text: "New Zealand" },
-  { value: "Nicaragua", text: "Nicaragua" },
-  { value: "Niger", text: "Niger" },
-  { value: "Nigeria", text: "Nigeria" },
-  { value: "North Korea", text: "North Korea" },
-  { value: "Norway", text: "Norway" },
-  { value: "Oman", text: "Oman" },
-  { value: "Pakistan", text: "Pakistan" },
-  { value: "Panama", text: "Panama" },
-  { value: "Paraguay", text: "Paraguay" },
-  { value: "Peru", text: "Peru" },
-  { value: "Philippines", text: "Philippines" },
-  { value: "Poland", text: "Poland" },
-  { value: "Portugal", text: "Portugal" },
-  { value: "Qatar", text: "Qatar" },
-  { value: "Romania", text: "Romania" },
-  { value: "Russia", text: "Russia" },
-  { value: "Rwanda", text: "Rwanda" },
-  { value: "Saudi Arabia", text: "Saudi Arabia" },
-  { value: "Senegal", text: "Senegal" },
-  { value: "Serbia", text: "Serbia" },
-  { value: "Singapore", text: "Singapore" },
-  { value: "Slovakia", text: "Slovakia" },
-  { value: "Slovenia", text: "Slovenia" },
-  { value: "Somalia", text: "Somalia" },
-  { value: "South Africa", text: "South Africa" },
-  { value: "South Korea", text: "South Korea" },
-  { value: "Spain", text: "Spain" },
-  { value: "Sri Lanka", text: "Sri Lanka" },
-  { value: "Sudan", text: "Sudan" },
-  { value: "Sweden", text: "Sweden" },
-  { value: "Switzerland", text: "Switzerland" },
-  { value: "Syria", text: "Syria" },
-  { value: "Taiwan", text: "Taiwan" },
-  { value: "Tanzania", text: "Tanzania" },
-  { value: "Thailand", text: "Thailand" },
-  { value: "Tunisia", text: "Tunisia" },
-  { value: "Turkey", text: "Turkey" },
-  { value: "Uganda", text: "Uganda" },
-  { value: "Ukraine", text: "Ukraine" },
-  { value: "United Arab Emirates", text: "United Arab Emirates" },
-  { value: "United Kingdom", text: "United Kingdom" },
-  { value: "United States", text: "United States" },
-  { value: "Uruguay", text: "Uruguay" },
-  { value: "Uzbekistan", text: "Uzbekistan" },
-  { value: "Venezuela", text: "Venezuela" },
-  { value: "Vietnam", text: "Vietnam" },
-  { value: "Yemen", text: "Yemen" },
-  { value: "Zambia", text: "Zambia" },
-  { value: "Zimbabwe", text: "Zimbabwe" },
-  { value: "Other", text: "Other" }
-];
-
-const languageOptions = [
-  { value: 'arabic', text: 'Arabic' },
-  { value: 'english', text: 'English' },
-  { value: 'french', text: 'French' },
-  { value: 'spanish', text: 'Spanish' },
-  { value: 'german', text: 'German' },
-  { value: 'italian', text: 'Italian' },
-  { value: 'portuguese', text: 'Portuguese' },
-  { value: 'russian', text: 'Russian' },
-  { value: 'chinese', text: 'Chinese (Mandarin)' },
-  { value: 'japanese', text: 'Japanese' },
-  { value: 'korean', text: 'Korean' },
-  { value: 'hindi', text: 'Hindi' },
-  { value: 'urdu', text: 'Urdu' },
-  { value: 'bengali', text: 'Bengali' },
-  { value: 'turkish', text: 'Turkish' },
-  { value: 'persian', text: 'Persian (Farsi)' },
-  { value: 'swahili', text: 'Swahili' },
-  { value: 'hausa', text: 'Hausa' },
-  { value: 'amharic', text: 'Amharic' },
-  { value: 'dutch', text: 'Dutch' },
-  { value: 'greek', text: 'Greek' },
-  { value: 'hebrew', text: 'Hebrew' },
-  { value: 'thai', text: 'Thai' },
-  { value: 'vietnamese', text: 'Vietnamese' },
-  { value: 'malay', text: 'Malay' },
-  { value: 'indonesian', text: 'Indonesian' },
-  { value: 'filipino', text: 'Filipino (Tagalog)' },
-  { value: 'polish', text: 'Polish' },
-  { value: 'ukrainian', text: 'Ukrainian' },
-  { value: 'czech', text: 'Czech' },
-  { value: 'romanian', text: 'Romanian' },
-  { value: 'hungarian', text: 'Hungarian' },
-  { value: 'swedish', text: 'Swedish' },
-  { value: 'norwegian', text: 'Norwegian' },
-  { value: 'danish', text: 'Danish' },
-  { value: 'finnish', text: 'Finnish' },
-  { value: 'other', text: 'Other' }
-];
 const nationalityOptions = [
   { value: 'emirati', text: 'Emirati' },
   { value: 'saudi', text: 'Saudi' },
   { value: 'egyptian', text: 'Egyptian' },
-  { value: 'qatari', text: 'Qatari' },
-  { value: 'kuwaiti', text: 'Kuwaiti' },
-  { value: 'bahraini', text: 'Bahraini' },
-  { value: 'omani', text: 'Omani' },
-
-  { value: 'american', text: 'American' },
-  { value: 'canadian', text: 'Canadian' },
-  { value: 'british', text: 'British' },
-  { value: 'french', text: 'French' },
-  { value: 'german', text: 'German' },
-  { value: 'italian', text: 'Italian' },
-  { value: 'spanish', text: 'Spanish' },
-  { value: 'dutch', text: 'Dutch' },
-  { value: 'swedish', text: 'Swedish' },
-  { value: 'norwegian', text: 'Norwegian' },
-  { value: 'danish', text: 'Danish' },
-  { value: 'finnish', text: 'Finnish' },
-  { value: 'polish', text: 'Polish' },
-  { value: 'ukrainian', text: 'Ukrainian' },
-  { value: 'russian', text: 'Russian' },
-
   { value: 'indian', text: 'Indian' },
-  { value: 'pakistani', text: 'Pakistani' },
-  { value: 'bangladeshi', text: 'Bangladeshi' },
-  { value: 'sri_lankan', text: 'Sri Lankan' },
-  { value: 'nepali', text: 'Nepali' },
-  { value: 'filipino', text: 'Filipino' },
-  { value: 'indonesian', text: 'Indonesian' },
-  { value: 'malaysian', text: 'Malaysian' },
-  { value: 'chinese', text: 'Chinese' },
-  { value: 'japanese', text: 'Japanese' },
-  { value: 'korean', text: 'Korean' },
-  { value: 'thai', text: 'Thai' },
-  { value: 'vietnamese', text: 'Vietnamese' },
-
-  { value: 'turkish', text: 'Turkish' },
-  { value: 'iranian', text: 'Iranian' },
-
-  { value: 'moroccan', text: 'Moroccan' },
-  { value: 'tunisian', text: 'Tunisian' },
-  { value: 'algerian', text: 'Algerian' },
-  { value: 'sudanese', text: 'Sudanese' },
-  { value: 'ethiopian', text: 'Ethiopian' },
-  { value: 'kenyan', text: 'Kenyan' },
-  { value: 'nigerian', text: 'Nigerian' },
-  { value: 'south_african', text: 'South African' },
-
-  { value: 'brazilian', text: 'Brazilian' },
-  { value: 'argentinian', text: 'Argentinian' },
-  { value: 'mexican', text: 'Mexican' },
-  { value: 'chilean', text: 'Chilean' },
-  { value: 'colombian', text: 'Colombian' },
-
-  { value: 'australian', text: 'Australian' },
-  { value: 'new_zealander', text: 'New Zealander' },
-
-  { value: 'other', text: 'Other' }
-];
-// UAE City Options
-const uaeCityOptions = [
-    { value: 'Abu Dhabi', text: 'Abu Dhabi' },
-    { value: 'Dubai', text: 'Dubai' },
-    { value: 'Sharjah', text: 'Sharjah' },
-    { value: 'Ajman', text: 'Ajman' },
-    { value: 'Ras Al Khaimah', text: 'Ras Al Khaimah' },
-    { value: 'Umm Al Quwain', text: 'Umm Al Quwain' },
-    { value: 'Fujairah', text: 'Fujairah' },
-    { value: 'Al Ain', text: 'Al Ain' }
+  { value: 'british', text: 'British' },
+  { value: 'american', text: 'American' },
+  { value: 'other', text: 'Other' },
 ]
-const residencyOptions = [{ value: 'resident', text: 'Resident' }, { value: 'non_resident', text: 'Non Resident' }]
+
+const residencyOptions = [
+  { value: 'citizen', text: 'Citizen' },
+  { value: 'resident', text: 'Resident' },
+  { value: 'investor', text: 'Investor' },
+  { value: 'tourist', text: 'Tourist' },
+  { value: 'other', text: 'Other' },
+]
+
+const countryOptions = [
+  { value: 'AE', text: 'United Arab Emirates' },
+  { value: 'SA', text: 'Saudi Arabia' },
+  { value: 'EG', text: 'Egypt' },
+  { value: 'IN', text: 'India' },
+  { value: 'GB', text: 'United Kingdom' },
+  { value: 'US', text: 'United States' },
+  { value: 'other', text: 'Other' },
+]
 
 const currencyOptions = [
   { value: 'AED', text: 'AED' },
@@ -1025,59 +773,7 @@ const createdByDatePresetOptions = computed(() => {
   }
   return [...datePresetOptions, { text: customText, value: 'custom' }]
 })
-// إضافة متغيرات لتخزين البيانات
-const localAreas = ref([])
-const localPropertyTypes = ref([])
-const localDevelopers = ref([])
-const isLoadingData = ref(false)
 
-// دالة لجلب المناطق
-const fetchAreasData = async () => {
-    try {
-        const res = await api.get('/listings/areas/?has_listings=true')
-        const data = res.data.data || res.data || []
-        localAreas.value = data.map(area => ({
-            id: area.id,
-            name: area.name || area.title,
-            area_parents_title: area.area_parents_title || ''
-        }))
-        console.log('Areas loaded:', localAreas.value.length)
-    } catch (error) {
-        console.error('Error fetching areas:', error)
-        localAreas.value = []
-    }
-}
-
-// دالة لجلب أنواع العقارات
-const fetchPropertyTypesData = async () => {
-    try {
-        const res = await api.get('/listings/property-types')
-        const data = res.data.data || res.data
-        localPropertyTypes.value = data.map(type => ({
-            id: type.id,
-            name: type.name
-        }))
-        console.log('Property types loaded:', localPropertyTypes.value.length)
-    } catch (error) {
-        console.error('Error fetching property types:', error)
-        localPropertyTypes.value = []
-    }
-}
-
-const fetchDevelopersData = async () => {
-    try {
-        const res = await api.get('/listings/developers')
-        const data = res.data.data || res.data || []
-        localDevelopers.value = data.map(dev => ({
-            id: dev.id,
-            name: dev.name
-        }))
-        console.log('Developers loaded:', localDevelopers.value.length)
-    } catch (error) {
-        console.error('Error fetching developers:', error)
-        localDevelopers.value = []
-    }
-}
 // Search functions for dynamic data
 const searchProjects = async (search) => {
   if (!search && search !== '') return
@@ -1102,7 +798,7 @@ const searchAreas = async (search) => {
   try {
     const response = await api.get('/listings/areas', { params: { search } })
     // Assuming the response structure
-     const areasData = response.data.data || response.data || []
+    const areasData = response.data?.data ?? response.data ?? []
     // Emit to parent if needed, otherwise update local ref
     if (props.areas?.length) {
       // If areas are passed as prop, we don't override
@@ -1414,13 +1110,7 @@ watch(() => props.dealType, hydrateFieldSettingsFromSession)
 
 onMounted(async () => {
   hydrateFieldSettingsFromSession()
-    await Promise.all([
-        fetchUsers(), 
-        fetchStages(),
-        fetchAreasData(),
-        fetchPropertyTypesData(),
-        fetchDevelopersData()
-    ])
+  await Promise.all([fetchUsers(), fetchStages()])
 })
 </script>
 
@@ -1446,27 +1136,28 @@ onMounted(async () => {
 }
 
 .close-btn {
-      position: absolute;
-    top: 8px;
-    right: -61px;
-    width: 83px;
-    height: 49px;
-    color: #fff;
-    font-size: 18px;
-    line-height: 1;
-    box-shadow: #0f172a33 0 8px 16px;
-    z-index: -1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-width: 1px;
-    border-style: solid;
-    border-color: #4fa5f7;
-    border-image: initial;
-    border-radius: 999px;
-    background: linear-gradient(90deg, #2f88ef, #5db8ff);
-    padding: 0;
-    transition: filter .2s;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  left: auto;
+  transform: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 18px;
+  font-weight: 500;
+  padding: 0;
+  box-shadow: none;
+  z-index: 9999;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  opacity: 0.95;
 }
 
 .close-btn :deep(iconify-icon) {
@@ -1956,9 +1647,6 @@ onMounted(async () => {
 :deep(.custom-v-select svg) {
     vertical-align: middle !important;
 }
-.advanced-date-trigger{
-  height: 100% !important;
-}
 </style>
 <style>
 
@@ -2068,4 +1756,5 @@ onMounted(async () => {
     font-size: 11px;
     color: #64748b;
     line-height: 1.2;
-}</style>
+}
+</style>
