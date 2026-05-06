@@ -296,25 +296,41 @@
               </div>
               <div v-if="fieldSettings.property_area" class="col-md-6">
                 <label class="form-label-custom">Property Address</label>
-                <v-select
-                  v-model="form.area_id"
-                  :options="localAreas.length ? localAreas : props.areas"
-                  :reduce="opt => opt.id"
-                  label="name"
-                  class="custom-v-select deal-select-placeholder"
-                  placeholder="Select Address"
-                  :clearable="true"
-                  :filterable="true"
-                  :searchable="true"
-                  @search="searchAreas"
-                    append-to-body
-                >
-                  <template #open-indicator="{ attributes }">
-                      <span v-bind="attributes">
-                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                      </span>
-                  </template>
-                </v-select>
+                  <v-select
+                          v-model="form.area_id"
+                          :options="localAreas.length ? localAreas : props.areas"
+                          :reduce="opt => opt.id"
+                          label="name"
+                          class="custom-v-select deal-select-placeholder"
+                          placeholder="Select Address"
+                          :clearable="true"
+                          :filterable="true"
+                          :searchable="true"
+                          @search="searchAreas"
+                            append-to-body
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                <template #option="option">
+                                    <div class="location-option">
+                                        <i class="ri-map-pin-line location-option-icon"></i>
+                                        <div class="location-option-text">
+                                            <span class="location-option-name">{{ locationFirstLine(option) }}</span>
+                                            <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template #selected-option="option">
+                                    <div v-if="option" class="location-selected">
+                                        <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
+                                        <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
+                                    </div>
+                                </template>
+                            </v-select>
+                
               </div>
               <div v-if="fieldSettings.property_sub_community" class="col-md-6">
                 <label class="form-label-custom">Sub Community</label>
@@ -1072,7 +1088,15 @@ const searchProjects = async (search) => {
     console.error('Error searching projects:', e)
   }
 }
-
+const locationFirstLine = (area) => area?.name || 'Unknown Area'
+const locationSecondLine = (area) => {
+    const parent = area?.parent || area?.area_parents_title || area?.parent_name
+    const community = area?.community_name || area?.communityName
+    const city = area?.city_name || area?.cityName
+    if (parent) return parent
+    if (community && city) return `${community}, ${city}`
+    return community || city || ''
+}
 const searchAreas = async (search) => {
   if (!search && search !== '') return
   try {
@@ -1997,4 +2021,51 @@ onMounted(async () => {
 }
 .advanced-date-trigger{
   height: 100% !important;
+}
+
+.location-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.location-option-icon {
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.location-option-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.location-option-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.location-option-subtitle {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.location-selected {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.location-selected-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.location-selected-subtitle {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.2;
 }</style>

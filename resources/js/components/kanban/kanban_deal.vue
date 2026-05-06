@@ -239,6 +239,7 @@ const leadsRef = ref(null)
 const dealsRef = ref(null)
 
 const integrationRef = ref(null)
+const leadPoolRef = ref(null) 
 const searchDropdownAnchorRef = ref(null)
 const search = ref(null)
 const searchDebounceTimer = ref(null)
@@ -426,7 +427,18 @@ onMounted(() => {
     }, 1000)
     document.addEventListener('click', onDocumentClick)
 })
-
+// في Kanban.vue
+watch(activeTab, async (newTab, oldTab) => {
+    if (newTab === 'lead-pool' && leadPoolRef.value) {
+        try {
+          
+                await leadPoolRef.value.fetchLeadPool()
+            
+        } catch (error) {
+            console.error('Error loading lead pool:', error)
+        }
+    }
+})
 watch(
     () => route.path,
     () => {
