@@ -16,16 +16,27 @@
       <div class="modal-header-deal d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div class="d-flex align-items-center gap-3 flex-grow-1 header-left-with-padding">
           <span class="modal-title">Create New Deal</span>
-          <div class="deals-type-select-wrap">
-            <select
-              v-model="dealType"
-              class="deals-type-select"
-              @change="selectDealType(dealType)"
-            >
-              <option v-for="tab in dealTypeTabs" :key="tab.id" :value="tab.id">
+          <div class="deals-type-select-wrap custom-dropdown">
+            <div class="selected" @click="toggleDropdown"   :class="{ open: dropdownOpen }">
+              {{ selectedDealTypeName }}
+                  <iconify-icon
+                    icon="lucide:chevrons-up-down"
+                    class="dropdown-icon"
+                  ></iconify-icon>
+            </div>
+
+            <div v-if="dropdownOpen" class="dropdown">
+              <div
+                v-for="tab in dealTypeTabs"
+                :key="tab.id"
+                class="dropdown-item"
+                :class="{ active: dealType === tab.id }"
+                @click="selectDeal(tab)"
+              >
                 {{ tab.name }}
-              </option>
-            </select>
+                <span v-if="dealType === tab.id" class="check">✔</span>
+              </div>
+            </div>
           </div>
         </div>
         <button type="button" class="close-btn" @click="close">
@@ -175,7 +186,21 @@ const handleHasListingIdUpdate = (value) => {
 function selectDealType(id) {
   dealType.value = id
 }
+const dropdownOpen = ref(false)
 
+const toggleDropdown = () => {
+  dropdownOpen.value = !dropdownOpen.value
+}
+
+const selectDeal = (tab) => {
+  dealType.value = tab.id
+  selectDealType(tab.id)
+  dropdownOpen.value = false
+}
+
+const selectedDealTypeName = computed(() => {
+  return dealTypeTabs.find(t => t.id === dealType.value)?.name || ''
+})
 // Get stages for current deal type
 const currentStages = computed(() => {
   if (!stages.value || stages.value.length === 0) {
@@ -1468,5 +1493,73 @@ onMounted(() => {
   background: #0f172a;
   color: #fff;
   border-color: #0f172a;
+}
+
+
+
+
+.custom-dropdown {
+  position: relative;
+  width: 180px;
+}
+
+.custom-dropdown .selected {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 20px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  cursor: pointer;
+}
+.dropdown-icon {
+  font-size: 16px;
+  color: #9ca3af;
+  margin-left: 8px;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.selected.open .dropdown-icon {
+  transform: rotate(180deg);
+  color: #111827;
+}
+
+
+.custom-dropdown .dropdown {
+  position: absolute;
+  top: 110%;
+  width: 100%;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  padding: 6px;
+  z-index: 999;
+}
+
+.custom-dropdown .dropdown-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.custom-dropdown .dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+.custom-dropdown .dropdown-item.active {
+  background: #f1f5f9;
+  font-weight: 500;
+}
+
+/* check */
+.custom-dropdown .check {
+  color: orange;
+  font-size: 14px;
 }
 </style>
