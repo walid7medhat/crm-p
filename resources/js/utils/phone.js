@@ -1,14 +1,17 @@
-import { isValidPhoneNumber } from 'libphonenumber-js'
+import { parsePhoneNumberFromString } from 'libphonenumber-js'
 
-/**
- * @param {string|null|undefined} value
- * @returns {boolean} true if empty, or a valid international number
- */
 export function isNonEmptyPhoneValid(value) {
   const s = value == null ? '' : String(value).trim()
   if (!s) return true
+
   try {
-    return isValidPhoneNumber(s)
+    const phone = parsePhoneNumberFromString(s)
+
+    // لو الرقم international (+971...)
+    if (phone) return phone.isValid()
+
+    // fallback لو الرقم بدون +
+    return false
   } catch {
     return false
   }

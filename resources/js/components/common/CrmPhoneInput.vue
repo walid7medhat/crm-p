@@ -11,9 +11,10 @@
     ]"
   >
     <VueTelInput
-      :model-value="normalizedModelValue"
+      ref="telInputRef"
+      :model-value="displayValue"
       mode="international"
-      :auto-format="autoFormat"
+      :auto-format="false"
       :auto-default-country="useIpLocationDefault"
       :default-country="bindingDefaultCountry"
       :disabled="disabled"
@@ -32,7 +33,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { VueTelInput } from 'vue-tel-input'
 import 'vue-tel-input/vue-tel-input.css'
 
@@ -40,39 +41,48 @@ const props = defineProps({
   modelValue: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   defaultCountry: { type: [String, Number], default: 971 },
-  /** Server / required-style errors (parent-driven) */
   invalid: { type: Boolean, default: false },
-  /**
-   * When true, show format error for non-empty values that fail lib validation
-   * (e.g. after submit attempt).
-   */
   showErrors: { type: Boolean, default: false },
   placeholder: { type: String, default: 'Enter phone number' },
-  /**
-   * When true, default flag/dial code from visitor IP (vue-tel-input → ip2c.org).
-   * When false, use `defaultCountry` (default UAE 971).
-   */
   inferCountryFromIp: { type: Boolean, default: false },
-  /** Disable vue-tel formatting groups/spaces while typing when needed. */
-  autoFormat: { type: Boolean, default: true },
-  /**
-   * Keep selector compact for optional fields: hide flag/dial only while empty.
-   * The flag appears again on focus, country change, or when phone has a value.
-   */
+  autoFormat: { type: Boolean, default: false },
   collapseCountryWhenEmpty: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])
 
+const telInputRef = ref(null)
 const lastLibValid = ref(true)
 const countryDropdownOpen = ref(false)
 const isFocused = ref(false)
 const hasExplicitCountryChoice = ref(false)
+const currentDialCode = ref('971') // Store the dial code (default UAE)
+const localNumber = ref('') // Store only the local number (without dial code)
 
 const normalizedModelValue = computed(() => (props.modelValue == null ? '' : String(props.modelValue)))
 
-/* Note: do not use preferred-countries — vue-tel-input concatenates them with the
- * full list without deduping, so each preferred country appears twice in the dropdown. */
+// Extract local number from full international number
+const extractLocalNumber = (fullNumber) => {
+  if (!fullNumber) return ''
+  // If starts with +, remove the dial code
+  if (fullNumber.startsWith('+')) {
+    for (let i = 1; i <= 4; i++) {
+      const possibleCode = fullNumber.substring(1, i + 1)
+      if (possibleCode === currentDialCode.value || 
+          (currentDialCode.value && possibleCode === currentDialCode.value)) {
+        return fullNumber.substring(i + 1).replace(/^0+/, '')
+      }
+    }
+  }
+  return fullNumber.replace(/\s/g, '')
+}
+
+// What the user sees (only local number, no dial code)
+const displayValue = computed(() => {
+  if (!localNumber.value && !normalizedModelValue.value) return ''
+  if (localNumber.value) return localNumber.value
+  return extractLocalNumber(normalizedModelValue.value)
+})
 
 const dropdownOptions = {
   showFlags: true,
@@ -84,13 +94,13 @@ const dropdownOptions = {
 
 const mergedInputOptions = computed(() => ({
   placeholder: props.placeholder,
-  showDialCode: true,
+  showDialCode: false, // IMPORTANT: Hide dial code from input
   autocomplete: 'tel',
   type: 'tel',
   name: 'telephone',
 }))
 
-const trimmedValue = computed(() => normalizedModelValue.value.trim())
+const trimmedValue = computed(() => displayValue.value.trim())
 
 const useIpLocationDefault = computed(() => props.inferCountryFromIp)
 
@@ -101,7 +111,6 @@ const resolvedDefaultCountry = computed(() => {
   return raw.toLowerCase()
 })
 
-/** Empty default + autoDefaultCountry lets the library geo-detect; otherwise fixed default. */
 const bindingDefaultCountry = computed(() =>
   props.inferCountryFromIp ? '' : resolvedDefaultCountry.value,
 )
@@ -121,7 +130,7 @@ const effectiveDropdownOptions = computed(() => ({
 
 const effectiveInputOptions = computed(() => ({
   ...mergedInputOptions.value,
-  showDialCode: !collapseCountryInactive.value,
+  showDialCode: false, // Always false to hide code
 }))
 
 const showInvalid = computed(() => {
@@ -140,8 +149,26 @@ function onValidate(phoneObject) {
   lastLibValid.value = valid
 }
 
+// Remove spaces and non-digits from input
+function cleanInput(value) {
+  if (!value) return ''
+  // Keep only digits
+  return value.replace(/\D/g, '')
+}
+
 function onUpdate(v) {
-  emit('update:modelValue', v ?? '')
+  // Clean the input value (remove spaces and non-digits)
+  const cleaned = cleanInput(v ?? '')
+  localNumber.value = cleaned
+  
+  // Build the full international number to send to backend
+  let fullNumber = ''
+  if (cleaned) {
+    fullNumber = `+${currentDialCode.value}${cleaned}`
+  }
+  
+  // Emit the full number to parent/backend
+  emit('update:modelValue', fullNumber)
 }
 
 function onFocus() {
@@ -152,17 +179,58 @@ function onBlur() {
   isFocused.value = false
 }
 
-function onCountryChanged() {
+function onCountryChanged(country) {
   if (!props.collapseCountryWhenEmpty) return
   hasExplicitCountryChoice.value = true
+  
+  // Update the dial code when country changes
+  if (country) {
+    if (country.dialCode) {
+      currentDialCode.value = country.dialCode
+    } else if (typeof country === 'object' && country.dialCode) {
+      currentDialCode.value = country.dialCode
+    } else if (typeof country === 'string') {
+      const dialMatch = country.match(/\d+/)
+      if (dialMatch) currentDialCode.value = dialMatch[0]
+    }
+  }
+  
+  // If there's a local number, rebuild and resend with new dial code
+  if (localNumber.value) {
+    const fullNumber = `+${currentDialCode.value}${localNumber.value}`
+    emit('update:modelValue', fullNumber)
+  }
 }
 
+// Initialize from props.modelValue
 watch(
   () => props.modelValue,
-  (v) => {
-    const s = v == null ? '' : String(v).trim()
-    if (!s) lastLibValid.value = true
+  (newVal) => {
+    if (newVal && typeof newVal === 'string') {
+      // Extract local number from full number
+      const extracted = extractLocalNumber(newVal)
+      if (extracted !== localNumber.value) {
+        localNumber.value = extracted
+      }
+    } else if (!newVal) {
+      localNumber.value = ''
+    }
+    if (!newVal) lastLibValid.value = true
   },
+  { immediate: true }
+)
+
+// Set initial dial code from default country
+watch(
+  () => bindingDefaultCountry.value,
+  async (newCountry) => {
+    if (newCountry && !currentDialCode.value) {
+      if (newCountry === 971 || newCountry === '971' || newCountry === 'ae') {
+        currentDialCode.value = '971'
+      }
+    }
+  },
+  { immediate: true }
 )
 </script>
 
@@ -170,11 +238,9 @@ watch(
 .crm-phone-input {
   width: 100%;
   position: relative;
-  /* Allow vue-tel-input country list (absolute) to extend outside the control */
   overflow: visible;
 }
 
-/* Lift entire control above neighbouring fields while country list is open */
 .crm-phone-input--dropdown-open {
   z-index: 10060;
 }
@@ -205,11 +271,15 @@ watch(
   border: none;
   border-right: 1px solid #e2e8f0;
   border-radius: var(--deal-input-r, 10px) 0 0 var(--deal-input-r, 10px);
-  min-width: 82px;
-  padding: 0 6px;
+  min-width: 60px;
+  padding: 0 4px;
 }
 
-/* Ensure flag paints in the selector (sprite + positions come from vue-tel-input CSS). */
+/* Hide the dial code from the dropdown selection area */
+.crm-phone-input :deep(.vti__selection .vti__country-code) {
+  display: none !important;
+}
+
 .crm-phone-input :deep(.vti__selection) {
   display: inline-flex;
   align-items: center;
@@ -222,11 +292,13 @@ watch(
   vertical-align: middle;
 }
 
+/* Hide dial code when collapsed */
 .crm-phone-input--collapse-country :deep(.vti__selection .vti__flag),
 .crm-phone-input--collapse-country :deep(.vti__selection .vti__country-code) {
   display: none !important;
 }
 
+/* Input field styling - no dial code appears here */
 .crm-phone-input :deep(.vti__input) {
   border: none !important;
   min-height: 44px !important;
@@ -234,14 +306,20 @@ watch(
   font-size: 14px !important;
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   padding-left: 10px !important;
+  background: transparent !important;
 }
 
+/* Remove any default text that might appear */
+.crm-phone-input :deep(.vti__input::placeholder) {
+  color: #94a3b8;
+}
+
+/* Dropdown list styling */
 .crm-phone-input :deep(.vti__dropdown-list) {
   border-radius: 10px;
   box-shadow: 0 10px 40px rgba(15, 23, 42, 0.12);
   background: #fff !important;
   border: 1px solid #e2e8f0;
-  /* Bootstrap .modal is ~1055; keep list above modal content and nested UI */
   z-index: 10060 !important;
 }
 
