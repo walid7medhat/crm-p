@@ -35,19 +35,51 @@
                   :options="personOptions"
                   :reduce="opt => opt.value"
                   label="text"
-                  class="custom-v-select deal-select-placeholder"
+                  class="custom-v-select deal-search-rp-select deal-select-placeholder"
                   placeholder="Select Person"
                   data-placeholder="Select Person"
                   :searchable="true"
                   :clearable="true"
                   append-to-body
                 >
-                   <template #open-indicator="{ attributes }">
+                 <template #open-indicator="{ attributes }">
                       <span v-bind="attributes">
                           <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                       </span>
                   </template>
-              </v-select>
+                  <template #option="option">
+                    <div v-if="option.value == null" class="deal-rp-opt-placeholder text-muted">Select Person</div>
+                    <div v-else class="deal-rp-opt d-flex align-items-center gap-2">
+                      <img :src="option.avatar || defaultAvatar" alt="" class="deal-rp-opt-avatar" />
+                      <div class="deal-rp-opt-info min-w-0 flex-grow-1">
+                        <div class="deal-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
+                          <span class="user-item-name">{{ option.text }}</span>
+                          <span v-if="option.role_name" class="user-position-badge">{{ option.role_name }}</span>
+                        </div>
+                        <div class="user-item-meta-line">
+                          <span class="meta-value">{{ option.parent_name }}</span>
+                          <span v-if="option.branch_name" class="meta-divider">|</span>
+                          <span v-if="option.branch_name" class="meta-value">{{ option.branch_name }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                  <template #selected-option="option">
+                    <div v-if="!option || option.value == null" class="deal-rp-opt-placeholder text-muted">Select Person</div>
+                    <div v-else class="deal-rp-sel d-flex align-items-center gap-2 min-w-0">
+                      <img :src="option.avatar || defaultAvatar" alt="" class="deal-rp-sel-avatar" />
+                      <div class="min-w-0 flex-grow-1">
+                        <div class="deal-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
+                        <div
+                          v-if="option.parent_name || option.branch_name"
+                          class="deal-rp-sel-meta text-truncate small text-muted"
+                        >
+                          {{ [option.parent_name, option.branch_name].filter(Boolean).join(' | ') }}
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </v-select>
               </div>
               <!-- <div v-if="fieldSettings.stage_group" class="col-md-6">
                 <label class="form-label-custom">Stage Group</label>
@@ -226,7 +258,7 @@
                 <label class="form-label-custom">Property Type</label>
                 <v-select
                   v-model="form.property_type_id"
-                  :options="propertyTypes"
+                  :options="localPropertyTypes"
                   :reduce="opt => opt.id"
                   label="name"
                   class="custom-v-select deal-select-placeholder"
@@ -402,42 +434,59 @@
                   :options="personOptions"
                   :reduce="opt => opt.value"
                   label="text"
-                  class="custom-v-select deal-select-placeholder"
+                  class="custom-v-select deal-search-rp-select deal-select-placeholder"
                   placeholder="Select Person"
                   data-placeholder="Select Person"
                   :searchable="true"
                   :clearable="true"
                   append-to-body
                 >
-                   <template #open-indicator="{ attributes }">
+                 <template #open-indicator="{ attributes }">
                       <span v-bind="attributes">
                           <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                       </span>
                   </template>
-              </v-select>
+                  <template #option="option">
+                    <div v-if="option.value == null" class="deal-rp-opt-placeholder text-muted">Select Person</div>
+                    <div v-else class="deal-rp-opt d-flex align-items-center gap-2">
+                      <img :src="option.avatar || defaultAvatar" alt="" class="deal-rp-opt-avatar" />
+                      <div class="deal-rp-opt-info min-w-0 flex-grow-1">
+                        <div class="deal-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
+                          <span class="user-item-name">{{ option.text }}</span>
+                          <span v-if="option.role_name" class="user-position-badge">{{ option.role_name }}</span>
+                        </div>
+                        <div class="user-item-meta-line">
+                          <span class="meta-value">{{ option.parent_name }}</span>
+                          <span v-if="option.branch_name" class="meta-divider">|</span>
+                          <span v-if="option.branch_name" class="meta-value">{{ option.branch_name }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                  <template #selected-option="option">
+                    <div v-if="!option || option.value == null" class="deal-rp-opt-placeholder text-muted">Select Person</div>
+                    <div v-else class="deal-rp-sel d-flex align-items-center gap-2 min-w-0">
+                      <img :src="option.avatar || defaultAvatar" alt="" class="deal-rp-sel-avatar" />
+                      <div class="min-w-0 flex-grow-1">
+                        <div class="deal-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
+                        <div
+                          v-if="option.parent_name || option.branch_name"
+                          class="deal-rp-sel-meta text-truncate small text-muted"
+                        >
+                          {{ [option.parent_name, option.branch_name].filter(Boolean).join(' | ') }}
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </v-select>
               </div>
-              <div v-if="fieldSettings.created_by" class="col-md-6">
+             <div v-if="fieldSettings.created_by" class="col-md-6">
                 <label class="form-label-custom">Created By</label>
-                <v-select
-                  v-model="form.created_by_date"
-                  :options="createdByDatePresetOptions"
-                  :reduce="opt => opt.value"
-                  label="text"
-                  class="custom-v-select deal-select-placeholder"
-                  placeholder="Any Date"
-                  data-placeholder="Any Date"
-                  :searchable="true"
-                  :clearable="true"
-                  append-to-body
-                  @option:selected="onCreatedByDatePresetSelected"
-                >
-               <template #open-indicator="{ attributes }">
-                      <span v-bind="attributes">
-                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                      </span>
-                  </template>
-              </v-select>
-              </div>
+                <button type="button" class="custom-date-trigger" @click="openDatePicker('created_by')">
+                    <span>{{ createdByDateDisplay }}</span>
+                    <iconify-icon icon="lucide:calendar-days" />
+                </button>
+            </div>
             </div>
           </div>
         </div>
@@ -474,6 +523,57 @@
     @apply="onCreatedByCustomDateApply"
     @cancel="onCreatedByCustomDateCancel"
   />
+  <!-- Custom Date Modal for Created By -->
+<div v-if="showCreatedByDateModal" class="lr-modal-backdrop" @click.stop>
+    <div class="lr-date-modal">
+        <div class="lr-date-left">
+            <button
+                v-for="preset in datePresets"
+                :key="preset.value"
+                type="button"
+                class="lr-date-preset"
+                :class="{ active: tempPreset === preset.value }"
+                @click="selectTempPresetRange(preset.value)"
+            >
+                {{ preset.label }}
+            </button>
+        </div>
+
+        <div class="lr-date-right">
+            <div class="lr-calendar-head">
+                <button type="button" @click="changeMonth(-1)"><iconify-icon icon="lucide:chevron-left" /></button>
+                <div>{{ monthLabel }}</div>
+                <button type="button" @click="changeMonth(1)"><iconify-icon icon="lucide:chevron-right" /></button>
+            </div>
+
+            <div class="lr-weekdays">
+                <span v-for="d in weekDays" :key="d">{{ d }}</span>
+            </div>
+
+            <div class="lr-calendar-grid">
+                <button
+                    v-for="cell in calendarCells"
+                    :key="cell.key"
+                    type="button"
+                    class="lr-day"
+                    :class="{
+                        muted: !cell.currentMonth,
+                        selected: isSelectedDate(cell.date),
+                        inrange: isInRange(cell.date)
+                    }"
+                    @click="pickTempDate(cell.date)"
+                >
+                    {{ cell.day }}
+                </button>
+            </div>
+
+            <div class="lr-date-actions large">
+                <button type="button" class="btn-cancel" @click="closeDatePicker">Cancel</button>
+                <button type="button" class="btn-apply" @click="applyTempDateRange">Apply</button>
+            </div>
+        </div>
+    </div>
+</div>
 </template>
 
 <script setup>
@@ -515,7 +615,231 @@ const sidebarPills = [
   { id: 'deals-in-progress', label: 'Deals In Progress' },
   { id: 'my-deals', label: 'My Deals' },
 ]
+// Date range for Created By
+const createdByDateRange = ref({ from: '', to: '' })
+const showCreatedByDateModal = ref(false)
+const activeDateField = ref('') // 'created_by'
+const tempDateRange = ref({ from: '', to: '' })
+const tempPreset = ref('')
+const tempStartDate = ref(null)
+const tempEndDate = ref(null)
+const selectedPreset = ref('')
+const startDate = ref(null)
+const endDate = ref(null)
+const calendarMonth = ref(new Date())
+const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
+
+const createdByDateDisplay = computed(() => {
+    if (createdByDateRange.value.from && createdByDateRange.value.to) {
+        if (createdByDateRange.value.from === createdByDateRange.value.to) {
+            return formatDateOnlyLong(createdByDateRange.value.from, '') || createdByDateRange.value.from
+        }
+        const fromFormatted = formatDateOnlyLong(createdByDateRange.value.from, '') || createdByDateRange.value.from
+        const toFormatted = formatDateOnlyLong(createdByDateRange.value.to, '') || createdByDateRange.value.to
+        return `${fromFormatted} - ${toFormatted}`
+    }
+    if (createdByDateRange.value.from) return `From ${formatDateOnlyLong(createdByDateRange.value.from, '') || createdByDateRange.value.from}`
+    if (createdByDateRange.value.to) return `Until ${formatDateOnlyLong(createdByDateRange.value.to, '') || createdByDateRange.value.to}`
+    return 'Any Date'
+})
+
+
+// Date presets
+const datePresets = [
+    { value: 'today', label: 'Today' },
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'this_week', label: 'This Week' },
+    { value: 'last_week', label: 'Last Week' },
+    { value: 'this_month', label: 'This Month' },
+    { value: 'last_month', label: 'Last Month' },
+    { value: 'custom_date', label: 'Custom Date' },
+]
+
+const monthLabel = computed(() => calendarMonth.value.toLocaleString('en-US', { month: 'long', year: 'numeric' }))
+
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
+const formatYmd = (d) => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : ''
+const sameDay = (a, b) => a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+const inRange = (d, a, b) => a && b && startOfDay(d) >= startOfDay(a) && startOfDay(d) <= startOfDay(b)
+
+const calendarCells = computed(() => {
+    const y = calendarMonth.value.getFullYear()
+    const m = calendarMonth.value.getMonth()
+    const first = new Date(y, m, 1)
+    const offset = first.getDay()
+    const daysInMonth = new Date(y, m + 1, 0).getDate()
+    const prevDays = new Date(y, m, 0).getDate()
+    const cells = []
+
+    for (let i = offset - 1; i >= 0; i -= 1) {
+        const day = prevDays - i
+        const date = new Date(y, m - 1, day)
+        cells.push({ key: `p-${day}`, day, date, currentMonth: false })
+    }
+    for (let day = 1; day <= daysInMonth; day += 1) {
+        const date = new Date(y, m, day)
+        cells.push({ key: `c-${day}`, day, date, currentMonth: true })
+    }
+    while (cells.length < 42) {
+        const day = cells.length - (offset + daysInMonth) + 1
+        const date = new Date(y, m + 1, day)
+        cells.push({ key: `n-${day}`, day, date, currentMonth: false })
+    }
+    return cells
+})
+
+function openDatePicker(fieldId = 'created_by') {
+    activeDateField.value = fieldId
+    
+    // Load current range
+    let currentRange = { ...createdByDateRange.value }
+    tempDateRange.value = { ...currentRange }
+    tempStartDate.value = currentRange.from ? new Date(currentRange.from) : null
+    tempEndDate.value = currentRange.to ? new Date(currentRange.to) : null
+    
+    // Find preset if matches
+    tempPreset.value = ''
+    for (const preset of datePresets) {
+        if (preset.value !== 'custom_date') {
+            const range = getDateRangeFromPreset(preset.value)
+            if (range.from === currentRange.from && range.to === currentRange.to) {
+                tempPreset.value = preset.value
+                break
+            }
+        }
+    }
+    if (tempDateRange.value.from && tempDateRange.value.to && !tempPreset.value) {
+        tempPreset.value = 'custom_date'
+    }
+    
+    showCreatedByDateModal.value = true
+}
+
+function getDateRangeFromPreset(preset) {
+    const now = new Date()
+    let from = null
+    let to = null
+    
+    switch (preset) {
+        case 'today':
+            from = toYmd(now)
+            to = toYmd(now)
+            break
+        case 'yesterday':
+            const yesterday = new Date(now)
+            yesterday.setDate(now.getDate() - 1)
+            from = toYmd(yesterday)
+            to = toYmd(yesterday)
+            break
+        case 'this_week': {
+            const start = new Date(now)
+            const day = now.getDay()
+            const diff = day === 0 ? 6 : day - 1
+            start.setDate(now.getDate() - diff)
+            const end = new Date(start)
+            end.setDate(start.getDate() + 6)
+            from = toYmd(start)
+            to = toYmd(end)
+            break
+        }
+        case 'last_week': {
+            const start = new Date(now)
+            const day = now.getDay()
+            const diff = day === 0 ? 6 : day - 1
+            start.setDate(now.getDate() - diff - 7)
+            const end = new Date(start)
+            end.setDate(start.getDate() + 6)
+            from = toYmd(start)
+            to = toYmd(end)
+            break
+        }
+        case 'this_month':
+            from = toYmd(new Date(now.getFullYear(), now.getMonth(), 1))
+            to = toYmd(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+            break
+        case 'last_month':
+            from = toYmd(new Date(now.getFullYear(), now.getMonth() - 1, 1))
+            to = toYmd(new Date(now.getFullYear(), now.getMonth(), 0))
+            break
+        case 'last_year':
+            from = toYmd(new Date(now.getFullYear() - 1, 0, 1))
+            to = toYmd(new Date(now.getFullYear() - 1, 11, 31))
+            break
+    }
+    return { from, to }
+}
+
+function toYmd(d) {
+    if (!d) return null
+    const date = new Date(d)
+    if (Number.isNaN(date.getTime())) return null
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function selectTempPresetRange(preset) {
+    tempPreset.value = preset
+    if (preset === 'custom_date') return
+    
+    const range = getDateRangeFromPreset(preset)
+    if (range.from && range.to) {
+        tempDateRange.value = range
+        tempStartDate.value = new Date(range.from)
+        tempEndDate.value = new Date(range.to)
+    }
+}
+
+function pickTempDate(date) {
+    if (!tempStartDate.value || (tempStartDate.value && tempEndDate.value)) {
+        tempStartDate.value = date
+        tempEndDate.value = null
+        tempPreset.value = 'custom_date'
+        return
+    }
+    if (date < tempStartDate.value) {
+        tempEndDate.value = tempStartDate.value
+        tempStartDate.value = date
+    } else {
+        tempEndDate.value = date
+    }
+    // Update range
+    if (tempStartDate.value && tempEndDate.value) {
+        tempDateRange.value = {
+            from: toYmd(tempStartDate.value),
+            to: toYmd(tempEndDate.value)
+        }
+    } else if (tempStartDate.value && !tempEndDate.value) {
+        tempDateRange.value = {
+            from: toYmd(tempStartDate.value),
+            to: toYmd(tempStartDate.value)
+        }
+    }
+    tempPreset.value = 'custom_date'
+}
+
+function applyTempDateRange() {
+    if (activeDateField.value === 'created_by') {
+        createdByDateRange.value = { ...tempDateRange.value }
+        // Update form value for search
+        if (tempDateRange.value.from || tempDateRange.value.to) {
+            form.value.created_by_date = 'custom'
+        } else {
+            form.value.created_by_date = null
+        }
+    }
+    showCreatedByDateModal.value = false
+}
+
+function closeDatePicker() {
+    showCreatedByDateModal.value = false
+}
+
+function changeMonth(delta) {
+    calendarMonth.value = new Date(calendarMonth.value.getFullYear(), calendarMonth.value.getMonth() + delta, 1)
+}
+
+const isSelectedDate = (date) => sameDay(date, tempStartDate.value) || sameDay(date, tempEndDate.value)
+const isInRange = (date) => inRange(date, tempStartDate.value, tempEndDate.value)
 const defaultFieldSettings = {
   name: true,
   stage_changed_by: true,
@@ -1112,7 +1436,8 @@ function onCreatedByDatePresetSelected(option) {
 
 const resetForm = () => {
   createdByCustomYmd.value = ''
-  showCreatedByDatePicker.value = false
+    showCreatedByDatePicker.value = false
+    createdByDateRange.value = { from: '', to: '' } 
   form.value = {
     deal_name: '',
     stage_changed_by: null,
@@ -1154,11 +1479,7 @@ const applyFieldSettings = (settings) => {
   persistFieldSettingsToSession(fieldSettings.value)
 }
 
-const toYmd = (d) => {
-  const date = new Date(d)
-  if (Number.isNaN(date.getTime())) return null
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
+
 
 const presetRange = (preset) => {
   const now = new Date()
@@ -1215,27 +1536,22 @@ const applySearch = () => {
     const p = personOptions.value.find((u) => u.value === form.value.responsible_person_id)
     pushFilter('responsible_person', 'Responsible Person', p?.text || form.value.responsible_person_id)
   }
+  if (form.value.stage_changed_by) {
+    query.stage_changed_by = form.value.stage_changed_by
+    const p = personOptions.value.find((u) => u.value === form.value.stage_changed_by)
+    pushFilter('stage_changed_by', 'Stage Changed By', p?.text || form.value.stage_changed_by)
+  }
   if (form.value.modified_by) {
     query.modified_by = form.value.modified_by
     const p = personOptions.value.find((u) => u.value === form.value.modified_by)
     pushFilter('modified_by', 'Modified By', p?.text || form.value.modified_by)
   }
-  if (form.value.created_by_date && form.value.created_by_date !== 'any') {
-    if (form.value.created_by_date === 'custom') {
-      if (createdByCustomYmd.value) {
-        query.from_date = createdByCustomYmd.value
-        query.to_date = createdByCustomYmd.value
-        const chip =
-          formatDateOnlyLong(createdByCustomYmd.value, '') || createdByCustomYmd.value
-        pushFilter('created_by', 'Created By', chip)
-      }
-    } else {
-      const range = presetRange(form.value.created_by_date)
-      if (range) Object.assign(query, range)
-      pushFilter('created_by', 'Created By', form.value.created_by_date)
-    }
-  }
-
+ // في دالة applySearch، استبدل جزء created_by_date بهذا:
+if (createdByDateRange.value.from || createdByDateRange.value.to) {
+    if (createdByDateRange.value.from) query.created_from = createdByDateRange.value.from
+    if (createdByDateRange.value.to) query.created_to = createdByDateRange.value.to
+    pushFilter('created_by', 'Created By', createdByDateDisplay.value)
+}
   // Buyer fields
   if (form.value.buyer_first_name) {
     query.buyer_first_name = form.value.buyer_first_name
@@ -2001,5 +2317,244 @@ onMounted(async () => {
     font-size: 11px;
     color: #64748b;
     line-height: 1.2;
+}
+
+.custom-date-trigger {
+    width: 100%;
+    height: 40px;
+    border-radius: 9px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 12px;
+    color: #64748B;
+    font-family: 'Montserrat';
+}
+
+.custom-date-trigger:hover {
+    border-color: #cbd5e1;
+}
+
+/* LR Modal Backdrop & Date Modal Styles */
+.lr-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10070;
+    padding: 12px;
+}
+
+.lr-date-modal {
+    width: min(860px, 96vw);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 25px 80px rgba(2, 6, 23, 0.25);
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    overflow: hidden;
+}
+
+.lr-date-left {
+    background: #f8fafc;
+    border-right: 1px solid #e2e8f0;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lr-date-preset {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 10px;
+    padding: 7px 10px;
+    font-size: 12px;
+    color: #334155;
+    text-align: left;
+    transition: all .15s ease;
+    cursor: pointer;
+}
+
+.lr-date-preset.active {
+    background: #01062C;
+    border-color: #01062C;
+    color: #fff;
+}
+
+.lr-date-preset:hover:not(.active) {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.lr-date-right {
+    padding: 14px;
+}
+
+.lr-calendar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.lr-calendar-head button {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 9px;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.lr-calendar-head button:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.lr-calendar-head button iconify-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.lr-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.lr-weekdays span {
+    text-align: center;
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.lr-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.lr-day {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 10px;
+    min-height: 34px;
+    font-size: 12px;
+    color: #334155;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.lr-day:hover:not(.muted) {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.lr-day.muted {
+    opacity: .45;
+}
+
+.lr-day.selected {
+    background: #01062C;
+    border-color: #01062C;
+    color: #fff;
+}
+
+.lr-day.inrange:not(.selected) {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+
+.lr-date-actions.large {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn-cancel {
+    background: #F4F4F4;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 100px;
+    font-size: 13px;
+    color: #01062C;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+    background: #e8e8e8;
+}
+
+.btn-apply {
+    background: #000;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 100px;
+    font-size: 13px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-apply:hover {
+    background: #1a1a1a;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .lr-date-modal {
+        grid-template-columns: 1fr;
+        width: 95vw;
+    }
+    
+    .lr-date-left {
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .lr-date-preset {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+    
+    .lr-calendar-grid {
+        gap: 4px;
+    }
+    
+    .lr-day {
+        min-height: 30px;
+        font-size: 11px;
+    }
+    
+    .lr-weekdays span {
+        font-size: 10px;
+    }
 }
 </style>

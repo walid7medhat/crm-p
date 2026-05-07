@@ -202,8 +202,67 @@
                                     </div>
                                 </template>
                             </v-select>
+                             <v-select
+                                v-else-if="field.type === 'select' && field.id === 'team'"
+                                v-model="form.team"
+                                :options="computedTeamOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                :placeholder="field.placeholder || 'Select Team'"
+                                :clearable="hasValue(form.team)"
+                                append-to-body
+                                class="custom-v-select lead-search-rp-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                <template #option="option">
+                                    <div v-if="option.value == null" class="lead-rp-opt-placeholder text-muted">
+                                        Select Team
+                                    </div>
+                                    <div v-else class="lead-rp-opt d-flex align-items-center gap-2">
+                                        <img
+                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
+                                            alt=""
+                                            class="lead-rp-opt-avatar"
+                                        />
+                                        <div class="lead-rp-opt-info min-w-0 flex-grow-1">
+                                            <div class="lead-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
+                                                <span class="user-item-name">{{ option.text }}</span>
+                                                <span v-if="option.role_name" class="user-position-badge">{{ option.role_name }}</span>
+                                            </div>
+                                            <div class="user-item-meta-line">
+                                                <span v-if="option.parent_name" class="meta-value">{{ option.parent_name }}</span>
+                                                <span v-if="option.parent_name && option.branch_name" class="meta-divider">|</span>
+                                                <span v-if="option.branch_name" class="meta-value">{{ option.branch_name }}</span>
+                                                <span v-if="!option.parent_name && !option.branch_name && option.team_size" class="meta-value">{{ option.team_size }} members</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template #selected-option="option">
+                                    <div v-if="!option || option.value == null" class="lead-rp-opt-placeholder text-muted">
+                                        Select Team
+                                    </div>
+                                    <div v-else class="lead-rp-sel d-flex align-items-center gap-2 min-w-0">
+                                        <img
+                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
+                                            alt=""
+                                            class="lead-rp-sel-avatar"
+                                        />
+                                        <div class="min-w-0 flex-grow-1">
+                                            <div class="lead-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
+                                            <div v-if="option.parent_name || option.branch_name || option.team_size" class="lead-rp-sel-meta text-truncate small text-muted">
+                                                {{ [option.parent_name, option.branch_name, option.team_size ? `${option.team_size} members` : null].filter(Boolean).join(' | ') }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </v-select>
                             <v-select
-                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person'"
+                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'team'"
                                 v-model="form[field.formKey]"
                                 :options="field.options"
                                 :reduce="opt => opt.value"
@@ -472,7 +531,66 @@
                                 </template>
                             </v-select>
                             <v-select
-                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person'"
+                                v-else-if="field.type === 'select' && field.id === 'team'"
+                                v-model="form.team"
+                                :options="computedTeamOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                :placeholder="field.placeholder || 'Select Team'"
+                                :clearable="hasValue(form.team)"
+                                append-to-body
+                                class="custom-v-select lead-search-rp-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                <template #option="option">
+                                    <div v-if="option.value == null" class="lead-rp-opt-placeholder text-muted">
+                                        Select Team
+                                    </div>
+                                    <div v-else class="lead-rp-opt d-flex align-items-center gap-2">
+                                        <img
+                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
+                                            alt=""
+                                            class="lead-rp-opt-avatar"
+                                        />
+                                        <div class="lead-rp-opt-info min-w-0 flex-grow-1">
+                                            <div class="lead-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
+                                                <span class="user-item-name">{{ option.text }}</span>
+                                                <span v-if="option.role_name" class="user-position-badge">{{ option.role_name }}</span>
+                                            </div>
+                                            <div class="user-item-meta-line">
+                                                <span v-if="option.parent_name" class="meta-value">{{ option.parent_name }}</span>
+                                                <span v-if="option.parent_name && option.branch_name" class="meta-divider">|</span>
+                                                <span v-if="option.branch_name" class="meta-value">{{ option.branch_name }}</span>
+                                                <span v-if="!option.parent_name && !option.branch_name && option.team_size" class="meta-value">{{ option.team_size }} members</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template #selected-option="option">
+                                    <div v-if="!option || option.value == null" class="lead-rp-opt-placeholder text-muted">
+                                        Select Team
+                                    </div>
+                                    <div v-else class="lead-rp-sel d-flex align-items-center gap-2 min-w-0">
+                                        <img
+                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
+                                            alt=""
+                                            class="lead-rp-sel-avatar"
+                                        />
+                                        <div class="min-w-0 flex-grow-1">
+                                            <div class="lead-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
+                                            <div v-if="option.parent_name || option.branch_name || option.team_size" class="lead-rp-sel-meta text-truncate small text-muted">
+                                                {{ [option.parent_name, option.branch_name, option.team_size ? `${option.team_size} members` : null].filter(Boolean).join(' | ') }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </v-select>
+                            <v-select
+                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'team'"
                                 v-model="form[field.formKey]"
                                 :options="field.options"
                                 :reduce="opt => opt.value"
@@ -1137,14 +1255,18 @@ const computedTeamOptions = computed(() => {
     filteredTeams.forEach((team) => {
         const id = Number(team.id)
         opts.push({
-            value: Number.isNaN(id) ? team.id : id,
-            text: team.name || `Team ${team.id}`,
+            value: team.id,
+            text: team.name,
+            avatar: team.avatar,
+            role_name: team.role_name || 'Team',  // ✅ إضافة role_name
+            parent_name: team.parent_name || team.admin_parent_name || '',  // ✅ إضافة parent_name
+            branch_name: team.branch_name || '',  // ✅ إضافة branch_name
+            team_size: team.team_size,
         })
     })
 
     return opts
 })
-
 /**
  * Branch multi-select options: `/get-offices` ids may differ from team `admin_parent_id` (User id).
  * Merge selected branch ids with labels from offices API or team.admin_parent_name so v-select shows names.

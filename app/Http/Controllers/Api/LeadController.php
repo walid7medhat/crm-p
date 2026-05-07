@@ -611,13 +611,13 @@ class LeadController extends Controller
                 ->map(function($user) {
                     return [
                         'id'     => $user->id,
-                        'name'   => $user->name,
+                       'name' => implode(' ', array_slice(explode(' ', $user->name), 0, 2)),
                         'email'  => $user->email,
                         'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                         'role_name' => $user->roles()->first()->name,
                         'team_id'=>$user->parent?->id,
-                        'parent_name' => $user->parent?->name,
-                        'branch_id' => $user->office?->id,
+                       'parent_name' => implode(' ', array_slice(explode(' ', $user->parent?->name), 0, 2)),
+                       'branch_id' => $user->office?->id,
 
                         'branch_name' => $user->office?->name
                     ];
@@ -634,12 +634,12 @@ class LeadController extends Controller
                 ->map(function($user) {
                     return [
                         'id'     => $user->id,
-                        'name'   => $user->name,
+                        'name' => implode(' ', array_slice(explode(' ', $user->name), 0, 2)),
                         'email'  => $user->email,
                         'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                         'team_id'=>$user->parent?->id,
-                        'parent_name' => $user->parent?->name,
-                        'branch_id' => $user->office?->id,
+                       'parent_name' => implode(' ', array_slice(explode(' ', $user->parent?->name), 0, 2)),
+                       'branch_id' => $user->office?->id,
 
                         'branch_name' => $user->office?->name
                     ];

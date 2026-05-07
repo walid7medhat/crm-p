@@ -234,7 +234,19 @@ class Deal extends Model
             ->when($request->stage_id, fn($q, $v) => $q->where('stage_id', $v))
             ->when($request->status, fn($q, $v) => $q->where('status', $v))
             ->when($request->responsible_id, fn($q, $v) => $q->where('responsible_person_id', $v))
-            ->when($request->modified_by, fn($q, $v) => $q->where('modified_by', $v))
+           ->when($request->modified_by, function ($q, $v) {
+                $q->orWhereHas('histories', function ($h) use ($v) {
+                    $h->where('user_id', $v)
+                      ->orWhere('action', 'updated')
+                      ->orWhere('action', 'stage_changed');
+                });
+            })
+            ->when($request->stage_changed_by, function ($q, $v) {
+                $q->whereHas('histories', function ($h) use ($v) {
+                    $h->where('action', 'stage_changed')
+                      ->where('user_id', $v);
+                });
+            })
             ->when($request->my_deals, function ($q, $v) {
                 $q->where(function ($sub) use ($v) {
                     $sub->where('responsible_person_id', auth()->user()->id)
@@ -258,6 +270,9 @@ class Deal extends Model
             // Date filters
             ->when($request->from_date, fn($q, $v) => $q->whereDate('created_at', '>=', $v))
             ->when($request->to_date, fn($q, $v) => $q->whereDate('created_at', '<=', $v))
+            
+             ->when($request->created_from, fn($q, $v) => $q->whereDate('created_at', '>=', $v))
+            ->when($request->created_to, fn($q, $v) => $q->whereDate('created_at', '<=', $v))
             
             // Buyer party filters
             ->when($request->buyer_first_name, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('first_name', 'like', "%$v%")))
