@@ -3387,6 +3387,21 @@ onMounted(async () => {
     ])
     
     isDataInitialized.value = true
+    
+    
+     const style = document.createElement('style');
+    style.textContent = `
+        .vs__dropdown-menu {
+            z-index: 30050 !important;
+        }
+        .flatpickr-calendar {
+            z-index: 30050 !important;
+        }
+        [data-popper-placement] {
+            z-index: 30050 !important;
+        }
+    `;
+    document.head.appendChild(style);
 })
 </script>
 
@@ -3746,5 +3761,28 @@ textarea.is-invalid {
   background: #0F172A;
   color: #fff;
   font-size: 12px;
+}
+:deep(   .vs__dropdown-menu ){
+      z-index: 30050 !important;
+}
+:deep(   .flatpickr-calendar  ){
+      z-index: 30050 !important;
+}
+:deep(   [data-popper-placement]){
+      z-index: 30050 !important;
+}
+
+</style>
+<style>
+    .vs__dropdown-menu {
+  z-index: 30050 !important;
+}
+
+.flatpickr-calendar {
+  z-index: 30050 !important;
+}
+
+[data-popper-placement] {
+  z-index: 30050 !important;
 }
 </style>

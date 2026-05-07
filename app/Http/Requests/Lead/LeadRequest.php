@@ -30,12 +30,12 @@ class LeadRequest extends FormRequest
             'work_phone' => [
                 'required',
                 'max:20',
-                'regex:/^\+?[0-9]+$/'
+                
             ],
             'work_phone_2' => [
                 'nullable',
                 'max:20',
-                'regex:/^\+?[0-9]+$/'
+               
             ],
             'secondary_email' => 'nullable|email',
             'email' => 'nullable|email',

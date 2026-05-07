@@ -1737,9 +1737,26 @@ removeBudgetDropdownListeners()
 .is-invalid-group .custom-date-trigger {
     border-color: #dc3545 !important;
 }
+:deep(.custom-date-trigger span){
 
+    font-size:11px !important;
+}
+:deep(.custom-input::placeholder) {
+  color: #94a3b8 !important;
+  font-size: 11px !important;
+  line-height: 38px !important;
+
+}
 </style>
 <style>
 .advanced-date-trigger{
   border:none !important;
+}
+.custom-date-trigger span{
+    font-size:11px !important;
+}
+.custom-input::placeholder {
+  color: #94a3b8 !important;
+  font-size: 11px !important;
+  line-height: 38px !important;
 }</style>
