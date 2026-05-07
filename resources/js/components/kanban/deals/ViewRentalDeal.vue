@@ -139,6 +139,24 @@
               <p class="info-value mb-0">{{ val(tenant.nationality) }}</p>
             </div>
           </div>
+            <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Tenant Residency Status</label>
+              <p class="info-value mb-0">{{ val(tenant.residency_status) }}</p>
+            </div>
+          </div>
+           <div class="col-md-6" v-if="tenant.country">
+            <div class="info-group">
+              <label class="info-label">Tenant Country Of Residence</label>
+              <p class="info-value mb-0">{{ val(tenant.country) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6" v-if="tenant.city">
+            <div class="info-group">
+              <label class="info-label">Tenant City Of Residence</label>
+              <p class="info-value mb-0">{{ val(tenant.city) }}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -242,13 +260,13 @@
               <p class="info-value mb-0">{{ val(landlord.residency_status) }}</p>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-6" v-if="landlord.country">
             <div class="info-group">
               <label class="info-label">Landlord Country Of Residence</label>
               <p class="info-value mb-0">{{ val(landlord.country) }}</p>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-6" v-if="landlord.city">
             <div class="info-group">
               <label class="info-label">Landlord City Of Residence</label>
               <p class="info-value mb-0">{{ val(landlord.city) }}</p>

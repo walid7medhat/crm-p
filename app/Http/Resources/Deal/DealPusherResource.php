@@ -49,6 +49,19 @@ class DealPusherResource extends JsonResource
             
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
+             
+            'responsible_person_id' => $this->responsible_person_id,
+            'responsible_person' => new UserResource($this->responsiblePerson),
+            
+            'buyer_name' => (function () {
+                $buyer = $this->parties
+                    ->where('party_type', 'buyer')
+                    ->where('party_role', 'primary')
+                    ->first();
+                return $buyer ? trim($buyer->first_name . ' ' . $buyer->last_name) : null;
+            })(),
+                        'assigned_at' => $assignmentHistory ? $assignmentHistory->created_at : $this->created_at,
+
         ];
     }
 }

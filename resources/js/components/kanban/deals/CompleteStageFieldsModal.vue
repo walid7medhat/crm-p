@@ -874,7 +874,7 @@
                                 <div class="col-md-6" v-if="shouldShowPropertyField('unit_no', property)">
                                     <label class="form-label-custom">Unit No <span v-if="isPropertyFieldRequired('unit_no')" class="text-danger">*</span></label>
                                     <b-form-input 
-                                        :value="property.unit_no"
+                                    v-model="property.unit_no"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'unit_no', val)"
                                         placeholder="Enter Unit No" 
                                         class="custom-input"
@@ -924,7 +924,7 @@
                                 <div class="col-md-6" v-if="shouldShowPropertyField('unit_size', property)">
                                     <label class="form-label-custom">Unit Size (sq.ft) <span v-if="isPropertyFieldRequired('unit_size')" class="text-danger">*</span></label>
                                     <b-form-input 
-                                        :value="property.unit_size"
+                                        v-model="property.unit_size"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'unit_size', val)"
                                         type="number"
                                         placeholder="Size in sq.ft" 
@@ -938,7 +938,7 @@
                                     <label class="form-label-custom">Rental Price <span v-if="isPropertyFieldRequired('rental_price')" class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <b-form-input 
-                                            :value="property.rental_price"
+                                            v-model="property.rental_price"
                                             @update:modelValue="(val) => updateProperty(propIndex, 'rental_price', val)"
                                             type="number"
                                             placeholder="Amount" 
@@ -954,7 +954,7 @@
                                     <label class="form-label-custom">Purchase Price <span v-if="isPropertyFieldRequired('purchase_price')" class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <b-form-input 
-                                            :value="property.purchase_price"
+                                            v-model="property.purchase_price"
                                             @update:modelValue="(val) => updateProperty(propIndex, 'purchase_price', val)"
                                             type="number"
                                             placeholder="Amount" 
@@ -970,7 +970,7 @@
                                     <label class="form-label-custom">Property Address <span v-if="isPropertyFieldRequired('area_id')" class="text-danger">*</span></label>
                                     <v-select
                                         :model-value="property.area_id"
-                                        @update:modelValue="(val) => updateProperty(propIndex, 'area_id', val)"
+                                        @update:modelValue="(val) => onPropertyAreaSelected(val, propIndex)"
                                         :options="areas"
                                         :reduce="item => item.id"
                                         label="name"
@@ -1015,7 +1015,7 @@
                                 <div class="col-md-6" v-if="shouldShowPropertyField('developer_name', property)">
                                     <label class="form-label-custom">Developer Sales Person Name <span v-if="isPropertyFieldRequired('developer_name')" class="text-danger">*</span></label>
                                     <b-form-input
-                                        :value="property.developer_name"
+                                    v-model="property.developer_name"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'developer_name', val)"
                                         placeholder="Enter Sales Person Name"
                                         class="custom-input"
@@ -1271,6 +1271,7 @@ function isBudgetVisibleForPrimaryDeal() {
   const dt = normalizeDealTypeForDocuments(dealLike?.deal_type ?? dealLike?.type ?? props.dealType)
   if (dt !== 'primary') return true
   const ord = dealLike?.stage?.order
+  console.log("order"+ord);
   if (ord === null || ord === undefined || ord === '') return true
   const n = Number(ord)
   if (!Number.isFinite(n)) return true
@@ -1452,15 +1453,38 @@ function hasPropertyMissing(propIndex) {
 function isPropertyFieldRequired(fieldName) {
   const missingKeys = effectiveMissingFields.value || []
   const normalizedFieldName = normalizePropertyFieldKey(fieldName)
+  
   // Check if any missing key matches pattern property_X_fieldName
   const result = missingKeys.some(key => {
     const match = key.match(/property_\d+_(.+)/)
     if (match) {
       const field = normalizePropertyFieldKey(match[1])
-      return field === normalizedFieldName
+      if (field === normalizedFieldName) {
+        // For bedrooms, also check property type
+        if (field === 'bedrooms') {
+          // Find the property index to check its type
+          const propMatch = key.match(/property_(\d+)_bedrooms/)
+          if (propMatch && localProperties.value[propMatch[1]]) {
+            const property = localProperties.value[propMatch[1]]
+            const propertyTypeId = property?.property_type_id
+            if (propertyTypeId) {
+              const selectedType = propertyTypes.value.find(t => t.id === propertyTypeId)
+              const typeName = selectedType?.name?.toLowerCase() || ''
+              if (typeName.includes('land') || typeName.includes('plot')) {
+                return false // Not required for land/plot
+              }
+            }
+          }
+        }
+        return true
+      }
     }
     // Also check for property_fieldName without index
     if (normalizePropertyFieldKey(key.replace('property_', '')) === normalizedFieldName) {
+      if (normalizedFieldName === 'bedrooms') {
+        // Need property context - assume required unless we can check
+        return true
+      }
       return true
     }
     return false
@@ -1522,12 +1546,12 @@ function updateProperty(propIndex, field, value) {
           selectedDeveloper.mobile ||
           ''
 
-        if (normalizedName) {
-          dealProperties.value[propIndex].developer_name = normalizedName
-        }
-        if (normalizedPhone) {
-          dealProperties.value[propIndex].developer_phone = normalizedPhone
-        }
+        // if (normalizedName) {
+        //   dealProperties.value[propIndex].developer_name = normalizedName
+        // }
+        // if (normalizedPhone) {
+        //   dealProperties.value[propIndex].developer_phone = normalizedPhone
+        // }
       }
     }
     
@@ -1894,6 +1918,33 @@ function updatePropertyDocuments(propIndex, newDocuments) {
     }
     formData.value.properties[propIndex] = { ...localProperties.value[propIndex] }
 }
+// أضف هذه الدالة الجديدة
+const onPropertyAreaSelected = (areaId, propIndex) => {
+    const property = localProperties.value[propIndex]
+    if (!property) return
+    
+    const selectedArea = areas.value.find(a => a.id === areaId)
+    
+    if (!selectedArea) return
+    
+    // تحديث المنطقة
+    updateProperty(propIndex, 'area_id', areaId)
+    
+    // تعيين المطور تلقائياً إذا كان موجوداً في بيانات المنطقة
+    let developerId = null
+    
+    if (selectedArea.project?.developer_id) {
+        developerId = selectedArea.project.developer_id
+    } else if (selectedArea.developer_id) {
+        developerId = selectedArea.developer_id
+    }
+    
+    if (developerId) {
+        updateProperty(propIndex, 'developer_id', developerId)
+    }
+}
+
+
 
 // Re-initialize property documents - للاستدعاء عند تغيير البيانات
 function reinitializePropertyDocuments() {
@@ -2240,7 +2291,11 @@ function shouldShowPropertyField(fieldName, property) {
       return isPropertyFieldRequired(fieldName)
   }
 }
-
+function isBudgetField(fieldKey) {
+  if (typeof fieldKey !== 'string') return false
+  const normalized = fieldKey.toLowerCase()
+  return normalized.includes('budget_from') || normalized.includes('budget_to')
+}
 function getPropertyBudgetDisplay(property) {
   const from = property?.budget_from
   const to = property?.budget_to
@@ -2431,8 +2486,41 @@ const effectiveMissingFields = computed(() => {
     
     return true
   })
+   // ADD THIS: Filter out bedrooms missing fields for land/plot properties
+  const finalFilteredFields = filteredFields.filter(field => {
+    // Check if this is a bedrooms missing field
+    if (field.match(/property_\d+_bedrooms/) || field === 'property_bedrooms') {
+      // Find the property index
+      let propIndex = null
+      let match = field.match(/property_(\d+)_bedrooms/)
+      if (match) {
+        propIndex = parseInt(match[1])
+      }
+      
+      // If we have properties data, check if this property is land/plot
+      if (propIndex !== null && localProperties.value[propIndex]) {
+        const property = localProperties.value[propIndex]
+        const propertyTypeId = property?.property_type_id
+        if (propertyTypeId) {
+          const selectedType = propertyTypes.value.find(t => t.id === propertyTypeId)
+          const typeName = selectedType?.name?.toLowerCase() || ''
+          if (typeName.includes('land') || typeName.includes('plot')) {
+            return false // Remove bedrooms from missing fields for land/plot
+          }
+        }
+      }
+    }
+    return true
+  })
+  const shouldHideBudget = !isBudgetVisibleForPrimaryDeal()
+  const finalWithBudgetFilter = finalFilteredFields.filter(field => {
+    if (shouldHideBudget && isBudgetField(field)) {
+      return false
+    }
+    return true
+  })
   
-  return filteredFields
+  return finalWithBudgetFilter
 })
 
 // Unresolved missing keys for submit button

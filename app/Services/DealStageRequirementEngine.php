@@ -207,18 +207,54 @@ class DealStageRequirementEngine
     }
 
     private function validatePropertyFields(Deal $deal, array $requiredFields): array
-    {
-        if ($deal->properties->isEmpty()) return [];
-        $missing = [];
-        foreach ($deal->properties as $index => $property) {
-            foreach ($requiredFields as $field) {
-                if ($this->isEmptyValue($property->{$field} ?? null)) {
-                    $missing[] = "property_{$index}_{$field}";
+        {
+            if ($deal->properties->isEmpty()) {
+                return [];
+            }
+
+            $missing = [];
+
+            // أنواع العقارات التي لا تحتاج bedrooms
+            $typesWithoutBedrooms = [35,36,24,31];
+
+            foreach ($deal->properties as $index => $property) {
+
+                $fieldsToValidate = $requiredFields;
+
+                // إزالة bedrooms للأراضي/القطع
+                if (in_array($property->property_type_id, $typesWithoutBedrooms)) {
+
+                    $fieldsToValidate = array_filter(
+                        $fieldsToValidate,
+                        fn ($field) => $field !== 'bedrooms'
+                    );
+                }
+
+                // إزالة budget fields بعد EOI
+                if (
+                    !empty($deal->stage_id) &&
+                    (int) Stage::find($deal->stage_id)?->order > 2
+                ) {
+                    $fieldsToValidate = array_filter(
+                        $fieldsToValidate,
+                        fn ($field) => !in_array($field, [
+                            'budget_from',
+                            'budget_to'
+                        ])
+                    );
+                }
+
+                foreach ($fieldsToValidate as $field) {
+
+                    if ($this->isEmptyValue($property->{$field} ?? null)) {
+
+                        $missing[] = "property_{$index}_{$field}";
+                    }
                 }
             }
+
+            return $missing;
         }
-        return $missing;
-    }
 
     private function countPropertyDocuments(Deal $deal, string $type): int
     {

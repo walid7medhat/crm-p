@@ -58,7 +58,20 @@ class DealProperty extends Model
     {
         return $this->belongsTo(PropertyType::class);
     }
-    
+    public function setPropertyTypeIdAttribute($value)
+{
+    $this->attributes['property_type_id'] = $value;
+
+    $type = \App\Models\PropertyType::find($value);
+
+    if ($type) {
+        $name = strtolower($type->name);
+
+        if (str_contains($name, 'land') || str_contains($name, 'plot')) {
+            $this->attributes['bedrooms'] = null;
+        }
+    }
+}
     public function area()
     {
         return $this->belongsTo(Area::class);

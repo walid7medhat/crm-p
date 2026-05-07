@@ -156,14 +156,14 @@
             </div>
           </div>
 
-          <div class="col-md-6">
+          <div class="col-md-6" v-if="buyer.city">
             <div class="info-group">
               <label class="info-label">Buyer City Of Residence</label>
               <p class="info-value mb-0">{{ val(buyer.city) }}</p>
             </div>
           </div>
 
-          <div class="col-md-6">
+          <div class="col-md-6" v-if="buyer.country">
             <div class="info-group">
               <label class="info-label">Buyer Country Of Residence</label>
               <p class="info-value mb-0">{{ val(buyer.country) }}</p>

@@ -149,10 +149,16 @@
               <p class="info-value mb-0">{{ val(buyer.residency_status) }}</p>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-6" v-if="buyer.city">
             <div class="info-group">
               <label class="info-label">Buyer City Of Residence</label>
               <p class="info-value mb-0">{{ val(buyer.city) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6" v-if="buyer.country">
+            <div class="info-group">
+              <label class="info-label">Buyer Country Of Residence</label>
+              <p class="info-value mb-0">{{ val(buyer.country) }}</p>
             </div>
           </div>
           <div class="col-md-6">
@@ -412,7 +418,19 @@
               <p class="info-value mb-0">{{ val(seller.email) }}</p>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-6" v-if="seller.residency_status">
+            <div class="info-group">
+              <label class="info-label">Seller Residency Status</label>
+              <p class="info-value mb-0">{{ val(seller.residency_status) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6" v-if="seller.country">
+            <div class="info-group">
+              <label class="info-label">Seller Country Of Residence</label>
+              <p class="info-value mb-0">{{ val(seller.country) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6" v-if="seller.city">
             <div class="info-group">
               <label class="info-label">Seller City Of Residence</label>
               <p class="info-value mb-0">{{ val(seller.city) }}</p>
@@ -620,6 +638,8 @@ const seller = computed(() => {
     phone: d.seller_phone,
     email: d.seller_email,
     city: d.seller_city,
+    country: d.seller_country,
+    residency_status: d.seller_residency_status,
     dob: d.seller_dob,
     language: d.seller_language,
   }

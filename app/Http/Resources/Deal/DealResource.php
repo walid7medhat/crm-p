@@ -50,6 +50,7 @@ class DealResource extends JsonResource
                 'id' => $this->stage->id,
                 'name' => $this->stage->name,
                 'color' => $this->stage->color,
+                'order' => $this->stage->order,
             ],
             
             'listing' => $this->listing ? [

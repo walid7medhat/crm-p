@@ -10,6 +10,7 @@
           label="name"
           placeholder="Select Address..."
           class="custom-v-select"
+            @update:modelValue="onAreaSelected"
         >
           <template #open-indicator="{ attributes }">
             <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" /></span>
@@ -68,20 +69,61 @@
         <b-form-input v-model="formData.unit_size" type="number" placeholder="Size" class="custom-input" />
       </div>
 
-      <div class="col-md-6" v-if="showBudgetFields">
-        <label class="form-label-custom">Budget From</label>
-        <div class="input-group">
-          <b-form-input v-model="formData.budget_from" type="number" placeholder="Min" class="custom-input" />
-          <span class="input-group-text">AED</span>
-        </div>
-      </div>
+    
 
-      <div class="col-md-6" v-if="showBudgetFields">
-        <label class="form-label-custom">Budget To</label>
-        <div class="input-group">
-          <b-form-input v-model="formData.budget_to" type="number" placeholder="Max" class="custom-input" />
-          <span class="input-group-text">AED</span>
-        </div>
+
+       <div v-if="showBudgetFields" class="col-md-6">
+                  <label class="form-label-custom">
+                    Budget (AED)
+                    <span  class="text-danger">*</span>
+                  </label>
+                  <div
+                    ref="budgetTriggerRef"
+                    class="budget-field-wrap"
+                  >
+                    <button
+                      type="button"
+                      class="custom-date-trigger"
+                      @click.stop="toggleBudgetDropdown"
+                            >
+                    <span>{{ budgetDisplay }}</span>
+                    <iconify-icon icon="lucide:chevron-down" />
+                  </button>
+                </div>
+            
+                <div
+            v-if="showBudgetDropdown"
+            ref="budgetDropdownPanelRef"
+            class="budget-dropdown budget-dropdown--portal"
+            :style="budgetDropdownStyle"
+            @click.stop
+            @mousedown.stop
+          >
+            <div class="budget-from-to-row" @click.stop @mousedown.stop>
+              <div class="budget-col">
+                <label class="budget-input-label">From (AED)</label>
+                <input
+                  :value="budgetFromDisplay"
+                  placeholder="0"
+                  @click.stop
+                  @mousedown.stop
+                  class="custom-input budget-dropdown-input"
+                  @input="(e) => setBudgetValue('budget_from', e.target.value)"
+                />
+              </div>
+              <div class="budget-col">
+                <label class="budget-input-label">To (AED)</label>
+                <input
+                  :value="budgetToDisplay"
+                  placeholder="0"
+                  @click.stop
+                  @mousedown.stop
+                  class="custom-input budget-dropdown-input"
+                  @input="(e) => setBudgetValue('budget_to', e.target.value)"
+                />
+              </div>
+            </div>
+          </div>
       </div>
 
       <div class="col-md-6" v-if="showPurchasePrice">
@@ -117,12 +159,12 @@
       </div>
 
       <div class="col-md-6">
-        <label class="form-label-custom">Developer Contact Name</label>
-        <b-form-input v-model="formData.developer_name" placeholder="Contact Person" class="custom-input" />
+        <label class="form-label-custom">Developer Sales Person Name</label>
+        <b-form-input v-model="formData.developer_name" placeholder="Sales Person Person" class="custom-input" />
       </div>
 
       <div class="col-md-6">
-        <label class="form-label-custom">Developer Contact Phone</label>
+        <label class="form-label-custom">Developer Sales Person Phone</label>
         <CrmPhoneInput v-model="formData.developer_phone" placeholder="Phone Number" />
       </div>
     </div>
@@ -138,7 +180,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch , onMounted ,onBeforeUnmount ,nextTick } from 'vue'
 import { BFormInput, BSpinner } from 'bootstrap-vue-3'
 import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import vSelect from 'vue-select'
@@ -203,6 +245,25 @@ const bedroomOptions = [
   { value: '5', text: '5 Bedrooms' },
   { value: '5+', text: '5+ Bedrooms' }
 ]
+const onAreaSelected = async (areaId) => {
+  
+  // Reset property fields (but keep area_id)
+
+  const selectedArea = props.areas.find(a => a.id === areaId)
+
+    if (!selectedArea) return
+
+    // ✅ set area
+  formData.value.area_id = areaId
+
+    // ✅ auto select developer from area or project
+    if (selectedArea.project?.developer_id) {
+      formData.value.developer_id = selectedArea.project.developer_id
+    } else if (selectedArea.developer_id) {
+      formData.value.developer_id = selectedArea.developer_id
+    }
+
+}
 
 function resetForm() {
   formData.value = {
@@ -259,6 +320,119 @@ watch(() => formData.value.property_type_id, () => {
   if (!showBedroomsField.value) {
     formData.value.bedrooms = null
   }
+})
+// ========== Budget Dropdown (نفس نظام Lead Search) ==========
+const showBudgetDropdown = ref(false)
+const budgetTriggerRef = ref(null)
+const budgetDropdownPanelRef = ref(null)
+const budgetDropdownStyle = ref({})
+
+const budgetFromDisplay = computed(() => {
+    return formData.value.budget_from ? formatBudgetWithCommas(formData.value.budget_from) : ''
+})
+
+const budgetToDisplay = computed(() => {
+    return formData.value.budget_to ? formatBudgetWithCommas(formData.value.budget_to) : ''
+})
+
+const budgetDisplay = computed(() => {
+    const from = budgetFromDisplay.value
+    const to = budgetToDisplay.value
+    if (!from && !to) return 'Select budget range'
+    if (from && to) return `${from} - ${to}`
+    if (from) return `From ${from}`
+    return `To ${to}`
+})
+
+function normalizeBudgetString(value) {
+    return String(value ?? '').replace(/[^\d]/g, '')
+}
+
+function formatBudgetWithCommas(value) {
+    if (!value && value !== 0) return ''
+    const digits = normalizeBudgetString(value)
+    if (!digits) return ''
+    return Number(digits).toLocaleString('en-US')
+}
+
+function setBudgetValue(key, value) {
+    const digits = normalizeBudgetString(value)
+    formData.value[key] = digits ? Number(digits) : null
+    emitUpdate()
+}
+
+function getBudgetTriggerElement() {
+    let el = budgetTriggerRef.value
+    if (Array.isArray(el)) el = el.find(Boolean)
+    if (el && typeof el.getBoundingClientRect === 'function') return el
+    if (el?.$el && typeof el.$el.getBoundingClientRect === 'function') return el.$el
+    return null
+}
+
+function updateBudgetDropdownPosition() {
+    const el = getBudgetTriggerElement()
+    if (!el) return
+    
+    // استخدام getBoundingClientRect للحصول على الموقع بالنسبة للviewport
+    const rect = el.getBoundingClientRect()
+    
+    // حساب الموقع بالنسبة للصفحة
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+    
+    budgetDropdownStyle.value = {
+        position: 'fixed',
+        top: `${rect.bottom + 6}px`,
+        left: `${rect.left}px`,
+        width: `${Math.max(rect.width, 240)}px`,
+        zIndex: '10060'
+    }
+}
+
+function removeBudgetDropdownListeners() {
+    // window.removeEventListener('scroll', updateBudgetDropdownPosition, true)
+    // window.removeEventListener('resize', updateBudgetDropdownPosition)
+}
+
+async function toggleBudgetDropdown(event) {
+    if (event) {
+        event.stopPropagation()
+        event.preventDefault()
+    }
+    
+    const next = !showBudgetDropdown.value
+    showBudgetDropdown.value = next
+    if (next) {
+        document.body.style.overflow = 'hidden'
+        
+        await nextTick()
+        updateBudgetDropdownPosition()
+        
+  
+    } else {
+        document.body.style.overflow = ''
+        removeBudgetDropdownListeners()
+    }
+}
+
+function onDocumentClick(event) {
+    if (!showBudgetDropdown.value) return
+    const t = event.target
+    const triggerEl = getBudgetTriggerElement()
+    const dropdownEl = budgetDropdownPanelRef.value
+    if (triggerEl?.contains(t) || dropdownEl?.contains(t)) return
+    
+    showBudgetDropdown.value = false
+    removeBudgetDropdownListeners()
+}
+onMounted(() => {
+ 
+    document.addEventListener('click', onDocumentClick)
+
+})
+onBeforeUnmount(() => {
+    document.removeEventListener('click', onDocumentClick)
+    removeBudgetDropdownListeners()
 })
 </script>
 
@@ -326,4 +500,103 @@ watch(() => formData.value.property_type_id, () => {
   font-size: 14px;
   color: #64748b;
 }
+.custom-input::placeholder {
+    color: #94a3b8 !important;
+    opacity: 1;
+    font-size: 12px !important;
+    font-family: 'Montserrat';
+}
+
+:deep(.custom-v-select .vs__search::placeholder) {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Budget Dropdown Styles - نفس نظام Lead Search */
+.budget-field-wrap {
+    position: relative;
+}
+
+.budget-dropdown--portal {
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
+    padding: 10px;
+}
+
+.budget-from-to-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.budget-col {
+    min-width: 0;
+}
+
+.budget-input-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.budget-dropdown-input {
+    height: 38px !important;
+}
+
+.is-invalid-group .custom-date-trigger {
+    border-color: #dc3545 !important;
+}
+
+.custom-date-trigger {
+    width: 100%;
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #64748B;
+    font-family: 'Montserrat';
+}
+
+.custom-date-trigger:hover {
+    border-color: #cbd5e1;
+}
+.budget-dropdown--portal {
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
+    padding: 10px;
+}
+/* Budget Dropdown Styles - نفس نظام Lead Search */
+.budget-field-wrap {
+    position: relative;
+}
+
+.budget-dropdown--portal {
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
+    padding: 10px;
+}
+
+.budget-dropdown--portal {
+    will-change: top, left;
+}
 </style>
+<style>
+.custom-input::placeholder {
+    color: #94a3b8 !important;
+    opacity: 1;
+    font-size: 12px !important;
+    font-family: 'Montserrat';
+}</style>

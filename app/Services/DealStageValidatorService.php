@@ -36,7 +36,7 @@ class DealStageValidatorService
         'resolved_type' => $resolvedType
     ]);
 
-    $deal->loadMissing(['parties', 'documents', 'properties']); // ✅ أضف 'properties' هنا
+    $deal->loadMissing(['parties', 'documents',   'properties.propertyType']); // ✅ أضف 'properties' هنا
 
     $result = $this->validator->validate($deal, $targetStageId, $resolvedType);
     
@@ -49,9 +49,19 @@ class DealStageValidatorService
     $missingByStage = $this->filterMissingByStagePropertyDocuments($missingByStage, $deal);
     
     // ✅ تصفية budget fields حسب المرحلة (قبل أي تصفية أخرى)
-    $missingFields = $this->filterBudgetFieldsByStage($missingFields, $targetStageId);
+    // $missingFields = $this->filterBudgetFieldsByStage($missingFields, $targetStageId);
+    // $missingByStage = $this->filterMissingByStageBudgetFields($missingByStage, $targetStageId);
     $missingByStage = $this->filterMissingByStageBudgetFields($missingByStage, $targetStageId);
+
+    $missingFields = collect($missingByStage)
+        ->pluck('missing_fields')
+        ->flatten()
+        ->unique()
+        ->values()
+        ->toArray();
     
+    $missingFields = $this->filterBedroomsFieldsByPropertyType($missingFields, $deal);
+    $missingByStage = $this->filterMissingByStageBedroomsFields($missingByStage, $deal);
     // ✅ تمرير effectiveListingId و resolvedType للتصفية
     $filteredMissingFields = $this->filterFieldsByListingAndType($missingFields, $effectiveListingId, $resolvedType);
     $filteredMissingByStage = $this->filterMissingByStageByListingAndType($missingByStage, $effectiveListingId, $resolvedType);
@@ -362,6 +372,82 @@ private function filterMissingByStagePropertyDocuments(array $missingByStage, De
         
         // ✅ تصفية property document fields
         $filteredStageFields = $this->filterPropertyDocumentFields($stageFields, $deal);
+        
+        if (!empty($filteredStageFields)) {
+            $filteredStages[] = [
+                'stage_order' => $stage['stage_order'] ?? 0,
+                'stage_id' => $stage['stage_id'] ?? null,
+                'stage_name' => $stage['stage_name'] ?? '',
+                'missing_fields' => $filteredStageFields,
+            ];
+        }
+    }
+    
+    return $filteredStages;
+}
+/**
+ * تصفية bedrooms fields بناءً على نوع العقار (إزالة للأراضي/القطع)
+ */
+private function filterBedroomsFieldsByPropertyType(array $fields, Deal $deal): array
+{
+    if (empty($fields)) {
+        return [];
+    }
+    
+    $filtered = [];
+    $properties = $deal->properties ?? collect([]);
+                 Log::info('PROPERTY TYPE DEBUG');
+    foreach ($fields as $field) {
+        $shouldSkip = false;
+        
+        // التحقق من وجود property_X_bedrooms
+        if (preg_match('/property_(\d+)_bedrooms/', $field, $matches)) {
+            $propertyIndex = (int) $matches[1];
+            $property = $properties->values()->get($propertyIndex);
+            
+            if ($property && $property->propertyType) {
+                $typeName = strtolower($property->propertyType->name ?? '');
+                Log::info('PROPERTY TYPE DEBUG', [
+    'field' => $field,
+    'property_index' => $propertyIndex,
+    'property_id' => $property?->id,
+    'property_type_id' => $property?->property_type_id,
+    'property_type_relation' => $property?->propertyType,
+    'property_type_name' => $typeName,
+]);
+                if (str_contains($typeName, 'land') || str_contains($typeName, 'plot')) {
+                    Log::info('Skipping bedrooms requirement - property type is land/plot', [
+                        'field' => $field,
+                        'property_index' => $propertyIndex,
+                        'property_type' => $typeName
+                    ]);
+                    $shouldSkip = true;
+                }
+            }
+        }
+        
+        if (!$shouldSkip) {
+            $filtered[] = $field;
+        }
+    }
+    
+    return $filtered;
+}
+
+/**
+ * تصفية bedrooms fields في missing_by_stage
+ */
+private function filterMissingByStageBedroomsFields(array $missingByStage, Deal $deal): array
+{
+    if (empty($missingByStage)) {
+        return [];
+    }
+    
+    $filteredStages = [];
+    
+    foreach ($missingByStage as $stage) {
+        $stageFields = $stage['missing_fields'] ?? [];
+        $filteredStageFields = $this->filterBedroomsFieldsByPropertyType($stageFields, $deal);
         
         if (!empty($filteredStageFields)) {
             $filteredStages[] = [

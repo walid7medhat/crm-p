@@ -882,6 +882,8 @@ function validateForm() {
 
 // Validate and submit
 async function validateAndSubmit() {
+ console.log('========== START VALIDATION ==========')
+  console.log('formData.value BEFORE validation:', JSON.stringify(formData.value, null, 2))
   // Show field errors
   showFieldErrors.value = true
   
@@ -966,15 +968,16 @@ async function submitForm() {
             if (value !== null && value !== undefined && value !== '') {
               // Handle file arrays
               if ((key === 'payment_proof' || key === 'spa_document') && Array.isArray(value)) {
-                if (value.length > 0) {
-                  value.forEach((file, fileIndex) => {
-                    if (file instanceof File) {
-                      submitData.append(`properties[${idx}][${key}][${fileIndex}]`, file)
-                    }
-                  })
-                } else {
-                  submitData.append(`properties[${idx}][${key}]`, JSON.stringify([]))
-                }
+
+                value.forEach((file, fileIndex) => {
+                  if (file instanceof File) {
+                    submitData.append(
+                      `properties[${idx}][${key}][${fileIndex}]`,
+                      file
+                    )
+                  }
+                })
+
               } else {
                 submitData.append(`properties[${idx}][${key}]`, value)
               }

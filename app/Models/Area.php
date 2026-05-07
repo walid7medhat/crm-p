@@ -167,4 +167,8 @@ public function getFullHierarchyAttribute()
 {
     return $this->hasMany(FloorPlanImage::class);
 }
+
+public function project(){
+    return $this->hasOne(Project::class,'area_id');
+}
 }

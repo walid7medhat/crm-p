@@ -24,6 +24,10 @@ class AreaResource extends JsonResource
             'children' => AreaResource::collection($this->whenLoaded('child')),
             'children_count' => $this->whenCounted('child'),
             'added_by_user' => $this->whenLoaded('addedBy'),
+            'project_id'=>$this->project_id,
+            'project_name'=>$this->project?->name,
+            'developer_id'=>$this->project?->developer_id,
+            'developer_name'=>$this->project?->developer?->name,
         ];
     }
 }

@@ -55,17 +55,23 @@
             <p class="info-value mb-0">{{ property.unit_size || '----' }}</p>
           </div>
         </div>
-        <div class="col-md-6" v-if="property.budget_from">
-          <div class="info-group">
-            <label class="info-label">Budget From</label>
-            <p class="info-value mb-0">{{ formatNumber(property.budget_from) }} AED</p>
-          </div>
-        </div>
-        <div class="col-md-6" v-if="property.budget_to">
-          <div class="info-group">
-            <label class="info-label">Budget To</label>
-            <p class="info-value mb-0">{{ formatNumber(property.budget_to) }} AED</p>
-          </div>
+         <div class="col-md-6" v-if="(property.budget_from || property.budget_to) && showBudgetFields">
+            <div class="info-group">
+                <label class="info-label">Budget (AED)</label>
+                <p class="info-value mb-0">
+                    <span v-if="property.budget_from && property.budget_to">
+                        {{ formatNumber(property.budget_from) }} - {{ formatNumber(property.budget_to) }}
+                    </span>
+                    <span v-else-if="property.budget_from">
+                        From {{ formatNumber(property.budget_from) }}
+                    </span>
+                    <span v-else-if="property.budget_to">
+                        To {{ formatNumber(property.budget_to) }}
+                    </span>
+                    <span v-else>----</span>
+                    AED
+                </p>
+            </div>
         </div>
         <div class="col-md-6" v-if="property.purchase_price">
           <div class="info-group">
@@ -81,13 +87,13 @@
         </div>
         <div class="col-md-6" v-if="property.developer_name">
           <div class="info-group">
-            <label class="info-label">Developer Contact Name</label>
+            <label class="info-label">Developer Sales Person Name</label>
             <p class="info-value mb-0">{{ property.developer_name }}</p>
           </div>
         </div>
         <div class="col-md-6" v-if="property.developer_phone">
           <div class="info-group">
-            <label class="info-label">Developer Contact Phone</label>
+            <label class="info-label">Developer Sales Person Phone</label>
             <p class="info-value mb-0">{{ property.developer_phone }}</p>
           </div>
         </div>
@@ -183,6 +189,7 @@
             label="name"
             placeholder="Select Address..."
             class="custom-v-select"
+             @update:modelValue="onAreaSelected"
           >
             <template #open-indicator="{ attributes }">
               <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" /></span>
@@ -241,20 +248,57 @@
           <b-form-input v-model="editData.unit_size" type="number" placeholder="Size" class="custom-input" />
         </div>
 
-        <div class="col-md-6" v-if="showBudgetFields">
-          <label class="form-label-custom">Budget From</label>
-          <div class="input-group">
-            <b-form-input v-model="editData.budget_from" type="number" placeholder="Min" class="custom-input" />
-            <span class="input-group-text">AED</span>
-          </div>
-        </div>
-
-        <div class="col-md-6" v-if="showBudgetFields">
-          <label class="form-label-custom">Budget To</label>
-          <div class="input-group">
-            <b-form-input v-model="editData.budget_to" type="number" placeholder="Max" class="custom-input" />
-            <span class="input-group-text">AED</span>
-          </div>
+         <div v-if="showBudgetFields" class="col-md-6">
+            <label class="form-label-custom">
+                Budget (AED)
+            </label>
+            <div
+                ref="budgetTriggerRef"
+                class="budget-field-wrap"
+            >
+                <button
+                    type="button"
+                    class="custom-date-trigger"
+                    @click.stop="toggleBudgetDropdown"
+                >
+                    <span>{{ budgetDisplay }}</span>
+                    <iconify-icon icon="lucide:chevron-down" />
+                </button>
+            </div>
+            <!-- Budget Dropdown -->
+            <div
+                v-if="showBudgetDropdown"
+                ref="budgetDropdownPanelRef"
+                class="budget-dropdown budget-dropdown--portal"
+                :style="budgetDropdownStyle"
+                @click.stop
+                @mousedown.stop
+            >
+                <div class="budget-from-to-row" @click.stop @mousedown.stop>
+                    <div class="budget-col">
+                        <label class="budget-input-label">From (AED)</label>
+                        <input
+                            :value="budgetFromDisplay"
+                            placeholder="0"
+                            @click.stop
+                            @mousedown.stop
+                            class="custom-input budget-dropdown-input"
+                            @input="(e) => setBudgetValue('budget_from', e.target.value)"
+                        />
+                    </div>
+                    <div class="budget-col">
+                        <label class="budget-input-label">To (AED)</label>
+                        <input
+                            :value="budgetToDisplay"
+                            placeholder="0"
+                            @click.stop
+                            @mousedown.stop
+                            class="custom-input budget-dropdown-input"
+                            @input="(e) => setBudgetValue('budget_to', e.target.value)"
+                        />
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="col-md-6" v-if="showPurchasePrice">
@@ -282,12 +326,12 @@
         </div>
 
         <div class="col-md-6">
-          <label class="form-label-custom">Developer Contact Name</label>
+          <label class="form-label-custom">Developer Sales Person Name</label>
           <b-form-input v-model="editData.developer_name" placeholder="Contact Person" class="custom-input" />
         </div>
 
         <div class="col-md-6">
-          <label class="form-label-custom">Developer Contact Phone</label>
+          <label class="form-label-custom">Developer Sales Person Phone</label>
           <CrmPhoneInput v-model="editData.developer_phone" placeholder="Phone Number" />
         </div>
 
@@ -359,7 +403,7 @@
 </template>
 
 <script setup>
-import { ref, computed ,watch,onMounted} from 'vue'
+import { ref, computed ,watch,onMounted , onBeforeUnmount, nextTick } from 'vue'
 import { BFormInput, BSpinner } from 'bootstrap-vue-3'
 import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import vSelect from 'vue-select'
@@ -387,10 +431,12 @@ const editData = ref({})
 /** Hydrated existing + new picks for SPA / Payment Proof (same shape as Create Deal PropertyCard). */
 const propertyEditDocs = ref([])
 const previewDoc = ref(null)
+const selectedListing = ref(null)
 
 // Stage detection
 const showBudgetFields = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
+  console.log(stageName);
   return stageName.includes('eoi')
 })
 const showPurchasePrice = computed(() => {
@@ -617,6 +663,35 @@ function startEdit() {
   ]
   isEditing.value = true
 }
+const onAreaSelected = (areaId) => {
+  selectedListing.value = null
+
+  if (editData.value) {
+    editData.value.unit_no = ''
+    editData.value.property_type_id = null
+    editData.value.bedrooms = null
+    editData.value.unit_size = ''
+    editData.value.developer_id = null
+    editData.value.developer_name = null
+  }
+
+  const selectedArea = props.areas.find(a => a.id === areaId)
+  if (!selectedArea) return
+
+  editData.value.area_id = areaId
+
+  const project = selectedArea.project
+
+  if (project?.developer_id) {
+    editData.value.developer_id = project.developer_id
+  } 
+  else if (selectedArea.developer_id) {
+    editData.value.developer_id = selectedArea.developer_id
+  } 
+  else {
+    editData.value.developer_id = null
+  }
+}
 
 function cancelEdit() {
   isEditing.value = false
@@ -713,25 +788,138 @@ function formatNumber(value) {
 }
 // بعد الـ computed الموجودة
 const showBedroomsField = computed(() => {
-  const propertyTypeId = props.property.property_type_id
+  const propertyTypeId = isEditing.value
+    ? editData.value.property_type_id
+    : props.property.property_type_id
+
   if (!propertyTypeId) return true
-  
+
   const selectedType = props.propertyTypes.find(t => t.id === propertyTypeId)
   const typeName = selectedType?.name?.toLowerCase() || ''
-  
-  // لو الاسم يحتوي على land أو plot، نخفي الـ Bedrooms
-  if (typeName.includes('land') || typeName.includes('plot')) {
-    return false
-  }
-  
-  return true
+
+  return !(typeName.includes('land') || typeName.includes('plot'))
 })
 
 // كمان لو اختار Land أو Plot، نحذف قيمة الـ bedrooms
-watch(() => props.property.property_type_id, (newTypeId) => {
-  if (!showBedroomsField.value) {
-    props.property.bedrooms = null
+watch(() => editData.value.property_type_id, (newTypeId) => {
+  if (!newTypeId) return
+
+  const selectedType = props.propertyTypes.find(t => t.id === newTypeId)
+  const typeName = selectedType?.name?.toLowerCase() || ''
+
+  if (typeName.includes('land') || typeName.includes('plot')) {
+    editData.value.bedrooms = null
+    props.property.bedrooms=null
+    editData.value = {
+      ...editData.value,
+      bedrooms: null
+    }
   }
+})
+// ========== Budget Dropdown for Edit Mode ==========
+const showBudgetDropdown = ref(false)
+const budgetTriggerRef = ref(null)
+const budgetDropdownPanelRef = ref(null)
+const budgetDropdownStyle = ref({})
+
+const budgetFromDisplay = computed(() => {
+    return editData.value.budget_from ? formatBudgetWithCommas(editData.value.budget_from) : ''
+})
+
+const budgetToDisplay = computed(() => {
+    return editData.value.budget_to ? formatBudgetWithCommas(editData.value.budget_to) : ''
+})
+
+const budgetDisplay = computed(() => {
+    const from = budgetFromDisplay.value
+    const to = budgetToDisplay.value
+    if (!from && !to) return 'Select budget range'
+    if (from && to) return `${from} - ${to}`
+    if (from) return `From ${from}`
+    return `To ${to}`
+})
+
+function normalizeBudgetString(value) {
+    return String(value ?? '').replace(/[^\d]/g, '')
+}
+
+function formatBudgetWithCommas(value) {
+    if (!value && value !== 0) return ''
+    const digits = normalizeBudgetString(value)
+    if (!digits) return ''
+    return Number(digits).toLocaleString('en-US')
+}
+
+function setBudgetValue(key, value) {
+    const digits = normalizeBudgetString(value)
+    editData.value[key] = digits ? Number(digits) : null
+}
+
+function getBudgetTriggerElement() {
+    let el = budgetTriggerRef.value
+    if (Array.isArray(el)) el = el.find(Boolean)
+    if (el && typeof el.getBoundingClientRect === 'function') return el
+    if (el?.$el && typeof el.$el.getBoundingClientRect === 'function') return el.$el
+    return null
+}
+
+function updateBudgetDropdownPosition() {
+    const el = getBudgetTriggerElement()
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    budgetDropdownStyle.value = {
+        position: 'fixed',
+        top: `${Math.round(r.bottom + 6)}px`,
+        left: `${Math.round(r.left)}px`,
+        width: `${Math.max(Math.round(r.width), 220)}px`,
+        zIndex: '10060'
+    }
+}
+
+function removeBudgetDropdownListeners() {
+    window.removeEventListener('scroll', updateBudgetDropdownPosition, true)
+    window.removeEventListener('resize', updateBudgetDropdownPosition)
+}
+
+async function toggleBudgetDropdown(event) {
+    if (event) {
+        event.stopPropagation()
+        event.preventDefault()
+    }
+    
+    const next = !showBudgetDropdown.value
+    showBudgetDropdown.value = next
+    if (next) {
+        document.body.style.overflow = 'hidden'
+        const scrollY = window.scrollY
+        await nextTick()
+        updateBudgetDropdownPosition()
+        window.scrollTo(0, scrollY)
+        window.addEventListener('scroll', updateBudgetDropdownPosition, true)
+        window.addEventListener('resize', updateBudgetDropdownPosition)
+    } else {
+        document.body.style.overflow = ''
+        removeBudgetDropdownListeners()
+    }
+}
+
+function onDocumentClick(event) {
+    if (!showBudgetDropdown.value) return
+    const t = event.target
+    const triggerEl = getBudgetTriggerElement()
+    const dropdownEl = budgetDropdownPanelRef.value
+    if (triggerEl?.contains(t) || dropdownEl?.contains(t)) return
+    
+    showBudgetDropdown.value = false
+    removeBudgetDropdownListeners()
+}
+onMounted(() => {
+    document.addEventListener('click', onDocumentClick)
+})
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', onDocumentClick)
+    removeBudgetDropdownListeners()
 })
 </script>
 
@@ -1086,5 +1274,60 @@ watch(() => props.property.property_type_id, (newTypeId) => {
 .property-card-edit-bottom-bar .edit-bar-save:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Budget Dropdown Styles - نفس نظام Lead Search */
+.budget-field-wrap {
+    position: relative;
+}
+
+.budget-dropdown--portal {
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
+    padding: 10px;
+}
+
+.budget-from-to-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.budget-col {
+    min-width: 0;
+}
+
+.budget-input-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.budget-dropdown-input {
+    height: 38px !important;
+}
+
+.custom-date-trigger {
+    width: 100%;
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #64748B;
+    font-family: 'Montserrat';
+    cursor: pointer;
+}
+
+.custom-date-trigger:hover {
+    border-color: #cbd5e1;
 }
 </style>
