@@ -3409,7 +3409,7 @@ onMounted(async () => {
   width: min(760px, 94vw);
   max-width: 94vw;
   max-height: 90vh;
-  overflow-y: auto;
+  /*overflow-y: auto;*/
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -3421,6 +3421,9 @@ onMounted(async () => {
   border-bottom: 1px solid #F4F4F4;
   flex-shrink: 0;
   padding: 14px 18px !important;
+    position: relative;
+        background: #fff;
+    border-radius: 10px;
 }
 
 .modal-title {
@@ -3430,23 +3433,38 @@ onMounted(async () => {
 }
 
 .close-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  cursor: pointer;
-  color: #64748B;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
+    position: absolute;
+    top: 8px;
+    right: -61px;
+    width: 83px;
+    height: 49px;
+    color: #fff;
+    font-size: 18px;
+    line-height: 1;
+    box-shadow: #0f172a33 0 8px 16px;
+    z-index: -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #4fa5f7;
+    border-image: initial;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2f88ef, #5db8ff);
+    padding: 0;
+    transition: filter .2s;
 }
 
 .close-btn:hover {
   background: #F1F5F9;
   color: #1E293B;
 }
-
+.deal-progress-hint , .modal-footer-custom .text-danger {
+      display: flex;
+    /* justify-content: center; */
+    align-items: center;
+}
 .form-scroll-area {
   flex: 1;
   padding: 0 14px 8px;

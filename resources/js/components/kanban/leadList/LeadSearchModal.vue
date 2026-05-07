@@ -687,7 +687,7 @@ const budgetDropdownPanelRef = ref(null)
 const budgetDropdownStyle = ref({})
 const selectedLeadFieldIds = ref(['lead_name','first_name',  'created_on', 'assigned_on', 'work_phone', 'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 'team','stage','quality_status', 'interaction_result'])
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
-const officeOptions = ref([{ value: null, text: 'Select Office' }])
+const officeOptions = ref([])
 const allResponsiblePersons = ref([])
 const allTeams = ref([])
 /** Avoid team watcher re-fetch when responsible selection sets team + branch */
@@ -1070,14 +1070,14 @@ const form = ref({
 })
 
 const responsiblePersons = ref([])
-const branchSourceOptions = ref([{ value: null, text: 'Select Branch Source' }])
-const stageOptions = ref([{ value: null, text: 'Select Stage' }])
+const branchSourceOptions = ref([])
+const stageOptions = ref([])
 
 const DEFAULT_RESPONSIBLE_AVATAR =
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
 
 const personOptions = computed(() => {
-    const opts = [{ value: null, text: 'Select Person' }]
+    const opts = []
     let filteredPersons = [...allResponsiblePersons.value]
 
     if (form.value.team) {
@@ -1108,7 +1108,7 @@ const personOptions = computed(() => {
 })
 
 const computedTeamOptions = computed(() => {
-    const opts = [{ value: null, text: 'Select Team' }]
+    const opts = []
     let filteredTeams = allTeams.value.filter((t) => t && t.id != null)
 
     const officeSel = normalizeOfficeSelection(form.value.office || [])
@@ -1187,7 +1187,7 @@ const dateOptions = [
 ]
 
 const yesNoOptions = [
-    { value: null, text: 'Any' },
+    // { value: null, text: 'Any' },
     { value: 1, text: 'Yes' },
     { value: 0, text: 'No' }
 ]
@@ -1217,25 +1217,25 @@ const createdOnOptions = [
 ]
 // Purpose of Purchase Options
 const purposeOptions = [
-    { value: null, text: 'Select Purpose' },
+    // { value: null, text: 'Select Purpose' },
     { value: 'Live in', text: 'Live in' },
     { value: 'Short-term investment', text: 'Short-term investment' },
     { value: 'Long-term investment', text: 'Long-term investment' }
 ]
 const sourceOptions = ref([
-    { value: null, text: 'Select Source' },
+    // { value: null, text: 'Select Source' },
     { value: 'Lead Form', text: 'Meta' },
     { value: 'website', text: 'Website' },
     { value: 'portal', text: 'Portal' },
 ])
 const websiteSourceOptions = ref([
-    { value: null, text: 'Select Website' },
+    // { value: null, text: 'Select Website' },
     { value: 'Allproperties.ae', text: 'Allproperties.ae' },
     { value: 'Oiaproperties.com', text: 'Oiaproperties.com' },
     
 ])
 const portalSourceOptions = ref([
-    { value: null, text: 'Select Portal' },
+    // { value: null, text: 'Select Portal' },
     { value: 'propertyfinder', text: 'Property Finder' },
     { value: 'bayut', text: 'Bayut' },
 ])
@@ -1294,7 +1294,7 @@ const qualityStatusOptions = computed(() => {
     // Stage 4 (order 4): Qualified
     if (stageOrder === 4) {
         return [
-            { value: null, text: 'Select Quality Status' },
+            // { value: null, text: 'Select Quality Status' },
             { value: 'cold', text: 'Cold Lead' },
             { value: 'warm', text: 'Warm Lead' },
             { value: 'hot', text: 'Hot Lead' }
@@ -1304,7 +1304,7 @@ const qualityStatusOptions = computed(() => {
     // Stage 9 (order 9): Lead Pool
     if (stageOrder === 9) {
         return [
-            { value: null, text: 'Select Quality Status' },
+            // { value: null, text: 'Select Quality Status' },
             { value: 'no_answer', text: 'No Answer' },
         ]
     }
@@ -1312,19 +1312,22 @@ const qualityStatusOptions = computed(() => {
     // Stage 10 (order 10): Unqualified
     if (stageOrder === 10) {
         return [
-            { value: null, text: 'Select Quality Status' },
-            { value: 'not_interested', text: 'Not Interested' },
-            { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+            // { value: null, text: 'Select Quality Status' },
+            // { value: 'not_interested', text: 'Not Interested' },
+             { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+            { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
             { value: 'job_seeker', text: 'Job Seeker' },
             { value: 'broker', text: 'Broker' },
+            { value: 'registered_by_mistake', text: 'Registered by Mistake' },
             { value: 'spam_leads', text: 'Spam Leads' },
+                { value: 'blacklist', text: 'blacklist' },
         ]
     }
     
     // Stage 8 (order 8): Lost
     if (stageOrder === 8) {
         return [
-            { value: null, text: 'Select Why Lost' },
+            // { value: null, text: 'Select Why Lost' },
               { value: 'already_bought', text: "Already bought" }
         ]
     }
@@ -1341,7 +1344,7 @@ const showInteractionResult = computed(() => {
 })
 
 const interactionResultOptions = [
-    { value: null, text: 'Select Call Result' },
+    // { value: null, text: 'Select Call Result' },
     { value: 'answered', text: 'Answered' },
     { value: 'no_answer', text: 'No Answer' },
 ]
@@ -1363,7 +1366,7 @@ const datePresets = [
     { value: 'custom_date', label: 'Custom Date' },
 ]
 const leadTypeOptions = [
-    { value: null, text: 'Select Lead Type' },
+    // { value: null, text: 'Select Lead Type' },
     { value: 'sale', text: 'Sale' },
     { value: 'rent', text: 'Rent' },
      { value: 'both', text: 'Both' },
@@ -1371,7 +1374,7 @@ const leadTypeOptions = [
 
 // Property Status Options
 const propertyStatusOptions = [
-    { value: null, text: 'Select Property Status' },
+    // { value: null, text: 'Select Property Status' },
     { value: 'ready', text: 'Ready' },
     { value: 'off_plan', text: 'Off Plan' },
     { value: 'both', text: 'Both' }
@@ -1417,7 +1420,7 @@ const fetchPropertyTypes = async () => {
         const res = await api.get('/listings/property-types')
         const data = res.data.data || res.data
         propertyTypeOptions.value = [
-            { value: null, text: 'Select Property Type' },
+            // { value: null, text: 'Select Property Type' },
             ...data.map(type => ({
                 value: type.id,
                 text: type.name
@@ -2324,7 +2327,7 @@ async function fetchBranchSources() {
         const data = res.data?.data
         if (Array.isArray(data) && data.length) {
             branchSourceOptions.value = [
-                { value: null, text: 'Select Branch Source' },
+                // { value: null, text: 'Select Branch Source' },
                 ...data.map(b => ({ value: b.name, text: b.name }))
             ]
         }
@@ -2344,7 +2347,7 @@ async function fetchStages() {
             })
             
             stageOptions.value = [
-                { value: null, text: 'Select Stage' },
+                // { value: null, text: 'Select Stage' },
                 ...filteredStages.map(s => ({ 
                     value: s.id, 
                     text: s.name, 
@@ -2421,7 +2424,7 @@ async function fetchOffices() {
         const data = res.data?.data
         if (Array.isArray(data) && data.length) {
             officeOptions.value = [
-                { value: null, text: 'Select Office' },
+                // { value: null, text: 'Select Office' },
                 ...data.map(office => ({
                     value: office.id,
                     text: office.name,
@@ -2442,7 +2445,7 @@ async function fetchOffices() {
             const admins = res2.data?.data
             if (Array.isArray(admins) && admins.length) {
                 officeOptions.value = [
-                    { value: null, text: 'Select Office' },
+                    // { value: null, text: 'Select Office' },
                     ...admins.map(admin => ({
                         value: admin.id,
                         text: admin.name,
@@ -2769,10 +2772,8 @@ watch(() => form.value.stageId, (newVal) => {
             isValidForStage = ['no_answer', 'contacted', 'wrong_person'].includes(currentQuality)
         } else if (stageOrder === 10) {
             isValidForStage = [
-                'not_interested', 'wrong_contact_details', 'no_answer_multiple_calls',
-                'job_seeker', 'broker', 'registered_by_mistake', 'spam_leads',
-                'already_assigned_to_another_agent', 'client_was_just_searching_online',
-                'number_does_not_exist'
+                'wrong_contact_details', 'no_answer_multiple_calls',
+            'job_seeker', 'broker', 'registered_by_mistake','spam_leads', 'blacklist'
             ].includes(currentQuality)
         }
         

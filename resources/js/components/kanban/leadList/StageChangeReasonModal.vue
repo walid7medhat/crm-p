@@ -703,12 +703,12 @@ const leadPoolStatusOptions = [
 
 const unqualifiedStatusOptions = [
 
-        { value: 'not_interested', text: 'Not Interested' },
-        { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+      { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
         { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
         { value: 'job_seeker', text: 'Job Seeker' },
         { value: 'broker', text: 'Broker' },
         { value: 'registered_by_mistake', text: 'Registered by Mistake' },
+        { value: 'spam_leads', text: 'Spam Leads' },
         { value: 'blacklist', text: 'blacklist' },
     
 ]

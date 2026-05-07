@@ -205,7 +205,7 @@ watch(
   border: none;
   border-right: 1px solid #e2e8f0;
   border-radius: var(--deal-input-r, 10px) 0 0 var(--deal-input-r, 10px);
-  min-width: 72px;
+  min-width: 82px;
   padding: 0 6px;
 }
 
