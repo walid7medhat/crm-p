@@ -502,6 +502,7 @@ function selectStage(index) {
         originalStageId,
         targetStageId,
         targetStageName: targetStage.name,
+         targetStageOrder: targetStage.order,
         dealData: deal.value,
       })
     }

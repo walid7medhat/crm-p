@@ -325,6 +325,7 @@
       :deal-type="pendingCompleteFields?.dealData?.deal_type || activeTypeTab"
       :target-stage-id="pendingCompleteFields?.targetStageId"
       :target-stage-name="pendingCompleteFields?.targetStageName"
+      :target-stage-order="pendingCompleteFields?.targetStageOrder"
       :missing-fields="pendingCompleteFields?.missingFields || []"
       :missing-fields-grouped="pendingCompleteFields?.missingFieldsGrouped || { sections: [] }"
       :missing-fields-grouped-by-stage="pendingCompleteFields?.missingFieldsGroupedByStage || { stages: [] }"
@@ -340,6 +341,7 @@
       :dealId="pendingStageChange?.dealId"
       :targetStageId="pendingStageChange?.targetStageId"
       :targetStageName="pendingStageChange?.targetStageName"
+      :targetStageOrder="pendingStageChange?.targetStageOrder"
       @submit="handleStageChangeWithReason"
       @closed="clearPendingStageChange"
     />
@@ -939,6 +941,7 @@ async function executeFetchDeals() {
     if (response.data.success) {
       stagesData.value = response.data.data.map(stage => ({
         stage_id: stage.stage_id,
+         order: stage.order,
         title: stage.stage_name,
         headerBg: stage.stage_color,
         dotColor: stage.stage_color || '#3B82F6',
@@ -1497,6 +1500,7 @@ async function onDealDragChange(evt, targetColumn) {
         dealId: deal.id,
         targetStageId: newStageId,
         targetStageName: targetColumn.title,
+        targetStageOrder: targetColumn.order,
         originalStageId: oldStageId,
         dealData: {
           ...originalDeal,
@@ -1528,6 +1532,7 @@ async function onDealDragChange(evt, targetColumn) {
         dealId: deal.id,
         targetStageId: newStageId,
         targetStageName: targetColumn.title,
+        targetStageOrder: targetColumn.order,
         originalStageId: oldStageId,
         originalStageName:
           columns.value.find(c => c.stage_id === oldStageId)?.title || 'Previous Stage',
@@ -1826,7 +1831,7 @@ function normalizeStageName(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 }
 
-async function handleStageChangeFromModal({ dealId, originalStageId, targetStageId, targetStageName, dealData }) {
+async function handleStageChangeFromModal({ dealId, originalStageId, targetStageId, targetStageName,targetStageOrder, dealData }) {
   if (!dealId || targetStageId == null) return
   if (String(originalStageId) === String(targetStageId)) return
     let fullDealData = dealData
@@ -1866,6 +1871,7 @@ async function handleStageChangeFromModal({ dealId, originalStageId, targetStage
           dealId,
           targetStageId: targetColumn.stage_id,
           targetStageName: targetColumn.title,
+          targetStageOrder: targetColumn.Order,
           originalStageId,
           originalStageName: columns.value.find((c) => String(c.stage_id) === String(originalStageId))?.title || 'Previous Stage',
            dealData: fullDealData 
@@ -1889,6 +1895,7 @@ async function handleStageChangeFromModal({ dealId, originalStageId, targetStage
       dealId,
       targetStageId: targetColumn.stage_id,
       targetStageName: targetColumn.title,
+      targetStageOrder: targetColumn.order,
       originalStageId,
       dealData: {
         ...(dealData || selectedDeal.value || {}),

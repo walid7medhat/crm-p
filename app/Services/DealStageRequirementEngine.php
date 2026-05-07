@@ -28,7 +28,7 @@ class DealStageRequirementEngine
         'developer_name',
         'developer_phone',
     ];
-
+        private int $currentTargetStageOrder = 0;
     public function __construct(private readonly DealStageValidator $validator)
     {
     }
@@ -47,7 +47,8 @@ class DealStageRequirementEngine
         if (!$targetStage || $targetStage->deal_type !== 'primary') {
             return $this->errorResult('Invalid target stage');
         }
-
+        $targetOrder = (int) $targetStage->order;
+        $this->currentTargetStageOrder = $targetOrder;
         if ($currentStage && (int) $targetStage->order <= (int) $currentStage->order) {
             return $this->successResult($deal, [
                 'current_stage_order' => (int) ($currentStage?->order ?? 0),
@@ -230,11 +231,7 @@ class DealStageRequirementEngine
                     );
                 }
 
-                // إزالة budget fields بعد EOI
-                if (
-                    !empty($deal->stage_id) &&
-                    (int) Stage::find($deal->stage_id)?->order > 2
-                ) {
+                if ($this->currentTargetStageOrder > 2){
                     $fieldsToValidate = array_filter(
                         $fieldsToValidate,
                         fn ($field) => !in_array($field, [

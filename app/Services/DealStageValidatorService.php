@@ -51,16 +51,21 @@ class DealStageValidatorService
     // ✅ تصفية budget fields حسب المرحلة (قبل أي تصفية أخرى)
     // $missingFields = $this->filterBudgetFieldsByStage($missingFields, $targetStageId);
     // $missingByStage = $this->filterMissingByStageBudgetFields($missingByStage, $targetStageId);
-    $missingByStage = $this->filterMissingByStageBudgetFields($missingByStage, $targetStageId);
+$missingByStage = $this->filterMissingByStageBudgetFields($missingByStage, $targetStageId);
 
-    $missingFields = collect($missingByStage)
-        ->pluck('missing_fields')
-        ->flatten()
-        ->unique()
-        ->values()
-        ->toArray();
-    
-    $missingFields = $this->filterBedroomsFieldsByPropertyType($missingFields, $deal);
+$missingFields = collect($missingByStage)
+    ->pluck('missing_fields')
+    ->flatten()
+    ->unique()
+    ->values()
+    ->toArray();
+
+$missingFields = $this->filterBudgetFieldsByStage(
+    $missingFields,
+    $targetStageId
+);
+
+$missingFields = $this->filterBedroomsFieldsByPropertyType($missingFields, $deal);
     $missingByStage = $this->filterMissingByStageBedroomsFields($missingByStage, $deal);
     // ✅ تمرير effectiveListingId و resolvedType للتصفية
     $filteredMissingFields = $this->filterFieldsByListingAndType($missingFields, $effectiveListingId, $resolvedType);

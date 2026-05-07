@@ -1234,6 +1234,7 @@ const props = defineProps({
   dealType: { type: String, default: 'primary' },
   targetStageId: { type: [Number, String], default: null },
   targetStageName: { type: String, default: '' },
+  targetStageOrder: { type:[ Number,String], default: null },
   missingFields: { type: Array, default: () => [] },
   missingFieldsGrouped: { type: Object, default: () => ({ sections: [] }) },
   missingFieldsGroupedByStage: { type: Object, default: () => ({ stages: [] }) },
@@ -1269,13 +1270,25 @@ function isSectionOpen(section) {
 function isBudgetVisibleForPrimaryDeal() {
   const dealLike = currentDealData.value || props.deal
   const dt = normalizeDealTypeForDocuments(dealLike?.deal_type ?? dealLike?.type ?? props.dealType)
+  
+  // إذا لم تكن الصفقة من نوع Primary، أظهر الحقل
   if (dt !== 'primary') return true
-  const ord = dealLike?.stage?.order
-  console.log("order"+ord);
-  if (ord === null || ord === undefined || ord === '') return true
-  const n = Number(ord)
-  if (!Number.isFinite(n)) return true
-  return n < 3
+  
+  // الحصول على اسم المرحلة المستهدفة
+  const targetStageName = props.targetStageName || ''
+  const targetStageNameLower = targetStageName.toLowerCase().trim()
+  
+  // قائمة المراحل التي يجب أن يظهر فيها حقل Budget
+  const stagesWhereBudgetVisible = ['eoi', 'new']
+  
+  // التحقق من اسم المرحلة
+  const isVisible = stagesWhereBudgetVisible.some(stageName => 
+    targetStageNameLower.includes(stageName)
+  )
+  
+  console.log("Target Stage:", targetStageName, "Budget Visible:", isVisible)
+  
+  return isVisible
 }
 
 /** Collapse section when focus leaves it and nothing is left missing in that section. */
