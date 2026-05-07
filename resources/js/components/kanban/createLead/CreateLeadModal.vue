@@ -95,11 +95,11 @@
                                         
                                         <div class="col">
                                             <label class="form-label-custom">Primary Phone</label>
-                                            <b-form-input 
+                                            <CrmPhoneInput 
                                                 v-model="form.work_phone" 
                                                 placeholder="Enter Phone Number" 
-                                                class="custom-input"
-                                                :class="{ 'is-invalid': validationErrors.work_phone }"
+                                                :invalid="!!validationErrors.work_phone"
+                                                :show-errors="showPhoneFieldErrors"
                                             />
                                             <div v-if="validationErrors.work_phone" class="invalid-feedback d-block">
                                                 {{ validationErrors.work_phone[0] }}
@@ -119,11 +119,11 @@
                                         </div>
                                          <div class="col">
                                             <label class="form-label-custom">Secondary Phone</label>
-                                            <b-form-input 
+                                            <CrmPhoneInput 
                                                 v-model="form.work_phone_2" 
                                                 placeholder="Enter Phone Number" 
-                                                class="custom-input"
-                                                :class="{ 'is-invalid': validationErrors.work_phone_2 }"
+                                                :invalid="!!validationErrors.work_phone_2"
+                                                :show-errors="showPhoneFieldErrors"
                                             />
                                             <div v-if="validationErrors.work_phone_2" class="invalid-feedback d-block">
                                                 {{ validationErrors.work_phone_2[0] }}
@@ -311,11 +311,11 @@
                                                         </div>
                                                         <div class="col-md-3">
                                                             <label class="form-label-custom">Source Client Phone <span class="text-danger">*</span></label>
-                                                            <b-form-input 
+                                                            <CrmPhoneInput 
                                                                 v-model="form.source_client_phone" 
                                                                 placeholder="Enter phone number"
-                                                                class="custom-input"
-                                                                :class="{ 'is-invalid': validationErrors.source_client_phone }"
+                                                                :invalid="!!validationErrors.source_client_phone"
+                                                                :show-errors="showPhoneFieldErrors"
                                                             />
                                                             <div v-if="validationErrors.source_client_phone" class="invalid-feedback d-block">
                                                                 {{ validationErrors.source_client_phone[0] }}
@@ -652,7 +652,9 @@
     import StageSelector from '../shared/StageSelector.vue'
     import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
     import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
+    import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
     import { formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
+    import { isNonEmptyPhoneValid } from '@/utils/phone'
     
     const props = defineProps({
         modelValue: Boolean
@@ -669,6 +671,7 @@
     const errorMessage = ref('')
     const sourceOptions = ref([])
     const validationErrors = ref({})
+    const showPhoneFieldErrors = ref(false)
     const showAdditionalPanel = ref(false)
     // additional fields selection
     
@@ -807,13 +810,13 @@
             ]
         } else if (order === 10) {
             return [
-                // { value: 'not_interested', text: 'Not Interested' },
+                { value: 'not_interested', text: 'Not Interested' },
                 { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
                 { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
                 { value: 'job_seeker', text: 'Job Seeker' },
                 { value: 'broker', text: 'Broker' },
                 { value: 'registered_by_mistake', text: 'Registered by Mistake' },
-                { value: 'spam_leads', text: 'Spam Leads' },
+              
                    { value: 'blacklist', text: 'blacklist' },
 
             ]
@@ -1529,6 +1532,7 @@ const clearClientData = () => {
           selectedExistingClient.value = null 
         validationErrors.value = {}
         errorMessage.value = ''
+        showPhoneFieldErrors.value = false
         closeBudgetDropdown()
         syncBudgetDisplayFields()
     }
@@ -1538,10 +1542,27 @@ const clearClientData = () => {
             isSubmitting.value = true
             errorMessage.value = ''
             validationErrors.value = {}
+            showPhoneFieldErrors.value = true
              const budgetError = validateBudgetRange()
             if (budgetError) {
                 validationErrors.value.budget = [budgetError]
                 $showNotification(budgetError, 'warning')
+                return
+            }
+            if (form.value.work_phone && !isNonEmptyPhoneValid(form.value.work_phone)) {
+                validationErrors.value.work_phone = ['Enter a valid phone number']
+                $showNotification('Primary phone is not valid', 'warning')
+                return
+            }
+            if (form.value.work_phone_2 && !isNonEmptyPhoneValid(form.value.work_phone_2)) {
+                validationErrors.value.work_phone_2 = ['Enter a valid phone number']
+                $showNotification('Secondary phone is not valid', 'warning')
+                return
+            }
+            if (isSalesUser.value && form.value.lead_source === 'referral' && form.value.source_client_phone
+                && !isNonEmptyPhoneValid(form.value.source_client_phone)) {
+                validationErrors.value.source_client_phone = ['Enter a valid phone number']
+                $showNotification('Source client phone is not valid', 'warning')
                 return
             }
             
@@ -1682,17 +1703,31 @@ const clearClientData = () => {
     }
     
     :deep(.custom-v-select .vs__dropdown-toggle) {
+        min-height: 42px;
         height: 42px;
         border-radius: 10px;
         border: 1px solid #E2E8F0;
         background: #fff;
         padding: 0 8px;
+        display: flex !important;
+        align-items: center !important;
+        box-sizing: border-box;
     }
     
     :deep(.custom-v-select .vs__selected-options) {
+        display: flex !important;
         flex-wrap: nowrap;
         overflow: hidden;
         max-width: calc(100% - 30px);
+        min-width: 0;
+        flex: 1 1 auto;
+        align-items: center !important;
+        align-self: center !important;
+        height: auto !important;
+    }
+
+    :deep(.custom-v-select.vs--single .vs__selected-options) {
+        align-items: center !important;
     }
     
     :deep(.custom-v-select .vs__selected) {
@@ -1701,18 +1736,38 @@ const clearClientData = () => {
         margin: 0;
         padding: 0;
         white-space: nowrap;
-        /*overflow: hidden;*/
         text-overflow: ellipsis;
-        display: block;
+        overflow: hidden;
         max-width: 100%;
-        line-height: 40px; 
+        min-width: 0;
+        display: flex !important;
+        align-items: center !important;
+        align-self: center !important;
+        height: auto !important;
+        line-height: 1.35 !important;
+        box-sizing: border-box;
+        flex: 0 1 auto;
     }
     
     :deep(.custom-v-select .vs__search) {
         font-size: 13px;
         color: #64748B;
         margin: 0;
-        padding: 0;
+        padding: 0 4px;
+        align-self: center !important;
+        height: auto !important;
+        min-height: 0 !important;
+        line-height: 1.35 !important;
+        box-sizing: border-box;
+    }
+
+    :deep(.custom-v-select .vs__placeholder) {
+        align-self: center !important;
+        display: flex !important;
+        align-items: center !important;
+        height: auto !important;
+        margin: 0 !important;
+        font-size: 13px;
     }
     
     :deep(.custom-v-select .vs__search::placeholder) {
@@ -1721,6 +1776,9 @@ const clearClientData = () => {
     
     :deep(.custom-v-select .vs__actions) {
         padding: 0 8px;
+        align-self: center !important;
+        display: flex !important;
+        align-items: center !important;
     }
     
     :deep(.custom-v-select .vs__open-indicator-icon) {
@@ -1768,14 +1826,16 @@ const clearClientData = () => {
     
     :deep(.custom-v-select-inline .vs__dropdown-toggle) {
         height: 42px !important;
+        min-height: 42px !important;
         border: none !important;
         border-left: 1px solid #E2E8F0 !important;
         border-radius: 0 8px 8px 0 !important;
         padding: 0 !important;
         background: #fff !important;
-        display: flex;
-        align-items: center;
+        display: flex !important;
+        align-items: stretch !important;
         cursor: pointer;
+        box-sizing: border-box;
     }
     
     :deep(.custom-v-select-inline .vs__selected-options) {
@@ -1783,10 +1843,13 @@ const clearClientData = () => {
         margin: 0 !important;
         flex-basis: auto !important;
         flex-grow: 1;
-        display: flex;
-        align-items: center;
+        display: flex !important;
+        align-items: stretch !important;
+        align-self: stretch !important;
+        height: 100% !important;
         overflow: hidden;
         max-width: calc(100% - 30px);
+        min-width: 0;
     }
     
     :deep(.custom-v-select-inline .vs__selected) {
@@ -1795,13 +1858,18 @@ const clearClientData = () => {
         margin: 0 !important;
         padding: 0 !important;
         position: static !important;
-        line-height: normal !important;
+        line-height: 1.25 !important;
         background: transparent !important;
         border: none !important;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        display: block !important;
+        display: flex !important;
+        align-items: center !important;
+        align-self: stretch !important;
+        height: 100% !important;
+        min-width: 0;
+        flex: 0 1 auto;
     }
     
     :deep(.custom-v-select-inline .vs__actions) {

@@ -19,7 +19,7 @@
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Phone Number <span class="text-danger">*</span></label>
-            <CrmPhoneInput v-model="form.buyer_phone" placeholder="Enter Phone Number" />
+            <CrmPhoneInput v-model="form.buyer_phone" placeholder="Enter Phone Number" :auto-format="false" />
           </div>
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Email <span class="text-danger">*</span></label>

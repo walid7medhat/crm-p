@@ -6,20 +6,25 @@
         'is-invalid': showInvalid,
         'crm-phone-input--disabled': disabled,
         'crm-phone-input--dropdown-open': countryDropdownOpen,
+        'crm-phone-input--collapse-country': collapseCountryInactive,
       },
     ]"
   >
     <VueTelInput
-      :model-value="modelValue"
+      :model-value="normalizedModelValue"
       mode="international"
-      :auto-format="true"
-      :auto-default-country="true"
+      :auto-format="autoFormat"
+      :auto-default-country="useIpLocationDefault"
+      :default-country="bindingDefaultCountry"
       :disabled="disabled"
-      :dropdown-options="dropdownOptions"
-      :input-options="mergedInputOptions"
+      :dropdown-options="effectiveDropdownOptions"
+      :input-options="effectiveInputOptions"
       :valid-characters-only="false"
       @update:model-value="onUpdate"
       @validate="onValidate"
+      @country-changed="onCountryChanged"
+      @focus="onFocus"
+      @blur="onBlur"
       @open="countryDropdownOpen = true"
       @close="countryDropdownOpen = false"
     />
@@ -34,6 +39,7 @@ import 'vue-tel-input/vue-tel-input.css'
 const props = defineProps({
   modelValue: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
+  defaultCountry: { type: [String, Number], default: 971 },
   /** Server / required-style errors (parent-driven) */
   invalid: { type: Boolean, default: false },
   /**
@@ -42,12 +48,28 @@ const props = defineProps({
    */
   showErrors: { type: Boolean, default: false },
   placeholder: { type: String, default: 'Enter phone number' },
+  /**
+   * When true, default flag/dial code from visitor IP (vue-tel-input → ip2c.org).
+   * When false, use `defaultCountry` (default UAE 971).
+   */
+  inferCountryFromIp: { type: Boolean, default: false },
+  /** Disable vue-tel formatting groups/spaces while typing when needed. */
+  autoFormat: { type: Boolean, default: true },
+  /**
+   * Keep selector compact for optional fields: hide flag/dial only while empty.
+   * The flag appears again on focus, country change, or when phone has a value.
+   */
+  collapseCountryWhenEmpty: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])
 
 const lastLibValid = ref(true)
 const countryDropdownOpen = ref(false)
+const isFocused = ref(false)
+const hasExplicitCountryChoice = ref(false)
+
+const normalizedModelValue = computed(() => (props.modelValue == null ? '' : String(props.modelValue)))
 
 /* Note: do not use preferred-countries — vue-tel-input concatenates them with the
  * full list without deduping, so each preferred country appears twice in the dropdown. */
@@ -68,14 +90,48 @@ const mergedInputOptions = computed(() => ({
   name: 'telephone',
 }))
 
+const trimmedValue = computed(() => normalizedModelValue.value.trim())
+
+const useIpLocationDefault = computed(() => props.inferCountryFromIp)
+
+const resolvedDefaultCountry = computed(() => {
+  const raw = String(props.defaultCountry ?? '').trim()
+  if (!raw) return 971
+  if (/^\d+$/.test(raw)) return Number(raw)
+  return raw.toLowerCase()
+})
+
+/** Empty default + autoDefaultCountry lets the library geo-detect; otherwise fixed default. */
+const bindingDefaultCountry = computed(() =>
+  props.inferCountryFromIp ? '' : resolvedDefaultCountry.value,
+)
+
+const collapseCountryInactive = computed(
+  () =>
+    props.collapseCountryWhenEmpty &&
+    trimmedValue.value.length === 0 &&
+    !isFocused.value &&
+    !hasExplicitCountryChoice.value,
+)
+
+const effectiveDropdownOptions = computed(() => ({
+  ...dropdownOptions,
+  showDialCodeInSelection: !collapseCountryInactive.value,
+}))
+
+const effectiveInputOptions = computed(() => ({
+  ...mergedInputOptions.value,
+  showDialCode: !collapseCountryInactive.value,
+}))
+
 const showInvalid = computed(() => {
-  const v = props.modelValue == null ? '' : String(props.modelValue).trim()
+  const v = trimmedValue.value
   const formatInvalid = props.showErrors && v.length > 0 && !lastLibValid.value
   return props.invalid || formatInvalid
 })
 
 function onValidate(phoneObject) {
-  const raw = props.modelValue == null ? '' : String(props.modelValue).trim()
+  const raw = trimmedValue.value
   if (!raw) {
     lastLibValid.value = true
     return
@@ -86,6 +142,19 @@ function onValidate(phoneObject) {
 
 function onUpdate(v) {
   emit('update:modelValue', v ?? '')
+}
+
+function onFocus() {
+  isFocused.value = true
+}
+
+function onBlur() {
+  isFocused.value = false
+}
+
+function onCountryChanged() {
+  if (!props.collapseCountryWhenEmpty) return
+  hasExplicitCountryChoice.value = true
 }
 
 watch(
@@ -138,6 +207,24 @@ watch(
   border-radius: var(--deal-input-r, 10px) 0 0 var(--deal-input-r, 10px);
   min-width: 72px;
   padding: 0 6px;
+}
+
+/* Ensure flag paints in the selector (sprite + positions come from vue-tel-input CSS). */
+.crm-phone-input :deep(.vti__selection) {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.crm-phone-input :deep(.vti__selection .vti__flag) {
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.crm-phone-input--collapse-country :deep(.vti__selection .vti__flag),
+.crm-phone-input--collapse-country :deep(.vti__selection .vti__country-code) {
+  display: none !important;
 }
 
 .crm-phone-input :deep(.vti__input) {

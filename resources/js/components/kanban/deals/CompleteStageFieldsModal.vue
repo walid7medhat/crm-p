@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div v-if="show" class="complete-fields-overlay" @click.self="closeModal">
+    <div v-if="show" class="complete-fields-overlay" @click.self="onOverlayClick">
       <div
         class="complete-fields-modal complete-stage-modal deal-figma-ui"
         :class="{
@@ -24,7 +24,7 @@
                 </span>
               </div>
             </div>
-            <button class="close-btn" @click="closeModal">
+            <button class="close-btn" @click="closeModal" :disabled="submitting">
               <iconify-icon icon="lucide:x"></iconify-icon>
             </button>
           </div>
@@ -1029,7 +1029,7 @@
                                   
                                     <CrmPhoneInput 
                                     v-model="property.developer_phone" 
-                                    placeholder="Enter Phone Number" 
+                                    placeholder="Enter Phone" 
                                     :invalid="isPropertyFieldInvalid(property, 'developer_phone') "
                                     :show-errors="isPropertyFieldInvalid(property, 'developer_phone') "
                                   />
@@ -2900,13 +2900,21 @@ const finalPayload = {
   console.log('Final payload:', finalPayload)
 
   emit('save', { payload: finalPayload, documents, stage_id: props.targetStageId })
-  submitting.value = false
+  // Keep modal locked briefly to avoid accidental close while parent save request is in flight.
+  submitResetTimer = setTimeout(() => {
+    submitting.value = false
+    submitResetTimer = null
+  }, 5000)
 }
 
 // Close modal
 function closeModal() {
+  if (submitting.value) return
   validationAttempted.value = false
   openBudgetDropdownIndex.value = null
+  document.body?.classList?.remove('complete-stage-open')
+  const viewModal = document.getElementById('view-deal-modal')
+  viewModal?.removeAttribute?.('inert')
   openSections.value = {
     buyer: true,
     seller: true,
@@ -2925,9 +2933,18 @@ function closeModal() {
   emit('closed')
 }
 
+function onOverlayClick() {
+  // Prevent accidental close while working with file pickers/dropdowns in this critical modal.
+  if (submitting.value) return
+}
+
 // Watch for modal show
 watch(() => props.show, async (val) => {
     if (val) {
+        document.body?.classList?.add('complete-stage-open')
+        // Prevent underlying bootstrap modal from trapping focus/clicks
+        const viewModal = document.getElementById('view-deal-modal')
+        viewModal?.setAttribute?.('inert', '')
         validationAttempted.value = false
         // إعادة تعيين حالة تحميل الـ Properties
         isLoadingPropertyData.value = true
@@ -2947,7 +2964,18 @@ watch(() => props.show, async (val) => {
         }
         
         await initializeForm()
+
+        // Focus first input inside the stage modal so typing works
+        await nextTick()
+        const root = document.querySelector('.complete-fields-modal')
+        const firstFocusable = root?.querySelector?.(
+          'input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), [contenteditable="true"], .vs__search',
+        )
+        firstFocusable?.focus?.()
     } else {
+        document.body?.classList?.remove('complete-stage-open')
+        const viewModal = document.getElementById('view-deal-modal')
+        viewModal?.removeAttribute?.('inert')
         submitting.value = false
         if (submitResetTimer) {
             clearTimeout(submitResetTimer)
@@ -3370,7 +3398,8 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1060;
+  /* Must sit above ViewDealModal and any bootstrap backdrops */
+  z-index: 30000;
   backdrop-filter: blur(2px);
 }
 
@@ -3384,6 +3413,8 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 30010;
 }
 
 .modal-header-deal {
@@ -3551,12 +3582,17 @@ onMounted(async () => {
   left: 0;
   width: 100%;
   min-width: 220px;
-  z-index: 60;
+  z-index: 30020;
   background: #fff;
   border: 1px solid #E2E8F0;
   border-radius: 10px;
   box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
   padding: 10px;
+}
+
+/* vue-select dropdown inside stacked modals must be above everything */
+:deep(.vs__dropdown-menu) {
+  z-index: 30020 !important;
 }
 
 .budget-from-to-row-stage {

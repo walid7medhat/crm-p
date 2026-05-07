@@ -65,11 +65,12 @@
 
         <div class="info-group">
             <label class="form-label-custom">Primary Phone</label>
-            <b-form-input 
+            <CrmPhoneInput 
                 v-model="form.work_phone" 
                 placeholder="Enter Phone Number" 
-                class="custom-input"
-                :class="{ 'is-invalid': validationErrors.work_phone }"
+                :auto-format="false"
+                :invalid="!!validationErrors.work_phone"
+                :show-errors="showPhoneFieldErrors"
                   :disabled="useSecondaryEmail || !canEditPhoneEmail"
             />
             <div v-if="validationErrors.work_phone" class="invalid-feedback d-block">
@@ -106,11 +107,12 @@
                     <label class="form-check-label small mt-1">Use as primary</label>
                 </div>
             </label>
-            <b-form-input 
+            <CrmPhoneInput 
                 v-model="form.work_phone_2" 
                 placeholder="Enter Phone Number" 
-                class="custom-input"
-                :class="{ 'is-invalid': validationErrors.work_phone_2 }"
+                :auto-format="false"
+                :invalid="!!validationErrors.work_phone_2"
+                :show-errors="showPhoneFieldErrors"
                     :disabled="!canEditPhoneEmail"
             />
             <div v-if="validationErrors.work_phone_2" class="invalid-feedback d-block">
@@ -594,7 +596,9 @@ import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
+import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import { formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
+import { isNonEmptyPhoneValid } from '@/utils/phone'
 
 const props = defineProps({
     lead: {
@@ -617,6 +621,7 @@ const users = ref([])
 const searchQuery = ref('')
 const selectedPerson = ref(null)
 const validationErrors = ref({})
+const showPhoneFieldErrors = ref(false)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 
@@ -697,13 +702,13 @@ const leadStatusOptions = computed(() => {
     // Stage 10: Unqualified
     if (stageOrder === 10) {
         return [
-            // { value: 'not_interested', text: 'Not Interested' },
+            { value: 'not_interested', text: 'Not Interested' },
             { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
             { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
             { value: 'job_seeker', text: 'Job Seeker' },
             { value: 'broker', text: 'Broker' },
             { value: 'registered_by_mistake', text: 'Registered by Mistake' },
-            { value: 'spam_leads', text: 'Spam Leads' },
+          
                 { value: 'blacklist', text: 'blacklist' },
 
         ]
@@ -953,6 +958,12 @@ const swapPhones = () => {
     form.value.work_phone = form.value.work_phone_2
     form.value.work_phone_2 = temp
 }
+
+/** Keep phone values without grouping spaces/separators. */
+const normalizePhoneValue = (value) => {
+    const s = value == null ? '' : String(value)
+    return s.replace(/[\s()-]+/g, '').trim()
+}
 // Fetch users from API
 const fetchUsers = async () => {
     try {
@@ -1127,6 +1138,11 @@ watch(() => form.value.last_name, () => {
 })
 
 watch(() => form.value.work_phone, () => {
+    const normalized = normalizePhoneValue(form.value.work_phone)
+    if (normalized !== form.value.work_phone) {
+        form.value.work_phone = normalized
+        return
+    }
     if (validationErrors.value.work_phone) {
         delete validationErrors.value.work_phone
         clearErrorMessageIfNeeded()
@@ -1148,6 +1164,11 @@ watch(() => form.value.secondary_email, () => {
 })
 
 watch(() => form.value.work_phone_2, () => {
+    const normalized = normalizePhoneValue(form.value.work_phone_2)
+    if (normalized !== form.value.work_phone_2) {
+        form.value.work_phone_2 = normalized
+        return
+    }
     if (validationErrors.value.work_phone_2) {
         delete validationErrors.value.work_phone_2
         clearErrorMessageIfNeeded()
@@ -1257,12 +1278,29 @@ const handleSave = async () => {
     try {
         isSubmitting.value = true
         errorMessage.value = ''
+        showPhoneFieldErrors.value = true
         validationErrors.value = {}
           const budgetError = validateBudget()
         if (budgetError) {
             validationErrors.value.budget = [budgetError]
             if (window.$showNotification) {
                 window.$showNotification(budgetError, 'warning')
+            }
+            return
+        }
+        form.value.work_phone = normalizePhoneValue(form.value.work_phone)
+        form.value.work_phone_2 = normalizePhoneValue(form.value.work_phone_2)
+        if (form.value.work_phone && !isNonEmptyPhoneValid(form.value.work_phone)) {
+            validationErrors.value.work_phone = ['Enter a valid phone number']
+            if (window.$showNotification) {
+                window.$showNotification('Primary phone is not valid', 'warning')
+            }
+            return
+        }
+        if (form.value.work_phone_2 && !isNonEmptyPhoneValid(form.value.work_phone_2)) {
+            validationErrors.value.work_phone_2 = ['Enter a valid phone number']
+            if (window.$showNotification) {
+                window.$showNotification('Secondary phone is not valid', 'warning')
             }
             return
         }
@@ -1287,6 +1325,8 @@ const handleSave = async () => {
         
         // Also emit save for backwards compatibility
         emit('save', response.data)
+
+        showPhoneFieldErrors.value = false
         
     } catch (error) {
         console.error('❌ Error updating lead:', error)
@@ -1454,17 +1494,31 @@ defineExpose({
 }
 
 :deep(.custom-v-select .vs__dropdown-toggle) {
+    min-height: 42px;
     height: 42px;
     border-radius: 10px;
     border: 1px solid #E2E8F0;
     background: #fff;
     padding: 0 8px;
+    display: flex !important;
+    align-items: center !important;
+    box-sizing: border-box;
 }
 
 :deep(.custom-v-select .vs__selected-options) {
+    display: flex !important;
     flex-wrap: nowrap;
     overflow: hidden;
     max-width: calc(100% - 30px);
+    min-width: 0;
+    flex: 1 1 auto;
+    align-items: center !important;
+    align-self: center !important;
+    height: auto !important;
+}
+
+:deep(.custom-v-select.vs--single .vs__selected-options) {
+    align-items: center !important;
 }
 
 :deep(.custom-v-select .vs__selected) {
@@ -1473,18 +1527,38 @@ defineExpose({
     margin: 0;
     padding: 0;
     white-space: nowrap;
-    /*overflow: hidden;*/
     text-overflow: ellipsis;
-    display: block;
+    overflow: hidden;
     max-width: 100%;
-    line-height: 40px; 
+    min-width: 0;
+    display: flex !important;
+    align-items: center !important;
+    align-self: center !important;
+    height: auto !important;
+    line-height: 1.35 !important;
+    box-sizing: border-box;
+    flex: 0 1 auto;
 }
 
 :deep(.custom-v-select .vs__search) {
     font-size: 13px;
     color: #64748B;
     margin: 0;
-    padding: 0;
+    padding: 0 4px;
+    align-self: center !important;
+    height: auto !important;
+    min-height: 0 !important;
+    line-height: 1.35 !important;
+    box-sizing: border-box;
+}
+
+:deep(.custom-v-select .vs__placeholder) {
+    align-self: center !important;
+    display: flex !important;
+    align-items: center !important;
+    height: auto !important;
+    margin: 0 !important;
+    font-size: 13px;
 }
 
 :deep(.custom-v-select .vs__search::placeholder) {
@@ -1493,6 +1567,9 @@ defineExpose({
 
 :deep(.custom-v-select .vs__actions) {
     padding: 0 8px;
+    align-self: center !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
 :deep(.custom-v-select .vs__open-indicator-icon) {

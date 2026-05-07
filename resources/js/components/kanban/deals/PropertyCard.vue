@@ -272,7 +272,10 @@
         <label class="form-label-custom">Developer Sales Person Phone</label>
         <CrmPhoneInput
           v-model="localProperty.developer_phone"
-          placeholder="Phone Number"
+          placeholder="Enter Phone"
+          :auto-format="false"
+          :invalid="showErrors && isRequired('developer_phone') && !localProperty.developer_phone"
+          :show-errors="showErrors"
         />
       </div>
 

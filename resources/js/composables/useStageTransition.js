@@ -60,6 +60,8 @@ export function useStageTransition() {
 
   function buildUpdateAndStageFormData({ payload = {}, documents = [], stageId }) {
     const formData = new FormData()
+    let paymentProofUploadIndex = 0
+    let spaDocumentUploadIndex = 0
 
     Object.keys(payload).forEach((key) => {
       const value = payload[key]
@@ -120,12 +122,14 @@ export function useStageTransition() {
       // into deal_properties payment_proof / spa_document.
       if (doc.category === 'property') {
         const docType = String(doc.document_type || '').toLowerCase()
-        if (docType === 'payment_proof' || docType === 'payment') {
-          formData.append('payment_proof[]', doc.file)
+        if (docType === 'payment_proof' || docType === 'payment' || docType.includes('payment')) {
+          formData.append(`payment_proof[${paymentProofUploadIndex}]`, doc.file)
+          paymentProofUploadIndex += 1
           return
         }
-        if (docType === 'spa' || docType === 'spa_document') {
-          formData.append('spa_document[]', doc.file)
+        if (docType === 'spa' || docType === 'spa_document' || docType.includes('spa')) {
+          formData.append(`spa_document[${spaDocumentUploadIndex}]`, doc.file)
+          spaDocumentUploadIndex += 1
           return
         }
       }

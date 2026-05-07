@@ -1041,7 +1041,7 @@ function resetFormData() {
     listing_id: null,
     developer_id: null,
     developer_name: null,
-    developer_phone: null,
+    developer_phone: '',
     area_id: null,
     property_link: '',
     property_reference: '',

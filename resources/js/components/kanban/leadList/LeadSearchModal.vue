@@ -98,6 +98,11 @@
                                     </template>
                                 </v-select>
                             </div>
+                            <CrmPhoneInput
+                                v-else-if="field.type === 'text' && field.id === 'work_phone'"
+                                v-model="form[field.formKey]"
+                                :placeholder="field.placeholder || 'Enter Phone'"
+                            />
                             <b-form-input
                                 v-else-if="field.type === 'text' && field.id !== 'budget_to'"
                                 v-model="form[field.formKey]"
@@ -198,67 +203,6 @@
                                 </template>
                             </v-select>
                             <v-select
-                                v-else-if="field.type === 'select' && field.id === 'team'"
-                                v-model="form.team"
-                                :options="computedTeamOptions"
-                                :reduce="opt => opt.value"
-                                label="text"
-                                :placeholder="field.placeholder || 'Select Team'"
-                                :clearable="hasValue(form.team)"
-                                append-to-body
-                                class="custom-v-select lead-search-rp-select"
-                            >
-                                <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
-                                </template>
-                                <template #option="option">
-                                    <div v-if="option.value == null" class="lead-rp-opt-placeholder text-muted">
-                                        Select Team
-                                    </div>
-                                    <div v-else class="lead-rp-opt d-flex align-items-center gap-2">
-                                        <img
-                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
-                                            alt=""
-                                            class="lead-rp-opt-avatar"
-                                        />
-                                        <div class="lead-rp-opt-info min-w-0 flex-grow-1">
-                                            <div class="lead-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
-                                                <span class="user-item-name">{{ option.text }}</span>
-                                                <span v-if="option.role_name" class="user-position-badge">{{ option.role_name }}</span>
-                                            </div>
-                                            <div class="user-item-meta-line">
-                                                <span class="meta-value">{{ option.parent_name }}</span>
-                                                <span v-if="option.team_size" class="meta-divider">|</span>
-                                                <span v-if="option.team_size" class="meta-value">{{ option.team_size }} members</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                                <template #selected-option="option">
-                                    <div v-if="!option || option.value == null" class="lead-rp-opt-placeholder text-muted">
-                                        Select Team
-                                    </div>
-                                    <div v-else class="lead-rp-sel d-flex align-items-center gap-2 min-w-0">
-                                        <img
-                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
-                                            alt=""
-                                            class="lead-rp-sel-avatar"
-                                        />
-                                        <div class="min-w-0 flex-grow-1">
-                                            <div class="lead-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
-                                            <div
-                                                v-if="option.parent_name || option.team_size"
-                                                class="lead-rp-sel-meta text-truncate small text-muted"
-                                            >
-                                                {{ [option.parent_name, option.team_size ? `${option.team_size} members` : null].filter(Boolean).join(' | ') }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                            </v-select>
-                            <v-select
                                 v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person'"
                                 v-model="form[field.formKey]"
                                 :options="field.options"
@@ -294,18 +238,16 @@
                                     </span>
                                 </template>
                             </v-select>
-                           <v-select
+                            <v-select
                                 v-if="field.id === 'source' && form.source === 'portal'"
                                 v-model="form.sourcePortal"
                                 :options="portalSourceOptions"
                                 :reduce="opt => opt.value"
                                 label="text"
-                                placeholder="Select Portals"
-                                :clearable="form.sourcePortal && form.sourcePortal.length > 0"
-                                multiple
-                                filterable
+                                placeholder="Select Portal"
+                                :clearable="hasValue(form.sourcePortal)"
                                 append-to-body
-                                class="custom-v-select mt-2 office-multi-select"
+                                class="custom-v-select mt-2"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -425,6 +367,11 @@
                                     <iconify-icon icon="lucide:chevron-down" />
                                 </button>
                             </div>
+                            <CrmPhoneInput
+                                v-else-if="field.type === 'text' && field.id === 'work_phone'"
+                                v-model="form[field.formKey]"
+                                :placeholder="field.placeholder || 'Enter Phone'"
+                            />
                             <b-form-input
                                 v-else-if="field.type === 'text' && field.id !== 'budget_to'"
                                 v-model="form[field.formKey]"
@@ -525,67 +472,6 @@
                                 </template>
                             </v-select>
                             <v-select
-                                v-else-if="field.type === 'select' && field.id === 'team'"
-                                v-model="form.team"
-                                :options="computedTeamOptions"
-                                :reduce="opt => opt.value"
-                                label="text"
-                                :placeholder="field.placeholder || 'Select Team'"
-                                :clearable="hasValue(form.team)"
-                                append-to-body
-                                class="custom-v-select lead-search-rp-select"
-                            >
-                                <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
-                                </template>
-                                <template #option="option">
-                                    <div v-if="option.value == null" class="lead-rp-opt-placeholder text-muted">
-                                        Select Team
-                                    </div>
-                                    <div v-else class="lead-rp-opt d-flex align-items-center gap-2">
-                                        <img
-                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
-                                            alt=""
-                                            class="lead-rp-opt-avatar"
-                                        />
-                                        <div class="lead-rp-opt-info min-w-0 flex-grow-1">
-                                            <div class="lead-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
-                                                <span class="user-item-name">{{ option.text }}</span>
-                                                <span v-if="option.role_name" class="user-position-badge">{{ option.role_name }}</span>
-                                            </div>
-                                            <div class="user-item-meta-line">
-                                                <span class="meta-value">{{ option.parent_name }}</span>
-                                                <span v-if="option.team_size" class="meta-divider">|</span>
-                                                <span v-if="option.team_size" class="meta-value">{{ option.team_size }} members</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                                <template #selected-option="option">
-                                    <div v-if="!option || option.value == null" class="lead-rp-opt-placeholder text-muted">
-                                        Select Team
-                                    </div>
-                                    <div v-else class="lead-rp-sel d-flex align-items-center gap-2 min-w-0">
-                                        <img
-                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
-                                            alt=""
-                                            class="lead-rp-sel-avatar"
-                                        />
-                                        <div class="min-w-0 flex-grow-1">
-                                            <div class="lead-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
-                                            <div
-                                                v-if="option.parent_name || option.team_size"
-                                                class="lead-rp-sel-meta text-truncate small text-muted"
-                                            >
-                                                {{ [option.parent_name, option.team_size ? `${option.team_size} members` : null].filter(Boolean).join(' | ') }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                            </v-select>
-                            <v-select
                                 v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person'"
                                 v-model="form[field.formKey]"
                                 :options="field.options"
@@ -602,7 +488,6 @@
                                     </span>
                                 </template>
                             </v-select>
-                            
                             <v-select
                                 v-if="field.id === 'source' && form.source === 'website'"
                                 v-model="form.sourceWebsite"
@@ -628,12 +513,10 @@
                                 :options="portalSourceOptions"
                                 :reduce="opt => opt.value"
                                 label="text"
-                                placeholder="Select Portals"
-                                :clearable="form.sourcePortal && form.sourcePortal.length > 0"
-                                multiple
-                                filterable
+                                placeholder="Select Portal"
+                                :clearable="hasValue(form.sourcePortal)"
                                 append-to-body
-                                class="custom-v-select mt-2 office-multi-select"
+                                class="custom-v-select mt-2"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -779,6 +662,7 @@ import { BModal, BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import FilterFieldSettingsModal from './FilterFieldSettingsModal.vue'
+import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import api from '@/plugins/axios'
 
 const props = defineProps({
@@ -803,7 +687,7 @@ const budgetDropdownPanelRef = ref(null)
 const budgetDropdownStyle = ref({})
 const selectedLeadFieldIds = ref(['lead_name','first_name',  'created_on', 'assigned_on', 'work_phone', 'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 'team','stage','quality_status', 'interaction_result'])
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
-const officeOptions = ref([])
+const officeOptions = ref([{ value: null, text: 'Select Office' }])
 const allResponsiblePersons = ref([])
 const allTeams = ref([])
 /** Avoid team watcher re-fetch when responsible selection sets team + branch */
@@ -850,20 +734,6 @@ function teamBranchId(team) {
     if (!team) return null
     return normalizeOfficeId(team.office_id ?? team.admin_parent_id ?? null)
 }
-const DEFAULT_TEAM_AVATAR = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
-
-function getTeamAvatar(teamId) {
-    if (!teamId) return null
-    const team = allTeams.value.find(t => Number(t.id) === Number(teamId))
-    // console.log('avatar',team?.avatar );
-    return team?.avatar || null
-}
-function getTeamBranchName(teamId) {
-    if (!teamId) return null
-    const team = allTeams.value.find(t => Number(t.id) === Number(teamId))
-    if (!team) return null
-    return team.admin_parent_name || team.name || null
-}
 
 function pruneTeamAndResponsible() {
     const teamOpts = computedTeamOptions.value.filter((o) => o.value != null)
@@ -903,7 +773,7 @@ const isCitySelected = (cityId) => {
 
 // Handle office / branch change — refresh API lists, then drop team/responsible if incompatible
 const handleOfficeChange = async (newOffice) => {
-    // console.log('Office changed to:', newOffice)
+    console.log('Office changed to:', newOffice)
     const normalizedOffices = normalizeOfficeSelection(newOffice)
     form.value.office = normalizedOffices
 
@@ -966,8 +836,6 @@ const queryToFormKeys = {
 
 function normalizeSourceWebsiteForm(next) {
     const siteValues = websiteSourceOptions.value.map(o => o.value).filter(v => v != null)
-    const portalValues = portalSourceOptions.value.map(o => o.value).filter(v => v != null)
-    
     if (Array.isArray(next.source) && next.source.length) {
         next.sourceWebsite = next.source.filter(Boolean)
         next.source = 'website'
@@ -990,15 +858,6 @@ function normalizeSourceWebsiteForm(next) {
             next.sourceWebsite = [next.sourceWebsite]
         } else {
             next.sourceWebsite = []
-        }
-    }
-    if (next.source === 'portal') {
-        if (Array.isArray(next.sourcePortal)) {
-            next.sourcePortal = next.sourcePortal.filter(v => v != null && v !== '')
-        } else if (next.sourcePortal) {
-            next.sourcePortal = [next.sourcePortal]
-        } else {
-            next.sourcePortal = []
         }
     }
 }
@@ -1027,7 +886,6 @@ function syncFormFromQuery(query) {
         leadName: '',
         source: '',
         sourceWebsite: [],
-        sourcePortal: [], 
         interactionResult: '',
         qualityStatus: '',
         team: '',
@@ -1063,11 +921,6 @@ function syncFormFromQuery(query) {
         const sw = query.source_website
         next.sourceWebsite = Array.isArray(sw) ? sw.filter(Boolean) : [sw].filter(Boolean)
         next.source = 'website'
-    }
-    if ((!next.source || next.source === '') && query.source_portal) {
-        const sp = query.source_portal
-        next.sourcePortal = Array.isArray(sp) ? sp.filter(Boolean) : [sp].filter(Boolean)
-        next.source = 'portal'
     }
     normalizeSourceWebsiteForm(next)
     next.budgetFrom = formatBudgetWithCommas(next.budgetFrom)
@@ -1200,7 +1053,7 @@ const form = ref({
     leadName: '',
     source: '',
     sourceWebsite: [],
-    sourcePortal: [],
+    sourcePortal: '',
     interactionResult: '',
     qualityStatus: '',
     createdFrom: '',    
@@ -1217,14 +1070,14 @@ const form = ref({
 })
 
 const responsiblePersons = ref([])
-const branchSourceOptions = ref([])
-const stageOptions = ref([])
+const branchSourceOptions = ref([{ value: null, text: 'Select Branch Source' }])
+const stageOptions = ref([{ value: null, text: 'Select Stage' }])
 
 const DEFAULT_RESPONSIBLE_AVATAR =
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
 
 const personOptions = computed(() => {
-    const opts = []
+    const opts = [{ value: null, text: 'Select Person' }]
     let filteredPersons = [...allResponsiblePersons.value]
 
     if (form.value.team) {
@@ -1255,7 +1108,7 @@ const personOptions = computed(() => {
 })
 
 const computedTeamOptions = computed(() => {
-    const opts = []
+    const opts = [{ value: null, text: 'Select Team' }]
     let filteredTeams = allTeams.value.filter((t) => t && t.id != null)
 
     const officeSel = normalizeOfficeSelection(form.value.office || [])
@@ -1283,15 +1136,9 @@ const computedTeamOptions = computed(() => {
 
     filteredTeams.forEach((team) => {
         const id = Number(team.id)
-        console.log("avatar",team.avatar );
         opts.push({
             value: Number.isNaN(id) ? team.id : id,
             text: team.name || `Team ${team.id}`,
-            avatar: team.avatar || null,  
-            role_name: team.role_name || null,  
-            parent_name: team.admin_parent_name || null,  
-            team_size: team.team_size || 0,  
-            email: team.email || null,  
         })
     })
 
@@ -1370,25 +1217,25 @@ const createdOnOptions = [
 ]
 // Purpose of Purchase Options
 const purposeOptions = [
-    // { value: null, text: 'Select Purpose' },
+    { value: null, text: 'Select Purpose' },
     { value: 'Live in', text: 'Live in' },
     { value: 'Short-term investment', text: 'Short-term investment' },
     { value: 'Long-term investment', text: 'Long-term investment' }
 ]
 const sourceOptions = ref([
-    // { value: null, text: 'Select Source' },
+    { value: null, text: 'Select Source' },
     { value: 'Lead Form', text: 'Meta' },
     { value: 'website', text: 'Website' },
     { value: 'portal', text: 'Portal' },
 ])
 const websiteSourceOptions = ref([
-    // { value: null, text: 'Select Website' },
+    { value: null, text: 'Select Website' },
     { value: 'Allproperties.ae', text: 'Allproperties.ae' },
     { value: 'Oiaproperties.com', text: 'Oiaproperties.com' },
     
 ])
 const portalSourceOptions = ref([
-    // { value: null, text: 'Select Portal' },
+    { value: null, text: 'Select Portal' },
     { value: 'propertyfinder', text: 'Property Finder' },
     { value: 'bayut', text: 'Bayut' },
 ])
@@ -1418,8 +1265,8 @@ function mapApiStatusToFormValue(apiValue, stageId) {
     } else if (stageOrder === 10) {
         options = [
           
-         'wrong_contact_details', 'no_answer_multiple_calls',
-            'job_seeker', 'broker', 'registered_by_mistake','spam_leads', 'blacklist'
+            'not_interested', 'wrong_contact_details', 'no_answer_multiple_calls',
+            'job_seeker', 'broker', 'registered_by_mistake', 'blacklist'
         ]
     }
     
@@ -1447,7 +1294,7 @@ const qualityStatusOptions = computed(() => {
     // Stage 4 (order 4): Qualified
     if (stageOrder === 4) {
         return [
-            // { value: null, text: 'Select Quality Status' },
+            { value: null, text: 'Select Quality Status' },
             { value: 'cold', text: 'Cold Lead' },
             { value: 'warm', text: 'Warm Lead' },
             { value: 'hot', text: 'Hot Lead' }
@@ -1457,7 +1304,7 @@ const qualityStatusOptions = computed(() => {
     // Stage 9 (order 9): Lead Pool
     if (stageOrder === 9) {
         return [
-            // { value: null, text: 'Select Quality Status' },
+            { value: null, text: 'Select Quality Status' },
             { value: 'no_answer', text: 'No Answer' },
         ]
     }
@@ -1465,23 +1312,19 @@ const qualityStatusOptions = computed(() => {
     // Stage 10 (order 10): Unqualified
     if (stageOrder === 10) {
         return [
-            // { value: null, text: 'Select Quality Status' },
-            // { value: 'not_interested', text: 'Not Interested' },
-         
+            { value: null, text: 'Select Quality Status' },
+            { value: 'not_interested', text: 'Not Interested' },
             { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
-            { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
             { value: 'job_seeker', text: 'Job Seeker' },
             { value: 'broker', text: 'Broker' },
-            { value: 'registered_by_mistake', text: 'Registered by Mistake' },
             { value: 'spam_leads', text: 'Spam Leads' },
-                { value: 'blacklist', text: 'blacklist' },
         ]
     }
     
     // Stage 8 (order 8): Lost
     if (stageOrder === 8) {
         return [
-            // { value: null, text: 'Select Why Lost' },
+            { value: null, text: 'Select Why Lost' },
               { value: 'already_bought', text: "Already bought" }
         ]
     }
@@ -1498,7 +1341,7 @@ const showInteractionResult = computed(() => {
 })
 
 const interactionResultOptions = [
-    // { value: null, text: 'Select Call Result' },
+    { value: null, text: 'Select Call Result' },
     { value: 'answered', text: 'Answered' },
     { value: 'no_answer', text: 'No Answer' },
 ]
@@ -1520,7 +1363,7 @@ const datePresets = [
     { value: 'custom_date', label: 'Custom Date' },
 ]
 const leadTypeOptions = [
-    // { value: null, text: 'Select Lead Type' },
+    { value: null, text: 'Select Lead Type' },
     { value: 'sale', text: 'Sale' },
     { value: 'rent', text: 'Rent' },
      { value: 'both', text: 'Both' },
@@ -1528,7 +1371,7 @@ const leadTypeOptions = [
 
 // Property Status Options
 const propertyStatusOptions = [
-    // { value: null, text: 'Select Property Status' },
+    { value: null, text: 'Select Property Status' },
     { value: 'ready', text: 'Ready' },
     { value: 'off_plan', text: 'Off Plan' },
     { value: 'both', text: 'Both' }
@@ -1574,7 +1417,7 @@ const fetchPropertyTypes = async () => {
         const res = await api.get('/listings/property-types')
         const data = res.data.data || res.data
         propertyTypeOptions.value = [
-            // { value: null, text: 'Select Property Type' },
+            { value: null, text: 'Select Property Type' },
             ...data.map(type => ({
                 value: type.id,
                 text: type.name
@@ -1762,7 +1605,7 @@ const visibleSearchFields = computed(() => {
 })
 const visibleSearchSections = computed(() => {
     // إضافة console.log للتأكد من التحديث
-    // console.log('Recalculating visibleSearchSections with selected fields:', selectedLeadFieldIds.value)
+    console.log('Recalculating visibleSearchSections with selected fields:', selectedLeadFieldIds.value)
     
     return searchFieldSections
         .map(section => ({
@@ -1807,11 +1650,11 @@ const searchFieldSections = [
 
 // أضف هذا بعد تعريف selectedLeadFieldIds
 watch(selectedLeadFieldIds, (newVal, oldVal) => {
-    // console.log('selectedLeadFieldIds changed in LeadSearchModal:', {
-    //     oldLength: oldVal?.length,
-    //     newLength: newVal?.length,
-    //     newValues: newVal
-    // })
+    console.log('selectedLeadFieldIds changed in LeadSearchModal:', {
+        oldLength: oldVal?.length,
+        newLength: newVal?.length,
+        newValues: newVal
+    })
     
     // فرض إعادة حساب visibleSearchSections
     nextTick(() => {
@@ -1829,10 +1672,10 @@ function onFilterApply(payload) {
         selectedLeadFieldIds.value = fieldsToSave
         
         localStorage.setItem(FIELD_STORAGE_KEY, JSON.stringify(fieldsToSave))
-        // console.log('Saved fields to localStorage:', fieldsToSave)
+        console.log('Saved fields to localStorage:', fieldsToSave)
         
         const saved = localStorage.getItem(FIELD_STORAGE_KEY)
-        // console.log('Verification - saved fields:', saved)
+        console.log('Verification - saved fields:', saved)
         if (window.$showNotification) {
             window.$showNotification('Fields saved successfully', 'success')
         }
@@ -1952,17 +1795,13 @@ function getDisplayValue(field, rawValue) {
         }
         return 'Website'
     }
-   if (field.formKey === 'source' && rawValue === 'portal') {
-        const portals = Array.isArray(form.value.sourcePortal)
-            ? form.value.sourcePortal.filter(v => v != null && v !== '')
-            : (form.value.sourcePortal ? [form.value.sourcePortal] : [])
-        if (portals.length) {
+    if (field.formKey === 'source' && rawValue === 'portal') {
+     const portalValue = form.value.sourcePortal
+        if (portalValue) {
             const opts = portalSourceOptions.value
-            const names = portals.map(val => {
-                const opt = opts.find(o => o.value === val)
-                return opt ? opt.text : String(val)
-            })
-            return `Portal (${names.join(', ')})`
+            const opt = opts.find(o => o.value === portalValue)
+            const portalName = opt ? opt.text : String(portalValue)
+            return `Portal (${portalName})`
         }
         return 'Portal'
     }
@@ -2288,17 +2127,13 @@ function applySearch() {
             sourceParam = 'website'
         }
         }else if (form.value.source === 'portal') {
-            const portals = Array.isArray(form.value.sourcePortal)
-                ? form.value.sourcePortal.filter(v => v != null && v !== '')
-                : (form.value.sourcePortal ? [form.value.sourcePortal] : [])
-            if (portals.length > 1) {
-                sourceParam = portals
-            } else if (portals.length === 1) {
-                sourceParam = portals[0]
-            } else {
-                sourceParam = 'portal'
-            }
-        } else if (form.value.source) {
+        // ✅ معالجة Portal
+        if (form.value.sourcePortal && form.value.sourcePortal !== '') {
+            sourceParam = form.value.sourcePortal
+        } else {
+            sourceParam = 'portal'
+        }
+        }  else if (form.value.source) {
             sourceParam = form.value.source
         }
 
@@ -2489,7 +2324,7 @@ async function fetchBranchSources() {
         const data = res.data?.data
         if (Array.isArray(data) && data.length) {
             branchSourceOptions.value = [
-                // { value: null, text: 'Select Branch Source' },
+                { value: null, text: 'Select Branch Source' },
                 ...data.map(b => ({ value: b.name, text: b.name }))
             ]
         }
@@ -2509,7 +2344,7 @@ async function fetchStages() {
             })
             
             stageOptions.value = [
-                // { value: null, text: 'Select Stage' },
+                { value: null, text: 'Select Stage' },
                 ...filteredStages.map(s => ({ 
                     value: s.id, 
                     text: s.name, 
@@ -2533,13 +2368,10 @@ async function fetchTeams() {
             allTeams.value = data.map(team => ({
                 id: team.id,
                 name: team.name,
-                avatar: team.avatar,
                 office_id: team.office_id || team.admin_parent_id || null,
                 admin_parent_id: team.admin_parent_id || null,
                 admin_parent_name: team.admin_parent_name || null,
-                city: team.city || null,
-                team_size:team.team_size,
-                role_name:team.role_name
+                city: team.city || null
             }))
         }
     } catch (error) {
@@ -2569,7 +2401,6 @@ async function fetchTeamsWithFilter() {
             allTeams.value = data.map(team => ({
                 id: team.id,
                 name: team.name,
-                avatar: team.avatar,
                 office_id: team.office_id || team.admin_parent_id || null,
                 city: team.city || null,
                 admin_parent_id: team.admin_parent_id || null,
@@ -2590,7 +2421,7 @@ async function fetchOffices() {
         const data = res.data?.data
         if (Array.isArray(data) && data.length) {
             officeOptions.value = [
-                // { value: null, text: 'Select Office' },
+                { value: null, text: 'Select Office' },
                 ...data.map(office => ({
                     value: office.id,
                     text: office.name,
@@ -2647,7 +2478,6 @@ function resetFormValues() {
         bedrooms: '',
         source: '',
         sourceWebsite: [],
-        sourcePortal:[],
         interactionResult: '',
         qualityStatus: '',
         team: '',
@@ -2914,10 +2744,8 @@ watch(() => form.value.assignedOn, (newVal, oldVal) => {
 watch(() => form.value.source, (newVal) => {
     if (newVal === 'website') {
         form.value.sourceWebsite = []
-        form.value.sourcePortal = []  
     } else if (newVal === 'portal') {
         form.value.sourceWebsite = []
-        form.value.sourcePortal = []  
     } else {
         form.value.sourceWebsite = []
         form.value.sourcePortal = []
@@ -2936,13 +2764,15 @@ watch(() => form.value.stageId, (newVal) => {
         if (stageOrder === 4) {
             isValidForStage = ['cold', 'warm', 'hot'].includes(currentQuality)
         } else if (stageOrder === 8) {
-            isValidForStage = ['Already bought'].includes(currentQuality)
+            isValidForStage = ['lost_by_other_company', 'lost_by_our_company'].includes(currentQuality)
         } else if (stageOrder === 9) {
             isValidForStage = ['no_answer', 'contacted', 'wrong_person'].includes(currentQuality)
         } else if (stageOrder === 10) {
             isValidForStage = [
-                'wrong_contact_details','job_seeker', 'broker', 'registered_by_mistake', 'spam_leads',
-                'blacklist'
+                'not_interested', 'wrong_contact_details', 'no_answer_multiple_calls',
+                'job_seeker', 'broker', 'registered_by_mistake', 'spam_leads',
+                'already_assigned_to_another_agent', 'client_was_just_searching_online',
+                'number_does_not_exist'
             ].includes(currentQuality)
         }
         
@@ -3658,25 +3488,43 @@ onBeforeUnmount(() => {
     border: 1px solid #E2E8F0;
     background: #fff;
     padding: 0 8px;
+    display: flex !important;
+    align-items: center !important;
+    box-sizing: border-box;
 }
 
 :deep(.custom-v-select .vs__selected-options) {
+    display: flex !important;
     flex-wrap: nowrap;
     overflow: hidden;
     max-width: calc(100% - 30px);
+    min-width: 0;
+    flex: 1 1 auto;
+    align-items: center !important;
+    align-self: center !important;
+    height: auto !important;
 }
 
-:deep(.custom-v-select .vs__selected) {
+:deep(.custom-v-select.vs--single .vs__selected-options) {
+    align-items: center !important;
+}
+
+:deep(.custom-v-select:not(.office-multi-select) .vs__selected) {
     font-size: 12px;
     color: #64748B;
     margin: 0;
     padding: 0;
     white-space: nowrap;
-    /*overflow: hidden;*/
     text-overflow: ellipsis;
-    display: block;
+    overflow: hidden;
     max-width: 100%;
-    line-height: 38px;
+    display: flex !important;
+    align-items: center !important;
+    align-self: center !important;
+    height: auto !important;
+    min-width: 0;
+    line-height: 1.35 !important;
+    box-sizing: border-box;
 }
 
 /* Branch multi-select: show all selected options clearly */
@@ -3687,6 +3535,9 @@ onBeforeUnmount(() => {
     gap: 4px;
     padding-top: 4px;
     padding-bottom: 4px;
+    align-items: center !important;
+    align-self: center !important;
+    height: auto !important;
 }
 
 :deep(.office-multi-select .vs__selected) {
@@ -3703,16 +3554,38 @@ onBeforeUnmount(() => {
     white-space: nowrap;
 }
 
+:deep(.custom-v-select .vs__search) {
+    font-size: 12px;
+    color: #64748B;
+    margin: 0;
+}
+
 :deep(.office-multi-select .vs__search) {
     min-width: 80px;
     line-height: 1.4;
 }
 
-:deep(.custom-v-select .vs__search) {
-    font-size: 12px;
-    color: #64748B;
-    margin: 0;
-    padding: 0;
+:deep(.custom-v-select:not(.office-multi-select) .vs__search) {
+    padding: 0 4px;
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    width: auto !important;
+    align-self: center !important;
+    height: auto !important;
+    line-height: 1.35 !important;
+    box-sizing: border-box !important;
+}
+
+:deep(.custom-v-select.vs--single input.vs__search) {
+    line-height: 1.35 !important;
+}
+
+:deep(.custom-v-select .vs__placeholder) {
+    align-self: center !important;
+    display: flex !important;
+    align-items: center !important;
+    height: auto !important;
+    margin: 0 !important;
 }
 
 :deep(.custom-v-select .vs__search::placeholder) {
@@ -3722,6 +3595,9 @@ onBeforeUnmount(() => {
 
 :deep(.custom-v-select .vs__actions) {
     padding: 0 8px;
+    align-self: center !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
 :deep(.custom-v-select .vs__open-indicator-icon) {
@@ -3795,13 +3671,15 @@ onBeforeUnmount(() => {
 }
 
 :deep(.lead-search-rp-select .vs__selected) {
-    line-height: 1.25 !important;
+    line-height: 1.35 !important;
     white-space: normal !important;
-    min-height: 44px;
+    min-height: 0 !important;
     display: flex !important;
     align-items: center !important;
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
+    align-self: center !important;
+    height: auto !important;
+    padding: 0 2px !important;
+    box-sizing: border-box;
 }
 
 .lead-rp-opt-avatar {
@@ -3910,7 +3788,4 @@ onBeforeUnmount(() => {
     .vs__dropdown-option{
         font-size: 14px !important;
     }
-
-
-
 </style>

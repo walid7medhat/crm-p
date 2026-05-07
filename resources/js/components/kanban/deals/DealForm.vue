@@ -415,7 +415,17 @@
             </v-select>
           </div>
           <div class="col-md-4"><label class="form-label-custom">Developer sales person name</label><b-form-input v-model="form.developer_name" placeholder="Enter Developer Name" class="custom-input" /></div>
-          <div class="col-md-4"><label class="form-label-custom">Developer sales person phone</label><CrmPhoneInput v-model="form.developer_phone" placeholder="Enter Developer Phone Number" :invalid="showErrors && !!fieldErrors.developer_phone" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.developer_phone" class="invalid-feedback d-block">{{ fieldErrors.developer_phone }}</div></div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Developer sales person phone</label>
+            <CrmPhoneInput
+              :key="`developer-phone-${props.selectedStageId || 'default'}`"
+              v-model="form.developer_phone"
+              placeholder="Enter Phone"
+              :invalid="showErrors && !!fieldErrors.developer_phone"
+              :show-errors="showErrors"
+            />
+            <div v-if="showErrors && fieldErrors.developer_phone" class="invalid-feedback d-block">{{ fieldErrors.developer_phone }}</div>
+          </div>
         </div>
       </div>
     </section>

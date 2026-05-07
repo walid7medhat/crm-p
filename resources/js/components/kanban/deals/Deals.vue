@@ -1708,6 +1708,13 @@ async function clearPendingCompleteFields() {
   }
 }
 
+function closePendingCompleteFieldsAfterSuccess() {
+  // On successful save/stage-change we should only close the modal state,
+  // without running cancel/revert logic.
+  showCompleteFieldsModal.value = false
+  pendingCompleteFields.value = null
+}
+
 // استبدل دالة clearPendingStageChange الحالية بهذه
 async function clearPendingStageChange() {
   const pending = pendingStageChange.value
@@ -1751,7 +1758,7 @@ async function handleCompleteFieldsSave({ payload, documents, stage_id }) {
     })
 
     showNotification('Deal updated and stage changed successfully', 'success')
-    clearPendingCompleteFields()
+    closePendingCompleteFieldsAfterSuccess()
     
     // 7. تحديث الـ UI
     await fetchDeals(true)

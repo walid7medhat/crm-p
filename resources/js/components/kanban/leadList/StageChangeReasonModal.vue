@@ -12,7 +12,7 @@
             
             <div class="modal-body">
                 <!-- Reason Section -->
-                <div class="mb-4 box-shadow">
+                <div v-if="interactionMode || targetStageOrder !== 6" class="mb-4 box-shadow">
                     <template v-if="interactionMode">
                         <label class="form-label">Call Result <span class="text-danger">*</span></label>
                         <div class="call-result-grid mb-3">
@@ -88,7 +88,7 @@
                         </div>
                     </template>
 
-                    <template v-else>
+                    <template v-else-if="targetStageOrder !== 6">
                         <label for="reason" class="form-label">
                             Please provide a reason for moving this lead <span class="text-danger">*</span>
                         </label>
@@ -101,6 +101,18 @@
                             required
                         ></textarea>
                     </template>
+                </div>
+
+                <!-- Deal Name (first section, standalone) -->
+                <div v-if="missingFields.includes('deal_name') && targetStageOrder === 6" class="form-group mb-3">
+                    <label class="form-label">Deal Name <span class="text-danger">*</span></label>
+                    <input 
+                        type="text" 
+                        v-model="formData.deal_name" 
+                        class="form-control deal-name-input" 
+                        placeholder="Enter deal name"
+                        required
+                    />
                 </div>
 
                 <!-- Dynamic Form Based on missingFields -->
@@ -247,16 +259,6 @@
                                             </template>
                                         </v-select>
                                     </template>
-                                </div>
-                                <div v-if="missingFields.includes('deal_name') && targetStageOrder === 6" class="form-group mb-0 lead-qual-field">
-                                    <label class="form-label">Deal Name <span class="text-danger">*</span></label>
-                                    <input 
-                                        type="text" 
-                                        v-model="formData.deal_name" 
-                                        class="form-control" 
-                                        placeholder="Enter deal name"
-                                        required
-                                    />
                                 </div>
                         <!-- Lead Type (Sale/Rent) -->
                         <div v-if="missingFields.includes('lead_type')" class="form-group mb-0 lead-qual-field">
@@ -701,13 +703,12 @@ const leadPoolStatusOptions = [
 
 const unqualifiedStatusOptions = [
 
-        // { value: 'not_interested', text: 'Not Interested' },
+        { value: 'not_interested', text: 'Not Interested' },
         { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
         { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
         { value: 'job_seeker', text: 'Job Seeker' },
         { value: 'broker', text: 'Broker' },
         { value: 'registered_by_mistake', text: 'Registered by Mistake' },
-        { value: 'spam_leads', text: 'Spam Leads' },
         { value: 'blacklist', text: 'blacklist' },
     
 ]
@@ -1069,7 +1070,7 @@ const handleSubmit = async () => {
         }
     } else {
         // Validate reason
-        if (!formData.value.reason.trim()) {
+        if (props.targetStageOrder !== 6 && !formData.value.reason.trim()) {
             $showNotification('Please provide a reason', 'warning')
             return
         }
@@ -1425,9 +1426,7 @@ defineExpose({
     color: #0f172a;
     letter-spacing: 0.1px;
 }
-.form-control::placeholder {
-  font-size: 12px !important; 
-}
+
 .btn-close {
      position: absolute;
     top: 8px;
@@ -1521,6 +1520,39 @@ defineExpose({
 .form-control::placeholder {
     font-size: 0.75rem;
     color: #9ca3af;
+}
+
+.deal-name-input::placeholder {
+    font-size: 0.75rem !important;
+    color: #9ca3af;
+    opacity: 1;
+}
+
+.deal-name-input::-webkit-input-placeholder {
+    font-size: 0.75rem !important;
+}
+
+.deal-name-input::-moz-placeholder {
+    font-size: 0.75rem !important;
+    opacity: 1;
+}
+
+/* Unified placeholder typography across this popup (inputs + selects) */
+.stage-change-modal input::placeholder,
+.stage-change-modal textarea::placeholder,
+.stage-change-modal .form-control::placeholder,
+.stage-change-modal .budget-input::placeholder {
+    font-size: 0.75rem !important;
+    color: #9ca3af !important;
+    font-family: inherit !important;
+    opacity: 1 !important;
+}
+
+:deep(.stage-change-modal .vs__search::placeholder) {
+    font-size: 0.75rem !important;
+    color: #9ca3af !important;
+    font-family: inherit !important;
+    opacity: 1 !important;
 }
 
 .form-control:focus,
