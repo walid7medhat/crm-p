@@ -1,5 +1,5 @@
 <template>
-  <div class="property-list">
+  <div ref="listRoot" class="property-list">
     <!-- <div class="mb-3">
       <button 
         type="button" 
@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import PropertyCard from './PropertyCard.vue'
 
 const props = defineProps({
@@ -61,15 +61,25 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'search-areas'])
 
+const listRoot = ref(null)
 const localProperties = ref([...props.modelValue])
+
+function scrollToLastPropertyCard() {
+  nextTick(() => {
+    const idx = localProperties.value.length - 1
+    if (idx < 0) return
+    const el = listRoot.value?.querySelector(`[data-property-card-index="${idx}"]`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  })
+}
 
 // Generate unique ID
 function generateId() {
   return Date.now() + Math.random().toString(36).substr(2, 9)
 }
 
-// Add new property
-function addProperty() {
+// Add new property (set scroll false for initial empty auto-add)
+function addProperty(shouldScroll = true) {
   const newProperty = {
     id: generateId(),
     sort_order: localProperties.value.length,
@@ -96,6 +106,7 @@ function addProperty() {
   }
   localProperties.value.push(newProperty)
   emitUpdate()
+  if (shouldScroll) scrollToLastPropertyCard()
 }
 
 // Update property at index
@@ -127,10 +138,12 @@ watch(() => props.modelValue, (newVal) => {
   }
 }, { deep: true })
 
-// Initialize if empty
+// Initialize if empty (no scroll on first auto row)
 if (localProperties.value.length === 0) {
-  addProperty()
+  addProperty(false)
 }
+
+defineExpose({ addProperty })
 </script>
 
 <style scoped>

@@ -1094,6 +1094,10 @@ const initPropertiesFromForm = () => {
 }
 
 const addNewProperty = () => {
+  if (propertyListRef.value?.addProperty) {
+    propertyListRef.value.addProperty(true)
+    return
+  }
   propertiesList.value.push({
     id: Date.now() + Math.random(), sort_order: propertiesList.value.length, unit_no: '', property_type_id: null,
     bedrooms: null, unit_size: '', area_id: null, developer_id: null, developer_name: '', developer_phone: '',

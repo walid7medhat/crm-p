@@ -318,7 +318,7 @@
           type="button"
           class="btn-add-property-sm"
           title="Add another property"
-          @click="showInlineAddProperty = true"
+          @click="openInlineAddProperty"
         >
           <iconify-icon icon="lucide:plus" /> Add Property
         </button>
@@ -443,6 +443,7 @@
 
       <div
         v-if="deal.id && showInlineAddProperty"
+        ref="inlineAddPropertyEl"
         class="view-card p-3 radius-12 mb-3 property-inline-add-highlight"
       >
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -538,7 +539,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch  } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
 import InlineSectionEditor from './InlineSectionEditor.vue'
 import PropertyCardReadonly from './PropertyCardReadonly.vue'
@@ -560,6 +561,14 @@ const props = defineProps({
 
 const emit = defineEmits(['edit-section', 'update:inline-edit-data', 'inline-edit-save', 'inline-edit-cancel', 'search-areas', 'search-subcommunities', 'refresh-deal'])
 const showInlineAddProperty = ref(false)
+const inlineAddPropertyEl = ref(null)
+
+function openInlineAddProperty() {
+  showInlineAddProperty.value = true
+  nextTick(() => {
+    inlineAddPropertyEl.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  })
+}
 
 function handlePropertyAdded(newProperty) {
   if (props.deal && props.deal.properties) {

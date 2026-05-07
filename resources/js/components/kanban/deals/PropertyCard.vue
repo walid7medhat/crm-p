@@ -1,5 +1,9 @@
 <template>
-  <div class="property-card border rounded-3 p-3 mb-3" :class="{ 'border-primary bg-light': isMain }">
+  <div
+    class="property-card border rounded-3 p-3 mb-3"
+    :class="{ 'border-primary bg-light': isMain }"
+    :data-property-card-index="index"
+  >
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div class="d-flex align-items-center gap-2">

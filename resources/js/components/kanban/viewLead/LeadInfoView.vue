@@ -981,7 +981,7 @@ const formatLeadStatus = (status, stageOrder = null) => {
             'broker': 'Broker',
             'registered_by_mistake': 'Registered by Mistake',
             'spam_leads':'Spam Leads',
-            'blacklist':'blacklist',
+            'blacklist':'Black Lists',
         }
         return unqualifiedMapping[status] || formatText(status)
     }

@@ -1320,7 +1320,7 @@ const qualityStatusOptions = computed(() => {
             { value: 'broker', text: 'Broker' },
             { value: 'registered_by_mistake', text: 'Registered by Mistake' },
             { value: 'spam_leads', text: 'Spam Leads' },
-                { value: 'blacklist', text: 'blacklist' },
+                { value: 'blacklist', text: 'Black Lists' },
         ]
     }
     

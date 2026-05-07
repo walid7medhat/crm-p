@@ -1159,12 +1159,15 @@
                       <label class="form-label-custom">Deal amount <span v-if="hasField('deal_total_amount')" class="text-danger">*</span></label>
                       <div class="input-group">
                         <span class="input-group-text">AED</span>
-                        <b-form-input
-                          v-model="formData.deal_total_amount"
-                          type="number"
+                        <input
+                          :value="formData.deal_total_amount"
+                          type="text"
+                          inputmode="decimal"
+                          autocomplete="off"
                           placeholder="Enter deal amount"
-                          class="custom-input compact-placeholder-field"
+                          class="form-control custom-input compact-placeholder-field"
                           :class="{ 'is-invalid': isFieldInvalid('deal_total_amount') }"
+                          @input="(e) => onDealAmountInput(e.currentTarget.value)"
                         />
                       </div>
                     </div>
@@ -1677,6 +1680,29 @@ function getDealTypeName(type) {
   return types[type] || type
 }
 
+/** Formats integer part with comma thousands; preserves a single decimal part while typing. */
+function formatDealAmountThousands(raw) {
+  const cleaned = String(raw ?? '')
+    .replace(/,/g, '')
+    .replace(/[^\d.]/g, '')
+  const firstDot = cleaned.indexOf('.')
+  const hasDot = firstDot !== -1
+  const intRaw = hasDot ? cleaned.slice(0, firstDot) : cleaned
+  const fracRaw = hasDot ? cleaned.slice(firstDot + 1).replace(/\./g, '') : ''
+  if (!intRaw && !fracRaw && !hasDot) return ''
+  const intFormatted = intRaw ? intRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''
+  if (hasDot) return intFormatted + '.' + fracRaw
+  return intFormatted
+}
+
+function onDealAmountInput(val) {
+  formData.value.deal_total_amount = formatDealAmountThousands(val)
+}
+
+function parseDealAmountNumeric(raw) {
+  return Number(String(raw ?? '').replace(/,/g, '').trim())
+}
+
 function normalizeDealTypeForDocuments(raw) {
   const s = String(raw ?? '').toLowerCase().trim().replace(/\s+/g, '_')
   if (!s) return 'primary'
@@ -2092,6 +2118,14 @@ async function initializeForm() {
     })
     
     formData.value = { ...initial }
+    
+    if (formData.value.deal_total_amount !== null && formData.value.deal_total_amount !== undefined && formData.value.deal_total_amount !== '') {
+      const asStr = String(formData.value.deal_total_amount).replace(/,/g, '')
+      const n = Number(asStr)
+      if (Number.isFinite(n)) {
+        formData.value.deal_total_amount = formatDealAmountThousands(asStr)
+      }
+    }
     
     // Initialize document arrays
     const parties = ['buyer', 'seller', 'tenant', 'landlord']
@@ -2700,6 +2734,90 @@ const canSubmit = computed(() => {
   return !loading.value && !submitting.value && unresolvedMissingKeys.value.length === 0
 })
 
+/** Scroll form from top: first visible invalid/missing control (top-to-bottom order). */
+function scrollToFirstValidationError() {
+  const modalEl = document.querySelector('.complete-fields-modal')
+  if (!modalEl) return
+
+  const scrollRoot = modalEl.querySelector('.form-scroll-area') || modalEl
+  const unresolved = unresolvedMissingKeys.value || []
+
+  let propertyDocBtn = null
+  const firstMissingPropertyDoc = unresolved.find((k) => k.startsWith('property_document_'))
+  if (firstMissingPropertyDoc) {
+    const docTypeRaw = firstMissingPropertyDoc.replace('property_document_', '')
+    const docTypeLabel =
+      docTypeRaw === 'spa'
+        ? 'spa document'
+        : docTypeRaw === 'payment_proof'
+          ? 'payment proof'
+          : docTypeRaw.replace(/_/g, ' ')
+    const addButtons = Array.from(modalEl.querySelectorAll('.document-property-section-add'))
+    propertyDocBtn =
+      addButtons.find((btn) =>
+        String(btn?.textContent || '').toLowerCase().includes(`add ${docTypeLabel}`.toLowerCase()),
+      ) || modalEl.querySelector('.document-property-section-add--missing')
+  }
+
+  const selector = [
+    '.document-property-section-add--missing',
+    '.budget-field-wrap-stage.is-invalid-group',
+    '.crm-phone-input.is-invalid',
+    '.custom-v-select.is-invalid',
+    '.vue-tel-input.is-invalid',
+    'input.is-invalid',
+    'textarea.is-invalid',
+    'select.is-invalid',
+    '.is-invalid',
+  ].join(', ')
+
+  const seen = new Set()
+  const targets = []
+
+  const pushIfVisible = (el) => {
+    if (!el || seen.has(el)) return
+    const style = window.getComputedStyle(el)
+    if (style.display === 'none' || style.visibility === 'hidden') return
+    const r = el.getBoundingClientRect()
+    if (r.width < 1 && r.height < 1) return
+    seen.add(el)
+    targets.push(el)
+  }
+
+  scrollRoot.querySelectorAll(selector).forEach(pushIfVisible)
+  if (propertyDocBtn) pushIfVisible(propertyDocBtn)
+
+  if (targets.length === 0) return
+
+  targets.sort((a, b) => {
+    const ra = a.getBoundingClientRect()
+    const rb = b.getBoundingClientRect()
+    const dy = ra.top - rb.top
+    if (Math.abs(dy) > 1) return dy
+    return ra.left - rb.left
+  })
+
+  const target = targets[0]
+  const rootRect = scrollRoot.getBoundingClientRect()
+  const targetRect = target.getBoundingClientRect()
+  const margin = 12
+  const nextTop = scrollRoot.scrollTop + (targetRect.top - rootRect.top) - margin
+  scrollRoot.scrollTo({ top: Math.max(0, nextTop), behavior: 'smooth' })
+
+  try {
+    if (target.matches?.('input, textarea, select, button') && !target.disabled) {
+      target.focus({ preventScroll: true })
+    } else {
+      const focusable = target.querySelector?.(
+        'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled]), .vs__search',
+      )
+      focusable?.focus?.({ preventScroll: true })
+    }
+  } catch {
+    /* ignore focus errors */
+  }
+}
+
 // Submit form — validate on click: scroll to first error, then save when complete
 async function submitForm() {
   if (loading.value || submitting.value) return
@@ -2715,21 +2833,10 @@ async function submitForm() {
   await nextTick()
 
   if (unresolvedMissingKeys.value.length > 0) {
-    const modalEl = document.querySelector('.complete-fields-modal')
-    const firstMissingPropertyDoc = unresolvedMissingKeys.value.find((k) => k.startsWith('property_document_'))
-    let firstInvalid = null
-    if (firstMissingPropertyDoc && modalEl) {
-      const docTypeRaw = firstMissingPropertyDoc.replace('property_document_', '')
-      const docTypeLabel = docTypeRaw === 'spa' ? 'spa document' : (docTypeRaw === 'payment_proof' ? 'payment proof' : docTypeRaw.replace(/_/g, ' '))
-      const addButtons = Array.from(modalEl.querySelectorAll('.document-property-section-add'))
-      firstInvalid = addButtons.find((btn) =>
-        String(btn?.textContent || '').toLowerCase().includes(`add ${docTypeLabel}`.toLowerCase())
-      ) || modalEl.querySelector('.document-property-section-add--missing')
-    }
-    if (!firstInvalid && modalEl) {
-      firstInvalid = modalEl.querySelector('.is-invalid')
-    }
-    firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    await nextTick()
+    requestAnimationFrame(() => {
+      scrollToFirstValidationError()
+    })
     return
   }
   console.log('Form Data before submit:', {
@@ -2779,7 +2886,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
         return
       }
       if (key === 'deal_total_amount') {
-        const val = Number(formData.value[key])
+        const val = parseDealAmountNumeric(formData.value[key])
         if (Number.isFinite(val) && val >= 0 && val <= 9999999999999.99) {
           payload[key] = val
         }

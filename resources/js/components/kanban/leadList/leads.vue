@@ -127,24 +127,27 @@
                                                 @touchend="onMobileCardTouchEnd(column, $event)"
                                                 @click="onLeadCardClick(task, column)"
                                             >
-                                                <!-- Task Header - Lead Name  -->
-                                                <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
-                                                    <p class="task-title flex-grow-1 mb-0">{{ task.lead_name }}</p>
-                                                    <span 
-                                                        v-if="task.has_service_duplicate"
-                                                        class="service-dup-badge"
-                                                    >
-                                                        Black List
-                                                    </span>
-                                                    <div 
-                                                        v-if="isFieldEnabled('duplicate_count') && index === 0  && isAdminOrSuperAdmin && task.duplicate_no>0"
-                                                        class="duplicate-badge position-relative cursor-pointer"
-                                                        @click.stop="openDuplicateLeadsModal(task.id, $event)"
-                                                    >
-                                                        <div class="duplicate-icon-wrapper">
-                                                            <div class="duplicate-rectangle duplicate-rectangle-back"></div>
-                                                            <div class="duplicate-rectangle duplicate-rectangle-front">
-                                                                <span class="duplicate-number">{{ task.duplicate_no || 0 }}</span>
+                                                <!-- Task Header - Lead Name + badges (single row) -->
+                                                <div class="task-header d-flex align-items-center gap-2 mb-12 min-w-0">
+                                                    <p class="task-title flex-grow-1 mb-0 min-w-0 text-truncate">{{ task.lead_name }}</p>
+                                                    <div class="task-header-badges d-inline-flex align-items-center gap-1 flex-shrink-0">
+                                                        <span
+                                                            v-if="task.has_service_duplicate"
+                                                            class="lead-blacklist-badge"
+                                                            title="Blacklist"
+                                                        >
+                                                            Blacklist
+                                                        </span>
+                                                        <div
+                                                            v-if="isFieldEnabled('duplicate_count') && index === 0 && isAdminOrSuperAdmin && task.duplicate_no > 0"
+                                                            class="duplicate-badge position-relative cursor-pointer"
+                                                            @click.stop="openDuplicateLeadsModal(task.id, $event)"
+                                                        >
+                                                            <div class="duplicate-icon-wrapper">
+                                                                <div class="duplicate-rectangle duplicate-rectangle-back"></div>
+                                                                <div class="duplicate-rectangle duplicate-rectangle-front">
+                                                                    <span class="duplicate-number">{{ task.duplicate_no || 0 }}</span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -3730,7 +3733,35 @@ const $showNotification = (message, type = 'info') => {
     }
 
 .task-header {
-    align-items: flex-start;
+    align-items: center;
+}
+
+.task-header-badges {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.lead-blacklist-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-family: Montserrat, system-ui, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1;
+    white-space: nowrap;
+    color: #fff;
+    background: linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%);
+    border: 1px solid rgba(127, 29, 29, 0.35);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
 }
 
 .duplicate-badge {
@@ -4369,13 +4400,5 @@ const $showNotification = (message, type = 'info') => {
     font-size: 16px;
     line-height: 1;
     font-weight: 600;
-}
-.service-dup-badge {
-    background: #ff4d4f;
-    color: white;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 6px;
-    margin-left: 6px;
 }
 </style>

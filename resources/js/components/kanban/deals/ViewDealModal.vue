@@ -15,25 +15,45 @@
     <div v-if="show" class="view-lead-modal-content p-3 pb-0">
       <!-- Header — same structure as ViewLeadModal -->
       <div class="modal-header-custom d-flex justify-content-between align-items-center px-1">
-        <div class="d-flex align-items-center gap-3 min-w-0">
+        <div class="d-flex align-items-center gap-3 min-w-0 flex-grow-1 deal-title-header-group">
           <template v-if="!isEditingTitle">
-            <span class="modal-title view-deal-title-truncate" @click="startEditTitle">
-              {{ deal.value?.deal_name || dealTitle }}
-            </span>
-            <iconify-icon
-              icon="lucide:pencil"
-              class="cursor-pointer deal-title-pencil flex-shrink-0"
-              @click="startEditTitle"
-            />
+            <div
+              class="deal-title-read-row d-flex align-items-center gap-2 min-w-0"
+              role="group"
+              aria-label="Deal name"
+            >
+              <span
+                class="modal-title view-deal-title-truncate min-w-0"
+                @click="startEditTitle"
+              >
+                {{ deal.value?.deal_name || dealTitle }}
+              </span>
+              <button
+                type="button"
+                class="deal-title-edit-btn"
+                aria-label="Edit deal name"
+                title="Edit deal name"
+                @click.stop="startEditTitle"
+              >
+                <span class="deal-title-edit-btn-inner">
+                  <iconify-icon icon="lucide:pencil" class="deal-title-edit-icon" />
+                </span>
+              </button>
+            </div>
           </template>
           <template v-else>
-            <input
-              v-model="dealTitleInput"
-              class="form-control form-control-sm view-deal-title-input"
-              @keyup.enter="saveTitle"
-              @blur="saveTitle"
-              autofocus
-            />
+            <div class="deal-title-input-shell min-w-0">
+              <input
+                ref="dealTitleInputRef"
+                v-model="dealTitleInput"
+                type="text"
+                class="view-deal-title-input"
+                placeholder="Deal name"
+                @keyup.enter="saveTitle"
+                @blur="onDealTitleBlur"
+                @keydown.esc.prevent="cancelTitleEdit"
+              />
+            </div>
           </template>
         </div>
         <button class="close-btn" type="button" aria-label="Close" @click="close">
@@ -275,7 +295,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, nextTick } from 'vue'
 import { BModal, BDropdown, BDropdownItem } from 'bootstrap-vue-3'
 import ViewPrimaryDeal from './ViewPrimaryDeal.vue'
 import ViewSecondaryDeal from './ViewSecondaryDeal.vue'
@@ -326,6 +346,8 @@ const editHydrationRequestId = ref(0)
 
 const isEditingTitle = ref(false)
 const dealTitleInput = ref('')
+const dealTitleInputRef = ref(null)
+let dealTitleBlurTimer = null
 
 
 const { updateAndChangeStage } = useStageTransition()
@@ -858,10 +880,38 @@ async function saveEditDeal() {
 function startEditTitle() {
   isEditingTitle.value = true
   dealTitleInput.value = deal.value?.deal_name || ''
+  nextTick(() => {
+    const el = dealTitleInputRef.value
+    if (el) {
+      el.focus()
+      el.select()
+    }
+  })
+}
+
+function cancelTitleEdit() {
+  if (dealTitleBlurTimer) {
+    clearTimeout(dealTitleBlurTimer)
+    dealTitleBlurTimer = null
+  }
+  dealTitleInput.value = deal.value?.deal_name || ''
+  isEditingTitle.value = false
+}
+
+function onDealTitleBlur() {
+  if (dealTitleBlurTimer) clearTimeout(dealTitleBlurTimer)
+  dealTitleBlurTimer = setTimeout(() => {
+    dealTitleBlurTimer = null
+    if (show.value && isEditingTitle.value) saveTitle()
+  }, 120)
 }
 
 async function saveTitle() {
-  if (!deal.value?.id) return
+  if (dealTitleBlurTimer) {
+    clearTimeout(dealTitleBlurTimer)
+    dealTitleBlurTimer = null
+  }
+  if (!deal.value?.id || !show.value) return
 
   const newName = dealTitleInput.value
 
@@ -906,6 +956,10 @@ watch(() => show.value, async (isOpen) => {
 
 watch(() => props.deal?.id, async (newId, oldId) => {
   if (!show.value || !newId || newId === oldId) return
+  isEditingTitle.value = false
+  isEditingDeal.value = false
+  activeEditSection.value = null
+  editFormData.value = {}
   hydratedDeal.value = null
   await hydrateDealForView()
   selectedStageIndex.value = currentStageIndex.value
@@ -942,9 +996,14 @@ watch(() => deal.value, (val) => {
 watch(show, (val) => {
   if (val && props.deal) selectedStageIndex.value = currentStageIndex.value
   if (!val) {
+    if (dealTitleBlurTimer) {
+      clearTimeout(dealTitleBlurTimer)
+      dealTitleBlurTimer = null
+    }
     showLinkedLeadModal.value = false
     hydratedDeal.value = null
     editHydrationRequestId.value = 0
+    isEditingTitle.value = false
     isEditingDeal.value = false
     activeEditSection.value = null
     editFormData.value = {}
@@ -1036,27 +1095,117 @@ function close() {
 }
 
 .view-deal-title-truncate {
+  display: inline-block;
   min-width: 0;
+  max-width: min(560px, calc(100vw - 280px));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
 }
 
-.view-deal-title-input {
-  width: min(500px, 100%);
-  max-width: 100%;
-  border: none !important;
-  height: 35px;
- border: 1px solid #dc3545 !important; 
-  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
-  min-width: 300px;
-    width: auto;
+.deal-title-header-group {
+  max-width: calc(100% - 48px);
 }
 
+.deal-title-read-row {
+  padding: 2px 0;
+  width: fit-content;
+  max-width: min(620px, calc(100vw - 220px));
+}
 
-.deal-title-pencil {
-  color: #64748b;
+.deal-title-edit-btn {
+  flex-shrink: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 11px;
+  line-height: 0;
+}
+
+.deal-title-edit-btn-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  border: 1px solid #c7d2fe;
+  background: linear-gradient(155deg, #eef2ff 0%, #e0e7ff 48%, #c7d2fe 100%);
+  color: #312e81;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.deal-title-edit-btn:hover .deal-title-edit-btn-inner {
+  background: linear-gradient(155deg, #eef2ff 0%, #e0e7ff 45%, #c7d2fe 100%);
+  color: #3730a3;
+  box-shadow:
+    0 6px 16px rgba(99, 102, 241, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+}
+
+.deal-title-edit-btn:active .deal-title-edit-btn-inner {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.15);
+}
+
+.deal-title-edit-icon {
+  font-size: 18px;
+}
+
+.deal-title-input-shell {
+  padding: 2px 0;
+  flex: 0 0 auto;
+  width: min(440px, calc(100vw - 210px));
+  max-width: 100%;
+}
+
+.view-deal-title-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  box-sizing: border-box;
+  font-size: clamp(14px, 2.8vw, 16px);
+  font-weight: 600;
+  font-family: var(--deal-font, 'Montserrat', sans-serif);
+  color: #01062c;
+  line-height: 1.35;
+  padding: 6px 14px;
+  border-radius: 11px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  outline: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+.view-deal-title-input::placeholder {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.view-deal-title-input:hover {
+  border-color: #cbd5e1;
+}
+
+.view-deal-title-input:focus {
+  border-color: #6366f1;
+  background: #fafbff;
+  box-shadow:
+    0 0 0 1px rgba(99, 102, 241, 0.35),
+    0 0 0 4px rgba(99, 102, 241, 0.12);
 }
 
 .settings-btn,

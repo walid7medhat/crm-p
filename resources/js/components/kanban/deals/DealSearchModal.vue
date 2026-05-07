@@ -28,27 +28,6 @@
                 <label class="form-label-custom">Name</label>
                 <b-form-input v-model="form.deal_name" class="custom-input deal-input-placeholder" placeholder="Enter Deals Name" />
               </div>
-              <div v-if="fieldSettings.end_date" class="col-md-6">
-                <label class="form-label-custom">End Date</label>
-                <v-select
-                  v-model="form.end_date"
-                  :options="datePresetOptions"
-                  :reduce="opt => opt.value"
-                  label="text"
-                  class="custom-v-select deal-select-placeholder"
-                  placeholder="Not Selected"
-                  data-placeholder="Not Selected"
-                  :searchable="true"
-                  :clearable="true"
-                  append-to-body
-                >
-              <template #open-indicator="{ attributes }">
-                      <span v-bind="attributes">
-                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                      </span>
-                  </template>
-                </v-select>
-              </div>
               <div v-if="fieldSettings.stage_changed_by" class="col-md-6">
                 <label class="form-label-custom">Stage Changed By</label>
                 <v-select
@@ -206,9 +185,42 @@
           <div class="search-section-card">
             <div class="search-section-title">Property Details</div>
             <div class="row g-3">
-              <div v-if="fieldSettings.property_unit_no" class="col-md-6">
-                <label class="form-label-custom">Unit No</label>
-                <b-form-input v-model="form.unit_no" class="custom-input" placeholder="Enter Unit No" />
+              <div v-if="fieldSettings.property_area" class="col-md-6">
+                <label class="form-label-custom">Property Address</label>
+                  <v-select
+                          v-model="form.area_id"
+                          :options="localAreas.length ? localAreas : props.areas"
+                          :reduce="opt => opt.id"
+                          label="name"
+                          class="custom-v-select deal-select-placeholder"
+                          placeholder="Select Address"
+                          :clearable="true"
+                          :filterable="true"
+                          :searchable="true"
+                          @search="searchAreas"
+                            append-to-body
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                                <template #option="option">
+                                    <div class="location-option">
+                                        <i class="ri-map-pin-line location-option-icon"></i>
+                                        <div class="location-option-text">
+                                            <span class="location-option-name">{{ locationFirstLine(option) }}</span>
+                                            <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template #selected-option="option">
+                                    <div v-if="option" class="location-selected">
+                                        <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
+                                        <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
+                                    </div>
+                                </template>
+                            </v-select>
               </div>
               <div v-if="fieldSettings.property_type" class="col-md-6">
                 <label class="form-label-custom">Property Type</label>
@@ -250,6 +262,14 @@
                   </template>
               
                 </v-select>
+              </div>
+              <div v-if="fieldSettings.property_unit_no" class="col-md-6">
+                <label class="form-label-custom">Unit No</label>
+                <b-form-input v-model="form.unit_no" class="custom-input" placeholder="Enter Unit No" />
+              </div>
+              <div v-if="fieldSettings.property_unit_size" class="col-md-6">
+                <label class="form-label-custom">Unit Size</label>
+                <b-form-input v-model="form.unit_size" class="custom-input" placeholder="Enter Unit Size (sq. ft)" />
               </div>
               <!-- <div v-if="fieldSettings.property_project_name" class="col-md-6">
                 <label class="form-label-custom">Project Name</label>
@@ -294,43 +314,6 @@
                   </template>
               </v-select>
               </div> -->
-              <div v-if="fieldSettings.property_area" class="col-md-6">
-                <label class="form-label-custom">Property Address</label>
-                  <v-select
-                          v-model="form.area_id"
-                          :options="localAreas.length ? localAreas : props.areas"
-                          :reduce="opt => opt.id"
-                          label="name"
-                          class="custom-v-select deal-select-placeholder"
-                          placeholder="Select Address"
-                          :clearable="true"
-                          :filterable="true"
-                          :searchable="true"
-                          @search="searchAreas"
-                            append-to-body
-                            >
-                                <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
-                                </template>
-                                <template #option="option">
-                                    <div class="location-option">
-                                        <i class="ri-map-pin-line location-option-icon"></i>
-                                        <div class="location-option-text">
-                                            <span class="location-option-name">{{ locationFirstLine(option) }}</span>
-                                            <span class="location-option-subtitle">{{ locationSecondLine(option) }}</span>
-                                        </div>
-                                    </div>
-                                </template>
-                                <template #selected-option="option">
-                                    <div v-if="option" class="location-selected">
-                                        <span class="location-selected-name">{{ locationFirstLine(option) }}</span>
-                                        <span class="location-selected-subtitle">{{ locationSecondLine(option) }}</span>
-                                    </div>
-                                </template>
-                            </v-select>
-              </div>
               <!-- <div v-if="fieldSettings.property_sub_community" class="col-md-6">
                 <label class="form-label-custom">Sub Community</label>
                 <v-select
@@ -352,10 +335,6 @@
                   </template>
                 </v-select>
               </div> -->
-              <div v-if="fieldSettings.property_unit_size" class="col-md-6">
-                <label class="form-label-custom">Unit Size</label>
-                <b-form-input v-model="form.unit_size" class="custom-input" placeholder="Enter Unit Size (sq. ft)" />
-              </div>
             </div>
           </div>
 
@@ -539,7 +518,6 @@ const sidebarPills = [
 
 const defaultFieldSettings = {
   name: true,
-  end_date: true,
   stage_changed_by: true,
   stage_group: true,
   responsible_person: true,
@@ -618,7 +596,6 @@ const fieldSettingsSections = [
       { id: 'responsible_person', label: 'Secondary Phone' },
       { id: 'stage_changed_by', label: 'Stage Changed By' },
       { id: 'modified_by', label: 'Modified By' },
-      { id: 'end_date', label: 'Last Updated' },
       { id: 'created_by', label: 'Created By' },
     ],
   },
@@ -643,14 +620,14 @@ const fieldSettingsSections = [
     tab: 'deals',
     label: 'Property Details',
     fields: [
-      { id: 'property_unit_no', label: 'Unit No' },
+      { id: 'property_area', label: 'Property Address' },
       { id: 'property_type', label: 'Property Type' },
       { id: 'property_bedrooms', label: 'Bedrooms' },
+      { id: 'property_unit_no', label: 'Unit No' },
+      { id: 'property_unit_size', label: 'Unit Size' },
       // { id: 'property_project_name', label: 'Project Name' },
       { id: 'property_developer', label: 'Developer' },
-      { id: 'property_area', label: 'Property Address' },
       // { id: 'property_sub_community', label: 'Sub Community' },
-      { id: 'property_unit_size', label: 'Unit Size' },
     ],
   },
   {
@@ -662,7 +639,6 @@ const fieldSettingsSections = [
       { id: 'name', label: 'Activity Source' },
       { id: 'stage_changed_by', label: 'Activity Type' },
       { id: 'responsible_person', label: 'Responsible Person' },
-      { id: 'end_date', label: 'DeadLine' },
       { id: 'modified_by', label: 'Created By' },
       { id: 'stage_group', label: 'Status' },
     ],
@@ -672,7 +648,6 @@ const fieldSettingsSections = [
 const form = ref({
   // Activity fields
   deal_name: '',
-  end_date: null,
   stage_changed_by: null,
   stage_group: [],
   responsible_person_id: null,
@@ -1140,7 +1115,6 @@ const resetForm = () => {
   showCreatedByDatePicker.value = false
   form.value = {
     deal_name: '',
-    end_date: null,
     stage_changed_by: null,
     stage_group: [],
     responsible_person_id: null,
@@ -1231,11 +1205,6 @@ const applySearch = () => {
   if (form.value.deal_name) {
     query.search = form.value.deal_name.trim()
     pushFilter('deal_name', 'Name', form.value.deal_name)
-  }
-  if (form.value.end_date && form.value.end_date !== 'any') {
-    const range = presetRange(form.value.end_date)
-    if (range) Object.assign(query, range)
-    pushFilter('end_date', 'End Date', form.value.end_date)
   }
   if (form.value.stage_group?.length) {
     query.stage_id = form.value.stage_group[0]
