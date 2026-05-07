@@ -182,7 +182,22 @@
               </div>
               <div v-if="fieldSettings.buyer_city_residence" class="col-md-6">
                 <label class="form-label-custom">City Of Residence</label>
-                <b-form-input v-model="form.buyer_city" class="custom-input" placeholder="Enter City" />
+                  <v-select
+                      v-model="form.buyer_city"
+                      :options="uaeCityOptions"
+                      :reduce="opt => opt.value"
+                      label="text"
+                      class="custom-v-select deal-select-placeholder"
+                      placeholder="Select City"
+                      :clearable="true"
+                      append-to-body
+                  >
+                      <template #open-indicator="{ attributes }">
+                          <span v-bind="attributes">
+                              <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          </span>
+                      </template>
+                  </v-select>
               </div>
             </div>
           </div>
@@ -236,7 +251,7 @@
               
                 </v-select>
               </div>
-              <div v-if="fieldSettings.property_project_name" class="col-md-6">
+              <!-- <div v-if="fieldSettings.property_project_name" class="col-md-6">
                 <label class="form-label-custom">Project Name</label>
                 <v-select
                   v-model="form.project_id"
@@ -258,7 +273,7 @@
                       </span>
                   </template>
               </v-select>
-              </div>
+              </div> -->
               <!-- <div v-if="fieldSettings.property_developer" class="col-md-6">
                 <label class="form-label-custom">Developer</label>
                 <v-select
@@ -316,7 +331,7 @@
                                 </template>
                             </v-select>
               </div>
-              <div v-if="fieldSettings.property_sub_community" class="col-md-6">
+              <!-- <div v-if="fieldSettings.property_sub_community" class="col-md-6">
                 <label class="form-label-custom">Sub Community</label>
                 <v-select
                   v-model="form.subcommunity_id"
@@ -336,7 +351,7 @@
                       </span>
                   </template>
                 </v-select>
-              </div>
+              </div> -->
               <div v-if="fieldSettings.property_unit_size" class="col-md-6">
                 <label class="form-label-custom">Unit Size</label>
                 <b-form-input v-model="form.unit_size" class="custom-input" placeholder="Enter Unit Size (sq. ft)" />
@@ -631,10 +646,10 @@ const fieldSettingsSections = [
       { id: 'property_unit_no', label: 'Unit No' },
       { id: 'property_type', label: 'Property Type' },
       { id: 'property_bedrooms', label: 'Bedrooms' },
-      { id: 'property_project_name', label: 'Project Name' },
+      // { id: 'property_project_name', label: 'Project Name' },
       { id: 'property_developer', label: 'Developer' },
-      { id: 'property_area', label: 'Area' },
-      { id: 'property_sub_community', label: 'Sub Community' },
+      { id: 'property_area', label: 'Property Address' },
+      // { id: 'property_sub_community', label: 'Sub Community' },
       { id: 'property_unit_size', label: 'Unit Size' },
     ],
   },
@@ -700,7 +715,17 @@ const nationalityOptions = [
   { value: 'american', text: 'American' },
   { value: 'other', text: 'Other' },
 ]
-
+// UAE City Options
+const uaeCityOptions = [
+    { value: 'Abu Dhabi', text: 'Abu Dhabi' },
+    { value: 'Dubai', text: 'Dubai' },
+    { value: 'Sharjah', text: 'Sharjah' },
+    { value: 'Ajman', text: 'Ajman' },
+    { value: 'Ras Al Khaimah', text: 'Ras Al Khaimah' },
+    { value: 'Umm Al Quwain', text: 'Umm Al Quwain' },
+    { value: 'Fujairah', text: 'Fujairah' },
+    { value: 'Al Ain', text: 'Al Ain' }
+]
 const residencyOptions = [
   { value: 'citizen', text: 'Citizen' },
   { value: 'resident', text: 'Resident' },
@@ -798,7 +823,7 @@ const searchAreas = async (search) => {
   try {
     const response = await api.get('/listings/areas', { params: { search } })
     // Assuming the response structure
-    const areasData = response.data?.data ?? response.data ?? []
+    const areasData = response.data.data || response.data || []
     // Emit to parent if needed, otherwise update local ref
     if (props.areas?.length) {
       // If areas are passed as prop, we don't override
@@ -839,7 +864,59 @@ const fetchStages = async () => {
     stages.value = []
   }
 }
+// إضافة متغيرات لتخزين البيانات
+const localAreas = ref([])
+const localPropertyTypes = ref([])
+const localDevelopers = ref([])
+const isLoadingData = ref(false)
 
+// دالة لجلب المناطق
+const fetchAreasData = async () => {
+    try {
+        const res = await api.get('/listings/areas/?has_listings=true')
+        const data = res.data.data || res.data || []
+        localAreas.value = data.map(area => ({
+            id: area.id,
+            name: area.name || area.title,
+            area_parents_title: area.area_parents_title || ''
+        }))
+        console.log('Areas loaded:', localAreas.value.length)
+    } catch (error) {
+        console.error('Error fetching areas:', error)
+        localAreas.value = []
+    }
+}
+
+// دالة لجلب أنواع العقارات
+const fetchPropertyTypesData = async () => {
+    try {
+        const res = await api.get('/listings/property-types')
+        const data = res.data.data || res.data
+        localPropertyTypes.value = data.map(type => ({
+            id: type.id,
+            name: type.name
+        }))
+        console.log('Property types loaded:', localPropertyTypes.value.length)
+    } catch (error) {
+        console.error('Error fetching property types:', error)
+        localPropertyTypes.value = []
+    }
+}
+
+const fetchDevelopersData = async () => {
+    try {
+        const res = await api.get('/listings/developers')
+        const data = res.data.data || res.data || []
+        localDevelopers.value = data.map(dev => ({
+            id: dev.id,
+            name: dev.name
+        }))
+        console.log('Developers loaded:', localDevelopers.value.length)
+    } catch (error) {
+        console.error('Error fetching developers:', error)
+        localDevelopers.value = []
+    }
+}
 function onCreatedByCustomDateApply(date) {
   if (date instanceof Date && !Number.isNaN(date.getTime())) {
     createdByCustomYmd.value = toDateOnlyApiString(date)
@@ -1110,7 +1187,10 @@ watch(() => props.dealType, hydrateFieldSettingsFromSession)
 
 onMounted(async () => {
   hydrateFieldSettingsFromSession()
-  await Promise.all([fetchUsers(), fetchStages()])
+
+  await Promise.all([fetchUsers(), fetchStages(),fetchAreasData(),
+        fetchPropertyTypesData(),
+        fetchDevelopersData()])
 })
 </script>
 

@@ -358,7 +358,6 @@ function formatBudgetWithCommas(value) {
 function setBudgetValue(key, value) {
     const digits = normalizeBudgetString(value)
     formData.value[key] = digits ? Number(digits) : null
-    emitUpdate()
 }
 
 function getBudgetTriggerElement() {
