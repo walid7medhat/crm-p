@@ -833,7 +833,7 @@
             <!-- Multi Properties Section -->
             <section v-if="dealProperties.length > 0" class="form-section">
                 <div 
-                    class="section-collapsible-header"
+                    class="section-collapsible-header properties-section"
                     :class="{ 'has-required': true }"
                     @click="toggleSection('properties')"
                 >
@@ -3826,7 +3826,10 @@ onMounted(async () => {
   background: #f8fafc;
   cursor: pointer;
   transition: background 0.2s;
-  justify-content: space-between;
+
+}
+.properties-section{
+   justify-content: space-between;
 }
 .section-collapsible-header .add-new{
     justify-content: space-between;
