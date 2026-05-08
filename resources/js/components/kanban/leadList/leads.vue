@@ -3759,7 +3759,7 @@ const $showNotification = (message, type = 'info') => {
     line-height: 1;
     white-space: nowrap;
     color: #fff;
-    background: linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%);
+    background: linear-gradient(135deg, #be6666 0%, #b66262 100%);
     border: 1px solid rgba(127, 29, 29, 0.35);
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
 }
