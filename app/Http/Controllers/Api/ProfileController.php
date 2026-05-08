@@ -103,7 +103,7 @@ class ProfileController extends Controller
             }
 
             // Delete old avatar if exists
-            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+            if ($user->avatar && Storage::disk('public')->exists($user->avatar) &&  $user->avatar !== 'users/user.png' ) {
                 Storage::disk('public')->delete($user->avatar);
             }
 

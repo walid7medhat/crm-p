@@ -302,7 +302,7 @@ public function show(User $user): JsonResponse
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 // Delete old avatar
-                if ($user->avatar && $user->avatar != 'users/user.png' && Storage::disk('public')->exists($user->avatar)) {
+                if ( $user->getRawOriginal('avatar') &&     $user->getRawOriginal('avatar') !== 'users/user.png' &&     Storage::disk('public')->exists($user->avatar)) {
                     Storage::disk('public')->delete($user->avatar);
                 }
                 
@@ -369,7 +369,7 @@ public function show(User $user): JsonResponse
             }
             
             // Delete avatar if exists
-            if ($user->avatar && $user->avatar != 'users/user.png' && Storage::disk('public')->exists($user->avatar)) {
+            if ( $user->getRawOriginal('avatar') &&     $user->getRawOriginal('avatar') !== 'users/user.png' &&     Storage::disk('public')->exists($user->avatar)) {
                 Storage::disk('public')->delete($user->avatar);
             }
             
