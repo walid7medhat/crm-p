@@ -837,9 +837,24 @@
                     :class="{ 'has-required': true }"
                     @click="toggleSection('properties')"
                 >
+                    <div class="d-flex">
                     <iconify-icon :icon="isSectionOpen('properties') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
                     <h6 class="section-title mb-0">Properties Details</h6>
-                    <span class="required-badge">Required</span>
+                    </div>
+                    <div class="d-flex add-new" > 
+                     <span class="required-badge">Required</span>
+                     <button 
+                        type="button"
+                        class="add-property-btn ms-auto"
+                        @click.stop="addNewProperty"
+                        :disabled="loading || submitting"
+                        title="Add another property"
+                    >
+                        <iconify-icon icon="lucide:plus" class="me-1"></iconify-icon>
+                        Add Property
+                    </button>
+                    </div>
+                  
                 </div>
                 
                 <div
@@ -867,6 +882,16 @@
                                 <span v-if="validationAttempted && hasPropertyMissing(propIndex)" class="badge bg-danger text-white">
                                     Missing Required Fields
                                 </span>
+                                 <button 
+                                    v-if="dealProperties.length > 1"
+                                    type="button"
+                                    class="btn-remove-property"
+                                    @click.stop="removeProperty(propIndex)"
+                                    :disabled="loading || submitting"
+                                    title="Remove property"
+                                >
+                                    <iconify-icon icon="lucide:trash-2"></iconify-icon>
+                                </button>
                             </div>
                             
                             <div class="row g-3">
@@ -1099,22 +1124,25 @@
                                 </div>
                                 
                                 <!-- Property Documents (Payment Proof + SPA — same idea as Create Deal / PropertyCard) -->
+                                <!-- Property Documents (Payment Proof + SPA) -->
                                 <div class="col-12 mt-3 property-documents-block">
                                     <label class="section-title mb-2">Property Documents</label>
+                                    
                                     <div
-                                      v-if="validationAttempted && missingPropertyDocumentTypes.some(t => t === 'payment_proof' || t === 'payment')"
+                                      v-if="validationAttempted && getMissingPropertyDocTypesForProperty(propIndex).some(t => t === 'payment_proof' || t === 'payment')"
                                       class="small text-danger mb-2"
                                     >
-                                      Payment Proof is required. Please add Payment Proof Document.
+                                      Payment Proof is required for this property. Please add Payment Proof Document.
                                     </div>
                                     <div
-                                      v-if="validationAttempted && missingPropertyDocumentTypes.some(t => t === 'spa' || t === 'spa_document')"
+                                      v-if="validationAttempted && getMissingPropertyDocTypesForProperty(propIndex).some(t => t === 'spa' || t === 'spa_document')"
                                       class="small text-danger mb-2"
                                     >
-                                      SPA Document is required. Please add SPA Document.
+                                      SPA Document is required for this property. Please add SPA Document.
                                     </div>
+                                    
                                     <DocumentUpload
-                                        :modelValue="propertyDocumentsCombined[propIndex]"
+                                        :modelValue="propertyDocumentsCombined[propIndex] || []"
                                         @update:modelValue="(val) => updatePropertyDocuments(propIndex, val)"
                                         category="property"
                                         :deal-id="props.deal?.id || props.dealId"
@@ -1122,7 +1150,8 @@
                                         :document-types="propertyDocTypesForModal"
                                         compact
                                         :show-errors="validationAttempted"
-                                        :missing-document-types="missingPropertyDocumentTypes"
+                                        :missing-document-types="getMissingPropertyDocTypesForProperty(propIndex)"
+                                        :key="`property-docs-${propIndex}-${property?.id || 'new'}-${propertyDocumentsCombined[propIndex]?.length || 0}`"
                                     />
                                 </div>
                             </div>
@@ -1257,11 +1286,98 @@ const openSections = ref({
   properties: true,
   financials: true
 })
-
+// Add new property with same required fields structure
+const addNewProperty = () => {
+    const newProperty = {
+        id: Date.now(),
+        sort_order: localProperties.value.length,
+        unit_no: '',
+        property_type_id: null,
+        bedrooms: null,
+        unit_size: '',
+        area_id: null,
+        developer_id: null,
+        developer_name: '',
+        developer_phone: '',
+        budget_from: null,
+        budget_to: null,
+        purchase_price: null,
+        commission: null,
+        payment_proof: [],
+        spa_document: []
+    }
+    
+    localProperties.value.push(newProperty)
+    
+    // Initialize documents array for the new property
+    const newDocArray = []
+    const updatedCombined = { ...propertyDocumentsCombined.value }
+    updatedCombined[localProperties.value.length - 1] = newDocArray
+    propertyDocumentsCombined.value = updatedCombined
+    
+    if (!formData.value.properties) {
+        formData.value.properties = []
+    }
+    formData.value.properties.push({ ...newProperty })
+    
+    openSections.value.properties = true
+    recentlyOpenedSection.value = 'properties'
+    if (recentlyOpenedTimer.value) {
+        clearTimeout(recentlyOpenedTimer.value)
+    }
+    recentlyOpenedTimer.value = setTimeout(() => {
+        recentlyOpenedSection.value = null
+    }, 3000)
+    
+    nextTick(() => {
+        const modalEl = document.querySelector('.complete-fields-modal')
+        if (modalEl) {
+            const scrollRoot = modalEl.querySelector('.form-scroll-area')
+            const newPropertyEl = modalEl.querySelector(`.property-card-in-modal:last-child`)
+            if (scrollRoot && newPropertyEl) {
+                newPropertyEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }
+    })
+    
+    console.log('New property added:', newProperty)
+}// Remove property by index
+const removeProperty = (propIndex) => {
+    if (localProperties.value.length <= 1) {
+        console.warn('Cannot remove the last property')
+        return
+    }
+    
+    localProperties.value.splice(propIndex, 1)
+    
+    const updatedCombined = { ...propertyDocumentsCombined.value }
+    delete updatedCombined[propIndex]
+    propertyDocumentsCombined.value = updatedCombined
+    
+    localProperties.value.forEach((prop, idx) => {
+        prop.sort_order = idx
+    })
+    
+    formData.value.properties = [...localProperties.value]
+    
+    reinitializePropertyDocuments()
+    
+    console.log('Property removed at index:', propIndex)
+}
 function toggleSection(section) {
   openSections.value[section] = !openSections.value[section]
+  
+  // إذا تم فتح القسم يدوياً، ضع علامة لمنع الإغلاق التلقائي لفترة
+  if (openSections.value[section]) {
+    recentlyOpenedSection.value = section
+    if (recentlyOpenedTimer.value) {
+      clearTimeout(recentlyOpenedTimer.value)
+    }
+    recentlyOpenedTimer.value = setTimeout(() => {
+      recentlyOpenedSection.value = null
+    }, 3000) // 3 ثواني - فترة كافية لملء البيانات
+  }
 }
-
 function isSectionOpen(section) {
   return openSections.value[section] !== false
 }
@@ -1364,26 +1480,7 @@ function hasRequiredInSection(section) {
   }
 }
 
-function hasUnresolvedInSection(section) {
-  const unresolved = unresolvedMissingKeys.value || []
 
-  switch (section) {
-    case 'buyer':
-      return unresolved.some((k) => k.startsWith('buyer_') || k.startsWith('buyer_document_'))
-    case 'seller':
-      return unresolved.some((k) => k.startsWith('seller_') || k.startsWith('seller_document_'))
-    case 'tenant':
-      return unresolved.some((k) => k.startsWith('tenant_') || k.startsWith('tenant_document_'))
-    case 'landlord':
-      return unresolved.some((k) => k.startsWith('landlord_') || k.startsWith('landlord_document_'))
-    case 'properties':
-      return unresolved.some((k) => k.startsWith('property_') || k === 'at_least_one_property')
-    case 'financials':
-      return unresolved.some((k) => ['deal_commission', 'deal_total_amount'].includes(k))
-    default:
-      return false
-  }
-}
 
 // ========== Helper Functions ==========
 const showBudgetFields = computed(() => {
@@ -1929,9 +2026,42 @@ function onSearchAreas(search) {
   fetchAreas(search)
 }
 // Update property documents - دالة محدثة
-function updatePropertyDocuments(propIndex, newDocuments) {
+const missingPropertyDocumentTypesPerProperty = ref({})
+
+// دالة لتحديد أنواع المستندات المطلوبة لكل خاصية
+function getMissingPropertyDocTypesForProperty(propIndex) {
+  const missingKeys = effectiveMissingFields.value || []
+  const missing = new Set()
+  
+  missingKeys.forEach(key => {
+    // تحقق من وجود نمط خاص بالخاصية الحالية
+    if (key.startsWith(`property_document_`) || key.includes('property_document_')) {
+      // استخراج رقم الخاصية من المفتاح إذا وجد
+      const propMatch = key.match(/property_(\d+)_document_/)
+      if (propMatch) {
+        const idx = parseInt(propMatch[1])
+        if (idx === propIndex) {
+          const docType = key.replace(/property_\d+_document_/, '')
+          missing.add(docType === 'spa' ? 'spa_document' : docType === 'payment' ? 'payment_proof' : docType)
+        }
+      } else {
+        // إذا لم يكن هناك رقم خاصية، فهذا يعني أن المستند مطلوب لجميع الخصائص
+        const docType = key.replace('property_document_', '')
+        missing.add(docType === 'spa' ? 'spa_document' : docType === 'payment' ? 'payment_proof' : docType)
+      }
+    }
+  })
+  
+  return Array.from(missing)
+}
+
+const updatePropertyDocuments = (propIndex, newDocuments) => {
+    console.log(`Updating documents for property ${propIndex}:`, newDocuments)
+    
     // تحديث الحالة المحلية
-    propertyDocumentsCombined.value[propIndex] = newDocuments
+    const updatedCombined = { ...propertyDocumentsCombined.value }
+    updatedCombined[propIndex] = newDocuments
+    propertyDocumentsCombined.value = updatedCombined
     
     // تحديث property في localProperties
     if (localProperties.value[propIndex]) {
@@ -1947,17 +2077,19 @@ function updatePropertyDocuments(propIndex, newDocuments) {
             (doc.file && doc.original_name && doc.original_name.includes('spa'))
         )
         
-        localProperties.value[propIndex].payment_proof = paymentProofs
-        localProperties.value[propIndex].spa_document = spaDocuments
+        // تحديث المصفوفات مع الحفاظ على reactivity
+        localProperties.value[propIndex].payment_proof = [...paymentProofs]
+        localProperties.value[propIndex].spa_document = [...spaDocuments]
     }
     
     // تحديث formData
     if (!formData.value.properties) {
         formData.value.properties = []
     }
-    formData.value.properties[propIndex] = { ...localProperties.value[propIndex] }
+    if (formData.value.properties[propIndex]) {
+        formData.value.properties[propIndex] = { ...localProperties.value[propIndex] }
+    }
 }
-// أضف هذه الدالة الجديدة
 const onPropertyAreaSelected = (areaId, propIndex) => {
     const property = localProperties.value[propIndex]
     if (!property) return
@@ -1986,8 +2118,11 @@ const onPropertyAreaSelected = (areaId, propIndex) => {
 
 
 // Re-initialize property documents - للاستدعاء عند تغيير البيانات
+// Re-initialize property documents
 function reinitializePropertyDocuments() {
     if (!localProperties.value.length) return
+    
+    const newPropertyDocumentsCombined = {}
     
     localProperties.value.forEach((property, idx) => {
         const propertyDocs = normalizeStoredDocs(property.documents)
@@ -2046,10 +2181,12 @@ function reinitializePropertyDocuments() {
             })
         }
         
-        propertyDocumentsCombined.value[idx] = docs
+        newPropertyDocumentsCombined[idx] = docs
     })
+    
+    // استبدال الكائن بالكامل لضمان reactivity
+    propertyDocumentsCombined.value = newPropertyDocumentsCombined
 }
-
 // Force refresh property documents - للاستدعاء بعد تحميل البيانات
 function forceRefreshPropertyDocuments() {
     setTimeout(() => {
@@ -2310,6 +2447,8 @@ function showPartyDetailFields(partyType) {
 }
 
 function shouldShowPropertyField(fieldName, property) {
+  const isNewProperty = property && !property.id; 
+  
   if (fieldName === 'budget_from' || fieldName === 'budget_to') {
     if (!isBudgetVisibleForPrimaryDeal()) return false
     return showBudgetFields.value || isPropertyFieldRequired(fieldName) || !!property?.[fieldName]
@@ -2327,17 +2466,23 @@ function shouldShowPropertyField(fieldName, property) {
     case 'developer_id':
     case 'developer_name':
     case 'developer_phone':
-      return dt === 'secondary' || isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || !!property?.developer_contact_name || !!property?.developer_contact_phone
+      // للخاصية الجديدة، نعرضها دائماً (خاصة للصفقات الثانوية)
+      if (dt === 'secondary') return true
+      if (isNewProperty && (dt === 'primary' || dt === 'secondary')) return true
+      return isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || !!property?.developer_contact_name || !!property?.developer_contact_phone
     case 'bedrooms':
       return showBedroomsForProperty(property)
     case 'rental_price':
       return dt === 'rental'
     case 'purchase_price':
+      // للخاصية الجديدة، نعرضها دائماً للصفقات غير الإيجارية
+      if (isNewProperty && dt !== 'rental') return true
       return showPurchasePrice.value && dt !== 'rental'
     default:
       return isPropertyFieldRequired(fieldName)
   }
 }
+
 function isBudgetField(fieldKey) {
   if (typeof fieldKey !== 'string') return false
   const normalized = fieldKey.toLowerCase()
@@ -3090,10 +3235,82 @@ watch(() => props.show, async (val) => {
         }
     }
 })
-const isLoadingComplete = computed(() => {
-    return loading.value || isLoadingPropertyData.value
-})
+// أضف هذه المتغيرات في بداية الـ script (بعد const openSections)
+const recentlyOpenedSection = ref(null)
+const recentlyOpenedTimer = ref(null)
 
+let autoCloseTimers = {};
+
+// قم بتعديل دالة hasUnresolvedInSection لإضافة منطق جديد
+function hasUnresolvedInSection(section) {
+  const unresolved = unresolvedMissingKeys.value || []
+
+  switch (section) {
+    case 'buyer':
+      return unresolved.some((k) => k.startsWith('buyer_') || k.startsWith('buyer_document_'))
+    case 'seller':
+      return unresolved.some((k) => k.startsWith('seller_') || k.startsWith('seller_document_'))
+    case 'tenant':
+      return unresolved.some((k) => k.startsWith('tenant_') || k.startsWith('tenant_document_'))
+    case 'landlord':
+      return unresolved.some((k) => k.startsWith('landlord_') || k.startsWith('landlord_document_'))
+    case 'properties':
+      // لا تغلق قسم properties إذا تم فتحه يدوياً مؤخراً
+      if (recentlyOpenedSection.value === 'properties') {
+        return true // اعتبر أن القسم لا يزال يحتوي على حقول ناقصة لمنع الإغلاق
+      }
+      return unresolved.some((k) => k.startsWith('property_') || k === 'at_least_one_property')
+    case 'financials':
+      return unresolved.some((k) => ['deal_commission', 'deal_total_amount'].includes(k))
+    default:
+      return false
+  }
+}
+
+// قم بتعديل watch الخاص بـ unresolvedMissingKeys
+watch(unresolvedMissingKeys, (newUnresolved) => {
+  const sections = ['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials'];
+  
+  sections.forEach(section => {
+    // إذا كان القسم مفتوحاً حالياً
+    if (openSections.value[section]) {
+      const hasUnresolved = hasUnresolvedInSection(section);
+      
+      // إذا اكتمل القسم (لا توجد به حقول ناقصة) ولكن ليس قسماً تم فتحه حديثاً
+      if (!hasUnresolved && recentlyOpenedSection.value !== section) {
+        // إلغاء أي Timer سابق لهذا القسم
+        if (autoCloseTimers[section]) {
+          clearTimeout(autoCloseTimers[section]);
+        }
+        
+        // تعيين Timer جديد للإغلاق بعد ثانية واحدة
+        autoCloseTimers[section] = setTimeout(() => {
+          // التحقق مرة أخرى قبل الإغلاق (للتأكد أن القسم لا يزال مكتملاً)
+          if (openSections.value[section] && !hasUnresolvedInSection(section) && recentlyOpenedSection.value !== section) {
+            openSections.value[section] = false;
+            console.log(`Section "${section}" completed and auto-closed after delay`);
+          }
+          delete autoCloseTimers[section];
+        }, 1000);
+      } else if (!hasUnresolved && recentlyOpenedSection.value === section) {
+        // القسم مكتمل ولكن تم فتحه حديثاً - لا تغلقه
+        console.log(`Section "${section}" completed but recently opened, keeping open`);
+      } else {
+        // إذا كان القسم لا يزال ناقصاً، قم بإلغاء أي Timer خاص به
+        if (autoCloseTimers[section]) {
+          clearTimeout(autoCloseTimers[section]);
+          delete autoCloseTimers[section];
+        }
+      }
+    } else {
+      // إذا كان القسم مغلقاً، قم بتنظيف الـ Timer الخاص به (إن وجد)
+      if (autoCloseTimers[section]) {
+        clearTimeout(autoCloseTimers[section]);
+        delete autoCloseTimers[section];
+      }
+    }
+  });
+}, { deep: true });
 watch(localProperties, () => {
     if (localProperties.value.length > 0) {
         reinitializePropertyDocuments()
@@ -3609,8 +3826,13 @@ onMounted(async () => {
   background: #f8fafc;
   cursor: pointer;
   transition: background 0.2s;
+  justify-content: space-between;
 }
-
+.section-collapsible-header .add-new{
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+}
 .section-collapsible-header:hover {
   background: #f1f5f9;
 }
@@ -3891,5 +4113,54 @@ textarea.is-invalid {
 
 [data-popper-placement] {
   z-index: 30050 !important;
+}
+.add-property-btn {
+  background: transparent;
+  border: 1px solid #3b82f6;
+  color: #3b82f6;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+
+.add-property-btn:hover:not(:disabled) {
+  background: #3b82f6;
+  color: white;
+}
+
+.add-property-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-remove-property {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-remove-property:hover:not(:disabled) {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.btn-remove-property:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

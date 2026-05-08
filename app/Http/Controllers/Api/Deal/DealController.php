@@ -1349,32 +1349,39 @@ class DealController extends Controller
      * Append SPA / Payment Proof uploads from multipart root keys onto the primary deal property (no properties[] payload).
      */
     private function mergeRootPropertyFilesOntoPrimaryProperty(Deal $deal, Request $request): void
-    {
-        $property = $deal->properties()->orderBy('sort_order')->orderBy('id')->first();
-        if (! $property) {
-            return;
-        }
+{
+    $properties = $deal->properties()
+        ->orderBy('sort_order')
+        ->orderBy('id')
+        ->get();
 
-        $paymentFiles = $this->extractRootKeyedValidFiles($request, 'payment_proof');
-        $spaFiles = $this->extractRootKeyedValidFiles($request, 'spa_document');
-        if ($paymentFiles === [] && $spaFiles === []) {
-            return;
-        }
+    if ($properties->isEmpty()) {
+        return;
+    }
+
+    foreach ($properties as $index => $property) {
+
+        $paymentFiles = $this->extractPropertyFiles($request, 'payment_proof', $index);
+        $spaFiles = $this->extractPropertyFiles($request, 'spa_document', $index);
 
         $changed = false;
 
-        if ($paymentFiles !== []) {
-            $existing = is_array($property->payment_proof) ? $property->payment_proof : [];
+        // =========================
+        // Payment Proof
+        // =========================
+        if (!empty($paymentFiles)) {
+
+            $existing = is_array($property->payment_proof)
+                ? $property->payment_proof
+                : [];
+
             foreach ($paymentFiles as $file) {
-                $alreadyExists = collect($existing)->contains(function ($doc) use ($file) {
-                    return ($doc['original_name'] ?? null) === $file->getClientOriginalName()
-                        && (int) ($doc['size'] ?? 0) === (int) $file->getSize()
-                        && ($doc['mime_type'] ?? null) === $file->getMimeType();
-                });
-                if ($alreadyExists) {
-                    continue;
-                }
-                $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
+
+                $path = $file->store(
+                    "deals/{$deal->id}/properties/{$property->id}/payment_proof",
+                    'public'
+                );
+
                 $existing[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -1382,22 +1389,27 @@ class DealController extends Controller
                     'size' => $file->getSize(),
                 ];
             }
+
             $property->payment_proof = $existing;
             $changed = true;
         }
 
-        if ($spaFiles !== []) {
-            $existing = is_array($property->spa_document) ? $property->spa_document : [];
+        // =========================
+        // SPA Document
+        // =========================
+        if (!empty($spaFiles)) {
+
+            $existing = is_array($property->spa_document)
+                ? $property->spa_document
+                : [];
+
             foreach ($spaFiles as $file) {
-                $alreadyExists = collect($existing)->contains(function ($doc) use ($file) {
-                    return ($doc['original_name'] ?? null) === $file->getClientOriginalName()
-                        && (int) ($doc['size'] ?? 0) === (int) $file->getSize()
-                        && ($doc['mime_type'] ?? null) === $file->getMimeType();
-                });
-                if ($alreadyExists) {
-                    continue;
-                }
-                $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
+
+                $path = $file->store(
+                    "deals/{$deal->id}/properties/{$property->id}/spa_document",
+                    'public'
+                );
+
                 $existing[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -1405,6 +1417,7 @@ class DealController extends Controller
                     'size' => $file->getSize(),
                 ];
             }
+
             $property->spa_document = $existing;
             $changed = true;
         }
@@ -1413,6 +1426,7 @@ class DealController extends Controller
             $property->save();
         }
     }
+}
 
     /**
      * مزامنة الـ Properties (Multi Properties)
@@ -1735,5 +1749,21 @@ public function addProperty(Request $request, Deal $deal)
             'message' => 'Failed to add property: ' . $e->getMessage()
         ], 500);
     }
+}
+private function extractPropertyFiles(Request $request, string $key, int $index): array
+{
+    $files = $request->file($key);
+
+    if (!is_array($files)) {
+        return [];
+    }
+
+    $fileGroup = $files[$index] ?? null;
+
+    if (!$fileGroup) {
+        return [];
+    }
+
+    return $this->flattenValidUploadedFiles($fileGroup);
 }
 }

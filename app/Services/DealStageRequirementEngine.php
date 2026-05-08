@@ -210,9 +210,15 @@ class DealStageRequirementEngine
     private function validatePropertyFields(Deal $deal, array $requiredFields): array
         {
             if ($deal->properties->isEmpty()) {
-                return [];
+            
+                $missing = [];
+            
+                foreach ($requiredFields as $field) {
+                    $missing[] = "property_0_{$field}";
+                }
+            
+                return $missing;
             }
-
             $missing = [];
 
             // أنواع العقارات التي لا تحتاج bedrooms
