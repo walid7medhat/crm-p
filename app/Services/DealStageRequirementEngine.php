@@ -133,7 +133,7 @@ class DealStageRequirementEngine
         if ($order === 2) {
             $missing = array_merge($missing, $this->validateAtLeastOneProperty($deal));
             $missing = array_merge($missing, $this->validatePropertyFields($deal, [
-                'area_id', 'property_type_id', 'bedrooms', 'budget_from', 'budget_to',
+                'area_id', 'property_type_id', 'bedrooms', 'budget_from', 'budget_to','developer_id','developer_name','developer_phone'
             ]));
             return array_values(array_unique($missing));
         }

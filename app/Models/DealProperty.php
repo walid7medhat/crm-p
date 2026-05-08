@@ -42,10 +42,10 @@ class DealProperty extends Model
        protected $casts = [
         'payment_proof' => 'array',  
         'spa_document' => 'array',   
-        'budget_from' => 'decimal:2',
-        'budget_to' => 'decimal:2',
-        'purchase_price' => 'decimal:2',
-        'commission' => 'decimal:2',
+        'budget_from' => 'integer',
+        'budget_to' => 'integer',
+        'purchase_price' => 'integer',
+        'commission' => 'integer',
     ];
     
     // ========== Relationships ==========

@@ -455,8 +455,7 @@ class StageController extends Controller
                     //     fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
                     //     fn ($q) => $q->orderBy('created_at', 'desc')
                     // )
-                    ->orderBy('created_at', 'desc')
-                    ->orderBy('id', 'desc')
+                    ->orderBy('updated_at', 'desc')
                     ->paginate($perPage);
 
                 $stagesWithLeads[] = [
@@ -749,8 +748,7 @@ class StageController extends Controller
                 //     fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
                 //     fn ($q) => $q->orderBy('created_at', 'desc')
                 // )
-                ->orderBy('created_at', 'desc')
-                ->orderBy('id', 'desc')
+                ->orderBy('updated_at', 'desc')
                 ->paginate($perPage, ['*'], 'page', $page);
 
             return ApiResponse::success([

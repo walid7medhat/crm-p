@@ -259,7 +259,7 @@ class DealController extends Controller
             ])
             ->visibleFor($user)
             ->filter($request)
-            ->where('stage_id', $stage->id);
+            ->where('stage_id', $stage->id)->orderBy('updated_at','desc');
             
             $totalCount = $dealsQuery->count();
             $stageDeals = $dealsQuery->paginate($perPage, ['*'], 'page', 1);
@@ -310,7 +310,7 @@ class DealController extends Controller
         ])
         ->visibleFor($user)
         ->filter($request)
-        ->where('stage_id', $stageId);
+        ->where('stage_id', $stageId)->orderBy('updated_at','desc');
         
         $deals = $dealsQuery->paginate($perPage, ['*'], 'page', $page);
         

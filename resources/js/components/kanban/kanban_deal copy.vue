@@ -54,13 +54,13 @@
                 :key="tab.id"
                 title-link-class="nav-tab-item"
             >
-                <!-- <template #title>
+                <template #title>
                     <span class="d-flex align-items-center gap-2 h-100 nav-tab-item">
                         {{ tab.name }}
                         <iconify-icon v-if="tab.hasChevron" icon="lucide:chevrons-up-down" class="text-md text-secondary-light"></iconify-icon>
                     </span>
                     <div class="active-indicator"></div>
-                </template> -->
+                </template>
 
                 <!-- Tab Content -->
                 <Deals v-if="tab.id === 'deals'" ref="dealsRef"    @deal-created="(deal) => dealsRef?.openDealModal?.(deal)"/>
@@ -71,7 +71,117 @@
 
             </b-tab>
 
-          
+            <!-- Header Actions at the end of the tabs row -->
+            <template #tabs-end>
+                <div class="header-actions ms-auto d-flex align-items-center gap-11">   
+
+                    <!-- Search: dropdown under input -->
+                    <div class="search-area-column d-flex flex-column align-items-end position-relative" ref="searchDropdownAnchorRef">
+                        <div
+                            class="search-wrapper d-flex align-items-center"
+                            :class="{
+                                'search-wrapper-expanded': activeFilters && activeFilters.length,
+                                'search-wrapper-tall': searchInputFocused
+                            }"
+                               @click="openSearchModal"
+                        >
+                            <div v-if="activeFilters.length" class="search-filters-pills d-flex align-items-center">
+                                <div
+                                    v-for="f in visibleFilterPills"
+                                    :key="f.id"
+                                    class="search-tag d-flex align-items-center gap-2"
+                                >
+                                    <span>{{ f.label }}: {{ f.value }}</span>
+                                    <iconify-icon icon="lucide:x" class="close-tag-icon" @click.stop="removeFilter(f)" style="cursor: pointer;"></iconify-icon>
+                                </div>
+                                <div
+                                    v-if="moreFiltersCount > 0"
+                                    class="search-tag search-tag-more d-flex align-items-center gap-2"
+                                >
+                                    <span class="search-tag-more-text" @click="showSearchModal = true">+{{ moreFiltersCount }} more</span>
+                                    <iconify-icon icon="lucide:x" class="close-tag-icon" @click.stop="clearMoreFilters" style="cursor: pointer;"></iconify-icon>
+                                </div>
+                            </div>
+                            <div
+                                class="search-input-container d-flex align-items-center"
+                                :class="{ 'search-input-container-tall': searchInputFocused }"
+                                @click="showSearchModal = true"
+                            >
+                                <iconify-icon icon="lucide:plus" class="search-plus-icon" style="cursor: pointer;"></iconify-icon>
+                                <b-form-input
+                                    :placeholder="searchInputPlaceholder"
+                                    v-model="search"
+                                    class="search-input"
+                                    @focus="onSearchFocus"
+                                    @blur="onSearchBlur"
+                                    @input="showSearchModal = false"
+                                />
+                            </div>
+                           <iconify-icon v-if="hasAnySearchCriteria" icon="lucide:x" class="clear-search-icon" @click="clearSearchFilter" style="cursor: pointer;"></iconify-icon>
+                            <iconify-icon
+                                v-if="isMobileKanban && !hasAnySearchCriteria"
+                                icon="lucide:search"
+                                class="search-magnify-mobile"
+                                aria-hidden="true"
+                                @click.stop="openSearchModal"
+                            />
+                        </div>
+                        <div v-if="showSearchModal" class="lead-search-dropdown-outer">
+                            <DealSearchModal
+                                v-if="activeTab === 'deals'"
+                                v-model="showSearchModal"
+                                :as-dropdown="true"
+                                :current-query="lastQuery"
+                                :deal-type="currentDealType"
+                                @search="onDealSearch"
+                            />
+                            <LeadSearchModal
+                                v-else
+                                v-model="showSearchModal"
+                                :as-dropdown="true"
+                                :initial-active-pill="activeFilter?.id"
+                                :has-active-filters="(activeFilters && activeFilters.length) > 0"
+                                :current-query="lastQuery"
+                                @search="onLeadSearch"
+                            />
+                        </div>
+                    </div>
+                    
+                    <!-- Create New Button -->
+                    <button class="btn-create-new d-flex align-items-center" @click="handleCreateNew">
+                        <span class="btn-create-new-text">Create New</span>
+                       <iconify-icon icon="lucide:plus" width="18" height="18" class="btn-create-new-icon flex-shrink-0" aria-hidden="true"></iconify-icon>
+                    </button>
+
+                    <!-- More Options -->
+                    <div class="more-options-wrapper d-flex align-items-center gap-12" v-if="hasCreateStagePermission || isSuperAdmin">
+                        <!--<b-dropdown -->
+                        <!--    variant="link" -->
+                        <!--    no-caret -->
+                        <!--    toggle-class="action-icon-btn-dropdown p-0 border-0"-->
+                        <!--    menu-class="stage-dropdown-menu"-->
+                        <!--    right>-->
+                        <!--    <template #button-content>-->
+                        <!--        <button class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">-->
+                        <!--            <iconify-icon icon="lucide:more-vertical" class="text-lg font-weight-bold"></iconify-icon>-->
+                        <!--        </button>-->
+                        <!--    </template>-->
+                            
+                        <!--    <b-dropdown-item @click="showAddStageModal = true" v-if="hasCreateStagePermission"  class="dropdown-item-custom">-->
+                        <!--        <img :src="addStage" alt="Add Stage" class="dropdown-icon" />-->
+                        <!--        <span class="dropdown-text">Add New Stage</span>-->
+                        <!--    </b-dropdown-item>-->
+                        <!--</b-dropdown>-->
+                        
+                        <button
+                                    v-if="isSuperAdmin"
+                                    @click="showSettingsHub = true"
+                                    class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border">
+                            <iconify-icon icon="lucide:settings" class="text-lg font-weight-bold" />
+                        </button>
+                    </div>
+                </div>
+            </template>
         </b-tabs>
     </div>
 </template>
@@ -182,8 +292,8 @@ const pollingInterval = ref(null)
 
 const tabs = computed(() => {
     const baseTabs = [
-        { id: 'leads', name: 'Leads', hasChevron: false },
         { id: 'deals', name: 'Deals', hasChevron: false },
+        { id: 'leads', name: 'Leads', hasChevron: false },
             { id: 'lead-pool', name: 'Lead Pool', hasChevron: false } 
         // { id: 'inventory', name: 'Inventory', hasChevron: true },
         // { id: 'costumers', name: 'Costumers', hasChevron: true },
@@ -304,34 +414,8 @@ function onDocumentClick(e) {
         showSearchModal.value = false
     }
 }
-const setupKanbanListeners = () => {
-  window.addEventListener('kanban-tab-change', (e) => {
-    activeTab.value = e.detail
-  })
-  
-  window.addEventListener('kanban-create-new', (e) => {
-    const tab = e.detail
-    if (tab === 'deals') {
-      showCreateDealModal.value = true
-    } else if (tab === 'integration') {
-      showCreateIntegrationModal.value = true
-    } else {
-      showCreateModal.value = true
-    }
-  })
-  
-  window.addEventListener('kanban-lead-search', (e) => {
-    onLeadSearch(e.detail)
-  })
-  
-  window.addEventListener('kanban-deal-search', (e) => {
-    onDealSearch(e.detail)
-  })
-}
-
 
 onMounted(() => {
-       setupKanbanListeners()
     if (activeTab.value === 'integration' && !isSuperAdmin.value) {
         activeTab.value = 'leads'
     }
@@ -342,10 +426,6 @@ onMounted(() => {
         initializeStageUpdates()
     }, 1000)
     document.addEventListener('click', onDocumentClick)
-   window.addEventListener('kanban-open-settings', () => {
-        showSettingsHub.value = true
-    })
-
 })
 // في Kanban.vue
 watch(activeTab, async (newTab, oldTab) => {
@@ -374,12 +454,6 @@ onUnmounted(() => {
         searchDebounceTimer.value = null
     }
     cleanup()
-      window.removeEventListener('kanban-tab-change', () => {})
-  window.removeEventListener('kanban-create-new', () => {})
-  window.removeEventListener('kanban-lead-search', () => {})
-  window.removeEventListener('kanban-deal-search', () => {})
-      window.removeEventListener('kanban-open-settings', () => {})
-
 })
 
 // Initialize real-time updates for stages
@@ -825,9 +899,7 @@ const $showNotification = (message, type = 'info') => {
     /*margin: 8px 12px 0;*/
     border-radius: 16px;
 }
-:deep(.nav-tabs){
-    display: none;
-}
+
 :deep(.kanban-tabs-container),
 :deep(.kanban-tabs-container .nav),
 :deep(.kanban-tabs-container > .nav-tabs) {

@@ -80,9 +80,10 @@
                 :class="{ 'has-required': hasRequiredInSection('buyer') }"
                 @click="toggleSection('buyer')"
               >
-                <iconify-icon :icon="isSectionOpen('buyer') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
+               
                 <h6 class="section-title mb-0">Buyer Details</h6>
                 <span v-if="hasRequiredInSection('buyer')" class="required-badge">Required</span>
+                 <iconify-icon :icon="isSectionOpen('buyer') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
               </div>
               
               <div
@@ -276,9 +277,9 @@
                 :class="{ 'has-required': hasRequiredInSection('seller') }"
                 @click="toggleSection('seller')"
               >
-                <iconify-icon :icon="isSectionOpen('seller') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
                 <h6 class="section-title mb-0">Seller Details</h6>
                 <span v-if="hasRequiredInSection('seller')" class="required-badge">Required</span>
+                <iconify-icon :icon="isSectionOpen('seller') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
               </div>
               
               <div
@@ -467,9 +468,10 @@
                 :class="{ 'has-required': hasRequiredInSection('tenant') }"
                 @click="toggleSection('tenant')"
               >
-                <iconify-icon :icon="isSectionOpen('tenant') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
                 <h6 class="section-title mb-0">Tenant Details</h6>
-                <span v-if="hasRequiredInSection('tenant')" class="required-badge">Required</span>
+                <span v-if="hasRequiredInSection('tenant')" class="required-badge">Required</span> 
+               <iconify-icon :icon="isSectionOpen('tenant') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
+
               </div>
               
               <div
@@ -646,9 +648,9 @@
                 :class="{ 'has-required': hasRequiredInSection('landlord') }"
                 @click="toggleSection('landlord')"
               >
-                <iconify-icon :icon="isSectionOpen('landlord') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
                 <h6 class="section-title mb-0">Landlord Details</h6>
                 <span v-if="hasRequiredInSection('landlord')" class="required-badge">Required</span>
+                <iconify-icon :icon="isSectionOpen('landlord') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
               </div>
               
               <div
@@ -838,7 +840,6 @@
                     @click="toggleSection('properties')"
                 >
                     <div class="d-flex">
-                    <iconify-icon :icon="isSectionOpen('properties') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
                     <h6 class="section-title mb-0">Properties Details</h6>
                     </div>
                     <div class="d-flex add-new" > 
@@ -853,6 +854,7 @@
                         <iconify-icon icon="lucide:plus" class="me-1"></iconify-icon>
                         Add Property
                     </button>
+                    <iconify-icon :icon="isSectionOpen('properties') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
                     </div>
                   
                 </div>
@@ -895,6 +897,33 @@
                             </div>
                             
                             <div class="row g-3">
+                                 <!-- Area / Address -->
+                                <div class="col-md-6" v-if="shouldShowPropertyField('area_id', property)">
+                                    <label class="form-label-custom">Property Address <span v-if="isPropertyFieldRequired('area_id')" class="text-danger">*</span></label>
+                                    <v-select
+                                        :model-value="property.area_id"
+                                        @update:modelValue="(val) => onPropertyAreaSelected(val, propIndex)"
+                                        :options="areas"
+                                        :reduce="item => item.id"
+                                        label="name"
+                                        placeholder="Select Address..."
+                                        class="custom-v-select"
+                                        :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'area_id') }"
+                                    >
+                                        <template #open-indicator="{ attributes }">
+                                            <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" /></span>
+                                        </template>
+                                        <template #option="option">
+                                            <div class="location-option">
+                                                <iconify-icon icon="lucide:map-pin" class="location-icon" />
+                                                <div>
+                                                    <div class="fw-semibold">{{ option.name }}</div>
+                                                    <div class="small text-muted">{{ option.area_parents_title }}</div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </v-select>
+                                </div>
                                 <!-- Unit No -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('unit_no', property)">
                                     <label class="form-label-custom">Unit No <span v-if="isPropertyFieldRequired('unit_no')" class="text-danger">*</span></label>
@@ -990,33 +1019,7 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Area / Address -->
-                                <div class="col-md-6" v-if="shouldShowPropertyField('area_id', property)">
-                                    <label class="form-label-custom">Property Address <span v-if="isPropertyFieldRequired('area_id')" class="text-danger">*</span></label>
-                                    <v-select
-                                        :model-value="property.area_id"
-                                        @update:modelValue="(val) => onPropertyAreaSelected(val, propIndex)"
-                                        :options="areas"
-                                        :reduce="item => item.id"
-                                        label="name"
-                                        placeholder="Select Address..."
-                                        class="custom-v-select"
-                                        :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'area_id') }"
-                                    >
-                                        <template #open-indicator="{ attributes }">
-                                            <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" /></span>
-                                        </template>
-                                        <template #option="option">
-                                            <div class="location-option">
-                                                <iconify-icon icon="lucide:map-pin" class="location-icon" />
-                                                <div>
-                                                    <div class="fw-semibold">{{ option.name }}</div>
-                                                    <div class="small text-muted">{{ option.area_parents_title }}</div>
-                                                </div>
-                                            </div>
-                                        </template>
-                                    </v-select>
-                                </div>
+                             
                                 
                                 <!-- Developer -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('developer_id', property)">
@@ -1172,9 +1175,9 @@
                 :class="{ 'has-required': hasRequiredInSection('financials') }"
                 @click="toggleSection('financials')"
               >
-                <iconify-icon :icon="isSectionOpen('financials') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
                 <h6 class="section-title mb-0">Deal Financials</h6>
                 <span v-if="hasRequiredInSection('financials')" class="required-badge">Required</span>
+                  <iconify-icon :icon="isSectionOpen('financials') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
               </div>
               
               <div
@@ -2466,10 +2469,9 @@ function shouldShowPropertyField(fieldName, property) {
     case 'developer_id':
     case 'developer_name':
     case 'developer_phone':
-      // للخاصية الجديدة، نعرضها دائماً (خاصة للصفقات الثانوية)
       if (dt === 'secondary') return true
       if (isNewProperty && (dt === 'primary' || dt === 'secondary')) return true
-      return isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || !!property?.developer_contact_name || !!property?.developer_contact_phone
+      return isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || !!property?.developer_name || !!property?.developer_phone || !!property?.developer_id
     case 'bedrooms':
       return showBedroomsForProperty(property)
     case 'rental_price':
@@ -3826,6 +3828,7 @@ onMounted(async () => {
   background: #f8fafc;
   cursor: pointer;
   transition: background 0.2s;
+  justify-content: space-between;
 
 }
 .properties-section{

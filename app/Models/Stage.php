@@ -43,7 +43,7 @@ class Stage extends Model
                                 ->orWhere('added_by', $user->id);
                         });
             }
-            return $leads;
+            return $leads->orderBy('updated_at','desc');
     }
             public function deals()
         {

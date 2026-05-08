@@ -9,7 +9,7 @@
           type="button"
           @click="$emit('view-more')"
         >
-          View more
+          Lead Details
         </b-button>
       </div>
 

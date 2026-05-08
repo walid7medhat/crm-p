@@ -23,6 +23,9 @@ return [
                     'bedrooms' => true,          // Bedrooms
                     'budget_from' => true,       // Budget From (لكل Property)
                     'budget_to' => true,         // Budget To (لكل Property)
+                     'developer_id' => true,
+                     'developer_name'=>true,
+                    'developer_phone'=>true,
                 ],
             ],
             
@@ -40,9 +43,9 @@ return [
                     'bedrooms' => true,
                     'unit_no' => true,
                     'unit_size' => false,
-                    'developer_id' => false,
-                     'developer_name'=>false,
-                    'developer_phone'=>false,
+                    'developer_id' => true,
+                     'developer_name'=>true,
+                    'developer_phone'=>true,
                     'purchase_price' => true,     
                
                 ],

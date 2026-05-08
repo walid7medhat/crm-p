@@ -1096,9 +1096,9 @@ const handleNewDeal = (deal) => {
   
   const column = columns.value.find(col => col.stage_id === stageId);
   if (column) {
-    // نمنع التكرار
     const existingIndex = column.deals.findIndex(d => d.id === deal.id);
     if (existingIndex === -1) {
+      // ✅ إضافة الديل الجديد في أول القائمة
       column.deals.unshift(deal);
       column.deals_count = column.deals.length;
     } else {
@@ -1230,6 +1230,7 @@ const handleStageChanged = (deal, changes) => {
               columns.value[newColumnIndex].deals = []
             }
             
+            // ✅ إضافة الديل في أول القائمة مش آخرها
             columns.value[newColumnIndex].deals.unshift({ ...deal })
             columns.value[newColumnIndex].deals_count = columns.value[newColumnIndex].deals.length
           }
@@ -1553,7 +1554,6 @@ async function onDealDragChange(evt, targetColumn) {
     )
   }
 }
-// استبدل دالة moveDealDirectly بهذه:
 async function moveDealDirectly(deal, newStageId, targetColumn, oldStageId) {
   try {
     const sourceColumn = columns.value.find(c => c.stage_id === oldStageId)
@@ -1568,12 +1568,12 @@ async function moveDealDirectly(deal, newStageId, targetColumn, oldStageId) {
       stage_id: newStageId
     }
 
-    // اصلاح الخطأ: التحقق من وجود الـ deal قبل الإضافة
     const existingIndex = targetColumn.deals.findIndex(d => d.id === deal.id)
     if (existingIndex !== -1) {
       targetColumn.deals[existingIndex] = { ...updatedDeal }
     } else {
-      targetColumn.deals.push({ ...updatedDeal })
+      // ✅ إضافة الديل في أول القائمة
+      targetColumn.deals.unshift({ ...updatedDeal })
     }
     targetColumn.deals_count = targetColumn.deals.length
 
@@ -1586,7 +1586,6 @@ async function moveDealDirectly(deal, newStageId, targetColumn, oldStageId) {
     showNotification('Failed to move deal', 'error')
   }
 }
-
 function findColumnByStageId(stageId) {
   return columns.value.find(c => String(c.stage_id) === String(stageId))
 }
@@ -1603,7 +1602,8 @@ function revertDealDrag(deal, targetColumn, originalStageId) {
   if (sourceColumn?.deals) {
     const existing = sourceColumn.deals.find(d => d.id === deal.id)
     if (!existing) {
-      sourceColumn.deals.push({ ...deal, stage_id: originalStageId })
+      // ✅ إضافة في الأول عند الرجوع
+      sourceColumn.deals.unshift({ ...deal, stage_id: originalStageId })
       sourceColumn.deals_count = sourceColumn.deals.length
     }
   }
@@ -1829,7 +1829,8 @@ function moveDealBetweenColumns(deal, fromStageId, toStageId) {
 
   const movedDeal = { ...deal, stage_id: toStageId }
   if (!toColumn.deals.find(d => d.id === deal.id)) {
-    toColumn.deals.push(movedDeal)
+    // ✅ إضافة الديل في أول القائمة مش آخرها
+    toColumn.deals.unshift(movedDeal)
     toColumn.deals_count = toColumn.deals.length
   }
 }
