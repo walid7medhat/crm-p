@@ -303,7 +303,7 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
                    
                 }
 
-        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') || $user->hasRole('admin'))){
+        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('manager'))){
             $query->where('is_active', true)
                 ->where('status', '!=', 'converted')
                 ->where('status', '!=', 'rented')
