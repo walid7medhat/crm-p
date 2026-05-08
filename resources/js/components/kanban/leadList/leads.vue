@@ -136,7 +136,7 @@
                                                             class="lead-blacklist-badge"
                                                             title="Blacklist"
                                                         >
-                                                            Blacklist
+                                                            Black List
                                                         </span>
                                                         <div
                                                             v-if="isFieldEnabled('duplicate_count') && index === 0 && isAdminOrSuperAdmin && task.duplicate_no > 0"
