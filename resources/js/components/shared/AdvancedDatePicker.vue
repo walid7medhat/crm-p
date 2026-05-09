@@ -1,5 +1,5 @@
 <template>
-  <div class="advanced-date-picker">
+  <div class="advanced-date-picker" :class="{ 'advanced-date-picker--dob': dobLayout }">
     <button
       type="button"
       class="advanced-date-trigger d-flex align-items-center gap-2"
@@ -15,6 +15,7 @@
       :show="showPicker"
       :model-value="pickerDate"
       :date-only="dateOnly"
+      :dob-layout="dobLayout"
       @update:show="showPicker = $event"
       @apply="onApply"
       @cancel="onCancel"
@@ -37,6 +38,8 @@ const props = defineProps({
   modelValue: { type: [String, Date], default: null },
   /** When true, hide time controls and emit YYYY-MM-DD (DOB / date filters). */
   dateOnly: { type: Boolean, default: true },
+  /** Rich DOB UX: Month / Day / Year dropdowns + calendar; future dates blocked. */
+  dobLayout: { type: Boolean, default: false },
   placeholder: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   invalid: { type: Boolean, default: false },
@@ -127,5 +130,47 @@ function onCancel() {
 
 .advanced-date-trigger.is-invalid {
   border-color: #dc3545;
+}
+
+.advanced-date-picker--dob .advanced-date-text {
+  font-size: 12px;
+}
+
+.advanced-date-picker--dob .advanced-date-icon {
+  font-size: 14px;
+}
+
+.advanced-date-picker--dob .advanced-date-trigger {
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(to bottom, #ffffff, #fafbfc);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.advanced-date-picker--dob .advanced-date-trigger:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.advanced-date-picker--dob .advanced-date-trigger:focus-visible {
+  outline: none;
+  border-color: #1a2f5b;
+  box-shadow: 0 0 0 3px rgba(26, 47, 91, 0.15);
+}
+
+.advanced-date-picker--dob .advanced-date-trigger.is-invalid {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.2);
+}
+
+.advanced-date-picker--dob .advanced-date-icon {
+  color: #1a2f5b;
+}
+
+.advanced-date-picker--dob .advanced-date-text {
+  font-weight: 500;
 }
 </style>

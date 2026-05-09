@@ -216,13 +216,13 @@
                       </v-select>
                     </div>
 
-                    <div class="col-md-6" v-if="shouldShowField('buyer_dob')">
+                    <div class="col-md-6 buyer-dob-field" v-if="shouldShowField('buyer_dob')">
                       <label class="form-label-custom">Buyer Date Of Birth <span v-if="hasField('buyer_dob')" class="text-danger">*</span></label>
                       <AdvancedDatePicker
                         v-model="formData.buyer_dob"
                         date-only
-                        placeholder="Select date"
-                        :class="['custom-input', { 'is-invalid': isFieldInvalid('buyer_dob') }]"
+                        dob-layout
+                        placeholder="Select date of birth"
                         :invalid="isFieldInvalid('buyer_dob')"
                       />
                     </div>
@@ -1007,12 +1007,14 @@
                                 <div class="col-md-6" v-if="shouldShowPropertyField('purchase_price', property)">
                                     <label class="form-label-custom">Purchase Price <span v-if="isPropertyFieldRequired('purchase_price')" class="text-danger">*</span></label>
                                     <div class="input-group">
-                                        <b-form-input 
-                                            v-model="property.purchase_price"
-                                            @update:modelValue="(val) => updateProperty(propIndex, 'purchase_price', val)"
-                                            type="number"
+                                        <input
+                                            :value="property.purchase_price ?? ''"
+                                            @input="(e) => onPropertyMoneyInput(propIndex, 'purchase_price', e.target.value)"
+                                            type="text"
+                                            inputmode="decimal"
+                                            autocomplete="off"
                                             placeholder="Amount" 
-                                            class="custom-input"
+                                            class="form-control custom-input"
                                             :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'purchase_price') }"
                                         />
                                         <span class="input-group-text">AED</span>
@@ -1095,30 +1097,30 @@
                                             <label class="budget-input-label-stage">From</label>
                                             <input
                                               :value="property.budget_from ?? ''"
-                                              type="number"
-                                              inputmode="numeric"
+                                              type="text"
+                                              inputmode="decimal"
                                               autocomplete="off"
                                               placeholder="0"
                                               class="form-control custom-input budget-dropdown-input-stage"
                                               :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'budget_from') }"
                                               @mousedown.stop
                                               @click.stop
-                                              @input="updateProperty(propIndex, 'budget_from', $event.target.value)"
+                                              @input="(e) => onPropertyMoneyInput(propIndex, 'budget_from', e.target.value)"
                                             />
                                           </div>
                                           <div class="budget-col-stage">
                                             <label class="budget-input-label-stage">To</label>
                                             <input
                                               :value="property.budget_to ?? ''"
-                                              type="number"
-                                              inputmode="numeric"
+                                              type="text"
+                                              inputmode="decimal"
                                               autocomplete="off"
                                               placeholder="0"
                                               class="form-control custom-input budget-dropdown-input-stage"
                                               :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'budget_to') }"
                                               @mousedown.stop
                                               @click.stop
-                                              @input="updateProperty(propIndex, 'budget_to', $event.target.value)"
+                                              @input="(e) => onPropertyMoneyInput(propIndex, 'budget_to', e.target.value)"
                                             />
                                           </div>
                                         </div>
@@ -1154,7 +1156,7 @@
                                         compact
                                         :show-errors="validationAttempted"
                                         :missing-document-types="getMissingPropertyDocTypesForProperty(propIndex)"
-                                        :key="`property-docs-${propIndex}-${property?.id || 'new'}-${propertyDocumentsCombined[propIndex]?.length || 0}`"
+                                        :key="`property-docs-${propIndex}-${property?.id || 'new'}`"
                                     />
                                 </div>
                             </div>
@@ -1368,10 +1370,24 @@ const removeProperty = (propIndex) => {
     console.log('Property removed at index:', propIndex)
 }
 function toggleSection(section) {
-  openSections.value[section] = !openSections.value[section]
+  const isCurrentlyOpen = isSectionOpen(section)
+  if (isCurrentlyOpen && hasUnresolvedInSection(section)) {
+    return
+  }
+
+  const nextOpen = !openSections.value[section]
+  openSections.value[section] = nextOpen
   
-  // إذا تم فتح القسم يدوياً، ضع علامة لمنع الإغلاق التلقائي لفترة
-  if (openSections.value[section]) {
+  // When user opens another section, auto-close completed sections.
+  if (nextOpen) {
+    const sections = ['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials']
+    sections.forEach((key) => {
+      if (key !== section && isSectionOpen(key) && !hasUnresolvedInSection(key)) {
+        openSections.value[key] = false
+      }
+    })
+
+    // إذا تم فتح القسم يدوياً، ضع علامة لمنع الإغلاق التلقائي لفترة
     recentlyOpenedSection.value = section
     if (recentlyOpenedTimer.value) {
       clearTimeout(recentlyOpenedTimer.value)
@@ -1678,6 +1694,10 @@ function updateProperty(propIndex, field, value) {
   }
 }
 
+function onPropertyMoneyInput(propIndex, field, rawValue) {
+  updateProperty(propIndex, field, formatDealAmountThousands(rawValue))
+}
+
 // Check if bedrooms field should be shown for property
 function showBedroomsForProperty(property) {
   const propertyTypeId = property.property_type_id
@@ -1801,6 +1821,11 @@ function onDealAmountInput(val) {
 
 function parseDealAmountNumeric(raw) {
   return Number(String(raw ?? '').replace(/,/g, '').trim())
+}
+
+function toNullableNumeric(raw) {
+  const parsed = parseDealAmountNumeric(raw)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 function normalizeDealTypeForDocuments(raw) {
@@ -3128,9 +3153,9 @@ if (localProperties.value.length > 0) {
         developer_sales_phone: typeof (prop.developer_phone ?? prop.developer_sales_phone) === 'string'
           ? (prop.developer_phone ?? prop.developer_sales_phone).trim()
           : ((prop.developer_phone ?? prop.developer_sales_phone) || ''),
-        budget_from: prop.budget_from || null,
-        budget_to: prop.budget_to || null,
-        purchase_price: prop.purchase_price || null,
+        budget_from: toNullableNumeric(prop.budget_from),
+        budget_to: toNullableNumeric(prop.budget_to),
+        purchase_price: toNullableNumeric(prop.purchase_price),
         commission: prop.commission || null,
         // Keep persisted docs in properties payload; new files go via multipart root keys.
         payment_proof: Array.isArray(prop.payment_proof) ? prop.payment_proof : [],
@@ -3241,8 +3266,6 @@ watch(() => props.show, async (val) => {
 const recentlyOpenedSection = ref(null)
 const recentlyOpenedTimer = ref(null)
 
-let autoCloseTimers = {};
-
 // قم بتعديل دالة hasUnresolvedInSection لإضافة منطق جديد
 function hasUnresolvedInSection(section) {
   const unresolved = unresolvedMissingKeys.value || []
@@ -3257,10 +3280,6 @@ function hasUnresolvedInSection(section) {
     case 'landlord':
       return unresolved.some((k) => k.startsWith('landlord_') || k.startsWith('landlord_document_'))
     case 'properties':
-      // لا تغلق قسم properties إذا تم فتحه يدوياً مؤخراً
-      if (recentlyOpenedSection.value === 'properties') {
-        return true // اعتبر أن القسم لا يزال يحتوي على حقول ناقصة لمنع الإغلاق
-      }
       return unresolved.some((k) => k.startsWith('property_') || k === 'at_least_one_property')
     case 'financials':
       return unresolved.some((k) => ['deal_commission', 'deal_total_amount'].includes(k))
@@ -3270,49 +3289,14 @@ function hasUnresolvedInSection(section) {
 }
 
 // قم بتعديل watch الخاص بـ unresolvedMissingKeys
-watch(unresolvedMissingKeys, (newUnresolved) => {
-  const sections = ['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials'];
-  
-  sections.forEach(section => {
-    // إذا كان القسم مفتوحاً حالياً
-    if (openSections.value[section]) {
-      const hasUnresolved = hasUnresolvedInSection(section);
-      
-      // إذا اكتمل القسم (لا توجد به حقول ناقصة) ولكن ليس قسماً تم فتحه حديثاً
-      if (!hasUnresolved && recentlyOpenedSection.value !== section) {
-        // إلغاء أي Timer سابق لهذا القسم
-        if (autoCloseTimers[section]) {
-          clearTimeout(autoCloseTimers[section]);
-        }
-        
-        // تعيين Timer جديد للإغلاق بعد ثانية واحدة
-        autoCloseTimers[section] = setTimeout(() => {
-          // التحقق مرة أخرى قبل الإغلاق (للتأكد أن القسم لا يزال مكتملاً)
-          if (openSections.value[section] && !hasUnresolvedInSection(section) && recentlyOpenedSection.value !== section) {
-            openSections.value[section] = false;
-            console.log(`Section "${section}" completed and auto-closed after delay`);
-          }
-          delete autoCloseTimers[section];
-        }, 1000);
-      } else if (!hasUnresolved && recentlyOpenedSection.value === section) {
-        // القسم مكتمل ولكن تم فتحه حديثاً - لا تغلقه
-        console.log(`Section "${section}" completed but recently opened, keeping open`);
-      } else {
-        // إذا كان القسم لا يزال ناقصاً، قم بإلغاء أي Timer خاص به
-        if (autoCloseTimers[section]) {
-          clearTimeout(autoCloseTimers[section]);
-          delete autoCloseTimers[section];
-        }
-      }
-    } else {
-      // إذا كان القسم مغلقاً، قم بتنظيف الـ Timer الخاص به (إن وجد)
-      if (autoCloseTimers[section]) {
-        clearTimeout(autoCloseTimers[section]);
-        delete autoCloseTimers[section];
-      }
+watch(unresolvedMissingKeys, () => {
+  const sections = ['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials']
+  sections.forEach((section) => {
+    if (hasUnresolvedInSection(section)) {
+      openSections.value[section] = true
     }
-  });
-}, { deep: true });
+  })
+}, { deep: true })
 watch(localProperties, () => {
     if (localProperties.value.length > 0) {
         reinitializePropertyDocuments()
@@ -3718,13 +3702,13 @@ onMounted(async () => {
      const style = document.createElement('style');
     style.textContent = `
         .vs__dropdown-menu {
-            z-index: 30050 !important;
+            z-index: 46200 !important;
         }
         .flatpickr-calendar {
-            z-index: 30050 !important;
+            z-index: 46200 !important;
         }
         [data-popper-placement] {
-            z-index: 30050 !important;
+            z-index: 46200 !important;
         }
     `;
     document.head.appendChild(style);

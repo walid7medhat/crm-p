@@ -1,19 +1,88 @@
 <template>
     <div v-if="show" class="date-time-picker-overlay" @click.self="handleCancel">
-        <div class="date-time-picker-modal" @click.stop>
-            <!-- Month/Year Header -->
-            <div class="picker-header">
-                <button class="nav-arrow" @click="previousMonth">
+        <div class="date-time-picker-modal" :class="{ 'is-dob-layout': dateOnly && dobLayout }" @click.stop>
+            <!-- Month / Year (calendar nav) -->
+            <!-- DOB mode: dropdowns for Month, Day, Year (fast jump to any birthday) -->
+            <div v-if="dateOnly && dobLayout" class="dob-selectors">
+                <div class="dob-select-field">
+                    <span class="dob-select-field-label">Month</span>
+                    <v-select
+                        v-model="dobMonthOneBased"
+                        :options="dobMonthChoices"
+                        :reduce="reduceDobOption"
+                        label="label"
+                        placeholder="Search month…"
+                        :clearable="false"
+                        :searchable="true"
+                        append-to-body
+                        class="dob-v-select"
+                        aria-label="Month"
+                    >
+                        <template #open-indicator="{ attributes }">
+                            <span v-bind="attributes" class="dob-vs-open">
+                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon" />
+                            </span>
+                        </template>
+                    </v-select>
+                </div>
+                <div class="dob-select-field">
+                    <span class="dob-select-field-label">Day</span>
+                    <v-select
+                        :key="`dob-day-${currentDate.getFullYear()}-${currentDate.getMonth()}`"
+                        v-model="dobSelDayOneBased"
+                        :options="dobDayChoices"
+                        :reduce="reduceDobOption"
+                        label="label"
+                        placeholder="Search day…"
+                        :clearable="false"
+                        :searchable="true"
+                        append-to-body
+                        class="dob-v-select"
+                        aria-label="Day"
+                    >
+                        <template #open-indicator="{ attributes }">
+                            <span v-bind="attributes" class="dob-vs-open">
+                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon" />
+                            </span>
+                        </template>
+                    </v-select>
+                </div>
+                <div class="dob-select-field">
+                    <span class="dob-select-field-label">Year</span>
+                    <v-select
+                        v-model="dobSelYear"
+                        :options="dobYearChoices"
+                        :reduce="reduceDobOption"
+                        label="label"
+                        placeholder="Search year…"
+                        :clearable="false"
+                        :searchable="true"
+                        append-to-body
+                        class="dob-v-select"
+                        aria-label="Year"
+                    >
+                        <template #open-indicator="{ attributes }">
+                            <span v-bind="attributes" class="dob-vs-open">
+                                <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon" />
+                            </span>
+                        </template>
+                    </v-select>
+                </div>
+                <p class="dob-helper">Or pick a day in the calendar.</p>
+            </div>
+
+            <div v-else class="picker-header">
+                <button type="button" class="nav-arrow" @click="previousMonth">
                     <iconify-icon icon="lucide:chevron-left" class="arrow-icon"></iconify-icon>
                 </button>
                 <div class="month-year-text">{{ currentMonthYear }}</div>
-                <button class="nav-arrow" @click="nextMonth">
+                <button type="button" class="nav-arrow" @click="nextMonth">
                     <iconify-icon icon="lucide:chevron-right" class="arrow-icon"></iconify-icon>
                 </button>
             </div>
 
             <!-- Calendar Grid -->
-            <div class="calendar-container">
+            <div class="calendar-container" :class="{ 'is-dob-compact': dateOnly && dobLayout }">
                 <!-- Weekday Headers -->
                 <div class="weekday-headers">
                     <div class="weekday-header" v-for="day in weekdays" :key="day">{{ day }}</div>
@@ -28,9 +97,11 @@
                         :class="{
                             'other-month': day.otherMonth,
                             'selected': day.selected,
-                            'today': day.isToday
+                            'today': day.isToday,
+                            'is-future-dob': day.isFutureDobBlocked
                         }"
-                        @click="selectDate(day.date)"
+                        role="gridcell"
+                        @click="selectDate(day.date, day)"
                     >
                         {{ day.day }}
                     </div>
@@ -74,7 +145,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
+import vSelect from 'vue-select'
 
 const props = defineProps({
     show: {
@@ -88,8 +160,40 @@ const props = defineProps({
     dateOnly: {
         type: Boolean,
         default: false
+    },
+    /** Birthday-style UI: Month / Day / Year dropdowns + no future dates. */
+    dobLayout: {
+        type: Boolean,
+        default: false
     }
 })
+
+const dobMonthLabels = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+]
+
+/** Start of today in local calendar (no time) — max selectable DOB. */
+const dobMaxCalendarDate = computed(() => {
+    const t = new Date()
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate())
+})
+
+const dobMonthChoices = computed(() =>
+    dobMonthLabels.map((label, idx) => ({ value: idx + 1, label }))
+)
+
+const dobYearOptions = computed(() => {
+    const maxY = dobMaxCalendarDate.value.getFullYear()
+    const minY = maxY - 110
+    const list = []
+    for (let y = maxY; y >= minY; y--) list.push(y)
+    return list
+})
+
+function reduceDobOption(o) {
+    return o.value
+}
 
 const emit = defineEmits(['update:modelValue', 'update:show', 'apply', 'cancel'])
 
@@ -102,6 +206,91 @@ const selectedDate = ref(null)
 const selectedHour = ref(12)
 const selectedMinute = ref(0)
 const selectedAmPm = ref('PM')
+
+const dobDaysInMonth = computed(() => {
+    const y = currentDate.value.getFullYear()
+    const m = currentDate.value.getMonth()
+    const maxD = new Date(y, m + 1, 0).getDate()
+    return Array.from({ length: maxD }, (_, i) => i + 1)
+})
+
+const dobDayChoices = computed(() =>
+    dobDaysInMonth.value.map((d) => ({ value: d, label: String(d) }))
+)
+
+const dobYearChoices = computed(() =>
+    dobYearOptions.value.map((y) => ({ value: y, label: String(y) }))
+)
+
+/** Sync selected date into viewed month/year, clamp invalid day / future dates. */
+function normalizeDobSelection() {
+    if (!props.dobLayout || !props.dateOnly) return
+    const y = currentDate.value.getFullYear()
+    const m = currentDate.value.getMonth()
+    const maxD = new Date(y, m + 1, 0).getDate()
+    let d = selectedDate.value ? Math.min(selectedDate.value.getDate(), maxD) : 1
+    let cand = new Date(y, m, d)
+    const maxC = dobMaxCalendarDate.value
+    if (compareCalendarOnly(cand, maxC) > 0) {
+        cand = new Date(maxC)
+        currentDate.value = new Date(cand.getFullYear(), cand.getMonth(), 1)
+    }
+    selectedDate.value = cand
+}
+
+const dobMonthOneBased = computed({
+    get() {
+        return currentDate.value.getMonth() + 1
+    },
+    set(m) {
+        const y = currentDate.value.getFullYear()
+        currentDate.value = new Date(y, m - 1, 1)
+        normalizeDobSelection()
+    }
+})
+
+const dobSelYear = computed({
+    get() {
+        return currentDate.value.getFullYear()
+    },
+    set(y) {
+        const m = currentDate.value.getMonth()
+        currentDate.value = new Date(y, m, 1)
+        normalizeDobSelection()
+    }
+})
+
+const dobSelDayOneBased = computed({
+    get() {
+        if (!selectedDate.value) return 1
+        const y = currentDate.value.getFullYear()
+        const m = currentDate.value.getMonth()
+        if (
+            selectedDate.value.getFullYear() === y &&
+            selectedDate.value.getMonth() === m
+        ) {
+            return selectedDate.value.getDate()
+        }
+        const maxD = new Date(y, m + 1, 0).getDate()
+        return Math.min(selectedDate.value.getDate(), maxD)
+    },
+    set(d) {
+        const y = currentDate.value.getFullYear()
+        const m = currentDate.value.getMonth()
+        let cand = new Date(y, m, d)
+        if (compareCalendarOnly(cand, dobMaxCalendarDate.value) > 0) {
+            cand = new Date(dobMaxCalendarDate.value)
+        }
+        selectedDate.value = cand
+        currentDate.value = new Date(cand.getFullYear(), cand.getMonth(), 1)
+    }
+})
+
+function compareCalendarOnly(a, b) {
+    const da = new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime()
+    const db = new Date(b.getFullYear(), b.getMonth(), b.getDate()).getTime()
+    return da === db ? 0 : da < db ? -1 : 1
+}
 
 // Initialize with modelValue or current date
 watch(() => props.modelValue, (newValue) => {
@@ -122,18 +311,23 @@ watch(() => props.modelValue, (newValue) => {
         selectedMinute.value = now.getMinutes()
         selectedAmPm.value = now.getHours() >= 12 ? 'PM' : 'AM'
     }
+    if (props.dateOnly && props.dobLayout) {
+        normalizeDobSelection()
+    }
 }, { immediate: true })
 
 watch(() => props.show, (newValue) => {
-    if (newValue && props.modelValue) {
-        const date = new Date(props.modelValue)
-        selectedDate.value = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-        currentDate.value = new Date(date.getFullYear(), date.getMonth(), 1)
-        
-        const hours24 = date.getHours()
-        selectedHour.value = hours24 === 0 ? 12 : (hours24 > 12 ? hours24 - 12 : hours24)
-        selectedMinute.value = date.getMinutes()
-        selectedAmPm.value = hours24 >= 12 ? 'PM' : 'AM'
+    if (!newValue || !props.modelValue) return
+    const date = new Date(props.modelValue)
+    selectedDate.value = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    currentDate.value = new Date(date.getFullYear(), date.getMonth(), 1)
+
+    const hours24 = date.getHours()
+    selectedHour.value = hours24 === 0 ? 12 : (hours24 > 12 ? hours24 - 12 : hours24)
+    selectedMinute.value = date.getMinutes()
+    selectedAmPm.value = hours24 >= 12 ? 'PM' : 'AM'
+    if (props.dateOnly && props.dobLayout) {
+        normalizeDobSelection()
     }
 })
 
@@ -160,15 +354,20 @@ const calendarDays = computed(() => {
     const days = []
     
     // Previous month days
+    const maxSel = props.dobLayout && props.dateOnly ? dobMaxCalendarDate.value : null
     for (let i = firstDayOfWeek - 1; i >= 0; i--) {
         const day = prevMonthLastDay - i
         const date = new Date(year, month - 1, day)
+        const isFutureDobBlocked =
+            maxSel &&
+            compareCalendarOnly(date, maxSel) > 0
         days.push({
             day,
             date,
             otherMonth: true,
             selected: false,
-            isToday: false
+            isToday: false,
+            isFutureDobBlocked: !!isFutureDobBlocked
         })
     }
     
@@ -185,12 +384,17 @@ const calendarDays = computed(() => {
             date.getMonth() === today.getMonth() &&
             date.getFullYear() === today.getFullYear()
         
+        const isFutureDobBlocked =
+            maxSel &&
+            compareCalendarOnly(date, maxSel) > 0
+
         days.push({
             day,
             date,
             otherMonth: false,
             selected: isSelected,
-            isToday
+            isToday,
+            isFutureDobBlocked: !!isFutureDobBlocked
         })
     }
     
@@ -198,12 +402,16 @@ const calendarDays = computed(() => {
     const remainingDays = 42 - days.length // 6 rows * 7 days
     for (let day = 1; day <= remainingDays; day++) {
         const date = new Date(year, month + 1, day)
+        const isFutureDobBlockedNext =
+            maxSel &&
+            compareCalendarOnly(date, maxSel) > 0
         days.push({
             day,
             date,
             otherMonth: true,
             selected: false,
-            isToday: false
+            isToday: false,
+            isFutureDobBlocked: !!isFutureDobBlockedNext
         })
     }
     
@@ -218,18 +426,30 @@ const nextMonth = () => {
     currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 1)
 }
 
-const selectDate = (date) => {
+const selectDate = (date, dayCell) => {
+    if (props.dateOnly && props.dobLayout && dayCell?.isFutureDobBlocked) {
+        return
+    }
     selectedDate.value = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-    
+
     // If selected date is from another month, switch to that month
     if (date.getMonth() !== currentDate.value.getMonth() || date.getFullYear() !== currentDate.value.getFullYear()) {
         currentDate.value = new Date(date.getFullYear(), date.getMonth(), 1)
+    }
+    if (props.dateOnly && props.dobLayout) {
+        normalizeDobSelection()
     }
 }
 
 const handleApply = () => {
     if (!selectedDate.value) {
         selectedDate.value = new Date()
+    }
+
+    if (props.dateOnly && props.dobLayout) {
+        if (compareCalendarOnly(selectedDate.value, dobMaxCalendarDate.value) > 0) {
+            selectedDate.value = new Date(dobMaxCalendarDate.value)
+        }
     }
     
     // Convert 12-hour format to 24-hour format
@@ -275,7 +495,8 @@ const handleCancel = () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10000;
+    /* Above Complete Stage modal (~300xx); searchable menus use 46000 when stage open */
+    z-index: 45000;
     backdrop-filter: blur(2px);
 }
 
@@ -287,6 +508,146 @@ const handleCancel = () => {
     min-width: 320px;
     max-width: 360px;
     width: 100%;
+}
+
+.date-time-picker-modal.is-dob-layout {
+    min-width: 320px;
+    max-width: 380px;
+    padding: 16px 16px 14px;
+}
+
+.dob-selectors {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.dob-helper {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding-top: 4px;
+    font-size: 11px;
+    line-height: 1.35;
+    color: #94a3b8;
+}
+
+.dob-select-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.dob-select-field-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.dob-vs-open {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* Compact searchable vue-select (DOB row) */
+:deep(.dob-v-select.v-select .vs__dropdown-toggle) {
+    min-height: 30px !important;
+    padding: 0 4px !important;
+    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #fafbfc !important;
+}
+
+:deep(.dob-v-select.v-select:not(.vs--open) .vs__dropdown-toggle:hover) {
+    border-color: #cbd5e1 !important;
+    background: #fff !important;
+}
+
+:deep(.dob-v-select.v-select.vs--open .vs__dropdown-toggle) {
+    border-color: #1a2f5b !important;
+    box-shadow: 0 0 0 2px rgba(26, 47, 91, 0.12);
+    background: #fff !important;
+}
+
+:deep(.dob-v-select .vs__selected-options) {
+    font-size: 11px !important;
+}
+
+:deep(.dob-v-select .vs__selected),
+:deep(.dob-v-select .vs__search),
+:deep(.dob-v-select input.vs__search) {
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    line-height: 1.2 !important;
+}
+
+:deep(.dob-v-select .vs__search::placeholder),
+:deep(.dob-v-select input.vs__search::placeholder) {
+    font-size: 10px !important;
+    color: #94a3b8 !important;
+    font-weight: 400 !important;
+}
+
+:deep(.dob-v-select .vs__dropdown-menu .vs__dropdown-option) {
+    font-size: 11px !important;
+    padding: 6px 10px !important;
+}
+
+:deep(.dob-v-select .vs__open-indicator),
+:deep(.dob-v-select .vs__open-indicator .vs__open-indicator-icon) {
+    transform: scale(0.92);
+}
+
+.date-time-picker-modal.is-dob-layout .calendar-container.is-dob-compact {
+    margin-bottom: 8px;
+}
+
+.date-time-picker-modal.is-dob-layout .is-dob-compact .weekday-headers {
+    gap: 2px;
+    margin-bottom: 4px;
+}
+
+.date-time-picker-modal.is-dob-layout .is-dob-compact .weekday-header {
+    padding: 2px 1px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.date-time-picker-modal.is-dob-layout .is-dob-compact .calendar-grid {
+    gap: 3px;
+}
+
+.date-time-picker-modal.is-dob-layout .is-dob-compact .calendar-day {
+    aspect-ratio: unset;
+    min-height: 0;
+    height: 30px;
+    max-height: 30px;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+.date-time-picker-modal.is-dob-layout .is-dob-compact .calendar-day.selected {
+    border-radius: 50%;
+}
+
+.date-time-picker-modal.is-dob-layout .separator-line {
+    margin-bottom: 10px;
+}
+
+.date-time-picker-modal.is-dob-layout .picker-actions {
+    padding-top: 0;
+}
+
+.date-time-picker-modal.is-dob-layout .btn-cancel-picker,
+.date-time-picker-modal.is-dob-layout .btn-apply-picker {
+    padding: 7px 16px;
+    font-size: 13px;
 }
 
 /* Header */
@@ -396,6 +757,16 @@ const handleCancel = () => {
 .calendar-day.today:not(.selected) {
     font-weight: 600;
     color: #01062C;
+}
+
+.calendar-day.is-future-dob {
+    color: #e2e8f0 !important;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.calendar-day.is-future-dob.other-month {
+    color: #f1f5f9 !important;
 }
 
 /* Time Picker */
@@ -511,9 +882,5 @@ const handleCancel = () => {
 
 .btn-apply-picker:hover {
     background: #152547;
-}
-.advanced-date-trigger{
-    border: none important;
-    border-radius: 12px !important;
 }
 </style>

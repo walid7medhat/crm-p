@@ -168,6 +168,51 @@ function generateId() {
   return Date.now() + '-' + Math.random().toString(36).substr(2, 9)
 }
 
+/** True if this slot has a real file (uploaded or existing), not an empty drop zone. */
+function boxHasContent(box) {
+  if (!box?.files?.length) return false
+  return box.files.some(
+    (f) =>
+      f &&
+      (f.is_existing ||
+        f.file ||
+        f.url ||
+        f.file_url ||
+        f.path)
+  )
+}
+
+/** After the last filled slot, always keep one empty slot so the user can add another file. */
+function ensureTrailingEmptySlot(typeId) {
+  if (!boxesByType.value[typeId]) {
+    boxesByType.value[typeId] = []
+  }
+  const boxes = boxesByType.value[typeId]
+  if (!boxes.length) {
+    boxes.push({ id: generateId(), files: [] })
+    return
+  }
+  const last = boxes[boxes.length - 1]
+  if (boxHasContent(last)) {
+    boxes.push({ id: generateId(), files: [] })
+  }
+}
+
+function ensureTrailingEmptySlotsAllTypes(nextBoxes) {
+  props.documentTypes.forEach((type) => {
+    const tid = type.id
+    let arr = nextBoxes[tid]
+    if (!arr || arr.length === 0) {
+      nextBoxes[tid] = [{ id: generateId(), files: [] }]
+      return
+    }
+    const last = arr[arr.length - 1]
+    if (boxHasContent(last)) {
+      arr.push({ id: generateId(), files: [] })
+    }
+  })
+}
+
 function getDisplayName(type) {
   if (type.id === 'national_id') {
     return 'Emirates ID'
@@ -291,8 +336,8 @@ function handleFileSelect(event) {
     // Add files to box
     addFilesToBox(selectedFiles, typeId, boxId)
     
-    // Add a new box automatically after upload (for ALL categories including property)
-    addNewBox(typeId)
+    // Keep one empty slot after the last filled box (buyer, property, etc.)
+    ensureTrailingEmptySlot(typeId)
   }
   
   selectedBoxRef.value = { typeId: null, boxId: null }
@@ -428,6 +473,8 @@ function hydrateFilesFromModelValue(model) {
       next[type.id] = [{ id: generateId(), files: [] }]
     }
   })
+
+  ensureTrailingEmptySlotsAllTypes(next)
   
   boxesByType.value = next
   isHydratingFromModel.value = false
@@ -480,11 +527,7 @@ const missingRequiredDocs = computed(() => {
 
 function hasFilesForType(typeId) {
   const boxes = boxesByType.value[typeId] || []
-  return boxes.some(box => 
-    box.files.some(file => 
-      file && (file.is_existing || file.file || file.url || file.file_url)
-    )
-  )
+  return boxes.some((box) => boxHasContent(box))
 }
 
 function isImageFile(file) {

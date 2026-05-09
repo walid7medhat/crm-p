@@ -111,6 +111,33 @@ button.vs__clear {
   box-sizing: border-box !important;
 }
 
+/* Stage completion modal is stacked above ViewDealModal; dropdown is append-to-body.
+   Must clear DateTimePicker / DOB overlay (45000). */
+body.complete-stage-open .vs__dropdown-menu {
+  z-index: 46200 !important;
+}
+
+/* Flatpickr also renders under body */
+body.complete-stage-open .flatpickr-calendar {
+  z-index: 46200 !important;
+}
+
+/* When stacked above ViewDealModal, ensure underlying modal can't steal clicks */
+body.complete-stage-open #view-deal-modal,
+body.complete-stage-open .modal#view-deal-modal {
+  pointer-events: none !important;
+}
+
+/* Bootstrap backdrop can still sit above and block clicks */
+body.complete-stage-open .modal-backdrop {
+  pointer-events: none !important;
+}
+
+body.complete-stage-open .complete-fields-overlay,
+body.complete-stage-open .complete-fields-modal {
+  pointer-events: auto !important;
+}
+
 .v-select.vs--single .vs__search,
 .v-select.vs--single input.vs__search {
   align-self: center !important;
