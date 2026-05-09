@@ -75,15 +75,18 @@
 
             <!-- Buyer Section with Collapsible -->
             <section v-if="!shouldHideBuyer && (showPartyDetailFields('buyer') || documentTypesByParty.buyer.length > 0)" class="form-section">
+           
               <div 
                 class="section-collapsible-header" 
-                :class="{ 'has-required': hasRequiredInSection('buyer') }"
+                :class="getSectionHeaderClass('buyer')"
                 @click="toggleSection('buyer')"
               >
-               
                 <h6 class="section-title mb-0">Buyer Details</h6>
-                <span v-if="hasRequiredInSection('buyer')" class="required-badge">Required</span>
-                 <iconify-icon :icon="isSectionOpen('buyer') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
+                 <div class="d-flex">
+                  <span v-if="hasRequiredInSection('buyer') && !isSectionComplete('buyer')" class="required-badge">Required</span>
+                  <span v-if="isSectionComplete('buyer')" class="completed-badge">Completed</span>
+                  <iconify-icon :icon="isSectionOpen('buyer') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
+                  </div>
               </div>
               
               <div
@@ -274,12 +277,15 @@
             <section v-if="!shouldHideSeller && (showPartyDetailFields('seller') || documentTypesByParty.seller.length > 0)" class="form-section">
               <div 
                 class="section-collapsible-header"
-                :class="{ 'has-required': hasRequiredInSection('seller') }"
+                :class="getSectionHeaderClass('seller')"
                 @click="toggleSection('seller')"
               >
                 <h6 class="section-title mb-0">Seller Details</h6>
-                <span v-if="hasRequiredInSection('seller')" class="required-badge">Required</span>
-                <iconify-icon :icon="isSectionOpen('seller') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
+                 <div class="d-flex">
+                  <span v-if="hasRequiredInSection('seller') && !isSectionComplete('seller')" class="required-badge">Required</span>
+                  <span v-if="isSectionComplete('seller')" class="completed-badge">Completed</span>
+                  <iconify-icon :icon="isSectionOpen('seller') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
+                  </div>
               </div>
               
               <div
@@ -465,13 +471,15 @@
             <section v-if="!shouldHideTenant && (showPartyDetailFields('tenant') || documentTypesByParty.tenant.length > 0)" class="form-section">
               <div 
                 class="section-collapsible-header"
-                :class="{ 'has-required': hasRequiredInSection('tenant') }"
+                :class="getSectionHeaderClass('tenant')"
                 @click="toggleSection('tenant')"
               >
                 <h6 class="section-title mb-0">Tenant Details</h6>
-                <span v-if="hasRequiredInSection('tenant')" class="required-badge">Required</span> 
-               <iconify-icon :icon="isSectionOpen('tenant') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
-
+                 <div class="d-flex">
+                  <span v-if="hasRequiredInSection('tenant') && !isSectionComplete('tenant')" class="required-badge">Required</span>
+                  <span v-if="isSectionComplete('tenant')" class="completed-badge">Completed</span>
+                  <iconify-icon :icon="isSectionOpen('tenant') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
+                </div>
               </div>
               
               <div
@@ -645,12 +653,15 @@
             <section v-if="!shouldHideLandlord && (showPartyDetailFields('landlord') || documentTypesByParty.landlord.length > 0)" class="form-section">
               <div 
                 class="section-collapsible-header"
-                :class="{ 'has-required': hasRequiredInSection('landlord') }"
+                :class="getSectionHeaderClass('landlord')"
                 @click="toggleSection('landlord')"
               >
                 <h6 class="section-title mb-0">Landlord Details</h6>
-                <span v-if="hasRequiredInSection('landlord')" class="required-badge">Required</span>
-                <iconify-icon :icon="isSectionOpen('landlord') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
+                 <div class="d-flex">
+                    <span v-if="hasRequiredInSection('landlord') && !isSectionComplete('landlord')" class="required-badge">Required</span>
+                    <span v-if="isSectionComplete('landlord')" class="completed-badge">Completed</span>
+                    <iconify-icon :icon="isSectionOpen('landlord') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
+                  </div>
               </div>
               
               <div
@@ -836,28 +847,28 @@
             <section v-if="dealProperties.length > 0" class="form-section">
                 <div 
                     class="section-collapsible-header properties-section"
-                    :class="{ 'has-required': true }"
+                    :class="getSectionHeaderClass('properties')"
                     @click="toggleSection('properties')"
-                >
+                  >
                     <div class="d-flex">
-                    <h6 class="section-title mb-0">Properties Details</h6>
+                      <h6 class="section-title mb-0">Properties Details</h6>
                     </div>
-                    <div class="d-flex add-new" > 
-                     <span class="required-badge">Required</span>
-                     <button 
+                    <div class="d-flex add-new"> 
+                      <span v-if="hasRequiredInSection('properties') && !isSectionComplete('properties')" class="required-badge">Required</span>
+                      <span v-if="isSectionComplete('properties')" class="completed-badge">Completed</span>
+                      <button 
                         type="button"
                         class="add-property-btn ms-auto"
                         @click.stop="addNewProperty"
                         :disabled="loading || submitting"
                         title="Add another property"
-                    >
+                      >
                         <iconify-icon icon="lucide:plus" class="me-1"></iconify-icon>
                         Add Property
-                    </button>
-                    <iconify-icon :icon="isSectionOpen('properties') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
+                      </button>
+                      <iconify-icon :icon="isSectionOpen('properties') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
                     </div>
-                  
-                </div>
+                  </div>
                 
                 <div
                   v-show="isSectionOpen('properties')"
@@ -1005,7 +1016,7 @@
                                 
                                 <!-- Purchase Price -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('purchase_price', property)">
-                                    <label class="form-label-custom">Purchase Price <span v-if="isPropertyFieldRequired('purchase_price')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom"> {{ isWonStage ? 'Amount' : 'Purchase Price' }} <span v-if="isPropertyFieldRequired('purchase_price')" class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input
                                             :value="property.purchase_price ?? ''"
@@ -1013,7 +1024,7 @@
                                             type="text"
                                             inputmode="decimal"
                                             autocomplete="off"
-                                            placeholder="Amount" 
+                                             :placeholder="isWonStage ? 'Enter Amount' : 'Enter Purchase Price'"
                                             class="form-control custom-input"
                                             :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'purchase_price') }"
                                         />
@@ -1173,14 +1184,17 @@
             <!-- Deal Financials Section -->
             <section v-if="shouldShowFinancialSection" class="form-section">
               <div 
-                class="section-collapsible-header"
-                :class="{ 'has-required': hasRequiredInSection('financials') }"
-                @click="toggleSection('financials')"
-              >
-                <h6 class="section-title mb-0">Deal Financials</h6>
-                <span v-if="hasRequiredInSection('financials')" class="required-badge">Required</span>
-                  <iconify-icon :icon="isSectionOpen('financials') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
-              </div>
+                  class="section-collapsible-header"
+                  :class="getSectionHeaderClass('financials')"
+                  @click="toggleSection('financials')"
+                >
+                  <h6 class="section-title mb-0">Deal Financials</h6>
+                  <div class="d-flex">
+                    <span v-if="hasRequiredInSection('financials') && !isSectionComplete('financials')" class="required-badge">Required</span>
+                    <span v-if="isSectionComplete('financials')" class="completed-badge">Completed</span>
+                    <iconify-icon :icon="isSectionOpen('financials') ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="collapse-icon"></iconify-icon>
+                  </div>
+                </div>
               
               <div
                 v-show="isSectionOpen('financials')"
@@ -1194,7 +1208,7 @@
                       <div class="input-group">
                         <span class="input-group-text">AED</span>
                         <input
-                          :value="formData.deal_total_amount"
+                          :value="computedTotalAmount"
                           type="text"
                           inputmode="decimal"
                           autocomplete="off"
@@ -1293,13 +1307,19 @@ const openSections = ref({
 })
 // Add new property with same required fields structure
 const addNewProperty = () => {
+  
+    const dt = normalizedDealType.value
+    const shouldShowUnitSize = dt === 'primary' 
+    const shouldShowBedrooms = dt !== 'rental' 
+    
     const newProperty = {
         id: Date.now(),
+        new:1,
         sort_order: localProperties.value.length,
         unit_no: '',
         property_type_id: null,
         bedrooms: null,
-        unit_size: '',
+        unit_size: shouldShowUnitSize ? '' : null,  
         area_id: null,
         developer_id: null,
         developer_name: '',
@@ -1369,7 +1389,45 @@ const removeProperty = (propIndex) => {
     
     console.log('Property removed at index:', propIndex)
 }
+// Check if a section has no unresolved missing fields (completed)
+function isSectionComplete(section) {
+  const unresolved = unresolvedMissingKeys.value || []
+  
+  switch(section) {
+    case 'buyer':
+      return !unresolved.some(k => k.startsWith('buyer_') || k.startsWith('buyer_document_'))
+    case 'seller':
+      return !unresolved.some(k => k.startsWith('seller_') || k.startsWith('seller_document_'))
+    case 'tenant':
+      return !unresolved.some(k => k.startsWith('tenant_') || k.startsWith('tenant_document_'))
+    case 'landlord':
+      return !unresolved.some(k => k.startsWith('landlord_') || k.startsWith('landlord_document_'))
+    case 'properties':
+      return !unresolved.some(k => k.startsWith('property_') || k === 'at_least_one_property')
+    case 'financials':
+      return !unresolved.some(k => ['deal_commission', 'deal_total_amount'].includes(k))
+    default:
+      return false
+  }
+}
+
+// Get section header class based on completion status
+function getSectionHeaderClass(section) {
+  const hasReq = hasRequiredInSection(section)
+  const isComplete = isSectionComplete(section)
+  
+  if (isComplete && hasReq) {
+    return 'has-completed'
+  }
+  if (hasReq && !isComplete) {
+    return 'has-required'
+  }
+  return ''
+}
 function toggleSection(section) {
+    const isComplete = isSectionComplete(section)
+  
+
   const isCurrentlyOpen = isSectionOpen(section)
   if (isCurrentlyOpen && hasUnresolvedInSection(section)) {
     return
@@ -1441,17 +1499,17 @@ function isLikelyUIPortalFocus() {
 }
 
 function onCollapsibleSectionFocusOut(sectionKey, event) {
-  const root = event.currentTarget
-  if (!(root instanceof HTMLElement)) return
-  const related = event.relatedTarget
-  if (related instanceof Node && root.contains(related)) return
-  requestAnimationFrame(() => {
-    if (root.contains(document.activeElement)) return
-    if (isLikelyUIPortalFocus()) return
-    if (!hasUnresolvedInSection(sectionKey)) {
-      openSections.value[sectionKey] = false
-    }
-  })
+  // const root = event.currentTarget
+  // if (!(root instanceof HTMLElement)) return
+  // const related = event.relatedTarget
+  // if (related instanceof Node && root.contains(related)) return
+  // requestAnimationFrame(() => {
+  //   if (root.contains(document.activeElement)) return
+  //   if (isLikelyUIPortalFocus()) return
+  //   if (!hasUnresolvedInSection(sectionKey)) {
+  //     openSections.value[sectionKey] = false
+  //   }
+  // })
 }
 
 function onBudgetDropdownFocusOut(propIndex, event) {
@@ -2222,6 +2280,30 @@ function forceRefreshPropertyDocuments() {
     }, 100)
 }
 // Initialize form
+// دالة لتنسيق التاريخ إلى YYYY-MM-DD
+function formatDateForPicker(dateValue) {
+  if (!dateValue) return null;
+  
+  try {
+    // إذا كان بالفعل بصيغة YYYY-MM-DD
+    if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+    
+    // محاولة تحويل التاريخ
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return null;
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.warn('Error formatting date:', dateValue, error);
+    return null;
+  }
+}
 async function initializeForm() {
   loading.value = true
   try {
@@ -2260,7 +2342,10 @@ async function initializeForm() {
           partyFields.forEach(field => {
             const key = `${partyType}_${field}`
             let value = party[field]
-            if (field === 'date_of_birth') value = party.date_of_birth
+             if (party.date_of_birth) {
+                initial[`${partyType}_dob`] = formatDateForPicker(party.date_of_birth);
+              }
+    
             if (value !== null && value !== undefined && value !== '') {
               initial[key] = value
             }
@@ -2321,6 +2406,7 @@ async function initializeForm() {
       console.log('Creating default property')
       localProperties.value = [{
         id: Date.now(),
+        new:1,
         sort_order: 0,
         unit_no: '',
         property_type_id: null,
@@ -2349,6 +2435,11 @@ async function initializeForm() {
 if (localProperties.value.length > 0) {
     reinitializePropertyDocuments()
 }
+const sections = ['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials']
+sections.forEach(section => {
+  // Only open sections that have unresolved missing fields
+  openSections.value[section] = hasUnresolvedInSection(section)
+})
     
   } catch (error) {
     console.error('Error initializing form:', error)
@@ -2367,7 +2458,39 @@ function getRequiredDocumentsByResidency(residencyStatus) {
   const status = residencyStatus?.toLowerCase()
   return status === 'resident' ? ['passport', 'national_id'] : ['passport']
 }
-
+const computedTotalAmount = computed(() => {
+  let total = 0
+  // استخدم localProperties.value مباشرة
+  const properties = localProperties.value
+  for (let i = 0; i < properties.length; i++) {
+    const prop = properties[i]
+    let price = prop.purchase_price
+    if (price) {
+      // تنظيف الرقم من الفواصل
+      if (typeof price === 'string') {
+        price = price.replace(/,/g, '')
+      }
+      const numPrice = Number(price)
+      if (!isNaN(numPrice)) {
+        total += numPrice
+      }
+    }
+  }
+  // إرجاع الرقم منسقاً للعرض
+  return total > 0 ? formatDealAmountThousands(String(total)) : ''
+})
+watch(computedTotalAmount, (val) => {
+  formData.value.deal_total_amount = val || null
+})
+// مراقبة التغييرات على purchase_price لكل خاصية
+watch(
+  () => localProperties.value.map(p => p.purchase_price),
+  (newValues) => {
+    // هذا يساعد في تحديث computedTotalAmount فوراً
+    console.log('Purchase prices changed:', newValues)
+  },
+  { deep: true }
+)
 // Computed for document types
 // Document types by party with deal type filtering
 const documentTypesByParty = computed(() => {
@@ -2391,9 +2514,7 @@ const documentTypesByParty = computed(() => {
   // إضافة مستندات بناءً على حالة الإقامة ولكن فقط للأطراف المسموح بها
   const parties = ['buyer', 'seller', 'tenant', 'landlord']
   parties.forEach(party => {
-    // تحقق أولاً: هل هذا الطرف مسموح به في نوع الصفقة الحالي؟
-    // يمكنك إضافة متغير محسوب (computed) جديد للتحقق من ذلك، أو استخدام المنطق الموجود في shouldHide...
-    // لنفترض أنك أضفت computed property باسم `isPartyAllowed(party)`
+   
     if (!isPartyAllowed(party)) return; // تخطى إذا كان الطرف غير مسموح به
 
     const residencyStatus = formData.value?.[`${party}_residency_status`]
@@ -2475,13 +2596,7 @@ function showPartyDetailFields(partyType) {
 }
 
 function shouldShowPropertyField(fieldName, property) {
-  const isNewProperty = property && !property.id; 
-  
-  if (fieldName === 'budget_from' || fieldName === 'budget_to') {
-    if (!isBudgetVisibleForPrimaryDeal()) return false
-    return showBudgetFields.value || isPropertyFieldRequired(fieldName) || !!property?.[fieldName]
-  }
-  
+  const isNewProperty = property && property.new; 
   const dt = normalizedDealType.value
   
   switch (fieldName) {
@@ -2489,22 +2604,31 @@ function shouldShowPropertyField(fieldName, property) {
     case 'property_type_id':
     case 'area_id':
       return true
+      
     case 'unit_size':
+      // عرض الحقل للخاصية الجديدة في الـ primary deal حتى لو كان فارغاً
+      if (isNewProperty && dt === 'primary') return true
       return isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || dt !== 'primary'
+      
+    case 'bedrooms':
+      // عرض الحقل للخاصية الجديدة إذا كانت تظهر bedrooms بشكل عام
+      if (isNewProperty) return true
+      return showBedroomsForProperty(property)
+      
     case 'developer_id':
     case 'developer_name':
     case 'developer_phone':
       if (dt === 'secondary') return true
       if (isNewProperty && (dt === 'primary' || dt === 'secondary')) return true
       return isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || !!property?.developer_name || !!property?.developer_phone || !!property?.developer_id
-    case 'bedrooms':
-      return showBedroomsForProperty(property)
+      
     case 'rental_price':
       return dt === 'rental'
+      
     case 'purchase_price':
-      // للخاصية الجديدة، نعرضها دائماً للصفقات غير الإيجارية
       if (isNewProperty && dt !== 'rental') return true
       return showPurchasePrice.value && dt !== 'rental'
+      
     default:
       return isPropertyFieldRequired(fieldName)
   }
@@ -2560,10 +2684,23 @@ function hasFinancialFields() {
   return missingKeys.some(key => ['deal_commission', 'deal_total_amount'].includes(key))
 }
 
-const shouldShowFinancialSection = computed(() =>
-  ['deal_commission', 'deal_total_amount'].some((k) => shouldShowField(k))
-)
-
+const shouldShowFinancialSection = computed(() => {
+  // Only show in Won stage
+  const targetStageNameLower = (props.targetStageName || '').toLowerCase()
+  const isWonStage = targetStageNameLower.includes('won') || 
+                      targetStageNameLower.includes('closed') ||
+                      targetStageNameLower.includes('completed')
+  
+  if (!isWonStage) return false
+  
+  return ['deal_commission', 'deal_total_amount'].some((k) => shouldShowField(k))
+})
+const isWonStage = computed(() => {
+  const targetStageNameLower = (props.targetStageName || '').toLowerCase()
+  return targetStageNameLower.includes('won') || 
+         targetStageNameLower.includes('closed') ||
+         targetStageNameLower.includes('completed')
+})
 const hasPropertyRequirements = computed(() => {
   const missingKeys = effectiveMissingFields.value || []
   return missingKeys.some(key => key.includes('property_') || key === 'at_least_one_property')
@@ -3262,6 +3399,33 @@ watch(() => props.show, async (val) => {
         }
     }
 })
+// دالة لتنسيق تاريخ الميلاد إلى YYYY-MM-DD لـ AdvancedDatePicker
+function formatDateForDatePicker(dateValue) {
+  if (!dateValue) return null;
+  
+  try {
+    // إذا كان التاريخ null أو undefined
+    if (!dateValue) return null;
+    
+    // إذا كان بالفعل بصيغة YYYY-MM-DD
+    if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+    
+    // محاولة تحويل التاريخ
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return null;
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.warn('Error formatting date:', dateValue, error);
+    return null;
+  }
+}
 // أضف هذه المتغيرات في بداية الـ script (بعد const openSections)
 const recentlyOpenedSection = ref(null)
 const recentlyOpenedTimer = ref(null)
@@ -3289,14 +3453,14 @@ function hasUnresolvedInSection(section) {
 }
 
 // قم بتعديل watch الخاص بـ unresolvedMissingKeys
-watch(unresolvedMissingKeys, () => {
-  const sections = ['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials']
-  sections.forEach((section) => {
-    if (hasUnresolvedInSection(section)) {
-      openSections.value[section] = true
-    }
-  })
-}, { deep: true })
+// watch(unresolvedMissingKeys, () => {
+//   const sections = ['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials']
+//   sections.forEach((section) => {
+//     if (hasUnresolvedInSection(section)) {
+//       openSections.value[section] = true
+//     }
+//   })
+// }, { deep: true })
 watch(localProperties, () => {
     if (localProperties.value.length > 0) {
         reinitializePropertyDocuments()
@@ -3713,6 +3877,7 @@ onMounted(async () => {
     `;
     document.head.appendChild(style);
 })
+
 </script>
 
 <style scoped>
@@ -4090,7 +4255,29 @@ textarea.is-invalid {
 :deep(   [data-popper-placement]){
       z-index: 30050 !important;
 }
+:deep(.advanced-date-trigger){
+  border-radius: 8px !important;
+  border: 1px solid #E2E8F0 !important;
+}
+/* Section completed styles */
+.section-collapsible-header.has-completed {
+  background: #f0fdf4;
+  border-left: 3px solid #22c55e;
+}
 
+.completed-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #22c55e;
+  color: white;
+  font-weight: 500;
+}
+
+.section-collapsible-header.has-required {
+  background: #fff8eb;
+  border-left: 3px solid #faa300;
+}
 </style>
 <style>
     .vs__dropdown-menu {
@@ -4152,5 +4339,9 @@ textarea.is-invalid {
 .btn-remove-property:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.advanced-date-trigger{
+  border-radius: 8px !important;
+  border: 1px solid #E2E8F0 !important;
 }
 </style>

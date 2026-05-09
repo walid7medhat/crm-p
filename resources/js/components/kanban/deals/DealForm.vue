@@ -37,7 +37,7 @@
           <div class="col-md-4"><label class="form-label-custom">Buyer Last Name <span class="text-danger">*</span></label><b-form-input v-model="form.buyer_last_name" placeholder="Enter Last Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.buyer_last_name }" /><div v-if="showErrors && fieldErrors.buyer_last_name" class="invalid-feedback d-block">{{ fieldErrors.buyer_last_name }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Date Of Birth <span class="text-danger">*</span></label>
-            <AdvancedDatePicker type="date" date-only placeholder="Select date" v-model="form.buyer_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.buyer_dob" />
+            <AdvancedDatePicker type="date" date-only dob-layout placeholder="Select date" v-model="form.buyer_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.buyer_dob" />
             <div v-if="showErrors && fieldErrors.buyer_dob" class="invalid-feedback d-block">{{ fieldErrors.buyer_dob }}</div>
           </div>
           <div class="col-md-4"><label class="form-label-custom">Buyer Phone Number <span class="text-danger">*</span></label><CrmPhoneInput v-model="form.buyer_phone" placeholder="Enter Phone" :invalid="showErrors && (!!fieldErrors.buyer_phone || !form.buyer_phone)" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.buyer_phone" class="invalid-feedback d-block">{{ fieldErrors.buyer_phone }}</div></div>
@@ -111,7 +111,7 @@
           <div class="col-md-4"><label class="form-label-custom">Last Name <span class="text-danger">*</span></label><b-form-input v-model="form.seller_last_name" placeholder="Enter Last Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.seller_last_name }" /><div v-if="showErrors && fieldErrors.seller_last_name" class="invalid-feedback d-block">{{ fieldErrors.seller_last_name }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
-            <AdvancedDatePicker type="date" date-only placeholder="Select date" v-model="form.seller_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.seller_dob" />
+            <AdvancedDatePicker type="date" dob-layout date-only placeholder="Select date" v-model="form.seller_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.seller_dob" />
             <div v-if="showErrors && fieldErrors.seller_dob" class="invalid-feedback d-block">{{ fieldErrors.seller_dob }}</div>
           </div>
           <div class="col-md-4"><label class="form-label-custom">Phone <span class="text-danger">*</span></label><CrmPhoneInput v-model="form.seller_phone" placeholder="Enter Phone" :invalid="showErrors && (!!fieldErrors.seller_phone || !form.seller_phone)" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.seller_phone" class="invalid-feedback d-block">{{ fieldErrors.seller_phone }}</div></div>
@@ -175,7 +175,7 @@
           <div class="col-md-4"><label class="form-label-custom">Last Name <span class="text-danger">*</span></label><b-form-input v-model="form.tenant_last_name" placeholder="Enter Last Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.tenant_last_name }" /><div v-if="showErrors && fieldErrors.tenant_last_name" class="invalid-feedback d-block">{{ fieldErrors.tenant_last_name }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Date Of Birth</label>
-            <AdvancedDatePicker type="date" date-only placeholder="Select date" v-model="form.tenant_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.tenant_dob" />
+            <AdvancedDatePicker type="date" dob-layout date-only placeholder="Select date" v-model="form.tenant_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.tenant_dob" />
             <div v-if="showErrors && fieldErrors.tenant_dob" class="invalid-feedback d-block">{{ fieldErrors.tenant_dob }}</div>
           </div>
           <div class="col-md-4"><label class="form-label-custom">Phone <span class="text-danger">*</span></label><CrmPhoneInput v-model="form.tenant_phone" placeholder="Enter Phone" :invalid="showErrors && (!!fieldErrors.tenant_phone || !form.tenant_phone)" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.tenant_phone" class="invalid-feedback d-block">{{ fieldErrors.tenant_phone }}</div></div>
@@ -239,7 +239,7 @@
           <div class="col-md-4"><label class="form-label-custom">Last Name <span class="text-danger">*</span></label><b-form-input v-model="form.landlord_last_name" placeholder="Enter Last Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.landlord_last_name }" /><div v-if="showErrors && fieldErrors.landlord_last_name" class="invalid-feedback d-block">{{ fieldErrors.landlord_last_name }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Date Of Birth <span class="text-danger">*</span></label>
-            <AdvancedDatePicker type="date" date-only placeholder="Select date" v-model="form.landlord_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.landlord_dob" />
+            <AdvancedDatePicker type="date" dob-layout date-only placeholder="Select date" v-model="form.landlord_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.landlord_dob" />
             <div v-if="showErrors && fieldErrors.landlord_dob" class="invalid-feedback d-block">{{ fieldErrors.landlord_dob }}</div>
           </div>
           <div class="col-md-4"><label class="form-label-custom">Phone <span class="text-danger">*</span></label><CrmPhoneInput v-model="form.landlord_phone" placeholder="Enter Phone" :invalid="showErrors && (!!fieldErrors.landlord_phone || !form.landlord_phone)" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.landlord_phone" class="invalid-feedback d-block">{{ fieldErrors.landlord_phone }}</div></div>

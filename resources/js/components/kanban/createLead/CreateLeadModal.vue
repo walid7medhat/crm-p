@@ -537,6 +537,7 @@
                                         <div v-if="shouldShowField('available_date')" class="col-md-4">
                                             <label class="form-label-custom">Available Date</label>
                                             <AdvancedDatePicker
+                                             dob-layout
                                                 v-model="form.available_date"
                                                 date-only
                                                 placeholder="Select date"

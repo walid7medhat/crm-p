@@ -128,6 +128,7 @@ class DealResource extends JsonResource
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
             'converted_at' => $this->lead?->converted_at?->format('Y-m-d H:i:s'),
+            
         ];
     }
     
