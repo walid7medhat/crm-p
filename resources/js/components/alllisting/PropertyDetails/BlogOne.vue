@@ -10,7 +10,7 @@
             <div class="property-gallery" v-if="property && property.gallery_images">
               <div class="gallery-container">
                 <div class="main-image-section" @click="openLightbox(0)">
-                  <img :src="currentMainImage || getFirstGalleryImage()" alt="Property main image" class="main-image" />
+                  <img :src="getFirstGalleryImage()" alt="Property main image" class="main-image" />
                   <div class="image-overlay">
                     <i class="ri-image-fill"></i>
                     <span>View All Photos</span>
@@ -1808,7 +1808,7 @@
           
           <div class="lightbox-image-container">
             <img 
-              :src="getImageUrl(property.gallery_images[currentImageIndex]?.image_url)" 
+              :src="getImageUrl(property.gallery_images[currentImageIndex]?.image_url_final)" 
               :alt="'Property image ' + (currentImageIndex + 1)" 
               class="lightbox-image" 
             />
@@ -1827,7 +1827,7 @@
             :class="{ active: currentImageIndex === index }"
             @click="setCurrentImage(index)"
           >
-            <img :src="getImageUrl(image.image_url)" :alt="'Thumbnail ' + (index + 1)" />
+            <img :src="getImageUrl(image.image_url_final)" :alt="'Thumbnail ' + (index + 1)" />
           </div>
         </div>
       </div>
@@ -4826,7 +4826,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
 
     const getFirstGalleryImage = () => {
       if (property.value?.gallery_images?.length > 0) {
-        return getImageUrl(property.value.gallery_images[0].image_url);
+        return getImageUrl(property.value.gallery_images[0].image_url_final);
       }
       return '/default-property.jpg';
     };
@@ -5200,6 +5200,7 @@ const createNewDesignContent = (currentUser) => {
   const hasFloorPlans = property.value?.floor_plans && Array.isArray(property.value.floor_plans) && property.value.floor_plans.length > 0;
   const hasProject = property.value?.project && property.value.project.id;
   const features = hasProject ? (Array.isArray(property.value.project?.features) ? property.value.project.features.map(f => f?.name || f?.title || f).filter(Boolean) : []) : [];
+  const gallerySlides = createGallerySlides() || [];
 
   container.innerHTML = `
  <!-- Slide 1 - Cover -->
@@ -5211,9 +5212,9 @@ const createNewDesignContent = (currentUser) => {
     ${hasFloorPlans ? createSlide5() : ''}
 
       <!-- Slide 6 - Additional Images -->
-    ${createSlide6()}
+  
 <!-- Slide 7 - Additional Images -->
-    ${createSlide7()}
+   ${gallerySlides}
 
     ${hasProject ? createSlide4() : ''}
 
@@ -5226,7 +5227,56 @@ const createNewDesignContent = (currentUser) => {
   return container;
 };
 
+const createGallerySlides = () => {
+  const images = (property.value?.gallery_images || []).slice(0, 9); 
 
+  const chunks = chunkArray(images, 3);
+
+  return chunks.map(chunk => createGallerySlide(chunk)).join('');
+};
+const chunkArray = (arr, size = 3) => {
+  const result = [];
+  for (let i = 0; i < arr.length; i += size) {
+    result.push(arr.slice(i, i + size));
+  }
+  return result;
+};
+const createGallerySlide = (imagesChunk) => {
+  const img1 = imagesChunk[0]
+    ? getImageUrl(imagesChunk[0].image_url)
+    : 'placeholder.png';
+
+  const img2 = imagesChunk[1]
+    ? getImageUrl(imagesChunk[1].image_url)
+    : 'placeholder.png';
+
+  const img3 = imagesChunk[2]
+    ? getImageUrl(imagesChunk[2].image_url)
+    : 'placeholder.png';
+
+  return `
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important; display:flex !important; flex-direction:column !important;">
+    
+    <div style="width:100% !important; height:90% !important; padding:4mm !important; box-sizing:border-box !important; display:flex !important; gap:3mm !important; overflow:hidden !important;">
+      
+      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img1}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+      
+      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img2}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+      
+      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; position:relative !important; background-image:url('${img3}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
+        
+        <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
+          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+        </div>
+
+      </div>
+
+    </div>
+
+    ${createFooter()}
+  </div>
+  `;
+};
 const createSlide1 = (currentUser) => {
   const bedroomsText = property.value?.number_of_bedrooms === 0 ? 'Studio' : `${property.value?.number_of_bedrooms || ''} Bedrooms`;
   const propertyTypeName = property.value?.property_type?.name || '';
@@ -5271,7 +5321,6 @@ const createSlide2 = () => {
   const bedrooms = property.value?.number_of_bedrooms === 0 ? 'Studio' : (property.value?.number_of_bedrooms ?? 'N/A');
   const bathrooms = property.value?.number_of_bathrooms ?? 'N/A';
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
-  const ownershipType = property.value?.ownership_type || 'Freehold';
   const completionStatus = property.value?.completion_status || 'Under Construction';
 
   return `
@@ -5305,13 +5354,10 @@ const createSlide2 = () => {
         <div style="display:flex !important;">
          
           <div style="flex:1 !important;  border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
-            <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;font-family: 'Montserrat', sans-serif !important;">Ownership Type</p>
-            <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">${ownershipType}</p>
-          </div>
-          <div style="flex:2 !important; padding-left:6mm !important;">
             <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;font-family: 'Montserrat', sans-serif !important;">Completion Status</p>
             <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">${completionStatus}</p>
           </div>
+
         </div>
       </div>
     </div>
@@ -5387,14 +5433,14 @@ const createSlide4 = () => {
   const projectAbout = project?.about || '';
   // const projectImage = project?.image2 ? getImageUrl(project.image2) : getMainImage();
   const projectImage = project?.image ? getImageUrl(project.image) : getMainImage();
-  const aboutLimited = limitText(projectAbout, 1500);
+  const aboutLimited = limitText(projectAbout, 800);
 
   return `
   <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#01062c !important; position:relative !important; display:flex !important; align-items:center !important; justify-content:center !important;">
     <div style="width:95% !important; height:90% !important; background:#fff !important; border-radius:5mm !important; overflow:hidden !important; display:flex !important;">
       <div style="width:50% !important; padding:8mm !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:flex-start !important; overflow:hidden !important;">
-        <h1 style="color:#01062C !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">About<br>Project</h1>
-        <div style="width:20mm !important; height:1mm !important; background:#FAA300 !important; margin-bottom:5mm !important;"></div>
+        <h1 style="color:#01062C !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">About<br>The Project</h1>
+        
         <p style="font-size:5mm !important; font-weight:bold !important; line-height:10mm !important; color:#01062C !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important; margin-bottom:2mm !important;">${projectTitle}</p>
         <p style="font-size:3.2mm !important; line-height:5.5mm !important; color:#444 !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important;">${formatTextForPDF(aboutLimited)}</p>
       </div>
@@ -5484,13 +5530,10 @@ const createSlide7 = () => {
 const createSlide9 = (currentUser) => {
   return `
   <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
-    <img src="${LastSlide_bg}" crossorigin="anonymous" style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; object-fit:cover !important; display:block !important;" />
+    <img src="${LastSlide_bg}" crossorigin="anonymous" style="position:absolute !important; top:0 !important; left:0 !important; width:130% !important; height:100% !important; object-fit:cover !important; display:block !important;" />
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(1,6,44,0.65) !important;"></div>
-    <div style="position:relative !important; z-index:5 !important; width:100% !important; height:90% !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important;">
-      <div style="text-align:center !important; margin-bottom:8mm !important;">
-        <img src="${OiaLogo}" style="width:18mm !important; display:block !important; margin:0 auto !important;" />
-      </div>
-      <h1 style="color:#fff !important; font-size:9mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important; text-align:center !important; letter-spacing:0.5mm !important; font-family:'Montserrat', sans-serif !important;">Thank You!</h1>
+     <div style="position:relative !important; z-index:5 !important; width:100% !important; height:100% !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:flex-start !important; padding-top:15mm !important;">      
+      <h1 style="color:#fff !important; font-size:9mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important; text-align:center !important; letter-spacing:0.5mm !important; font-family:'Montserrat', sans-serif !important;margin-top:20mm  !important;">Thank You!</h1>
       <div style="position:absolute !important; bottom:12mm !important; right:14mm !important; text-align:left !important;">
         <p style="color:rgba(255,255,255,0.7) !important; font-size:3.5mm !important; margin:0 0 1.5mm 0 !important;">Contact</p>
         <p style="color:#fff !important; font-size:5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important; font-family:'Montserrat', sans-serif !important;">${currentUser?.name || ''}</p>
@@ -5506,7 +5549,7 @@ const createSlide9 = (currentUser) => {
 
 
 // Helper function to format text
-const limitText = (text = '', max = 3000) => {
+const limitText = (text = '', max = 900) => {
   if (!text) return '';
   return text.length > max
     ? text.slice(0, max) + '...'

@@ -5,12 +5,14 @@ namespace App\Http\Resources\Listing;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use App\Models\User;
+use App\Helpers\ImageHelper;
 class ListingResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
         $user = auth()->user();
-    
+    $isTodayMain = $this->created_at?->isToday();
+
         // Manual permission check
         $canEdit = false;
         $canDelete = false;
@@ -204,17 +206,37 @@ $allowedAgentIds = [];
             'is_owner' =>$this->isOwner($user) || ( $user->hasRole('manager') && $user->listing_team == 1),
 
             // Gallery Images
-            'gallery_images' => $this->galleryImages->map(function ($galleryImage) {
+          'gallery_images' => $this->galleryImages->map(function ($galleryImage) {
+            
+                $isToday = $galleryImage->created_at?->isToday();
+            
                 return [
                     'id' => $galleryImage->id,
                     'name' => $galleryImage->name,
-                    'image_url' => $galleryImage->image_path ? asset('storage/' . $galleryImage->image_path) : null,
+            
+                    // الأصلية دايمًا
+                    'image_url' => $galleryImage->image_path
+                        ? asset('storage/' . $galleryImage->image_path)
+                        : null,
+            
+                    // watermark condition
+                    // 'image_url_final' => $galleryImage->image_path
+                    //     ? ($isToday
+                    //         ? ImageHelper::getWatermarkedUrl($galleryImage->image_path)
+                    //         : asset('storage/' . $galleryImage->image_path))
+                    //     : null,
+                        'image_url_final' => $galleryImage->image_path
+                            ? route('image.watermark', ['path' => $galleryImage->image_path])
+                            : null,
+            
                     'order' => $galleryImage->order,
                     'created_at' => $galleryImage->created_at,
                 ];
             }),
             'main_image'=>$this->hero_image_path ? asset('storage/' . $this->hero_image_path) : null,
-
+            // 'main_image' =>$this->hero_image_path
+            //                     ? route('image.watermark', ['path' => $this->hero_image_path])
+            //                     : null,
             // Relationships
             'property_type' => $this->whenLoaded('propertyType', function () {
                 return [

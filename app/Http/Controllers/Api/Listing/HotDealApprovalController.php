@@ -29,38 +29,59 @@ class HotDealApprovalController extends Controller
     {
         try {
             $user = Auth::user();
-            
+    
             $query = HotDealRequest::with([
-                        'listing:id,area_id,price,number_of_bedrooms',
-                        'listing.area:id,name,parent_id',
-                        'listing.area.parent',
-                        'requester:id,name'
-                    ]);
-                // ->where('status', 'pending');
-            
-            // If user is manager/team lead, only show requests from their hierarchy
-            if ($user->hasRole('manager') || $user->hasRole('team_lead')) {
-                $userIdsUnder = User::where('parent_id', $user->id)
-                     ->orWhereHas('parent', function($parentQuery) use ($user) {
-                            $parentQuery->where('parent_id', $user->id);
-                        })
-                    ->pluck('id');
-                $userIdsUnder[] = $user->id;
-                
-                $query->whereHas('requester', function($q) use ($userIdsUnder) {
+                'listing:id,area_id,price,number_of_bedrooms',
+                'listing.area:id,name,parent_id',
+                'listing.area.parent',
+                'requester:id,name'
+            ])->where('status', 'pending');
+    
+            // 🟢 Manager (listing team) → كل الريكويستات
+            if ($user->hasRole('manager') && $user->is_listing_team) {
+    
+                // no filter → full access
+            }
+    
+            // 🟡 Team Lead → تحتَه فقط
+            elseif ($user->hasRole('team_lead')) {
+    
+                $userIdsUnder = $this->getAllSubUsers($user->id);
+    
+                $query->whereHas('requester', function ($q) use ($userIdsUnder) {
                     $q->whereIn('id', $userIdsUnder);
                 });
-            }elseif($user->hasRole('sales')){
-                  return ApiResponse::error('Access Denied' );
             }
-            
-            $requests = $query->orderByRaw("status = 'pending' DESC")->orderBy('created_at', 'desc')->paginate(20);
-            
+    
+            // 🔴 forbidden
+            else {
+                return ApiResponse::error('Access Denied', 403);
+            }
+    
+            $requests = $query
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+    
             return ApiResponse::success($requests, 'Pending hot deal requests retrieved');
+    
         } catch (\Exception $e) {
-            return ApiResponse::error('Failed to retrieve requests: ' . $e->getMessage());
+            return ApiResponse::error($e->getMessage());
         }
     }
+    private function getAllSubUsers($userId)
+{
+    $all = collect();
+
+    $children = User::where('parent_id', $userId)->get();
+
+    foreach ($children as $child) {
+        $all->push($child->id);
+
+        $all = $all->merge($this->getAllSubUsers($child->id));
+    }
+
+    return $all->unique()->values();
+}
     
     /**
      * Approve or reject hot deal request

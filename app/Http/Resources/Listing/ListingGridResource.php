@@ -4,11 +4,13 @@ namespace App\Http\Resources\Listing;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Helpers\ImageHelper;
 
 class ListingGridResource extends JsonResource
 {
     public function toArray(Request $request): array
-    {
+    {$isTodayMain = $this->created_at?->isToday();
+
         return [
             'id' => $this->id,
             'title' => $this->project?->title,
@@ -50,7 +52,9 @@ class ListingGridResource extends JsonResource
             'completion_status' => $this->completion_status,
             
             // 'main_image' => $this->galleryImages->first()?->image_url,
-            'main_image'=>$this->hero_image_path ? asset('storage/' . $this->hero_image_path) : null,
+            'main_image'=> $this->hero_image_path
+                            ? route('image.watermark', ['path' => $this->hero_image_path])
+                            : null,
             'total_images' => $this->galleryImages->count()+1,
             
             'property_type' => $this->propertyType?->name,

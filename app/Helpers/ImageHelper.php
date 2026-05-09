@@ -42,7 +42,7 @@ class ImageHelper
          * Watermark Section
          * =========================
          */
-        if (!empty($options['watermark']['enabled'])) {
+        if (!empty($options['watermark']['enabled']) && $options['watermark']['enabled']) {
 
             $watermarkPath = $options['watermark']['path'] ?? null;
 
@@ -222,4 +222,60 @@ class ImageHelper
         
         return $results;
     }
+   public static function getWatermarkedUrl(string $path, array $options = []): string
+{
+    $options['watermark'] = array_merge([
+        'path' => 'Setting/1745128256Oia Watermark.png',
+        'opacity' => 80,
+        'position' => 'center',
+        'margin' => 20,
+    ], $options['watermark'] ?? []);
+
+    $fullImagePath = storage_path('app/public/' . $path);
+
+    if (!file_exists($fullImagePath)) {
+        return asset('storage/' . $path);
+    }
+
+    $image = \Intervention\Image\ImageManagerStatic::make($fullImagePath);
+
+    $watermarkFullPath = storage_path('app/public/' . $options['watermark']['path']);
+
+    if (file_exists($watermarkFullPath)) {
+
+        $watermark = \Intervention\Image\ImageManagerStatic::make($watermarkFullPath);
+        $watermark->opacity($options['watermark']['opacity']);
+
+        $margin = $options['watermark']['margin'];
+        $position = $options['watermark']['position'];
+
+        switch ($position) {
+            case 'top-left':
+                $image->insert($watermark, 'top-left', $margin, $margin);
+                break;
+
+            case 'top-right':
+                $image->insert($watermark, 'top-right', $margin, $margin);
+                break;
+
+            case 'bottom-left':
+                $image->insert($watermark, 'bottom-left', $margin, $margin);
+                break;
+
+            case 'bottom-right':
+                $image->insert($watermark, 'bottom-right', $margin, $margin);
+                break;
+
+            default:
+                $image->insert($watermark, 'center');
+                break;
+        }
+    }
+
+    $watermarkedPath = 'watermark/' . md5($path) . '.webp';
+
+    Storage::disk('public')->put($watermarkedPath, (string) $image->encode('webp', 80));
+
+    return asset('storage/' . $watermarkedPath);
+}
 }

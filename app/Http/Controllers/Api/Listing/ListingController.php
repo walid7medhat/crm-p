@@ -35,6 +35,10 @@ use Illuminate\Support\Facades\Log;
 use App\Notifications\ListingNeedsApproval;
 use App\Notifications\ListingApproved;
 use App\Notifications\ListingRejected;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManagerStatic as Image;
+
 class ListingController extends Controller
 {
     use HotDealNotifiable;
@@ -87,6 +91,7 @@ class ListingController extends Controller
         );
 
     } catch (\Exception $e) {
+        dd($e);
         return $this->fallbackIndex($request, $e);
     }
 }
@@ -787,8 +792,16 @@ public function getMatchingListings(Request $request)
                         \Log::info('Creating listing with data', [$newHotDealStatus,$oldHotDealStatus,$user->hasRole('sales') && $user->isListingTeam]);
         // If trying to mark as hot deal
         if ($newHotDealStatus == 'Yes' ) {
+            if ($user->hasRole(['super_admin', 'admin']) || ($user->hasRole(['manager', 'team_lead']) && $user->isListingTeam)) {
+               
+                $listing->update([
+                    'is_hot_deal' => 'Yes',
+                    'hot_deal_approved_by' => $user->id,
+                    'hot_deal_approved_at' => Now()
+                ]);
+            }
             // Check if user is sales agent under listing team
-            if ($user->hasRole('sales') && $user->isListingTeam) {
+            else  {
                 // Check if there's already a pending request
                 if ($listing->hasPendingHotDealRequest()) {
                     throw new \Exception('There is already a pending hot deal request for this property.');
@@ -813,26 +826,11 @@ public function getMatchingListings(Request $request)
                      
                 throw new \Exception('Hot deal request has been sent for approval. You will be Notified once it\'s reviewed.', 422);
             }
-            // If user is admin/super_admin/manager, they can set directly
-            elseif ($user->hasRole(['super_admin', 'admin', 'manager','team_lead'])) {
-               
-                $listing->update([
-                    'is_hot_deal' => 'Yes',
-                    'hot_deal_approved_by' => $user->id,
-                    'hot_deal_approved_at' => Now()
-                ]);
-            }else if ($user->hasRole('sales') && !$user->isListingTeam ) {
-                $listing->update([
-                    'is_hot_deal' => 'Yes',
-                    'hot_deal_approved_by' => $user->id,
-                    'hot_deal_approved_at' => Now()
-                    ]);
-                
-            }
+           
             // Otherwise, Not allowed
-            else {
-                throw new \Exception('You are Not authorized to mark properties as hot deals.');
-            }
+            // else {
+            //     throw new \Exception('You are Not authorized to mark properties as hot deals.');
+            // }
         } 
         // If unmarking as hot deal
         else {
@@ -896,7 +894,7 @@ public function getMatchingListings(Request $request)
                                 'quality' => 90,
                                 'max_width' => 1920,
                                 'watermark' => [
-                                    'enabled'  => true,
+                                    'enabled'  => false,
                                     'path'     => 'storage/Setting/1745128256Oia Watermark.png',
                                     'position' => 'center',
                                     'opacity'  => 90
@@ -972,7 +970,7 @@ public function getMatchingListings(Request $request)
                                     'quality' => 85,
                                     'max_width' => 1600,
                                     'watermark' => [
-                                        'enabled'  => true,
+                                        'enabled'  => false,
                                         'path'     => 'storage/Setting/1745128256Oia Watermark.png',
                                         'position' => 'center',
                                         'opacity'  => 90
@@ -1018,7 +1016,7 @@ public function getMatchingListings(Request $request)
                                     'quality' => 85,
                                     'max_width' => 1920,
                                     'watermark' => [
-                                        'enabled'  => true,
+                                        'enabled'  => false,
                                         'path'     => 'storage/Setting/1745128256Oia Watermark.png',
                                         'position' => 'center',
                                         'opacity'  => 90
@@ -1226,7 +1224,7 @@ public function getMatchingListings(Request $request)
 //                                     'quality' => 85,
 //                                     'max_width' => 1920,
 //                                     'watermark' => [
-//                                         'enabled'  => true,
+//                                         'enabled'  => false,
 //                                         'path'     => 'storage/Setting/1745128256Oia Watermark.png',
 //                                         'position' => 'center',
 //                                         'opacity'  => 90
@@ -1293,7 +1291,7 @@ public function getMatchingListings(Request $request)
 //                                     'quality' => 85,
 //                                     'max_width' => 1600,
 //                                     'watermark' => [
-//                                         'enabled'  => true,
+//                                         'enabled'  => false,
 //                                         'path'     => 'storage/Setting/1745128256Oia Watermark.png',
 //                                         'position' => 'center',
 //                                         'opacity'  => 90
@@ -1328,7 +1326,7 @@ public function getMatchingListings(Request $request)
 //                                     'quality' => 85,
 //                                     'max_width' => 1920,
 //                                     'watermark' => [
-//                                         'enabled'  => true,
+//                                         'enabled'  => false,
 //                                         'path'     => 'storage/Setting/1745128256Oia Watermark.png',
 //                                         'position' => 'center',
 //                                         'opacity'  => 90
@@ -1521,7 +1519,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                     'quality' => 85,
                     'max_width' => 1920,
                     'watermark' => [
-                        'enabled'  => true,
+                        'enabled'  => false,
                         'path'     => 'storage/Setting/1745128256Oia Watermark.png',
                         'position' => 'center',
                         'opacity'  => 90
@@ -1588,7 +1586,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                         'quality' => 85,
                         'max_width' => 1600,
                         'watermark' => [
-                            'enabled'  => true,
+                            'enabled'  => false,
                             'path'     => 'storage/Setting/1745128256Oia Watermark.png',
                             'position' => 'center',
                             'opacity'  => 90
@@ -1618,7 +1616,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                         'quality' => 85,
                         'max_width' => 1920,
                         'watermark' => [
-                            'enabled'  => true,
+                            'enabled'  => false,
                             'path'     => 'storage/Setting/1745128256Oia Watermark.png',
                             'position' => 'center',
                             'opacity'  => 90
@@ -2982,5 +2980,37 @@ public function batchApprove(Request $request): JsonResponse
     } catch (\Exception $e) {
         return ApiResponse::error('Failed to process batch approval: ' . $e->getMessage());
     }
+}
+public function watermark(Request $request)
+{
+    $path = $request->get('path');
+
+    if (!$path) {
+        abort(404);
+    }
+
+    $fullPath = storage_path('app/public/' . $path);
+
+    if (!file_exists($fullPath)) {
+        abort(404);
+    }
+
+    $image = Image::make($fullPath);
+
+    $watermarkPath = storage_path('app/public/Setting/1745128256Oia Watermark.png');
+
+    if (file_exists($watermarkPath)) {
+
+        $watermark = Image::make($watermarkPath);
+
+        $watermark->opacity(70);
+
+        // center default
+        $image->insert($watermark, 'center');
+    }
+
+    return $image->response('webp', 80, [
+        'Cache-Control' => 'public, max-age=86400'
+    ]);
 }
 }

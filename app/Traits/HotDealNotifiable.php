@@ -12,40 +12,43 @@ trait HotDealNotifiable
     /**
      * Get the manager and team lead hierarchy for approval
      */
-    protected function getApproversForHotDeal(Listing $listing)
-    {
-        $approvers = [];
-        $agent = $listing->agent;
+           protected function getApproversForHotDeal(Listing $listing)
+        {
+            $approvers = [];
+            $agent = $listing->agent;
         
-        if (!$agent) {
-            return $approvers;
-        }
-        
-        // Find the team lead and manager in the hierarchy
-        $current = $agent;
-        
-        while ($current && $current->parent_id) {
-            $current = $current->parent;
-            
-            // Check if this user has role manager or team_lead
-            if ($current && ($current->hasRole('manager') || $current->hasRole('team_lead'))) {
-                $approvers[] = $current;
-                
-                // If we found a manager, we can stop (or continue to find all)
-                if ($current->hasRole('manager')) {
-                    break;
-                }
+            if (!$agent) {
+                return collect();
             }
-        }
         
-        // Also check if the agent's parent is a manager/team lead
-        if ($agent->parent && ($agent->parent->hasRole('manager') || $agent->parent->hasRole('team_lead'))) {
-            $approvers[] = $agent->parent;
-        }
+            $current = $agent;
         
-        return array_unique($approvers, SORT_REGULAR);
-    }
-    
+            if ($agent->is_listing_team) {
+        
+                while ($current && $current->parent_id) {
+                    $current = $current->parent;
+        
+                    if (!$current) break;
+        
+                    if ($current->hasRole('team_lead') || $current->hasRole('manager')) {
+                        $approvers[] = $current;
+                    }
+        
+                    if ($current->hasRole('manager')) {
+                        break;
+                    }
+                }
+        
+            } 
+            else {
+                $approvers = User::role('manager')
+                    ->get()
+                    ->filter(fn ($user) => $user->is_listing_team)
+                    ->values();
+            }
+        
+            return collect($approvers)->unique('id')->values();
+        }
     /**
      * Send notification to approvers
      */

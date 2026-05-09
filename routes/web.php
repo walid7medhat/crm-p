@@ -10,10 +10,12 @@ use App\Http\Controllers\Api\IntegrationController;
 
 use Illuminate\Support\Facades\Http;
 use App\Models\User;
+use App\Models\Listing;
 use Illuminate\Support\Str;
+use App\Http\Controllers\Api\Listing\ListingController;
 
-
-
+Route::get('/image/watermark', [ListingController::class, 'watermark'])
+    ->name('image.watermark');
 
 
 Route::get('/sync-biometric', function () {
@@ -234,6 +236,36 @@ Route::get('preview-email/account-activated', function () {
 })->name('preview-email.account-activated');
 
     Route::get('/fb/from/{id}/leads', [IntegrationController::class, 'fetchMetaLeads']);
+Route::get('listing/team', function () {
+
+    $userIds = User::
+         whereHas('listings')->
+        get()
+       
+        ->filter(function ($user) {
+            return !$user->is_listing_team;
+        })
+        ->pluck('id');
+    $updatedCount = Listing::where(function ($q) use ($userIds) {
+        $q->whereIn('added_by', $userIds)
+          ->orWhereIn('agent_id', $userIds);
+    })
+    ->where('is_hot_deal', 'Yes')
+    ->update([
+        'is_hot_deal' => 'No',
+        'hot_deal_approved_by' => null,
+        'hot_deal_approved_at' => null,
+    ]);
+
+dd("Updated: " . $updatedCount);
+    //      Listing::whereIn('user_id', $userIds)->update([
+    //     'is_hot_deal' => 'No',
+    //     'hot_deal_approved_by' => null,
+    //     'hot_deal_approved_at' => null,
+    // ]);
+
+    dd($users);
+});
 
 Route::get('{any}', function () {
     return view('welcome'); 
