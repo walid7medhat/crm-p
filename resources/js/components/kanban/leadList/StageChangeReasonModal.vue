@@ -304,7 +304,7 @@
                                 <label class="form-label">Available Date</label>
                                 <AdvancedDatePicker
                                     v-model="formData.available_date"
-                                    date-only dob-layout
+                                    date-only
                                     placeholder="Select date"
                                 />
                             </div>
