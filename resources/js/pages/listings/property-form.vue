@@ -69,8 +69,8 @@
               />
             </div>
             
-            <!-- Payment Plan -->
-              <div class="col-md-4"  v-if="form.completionStatus === 'Under Construction'">
+            <!-- Payment Plan / Breakdown -->
+              <div class="col-md-4" v-if="form.completionStatus !== 'Completed'">
                 <label class="form-label">Payment Plans</label>
                 <v-select 
                   v-model="form.payment_plans" 

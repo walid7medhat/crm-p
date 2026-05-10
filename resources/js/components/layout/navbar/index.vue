@@ -115,6 +115,7 @@
           <i class="ri-add-line"></i>
           <span class="d-none d-sm-inline">Create Listing</span>
         </router-link>
+        <SystemOverviewLangToggle />
         <NotificationBell 
           ref="notificationBell"
           :sound-enabled="soundEnabled"
@@ -330,6 +331,7 @@ import { ref, onMounted, computed, onUnmounted, watch ,nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useTheme } from '@/composables/useTheme.js';
 import NotificationBell from '@/components/NotificationBell.vue';
+import SystemOverviewLangToggle from '@/components/system-overview/SystemOverviewLangToggle.vue';
 const userPlaceholder = '/assets/images/user.png';
 import DealSearchModal from '@/components/kanban/deals/DealSearchModal.vue';
 import LeadSearchModal from '@/components/kanban/leadList/LeadSearchModal.vue';

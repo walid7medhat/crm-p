@@ -160,7 +160,7 @@
                                             v-model="ownerForm.residency_status" 
                                             class="form-select" 
                                             :class="{'is-invalid': errors.residency_status}"
-                                            :disabled="ownerForm.nationality === 'UAE'"
+                                            :disabled="isUaeNationality(ownerForm.nationality)"
                                         >
                                             <option value="">Select...</option>
                                             <option value="resident">Resident</option>
@@ -265,6 +265,9 @@
                                         <div v-if="ownerForm.passport_copy" class="mt-1">
                                             <small class="text-success">File selected: {{ ownerForm.passport_copy.name }}</small>
                                         </div>
+                                        <div v-if="passportOcrLoading" class="mt-1">
+                                            <small class="text-primary">{{ ocrStatusMessage }}</small>
+                                        </div>
                                         <div v-if="existingFiles.passport_copy" class="mt-1">
                                             <small class="text-info">Existing file: {{ existingFiles.passport_copy }}</small>
                                         </div>
@@ -342,6 +345,10 @@ import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import userPlaceholder from '@/assets/images/avatar/avatar1.png';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
 export default {
     name: 'OwnerForm',
@@ -381,6 +388,8 @@ export default {
         const loading = ref(false);
         const locations = ref([]);
         const avatarPreview = ref(null);
+        const passportOcrLoading = ref(false);
+        const ocrStatusMessage = ref('Reading document MRZ...');
         const existingFiles = ref({
             id_front: null,
             id_back: null,
@@ -435,6 +444,10 @@ export default {
         "Uruguay","Uzbekistan","Vanuatu","Vatican City","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"
         ]);
 
+        /** Must match the entry in nationalities exactly so v-select binds correctly. Legacy API values may say "UAE". */
+        const UAE_NATIONALITY_LABEL = 'United Arab Emirates';
+        const isUaeNationality = (val) => val === 'UAE' || val === UAE_NATIONALITY_LABEL;
+
         // Handle avatar upload
         const handleAvatarUpload = (event) => {
             const file = event.target.files[0];
@@ -485,7 +498,7 @@ export default {
 
         // Handle nationality change
         const handleNationalityChange = (newNationality) => {
-            if (newNationality === 'UAE') {
+            if (isUaeNationality(newNationality)) {
                 ownerForm.value.residency_status = 'resident';
                 fetchLocations('resident');
             } else {
@@ -497,7 +510,7 @@ export default {
 
         // Get location label and placeholder
         const getLocationLabel = () => {
-            if (ownerForm.value.nationality === 'UAE') {
+            if (isUaeNationality(ownerForm.value.nationality)) {
                 return 'City';
             } else if (ownerForm.value.residency_status === 'resident') {
                 return 'Emirate';
@@ -508,7 +521,7 @@ export default {
         };
 
         const getLocationPlaceholder = () => {
-            if (ownerForm.value.nationality === 'UAE') {
+            if (isUaeNationality(ownerForm.value.nationality)) {
                 return 'Select City';
             } else if (ownerForm.value.residency_status === 'resident') {
                 return 'Select Emirate';
@@ -553,12 +566,325 @@ export default {
             event.target.value = '';
         };
 
+        const MRZ_NATIONALITY_MAP = {
+            ARE: 'United Arab Emirates',
+            EGY: 'Egypt',
+            SAU: 'Saudi Arabia',
+            IND: 'India',
+            PAK: 'Pakistan',
+            BGD: 'Bangladesh',
+            GBR: 'United Kingdom',
+            USA: 'United States',
+            CAN: 'Canada',
+            FRA: 'France',
+            DEU: 'Germany',
+            ITA: 'Italy',
+            ESP: 'Spain',
+            TUR: 'Turkey',
+            IRN: 'Iran',
+            IRQ: 'Iraq',
+            JOR: 'Jordan',
+            LBN: 'Lebanon',
+            SYR: 'Syria',
+            YEM: 'Yemen',
+            MAR: 'Morocco',
+            DZA: 'Algeria',
+            TUN: 'Tunisia',
+            SDN: 'Sudan',
+            SOM: 'Somalia',
+            ETH: 'Ethiopia',
+            KEN: 'Kenya',
+            RUS: 'Russia',
+            UKR: 'Ukraine',
+            CHN: 'China',
+            JPN: 'Japan',
+            KOR: 'South Korea',
+            PHL: 'Philippines',
+            NPL: 'Nepal',
+            LKA: 'Sri Lanka',
+        };
+
+        const mapNationalityCode = (code) => {
+            const normalized = String(code || '').toUpperCase().trim();
+            return MRZ_NATIONALITY_MAP[normalized] || normalized;
+        };
+
+        const splitNameFirstAndRemaining = (rawFullName) => {
+            const tokens = String(rawFullName || '')
+                .replace(/[^a-z\s]/gi, ' ')
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean);
+            if (!tokens.length) return { firstName: '', lastName: '' };
+            return {
+                firstName: tokens[0] || '',
+                lastName: tokens.slice(1).join(' '),
+            };
+        };
+
+        const cleanMrzLine = (line) =>
+            String(line || '')
+                .toUpperCase()
+                .replace(/[^A-Z0-9<]/g, '');
+
+        const extractMrzLines = (ocrText) => {
+            const candidates = String(ocrText || '')
+                .split(/\r?\n/)
+                .map(cleanMrzLine)
+                .filter((line) => line.length >= 28);
+
+            // Passport TD3: 2 lines, usually length 44 and first starts with P<
+            for (let i = 0; i < candidates.length - 1; i += 1) {
+                const l1 = candidates[i];
+                const l2 = candidates[i + 1];
+                if (l1.startsWith('P<') && l2.length >= 40) {
+                    return [l1.slice(0, 44), l2.slice(0, 44)];
+                }
+            }
+            // Fallback: choose best two long lines and infer first line prefix.
+            const longLines = [...candidates]
+                .sort((a, b) => b.length - a.length)
+                .slice(0, 2)
+                .map((line) => line.slice(0, 44));
+            if (longLines.length === 2) {
+                if (!longLines[0].startsWith('P<')) longLines[0] = `P<${longLines[0].slice(2)}`;
+                return longLines;
+            }
+            return null;
+        };
+
+        const parsePassportMrz = (line1, line2) => {
+            const namesRaw = line1.slice(5);
+            const [surnameRaw = '', givenRaw = ''] = namesRaw.split('<<');
+            const surname = surnameRaw.replace(/</g, ' ').trim();
+            const givenNames = givenRaw.replace(/</g, ' ').trim();
+            const fullName = [givenNames, surname].filter(Boolean).join(' ').trim();
+            const { firstName, lastName } = splitNameFirstAndRemaining(fullName);
+            const nationalityCode = line2.slice(10, 13);
+            const passportNumber = line2.slice(0, 9).replace(/</g, '').trim();
+
+            return {
+                firstName,
+                lastName,
+                nationality: mapNationalityCode(nationalityCode),
+                nationalityCode,
+                passportNumber,
+            };
+        };
+
+        const loadImageElement = (file) =>
+            new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(img);
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('Failed to load image'));
+                };
+                img.src = url;
+            });
+
+        const buildCanvasFromFile = async (file, scale = 2) => {
+            const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+
+            if (isPdf) {
+                const data = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data }).promise;
+                const page = await pdf.getPage(1);
+                const viewport = page.getViewport({ scale });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                if (!context) throw new Error('Canvas not supported');
+                canvas.width = Math.floor(viewport.width);
+                canvas.height = Math.floor(viewport.height);
+                await page.render({ canvasContext: context, viewport }).promise;
+                return canvas;
+            }
+
+            const image = await loadImageElement(file);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Canvas not supported');
+            canvas.width = Math.floor(image.width * scale);
+            canvas.height = Math.floor(image.height * scale);
+            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            return canvas;
+        };
+
+        const runPassportMrzOcr = async (file) => {
+            const buildCropCanvas = (startRatio) => {
+                const source = sourceCanvas;
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (!ctx) throw new Error('Canvas not supported');
+
+                const cropY = Math.floor(source.height * startRatio);
+                const cropHeight = source.height - cropY;
+                canvas.width = source.width;
+                canvas.height = cropHeight;
+                ctx.imageSmoothingEnabled = true;
+                ctx.drawImage(source, 0, cropY, source.width, cropHeight, 0, 0, canvas.width, canvas.height);
+
+                // Contrast boost + threshold to isolate MRZ glyphs.
+                const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = frame.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                    const val = gray > 140 ? 255 : 0;
+                    data[i] = val;
+                    data[i + 1] = val;
+                    data[i + 2] = val;
+                }
+                ctx.putImageData(frame, 0, 0);
+                return canvas;
+            };
+
+            const module = await import('tesseract.js');
+            const recognize = module.recognize || module.default?.recognize;
+            if (!recognize) throw new Error('Tesseract recognize not available');
+            const sourceCanvas = await buildCanvasFromFile(file, 2);
+
+            const cropRatios = [0.58, 0.5, 0.65];
+            for (const ratio of cropRatios) {
+                const canvas = buildCropCanvas(ratio);
+                const result = await recognize(canvas, 'eng', {
+                    logger: () => {},
+                    tessedit_pageseg_mode: 6,
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<',
+                });
+                const text = result?.data?.text || '';
+                const mrzLines = extractMrzLines(text);
+                if (mrzLines) return parsePassportMrz(mrzLines[0], mrzLines[1]);
+            }
+
+            throw new Error('MRZ not detected');
+        };
+
+        const runIdOcr = async (file) => {
+            const canvas = await buildCanvasFromFile(file, 1.8);
+
+            const module = await import('tesseract.js');
+            const recognize = module.recognize || module.default?.recognize;
+            if (!recognize) throw new Error('Tesseract recognize not available');
+
+            let text = '';
+            try {
+                const result = await recognize(canvas, 'eng+ara', {
+                    logger: () => {},
+                    tessedit_pageseg_mode: 6,
+                });
+                text = String(result?.data?.text || '');
+            } catch {
+                const result = await recognize(canvas, 'eng', {
+                    logger: () => {},
+                    tessedit_pageseg_mode: 6,
+                });
+                text = String(result?.data?.text || '');
+            }
+            const lines = text
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter(Boolean);
+
+            const findValue = (regexList) => {
+                for (const line of lines) {
+                    for (const regex of regexList) {
+                        const match = line.match(regex);
+                        if (match?.[1]) return match[1].trim();
+                    }
+                }
+                return '';
+            };
+
+            const fullName = findValue([
+                /name\s*[:\-]\s*([a-z\s]+)/i,
+                /full\s*name\s*[:\-]\s*([a-z\s]+)/i,
+                /name\s+([a-z\s]{4,})$/i,
+                /holder\s*[:\-]\s*([a-z\s]+)/i,
+            ]);
+            const nationalityRaw = findValue([
+                /nationality\s*[:\-]\s*(.+)/i,
+                /country\s*[:\-]\s*(.+)/i,
+            ]);
+            const nationalityText = nationalityRaw.replace(/[^a-zA-Z\s]/g, ' ').trim();
+
+            const normalizedForUae = `${text}\n${fullName}\n${nationalityText}`.toLowerCase();
+            const lettersFold = String(text || '')
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, '');
+
+            const isEmiratesIdCard =
+                /\b(eid|emirates\s*id|emirates\s*identity|united\s*arab\s*emirates|uaen|uae\s*id|federal\s*authority|icao|ica0)\b/i.test(text)
+                || /\b(emirati|emiratee?i|emarati)\b/i.test(normalizedForUae)
+                || lettersFold.includes('UNITEDARABEMIRATES')
+                || lettersFold.includes('EMIRATES')
+                || lettersFold.includes('EMRATE')
+                || lettersFold.includes('FMERATS')
+                || lettersFold.includes('IDENTITYCARD')
+                || /784[-\s]?\d{4}\s?\d{7}\s?\d/i.test(text)
+                || /784\d{12,14}/i.test(lettersFold);
+
+            const { firstName, lastName } = splitNameFirstAndRemaining(fullName);
+
+            let nationalityFinal = nationalityText;
+            if (isEmiratesIdCard || /\b(emirati|emarati|united\s*arab\s*emirates|\buae\b)\b/i.test(nationalityText)) {
+                nationalityFinal = UAE_NATIONALITY_LABEL;
+            }
+
+            return {
+                firstName,
+                lastName,
+                nationality: nationalityFinal,
+                isUAE: nationalityFinal === UAE_NATIONALITY_LABEL || isUaeNationality(nationalityFinal),
+            };
+        };
+
+        const applyMrzToOwnerForm = async (mrz) => {
+            if (mrz.firstName) ownerForm.value.first_name = mrz.firstName;
+            if (mrz.lastName) ownerForm.value.last_name = mrz.lastName;
+            if (mrz.nationality) {
+                ownerForm.value.nationality = mrz.nationality;
+                await handleNationalityChange(mrz.nationality);
+            }
+            showNotification('✅ Passport MRZ parsed and fields auto-filled', 'success');
+        };
+
+        const applyIdDataToOwnerForm = async (data) => {
+            let changed = false;
+            if (data.firstName) {
+                ownerForm.value.first_name = data.firstName;
+                changed = true;
+            }
+            if (data.lastName) {
+                ownerForm.value.last_name = data.lastName;
+                changed = true;
+            }
+            if (data.isUAE || isUaeNationality(data.nationality)) {
+                ownerForm.value.nationality = UAE_NATIONALITY_LABEL;
+                ownerForm.value.residency_status = 'resident';
+                await handleNationalityChange(UAE_NATIONALITY_LABEL);
+                changed = true;
+            } else if (data.nationality) {
+                ownerForm.value.nationality = data.nationality;
+                await handleNationalityChange(data.nationality);
+                changed = true;
+            }
+            if (changed) {
+                showNotification('✅ ID OCR parsed and fields auto-filled', 'success');
+            } else {
+                throw new Error('No useful fields extracted from ID');
+            }
+        };
+
         const removeAdditionalDocument = (index) => {
             ownerForm.value.additionalDocuments.splice(index, 1);
         };
 
         // Handle file upload
-        const handleFileUpload = (event, field) => {
+        const handleFileUpload = async (event, field) => {
             const file = event.target.files[0];
             if (file) {
                 // Check file size (5MB limit)
@@ -569,6 +895,39 @@ export default {
                 }
                 ownerForm.value[field] = file;
                 showNotification(`✅ ${field.replace('_', ' ')} uploaded successfully`, "success");
+
+                const isLikelyImage = file.type.startsWith('image/')
+                    || /\.(png|jpe?g|webp|bmp)$/i.test(file.name || '');
+                const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+                const canRunOcr = isLikelyImage || isPdf;
+
+                if (field === 'passport_copy' && canRunOcr) {
+                    try {
+                        passportOcrLoading.value = true;
+                        ocrStatusMessage.value = 'Reading passport MRZ...';
+                        const mrz = await runPassportMrzOcr(file);
+                        await applyMrzToOwnerForm(mrz);
+                    } catch (error) {
+                        console.error('Passport MRZ OCR failed:', error);
+                        showNotification('⚠️ Could not read passport MRZ. Please fill fields manually.', 'warning');
+                    } finally {
+                        passportOcrLoading.value = false;
+                    }
+                }
+
+                if ((field === 'id_front' || field === 'id_back') && canRunOcr) {
+                    try {
+                        passportOcrLoading.value = true;
+                        ocrStatusMessage.value = 'Reading ID and extracting data...';
+                        const idData = await runIdOcr(file);
+                        await applyIdDataToOwnerForm(idData);
+                    } catch (error) {
+                        console.error('ID OCR failed:', error);
+                        showNotification('⚠️ Could not read ID fields. Please fill manually.', 'warning');
+                    } finally {
+                        passportOcrLoading.value = false;
+                    }
+                }
             }
         };
 
@@ -606,7 +965,7 @@ export default {
                 ownerForm.value.additionalDocuments = [];
 
                 // If nationality is UAE, fetch locations
-                if (ownerForm.value.nationality === 'UAE') {
+                if (isUaeNationality(ownerForm.value.nationality)) {
                     await fetchLocations('resident');
                 } else if (ownerForm.value.residency_status) {
                     await fetchLocations(ownerForm.value.residency_status);
@@ -714,7 +1073,7 @@ export default {
 
         // Watch for residency status changes
         watch(() => ownerForm.value.residency_status, async (newStatus) => {
-            if (ownerForm.value.nationality === 'UAE') return;
+            if (isUaeNationality(ownerForm.value.nationality)) return;
             
             if (newStatus) {
                 await fetchLocations(newStatus);
@@ -750,10 +1109,13 @@ export default {
             getLocationLabel,
             getLocationPlaceholder,
             handleFileUpload,
+            passportOcrLoading,
+            ocrStatusMessage,
             existingAdditionalDocuments,
             handleAdditionalDocumentsUpload,
             removeAdditionalDocument,
-            submitForm
+            submitForm,
+            isUaeNationality,
         };
     }
 };

@@ -102,6 +102,7 @@ import ImportPitrix from './components/kanban/leadList/ImportPitrix.vue'
 
 import  BulkAreaCoordinates from './pages/areas/BulkAreaCoordinates.vue'
 import Logs from './pages/logs/index.vue'
+import SystemOverview from './pages/system-overview/SystemOverview.vue'
 
 
 import AttendanceMonthlyReport   from './pages/hr/attendance-monthly-reports.vue'
@@ -109,6 +110,12 @@ const baseRoutes = [
     { path: '/import-pitrix', component: ImportPitrix, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/area-coordinates', component: BulkAreaCoordinates, meta: { requiresAuth: true, requiresAdmin: true } },
       { path: '/logs', component: Logs, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+      {
+        path: '/system-overview',
+        name: 'system-overview',
+        component: SystemOverview,
+        meta: { requiresAuth: true, requiresAdmin: true },
+      },
 
       { path: '/attendance-monthly-reports', component: AttendanceMonthlyReport, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // Kanban Route (super_admin only — see meta.requiresSuperAdmin)
