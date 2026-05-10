@@ -35,8 +35,8 @@ class Deal extends Model
 
     protected $casts = [
         'metadata' => 'array',
-        'deal_total_amount' => 'integer',
-        'deal_commission' => 'integer',
+        'deal_total_amount' => 'decimal:2',
+        'deal_commission' => 'decimal:2',
         'agent_share' => 'decimal:2',
         'company_share' => 'decimal:2',
     ];
@@ -214,13 +214,13 @@ class Deal extends Model
 
     public function scopeVisibleFor($query, $user)
     {
-        if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+        if ($user->hasAnyRole(['manager', 'team_lead', 'admin']) && $user->id != 30 && $user->id != 33) {
             $subordinatesIds = $user->getAllSubordinatesIds();
             $query->whereIn(
                 'responsible_person_id',
                 array_merge($subordinatesIds, [$user->id])
             );
-        } elseif (!$user->hasRole('super_admin') && auth()->user()->id != 30 && auth()->user()->id != 33) {
+        } elseif (!$user->hasRole('super_admin') && $user->id != 30 && $user->id != 33) {
             $query->where('responsible_person_id', $user->id);
         }
         return $query;
@@ -291,6 +291,8 @@ class Deal extends Model
                     $query->where('deal_number', 'like', "%$search%")
                         ->orWhere('deal_name', 'like', "%$search%")
                         ->orWhere('source', 'like', "%$search%")
+                        ->orWhere('property_reference', 'like', "%$search%")
+                        ->orWhere('property_link', 'like', "%$search%")
                         ->orWhere('currency', 'like', "%$search%")
                         ->orWhere('lost_reason', 'like', "%$search%")
                         ->orWhereHas('responsiblePerson', fn($u) => $u->where('name', 'like', "%$search%")->orWhere('email', 'like', "%$search%"))

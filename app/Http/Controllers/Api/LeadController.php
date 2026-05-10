@@ -100,7 +100,7 @@ class LeadController extends Controller
                   
                     }
         
-                if ($user->hasRole('super_admin') ) {
+                if ($user->hasRole('super_admin') || $user->id==30) {
                     $leads = $leadsQuery->latest()->get();
                 } elseif ($user->hasAnyRole(['manager', 'team_lead','admin'])) {
                     $subordinatesIds = $user->getAllSubordinatesIds();

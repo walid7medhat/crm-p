@@ -57,7 +57,7 @@ class LeadConversionController extends Controller
             ], 404);
         }
 
-        if (!$user->hasAnyRole(['super_admin'])) {
+       if (!$user->hasAnyRole(['super_admin']) && $user->id != 30) {
             $canAccess = false;
             
             if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
@@ -131,7 +131,7 @@ class LeadConversionController extends Controller
             ]);
 
             // ✅ Create properties from lead data
-            // $this->createDealPropertiesFromLead($deal, $lead);
+            $this->createDealPropertiesFromLead($deal, $lead);
 
             // Create party based on deal type
             if ($request->deal_type != 'rental') {
@@ -222,7 +222,7 @@ class LeadConversionController extends Controller
         $lead = Lead::find($request->lead_id);
         
         if ($lead) {
-            if (!$user->hasAnyRole(['super_admin'])) {
+            if (!$user->hasAnyRole(['super_admin']) && $user->id != 30) {
                 $canAccess = false;
                 
                 if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
@@ -803,7 +803,7 @@ private function createDealProperties(Deal $deal, $request)
     {
         $user = auth()->user();
         
-        if (!$user->hasAnyRole(['super_admin'])) {
+        if (!$user->hasAnyRole(['super_admin']) && $user->id != 30) {
             $canAccess = false;
             
             if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
