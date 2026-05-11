@@ -1,0 +1,26 @@
+/**
+ * vue-tel-input bundles flag coords on .vti__flag.<iso>; some environments strip data: sprites.
+ * CDN sprite matches intl-tel v17 coords used by vue-tel-input.
+ */
+.crm-phone-input .vti__flag {
+  display: inline-block;
+  width: 20px;
+  height: 15px;
+  box-shadow: 0 0 1px #888;
+  background-repeat: no-repeat !important;
+  background-color: transparent !important;
+  background-image: url('https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/img/flags.png') !important;
+}
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .crm-phone-input .vti__flag {
+    background-image: url('https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/img/flags@2x.png') !important;
+    background-size: 5630px 15px !important;
+  }
+}
+
+/* UAE fallback when bundled data-uri sprites are blocked */
+.crm-phone-input .vti__flag.ae {
+  background-position: -44px 0 !important;
+  height: 10px;
+}

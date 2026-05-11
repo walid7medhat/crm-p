@@ -402,6 +402,19 @@ Route::middleware(['auth:api'])->prefix('recruitment/admin')->group(function () 
 
 Route::get('/teams-with-leads', [StageController::class, 'getTeamsWithLeads'])->middleware('jwt.auth');
 
+Route::middleware(['jwt.auth', 'role:super_admin|admin'])->group(function () {
+    Route::get('/system-overview/access', function () {
+        return response()->json([
+            'success' => true,
+            'message' => 'System overview access granted',
+            'data' => [
+                'access' => true,
+                'timestamp' => now()->toIso8601String(),
+            ],
+        ]);
+    });
+});
+
 Route::middleware('jwt.auth')->group(function () {
     Route::prefix('sales-intelligence')->group(function () {
         Route::get('/overview', [SalesIntelligenceController::class, 'overview']);

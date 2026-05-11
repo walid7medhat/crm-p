@@ -64,6 +64,12 @@
               <span>Logs</span>
             </router-link>
           </li>
+          <li v-if="isAdmin">
+            <router-link to="/system-overview" :class="{ 'active-page': isActive('/system-overview') }">
+              <iconify-icon icon="lucide:layout-dashboard" class="menu-icon" />
+              <span>System map</span>
+            </router-link>
+          </li>
           <li v-if="isSuperAdmin">
             <router-link to="/attendance-monthly-reports" :class="{ 'active-page': isActive('/attendance-monthly-reports') }">
               <iconify-icon icon="lucide:users-round" class="menu-icon" />
@@ -756,6 +762,9 @@ const mainMenuItems = computed(() => {
 
 //   items.push({ path: '/payment-breakdown', label: 'Breakdown', icon: 'lucide:receipt-text' });
 
+  if (isAdmin.value) {
+    items.push({ path: '/system-overview', label: 'System overview', icon: 'lucide:layout-dashboard' });
+  }
   if (isSuperAdmin.value) {
     items.push({ path: '/lead-reports', label: 'Lead Reports', icon: 'lucide:bar-chart-2' });
     items.push({ path: '/sales-intelligence', label: 'Sales Intelligence', icon: 'lucide:sparkles' });
@@ -888,6 +897,7 @@ const mobileDockItems = computed(() => {
   if (isAdmin.value) {
     items.splice(1, 0, { path: '/kanban', label: 'CRM', icon: 'lucide:handshake' });
     items.splice(2, 0, { path: '/hr', label: 'HR', icon: 'lucide:users-round' });
+    items.push({ path: '/system-overview', label: 'Overview', icon: 'lucide:layout-dashboard' });
   }
   if (isSuperAdmin.value) {
     items.push({ path: '/lead-reports', label: 'Reports', icon: 'lucide:bar-chart-3' });

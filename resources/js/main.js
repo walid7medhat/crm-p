@@ -11,6 +11,10 @@ import axios from 'axios'
 // CSS imports
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap'
+
+/* Intl phone: coords from library; CDN sprite survives CSP / quirks vs data-uri in vue-tel build */
+import 'vue-tel-input/vue-tel-input.css'
+import '../css/crm-phone-flags.css'
 import 'vue-slick-carousel/dist/vue-slick-carousel.css'
 import 'vue-slick-carousel/dist/vue-slick-carousel-theme.css'
 
