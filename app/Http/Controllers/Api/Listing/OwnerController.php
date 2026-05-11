@@ -118,7 +118,7 @@ public function getOwnerProperties(Owner $owner): JsonResponse
         $user = Auth::user();
         
         // Check permissions
-        if ($owner->added_by !== $user->id && !$user->hasRole('super_admin')) {
+        if ($owner->added_by !== $user->id && !$user->hasRole('super_admin') && !($user->hasRole('manager') && $user->listing_team==1)) {
             return ApiResponse::error('Access denied', 403);
         }
         
@@ -233,7 +233,7 @@ public function getOwnerProperties(Owner $owner): JsonResponse
         $user = Auth::user();
         
         // If user has sales role, check if they added this owner
-        if ($owner->added_by !== $user->id && !$user->hasRole(['super_admin', 'admin'])) {
+        if ($owner->added_by !== $user->id && !$user->hasRole(['super_admin', 'admin']) && !($user->hasRole('manager') && $user->listing_team==1)) {
             return ApiResponse::error('Access denied', 403);
         }
         
