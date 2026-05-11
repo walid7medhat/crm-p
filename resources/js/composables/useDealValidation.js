@@ -15,6 +15,8 @@ export function useDealValidation() {
         sections: grouped.sections || payload.missing_fields_grouped?.sections || [],
         by_stage: grouped.by_stage || payload.missing_fields_grouped_by_stage?.stages || [],
       },
+      /** Full stage-required keys from backend (for label asterisks); was not forwarded before. */
+      requiredFields: payload.required_fields || payload.requiredFields || [],
       message: payload.message || 'Missing required fields',
     }
   }

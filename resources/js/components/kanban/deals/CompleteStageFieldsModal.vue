@@ -276,7 +276,7 @@
                 
                 <!-- Buyer Documents -->
                 <div v-if="documentTypesByParty.buyer.length > 0" class="mt-3">
-                  <label class="section-title mb-3">Buyer Documents</label>
+                  <label class="section-title mb-3">Buyer Documents <span class="text-danger">*</span></label>
                   <DocumentUpload
                     v-model="formData.buyer_documents"
                     category="buyer"
@@ -488,7 +488,7 @@
                 
                 <!-- Seller Documents -->
                 <div class="mt-3" v-if="documentTypesByParty.seller.length > 0">
-                  <label class="section-title mb-3">Seller Documents</label>
+                  <label class="section-title mb-3">Seller Documents <span class="text-danger">*</span></label>
                   <DocumentUpload
                     v-model="formData.seller_documents"
                     category="seller"
@@ -688,7 +688,7 @@
                 
                 <!-- Tenant Documents -->
                 <div class="mt-3" v-if="documentTypesByParty.tenant.length > 0">
-                  <label class="section-title mb-3">Tenant Documents</label>
+                  <label class="section-title mb-3">Tenant Documents <span class="text-danger">*</span></label>
                   <DocumentUpload
                     v-model="formData.tenant_documents"
                     category="tenant"
@@ -900,7 +900,7 @@
                 
                 <!-- Landlord Documents -->
                 <div class="mt-3" v-if="documentTypesByParty.landlord.length > 0">
-                  <label class="section-title mb-3">Landlord Documents</label>
+                  <label class="section-title mb-3">Landlord Documents <span class="text-danger">*</span></label>
                   <DocumentUpload
                     v-model="formData.landlord_documents"
                     category="landlord"
@@ -982,7 +982,7 @@
                             <div class="row g-3">
                                  <!-- Area / Address -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('area_id', property)">
-                                    <label class="form-label-custom">Property Address <span v-if="isPropertyFieldRequired('area_id')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom">Property Address <span v-if="isPropertyFieldRequired('area_id', propIndex)" class="text-danger">*</span></label>
                                     <v-select
                                         :model-value="property.area_id"
                                         @update:modelValue="(val) => onPropertyAreaSelected(val, propIndex)"
@@ -1011,7 +1011,7 @@
                                 
                                 <!-- Property Type -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('property_type_id', property)">
-                                    <label class="form-label-custom">Property Type <span v-if="isPropertyFieldRequired('property_type_id')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom">Property Type <span v-if="isPropertyFieldRequired('property_type_id', propIndex)" class="text-danger">*</span></label>
                                     <v-select
                                         :model-value="property.property_type_id"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'property_type_id', val)"
@@ -1030,7 +1030,7 @@
                                 
                                 <!-- Bedrooms -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('bedrooms', property)">
-                                    <label class="form-label-custom">Bedrooms <span v-if="isPropertyFieldRequired('bedrooms')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom">Bedrooms <span v-if="isPropertyFieldRequired('bedrooms', propIndex)" class="text-danger">*</span></label>
                                     <v-select
                                         :model-value="property.bedrooms"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'bedrooms', val)"
@@ -1049,7 +1049,7 @@
                       
                                 <!-- Rental Price (للصفقات الإيجارية) -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('rental_price', property)">
-                                    <label class="form-label-custom">Rental Price <span v-if="isPropertyFieldRequired('rental_price')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom">Rental Price <span v-if="isPropertyFieldRequired('rental_price', propIndex)" class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <b-form-input 
                                             v-model="property.rental_price"
@@ -1065,7 +1065,7 @@
                                 
                                 <!-- Purchase Price -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('purchase_price', property)">
-                                    <label class="form-label-custom"> {{ isWonStage ? 'Purchase Price' : 'Purchase Price' }} <span v-if="isPropertyFieldRequired('purchase_price')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom"> {{ isWonStage ? 'Purchase Price' : 'Purchase Price' }} <span v-if="isPropertyFieldRequired('purchase_price', propIndex)" class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input
                                             :value="property.purchase_price ?? ''"
@@ -1085,7 +1085,7 @@
                                 
                                 <!-- Developer -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('developer_id', property)">
-                                    <label class="form-label-custom">Developer <span v-if="isPropertyFieldRequired('developer_id')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom">Developer <span v-if="isPropertyFieldRequired('developer_id', propIndex)" class="text-danger">*</span></label>
                                     <v-select
                                         :model-value="property.developer_id"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'developer_id', val)"
@@ -1103,7 +1103,7 @@
                                 </div>
 
                                 <div class="col-md-6" v-if="shouldShowPropertyField('developer_name', property)">
-                                    <label class="form-label-custom">Developer Sales Person Name <span v-if="isPropertyFieldRequired('developer_name')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom">Developer Sales Person Name <span v-if="isPropertyFieldRequired('developer_name', propIndex)" class="text-danger">*</span></label>
                                     <b-form-input
                                     v-model="property.developer_name"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'developer_name', val)"
@@ -1115,7 +1115,7 @@
                                 
                                 <!-- Developer Sales Person Phone (لـ Secondary) -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('developer_phone', property)">
-                                    <label class="form-label-custom">Developer Sales Person Phone <span v-if="isPropertyFieldRequired('developer_phone')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom">Developer Sales Person Phone <span v-if="isPropertyFieldRequired('developer_phone', propIndex)" class="text-danger">*</span></label>
                                   
                                     <CrmPhoneInput 
                                     v-model="property.developer_phone" 
@@ -1129,7 +1129,7 @@
                                 <div class="col-md-6" v-if="shouldShowPropertyField('budget_from', property) || shouldShowPropertyField('budget_to', property)">
                                     <label class="form-label-custom">
                                       Budget (AED)
-                                      <span v-if="isPropertyFieldRequired('budget_from') || isPropertyFieldRequired('budget_to')" class="text-danger">*</span>
+                                      <span v-if="isPropertyFieldRequired('budget_from', propIndex) || isPropertyFieldRequired('budget_to', propIndex)" class="text-danger">*</span>
                                     </label>
                                     <div
                                       class="budget-field-wrap-stage"
@@ -1190,7 +1190,7 @@
                                           
                                 <!-- Unit Size -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('unit_size', property)">
-                                    <label class="form-label-custom">Unit Size (sq.ft) <span v-if="isPropertyFieldRequired('unit_size')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom">Unit Size (sq.ft) <span v-if="isPropertyFieldRequired('unit_size', propIndex)" class="text-danger">*</span></label>
                                     <b-form-input 
                                         v-model="property.unit_size"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'unit_size', val)"
@@ -1202,7 +1202,7 @@
                                 </div>
                                  <!-- Unit No -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('unit_no', property)">
-                                    <label class="form-label-custom">Unit No <span v-if="isPropertyFieldRequired('unit_no')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom">Unit No <span v-if="isPropertyFieldRequired('unit_no', propIndex)" class="text-danger">*</span></label>
                                     <b-form-input 
                                     v-model="property.unit_no"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'unit_no', val)"
@@ -1215,7 +1215,7 @@
                                 <!-- Property Documents (Payment Proof + SPA — same idea as Create Deal / PropertyCard) -->
                                 <!-- Property Documents (Payment Proof + SPA) -->
                                 <div class="col-12 mt-3 property-documents-block">
-                                    <label class="section-title mb-2">Property Documents</label>
+                                    <label class="section-title mb-2">Property Documents <span v-if="isPropertyDocumentsSectionRequired" class="text-danger">*</span></label>
                                     
                                     <div
                                       v-if="validationAttempted && getMissingPropertyDocTypesForProperty(propIndex).some(t => t === 'payment_proof' || t === 'payment')"
@@ -1336,7 +1336,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, nextTick, shallowRef } from 'vue'
 import { BFormInput, BSpinner } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -1378,6 +1378,31 @@ const props = defineProps({
   deal: { type: Object, default: null },
   requiredFields: { type: Array, default: () => [] } 
 })
+
+/**
+ * Union of normalized required/missing keys seen while this modal is open.
+ * Missing arrays shrink as the user fills fields; this set keeps label asterisks stable.
+ */
+const accumulatedRequiredKeys = shallowRef(new Set())
+
+function resetAccumulatedRequiredKeys() {
+  accumulatedRequiredKeys.value = new Set()
+}
+
+function accumulateRequiredKeysFromProps() {
+  const next = new Set(accumulatedRequiredKeys.value)
+  const addKey = (raw) => {
+    if (raw === null || raw === undefined || raw === '') return
+    next.add(normalizeMissingFieldKey(String(raw)))
+  }
+  ;(props.requiredFields || []).forEach(addKey)
+  ;(props.missingFields || []).forEach(addKey)
+  const byStage = props.groupedMissing?.by_stage || props.missingFieldsGroupedByStage?.stages || []
+  byStage.forEach((stage) => {
+    ;(stage?.fields || stage?.missing_fields || []).forEach(addKey)
+  })
+  accumulatedRequiredKeys.value = next
+}
 
 /** After clicking Save: show red borders + scroll to first invalid (not before). */
 const validationAttempted = ref(false)
@@ -1725,47 +1750,85 @@ function hasPropertyMissing(propIndex) {
   return hasMissing
 }
 
-// Check if property field is required for ANY property
-function isPropertyFieldRequired(fieldName) {
+function isBedroomsExcludedForProperty(property) {
+  const propertyTypeId = property?.property_type_id
+  if (!propertyTypeId) return false
+  const selectedType = propertyTypes.value.find((t) => t.id === propertyTypeId)
+  const typeName = selectedType?.name?.toLowerCase() || ''
+  return typeName.includes('land') || typeName.includes('plot')
+}
+
+/** Stage-required property columns from API + accumulated snapshot, optional row index. */
+function isPropertyFieldRequiredByStageList(fieldName, propIndex = null) {
+  const normalizedFieldName = normalizePropertyFieldKey(fieldName)
+  const reqList =
+    accumulatedRequiredKeys.value.size > 0
+      ? Array.from(accumulatedRequiredKeys.value)
+      : (props.requiredFields || []).map((k) => normalizeMissingFieldKey(String(k)))
+  if (!reqList.length) return false
+  for (const rawKey of reqList) {
+    const key = String(rawKey)
+    if (key.includes('property_document_')) continue
+    const m = key.match(/^property_(\d+)_(.+)$/i)
+    if (!m) continue
+    const idx = parseInt(m[1], 10)
+    const fieldPart = normalizePropertyFieldKey(m[2])
+    if (fieldPart !== normalizedFieldName) continue
+    if (propIndex !== null && propIndex !== undefined && idx !== propIndex) continue
+    if (normalizedFieldName === 'bedrooms' && localProperties.value[idx] && isBedroomsExcludedForProperty(localProperties.value[idx])) {
+      continue
+    }
+    return true
+  }
+  return false
+}
+
+/** Fallback: keys still reported as missing (when `required_fields` is empty or partial). */
+function isPropertyFieldRequiredFromMissing(fieldName, propIndex = null) {
   const missingKeys = effectiveMissingFields.value || []
   const normalizedFieldName = normalizePropertyFieldKey(fieldName)
-  
-  // Check if any missing key matches pattern property_X_fieldName
-  const result = missingKeys.some(key => {
-    const match = key.match(/property_\d+_(.+)/)
+  return missingKeys.some((key) => {
+    const match = key.match(/property_(\d+)_(.+)/)
     if (match) {
-      const field = normalizePropertyFieldKey(match[1])
-      if (field === normalizedFieldName) {
-        // For bedrooms, also check property type
-        if (field === 'bedrooms') {
-          // Find the property index to check its type
-          const propMatch = key.match(/property_(\d+)_bedrooms/)
-          if (propMatch && localProperties.value[propMatch[1]]) {
-            const property = localProperties.value[propMatch[1]]
-            const propertyTypeId = property?.property_type_id
-            if (propertyTypeId) {
-              const selectedType = propertyTypes.value.find(t => t.id === propertyTypeId)
-              const typeName = selectedType?.name?.toLowerCase() || ''
-              if (typeName.includes('land') || typeName.includes('plot')) {
-                return false // Not required for land/plot
-              }
-            }
-          }
-        }
-        return true
+      const idx = parseInt(match[1], 10)
+      const field = normalizePropertyFieldKey(match[2])
+      if (field !== normalizedFieldName) return false
+      if (propIndex !== null && propIndex !== undefined && idx !== propIndex) return false
+      if (field === 'bedrooms' && localProperties.value[idx] && isBedroomsExcludedForProperty(localProperties.value[idx])) {
+        return false
       }
+      return true
     }
-    // Also check for property_fieldName without index
     if (normalizePropertyFieldKey(key.replace('property_', '')) === normalizedFieldName) {
-      if (normalizedFieldName === 'bedrooms') {
-        // Need property context - assume required unless we can check
-        return true
+      if (normalizedFieldName === 'bedrooms' && propIndex !== null && propIndex !== undefined) {
+        const prop = localProperties.value[propIndex]
+        if (prop && isBedroomsExcludedForProperty(prop)) return false
       }
+      if (propIndex !== null && propIndex !== undefined) return false
       return true
     }
     return false
   })
-  return result
+}
+
+/**
+ * Whether a property column is required for this stage (label asterisk).
+ * Pass `propIndex` from the properties v-for so each row matches its own required keys.
+ */
+function isPropertyFieldRequired(fieldName, propIndex = null) {
+  if (isPropertyFieldRequiredByStageList(fieldName, propIndex)) return true
+  return isPropertyFieldRequiredFromMissing(fieldName, propIndex)
+}
+
+function getDealPropertyIndex(property) {
+  if (!property) return null
+  const list = dealProperties.value || []
+  let idx = list.findIndex((p) => p === property)
+  if (idx !== -1) return idx
+  if (property.id != null && property.id !== undefined) {
+    idx = list.findIndex((p) => p?.id != null && String(p.id) === String(property.id))
+  }
+  return idx !== -1 ? idx : null
 }
 function getRequiredFieldsForProperty() {
   const missingKeys = effectiveMissingFields.value || []
@@ -1790,7 +1853,8 @@ function getRequiredFieldsForProperty() {
 // Check if specific property field is invalid (only after Save)
 function isPropertyFieldInvalid(property, fieldName) {
   if (!validationAttempted.value) return false
-  const isRequired = isPropertyFieldRequired(fieldName)
+  const pIdx = getDealPropertyIndex(property)
+  const isRequired = isPropertyFieldRequired(fieldName, pIdx !== null && pIdx !== -1 ? pIdx : null)
   if (!isRequired) return false
   
   const normalizedFieldName = normalizePropertyFieldKey(fieldName)
@@ -2581,21 +2645,22 @@ watch(
 // Document types by party with deal type filtering
 const documentTypesByParty = computed(() => {
   const result = { buyer: [], seller: [], tenant: [], landlord: [] }
-  // استخدم القائمة المفلترة هنا
-  const missingKeys = effectiveMissingFields.value || [] 
-
-  missingKeys.forEach(key => {
-    if (key.includes('_document_')) {
+  const pushDocKeys = (keyList) => {
+    ;(keyList || []).forEach((key) => {
+      if (typeof key !== 'string' || !key.includes('_document_')) return
       const [partyType, docType] = key.split('_document_')
-      if (result[partyType]) {
+      if (result[partyType] && !result[partyType].some((d) => d.id === docType)) {
         result[partyType].push({
           id: docType,
-          name: docType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-          required: true
+          name: docType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+          required: true,
         })
       }
-    }
-  })
+    })
+  }
+  pushDocKeys(effectiveMissingFields.value || [])
+  pushDocKeys(props.requiredFields || [])
+  pushDocKeys(Array.from(accumulatedRequiredKeys.value || []))
 
   // إضافة مستندات بناءً على حالة الإقامة ولكن فقط للأطراف المسموح بها
   const parties = ['buyer', 'seller', 'tenant', 'landlord']
@@ -2664,17 +2729,15 @@ function hasField(fieldKey) {
   )
 }
 function isRequiredField(fieldKey) {
-  if (!props.requiredFields || !Array.isArray(props.requiredFields)) {
-    console.warn('requiredFields is not available yet for field:', fieldKey)
-    return false
-  }
-  
   const normalized = normalizeMissingFieldKey(fieldKey)
-  const result = props.requiredFields.some(key =>
-    normalizeMissingFieldKey(key) === normalized
-  )
-  
-  return result
+  if (accumulatedRequiredKeys.value.has(normalized)) return true
+  if (Array.isArray(props.requiredFields) && props.requiredFields.length > 0) {
+    if (props.requiredFields.some((key) => normalizeMissingFieldKey(String(key)) === normalized)) {
+      return true
+    }
+  }
+  /** When `required_fields` was missing from API, still show * using opening missing snapshot. */
+  return hasField(fieldKey)
 }
 /** Show full party / deal forms (not only “missing” keys) so users can see and edit existing data. */
 function shouldShowField(fieldKey) {
@@ -2760,22 +2823,27 @@ function togglePropertyBudgetDropdown(propIndex) {
 
 const propertyDocTypesForModal = computed(() => {
   const mk = effectiveMissingFields.value || []
-  const paymentRequired = mk.some(
-    (k) =>
-      k.includes('property_document_payment') ||
-      (k.includes('payment_proof') && k.includes('property'))
-  )
-  const spaRequired = mk.some(
-    (k) =>
-      k.includes('property_document_spa') ||
-      k.includes('spa_document') ||
-      (k.includes('spa') && k.includes('property'))
-  )
+  const req = props.requiredFields || []
+  const acc = accumulatedRequiredKeys.value ? Array.from(accumulatedRequiredKeys.value) : []
+  const keyMatchesPayment = (k) =>
+    String(k).includes('property_document_payment') ||
+    (String(k).includes('payment_proof') && String(k).includes('property'))
+  const keyMatchesSpa = (k) =>
+    String(k).includes('property_document_spa') ||
+    String(k).includes('spa_document') ||
+    (String(k).includes('spa') && String(k).includes('property'))
+  const paymentRequired =
+    mk.some(keyMatchesPayment) || req.some(keyMatchesPayment) || acc.some(keyMatchesPayment)
+  const spaRequired = mk.some(keyMatchesSpa) || req.some(keyMatchesSpa) || acc.some(keyMatchesSpa)
   return [
     { id: 'payment_proof', name: 'Payment Proof', required: paymentRequired },
-    { id: 'spa', name: 'SPA Document', required: spaRequired }
+    { id: 'spa', name: 'SPA Document', required: spaRequired },
   ]
 })
+
+const isPropertyDocumentsSectionRequired = computed(() =>
+  propertyDocTypesForModal.value.some((d) => d.required)
+)
 
 function hasPartyFields(partyType) {
   const missingKeys = effectiveMissingFields.value || []
@@ -3463,6 +3531,8 @@ function onOverlayClick() {
 // Watch for modal show
 watch(() => props.show, async (val) => {
     if (val) {
+        resetAccumulatedRequiredKeys()
+        accumulateRequiredKeysFromProps()
         document.body?.classList?.add('complete-stage-open')
         // Prevent underlying bootstrap modal from trapping focus/clicks
         const viewModal = document.getElementById('view-deal-modal')
@@ -3495,16 +3565,36 @@ watch(() => props.show, async (val) => {
         )
         firstFocusable?.focus?.()
     } else {
+        resetAccumulatedRequiredKeys()
         document.body?.classList?.remove('complete-stage-open')
         const viewModal = document.getElementById('view-deal-modal')
         viewModal?.removeAttribute?.('inert')
         submitting.value = false
         if (submitResetTimer) {
-            clearTimeout(submitResetTimer)
-            submitResetTimer = null
+          clearTimeout(submitResetTimer)
+          submitResetTimer = null
         }
     }
-})
+}, { immediate: true })
+
+watch(
+  () => [props.requiredFields, props.missingFields, props.groupedMissing, props.missingFieldsGroupedByStage],
+  () => {
+    if (props.show) accumulateRequiredKeysFromProps()
+  },
+  { deep: true },
+)
+
+watch(
+  () => [props.dealId, props.targetStageId],
+  () => {
+    if (props.show) {
+      resetAccumulatedRequiredKeys()
+      accumulateRequiredKeysFromProps()
+    }
+  },
+)
+
 // دالة لتنسيق تاريخ الميلاد إلى YYYY-MM-DD لـ AdvancedDatePicker
 function formatDateForDatePicker(dateValue) {
   if (!dateValue) return null;
