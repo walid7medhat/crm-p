@@ -935,17 +935,7 @@
                                         </template>
                                     </v-select>
                                 </div>
-                                <!-- Unit No -->
-                                <div class="col-md-6" v-if="shouldShowPropertyField('unit_no', property)">
-                                    <label class="form-label-custom">Unit No <span v-if="isPropertyFieldRequired('unit_no')" class="text-danger">*</span></label>
-                                    <b-form-input 
-                                    v-model="property.unit_no"
-                                        @update:modelValue="(val) => updateProperty(propIndex, 'unit_no', val)"
-                                        placeholder="Enter Unit No" 
-                                        class="custom-input"
-                                        :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'unit_no') }"
-                                    />
-                                </div>
+                               
                                 
                                 <!-- Property Type -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('property_type_id', property)">
@@ -984,20 +974,7 @@
                                         </template>
                                     </v-select>
                                 </div>
-                                
-                                <!-- Unit Size -->
-                                <div class="col-md-6" v-if="shouldShowPropertyField('unit_size', property)">
-                                    <label class="form-label-custom">Unit Size (sq.ft) <span v-if="isPropertyFieldRequired('unit_size')" class="text-danger">*</span></label>
-                                    <b-form-input 
-                                        v-model="property.unit_size"
-                                        @update:modelValue="(val) => updateProperty(propIndex, 'unit_size', val)"
-                                        type="number"
-                                        placeholder="Size in sq.ft" 
-                                        class="custom-input"
-                                        :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'unit_size') }"
-                                    />
-                                </div>
-                                
+                      
                                 <!-- Rental Price (للصفقات الإيجارية) -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('rental_price', property)">
                                     <label class="form-label-custom">Rental Price <span v-if="isPropertyFieldRequired('rental_price')" class="text-danger">*</span></label>
@@ -1016,7 +993,7 @@
                                 
                                 <!-- Purchase Price -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('purchase_price', property)">
-                                    <label class="form-label-custom"> {{ isWonStage ? 'Amount' : 'Purchase Price' }} <span v-if="isPropertyFieldRequired('purchase_price')" class="text-danger">*</span></label>
+                                    <label class="form-label-custom"> {{ isWonStage ? 'Purchase Price' : 'Purchase Price' }} <span v-if="isPropertyFieldRequired('purchase_price')" class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input
                                             :value="property.purchase_price ?? ''"
@@ -1024,7 +1001,7 @@
                                             type="text"
                                             inputmode="decimal"
                                             autocomplete="off"
-                                             :placeholder="isWonStage ? 'Enter Amount' : 'Enter Purchase Price'"
+                                             :placeholder="isWonStage ? 'Enter Purchase Price' : 'Enter Purchase Price'"
                                             class="form-control custom-input"
                                             :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'purchase_price') }"
                                         />
@@ -1137,6 +1114,30 @@
                                         </div>
                                       </div>
                                     </div>
+                                </div>
+                                          
+                                <!-- Unit Size -->
+                                <div class="col-md-6" v-if="shouldShowPropertyField('unit_size', property)">
+                                    <label class="form-label-custom">Unit Size (sq.ft) <span v-if="isPropertyFieldRequired('unit_size')" class="text-danger">*</span></label>
+                                    <b-form-input 
+                                        v-model="property.unit_size"
+                                        @update:modelValue="(val) => updateProperty(propIndex, 'unit_size', val)"
+                                        type="number"
+                                        placeholder="Size in sq.ft" 
+                                        class="custom-input"
+                                        :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'unit_size') }"
+                                    />
+                                </div>
+                                 <!-- Unit No -->
+                                <div class="col-md-6" v-if="shouldShowPropertyField('unit_no', property)">
+                                    <label class="form-label-custom">Unit No <span v-if="isPropertyFieldRequired('unit_no')" class="text-danger">*</span></label>
+                                    <b-form-input 
+                                    v-model="property.unit_no"
+                                        @update:modelValue="(val) => updateProperty(propIndex, 'unit_no', val)"
+                                        placeholder="Enter Unit No" 
+                                        class="custom-input"
+                                        :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'unit_no') }"
+                                    />
                                 </div>
                                 
                                 <!-- Property Documents (Payment Proof + SPA — same idea as Create Deal / PropertyCard) -->
