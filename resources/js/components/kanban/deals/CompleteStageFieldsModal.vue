@@ -62,7 +62,7 @@
             <!-- Lost Reason Section -->
             <section v-if="shouldShowField('lost_reason')" class="form-section">
               <div class="form-card p-3 radius-12">
-                <label class="form-label-custom">Enter Reason For Deal Lost <span v-if="hasField('lost_reason')" class="text-danger">*</span></label>
+                <label class="form-label-custom">Enter Reason For Deal Lost <span v-if="isRequiredField('lost_reason')" class="text-danger">*</span></label>
                 <textarea
                   v-model="formData.lost_reason"
                   class="lost-reason-textarea"
@@ -98,7 +98,7 @@
                   <div class="row g-3">
                     <!-- Buyer fields -->
                     <div class="col-md-6" v-if="shouldShowField('buyer_first_name')">
-                      <label class="form-label-custom">Buyer First Name <span v-if="hasField('buyer_first_name')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Buyer First Name <span v-if="isRequiredField('buyer_first_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.buyer_first_name" 
                         placeholder="Enter First Name" 
@@ -108,7 +108,7 @@
                     </div>
                     
                     <div class="col-md-6" v-if="shouldShowField('buyer_last_name')">
-                      <label class="form-label-custom">Buyer Last Name <span v-if="hasField('buyer_last_name')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Buyer Last Name <span v-if="isRequiredField('buyer_last_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.buyer_last_name" 
                         placeholder="Enter Last Name" 
@@ -118,7 +118,7 @@
                     </div>
                     
                     <div class="col-md-6" v-if="shouldShowField('buyer_phone')">
-                      <label class="form-label-custom">Buyer Phone Number <span v-if="hasField('buyer_phone')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Buyer Phone Number <span v-if="isRequiredField('buyer_phone')" class="text-danger">*</span></label>
                       <CrmPhoneInput 
                         v-model="formData.buyer_phone" 
                         placeholder="Enter Phone Number" 
@@ -128,7 +128,7 @@
                     </div>
                     
                     <div class="col-md-6" v-if="shouldShowField('buyer_email')">
-                      <label class="form-label-custom">Buyer Email <span v-if="hasField('buyer_email')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Buyer Email <span v-if="isRequiredField('buyer_email')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.buyer_email" 
                         type="email" 
@@ -139,7 +139,7 @@
                     </div>
                     
                     <div class="col-md-6" v-if="shouldShowField('buyer_nationality')">
-                      <label class="form-label-custom">Buyer Nationality <span v-if="hasField('buyer_nationality')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Buyer Nationality <span v-if="isRequiredField('buyer_nationality')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.buyer_nationality" 
@@ -177,7 +177,7 @@
                     </div>
                     
                     <div class="col-md-6" v-if="shouldShowField('buyer_residency_status') || (documentTypesByParty.buyer.length > 0 && ['primary', 'secondary'].includes(effectiveDealTypeForDocs))">
-                      <label class="form-label-custom">Buyer Residency Status <span v-if="hasField('buyer_residency_status')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Buyer Residency Status <span v-if="isRequiredField('buyer_residency_status')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body
                         v-model="formData.buyer_residency_status"
@@ -198,7 +198,7 @@
                     </div>
                     
                     <div class="col-md-6" v-if="shouldShowField('buyer_country') && (showBuyerCountryField || hasField('buyer_country'))">
-                      <label class="form-label-custom">Buyer Country Of Residence <span v-if="hasField('buyer_country')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Buyer Country Of Residence <span v-if="isRequiredField('buyer_country')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.buyer_country" 
@@ -218,7 +218,7 @@
                     </div>
                     
                     <div class="col-md-6" v-if="shouldShowField('buyer_city') && showBuyerCityField">
-                      <label class="form-label-custom">Buyer City Of Residence <span v-if="hasField('buyer_city')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Buyer City Of Residence <span v-if="isRequiredField('buyer_city')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.buyer_city" 
@@ -238,7 +238,7 @@
                     </div>
 
                     <div class="col-md-6 buyer-dob-field" v-if="shouldShowField('buyer_dob')">
-                      <label class="form-label-custom">Buyer Date Of Birth <span v-if="hasField('buyer_dob')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Buyer Date Of Birth <span v-if="isRequiredField('buyer_dob')" class="text-danger">*</span></label>
                       <AdvancedDatePicker
                         v-model="formData.buyer_dob"
                         date-only
@@ -249,7 +249,7 @@
                     </div>
 
                     <div class="col-md-6" v-if="shouldShowField('buyer_language')">
-                      <label class="form-label-custom">Buyer Language <span v-if="hasField('buyer_language')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Buyer Language <span v-if="isRequiredField('buyer_language')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         :model-value="normalizeLanguageSelection(formData.buyer_language)"
@@ -315,7 +315,7 @@
                   <div class="row g-3">
                     <!-- Seller fields -->
                     <div class="col-md-4" v-if="shouldShowField('seller_first_name')">
-                      <label class="form-label-custom">First Name <span v-if="hasField('seller_first_name')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">First Name <span v-if="isRequiredField('seller_first_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.seller_first_name" 
                         placeholder="Enter First Name" 
@@ -325,7 +325,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('seller_last_name')">
-                      <label class="form-label-custom">Last Name <span v-if="hasField('seller_last_name')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Last Name <span v-if="isRequiredField('seller_last_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.seller_last_name" 
                         placeholder="Enter Last Name" 
@@ -335,7 +335,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('seller_dob')">
-                      <label class="form-label-custom">Date Of Birth <span v-if="hasField('seller_dob')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Date Of Birth <span v-if="isRequiredField('seller_dob')" class="text-danger">*</span></label>
                       <AdvancedDatePicker
                         v-model="formData.seller_dob"
                         date-only
@@ -346,7 +346,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('seller_phone')">
-                      <label class="form-label-custom">Phone <span v-if="hasField('seller_phone')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Phone <span v-if="isRequiredField('seller_phone')" class="text-danger">*</span></label>
                       <CrmPhoneInput 
                         v-model="formData.seller_phone" 
                         placeholder="Enter Phone" 
@@ -356,7 +356,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('seller_email')">
-                      <label class="form-label-custom">Email <span v-if="hasField('seller_email')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Email <span v-if="isRequiredField('seller_email')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.seller_email" 
                         type="email" 
@@ -367,7 +367,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('seller_nationality')">
-                      <label class="form-label-custom">Nationality <span v-if="hasField('seller_nationality')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Nationality <span v-if="isRequiredField('seller_nationality')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.seller_nationality" 
@@ -405,7 +405,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('seller_residency_status')">
-                      <label class="form-label-custom">Residency Status <span v-if="hasField('seller_residency_status')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Residency Status <span v-if="isRequiredField('seller_residency_status')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.seller_residency_status" 
@@ -445,7 +445,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('seller_city') && showSellerCityField">
-                      <label class="form-label-custom">City Of Residence <span v-if="hasField('seller_city')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">City Of Residence <span v-if="isRequiredField('seller_city')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.seller_city" 
@@ -465,7 +465,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('seller_language')">
-                      <label class="form-label-custom">Language <span v-if="hasField('seller_language')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Language <span v-if="isRequiredField('seller_language')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.seller_language" 
@@ -526,7 +526,7 @@
                 <div class="form-card p-3 radius-12" v-if="showPartyDetailFields('tenant')">
                   <div class="row g-3">
                     <div class="col-md-4" v-if="shouldShowField('tenant_first_name')">
-                      <label class="form-label-custom">First Name <span v-if="hasField('tenant_first_name')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">First Name <span v-if="isRequiredField('tenant_first_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.tenant_first_name" 
                         placeholder="Enter First Name" 
@@ -536,7 +536,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('tenant_last_name')">
-                      <label class="form-label-custom">Last Name <span v-if="hasField('tenant_last_name')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Last Name <span v-if="isRequiredField('tenant_last_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.tenant_last_name" 
                         placeholder="Enter Last Name" 
@@ -546,7 +546,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('tenant_phone')">
-                      <label class="form-label-custom">Phone <span v-if="hasField('tenant_phone')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Phone <span v-if="isRequiredField('tenant_phone')" class="text-danger">*</span></label>
                       <CrmPhoneInput 
                         v-model="formData.tenant_phone" 
                         placeholder="Enter Phone" 
@@ -556,7 +556,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('tenant_email')">
-                      <label class="form-label-custom">Email <span v-if="hasField('tenant_email')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Email <span v-if="isRequiredField('tenant_email')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.tenant_email" 
                         type="email" 
@@ -567,7 +567,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('tenant_nationality')">
-                      <label class="form-label-custom">Nationality <span v-if="hasField('tenant_nationality')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Nationality <span v-if="isRequiredField('tenant_nationality')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.tenant_nationality" 
@@ -605,7 +605,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('tenant_residency_status')">
-                      <label class="form-label-custom">Residency Status <span v-if="hasField('tenant_residency_status')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Residency Status <span v-if="isRequiredField('tenant_residency_status')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.tenant_residency_status" 
@@ -645,7 +645,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('tenant_city') && showTenantCityField">
-                      <label class="form-label-custom">City Of Residence <span v-if="hasField('tenant_city')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">City Of Residence <span v-if="isRequiredField('tenant_city')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.tenant_city" 
@@ -665,7 +665,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('tenant_language')">
-                      <label class="form-label-custom">Language <span v-if="hasField('tenant_language')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Language <span v-if="isRequiredField('tenant_language')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.tenant_language" 
@@ -726,7 +726,7 @@
                 <div class="form-card p-3 radius-12" v-if="showPartyDetailFields('landlord')">
                   <div class="row g-3">
                     <div class="col-md-4" v-if="shouldShowField('landlord_first_name')">
-                      <label class="form-label-custom">First Name <span v-if="hasField('landlord_first_name')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">First Name <span v-if="isRequiredField('landlord_first_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.landlord_first_name" 
                         placeholder="Enter First Name" 
@@ -736,7 +736,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('landlord_last_name')">
-                      <label class="form-label-custom">Last Name <span v-if="hasField('landlord_last_name')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Last Name <span v-if="isRequiredField('landlord_last_name')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.landlord_last_name" 
                         placeholder="Enter Last Name" 
@@ -746,7 +746,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('landlord_dob')">
-                      <label class="form-label-custom">Date Of Birth <span v-if="hasField('landlord_dob')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Date Of Birth <span v-if="isRequiredField('landlord_dob')" class="text-danger">*</span></label>
                       <AdvancedDatePicker
                         v-model="formData.landlord_dob"
                         date-only
@@ -757,7 +757,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('landlord_phone')">
-                      <label class="form-label-custom">Phone <span v-if="hasField('landlord_phone')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Phone <span v-if="isRequiredField('landlord_phone')" class="text-danger">*</span></label>
                     
                       <CrmPhoneInput 
                         v-model="formData.landlord_phone" 
@@ -768,7 +768,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('landlord_email')">
-                      <label class="form-label-custom">Email <span v-if="hasField('landlord_email')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Email <span v-if="isRequiredField('landlord_email')" class="text-danger">*</span></label>
                       <b-form-input 
                         v-model="formData.landlord_email" 
                         type="email" 
@@ -779,7 +779,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('landlord_nationality')">
-                      <label class="form-label-custom">Nationality <span v-if="hasField('landlord_nationality')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Nationality <span v-if="isRequiredField('landlord_nationality')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.landlord_nationality" 
@@ -817,7 +817,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('landlord_residency_status')">
-                      <label class="form-label-custom">Residency Status <span v-if="hasField('landlord_residency_status')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Residency Status <span v-if="isRequiredField('landlord_residency_status')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.landlord_residency_status" 
@@ -857,7 +857,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('landlord_city') && showLandlordCityField">
-                      <label class="form-label-custom">City Of Residence <span v-if="hasField('landlord_city')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">City Of Residence <span v-if="isRequiredField('landlord_city')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.landlord_city" 
@@ -877,7 +877,7 @@
                     </div>
                     
                     <div class="col-md-4" v-if="shouldShowField('landlord_language')">
-                      <label class="form-label-custom">Language <span v-if="hasField('landlord_language')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Language <span v-if="isRequiredField('landlord_language')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
                         v-model="formData.landlord_language" 
@@ -1277,7 +1277,7 @@
                 <div class="form-card p-3 radius-12">
                   <div class="row g-3">
                     <div class="col-md-6" v-if="shouldShowField('deal_total_amount')">
-                      <label class="form-label-custom">Deal amount <span v-if="hasField('deal_total_amount')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Deal amount <span v-if="isRequiredField('deal_total_amount')" class="text-danger">*</span></label>
                       <div class="input-group">
                         <span class="input-group-text">AED</span>
                         <input
@@ -1293,7 +1293,7 @@
                       </div>
                     </div>
                     <div class="col-md-6" v-if="shouldShowField('deal_commission')">
-                      <label class="form-label-custom">Deal Commission % <span v-if="hasField('deal_commission')" class="text-danger">*</span></label>
+                      <label class="form-label-custom">Deal Commission % <span v-if="isRequiredField('deal_commission')" class="text-danger">*</span></label>
                       <b-form-input
                         v-model="formData.deal_commission"
                         type="number"
@@ -1375,7 +1375,8 @@ const props = defineProps({
   missingFieldsGrouped: { type: Object, default: () => ({ sections: [] }) },
   missingFieldsGroupedByStage: { type: Object, default: () => ({ stages: [] }) },
   groupedMissing: { type: Object, default: () => ({ sections: [], by_stage: [] }) },
-  deal: { type: Object, default: null }
+  deal: { type: Object, default: null },
+  requiredFields: { type: Array, default: () => [] } 
 })
 
 /** After clicking Save: show red borders + scroll to first invalid (not before). */
@@ -2651,10 +2652,24 @@ const missingDocumentTypesByParty = computed(() => {
 
 // Check if field is required (stage rules)
 function hasField(fieldKey) {
-  const missingKeys = effectiveMissingFields.value || []
-  return missingKeys.includes(fieldKey)
+  // استخدم missingFields الأصلي بدلاً من effectiveMissingFields
+  const originalMissing = props.missingFields || []
+  const byStageMissing = (props.groupedMissing?.by_stage || props.missingFieldsGroupedByStage?.stages || [])
+    .flatMap(stage => stage?.fields || stage?.missing_fields || [])
+  
+  const allOriginalMissing = [...originalMissing, ...byStageMissing]
+  
+  return allOriginalMissing.some(key => 
+    normalizeMissingFieldKey(key) === normalizeMissingFieldKey(fieldKey)
+  )
 }
-
+function isRequiredField(fieldKey) {
+  const required = props.requiredFields || []
+console.log("is required",props.requiredFields);
+  return required.some(key =>
+    normalizeMissingFieldKey(key) === normalizeMissingFieldKey(fieldKey)
+  )
+}
 /** Show full party / deal forms (not only “missing” keys) so users can see and edit existing data. */
 function shouldShowField(fieldKey) {
   if (!fieldKey) return false

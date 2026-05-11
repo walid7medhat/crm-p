@@ -32,7 +32,83 @@ class DealStageRequirementEngine
     public function __construct(private readonly DealStageValidator $validator)
     {
     }
+        private function getRequiredFieldsForStage(int $targetOrder, Deal $deal): array
+        {
+            $required = [];
 
+            if ($targetOrder === 1) {
+                $required = ['deal_name', 'source'];
+                return $required;
+            }
+
+            if ($targetOrder >= 2 && $targetOrder <= 5) {
+                foreach (self::PRIMARY_BASIC_BUYER_FIELDS as $field) {
+                    $required[] = "buyer_{$field}";
+                }
+
+                $required[] = 'buyer_document_passport';
+                $required[] = 'buyer_document_national_id';
+            }
+
+            if ($targetOrder >= 2) {
+                $required[] = 'at_least_one_property';
+            }
+
+            // ✅ تصحيح: إضافة الحقول لكل property موجودة
+            if ($targetOrder >= 2) {
+                $properties = $deal->properties;
+                
+                if ($properties->isEmpty()) {
+                    // إذا لم توجد خصائص، نضيف للحقل الافتراضي property_0
+                    $required = array_merge($required, [
+                        'property_0_area_id',
+                        'property_0_property_type_id',
+                    ]);
+                } else {
+                    // ✅ إضافة الحقول لكل property موجودة
+                    foreach ($properties as $index => $property) {
+                        $required[] = "property_{$index}_area_id";
+                        $required[] = "property_{$index}_property_type_id";
+                        
+                        // إضافة budget fields فقط للمراحل المبكرة (order 2)
+                        if ($targetOrder == 2) {
+                            $required[] = "property_{$index}_budget_from";
+                            $required[] = "property_{$index}_budget_to";
+                        }
+                        
+                        // إضافة باقي الحقل للمراحل المتقدمة
+                        if ($targetOrder >= 3) {
+                            $required[] = "property_{$index}_bedrooms";
+                            $required[] = "property_{$index}_unit_no";
+                            $required[] = "property_{$index}_unit_size";
+                            $required[] = "property_{$index}_developer_id";
+                            $required[] = "property_{$index}_developer_name";
+                            $required[] = "property_{$index}_developer_phone";
+                            $required[] = "property_{$index}_purchase_price";
+                        }
+                    }
+                }
+            }
+
+            if ($targetOrder >= 3) {
+                $required[] = 'property_document_payment_proof';
+                $required[] = 'property_document_spa';
+            }
+
+            if ($targetOrder >= 5) {
+                $required[] = 'deal_total_amount';
+                $required[] = 'buyer_document_kyc';
+            }
+
+            // ✅ إزالة budget fields للمراحل المتقدمة (بعد order 2)
+            if ($targetOrder > 2) {
+                $required = array_filter($required, function($field) {
+                    return !str_contains($field, 'budget_');
+                });
+            }
+
+            return array_values(array_unique($required));
+        }
     public function validateStageTransition(Deal $deal, int $targetStageId, array $context = []): array
     {
         // Always reload fresh state so same-request updates/uploads are reflected.
@@ -87,7 +163,7 @@ class DealStageRequirementEngine
         $missingFields = $this->canonicalizeMissingFields($missingFields);
         $missingByStage = $this->canonicalizeMissingByStage($evaluationByStage);
         $valid = empty($missingFields);
-
+$requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
         return [
             'valid' => $valid,
             'message' => $valid ? 'Validation passed' : 'Missing required fields',
@@ -100,6 +176,7 @@ class DealStageRequirementEngine
                 'sections' => $this->validator->getMissingFieldsGroupedForUI($missingFields)['sections'] ?? [],
                 'by_stage' => $this->validator->getMissingFieldsGroupedByStageForUI($missingByStage)['stages'] ?? [],
             ],
+              'required_fields' => $requiredFields,
             'debug' => [
                 'current_stage_order' => (int) ($currentStage?->order ?? 0),
                 'target_stage_order' => $targetOrder,
@@ -303,6 +380,8 @@ class DealStageRequirementEngine
 
     private function successResult(Deal $deal, array $debug): array
     {
+        $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
+
         return [
             'valid' => true,
             'message' => 'Validation passed',
@@ -315,6 +394,7 @@ class DealStageRequirementEngine
             'debug' => $debug,
             'deal_type' => 'primary',
             'has_listing_id' => !is_null($deal->listing_id),
+             'required_fields' => $requiredFields,
         ];
     }
 

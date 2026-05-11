@@ -342,6 +342,7 @@
       :targetStageId="pendingStageChange?.targetStageId"
       :targetStageName="pendingStageChange?.targetStageName"
       :targetStageOrder="pendingStageChange?.targetStageOrder"
+      :required-fields="pendingCompleteFields?.requiredFields || []" 
       @submit="handleStageChangeWithReason"
       @closed="clearPendingStageChange"
     />
@@ -1509,6 +1510,7 @@ async function onDealDragChange(evt, targetColumn) {
         },
         missingFields,
         missingFieldsGrouped: res.missingFieldsGrouped,
+        requiredFields: res.requiredFields,
         missingFieldsGroupedByStage: res.missingFieldsGroupedByStage,
         groupedMissing: res.groupedMissing,
         canProceedWithoutFields: false,
@@ -1775,6 +1777,7 @@ async function handleCompleteFieldsSave({ payload, documents, stage_id }) {
         missingFieldsGrouped: normalizedMissing.missingFieldsGrouped,
         missingFieldsGroupedByStage: normalizedMissing.missingFieldsGroupedByStage,
         groupedMissing: normalizedMissing.groupedMissing,
+        requiredFields:normalizedMissing.requiredFields
       }
       showCompleteFieldsModal.value = true
       return
@@ -1912,6 +1915,7 @@ async function handleStageChangeFromModal({ dealId, originalStageId, targetStage
       missingFields,
       missingFieldsGrouped: normalized.missingFieldsGrouped,
       missingFieldsGroupedByStage: normalized.missingFieldsGroupedByStage,
+      requiredFields:normalized.requiredFields,
       groupedMissing: normalized.groupedMissing,
       canProceedWithoutFields: valid,
     }

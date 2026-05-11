@@ -538,6 +538,7 @@ class DealController extends Controller
             'message' => $result['message'] ?? ($result['valid'] ? 'Validation passed' : 'Missing required fields'),
             'has_listing_id' => $result['has_listing_id'] ?? false,
             'deal_type' => $result['deal_type'] ?? $request->deal_type,
+                'required_fields' => $result['required_fields'] ?? [],
         ];
 
         if (!empty($result['missing_fields'])) {
