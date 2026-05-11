@@ -44,10 +44,30 @@
           <div class="col-md-4"><label class="form-label-custom">Buyer Email <span class="text-danger">*</span></label><b-form-input v-model="form.buyer_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !form.buyer_email }" /><div v-if="showErrors && fieldErrors.buyer_email" class="invalid-feedback d-block">{{ fieldErrors.buyer_email }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Buyer Nationality <span class="text-danger">*</span></label>
-            <v-select v-model="form.buyer_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.buyer_nationality }" clearable>
-              <template #open-indicator="{ attributes }">
-                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
-              </template>
+            <v-select v-model="form.buyer_nationality" :options="nationalityOptions" :reduce="item => item.text" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.buyer_nationality }" clearable>
+                        <template #open-indicator="{ attributes }">
+                          <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                          </span>
+                        </template>
+                        <template #option="{ text, code }">
+                          <div class="d-flex align-items-center gap-2">
+                            <img 
+                              :src="`https://flagcdn.com/w20/${code}.png`" 
+                              width="20"
+                            />
+                            <span>{{ text }}</span>
+                          </div>
+                        </template>
+                        <template #selected-option="{ text, code }">
+                          <div class="d-flex align-items-center gap-2">
+                            <img 
+                              :src="`https://flagcdn.com/w20/${code}.png`" 
+                              width="20"
+                            />
+                            <span>{{ text }}</span>
+                          </div>
+                        </template>
             </v-select>
             <div v-if="showErrors && fieldErrors.buyer_nationality" class="invalid-feedback d-block">{{ fieldErrors.buyer_nationality }}</div>
           </div>
@@ -118,9 +138,29 @@
           <div class="col-md-4"><label class="form-label-custom">Email <span class="text-danger">*</span></label><b-form-input v-model="form.seller_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !form.seller_email }" /><div v-if="showErrors && fieldErrors.seller_email" class="invalid-feedback d-block">{{ fieldErrors.seller_email }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
-            <v-select v-model="form.seller_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.seller_nationality }" clearable>
-              <template #open-indicator="{ attributes }">
-                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+            <v-select v-model="form.seller_nationality" :options="nationalityOptions" :reduce="item => item.text" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.seller_nationality }" clearable>
+               <template #open-indicator="{ attributes }">
+                <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+              </template>
+              <template #option="{ text, code }">
+                <div class="d-flex align-items-center gap-2">
+                  <img 
+                    :src="`https://flagcdn.com/w20/${code}.png`" 
+                    width="20"
+                  />
+                  <span>{{ text }}</span>
+                </div>
+              </template>
+              <template #selected-option="{ text, code }">
+                <div class="d-flex align-items-center gap-2">
+                  <img 
+                    :src="`https://flagcdn.com/w20/${code}.png`" 
+                    width="20"
+                  />
+                  <span>{{ text }}</span>
+                </div>
               </template>
             </v-select>
             <div v-if="showErrors && fieldErrors.seller_nationality" class="invalid-feedback d-block">{{ fieldErrors.seller_nationality }}</div>
@@ -182,10 +222,30 @@
           <div class="col-md-4"><label class="form-label-custom">Email <span class="text-danger">*</span></label><b-form-input v-model="form.tenant_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !form.tenant_email }" /><div v-if="showErrors && fieldErrors.tenant_email" class="invalid-feedback d-block">{{ fieldErrors.tenant_email }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
-            <v-select v-model="form.tenant_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.tenant_nationality }" clearable>
-              <template #open-indicator="{ attributes }">
-                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
-              </template>
+            <v-select v-model="form.tenant_nationality" :options="nationalityOptions" :reduce="item => item.text" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.tenant_nationality }" clearable>
+               <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+                </template>
+                <template #option="{ text, code }">
+                  <div class="d-flex align-items-center gap-2">
+                    <img 
+                      :src="`https://flagcdn.com/w20/${code}.png`" 
+                      width="20"
+                    />
+                    <span>{{ text }}</span>
+                  </div>
+                </template>
+                <template #selected-option="{ text, code }">
+                  <div class="d-flex align-items-center gap-2">
+                    <img 
+                      :src="`https://flagcdn.com/w20/${code}.png`" 
+                      width="20"
+                    />
+                    <span>{{ text }}</span>
+                  </div>
+                </template>
             </v-select>
             <div v-if="showErrors && fieldErrors.tenant_nationality" class="invalid-feedback d-block">{{ fieldErrors.tenant_nationality }}</div>
           </div>
@@ -246,9 +306,29 @@
           <div class="col-md-4"><label class="form-label-custom">Email <span class="text-danger">*</span></label><b-form-input v-model="form.landlord_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !form.landlord_email }" /><div v-if="showErrors && fieldErrors.landlord_email" class="invalid-feedback d-block">{{ fieldErrors.landlord_email }}</div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Nationality <span class="text-danger">*</span></label>
-            <v-select v-model="form.landlord_nationality" :options="nationalityOptions" :reduce="item => item.value" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.landlord_nationality }" clearable>
-              <template #open-indicator="{ attributes }">
-                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+            <v-select v-model="form.landlord_nationality" :options="nationalityOptions" :reduce="item => item.text" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.landlord_nationality }" clearable>
+               <template #open-indicator="{ attributes }">
+                <span v-bind="attributes">
+                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+              </template>
+              <template #option="{ text, code }">
+                <div class="d-flex align-items-center gap-2">
+                  <img 
+                    :src="`https://flagcdn.com/w20/${code}.png`" 
+                    width="20"
+                  />
+                  <span>{{ text }}</span>
+                </div>
+              </template>
+              <template #selected-option="{ text, code }">
+                <div class="d-flex align-items-center gap-2">
+                  <img 
+                    :src="`https://flagcdn.com/w20/${code}.png`" 
+                    width="20"
+                  />
+                  <span>{{ text }}</span>
+                </div>
               </template>
             </v-select>
             <div v-if="showErrors && fieldErrors.landlord_nationality" class="invalid-feedback d-block">{{ fieldErrors.landlord_nationality }}</div>
@@ -510,7 +590,9 @@ import api from '@/plugins/axios'
 import { isNonEmptyPhoneValid } from '@/utils/phone'
 import { getCurrentInstance } from 'vue'
 import { normalizeLanguageSelection, hasLanguageSelection } from '@/composables/useLanguageMultiSelect'
-
+import countries from "i18n-iso-countries";
+import en from "i18n-iso-countries/langs/en.json";
+countries.registerLocale(en);
 const { proxy } = getCurrentInstance()
 
 const props = defineProps({
@@ -1173,68 +1255,15 @@ watch(() => form.value.property_type_id, (newTypeId) => {
 defineExpose({ clearAllDocuments, validateForm, getPropertiesData, propertiesList })
 
 // ========== Options ==========
-const nationalityOptions = [
-  { value: 'emirati', text: 'Emirati' },
-  { value: 'saudi', text: 'Saudi' },
-  { value: 'egyptian', text: 'Egyptian' },
-  { value: 'qatari', text: 'Qatari' },
-  { value: 'kuwaiti', text: 'Kuwaiti' },
-  { value: 'bahraini', text: 'Bahraini' },
-  { value: 'omani', text: 'Omani' },
 
-  { value: 'american', text: 'American' },
-  { value: 'canadian', text: 'Canadian' },
-  { value: 'british', text: 'British' },
-  { value: 'french', text: 'French' },
-  { value: 'german', text: 'German' },
-  { value: 'italian', text: 'Italian' },
-  { value: 'spanish', text: 'Spanish' },
-  { value: 'dutch', text: 'Dutch' },
-  { value: 'swedish', text: 'Swedish' },
-  { value: 'norwegian', text: 'Norwegian' },
-  { value: 'danish', text: 'Danish' },
-  { value: 'finnish', text: 'Finnish' },
-  { value: 'polish', text: 'Polish' },
-  { value: 'ukrainian', text: 'Ukrainian' },
-  { value: 'russian', text: 'Russian' },
 
-  { value: 'indian', text: 'Indian' },
-  { value: 'pakistani', text: 'Pakistani' },
-  { value: 'bangladeshi', text: 'Bangladeshi' },
-  { value: 'sri_lankan', text: 'Sri Lankan' },
-  { value: 'nepali', text: 'Nepali' },
-  { value: 'filipino', text: 'Filipino' },
-  { value: 'indonesian', text: 'Indonesian' },
-  { value: 'malaysian', text: 'Malaysian' },
-  { value: 'chinese', text: 'Chinese' },
-  { value: 'japanese', text: 'Japanese' },
-  { value: 'korean', text: 'Korean' },
-  { value: 'thai', text: 'Thai' },
-  { value: 'vietnamese', text: 'Vietnamese' },
-
-  { value: 'turkish', text: 'Turkish' },
-  { value: 'iranian', text: 'Iranian' },
-
-  { value: 'moroccan', text: 'Moroccan' },
-  { value: 'tunisian', text: 'Tunisian' },
-  { value: 'algerian', text: 'Algerian' },
-  { value: 'sudanese', text: 'Sudanese' },
-  { value: 'ethiopian', text: 'Ethiopian' },
-  { value: 'kenyan', text: 'Kenyan' },
-  { value: 'nigerian', text: 'Nigerian' },
-  { value: 'south_african', text: 'South African' },
-
-  { value: 'brazilian', text: 'Brazilian' },
-  { value: 'argentinian', text: 'Argentinian' },
-  { value: 'mexican', text: 'Mexican' },
-  { value: 'chilean', text: 'Chilean' },
-  { value: 'colombian', text: 'Colombian' },
-
-  { value: 'australian', text: 'Australian' },
-  { value: 'new_zealander', text: 'New Zealander' },
-
-  { value: 'other', text: 'Other' }
-];
+const nationalityOptions = Object.entries(
+  countries.getNames("en", { select: "official" })
+).map(([code, name]) => ({
+  value: code.toLowerCase(), // eg
+  text: name, // Egypt
+  code: code.toLowerCase()
+}));
 
 const residencyOptions = [{ value: 'resident', text: 'Resident' }, { value: 'non_resident', text: 'Non Resident' }]
 const buyerResidencyOptions = [{ value: 'resident', text: 'Resident' }, { value: 'non_resident', text: 'Non Resident' }]

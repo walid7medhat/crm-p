@@ -130,7 +130,7 @@ class DealStageRequirementEngine
                 'current_stage_order' => (int) ($currentStage?->order ?? 0),
                 'target_stage_order' => (int) $targetStage->order,
                 'note' => 'backward_or_same_stage_transition',
-            ]);
+            ], $targetOrder);
         }
 
         $targetOrder = (int) $targetStage->order;
@@ -378,7 +378,7 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
         ];
     }
 
-    private function successResult(Deal $deal, array $debug): array
+    private function successResult(Deal $deal, array $debug,int $targetOrder): array
     {
         $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
 

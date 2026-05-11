@@ -31,12 +31,7 @@
             <p class="info-value mb-0">{{ property.area_name || '----' }}</p>
           </div>
         </div>
-        <div class="col-md-6">
-          <div class="info-group">
-            <label class="info-label">Unit No</label>
-            <p class="info-value mb-0">{{ property.unit_no || '----' }}</p>
-          </div>
-        </div>
+       
         <div class="col-md-6">
           <div class="info-group">
             <label class="info-label">Property Type</label>
@@ -49,12 +44,7 @@
             <p class="info-value mb-0">{{ formatBedrooms(property.bedrooms) }}</p>
           </div>
         </div>
-        <div class="col-md-6">
-          <div class="info-group">
-            <label class="info-label">Unit Size (sq.ft)</label>
-            <p class="info-value mb-0">{{ property.unit_size || '----' }}</p>
-          </div>
-        </div>
+        
          <div class="col-md-6" v-if="(property.budget_from || property.budget_to) && showBudgetFields">
             <div class="info-group">
                 <label class="info-label">Budget (AED)</label>
@@ -101,6 +91,18 @@
           <div class="info-group">
             <label class="info-label">Property Commission</label>
             <p class="info-value mb-0">{{ property.commission }}%</p>
+          </div>
+        </div>
+         <div class="col-md-6">
+          <div class="info-group">
+            <label class="info-label">Unit No</label>
+            <p class="info-value mb-0">{{ property.unit_no || '----' }}</p>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="info-group">
+            <label class="info-label">Unit Size (sq.ft)</label>
+            <p class="info-value mb-0">{{ property.unit_size || '----' }}</p>
           </div>
         </div>
       </div>
@@ -206,10 +208,7 @@
           </v-select>
         </div>
 
-        <div class="col-md-6">
-          <label class="form-label-custom">Unit No</label>
-          <b-form-input v-model="editData.unit_no" placeholder="Enter Unit No" class="custom-input" />
-        </div>
+     
 
         <div class="col-md-6">
           <label class="form-label-custom">Property Type</label>
@@ -243,11 +242,7 @@
           </v-select>
         </div>
 
-        <div class="col-md-6">
-          <label class="form-label-custom">Unit Size (sq.ft)</label>
-          <b-form-input v-model="editData.unit_size" type="number" placeholder="Size" class="custom-input" />
-        </div>
-
+        
          <div v-if="showBudgetFields" class="col-md-6">
             <label class="form-label-custom">
                 Budget (AED)
@@ -341,6 +336,14 @@
             <b-form-input v-model="editData.commission" type="number" step="0.01" placeholder="Commission %" class="custom-input" />
             <span class="input-group-text">%</span>
           </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">Unit Size (sq.ft)</label>
+          <b-form-input v-model="editData.unit_size" type="number" placeholder="Size" class="custom-input" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">Unit No</label>
+          <b-form-input v-model="editData.unit_no" placeholder="Enter Unit No" class="custom-input" />
         </div>
 
         <!-- Same as Create Deal: Payment Proof + SPA, multi-file, always in edit -->

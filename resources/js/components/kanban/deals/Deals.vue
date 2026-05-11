@@ -2203,7 +2203,7 @@ defineExpose({
 .kanban-outer {
   position: relative;
   width: 100%;
-  height: calc(100vh - 200px);
+  height: calc(100vh - 160px);
 }
 
 .kanban-container {

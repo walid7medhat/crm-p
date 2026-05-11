@@ -3249,7 +3249,7 @@ const $showNotification = (message, type = 'info') => {
 .kanban-outer {
     position: relative;
     width: 100%;
-    height: calc(100vh - 150px);
+    height: calc(100vh - 100px);
 }
 
 .kanban-container {
