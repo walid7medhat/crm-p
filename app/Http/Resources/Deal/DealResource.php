@@ -96,6 +96,13 @@ class DealResource extends JsonResource
                         
                         'display_name' => $property->display_name,
                         'budget_range' => $property->budget_range,
+                             // ✅ EOI Documents
+                        'eoi_documents_raw' => $property->eoi_documents,
+                        'eoi_documents' => (new PropertyDocumentResource($property->eoi_documents, 'eoi'))->resolve($request),
+                        
+                        // ✅ Booking Documents
+                        'booking_documents_raw' => $property->booking_documents,
+                        'booking_documents' => (new PropertyDocumentResource($property->booking_documents, 'booking'))->resolve($request),
                     ];
                 });
             }),

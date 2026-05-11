@@ -259,7 +259,7 @@ class DealController extends Controller
             ])
             ->visibleFor($user)
             ->filter($request)
-            ->where('stage_id', $stage->id);
+            ->where('stage_id', $stage->id)->orderBy('updated_at','desc');
             
             $totalCount = $dealsQuery->count();
             $stageDeals = $dealsQuery->paginate($perPage, ['*'], 'page', 1);
@@ -310,7 +310,7 @@ class DealController extends Controller
         ])
         ->visibleFor($user)
         ->filter($request)
-        ->where('stage_id', $stageId);
+        ->where('stage_id', $stageId)->orderBy('updated_at','desc');
         
         $deals = $dealsQuery->paginate($perPage, ['*'], 'page', $page);
         
@@ -1495,6 +1495,8 @@ class DealController extends Controller
             'spa_document' => $propertyData['spa_document'] ?? null,
             'contract_document' => $propertyData['contract_document'] ?? null,
             'ejari_document' => $propertyData['ejari_document'] ?? null,
+            'eoi_documents' => $propertyData['eoi_documents'] ?? null,
+            'booking_documents' => $propertyData['booking_documents'] ?? null,
         ]);
     }
 }
@@ -1511,80 +1513,114 @@ class DealController extends Controller
     }
 
      public function updateProperty(UpdatePropertyRequest $request, Deal $deal, DealProperty $property)
-    {
-        // Check authorization
-        if (!$this->authorizeAccess($deal)) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-        }
-
-        try {
-            DB::beginTransaction();
-
-            // Update text fields
-            $property->update($request->only([
-                'unit_no', 'property_type_id', 'bedrooms', 'unit_size',
-                'area_id', 'developer_id', 'developer_name', 'developer_phone',
-                'budget_from', 'budget_to', 'purchase_price', 'commission'
-            ]));
-
-            // Handle payment_proof files (append — keep existing when adding more)
-            if ($request->hasFile('payment_proof')) {
-                $existing = is_array($property->payment_proof) ? $property->payment_proof : [];
-                $newProof = [];
-                foreach ($request->file('payment_proof') as $file) {
-                    $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
-                    $newProof[] = [
-                        'original_name' => $file->getClientOriginalName(),
-                        'path' => $path,
-                        'mime_type' => $file->getMimeType(),
-                        'size' => $file->getSize(),
-                    ];
-                }
-                $property->payment_proof = array_values(array_merge($existing, $newProof));
-            }
-
-            // Handle spa_document files (append)
-            if ($request->hasFile('spa_document')) {
-                $existing = is_array($property->spa_document) ? $property->spa_document : [];
-                $newSpa = [];
-                foreach ($request->file('spa_document') as $file) {
-                    $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
-                    $newSpa[] = [
-                        'original_name' => $file->getClientOriginalName(),
-                        'path' => $path,
-                        'mime_type' => $file->getMimeType(),
-                        'size' => $file->getSize(),
-                    ];
-                }
-                $property->spa_document = array_values(array_merge($existing, $newSpa));
-            }
-
-            $property->save();
-
-            DB::commit();
-
-            // Load relationships for response
-            $property->load(['propertyType', 'area', 'developer']);
-
-            $payload = $property->toArray();
-            $payload['payment_proof'] = (new PropertyDocumentResource($property->payment_proof, 'payment_proof'))->resolve($request);
-            $payload['spa_document'] = (new PropertyDocumentResource($property->spa_document, 'spa'))->resolve($request);
-
-            return response()->json([
-                'success' => true,
-                'data' => $payload,
-                'message' => 'Property updated successfully'
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('Error updating property: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update property: ' . $e->getMessage()
-            ], 500);
-        }
+{
+    // Check authorization
+    if (!$this->authorizeAccess($deal)) {
+        return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
     }
+
+    try {
+        DB::beginTransaction();
+
+        // Update text fields
+        $property->update($request->only([
+            'unit_no', 'property_type_id', 'bedrooms', 'unit_size',
+            'area_id', 'developer_id', 'developer_name', 'developer_phone',
+            'budget_from', 'budget_to', 'purchase_price', 'commission'
+        ]));
+
+        // ✅ Handle EOI Documents (append)
+        if ($request->hasFile('eoi_documents')) {
+            $existing = is_array($property->eoi_documents) ? $property->eoi_documents : [];
+            $newEoiDocs = [];
+            foreach ($request->file('eoi_documents') as $file) {
+                $path = $file->store("deals/{$deal->id}/properties/eoi_documents", 'public');
+                $newEoiDocs[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->eoi_documents = array_values(array_merge($existing, $newEoiDocs));
+        }
+
+        // ✅ Handle Booking Documents (append)
+        if ($request->hasFile('booking_documents')) {
+            $existing = is_array($property->booking_documents) ? $property->booking_documents : [];
+            $newBookingDocs = [];
+            foreach ($request->file('booking_documents') as $file) {
+                $path = $file->store("deals/{$deal->id}/properties/booking_documents", 'public');
+                $newBookingDocs[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->booking_documents = array_values(array_merge($existing, $newBookingDocs));
+        }
+
+        // Handle payment_proof files (append)
+        if ($request->hasFile('payment_proof')) {
+            $existing = is_array($property->payment_proof) ? $property->payment_proof : [];
+            $newProof = [];
+            foreach ($request->file('payment_proof') as $file) {
+                $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                $newProof[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->payment_proof = array_values(array_merge($existing, $newProof));
+        }
+
+        // Handle spa_document files (append)
+        if ($request->hasFile('spa_document')) {
+            $existing = is_array($property->spa_document) ? $property->spa_document : [];
+            $newSpa = [];
+            foreach ($request->file('spa_document') as $file) {
+                $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
+                $newSpa[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->spa_document = array_values(array_merge($existing, $newSpa));
+        }
+
+        $property->save();
+
+        DB::commit();
+
+        // Load relationships for response
+        $property->load(['propertyType', 'area', 'developer']);
+
+        $payload = $property->toArray();
+        $payload['payment_proof'] = (new PropertyDocumentResource($property->payment_proof, 'payment_proof'))->resolve($request);
+        $payload['spa_document'] = (new PropertyDocumentResource($property->spa_document, 'spa'))->resolve($request);
+        $payload['eoi_documents'] = (new PropertyDocumentResource($property->eoi_documents, 'eoi'))->resolve($request);
+        $payload['booking_documents'] = (new PropertyDocumentResource($property->booking_documents, 'booking'))->resolve($request);
+
+        return response()->json([
+            'success' => true,
+            'data' => $payload,
+            'message' => 'Property updated successfully'
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Error updating property: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update property: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
     private function authorizeAccess($deal)
     {
@@ -1601,9 +1637,8 @@ class DealController extends Controller
         
         return $deal->responsible_person_id == $user->id || $deal->added_by == $user->id;
     }
-    /**
- * حذف مستند من Property
- */
+
+
 public function deletePropertyDocument(Request $request)
 {
     try {
@@ -1624,8 +1659,11 @@ public function deletePropertyDocument(Request $request)
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
         
+        // ✅ دعم جميع أنواع المستندات
+        $validDocumentTypes = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents'];
         $documentType = $request->document_type;
-        if (! in_array($documentType, ['payment_proof', 'spa_document'], true)) {
+        
+        if (!in_array($documentType, $validDocumentTypes, true)) {
             return response()->json(['success' => false, 'message' => 'Invalid document type'], 422);
         }
 
@@ -1638,9 +1676,9 @@ public function deletePropertyDocument(Request $request)
             \Storage::disk('public')->delete($normalizedInputPath);
         }
         
-        // DealProperty casts payment_proof/spa_document to array — never json_decode the attribute.
+        // DealProperty casts payment_proof/spa_document to array
         $currentDocs = $property->{$documentType};
-        if (! is_array($currentDocs)) {
+        if (!is_array($currentDocs)) {
             if (is_string($currentDocs) && $currentDocs !== '') {
                 $decoded = json_decode($currentDocs, true);
                 $currentDocs = is_array($decoded) ? $decoded : [];
@@ -1669,7 +1707,7 @@ public function deletePropertyDocument(Request $request)
             return !($matchesByPath || $matchesByBasename || $matchesByOriginalName);
         }));
         
-        $property->{$documentType} = ! empty($filteredDocs) ? $filteredDocs : null;
+        $property->{$documentType} = !empty($filteredDocs) ? $filteredDocs : null;
         $property->save();
         
         return response()->json([

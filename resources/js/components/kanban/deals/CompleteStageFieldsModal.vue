@@ -2270,61 +2270,86 @@ function getMissingPropertyDocTypesForProperty(propIndex) {
   const missing = new Set()
   
   missingKeys.forEach(key => {
-    // تحقق من وجود نمط خاص بالخاصية الحالية
-    if (key.startsWith(`property_document_`) || key.includes('property_document_')) {
-      // استخراج رقم الخاصية من المفتاح إذا وجد
-      const propMatch = key.match(/property_(\d+)_document_/)
-      if (propMatch) {
-        const idx = parseInt(propMatch[1])
-        if (idx === propIndex) {
-          const docType = key.replace(/property_\d+_document_/, '')
-          missing.add(docType === 'spa' ? 'spa_document' : docType === 'payment' ? 'payment_proof' : docType)
-        }
-      } else {
-        // إذا لم يكن هناك رقم خاصية، فهذا يعني أن المستند مطلوب لجميع الخصائص
-        const docType = key.replace('property_document_', '')
-        missing.add(docType === 'spa' ? 'spa_document' : docType === 'payment' ? 'payment_proof' : docType)
-      }
+    // EOI
+    if (key === `property_${propIndex}_document_eoi` || key === `property_0_document_eoi`) {
+      missing.add('eoi')
+    }
+    // Booking
+    if (key === `property_${propIndex}_document_booking` || key === `property_0_document_booking`) {
+      missing.add('booking')
+    }
+    // SPA
+    if (key === `property_${propIndex}_document_spa` || key === `property_0_document_spa`) {
+      missing.add('spa')
+    }
+    // Payment Proof
+    if (key === `property_${propIndex}_document_payment_proof` || key === `property_0_document_payment_proof`) {
+      missing.add('payment_proof')
     }
   })
   
   return Array.from(missing)
 }
-
-const updatePropertyDocuments = (propIndex, newDocuments) => {
+// في دالة updatePropertyDocuments
+const updatePropertyDocuments = async  (propIndex, newDocuments) => {
     console.log(`Updating documents for property ${propIndex}:`, newDocuments)
     
-    // تحديث الحالة المحلية
+    // ✅ تحديث propertyDocumentsCombined
     const updatedCombined = { ...propertyDocumentsCombined.value }
     updatedCombined[propIndex] = newDocuments
     propertyDocumentsCombined.value = updatedCombined
     
-    // تحديث property في localProperties
+    // ✅ تحديث localProperties
     if (localProperties.value[propIndex]) {
         // تجميع المستندات حسب النوع
-        const paymentProofs = newDocuments.filter(doc => 
+        const eoiDocs = newDocuments.filter(doc => 
+            doc.document_type === 'eoi' || 
+            doc.document_type === 'eoi_document' ||
+            (doc.original_name && doc.original_name.toLowerCase().includes('eoi'))
+        )
+        
+        const bookingDocs = newDocuments.filter(doc => 
+            doc.document_type === 'booking' || 
+            doc.document_type === 'booking_document' ||
+            (doc.original_name && doc.original_name.toLowerCase().includes('booking'))
+        )
+        
+        const paymentDocs = newDocuments.filter(doc => 
             doc.document_type === 'payment_proof' || 
-            (doc.file && doc.original_name && doc.original_name.includes('payment'))
+            doc.document_type === 'payment' ||
+            (doc.original_name && doc.original_name.toLowerCase().includes('payment'))
         )
         
-        const spaDocuments = newDocuments.filter(doc => 
-            doc.document_type === 'spa_document' || 
-            doc.document_type === 'spa' ||
-            (doc.file && doc.original_name && doc.original_name.includes('spa'))
+        const spaDocs = newDocuments.filter(doc => 
+            doc.document_type === 'spa' || 
+            doc.document_type === 'spa_document' ||
+            (doc.original_name && doc.original_name.toLowerCase().includes('spa'))
         )
         
-        // تحديث المصفوفات مع الحفاظ على reactivity
-        localProperties.value[propIndex].payment_proof = [...paymentProofs]
-        localProperties.value[propIndex].spa_document = [...spaDocuments]
+        // تحديث المصفوفات
+        localProperties.value[propIndex].eoi_documents = eoiDocs
+        localProperties.value[propIndex].booking_documents = bookingDocs
+        localProperties.value[propIndex].payment_proof = paymentDocs
+        localProperties.value[propIndex].spa_document = spaDocs
+        
+        console.log('Updated localProperties:', {
+            eoi_documents: localProperties.value[propIndex].eoi_documents?.length,
+            booking_documents: localProperties.value[propIndex].booking_documents?.length,
+            payment_proof: localProperties.value[propIndex].payment_proof?.length,
+            spa_document: localProperties.value[propIndex].spa_document?.length
+        })
     }
     
-    // تحديث formData
+    // ✅ تحديث formData
     if (!formData.value.properties) {
         formData.value.properties = []
     }
     if (formData.value.properties[propIndex]) {
         formData.value.properties[propIndex] = { ...localProperties.value[propIndex] }
     }
+    
+    // ✅ force re-evaluate unresolvedMissingKeys
+    await nextTick()
 }
 const onPropertyAreaSelected = (areaId, propIndex) => {
     const property = localProperties.value[propIndex]
@@ -2767,7 +2792,7 @@ function showPartyDetailFields(partyType) {
 function shouldShowPropertyField(fieldName, property) {
   const isNewProperty = property && property.new; 
   const dt = normalizedDealType.value
-  
+  const targetOrder = props.targetStageOrder || 0
   switch (fieldName) {
     case 'unit_no':
     case 'property_type_id':
@@ -2795,8 +2820,8 @@ function shouldShowPropertyField(fieldName, property) {
       return dt === 'rental'
       
     case 'purchase_price':
-      if (isNewProperty && dt !== 'rental') return true
-      return showPurchasePrice.value && dt !== 'rental'
+      if (isNewProperty && dt !== 'rental' && targetOrder>=3) return true
+      return showPurchasePrice.value && dt !== 'rental' 
       
     default:
       return isPropertyFieldRequired(fieldName)
@@ -2822,25 +2847,28 @@ function togglePropertyBudgetDropdown(propIndex) {
 }
 
 const propertyDocTypesForModal = computed(() => {
-  const mk = effectiveMissingFields.value || []
-  const req = props.requiredFields || []
-  const acc = accumulatedRequiredKeys.value ? Array.from(accumulatedRequiredKeys.value) : []
-  const keyMatchesPayment = (k) =>
-    String(k).includes('property_document_payment') ||
-    (String(k).includes('payment_proof') && String(k).includes('property'))
-  const keyMatchesSpa = (k) =>
-    String(k).includes('property_document_spa') ||
-    String(k).includes('spa_document') ||
-    (String(k).includes('spa') && String(k).includes('property'))
-  const paymentRequired =
-    mk.some(keyMatchesPayment) || req.some(keyMatchesPayment) || acc.some(keyMatchesPayment)
-  const spaRequired = mk.some(keyMatchesSpa) || req.some(keyMatchesSpa) || acc.some(keyMatchesSpa)
-  return [
-    { id: 'payment_proof', name: 'Payment Proof', required: paymentRequired },
-    { id: 'spa', name: 'SPA Document', required: spaRequired },
-  ]
+  const missingKeys = effectiveMissingFields.value || []
+  const docs = []
+  
+  // ✅ استخدم نفس الاسم المستخدم في checkPropertyDocumentExists
+  if (missingKeys.some(k => k.includes('document_eoi') || k.includes('eoi_document'))) {
+    docs.push({ id: 'eoi', name: 'EOI Document', required: true })
+  }
+  
+  if (missingKeys.some(k => k.includes('document_booking') || k.includes('booking_document'))) {
+    docs.push({ id: 'booking', name: 'Booking Document', required: true })
+  }
+  
+  if (missingKeys.some(k => k.includes('document_spa') || k.includes('spa_document'))) {
+    docs.push({ id: 'spa', name: 'SPA Document', required: true })
+  }
+  
+  if (missingKeys.some(k => k.includes('document_payment') || k.includes('payment_proof'))) {
+    docs.push({ id: 'payment_proof', name: 'Payment Proof', required: true })
+  }
+  
+  return docs
 })
-
 const isPropertyDocumentsSectionRequired = computed(() =>
   propertyDocTypesForModal.value.some((d) => d.required)
 )
@@ -3060,102 +3088,87 @@ const unresolvedMissingKeys = computed(() => {
   const missingKeys = effectiveMissingFields.value || []
   
   missingKeys.forEach(key => {
-    // ✅ معالجة property_document_ fields
-    if (key.startsWith('property_document_')) {
-      const rawDocType = key.replace('property_document_', '')
-      const normalizedDocType =
-        rawDocType === 'spa'
-          ? 'spa_document'
-          : rawDocType === 'payment'
-            ? 'payment_proof'
-            : rawDocType
+if (key.startsWith('property_document_')) {
+  const rawDocType = key.replace('property_document_', '')
+  
+  // ✅ توحيد أسماء أنواع المستندات
+  let normalizedDocType = rawDocType
+  if (rawDocType === 'spa') {
+    normalizedDocType = 'spa_document'
+  } else if (rawDocType === 'payment') {
+    normalizedDocType = 'payment_proof'
+  } else if (rawDocType === 'booking') {
+    normalizedDocType = 'booking_document' // ✅ إضافة معالجة booking
+  } else if (rawDocType === 'eoi') {
+    normalizedDocType = 'eoi_document' // ✅ إضافة معالجة eoi
+  }
 
-      // ✅ التحقق من المستندات في propertyDocumentsCombined (الجديدة) وفي الـ property نفسه (الموجودة)
-      let hasPropertyDoc = false
+  // ✅ التحقق من المستندات في localProperties
+  let hasPropertyDoc = false
+  
+  // التحقق من propertyDocumentsCombined (المستندات الجديدة)
+  hasPropertyDoc = localProperties.value.some((property, propIndex) => {
+    const docs = propertyDocumentsCombined.value?.[propIndex] || []
+    if (Array.isArray(docs) && docs.some(doc => {
+      const docType = doc?.document_type || ''
+      // ✅ مقارنة مع normalizedDocType و rawDocType
+      const hasFileOrUrl = !!(doc?.file || doc?.url)
+      return hasFileOrUrl && (
+        docType === normalizedDocType || 
+        docType === rawDocType ||
+        docType === normalizedDocType.replace('_document', '') ||
+        (rawDocType === 'booking' && (docType === 'booking' || docType === 'booking_document')) ||
+        (rawDocType === 'eoi' && (docType === 'eoi' || docType === 'eoi_document'))
+      )
+    })) {
+      return true
+    }
+    return false
+  })
+  
+  // ✅ التحقق من المستندات الموجودة في property نفسها
+  if (!hasPropertyDoc) {
+    hasPropertyDoc = localProperties.value.some((property) => {
+      // تحديد أي مصفوفة مستندات نبحث فيها
+      let existingDocs = null
+      if (normalizedDocType === 'booking_document' || rawDocType === 'booking') {
+        existingDocs = property.booking_documents
+      } else if (normalizedDocType === 'eoi_document' || rawDocType === 'eoi') {
+        existingDocs = property.eoi_documents
+      } else if (normalizedDocType === 'spa_document' || rawDocType === 'spa') {
+        existingDocs = property.spa_document
+      } else if (normalizedDocType === 'payment_proof' || rawDocType === 'payment') {
+        existingDocs = property.payment_proof
+      }
       
-      // التحقق من المستندات الجديدة المرفوعة
-      hasPropertyDoc = localProperties.value.some((property, propIndex) => {
-        // التحقق من المستندات الجديدة في propertyDocumentsCombined
-        const docs = propertyDocumentsCombined.value?.[propIndex] || []
-        if (Array.isArray(docs) && docs.some(doc => {
-          const docType = doc?.document_type || ''
-          const hasFileOrUrl = !!(doc?.file || doc?.url)
-          return hasFileOrUrl && (docType === normalizedDocType || docType === rawDocType)
-        })) {
+      if (existingDocs) {
+        let existingDocsArray = existingDocs
+        if (typeof existingDocsArray === 'string') {
+          try {
+            existingDocsArray = JSON.parse(existingDocsArray)
+          } catch(e) {
+            existingDocsArray = []
+          }
+        }
+        if (Array.isArray(existingDocsArray) && existingDocsArray.some(doc => 
+          !!(doc?.file || doc?.url || doc?.path || doc?.original_name)
+        )) {
           return true
         }
-        
-        // ✅ التحقق من المستندات الموجودة مسبقاً في الـ property
-        const existingDocs = property[normalizedDocType === 'spa_document' ? 'spa_document' : 'payment_proof']
-        if (existingDocs) {
-          let existingDocsArray = existingDocs
-          if (typeof existingDocsArray === 'string') {
-            try {
-              existingDocsArray = JSON.parse(existingDocsArray)
-            } catch(e) {
-              existingDocsArray = []
-            }
-          }
-          if (Array.isArray(existingDocsArray) && existingDocsArray.some(doc => !!(doc?.file || doc?.url || doc?.path || doc?.original_name))) {
-            return true
-          }
-          if (existingDocsArray && typeof existingDocsArray === 'object' && !!(existingDocsArray.file || existingDocsArray.url || existingDocsArray.path || existingDocsArray.original_name)) {
-            return true
-          }
-        }
-        
-        return false
-      })
-      
-      // ✅ التحقق من المستندات في الـ properties داخل formData
-      if (!hasPropertyDoc && formData.value?.properties) {
-        hasPropertyDoc = formData.value.properties.some(property => {
-          const existingDocs = normalizedDocType === 'spa_document' ? property.spa_document : property.payment_proof
-          if (existingDocs) {
-            let existingDocsArray = existingDocs
-            if (typeof existingDocsArray === 'string') {
-              try {
-                existingDocsArray = JSON.parse(existingDocsArray)
-              } catch(e) {
-                existingDocsArray = []
-              }
-            }
-            if (Array.isArray(existingDocsArray) && existingDocsArray.some(doc => !!(doc?.file || doc?.url || doc?.path || doc?.original_name))) {
-              return true
-            }
-            if (existingDocsArray && typeof existingDocsArray === 'object' && !!(existingDocsArray.file || existingDocsArray.url || existingDocsArray.path || existingDocsArray.original_name)) {
-              return true
-            }
-          }
-          return false
-        })
-      }
-
-      // When backend still reports payment proof as missing, require at least one NEW
-      // upload in this modal attempt so SPA/next-stage increment rules can be satisfied.
-      if (normalizedDocType === 'payment_proof') {
-        const hasNewPaymentProof = localProperties.value.some((_, propIndex) => {
-          const docs = propertyDocumentsCombined.value?.[propIndex] || []
-          if (!Array.isArray(docs)) return false
-          return docs.some((doc) => {
-            const docType = String(doc?.document_type || '').toLowerCase()
-            return (docType === 'payment_proof' || docType === 'payment') && doc?.file instanceof File
-          })
-        })
-        if (!hasNewPaymentProof && !unresolved.includes(key)) {
-          unresolved.push(key)
-        }
-        return
-      }
-
-      if (!hasPropertyDoc) {
-        if (!unresolved.includes(key)) {
-          unresolved.push(key)
+        if (existingDocsArray && typeof existingDocsArray === 'object' && 
+            !!(existingDocsArray.file || existingDocsArray.url || existingDocsArray.path)) {
+          return true
         }
       }
-
-      return
-    }
+      return false
+    })
+  }
+  
+  if (!hasPropertyDoc && !unresolved.includes(key)) {
+    unresolved.push(key)
+  }
+  return
+}
     
     if (key.includes('_document_')) {
       const [partyType, docType] = key.split('_document_')
@@ -3403,51 +3416,50 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
   })
   
   // Collect property documents
-if (localProperties.value.length > 0) {
-    localProperties.value.forEach((property, propIndex) => {
-        const combinedDocs = propertyDocumentsCombined.value[propIndex]
-        if (combinedDocs && Array.isArray(combinedDocs)) {
-            combinedDocs.forEach(doc => {
-                // تحقق إذا كان الملف جديد (File object) أو موجود مسبقاً
-                if (doc.file && doc.file instanceof File) {
-                    documents.push({
-                        file: doc.file,
-                        document_type: doc.document_type || 'payment_proof',
-                        category: 'property',
-                        property_id: property.id,
-                        property_index: propIndex
-                    })
-                }
-                // إذا كان المستند موجود مسبقاً وله URL، لا نضيفه مرة أخرى
-            })
-        }
-    })
-}
-
-  // Guard against oversized multipart uploads (server limit is 8MB).
-  // Keep a safety margin for non-file form fields/boundary bytes.
-  const totalUploadBytes = documents.reduce((sum, doc) => {
-    const size = doc?.file?.size || 0
-    return sum + size
-  }, 0)
-  const maxSafeUploadBytes = 7.5 * 1024 * 1024
-  if (totalUploadBytes > maxSafeUploadBytes) {
-    const mb = (totalUploadBytes / (1024 * 1024)).toFixed(2)
-    const msg = `Uploaded files are too large (${mb} MB). Please reduce file size to under 7.5 MB total.`
-    if (window?.$showNotification) {
-      window.$showNotification(msg, 'warning')
-    } else {
-      alert(msg)
-    }
-    submitting.value = false
-    return
-  }
-  
   // Add properties to payload
-  // في submitForm()، أضف:
-if (localProperties.value.length > 0) {
-    // ✅ تأكد من تحويل documents إلى format مناسب
-    payload.properties = localProperties.value.map((prop, index) => ({
+  if (localProperties.value.length > 0) {
+    payload.properties = localProperties.value.map((prop, index) => {
+      // جمع الملفات الجديدة من eoi_documents
+      const eoiFiles = []
+      if (prop.eoi_documents && Array.isArray(prop.eoi_documents)) {
+        prop.eoi_documents.forEach(doc => {
+          if (doc.file instanceof File) {
+            eoiFiles.push(doc.file)
+          }
+        })
+      }
+      
+      // جمع الملفات الجديدة من booking_documents
+      const bookingFiles = []
+      if (prop.booking_documents && Array.isArray(prop.booking_documents)) {
+        prop.booking_documents.forEach(doc => {
+          if (doc.file instanceof File) {
+            bookingFiles.push(doc.file)
+          }
+        })
+      }
+      
+      // جمع الملفات الجديدة من payment_proof
+      const paymentFiles = []
+      if (prop.payment_proof && Array.isArray(prop.payment_proof)) {
+        prop.payment_proof.forEach(doc => {
+          if (doc.file instanceof File) {
+            paymentFiles.push(doc.file)
+          }
+        })
+      }
+      
+      // جمع الملفات الجديدة من spa_document
+      const spaFiles = []
+      if (prop.spa_document && Array.isArray(prop.spa_document)) {
+        prop.spa_document.forEach(doc => {
+          if (doc.file instanceof File) {
+            spaFiles.push(doc.file)
+          }
+        })
+      }
+      
+      return {
         sort_order: index,
         unit_no: prop.unit_no || '',
         property_type_id: prop.property_type_id || null,
@@ -3468,11 +3480,35 @@ if (localProperties.value.length > 0) {
         budget_to: toNullableNumeric(prop.budget_to),
         purchase_price: toNullableNumeric(prop.purchase_price),
         commission: prop.commission || null,
-        // Keep persisted docs in properties payload; new files go via multipart root keys.
-        payment_proof: Array.isArray(prop.payment_proof) ? prop.payment_proof : [],
-        spa_document: Array.isArray(prop.spa_document) ? prop.spa_document : [],
-    }))
-}
+        // ✅ إضافة مستندات EOI و Booking
+        eoi_documents: eoiFiles,
+        booking_documents: bookingFiles,
+        payment_proof: paymentFiles,
+        spa_document: spaFiles,
+      }
+    })
+  }
+
+  // Guard against oversized multipart uploads (server limit is 8MB).
+  // Keep a safety margin for non-file form fields/boundary bytes.
+  const totalUploadBytes = documents.reduce((sum, doc) => {
+    const size = doc?.file?.size || 0
+    return sum + size
+  }, 0)
+  const maxSafeUploadBytes = 10 * 1024 * 1024
+  if (totalUploadBytes > maxSafeUploadBytes) {
+    const mb = (totalUploadBytes / (1024 * 1024)).toFixed(2)
+    const msg = `Uploaded files are too large (${mb} MB). Please reduce file size to under 10 MB total.`
+    if (window?.$showNotification) {
+      window.$showNotification(msg, 'warning')
+    } else {
+      alert(msg)
+    }
+    submitting.value = false
+    return
+  }
+  
+
 
 console.log('Properties type:', typeof payload.properties, payload.properties)
 if (payload.properties && typeof payload.properties === 'string') {

@@ -61,11 +61,19 @@ class ConvertLeadRequest extends FormRequest
             'properties.*.rental_price' => 'nullable|numeric|min:0',
             'properties.*.commission' => 'nullable|numeric|min:0|max:100',
             
-            // ✅ ملفات payment_proof في الـ multi properties
+            // ✅ EOI Documents
+            'properties.*.eoi_documents' => 'nullable|array',
+            'properties.*.eoi_documents.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            
+            // ✅ Booking Documents
+            'properties.*.booking_documents' => 'nullable|array',
+            'properties.*.booking_documents.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            
+            // ✅ Payment Proof
             'properties.*.payment_proof' => 'nullable|array',
             'properties.*.payment_proof.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
             
-            // ✅ ملفات spa_document في الـ multi properties
+            // ✅ SPA Document
             'properties.*.spa_document' => 'nullable|array',
             'properties.*.spa_document.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
             
@@ -73,6 +81,10 @@ class ConvertLeadRequest extends FormRequest
             'properties.*.ejari_document' => 'nullable|array',
             
             // ========== SINGLE PROPERTY MODE ==========
+            'eoi_documents' => 'nullable|array',
+            'eoi_documents.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            'booking_documents' => 'nullable|array',
+            'booking_documents.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
             'payment_proof' => 'nullable|array',
             'payment_proof.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
             'spa_document' => 'nullable|array',
@@ -272,6 +284,12 @@ class ConvertLeadRequest extends FormRequest
             'landlord_country.required_if' => 'Landlord country is required for non-residents',
             
             // File validation messages
+            'properties.*.eoi_documents.*.file' => 'Each EOI document must be a valid file',
+            'properties.*.eoi_documents.*.mimes' => 'EOI document must be a JPG, JPEG, PNG, or PDF file',
+            'properties.*.eoi_documents.*.max' => 'EOI document cannot exceed 10MB',
+            'properties.*.booking_documents.*.file' => 'Each booking document must be a valid file',
+            'properties.*.booking_documents.*.mimes' => 'Booking document must be a JPG, JPEG, PNG, or PDF file',
+            'properties.*.booking_documents.*.max' => 'Booking document cannot exceed 10MB',
             'properties.*.payment_proof.*.file' => 'Each payment proof must be a valid file',
             'properties.*.payment_proof.*.mimes' => 'Payment proof must be a JPG, JPEG, PNG, or PDF file',
             'properties.*.payment_proof.*.max' => 'Payment proof cannot exceed 10MB',

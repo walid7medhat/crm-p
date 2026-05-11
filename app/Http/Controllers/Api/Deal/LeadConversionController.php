@@ -368,9 +368,7 @@ class LeadConversionController extends Controller
         }
     }
 
-    /**
-     * Create multi properties for deal
-     */
+
 /**
  * Create multi properties for deal
  */
@@ -379,6 +377,38 @@ private function createDealProperties(Deal $deal, $request)
     // ========== MULTI PROPERTIES MODE ==========
     if ($request->has('properties') && is_array($request->properties) && count($request->properties) > 0) {
         foreach ($request->properties as $index => $propertyData) {
+            // ✅ Handle EOI Documents
+            $eoiDocumentPaths = [];
+            if (isset($propertyData['eoi_documents']) && is_array($propertyData['eoi_documents'])) {
+                foreach ($propertyData['eoi_documents'] as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/eoi_documents", 'public');
+                        $eoiDocumentPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            }
+            
+            // ✅ Handle Booking Documents
+            $bookingDocumentPaths = [];
+            if (isset($propertyData['booking_documents']) && is_array($propertyData['booking_documents'])) {
+                foreach ($propertyData['booking_documents'] as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/booking_documents", 'public');
+                        $bookingDocumentPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            }
+            
             // Handle payment_proof files
             $paymentProofPaths = [];
             if (isset($propertyData['payment_proof']) && is_array($propertyData['payment_proof'])) {
@@ -411,7 +441,7 @@ private function createDealProperties(Deal $deal, $request)
                 }
             }
             
-            $deal->properties()->create([
+            $property = $deal->properties()->create([
                 'sort_order' => $index,
                 'unit_no' => $propertyData['unit_no'] ?? null,
                 'property_type_id' => $propertyData['property_type_id'] ?? null,
@@ -428,6 +458,9 @@ private function createDealProperties(Deal $deal, $request)
                 'rental_price' => $propertyData['rental_price'] ?? null,
                 'payment_proof' => !empty($paymentProofPaths) ? json_encode($paymentProofPaths) : null,
                 'spa_document' => !empty($spaDocumentPaths) ? json_encode($spaDocumentPaths) : null,
+                // ✅ إضافة الحقول الجديدة
+                'eoi_documents' => !empty($eoiDocumentPaths) ? json_encode($eoiDocumentPaths) : null,
+                'booking_documents' => !empty($bookingDocumentPaths) ? json_encode($bookingDocumentPaths) : null,
                 'contract_document' => $propertyData['contract_document'] ?? null,
                 'ejari_document' => $propertyData['ejari_document'] ?? null,
                 'commission' => $propertyData['commission'] ?? null,
@@ -453,6 +486,60 @@ private function createDealProperties(Deal $deal, $request)
         if ($request->filled('purchase_price')) $propertyData['purchase_price'] = $request->purchase_price;
         if ($request->filled('rental_price')) $propertyData['rental_price'] = $request->rental_price;
         if ($request->filled('commission')) $propertyData['commission'] = $request->commission;
+        
+        // ✅ Handle EOI Documents (direct request)
+        $eoiDocumentPaths = [];
+        if ($request->hasFile('eoi_documents')) {
+            $files = $request->file('eoi_documents');
+            if (is_array($files)) {
+                foreach ($files as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/eoi_documents", 'public');
+                        $eoiDocumentPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
+                $path = $files->store("deals/{$deal->id}/properties/eoi_documents", 'public');
+                $eoiDocumentPaths[] = [
+                    'original_name' => $files->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $files->getMimeType(),
+                    'size' => $files->getSize(),
+                ];
+            }
+        }
+        
+        // ✅ Handle Booking Documents (direct request)
+        $bookingDocumentPaths = [];
+        if ($request->hasFile('booking_documents')) {
+            $files = $request->file('booking_documents');
+            if (is_array($files)) {
+                foreach ($files as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/booking_documents", 'public');
+                        $bookingDocumentPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
+                $path = $files->store("deals/{$deal->id}/properties/booking_documents", 'public');
+                $bookingDocumentPaths[] = [
+                    'original_name' => $files->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $files->getMimeType(),
+                    'size' => $files->getSize(),
+                ];
+            }
+        }
         
         // Handle payment_proof files from direct request
         $paymentProofPaths = [];
@@ -509,6 +596,12 @@ private function createDealProperties(Deal $deal, $request)
         }
         
         // Add files to property data
+        if (!empty($eoiDocumentPaths)) {
+            $propertyData['eoi_documents'] = json_encode($eoiDocumentPaths);
+        }
+        if (!empty($bookingDocumentPaths)) {
+            $propertyData['booking_documents'] = json_encode($bookingDocumentPaths);
+        }
         if (!empty($paymentProofPaths)) {
             $propertyData['payment_proof'] = json_encode($paymentProofPaths);
         }

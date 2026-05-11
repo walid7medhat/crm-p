@@ -744,7 +744,7 @@ const isPurchasePriceRequired = computed(() => {
 })
 const showPropertyDocuments = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
-  return stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
+  return stageName.includes('eoi') || stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
 })
 
 const shouldHideSeller = computed(() => hasListingId.value && props.dealType === 'secondary')
@@ -784,14 +784,60 @@ const primaryBuyerDocTypes = computed(() => {
 })
 const propertyDocTypes = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
-  if (!stageName.includes('booking') && !stageName.includes('spa') && !stageName.includes('won')) {
-    return []
+  
+  // ✅ Log for debugging
+  console.log('=== propertyDocTypes Debug ===')
+  console.log('Selected Stage Name:', props.selectedStageName)
+  console.log('Stage Name (lowercase):', stageName)
+  console.log('Includes "eoi":', stageName.includes('eoi'))
+  console.log('Includes "booking":', stageName.includes('booking'))
+  console.log('Includes "spa":', stageName.includes('spa'))
+  console.log('Includes "won":', stageName.includes('won'))
+  console.log('================================')
+  
+  // EOI stage
+  if (stageName.includes('eoi')) {
+    console.log('✅ Returning EOI documents')
+    return [
+      { id: 'eoi', name: 'EOI Document', required: true },
+    ]
   }
-  const spaOrWon = stageName.includes('spa') || stageName.includes('won')
-  return [
-    { id: 'payment_proof', name: 'Payment Proof', required: spaOrWon },
-    { id: 'spa', name: 'SPA Document', required: spaOrWon }
-  ]
+  
+  // Booking stage
+  if (stageName.includes('booking')) {
+    console.log('✅ Returning Booking documents')
+    return [
+      { id: 'eoi', name: 'EOI Document', required: true },
+      { id: 'booking', name: 'Booking Document', required: true },
+      { id: 'payment_proof', name: 'Payment Proof', required: false },
+    ]
+  }
+  
+  // SPA stage
+  if (stageName.includes('spa')) {
+    console.log('✅ Returning SPA documents')
+    return [
+      { id: 'eoi', name: 'EOI Document', required: true },
+      { id: 'booking', name: 'Booking Document', required: true },
+      { id: 'payment_proof', name: 'Payment Proof', required: false },
+      { id: 'spa', name: 'SPA Document', required: true },
+    ]
+  }
+  
+  // Won stage (or any other after SPA)
+  if (stageName.includes('won') || stageName.includes('deal won')) {
+    console.log('✅ Returning Won documents')
+    return [
+      { id: 'eoi', name: 'EOI Document', required: true },
+      { id: 'booking', name: 'Booking Document', required: true },
+      { id: 'payment_proof', name: 'Payment Proof', required: true },
+      { id: 'spa', name: 'SPA Document', required: true },
+    ]
+  }
+  
+  console.log('❌ No matching stage, returning empty array')
+  // Default (no stage or unrecognized)
+  return []
 })
 const secondaryBuyerDocTypes = computed(() => {
   const residencyStatus = form.value?.buyer_residency_status
@@ -1163,13 +1209,25 @@ const checkShowMultiProperties = () => {
 
 const initPropertiesFromForm = () => {
   const firstProperty = {
-    id: form.value.property_id || Date.now(), sort_order: 0, unit_no: form.value.unit_no || '', property_type_id: form.value.property_type_id || null,
-    bedrooms: form.value.bedrooms || null, unit_size: form.value.unit_size || '', area_id: form.value.area_id || null,
-    developer_id: form.value.developer_id || null, developer_name: form.value.developer_name || '',
-    developer_phone: form.value.developer_phone || '', budget_from: form.value.budget_from || null,
-    budget_to: form.value.budget_to || null, purchase_price: form.value.purchase_price || null,   commission: null, 
+    id: form.value.property_id || Date.now(), 
+    sort_order: 0, 
+    unit_no: form.value.unit_no || '', 
+    property_type_id: form.value.property_type_id || null,
+    bedrooms: form.value.bedrooms || null, 
+    unit_size: form.value.unit_size || '', 
+    area_id: form.value.area_id || null,
+    developer_id: form.value.developer_id || null, 
+    developer_name: form.value.developer_name || '',
+    developer_phone: form.value.developer_phone || '', 
+    budget_from: form.value.budget_from || null,
+    budget_to: form.value.budget_to || null, 
+    purchase_price: form.value.purchase_price || null,   
+    commission: null, 
     payment_proof: Array.isArray(form.value.payment_proof) ? [...form.value.payment_proof] : [],
     spa_document: Array.isArray(form.value.spa_document) ? [...form.value.spa_document] : [],
+    // ✅ إضافة المستندات الجديدة
+    eoi_documents: Array.isArray(form.value.eoi_documents) ? [...form.value.eoi_documents] : [],
+    booking_documents: Array.isArray(form.value.booking_documents) ? [...form.value.booking_documents] : [],
     listing_id: form.value.listing_id || null
   }
   propertiesList.value = [firstProperty]
@@ -1181,9 +1239,26 @@ const addNewProperty = () => {
     return
   }
   propertiesList.value.push({
-    id: Date.now() + Math.random(), sort_order: propertiesList.value.length, unit_no: '', property_type_id: null,
-    bedrooms: null, unit_size: '', area_id: null, developer_id: null, developer_name: '', developer_phone: '',
-    budget_from: null, budget_to: null, purchase_price: null,   commission: null, payment_proof: [], spa_document: [], listing_id: null
+    id: Date.now() + Math.random(), 
+    sort_order: propertiesList.value.length, 
+    unit_no: '', 
+    property_type_id: null,
+    bedrooms: null, 
+    unit_size: '', 
+    area_id: null, 
+    developer_id: null, 
+    developer_name: '', 
+    developer_phone: '',
+    budget_from: null, 
+    budget_to: null, 
+    purchase_price: null,   
+    commission: null, 
+    payment_proof: [], 
+    spa_document: [],
+    // ✅ إضافة المستندات الجديدة
+    eoi_documents: [],
+    booking_documents: [],
+    listing_id: null
   })
 }
 
@@ -1193,18 +1268,34 @@ const getPropertiesData = () => {
   
   if (showMultiProperties.value && propertiesList.value.length > 0) {
     const dataToSend = propertiesList.value.map((prop, index) => {
-      // استخراج الملفات الفعلية فقط من payment_proof
+      // استخراج الملفات الفعلية فقط
+      let eoiFiles = []
+      let bookingFiles = []
       let paymentProofFiles = []
       let spaDocumentFiles = []
       
-      // معالجة payment_proof - استخراج الـ File فقط
+      // ✅ EOI Documents
+      if (prop.eoi_documents && Array.isArray(prop.eoi_documents)) {
+        eoiFiles = prop.eoi_documents
+          .filter(doc => doc && doc.file instanceof File)
+          .map(doc => doc.file)
+      }
+      
+      // ✅ Booking Documents
+      if (prop.booking_documents && Array.isArray(prop.booking_documents)) {
+        bookingFiles = prop.booking_documents
+          .filter(doc => doc && doc.file instanceof File)
+          .map(doc => doc.file)
+      }
+      
+      // Payment Proof
       if (prop.payment_proof && Array.isArray(prop.payment_proof)) {
         paymentProofFiles = prop.payment_proof
           .filter(doc => doc && doc.file instanceof File)
           .map(doc => doc.file)
       }
       
-      // معالجة spa_document - استخراج الـ File فقط
+      // SPA Document
       if (prop.spa_document && Array.isArray(prop.spa_document)) {
         spaDocumentFiles = prop.spa_document
           .filter(doc => doc && doc.file instanceof File)
@@ -1227,8 +1318,11 @@ const getPropertiesData = () => {
         purchase_price: prop.purchase_price || null,
         commission: prop.commission || null,
         rental_price: prop.rental_price || null,
-        payment_proof: paymentProofFiles,  // الآن هي مصفوفة من Files فقط
-        spa_document: spaDocumentFiles,    // الآن هي مصفوفة من Files فقط
+        // ✅ إضافة جميع المستندات
+        eoi_documents: eoiFiles,
+        booking_documents: bookingFiles,
+        payment_proof: paymentProofFiles,
+        spa_document: spaDocumentFiles,
       }
     })
     

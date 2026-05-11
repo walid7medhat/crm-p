@@ -37,6 +37,8 @@ class DealProperty extends Model
         'spa_document',
         'contract_document',
         'ejari_document',
+          'eoi_documents',
+        'booking_documents',
     ];
     
        protected $casts = [
@@ -46,6 +48,8 @@ class DealProperty extends Model
         'budget_to' => 'integer',
         'purchase_price' => 'integer',
         'commission' => 'integer',
+         'eoi_documents' => 'array',
+        'booking_documents' => 'array',
     ];
     
     // ========== Relationships ==========

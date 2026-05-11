@@ -967,7 +967,8 @@ async function submitForm() {
             const value = property[key]
             if (value !== null && value !== undefined && value !== '') {
               // Handle file arrays
-              if ((key === 'payment_proof' || key === 'spa_document') && Array.isArray(value)) {
+              if ((key === 'payment_proof' || key === 'spa_document'|| key === 'eoi_documents' ||
+           key === 'booking_documents') && Array.isArray(value)) {
 
                 value.forEach((file, fileIndex) => {
                   if (file instanceof File) {

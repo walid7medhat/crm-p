@@ -28,6 +28,7 @@ class DealStageRequirementEngine
         'developer_name',
         'developer_phone',
     ];
+    
         private int $currentTargetStageOrder = 0;
     public function __construct(private readonly DealStageValidator $validator)
     {
@@ -86,6 +87,7 @@ class DealStageRequirementEngine
                             $required[] = "property_{$index}_developer_phone";
                             $required[] = "property_{$index}_purchase_price";
                         }
+                        
                     }
                 }
             }
@@ -106,6 +108,7 @@ class DealStageRequirementEngine
                     return !str_contains($field, 'budget_');
                 });
             }
+            $this->addStageDocumentsToRequired($required, $targetOrder, $deal);
 
             return array_values(array_unique($required));
         }
@@ -207,6 +210,10 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
             $missing = array_merge($missing, $this->validateBuyerDocument($deal, 'national_id'));
         }
 
+        // ✅ التحقق من مستندات المرحلة (يتم لجميع المراحل من 2 إلى 5)
+        $stageDocMissing = $this->validateStageDocumentsForProperties($deal, $order);
+        $missing = array_merge($missing, $stageDocMissing);
+
         if ($order === 2) {
             $missing = array_merge($missing, $this->validateAtLeastOneProperty($deal));
             $missing = array_merge($missing, $this->validatePropertyFields($deal, [
@@ -230,7 +237,6 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
             $missing = array_merge($missing, $this->validatePropertyFields($deal, array_merge(
                 self::PRIMARY_ALL_PROPERTY_FIELDS, ['purchase_price']
             )));
-            // SPA requires one additional new payment proof upload in this transition.
             if ($newPaymentProofUploads < 1) $missing[] = 'property_document_payment_proof';
             if ($this->countPropertyDocuments($deal, 'spa_document') < 1) $missing[] = 'property_document_spa';
             return array_values(array_unique($missing));
@@ -242,7 +248,6 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
                 self::PRIMARY_ALL_PROPERTY_FIELDS, ['purchase_price']
             )));
             if ($this->isEmptyValue($deal->deal_total_amount)) $missing[] = 'deal_total_amount';
-            // Won requires adding one more payment proof in this transition.
             if ($newPaymentProofUploads < 1) $missing[] = 'property_document_payment_proof';
             if ($this->countPropertyDocuments($deal, 'spa_document') < 1) $missing[] = 'property_document_spa';
             $missing = array_merge($missing, $this->validateBuyerDocument($deal, 'kyc'));
@@ -435,5 +440,112 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
             return is_string($field) ? trim($field) : $field;
         }, $fields);
         return array_values(array_unique($mapped));
+    }
+        /**
+     * الحصول على مستندات المرحلة من الكونفيج
+     */
+        private function getStageDocumentsForOrder(int $order): array
+    {
+        // استخدام المصفوفة الثابتة بدلاً من الكونفيج للتأكد من العمل
+        $documentsMap = [
+            2 => ['eoi'],
+            3 => ['eoi', 'booking'],
+            4 => ['eoi', 'booking', 'spa'],
+            5 => ['eoi', 'booking', 'spa', 'payment_proof'],
+        ];
+        
+        return $documentsMap[$order] ?? [];
+    }
+
+    /**
+     * إضافة مستندات المرحلة إلى المطلوبات
+     */
+    private function addStageDocumentsToRequired(array &$required, int $targetOrder, Deal $deal): void
+    {
+        $allDocs = [];
+        for ($order = 2; $order <= $targetOrder; $order++) {
+            $allDocs = array_merge($allDocs, $this->getStageDocumentsForOrder($order));
+        }
+        $allDocs = array_values(array_unique($allDocs));
+        
+        if (empty($allDocs)) return;
+        
+        if ($deal->properties->isEmpty()) {
+            foreach ($allDocs as $doc) {
+                $required[] = "property_0_document_{$doc}";
+            }
+        } else {
+            foreach ($deal->properties as $index => $property) {
+                foreach ($allDocs as $doc) {
+                    $required[] = "property_{$index}_document_{$doc}";
+                }
+            }
+        }
+    }
+
+    /**
+     * التحقق من مستندات المرحلة لكل Property
+     */
+    private function validateStageDocumentsForProperties(Deal $deal, int $targetOrder): array
+    {
+        $missing = [];
+        
+        $allDocs = [];
+        for ($order = 2; $order <= $targetOrder; $order++) {
+            $allDocs = array_merge($allDocs, $this->getStageDocumentsForOrder($order));
+        }
+        $allDocs = array_values(array_unique($allDocs));
+        
+        if (empty($allDocs)) return [];
+        
+        if ($deal->properties->isEmpty()) {
+            foreach ($allDocs as $doc) {
+                if (!$this->checkPropertyDocumentExists($deal, null, $doc)) {
+                    $missing[] = "property_0_document_{$doc}";
+                }
+            }
+        } else {
+            foreach ($deal->properties as $index => $property) {
+                foreach ($allDocs as $doc) {
+                    if (!$this->checkPropertyDocumentExists($deal, $property, $doc)) {
+                        $missing[] = "property_{$index}_document_{$doc}";
+                    }
+                }
+            }
+        }
+        
+        return $missing;
+    }
+
+    /**
+     * التحقق من وجود مستند معين لـ Property
+     */
+    private function checkPropertyDocumentExists(Deal $deal, $property, string $docType): bool
+    {
+        $fieldMap = [
+            'eoi' => 'eoi_documents',
+            'booking' => 'booking_documents',
+            'payment_proof' => 'payment_proof',
+            'spa' => 'spa_document',
+        ];
+        
+        $field = $fieldMap[$docType] ?? null;
+        if (!$field) return false;
+        
+        $docs = $property ? ($property->{$field} ?? []) : ($deal->properties->first()?->{$field} ?? []);
+        
+        if (is_string($docs)) {
+            $docs = json_decode($docs, true) ?? [];
+        }
+        
+        if (!is_array($docs)) return false;
+        
+        foreach ($docs as $doc) {
+            if (!empty($doc) && (isset($doc['path']) || isset($doc['url']) || isset($doc['original_name']))) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

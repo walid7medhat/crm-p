@@ -112,6 +112,72 @@
         <div class="row mt-3">
           <div class="col-12">
             <div class="info-group">
+              <label class="info-label">Eoi Document</label>
+              <div v-if="hasPropertyDocs(property, 'eoi_documents')" class="documents-grid">
+                <div
+                  v-for="(doc, idx) in getPropertyDocsList(property, 'eoi_documents')"
+                  :key="idx"
+                  class="document-card"
+                >
+                  <div class="document-preview" @click="previewDocument(doc)">
+                    <img
+                      v-if="isImageDocument(doc)"
+                      :src="getDocumentUrl(doc)"
+                      :alt="doc.original_name || doc.name"
+                      class="document-thumbnail"
+                      @error="handleImageError"
+                    />
+                    <div v-else class="document-icon-placeholder">
+                      <iconify-icon :icon="getFileIcon(doc)" class="document-icon-large" />
+                    </div>
+                    <div class="document-name">{{ truncateName(doc.original_name || doc.name) }}</div>
+                  </div>
+                  <div class="document-actions">
+                    <button class="doc-action-btn view" @click.stop="previewDocument(doc)">View</button>
+                    <button class="doc-action-btn delete" @click.stop="deleteDocument(doc, 'eoi_documents')">Delete</button>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="text-muted small mb-0">No documents uploaded.</p>
+            </div>
+          </div>
+        </div>
+        <div class="row mt-3">
+          <div class="col-12">
+            <div class="info-group">
+              <label class="info-label">Booking Document</label>
+              <div v-if="hasPropertyDocs(property, 'booking_documents')" class="documents-grid">
+                <div
+                  v-for="(doc, idx) in getPropertyDocsList(property, 'booking_documents')"
+                  :key="idx"
+                  class="document-card"
+                >
+                  <div class="document-preview" @click="previewDocument(doc)">
+                    <img
+                      v-if="isImageDocument(doc)"
+                      :src="getDocumentUrl(doc)"
+                      :alt="doc.original_name || doc.name"
+                      class="document-thumbnail"
+                      @error="handleImageError"
+                    />
+                    <div v-else class="document-icon-placeholder">
+                      <iconify-icon :icon="getFileIcon(doc)" class="document-icon-large" />
+                    </div>
+                    <div class="document-name">{{ truncateName(doc.original_name || doc.name) }}</div>
+                  </div>
+                  <div class="document-actions">
+                    <button class="doc-action-btn view" @click.stop="previewDocument(doc)">View</button>
+                    <button class="doc-action-btn delete" @click.stop="deleteDocument(doc, 'booking_documents')">Delete</button>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="text-muted small mb-0">No documents uploaded.</p>
+            </div>
+          </div>
+        </div>
+        <div class="row mt-3">
+          <div class="col-12">
+            <div class="info-group">
               <label class="info-label">Payment Proof</label>
               <div v-if="hasPropertyDocs(property, 'payment_proof')" class="documents-grid">
                 <div
@@ -176,6 +242,7 @@
             </div>
           </div>
         </div>
+        
       </template>
     </div>
 
@@ -460,15 +527,16 @@ const showStagePropertyDocs = computed(() => true)
 /** Required for DocumentUpload: must be defined (was missing — only header showed, no Payment Proof / SPA rows). */
 const propertyEditDocTypes = computed(() => {
   const s = (props.selectedStageName || '').toLowerCase()
-  const spaOrWon =
-    s.includes('spa') ||
-    s.includes('won') ||
-    s.includes('deal won') ||
-    s.includes('transfer') ||
-    s.includes('closed')
+  const showEoi = s.includes('eoi') || s.includes('booking') || s.includes('spa') || s.includes('won')
+  const showBooking = s.includes('booking') || s.includes('spa') || s.includes('won')
+  const showPayment = s.includes('spa') || s.includes('won')
+  const showSpa = s.includes('spa') || s.includes('won')
+  
   return [
-    { id: 'payment_proof', name: 'Payment Proof', required: spaOrWon },
-    { id: 'spa', name: 'SPA Document', required: spaOrWon },
+    { id: 'eoi', name: 'EOI Document', required: showEoi },
+    { id: 'booking', name: 'Booking Document', required: showBooking },
+    { id: 'payment_proof', name: 'Payment Proof', required: showPayment },
+    { id: 'spa', name: 'SPA Document', required: showSpa },
   ]
 })
 
@@ -485,6 +553,7 @@ const bedroomOptions = [
 // ========== Document Helper Functions ==========
 function getDocumentsArray(docs) {
   if (!docs) return []
+  if (Array.isArray(docs)) return docs
   if (typeof docs === 'string') {
     try {
       const parsed = JSON.parse(docs)
@@ -493,7 +562,13 @@ function getDocumentsArray(docs) {
       return []
     }
   }
-  return Array.isArray(docs) ? docs : []
+  if (typeof docs === 'object' && docs !== null) {
+    // إذا كان الكائن يحتوي على ملفات
+    if (docs.file || docs.path || docs.url) {
+      return [docs]
+    }
+  }
+  return []
 }
 
 function hasDocuments(docs) {
@@ -503,6 +578,11 @@ function hasDocuments(docs) {
 /** Prefer API `payment_proof` / `spa_document`; fall back to `*_raw` if ever empty or missing. */
 function getPropertyDocsList(property, field) {
   if (!property) return []
+  
+  // ✅ دعم الحقول الجديدة
+  const allowedFields = ['eoi_documents', 'booking_documents', 'payment_proof', 'spa_document']
+  if (!allowedFields.includes(field)) return []
+  
   const primary = getDocumentsArray(property[field])
   if (primary.length > 0) return primary
   return getDocumentsArray(property[`${field}_raw`])
@@ -512,10 +592,17 @@ function hasPropertyDocs(property, field) {
   return getPropertyDocsList(property, field).length > 0
 }
 
+
 /** Map API property JSON attachments into DocumentUpload items */
 function mapPropertyDocsForEditor(docs, documentTypeSlug) {
   const arr = getDocumentsArray(docs)
-  const dt = documentTypeSlug === 'spa' ? 'spa' : 'payment_proof'
+  // Map slug to proper document_type
+  let dt = documentTypeSlug
+  if (documentTypeSlug === 'eoi') dt = 'eoi'
+  if (documentTypeSlug === 'booking') dt = 'booking'
+  if (documentTypeSlug === 'payment_proof') dt = 'payment_proof'
+  if (documentTypeSlug === 'spa') dt = 'spa'
+  
   return arr.map((doc, idx) => ({
     id: doc.id || `existing-${dt}-${idx}`,
     name: doc.original_name || doc.file_name || doc.name || `File ${idx + 1}`,
@@ -596,7 +683,10 @@ async function deleteDocument(doc, type) {
   if (!result.isConfirmed) return
 
   try {
-    const isPropertyDocType = type === 'payment_proof' || type === 'spa_document'
+    // ✅ دعم جميع أنواع المستندات
+    const validPropertyDocTypes = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents']
+    const isPropertyDocType = validPropertyDocTypes.includes(type)
+    
     if (isPropertyDocType) {
       const filePath =
         doc.path ||
@@ -609,23 +699,67 @@ async function deleteDocument(doc, type) {
         doc.raw?.file_url ||
         ''
 
+      let documentTypeForApi = type
+      if (type === 'eoi_documents') documentTypeForApi = 'eoi_documents'
+      if (type === 'booking_documents') documentTypeForApi = 'booking_documents'
+      if (type === 'payment_proof') documentTypeForApi = 'payment_proof'
+      if (type === 'spa_document') documentTypeForApi = 'spa_document'
+
       await axios.delete('/api/deals/property-document', {
         data: {
           deal_id: props.dealId,
           property_id: props.property?.id ?? null,
-          document_type: type,
+          document_type: documentTypeForApi,
           file_path: filePath,
         },
       })
+      
+      // ✅ تحديث الحالة محلياً - حذف المستند من الـ property
+      if (props.property && props.property[type]) {
+        let currentDocs = props.property[type]
+        if (typeof currentDocs === 'string') {
+          try {
+            currentDocs = JSON.parse(currentDocs)
+          } catch {
+            currentDocs = []
+          }
+        }
+        if (Array.isArray(currentDocs)) {
+          // تصفية المستندات وإزالة المستند المحذوف
+          const filteredDocs = currentDocs.filter(d => {
+            const dPath = d.path || d.file_path || ''
+            const dUrl = d.url || d.file_url || ''
+            const dName = d.original_name || d.file_name || d.name || ''
+            
+            return dPath !== filePath && 
+                   dUrl !== filePath && 
+                   dName !== (doc.original_name || doc.name)
+          })
+          
+          // تحديث الـ property
+          props.property[type] = filteredDocs
+          
+          // إذا كنا في وضع التحرير، تحديث propertyEditDocs أيضاً
+          if (isEditing.value) {
+            const docTypeSlug = type === 'eoi_documents' ? 'eoi' :
+                               type === 'booking_documents' ? 'booking' :
+                               type === 'payment_proof' ? 'payment_proof' : 'spa'
+            propertyEditDocs.value = propertyEditDocs.value.filter(d => 
+              !(d.document_type === docTypeSlug && 
+                (d.path === filePath || d.url === filePath || d.name === (doc.original_name || doc.name)))
+            )
+          }
+        }
+      }
     } else if (doc.id && /^\d+$/.test(String(doc.id))) {
-      // Non-property docs are stored in deal_documents table
       await axios.delete(`/api/deals/documents/${doc.id}`)
     } else {
       throw new Error('Missing identifier for delete')
     }
     
-    // تحديث الـ parent
+    // ✅ تحديث الـ parent بعد الحذف المحلي
     emit('refresh-deal')
+    emit('property-updated', props.property)
     
     Swal.fire({
       icon: 'success',
@@ -660,7 +794,9 @@ function startEdit() {
     purchase_price: props.property.purchase_price || null,
     commission: props.property.commission || null,
   }
-  propertyEditDocs.value = [
+   propertyEditDocs.value = [
+    ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'eoi_documents'), 'eoi'),
+    ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'booking_documents'), 'booking'),
     ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'payment_proof'), 'payment_proof'),
     ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'spa_document'), 'spa'),
   ]
@@ -716,16 +852,27 @@ async function saveEdit() {
       }
     })
     
+    let eoiIdx = 0
+    let bookingIdx = 0
     let ppIdx = 0
-    propertyEditDocs.value.forEach((doc) => {
-      if ((doc.document_type || '') === 'payment_proof' && doc.file instanceof File) {
-        formData.append(`payment_proof[${ppIdx++}]`, doc.file)
-      }
-    })
     let spaIdx = 0
+    
     propertyEditDocs.value.forEach((doc) => {
-      if ((doc.document_type || '') === 'spa' && doc.file instanceof File) {
-        formData.append(`spa_document[${spaIdx++}]`, doc.file)
+      const docType = doc.document_type || ''
+      // ✅ فقط الملفات الجديدة (وليس الموجودة)
+      if (doc.file instanceof File) {
+        if (docType === 'eoi') {
+          formData.append(`eoi_documents[${eoiIdx++}]`, doc.file)
+        }
+        if (docType === 'booking') {
+          formData.append(`booking_documents[${bookingIdx++}]`, doc.file)
+        }
+        if (docType === 'payment_proof') {
+          formData.append(`payment_proof[${ppIdx++}]`, doc.file)
+        }
+        if (docType === 'spa') {
+          formData.append(`spa_document[${spaIdx++}]`, doc.file)
+        }
       }
     })
     
@@ -734,6 +881,11 @@ async function saveEdit() {
     })
     
     if (response.data.success || response.data.data) {
+      const updatedProperty = response.data.data || response.data.property
+      
+      // ✅ تحديث الـ property المحلي
+      Object.assign(props.property, updatedProperty)
+      
       Swal.fire({
         icon: 'success',
         title: 'Success',
@@ -742,7 +894,6 @@ async function saveEdit() {
         showConfirmButton: false
       })
       
-      const updatedProperty = response.data.data || response.data.property
       emit('property-updated', updatedProperty)
       emit('refresh-deal')
       isEditing.value = false

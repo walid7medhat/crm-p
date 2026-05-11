@@ -27,6 +27,7 @@ return [
                      'developer_name'=>true,
                     'developer_phone'=>true,
                 ],
+                 'property_documents' => ['eoi'],
             ],
             
             // ===================== BOOKING STAGE (order 3) =====================
@@ -49,6 +50,7 @@ return [
                     'purchase_price' => true,     
                
                 ],
+                 'property_documents' => ['payment_proof', 'booking','eoi'],
             ],
             
             // ===================== SPA STAGE (order 4) =====================
@@ -73,7 +75,7 @@ return [
                     'purchase_price' => true,
              
                 ],
-                'property_documents' => ['payment_proof', 'spa'],
+                'property_documents' => ['payment_proof', 'spa','booking','eoi'],
             ],
             
             // ===================== WON STAGE (order 5) =====================
@@ -98,7 +100,7 @@ return [
                     'purchase_price' => true,
            
                 ],
-                'property_documents' => ['payment_proof', 'spa'],
+                'property_documents' => ['payment_proof', 'spa','eoi','booking'],
             ],
             
             // ===================== LOST STAGE (order 6) =====================

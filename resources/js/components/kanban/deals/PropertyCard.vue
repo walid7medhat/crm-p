@@ -341,6 +341,15 @@ const propertyDocumentsCombined = computed({
   get() {
     const obj = localProperty.value
     ensurePropertyDocumentArrays(obj)
+    
+    const eoi = (obj.eoi_documents || []).map((d) => ({
+      ...d,
+      document_type: d.document_type || 'eoi'
+    }))
+    const booking = (obj.booking_documents || []).map((d) => ({
+      ...d,
+      document_type: d.document_type || 'booking'
+    }))
     const pay = (obj.payment_proof || []).map((d) => ({
       ...d,
       document_type: d.document_type || 'payment_proof'
@@ -349,14 +358,23 @@ const propertyDocumentsCombined = computed({
       ...d,
       document_type: d.document_type || 'spa'
     }))
-    return [...pay, ...spa]
+    
+    return [...eoi, ...booking, ...pay, ...spa]
   },
   set(files) {
     const list = Array.isArray(files) ? files : []
+    localProperty.value.eoi_documents = list.filter(
+      (f) => (f.document_type || '') === 'eoi'
+    )
+    localProperty.value.booking_documents = list.filter(
+      (f) => (f.document_type || '') === 'booking'
+    )
     localProperty.value.payment_proof = list.filter(
       (f) => (f.document_type || '') === 'payment_proof'
     )
-    localProperty.value.spa_document = list.filter((f) => (f.document_type || '') === 'spa')
+    localProperty.value.spa_document = list.filter(
+      (f) => (f.document_type || '') === 'spa'
+    )
   }
 })
 
@@ -384,7 +402,7 @@ const showPurchasePrice = computed(() => {
 
 const showPropertyDocuments = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
-  return stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
+  return stageName.includes('eoi') || stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
 })
 
 // Check if a field is required
