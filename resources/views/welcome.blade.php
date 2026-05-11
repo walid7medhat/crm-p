@@ -15,11 +15,40 @@
        
     </head>
    <body class="antialiased"
-         style="background-image: url('{{ asset('images/crm-bg-ice.png') }}');
+         style="background-image: none !important;
                 background-attachment: fixed;
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;">
+      <video
+        class="crm-bg-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto"
+        aria-hidden="true"
+        tabindex="-1"
+      >
+        <source src="{{ asset('videos/beach3.webm') }}" type="video/webm">
+      </video>
+
+      <style>
+        .crm-bg-video{
+          position: fixed;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          z-index: -1;
+          pointer-events: none;
+        }
+        #app{
+          position: relative;
+          z-index: 1;
+        }
+      </style>
+
       <div id="app"></div>
     </body>
 </html>
