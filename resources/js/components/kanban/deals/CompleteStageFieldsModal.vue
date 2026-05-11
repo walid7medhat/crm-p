@@ -143,8 +143,8 @@
                       <v-select
                         append-to-body 
                         v-model="formData.buyer_nationality" 
-                        :options="nationalityOptions" 
-                        :reduce="item => item.value" 
+                          :reduce="item => item.text"
+                          :options="nationalityOptions"
                         label="text" 
                         placeholder="Select Nationality" 
                         class="custom-v-select"
@@ -154,6 +154,24 @@
                           <span v-bind="attributes">
                             <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                           </span>
+                        </template>
+                        <template #option="{ text, code }">
+                          <div class="d-flex align-items-center gap-2">
+                            <img 
+                              :src="`https://flagcdn.com/w20/${code}.png`" 
+                              width="20"
+                            />
+                            <span>{{ text }}</span>
+                          </div>
+                        </template>
+                        <template #selected-option="{ text, code }">
+                          <div class="d-flex align-items-center gap-2">
+                            <img 
+                              :src="`https://flagcdn.com/w20/${code}.png`" 
+                              width="20"
+                            />
+                            <span>{{ text }}</span>
+                          </div>
                         </template>
                       </v-select>
                     </div>
@@ -353,8 +371,8 @@
                       <v-select
                         append-to-body 
                         v-model="formData.seller_nationality" 
-                        :options="nationalityOptions" 
-                        :reduce="item => item.value" 
+                          :reduce="item => item.text"
+                          :options="nationalityOptions"
                         label="text" 
                         placeholder="Select Nationality" 
                         class="custom-v-select"
@@ -364,6 +382,24 @@
                           <span v-bind="attributes">
                             <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                           </span>
+                        </template>
+                        <template #option="{ text, code }">
+                          <div class="d-flex align-items-center gap-2">
+                            <img 
+                              :src="`https://flagcdn.com/w20/${code}.png`" 
+                              width="20"
+                            />
+                            <span>{{ text }}</span>
+                          </div>
+                        </template>
+                        <template #selected-option="{ text, code }">
+                          <div class="d-flex align-items-center gap-2">
+                            <img 
+                              :src="`https://flagcdn.com/w20/${code}.png`" 
+                              width="20"
+                            />
+                            <span>{{ text }}</span>
+                          </div>
                         </template>
                       </v-select>
                     </div>
@@ -535,8 +571,8 @@
                       <v-select
                         append-to-body 
                         v-model="formData.tenant_nationality" 
-                        :options="nationalityOptions" 
-                        :reduce="item => item.value" 
+                          :reduce="item => item.text"
+                        :options="nationalityOptions"
                         label="text" 
                         placeholder="Select Nationality" 
                         class="custom-v-select"
@@ -546,6 +582,24 @@
                           <span v-bind="attributes">
                             <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                           </span>
+                        </template>
+                        <template #option="{ text, code }">
+                          <div class="d-flex align-items-center gap-2">
+                            <img 
+                              :src="`https://flagcdn.com/w20/${code}.png`" 
+                              width="20"
+                            />
+                            <span>{{ text }}</span>
+                          </div>
+                        </template>
+                        <template #selected-option="{ text, code }">
+                          <div class="d-flex align-items-center gap-2">
+                            <img 
+                              :src="`https://flagcdn.com/w20/${code}.png`" 
+                              width="20"
+                            />
+                            <span>{{ text }}</span>
+                          </div>
                         </template>
                       </v-select>
                     </div>
@@ -729,8 +783,8 @@
                       <v-select
                         append-to-body 
                         v-model="formData.landlord_nationality" 
-                        :options="nationalityOptions" 
-                        :reduce="item => item.value" 
+                          :reduce="item => item.text"
+                        :options="nationalityOptions"
                         label="text" 
                         placeholder="Select Nationality" 
                         class="custom-v-select"
@@ -741,6 +795,24 @@
                             <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                           </span>
                         </template>
+                        <template #option="{ text, code }">
+                          <div class="d-flex align-items-center gap-2">
+                            <img 
+                              :src="`https://flagcdn.com/w20/${code}.png`" 
+                              width="20"
+                            />
+                            <span>{{ text }}</span>
+                          </div>
+                        </template>
+                        <template #selected-option="{ text, code }">
+                        <div class="d-flex align-items-center gap-2">
+                          <img 
+                            :src="`https://flagcdn.com/w20/${code}.png`" 
+                            width="20"
+                          />
+                          <span>{{ text }}</span>
+                        </div>
+                      </template>
                       </v-select>
                     </div>
                     
@@ -1274,6 +1346,18 @@ import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import api from '@/plugins/axios'
 import { isNonEmptyPhoneValid } from '@/utils/phone'
 import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
+import countries from "i18n-iso-countries";
+import en from "i18n-iso-countries/langs/en.json";
+
+// تسجيل اللغة
+countries.registerLocale(en);
+const nationalityOptions = Object.entries(
+  countries.getNames("en", { select: "official" })
+).map(([code, name]) => ({
+  value: code.toLowerCase(), // eg
+  text: name, // Egypt
+  code: code.toLowerCase()
+}));
 const isLoadingPropertyData = ref(true)
 const isDataLoaded = ref(false)
 const isDataInitialized = ref(false)
@@ -3507,68 +3591,7 @@ const languageOptions = [
   { value: 'finnish', text: 'Finnish' },
   { value: 'other', text: 'Other' }
 ];
-const nationalityOptions = [
-  { value: 'emirati', text: 'Emirati' },
-  { value: 'saudi', text: 'Saudi' },
-  { value: 'egyptian', text: 'Egyptian' },
-  { value: 'qatari', text: 'Qatari' },
-  { value: 'kuwaiti', text: 'Kuwaiti' },
-  { value: 'bahraini', text: 'Bahraini' },
-  { value: 'omani', text: 'Omani' },
 
-  { value: 'american', text: 'American' },
-  { value: 'canadian', text: 'Canadian' },
-  { value: 'british', text: 'British' },
-  { value: 'french', text: 'French' },
-  { value: 'german', text: 'German' },
-  { value: 'italian', text: 'Italian' },
-  { value: 'spanish', text: 'Spanish' },
-  { value: 'dutch', text: 'Dutch' },
-  { value: 'swedish', text: 'Swedish' },
-  { value: 'norwegian', text: 'Norwegian' },
-  { value: 'danish', text: 'Danish' },
-  { value: 'finnish', text: 'Finnish' },
-  { value: 'polish', text: 'Polish' },
-  { value: 'ukrainian', text: 'Ukrainian' },
-  { value: 'russian', text: 'Russian' },
-
-  { value: 'indian', text: 'Indian' },
-  { value: 'pakistani', text: 'Pakistani' },
-  { value: 'bangladeshi', text: 'Bangladeshi' },
-  { value: 'sri_lankan', text: 'Sri Lankan' },
-  { value: 'nepali', text: 'Nepali' },
-  { value: 'filipino', text: 'Filipino' },
-  { value: 'indonesian', text: 'Indonesian' },
-  { value: 'malaysian', text: 'Malaysian' },
-  { value: 'chinese', text: 'Chinese' },
-  { value: 'japanese', text: 'Japanese' },
-  { value: 'korean', text: 'Korean' },
-  { value: 'thai', text: 'Thai' },
-  { value: 'vietnamese', text: 'Vietnamese' },
-
-  { value: 'turkish', text: 'Turkish' },
-  { value: 'iranian', text: 'Iranian' },
-
-  { value: 'moroccan', text: 'Moroccan' },
-  { value: 'tunisian', text: 'Tunisian' },
-  { value: 'algerian', text: 'Algerian' },
-  { value: 'sudanese', text: 'Sudanese' },
-  { value: 'ethiopian', text: 'Ethiopian' },
-  { value: 'kenyan', text: 'Kenyan' },
-  { value: 'nigerian', text: 'Nigerian' },
-  { value: 'south_african', text: 'South African' },
-
-  { value: 'brazilian', text: 'Brazilian' },
-  { value: 'argentinian', text: 'Argentinian' },
-  { value: 'mexican', text: 'Mexican' },
-  { value: 'chilean', text: 'Chilean' },
-  { value: 'colombian', text: 'Colombian' },
-
-  { value: 'australian', text: 'Australian' },
-  { value: 'new_zealander', text: 'New Zealander' },
-
-  { value: 'other', text: 'Other' }
-];
 
 const residencyOptions = [
   { value: 'resident', text: 'Resident' },

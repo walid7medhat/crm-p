@@ -2340,7 +2340,7 @@ onMounted(async () => {
 
 /* LR Modal Backdrop & Date Modal Styles */
 .lr-modal-backdrop {
-    position: fixed;
+    position: inherit;
     inset: 0;
     background: rgba(2, 6, 23, 0.45);
     display: flex;

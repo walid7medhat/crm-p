@@ -32,6 +32,7 @@
         "bootstrap-vue-3": "^0.3.12",
         "element-plus": "^2.11.7",
         "html2pdf.js": "^0.12.1",
+        "i18n-iso-countries": "^7.14.0",
         "jsvectormap": "^1.7.0",
         "laravel-echo": "^1.15.0",
         "leaflet": "^1.9.4",

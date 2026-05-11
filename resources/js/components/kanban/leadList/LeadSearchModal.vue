@@ -3466,7 +3466,7 @@ onBeforeUnmount(() => {
 
 
 .lr-modal-backdrop {
-    position: fixed;
+    position: inherit !important;
     inset: 0;
     background: rgba(2, 6, 23, 0.45);
     display: flex;
