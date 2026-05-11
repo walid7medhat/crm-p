@@ -131,7 +131,7 @@ class LeadConversionController extends Controller
             ]);
 
             // ✅ Create properties from lead data
-            $this->createDealPropertiesFromLead($deal, $lead);
+            // $this->createDealPropertiesFromLead($deal, $lead);
 
             // Create party based on deal type
             if ($request->deal_type != 'rental') {
