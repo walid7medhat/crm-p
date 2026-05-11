@@ -412,6 +412,7 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
             'debug' => ['error' => $message],
             'deal_type' => 'primary',
             'has_listing_id' => false,
+             'required_fields' => [], 
         ];
     }
 

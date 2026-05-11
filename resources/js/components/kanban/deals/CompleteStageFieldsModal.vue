@@ -2664,11 +2664,17 @@ function hasField(fieldKey) {
   )
 }
 function isRequiredField(fieldKey) {
-  const required = props.requiredFields || []
-console.log("is required",props.requiredFields);
-  return required.some(key =>
-    normalizeMissingFieldKey(key) === normalizeMissingFieldKey(fieldKey)
+  if (!props.requiredFields || !Array.isArray(props.requiredFields)) {
+    console.warn('requiredFields is not available yet for field:', fieldKey)
+    return false
+  }
+  
+  const normalized = normalizeMissingFieldKey(fieldKey)
+  const result = props.requiredFields.some(key =>
+    normalizeMissingFieldKey(key) === normalized
   )
+  
+  return result
 }
 /** Show full party / deal forms (not only “missing” keys) so users can see and edit existing data. */
 function shouldShowField(fieldKey) {
