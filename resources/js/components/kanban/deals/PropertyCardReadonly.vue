@@ -145,7 +145,7 @@
         <div class="row mt-3">
           <div class="col-12">
             <div class="info-group">
-              <label class="info-label">Booking Document</label>
+              <label class="info-label">Booking Form</label>
               <div v-if="hasPropertyDocs(property, 'booking_documents')" class="documents-grid">
                 <div
                   v-for="(doc, idx) in getPropertyDocsList(property, 'booking_documents')"
@@ -534,7 +534,7 @@ const propertyEditDocTypes = computed(() => {
   
   return [
     { id: 'eoi', name: 'EOI Document', required: showEoi },
-    { id: 'booking', name: 'Booking Document', required: showBooking },
+    { id: 'booking', name: 'Booking Form', required: showBooking },
     { id: 'payment_proof', name: 'Payment Proof', required: showPayment },
     { id: 'spa', name: 'SPA Document', required: showSpa },
   ]

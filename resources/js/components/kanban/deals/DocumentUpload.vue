@@ -141,6 +141,15 @@ const props = defineProps({
   compact: { type: Boolean, default: false },
   dealId: { type: [Number, String], default: null },
   propertyId: { type: [Number, String], default: null },
+  /**
+   * either: passport and national_id satisfy each other (one of two).
+   * all: when both types are listed as required, both must be uploaded (e.g. UAE resident).
+   */
+  identificationRequirementMode: {
+    type: String,
+    default: 'either',
+    validator: (v) => !v || ['either', 'all'].includes(v),
+  },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -216,6 +225,9 @@ function ensureTrailingEmptySlotsAllTypes(nextBoxes) {
 function getDisplayName(type) {
   if (type.id === 'national_id') {
     return 'Emirates ID'
+  }
+  if (type.id === 'booking') {
+    return 'Booking Form'
   }
   return type.name
 }
@@ -477,7 +489,9 @@ function hydrateFilesFromModelValue(model) {
   ensureTrailingEmptySlotsAllTypes(next)
   
   boxesByType.value = next
-  isHydratingFromModel.value = false
+  nextTick(() => {
+    isHydratingFromModel.value = false
+  })
 }
 
 const missingRequiredDocs = computed(() => {
@@ -490,7 +504,11 @@ const missingRequiredDocs = computed(() => {
       }
     }
   })
-  
+
+  if (props.identificationRequirementMode === 'all') {
+    return missing
+  }
+
   alternativeGroups.value.forEach(group => {
     const typesInGroup = group.types
     const missingInGroup = typesInGroup.filter(typeId => {
@@ -609,29 +627,40 @@ watch(
   { immediate: true }
 )
 
+watch(
+  () => props.modelValue,
+  (val) => {
+    if (!props.documentTypes?.length) return
+    hydrateFilesFromModelValue(val || [])
+  },
+  { deep: true }
+)
+
 function isDocumentTypeRequired(typeId) {
   const docType = props.documentTypes.find(t => t.id === typeId)
   const originalRequired = docType?.required || false
   
   if (!originalRequired) return false
   if (hasFilesForType(typeId)) return false
-  
-  for (const pair of alternativePairs.value) {
-    if (pair.type1 === typeId) {
-      const hasAlternative = hasFilesForType(pair.type2)
-      if (hasAlternative) return false
+
+  if (props.identificationRequirementMode !== 'all') {
+    for (const pair of alternativePairs.value) {
+      if (pair.type1 === typeId) {
+        const hasAlternative = hasFilesForType(pair.type2)
+        if (hasAlternative) return false
+      }
+      if (pair.type2 === typeId) {
+        const hasAlternative = hasFilesForType(pair.type1)
+        if (hasAlternative) return false
+      }
     }
-    if (pair.type2 === typeId) {
-      const hasAlternative = hasFilesForType(pair.type1)
-      if (hasAlternative) return false
-    }
-  }
-  
-  for (const group of alternativeGroups.value) {
-    if (group.types.includes(typeId)) {
-      const otherTypes = group.types.filter(t => t !== typeId)
-      const hasAnyOther = otherTypes.some(otherType => hasFilesForType(otherType))
-      if (hasAnyOther) return false
+
+    for (const group of alternativeGroups.value) {
+      if (group.types.includes(typeId)) {
+        const otherTypes = group.types.filter(t => t !== typeId)
+        const hasAnyOther = otherTypes.some(otherType => hasFilesForType(otherType))
+        if (hasAnyOther) return false
+      }
     }
   }
   

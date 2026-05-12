@@ -92,7 +92,7 @@ class DealController extends Controller
             'lead',
             'stage',
             'responsiblePerson',
-            'parties',
+            'parties.documents',
             'documents',
             'properties'
         ]);
@@ -1364,6 +1364,8 @@ class DealController extends Controller
 
         $paymentFiles = $this->extractPropertyFiles($request, 'payment_proof', $index);
         $spaFiles = $this->extractPropertyFiles($request, 'spa_document', $index);
+        $eoiFiles = $this->extractPropertyFiles($request, 'eoi_documents', $index);
+        $bookingFiles = $this->extractPropertyFiles($request, 'booking_documents', $index);
 
         $changed = false;
 
@@ -1420,6 +1422,48 @@ class DealController extends Controller
             }
 
             $property->spa_document = $existing;
+            $changed = true;
+        }
+
+        // =========================
+        // EOI documents (per property index)
+        // =========================
+        if (!empty($eoiFiles)) {
+            $existing = is_array($property->eoi_documents) ? $property->eoi_documents : [];
+            foreach ($eoiFiles as $file) {
+                $path = $file->store(
+                    "deals/{$deal->id}/properties/{$property->id}/eoi_documents",
+                    'public'
+                );
+                $existing[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->eoi_documents = array_values($existing);
+            $changed = true;
+        }
+
+        // =========================
+        // Booking documents (per property index)
+        // =========================
+        if (!empty($bookingFiles)) {
+            $existing = is_array($property->booking_documents) ? $property->booking_documents : [];
+            foreach ($bookingFiles as $file) {
+                $path = $file->store(
+                    "deals/{$deal->id}/properties/{$property->id}/booking_documents",
+                    'public'
+                );
+                $existing[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->booking_documents = array_values($existing);
             $changed = true;
         }
 

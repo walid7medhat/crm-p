@@ -64,6 +64,7 @@ import MyOrders from './pages/listings/my_order.vue'
 import AllRequests from './pages/listings/AllRequests.vue'
 import HotDealRequests from './pages/listings/hot_deal_requests.vue'
 import NeedApprove from './pages/listings/PendingApprovalsTable.vue'
+import MyViewings from './pages/listings/my_viewings.vue'
 import allNotifications from './components/allNotifications.vue'
 
 // Kanban
@@ -201,6 +202,7 @@ const baseRoutes = [
 
   { path: '/my-requests', component: MyRequests, meta: { requiresAuth: true } },
   { path: '/my-orders', component: MyOrders, meta: { requiresAuth: true } },
+  { path: '/my-viewings', component: MyViewings, meta: { requiresAuth: true } },
   { path: '/all-requests', name: 'all-requests', component: AllRequests, meta: { requiresAuth: true } },
   { path: '/hotDeal-requests',name:'hotDeal-requests', component: HotDealRequests, meta: { requiresAuth: true } },
   

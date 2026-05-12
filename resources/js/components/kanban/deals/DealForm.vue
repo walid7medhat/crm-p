@@ -808,7 +808,7 @@ const propertyDocTypes = computed(() => {
     console.log('✅ Returning Booking documents')
     return [
       { id: 'eoi', name: 'EOI Document', required: true },
-      { id: 'booking', name: 'Booking Document', required: true },
+      { id: 'booking', name: 'Booking Form', required: true },
       { id: 'payment_proof', name: 'Payment Proof', required: false },
     ]
   }
@@ -818,7 +818,7 @@ const propertyDocTypes = computed(() => {
     console.log('✅ Returning SPA documents')
     return [
       { id: 'eoi', name: 'EOI Document', required: true },
-      { id: 'booking', name: 'Booking Document', required: true },
+      { id: 'booking', name: 'Booking Form', required: true },
       { id: 'payment_proof', name: 'Payment Proof', required: false },
       { id: 'spa', name: 'SPA Document', required: true },
     ]
@@ -829,7 +829,7 @@ const propertyDocTypes = computed(() => {
     console.log('✅ Returning Won documents')
     return [
       { id: 'eoi', name: 'EOI Document', required: true },
-      { id: 'booking', name: 'Booking Document', required: true },
+      { id: 'booking', name: 'Booking Form', required: true },
       { id: 'payment_proof', name: 'Payment Proof', required: true },
       { id: 'spa', name: 'SPA Document', required: true },
     ]

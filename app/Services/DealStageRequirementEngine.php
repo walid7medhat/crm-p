@@ -48,7 +48,11 @@ class DealStageRequirementEngine
                 }
 
                 $required[] = 'buyer_document_passport';
-                $required[] = 'buyer_document_national_id';
+                $deal->loadMissing(['parties']);
+                $buyer = $deal->parties->first(fn ($party) => $party->party_type === 'buyer');
+                if (!$this->buyerIsNonResident($buyer)) {
+                    $required[] = 'buyer_document_national_id';
+                }
             }
 
             if ($targetOrder >= 2) {
@@ -94,6 +98,9 @@ class DealStageRequirementEngine
 
             if ($targetOrder >= 3) {
                 $required[] = 'property_document_payment_proof';
+            }
+            // SPA is required from stage 4 onward (not on booking / order 3)
+            if ($targetOrder >= 4) {
                 $required[] = 'property_document_spa';
             }
 
@@ -137,7 +144,6 @@ class DealStageRequirementEngine
         }
 
         $targetOrder = (int) $targetStage->order;
-        $newPaymentProofUploads = max(0, (int) ($context['new_payment_proof_uploads'] ?? 0));
         $evaluationByStage = [];
         $missingFields = [];
 
@@ -155,7 +161,7 @@ class DealStageRequirementEngine
                 if (!$stage) {
                     continue;
                 }
-                $stageMissing = $this->validatePrimaryStageByOrder($deal, $order, $newPaymentProofUploads);
+                $stageMissing = $this->validatePrimaryStageByOrder($deal, $order);
                 if (!empty($stageMissing)) {
                     $evaluationByStage[] = $this->buildStageEvaluation($stage, $stageMissing);
                     $missingFields = array_merge($missingFields, $stageMissing);
@@ -186,7 +192,6 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
                 'payment_proof_count' => $this->countPropertyDocuments($deal, 'payment_proof'),
                 'spa_document_count' => $this->countPropertyDocuments($deal, 'spa_document'),
                 'property_count' => $deal->properties->count(),
-                'new_payment_proof_uploads' => $newPaymentProofUploads,
                 'evaluation' => $missingByStage,
             ],
             'deal_type' => 'primary',
@@ -194,7 +199,7 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
         ];
     }
 
-    private function validatePrimaryStageByOrder(Deal $deal, int $order, int $newPaymentProofUploads = 0): array
+    private function validatePrimaryStageByOrder(Deal $deal, int $order): array
     {
         $missing = [];
 
@@ -207,7 +212,10 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
         if ($order >= 2 && $order <= 5) {
             $missing = array_merge($missing, $this->validateBuyerBasic($deal));
             $missing = array_merge($missing, $this->validateBuyerDocument($deal, 'passport'));
-            $missing = array_merge($missing, $this->validateBuyerDocument($deal, 'national_id'));
+            $buyer = $deal->parties->first(fn ($party) => $party->party_type === 'buyer');
+            if (!$this->buyerIsNonResident($buyer)) {
+                $missing = array_merge($missing, $this->validateBuyerDocument($deal, 'national_id'));
+            }
         }
 
         // ✅ التحقق من مستندات المرحلة (يتم لجميع المراحل من 2 إلى 5)
@@ -223,12 +231,14 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
         }
 
         if ($order === 3) {
+            // Booking stage: payment proof + booking form only (no SPA)
             $missing = array_merge($missing, $this->validateAtLeastOneProperty($deal));
             $missing = array_merge($missing, $this->validatePropertyFields($deal, array_merge(
                 self::PRIMARY_ALL_PROPERTY_FIELDS, ['purchase_price']
             )));
-            if ($this->countPropertyDocuments($deal, 'payment_proof') < 1) $missing[] = 'property_document_payment_proof';
-            if ($this->countPropertyDocuments($deal, 'spa_document') < 1) $missing[] = 'property_document_spa';
+            if ($this->countPropertyDocuments($deal, 'payment_proof') < 1) {
+                $missing[] = 'property_document_payment_proof';
+            }
             return array_values(array_unique($missing));
         }
 
@@ -237,8 +247,14 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
             $missing = array_merge($missing, $this->validatePropertyFields($deal, array_merge(
                 self::PRIMARY_ALL_PROPERTY_FIELDS, ['purchase_price']
             )));
-            if ($newPaymentProofUploads < 1) $missing[] = 'property_document_payment_proof';
-            if ($this->countPropertyDocuments($deal, 'spa_document') < 1) $missing[] = 'property_document_spa';
+            // Same as stage 3: use persisted property rows (after sync + merge), not only files in this request.
+            // Otherwise payment proof uploaded at booking is ignored and SPA stage always 422s.
+            if ($this->countPropertyDocuments($deal, 'payment_proof') < 1) {
+                $missing[] = 'property_document_payment_proof';
+            }
+            if ($this->countPropertyDocuments($deal, 'spa_document') < 1) {
+                $missing[] = 'property_document_spa';
+            }
             return array_values(array_unique($missing));
         }
 
@@ -248,13 +264,29 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
                 self::PRIMARY_ALL_PROPERTY_FIELDS, ['purchase_price']
             )));
             if ($this->isEmptyValue($deal->deal_total_amount)) $missing[] = 'deal_total_amount';
-            if ($newPaymentProofUploads < 1) $missing[] = 'property_document_payment_proof';
-            if ($this->countPropertyDocuments($deal, 'spa_document') < 1) $missing[] = 'property_document_spa';
+            if ($this->countPropertyDocuments($deal, 'payment_proof') < 1) {
+                $missing[] = 'property_document_payment_proof';
+            }
+            if ($this->countPropertyDocuments($deal, 'spa_document') < 1) {
+                $missing[] = 'property_document_spa';
+            }
             $missing = array_merge($missing, $this->validateBuyerDocument($deal, 'kyc'));
             return array_values(array_unique($missing));
         }
 
         return array_values(array_unique($missing));
+    }
+
+    /** Matches frontend: non-resident only needs passport (no Emirates ID / national_id). */
+    private function buyerIsNonResident($buyer): bool
+    {
+        if (!$buyer) {
+            return false;
+        }
+        $raw = strtolower(trim((string) ($buyer->residency_status ?? '')));
+        $raw = str_replace('-', '_', $raw);
+
+        return in_array($raw, ['non_resident', 'nonresident'], true);
     }
 
     private function validateBuyerBasic(Deal $deal): array
@@ -449,7 +481,7 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
         // استخدام المصفوفة الثابتة بدلاً من الكونفيج للتأكد من العمل
         $documentsMap = [
             2 => ['eoi'],
-            3 => ['eoi', 'booking'],
+            3 => ['booking'],
             4 => ['eoi', 'booking', 'spa'],
             5 => ['eoi', 'booking', 'spa', 'payment_proof'],
         ];
@@ -462,11 +494,8 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
      */
     private function addStageDocumentsToRequired(array &$required, int $targetOrder, Deal $deal): void
     {
-        $allDocs = [];
-        for ($order = 2; $order <= $targetOrder; $order++) {
-            $allDocs = array_merge($allDocs, $this->getStageDocumentsForOrder($order));
-        }
-        $allDocs = array_values(array_unique($allDocs));
+        // Per-stage property documents only (stage 3 = booking form, not SPA/EOI again)
+        $allDocs = array_values(array_unique($this->getStageDocumentsForOrder($targetOrder)));
         
         if (empty($allDocs)) return;
         
@@ -489,12 +518,8 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
     private function validateStageDocumentsForProperties(Deal $deal, int $targetOrder): array
     {
         $missing = [];
-        
-        $allDocs = [];
-        for ($order = 2; $order <= $targetOrder; $order++) {
-            $allDocs = array_merge($allDocs, $this->getStageDocumentsForOrder($order));
-        }
-        $allDocs = array_values(array_unique($allDocs));
+
+        $allDocs = array_values(array_unique($this->getStageDocumentsForOrder($targetOrder)));
         
         if (empty($allDocs)) return [];
         
@@ -541,11 +566,21 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
         if (!is_array($docs)) return false;
         
         foreach ($docs as $doc) {
-            if (!empty($doc) && (isset($doc['path']) || isset($doc['url']) || isset($doc['original_name']))) {
+            if (empty($doc)) {
+                continue;
+            }
+            $row = is_array($doc) ? $doc : (array) $doc;
+            $hasIdentity = ! empty($row['path'])
+                || ! empty($row['file_path'])
+                || ! empty($row['url'])
+                || ! empty($row['file_url'])
+                || ! empty($row['original_name'])
+                || ! empty($row['file_name']);
+            if ($hasIdentity) {
                 return true;
             }
         }
-        
+
         return false;
     }
 }

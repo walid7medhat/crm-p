@@ -576,6 +576,7 @@ const requestsItems = computed(() => {
     const items = [
       { path: '/my-requests', label: 'Inbound Request', colorClass: 'text-white w-auto', count: 0 ,permission: 'listings-list'},
       { path: '/my-orders', label: 'Outbound Request', colorClass: 'text-white w-auto', count: 0,permission: 'listings-list' },
+      { path: '/my-viewings', label: 'Viewings', colorClass: 'text-white w-auto', count: 0, permission: 'listings-list' },
     ];
     
     // Only show hot deal requests for listing team members

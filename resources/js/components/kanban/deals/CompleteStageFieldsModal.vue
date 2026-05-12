@@ -276,12 +276,13 @@
                 
                 <!-- Buyer Documents -->
                 <div v-if="documentTypesByParty.buyer.length > 0" class="mt-3">
-                  <label class="section-title mb-3">Buyer Documents <span class="text-danger">*</span></label>
+                  <label class="section-title mb-3">Buyer Documents <span v-if="documentTypesByParty.buyer.some((d) => d.required)" class="text-danger">*</span></label>
                   <DocumentUpload
                     v-model="formData.buyer_documents"
                     category="buyer"
                     compact
                     :document-types="documentTypesByParty.buyer"
+                    :identification-requirement-mode="identificationRequirementModeForParty('buyer')"
                     :show-errors="validationAttempted"
                     :missing-document-types="missingDocumentTypesByParty.buyer"
                     ref="buyerDocUploadRef"
@@ -488,12 +489,13 @@
                 
                 <!-- Seller Documents -->
                 <div class="mt-3" v-if="documentTypesByParty.seller.length > 0">
-                  <label class="section-title mb-3">Seller Documents <span class="text-danger">*</span></label>
+                  <label class="section-title mb-3">Seller Documents <span v-if="documentTypesByParty.seller.some((d) => d.required)" class="text-danger">*</span></label>
                   <DocumentUpload
                     v-model="formData.seller_documents"
                     category="seller"
                     compact
                     :document-types="documentTypesByParty.seller"
+                    :identification-requirement-mode="identificationRequirementModeForParty('seller')"
                     :show-errors="validationAttempted"
                     :missing-document-types="missingDocumentTypesByParty.seller"
                     ref="sellerDocUploadRef"
@@ -688,12 +690,13 @@
                 
                 <!-- Tenant Documents -->
                 <div class="mt-3" v-if="documentTypesByParty.tenant.length > 0">
-                  <label class="section-title mb-3">Tenant Documents <span class="text-danger">*</span></label>
+                  <label class="section-title mb-3">Tenant Documents <span v-if="documentTypesByParty.tenant.some((d) => d.required)" class="text-danger">*</span></label>
                   <DocumentUpload
                     v-model="formData.tenant_documents"
                     category="tenant"
                     compact
                     :document-types="documentTypesByParty.tenant"
+                    :identification-requirement-mode="identificationRequirementModeForParty('tenant')"
                     :show-errors="validationAttempted"
                     :missing-document-types="missingDocumentTypesByParty.tenant"
                     ref="tenantDocUploadRef"
@@ -900,12 +903,13 @@
                 
                 <!-- Landlord Documents -->
                 <div class="mt-3" v-if="documentTypesByParty.landlord.length > 0">
-                  <label class="section-title mb-3">Landlord Documents <span class="text-danger">*</span></label>
+                  <label class="section-title mb-3">Landlord Documents <span v-if="documentTypesByParty.landlord.some((d) => d.required)" class="text-danger">*</span></label>
                   <DocumentUpload
                     v-model="formData.landlord_documents"
                     category="landlord"
                     compact
                     :document-types="documentTypesByParty.landlord"
+                    :identification-requirement-mode="identificationRequirementModeForParty('landlord')"
                     :show-errors="validationAttempted"
                     :missing-document-types="missingDocumentTypesByParty.landlord"
                     ref="landlordDocUploadRef"
@@ -1217,6 +1221,18 @@
                                 <div class="col-12 mt-3 property-documents-block">
                                     <label class="section-title mb-2">Property Documents <span v-if="isPropertyDocumentsSectionRequired" class="text-danger">*</span></label>
                                     
+                                    <div
+                                      v-if="validationAttempted && getMissingPropertyDocTypesForProperty(propIndex).some(t => t === 'eoi' || t === 'eoi_document')"
+                                      class="small text-danger mb-2"
+                                    >
+                                      EOI is required for this property. Please add an EOI document.
+                                    </div>
+                                    <div
+                                      v-if="validationAttempted && getMissingPropertyDocTypesForProperty(propIndex).some(t => t === 'booking' || t === 'booking_document')"
+                                      class="small text-danger mb-2"
+                                    >
+                                      Booking form is required for this property. Please add a booking document.
+                                    </div>
                                     <div
                                       v-if="validationAttempted && getMissingPropertyDocTypesForProperty(propIndex).some(t => t === 'payment_proof' || t === 'payment')"
                                       class="small text-danger mb-2"
@@ -2091,16 +2107,24 @@ function getExistingDocuments(partyType) {
   const party = deal.parties.find(p => p.party_type === partyType)
   if (!party?.documents) return []
   
-  return party.documents.map(doc => ({
-    file: doc.file || doc.url || null,
-    url: doc.url || null,
-    document_type: doc.document_type,
-    name: doc.name || doc.document_type,
-    size: doc.size || 0,
-    isUploading: false,
-    uploaded: true,
-    existing: true
-  }))
+  return party.documents.map((doc) => {
+    const resolvedUrl = doc.url || doc.file_url || null
+    const hasServerFile = !!(resolvedUrl || doc.path) && !(doc.file instanceof File)
+    return {
+      id: doc.id,
+      file: doc.file instanceof File ? doc.file : null,
+      url: resolvedUrl,
+      path: doc.path || null,
+      document_type: doc.document_type,
+      name: doc.file_name || doc.name || doc.document_type,
+      size: doc.file_size || doc.size || 0,
+      mime_type: doc.mime_type || '',
+      isUploading: false,
+      uploaded: true,
+      existing: true,
+      is_existing: hasServerFile,
+    }
+  })
 }
 
 function hydratePropertyDocsFromDealDocuments(deal) {
@@ -2109,12 +2133,17 @@ function hydratePropertyDocsFromDealDocuments(deal) {
   const propertyDocs = deal.documents.filter((doc) => {
     const category = String(doc?.document_category || doc?.category || '').toLowerCase()
     const docType = String(doc?.document_type || doc?.type || '').toLowerCase()
-    const isSpaOrPayment = docType.includes('spa') || docType.includes('payment')
+    const isPropertyKind =
+      docType.includes('spa') ||
+      docType.includes('payment') ||
+      docType.includes('eoi') ||
+      docType === 'booking' ||
+      docType.includes('booking')
     return (
       category === 'property' ||
       category === 'properties' ||
       category.includes('property') ||
-      (!category && isSpaOrPayment)
+      (!category && isPropertyKind)
     )
   })
   if (propertyDocs.length === 0) return
@@ -2126,6 +2155,8 @@ function hydratePropertyDocsFromDealDocuments(deal) {
 
   const existingPayment = Array.isArray(firstProperty.payment_proof) ? [...firstProperty.payment_proof] : []
   const existingSpa = Array.isArray(firstProperty.spa_document) ? [...firstProperty.spa_document] : []
+  const existingEoi = Array.isArray(firstProperty.eoi_documents) ? [...firstProperty.eoi_documents] : []
+  const existingBooking = Array.isArray(firstProperty.booking_documents) ? [...firstProperty.booking_documents] : []
 
   propertyDocs.forEach((doc) => {
     const rawType = String(doc?.document_type || doc?.type || '').toLowerCase()
@@ -2141,6 +2172,10 @@ function hydratePropertyDocsFromDealDocuments(deal) {
       labelHint.includes('proof')
     ) {
       normalizedType = 'payment_proof'
+    } else if (rawType.includes('eoi') || labelHint.includes('eoi')) {
+      normalizedType = 'eoi'
+    } else if (rawType === 'booking' || rawType.includes('booking') || labelHint.includes('booking')) {
+      normalizedType = 'booking'
     }
 
     const normalizedDoc = {
@@ -2159,10 +2194,18 @@ function hydratePropertyDocsFromDealDocuments(deal) {
     if (normalizedType === 'spa_document') {
       existingSpa.push(normalizedDoc)
     }
+    if (normalizedType === 'eoi') {
+      existingEoi.push(normalizedDoc)
+    }
+    if (normalizedType === 'booking') {
+      existingBooking.push(normalizedDoc)
+    }
   })
 
   firstProperty.payment_proof = existingPayment
   firstProperty.spa_document = existingSpa
+  firstProperty.eoi_documents = existingEoi
+  firstProperty.booking_documents = existingBooking
 }
 
 function normalizeStoredDocs(raw) {
@@ -2271,22 +2314,30 @@ function getMissingPropertyDocTypesForProperty(propIndex) {
   
   missingKeys.forEach(key => {
     // EOI
-    if (key === `property_${propIndex}_document_eoi` || key === `property_0_document_eoi`) {
+    if (key === `property_${propIndex}_document_eoi` || (propIndex === 0 && key === 'property_0_document_eoi')) {
       missing.add('eoi')
     }
     // Booking
-    if (key === `property_${propIndex}_document_booking` || key === `property_0_document_booking`) {
+    if (key === `property_${propIndex}_document_booking` || (propIndex === 0 && key === 'property_0_document_booking')) {
       missing.add('booking')
     }
     // SPA
-    if (key === `property_${propIndex}_document_spa` || key === `property_0_document_spa`) {
+    if (key === `property_${propIndex}_document_spa` || (propIndex === 0 && key === 'property_0_document_spa')) {
       missing.add('spa')
     }
     // Payment Proof
-    if (key === `property_${propIndex}_document_payment_proof` || key === `property_0_document_payment_proof`) {
+    if (key === `property_${propIndex}_document_payment_proof` || (propIndex === 0 && key === 'property_0_document_payment_proof')) {
       missing.add('payment_proof')
     }
   })
+
+  const prop = localProperties.value[propIndex]
+  if (prop) {
+    if (propertyStoredDocArrayHasContent(prop.eoi_documents)) missing.delete('eoi')
+    if (propertyStoredDocArrayHasContent(prop.booking_documents)) missing.delete('booking')
+    if (propertyStoredDocArrayHasContent(prop.spa_document)) missing.delete('spa')
+    if (propertyStoredDocArrayHasContent(prop.payment_proof)) missing.delete('payment_proof')
+  }
   
   return Array.from(missing)
 }
@@ -2395,6 +2446,14 @@ function reinitializePropertyDocuments() {
           const t = String(d?.document_type || d?.type || '').toLowerCase()
           return t.includes('spa')
         })
+        const eoiFromPropertyDocs = propertyDocs.filter((d) => {
+          const t = String(d?.document_type || d?.type || '').toLowerCase()
+          return t.includes('eoi')
+        })
+        const bookingFromPropertyDocs = propertyDocs.filter((d) => {
+          const t = String(d?.document_type || d?.type || '').toLowerCase()
+          return t === 'booking' || t.includes('booking')
+        })
 
         const paymentProof = normalizeStoredDocs(
           property.payment_proof ||
@@ -2408,6 +2467,19 @@ function reinitializePropertyDocuments() {
           property.spa_document_raw ||
           property.spa ||
           spaFromPropertyDocs
+        )
+        const eoiDocument = normalizeStoredDocs(
+          property.eoi_documents ||
+          property.eoi_document ||
+          property.eoi ||
+          property.eoi_documents_raw ||
+          eoiFromPropertyDocs
+        )
+        const bookingDocument = normalizeStoredDocs(
+          property.booking_documents ||
+          property.booking_document ||
+          property.booking_documents_raw ||
+          bookingFromPropertyDocs
         )
         
         let docs = []
@@ -2438,6 +2510,34 @@ function reinitializePropertyDocuments() {
                     name: doc.original_name || doc.name || 'SPA Document',
                     uploaded: true,
                     existing: true
+                })
+            })
+        }
+
+        if (Array.isArray(eoiDocument)) {
+            eoiDocument.forEach((doc) => {
+                docs.push({
+                    ...doc,
+                    document_type: 'eoi',
+                    url: doc.url || doc.path || null,
+                    file: doc.file || null,
+                    name: doc.original_name || doc.name || 'EOI',
+                    uploaded: true,
+                    existing: true,
+                })
+            })
+        }
+
+        if (Array.isArray(bookingDocument)) {
+            bookingDocument.forEach((doc) => {
+                docs.push({
+                    ...doc,
+                    document_type: 'booking',
+                    url: doc.url || doc.path || null,
+                    file: doc.file || null,
+                    name: doc.original_name || doc.name || 'Booking Form',
+                    uploaded: true,
+                    existing: true,
                 })
             })
         }
@@ -2628,10 +2728,39 @@ sections.forEach(section => {
   }
 }
 
-// Get required documents by residency
+// Passport / Emirates ID (national_id) depend on residency; API still lists both keys — we filter in UI.
+const RESIDENCY_PROOF_DOCUMENT_IDS = new Set(['passport', 'national_id'])
+
+function normalizeResidencyValue(residencyStatus) {
+  return String(residencyStatus ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, '_')
+}
+
+function allowedResidencyProofDocuments(residencyStatus) {
+  if (normalizeResidencyValue(residencyStatus) === 'non_resident') {
+    return new Set(['passport'])
+  }
+  return new Set(['passport', 'national_id'])
+}
+
 function getRequiredDocumentsByResidency(residencyStatus) {
-  const status = residencyStatus?.toLowerCase()
-  return status === 'resident' ? ['passport', 'national_id'] : ['passport']
+  return Array.from(allowedResidencyProofDocuments(residencyStatus))
+}
+
+/** Resident: Emirates ID + passport required; non-resident: passport required only (no Emirates ID slot). */
+function residencyProofDocumentRequired(party, docId) {
+  if (!RESIDENCY_PROOF_DOCUMENT_IDS.has(docId)) return true
+  const raw = normalizeResidencyValue(formData.value?.[`${party}_residency_status`])
+  if (raw === 'non_resident') return docId === 'passport'
+  return true
+}
+
+function identificationRequirementModeForParty(party) {
+  return normalizeResidencyValue(formData.value?.[`${party}_residency_status`]) === 'resident'
+    ? 'all'
+    : 'either'
 }
 const computedTotalAmount = computed(() => {
   let total = 0
@@ -2701,12 +2830,48 @@ const documentTypesByParty = computed(() => {
         result[party].push({
           id: docType,
           name: docType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-          required: true
+          required: residencyProofDocumentRequired(party, docType),
         })
       }
     })
   })
-  
+
+  // Keep showing document slots that are already filled (e.g. EOI done, booking still required).
+  parties.forEach((party) => {
+    if (!isPartyAllowed(party)) return
+    const existing = formData.value?.[`${party}_documents`]
+    if (!Array.isArray(existing)) return
+    const seen = new Set((result[party] || []).map((d) => d.id))
+    existing.forEach((doc) => {
+      const id = doc?.document_type
+      if (!id || typeof id !== 'string' || seen.has(id)) return
+      const hasFile =
+        isPendingUploadFile(doc.file) ||
+        !!(doc.url || doc.file_url || doc.path || doc.file_name || doc.name)
+      if (!hasFile) return
+      result[party].push({
+        id,
+        name: id.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        required: false,
+      })
+      seen.add(id)
+    })
+  })
+
+  parties.forEach((party) => {
+    if (!isPartyAllowed(party)) return
+    const allowed = allowedResidencyProofDocuments(formData.value?.[`${party}_residency_status`])
+    result[party] = result[party]
+      .filter((doc) => {
+        if (!RESIDENCY_PROOF_DOCUMENT_IDS.has(doc.id)) return true
+        return allowed.has(doc.id)
+      })
+      .map((doc) => {
+        if (!RESIDENCY_PROOF_DOCUMENT_IDS.has(doc.id)) return doc
+        return { ...doc, required: residencyProofDocumentRequired(party, doc.id) }
+      })
+  })
+
   return result
 })
 
@@ -2736,9 +2901,38 @@ const missingDocumentTypesByParty = computed(() => {
       }
     }
   })
-  
+
+  const parties = ['buyer', 'seller', 'tenant', 'landlord']
+  parties.forEach((party) => {
+    const allowed = allowedResidencyProofDocuments(formData.value?.[`${party}_residency_status`])
+    result[party] = result[party].filter((docType) => {
+      if (!RESIDENCY_PROOF_DOCUMENT_IDS.has(docType)) return true
+      if (!allowed.has(docType)) return false
+      return residencyProofDocumentRequired(party, docType)
+    })
+  })
+
   return result
 })
+
+const RESIDENCY_DOC_PARTIES = ['buyer', 'seller', 'tenant', 'landlord']
+watch(
+  () => RESIDENCY_DOC_PARTIES.map((p) => formData.value?.[`${p}_residency_status`]),
+  () => {
+    RESIDENCY_DOC_PARTIES.forEach((party) => {
+      if (normalizeResidencyValue(formData.value?.[`${party}_residency_status`]) !== 'non_resident') {
+        return
+      }
+      const k = `${party}_documents`
+      const docs = formData.value[k]
+      if (!Array.isArray(docs) || !docs.length) return
+      const next = docs.filter((d) => d?.document_type !== 'national_id')
+      if (next.length !== docs.length) {
+        formData.value[k] = next
+      }
+    })
+  },
+)
 
 // Check if field is required (stage rules)
 function hasField(fieldKey) {
@@ -2846,28 +3040,33 @@ function togglePropertyBudgetDropdown(propIndex) {
   openBudgetDropdownIndex.value = openBudgetDropdownIndex.value === propIndex ? null : propIndex
 }
 
+const PROPERTY_MODAL_DOC_SPECS = [
+  { id: 'eoi', name: 'EOI Document', missingFragments: ['document_eoi', 'eoi_document'], localKey: 'eoi_documents' },
+  { id: 'booking', name: 'Booking Form', missingFragments: ['document_booking', 'booking_document'], localKey: 'booking_documents' },
+  { id: 'spa', name: 'SPA Document', missingFragments: ['document_spa', 'spa_document'], localKey: 'spa_document' },
+  { id: 'payment_proof', name: 'Payment Proof', missingFragments: ['document_payment', 'payment_proof'], localKey: 'payment_proof' },
+]
+
 const propertyDocTypesForModal = computed(() => {
   const missingKeys = effectiveMissingFields.value || []
-  const docs = []
-  
-  // ✅ استخدم نفس الاسم المستخدم في checkPropertyDocumentExists
-  if (missingKeys.some(k => k.includes('document_eoi') || k.includes('eoi_document'))) {
-    docs.push({ id: 'eoi', name: 'EOI Document', required: true })
-  }
-  
-  if (missingKeys.some(k => k.includes('document_booking') || k.includes('booking_document'))) {
-    docs.push({ id: 'booking', name: 'Booking Document', required: true })
-  }
-  
-  if (missingKeys.some(k => k.includes('document_spa') || k.includes('spa_document'))) {
-    docs.push({ id: 'spa', name: 'SPA Document', required: true })
-  }
-  
-  if (missingKeys.some(k => k.includes('document_payment') || k.includes('payment_proof'))) {
-    docs.push({ id: 'payment_proof', name: 'Payment Proof', required: true })
-  }
-  
-  return docs
+  const propsList = localProperties.value || []
+
+  const missingMatches = (fragments) =>
+    missingKeys.some((k) => {
+      const s = String(k)
+      return fragments.some((frag) => s.includes(frag))
+    })
+
+  const anyPropertyHas = (localKey) =>
+    propsList.some((p) => propertyStoredDocArrayHasContent(p?.[localKey]))
+
+  return PROPERTY_MODAL_DOC_SPECS.filter(
+    (spec) => missingMatches(spec.missingFragments) || anyPropertyHas(spec.localKey)
+  ).map((spec) => ({
+    id: spec.id,
+    name: spec.name,
+    required: missingMatches(spec.missingFragments),
+  }))
 })
 const isPropertyDocumentsSectionRequired = computed(() =>
   propertyDocTypesForModal.value.some((d) => d.required)
@@ -3169,9 +3368,103 @@ if (key.startsWith('property_document_')) {
   }
   return
 }
-    
+
+    // API / stage engine uses property_0_document_eoi (indexed), not only property_document_eoi
+    const indexedPropDocMatch = key.match(/^property_(\d+)_document_(.+)$/)
+    if (indexedPropDocMatch) {
+      const propIndex = parseInt(indexedPropDocMatch[1], 10)
+      const rawDocType = indexedPropDocMatch[2]
+
+      let normalizedDocType = rawDocType
+      if (rawDocType === 'spa') {
+        normalizedDocType = 'spa_document'
+      } else if (rawDocType === 'payment') {
+        normalizedDocType = 'payment_proof'
+      } else if (rawDocType === 'booking') {
+        normalizedDocType = 'booking_document'
+      } else if (rawDocType === 'eoi') {
+        normalizedDocType = 'eoi_document'
+      }
+
+      let hasPropertyDoc = false
+      const combinedDocs = propertyDocumentsCombined.value?.[propIndex] || []
+      if (
+        Array.isArray(combinedDocs) &&
+        combinedDocs.some((doc) => {
+          const docType = doc?.document_type || ''
+          const hasFileOrUrl = !!(doc?.file || doc?.url)
+          return (
+            hasFileOrUrl &&
+            (docType === normalizedDocType ||
+              docType === rawDocType ||
+              docType === normalizedDocType.replace('_document', '') ||
+              (rawDocType === 'booking' &&
+                (docType === 'booking' || docType === 'booking_document')) ||
+              (rawDocType === 'eoi' && (docType === 'eoi' || docType === 'eoi_document')))
+          )
+        })
+      ) {
+        hasPropertyDoc = true
+      }
+
+      if (!hasPropertyDoc && localProperties.value[propIndex]) {
+        const property = localProperties.value[propIndex]
+        let existingDocs = null
+        if (normalizedDocType === 'booking_document' || rawDocType === 'booking') {
+          existingDocs = property.booking_documents
+        } else if (normalizedDocType === 'eoi_document' || rawDocType === 'eoi') {
+          existingDocs = property.eoi_documents
+        } else if (normalizedDocType === 'spa_document' || rawDocType === 'spa') {
+          existingDocs = property.spa_document
+        } else if (
+          normalizedDocType === 'payment_proof' ||
+          rawDocType === 'payment' ||
+          rawDocType === 'payment_proof'
+        ) {
+          existingDocs = property.payment_proof
+        }
+
+        if (existingDocs) {
+          let existingDocsArray = existingDocs
+          if (typeof existingDocsArray === 'string') {
+            try {
+              existingDocsArray = JSON.parse(existingDocsArray)
+            } catch {
+              existingDocsArray = []
+            }
+          }
+          if (
+            Array.isArray(existingDocsArray) &&
+            existingDocsArray.some(
+              (doc) => !!(doc?.file || doc?.url || doc?.path || doc?.original_name),
+            )
+          ) {
+            hasPropertyDoc = true
+          }
+          if (
+            existingDocsArray &&
+            typeof existingDocsArray === 'object' &&
+            !Array.isArray(existingDocsArray) &&
+            !!(existingDocsArray.file || existingDocsArray.url || existingDocsArray.path)
+          ) {
+            hasPropertyDoc = true
+          }
+        }
+      }
+
+      if (!hasPropertyDoc && !unresolved.includes(key)) {
+        unresolved.push(key)
+      }
+      return
+    }
+
     if (key.includes('_document_')) {
       const [partyType, docType] = key.split('_document_')
+      if (RESIDENCY_PROOF_DOCUMENT_IDS.has(docType)) {
+        const allowed = allowedResidencyProofDocuments(formData.value?.[`${partyType}_residency_status`])
+        if (!allowed.has(docType)) return
+        if (!residencyProofDocumentRequired(partyType, docType)) return
+      }
       const docs = formData.value?.[`${partyType}_documents`] || []
       const hasDoc = Array.isArray(docs) && docs.some(doc => 
         (doc?.file || doc?.url) && doc?.document_type === docType
@@ -3239,9 +3532,14 @@ function scrollToFirstValidationError() {
   const unresolved = unresolvedMissingKeys.value || []
 
   let propertyDocBtn = null
-  const firstMissingPropertyDoc = unresolved.find((k) => k.startsWith('property_document_'))
+  const firstMissingPropertyDoc =
+    unresolved.find((k) => k.startsWith('property_document_')) ||
+    unresolved.find((k) => /^property_\d+_document_/.test(k))
   if (firstMissingPropertyDoc) {
-    const docTypeRaw = firstMissingPropertyDoc.replace('property_document_', '')
+    const indexed = firstMissingPropertyDoc.match(/^property_\d+_document_(.+)$/)
+    const docTypeRaw = indexed
+      ? indexed[1]
+      : firstMissingPropertyDoc.replace('property_document_', '')
     const docTypeLabel =
       docTypeRaw === 'spa'
         ? 'spa document'
@@ -3312,6 +3610,41 @@ function scrollToFirstValidationError() {
   } catch {
     /* ignore focus errors */
   }
+}
+
+function isPendingUploadFile(value) {
+  if (!value) return false
+  if (typeof File !== 'undefined' && value instanceof File) return true
+  if (typeof Blob !== 'undefined' && value instanceof Blob) return true
+  return false
+}
+
+/** Entries already on the server (path/url/metadata). Pending browser Files are sent via multipart and must not be dropped here. */
+function persistedPropertyDocMetadataList(docs) {
+  if (!Array.isArray(docs)) return []
+  return docs.filter((doc) => {
+    if (!doc || typeof doc !== 'object') return false
+    if (isPendingUploadFile(doc.file)) return false
+    return true
+  })
+}
+
+/** True if this property doc array already has a stored file or a pending upload. */
+function propertyStoredDocArrayHasContent(arr) {
+  if (!Array.isArray(arr) || !arr.length) return false
+  return arr.some((doc) => {
+    if (!doc || typeof doc !== 'object') return false
+    if (isPendingUploadFile(doc.file)) return true
+    return !!(
+      doc.path ||
+      doc.file_path ||
+      doc.url ||
+      doc.file_url ||
+      doc.original_name ||
+      doc.file_name ||
+      doc.name
+    )
+  })
 }
 
 // Submit form — validate on click: scroll to first error, then save when complete
@@ -3403,7 +3736,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
   docRefs.forEach(({ party, key }) => {
     if (formData.value[key] && Array.isArray(formData.value[key])) {
       formData.value[key].forEach(doc => {
-        if (doc.file instanceof File) {
+        if (isPendingUploadFile(doc.file)) {
           documents.push({
             file: doc.file,
             document_type: doc.document_type,
@@ -3423,7 +3756,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
       const eoiFiles = []
       if (prop.eoi_documents && Array.isArray(prop.eoi_documents)) {
         prop.eoi_documents.forEach(doc => {
-          if (doc.file instanceof File) {
+          if (isPendingUploadFile(doc.file)) {
             eoiFiles.push(doc.file)
           }
         })
@@ -3433,7 +3766,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
       const bookingFiles = []
       if (prop.booking_documents && Array.isArray(prop.booking_documents)) {
         prop.booking_documents.forEach(doc => {
-          if (doc.file instanceof File) {
+          if (isPendingUploadFile(doc.file)) {
             bookingFiles.push(doc.file)
           }
         })
@@ -3443,7 +3776,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
       const paymentFiles = []
       if (prop.payment_proof && Array.isArray(prop.payment_proof)) {
         prop.payment_proof.forEach(doc => {
-          if (doc.file instanceof File) {
+          if (isPendingUploadFile(doc.file)) {
             paymentFiles.push(doc.file)
           }
         })
@@ -3453,7 +3786,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
       const spaFiles = []
       if (prop.spa_document && Array.isArray(prop.spa_document)) {
         prop.spa_document.forEach(doc => {
-          if (doc.file instanceof File) {
+          if (isPendingUploadFile(doc.file)) {
             spaFiles.push(doc.file)
           }
         })
@@ -3480,21 +3813,33 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
         budget_to: toNullableNumeric(prop.budget_to),
         purchase_price: toNullableNumeric(prop.purchase_price),
         commission: prop.commission || null,
-        // ✅ إضافة مستندات EOI و Booking
-        eoi_documents: eoiFiles,
-        booking_documents: bookingFiles,
-        payment_proof: paymentFiles,
-        spa_document: spaFiles,
+        // Persisted metadata + new files (previously only raw Files were sent — wiped EOI/booking/payment/SPA on save)
+        eoi_documents: [...persistedPropertyDocMetadataList(prop.eoi_documents), ...eoiFiles.map((f) => ({ file: f }))],
+        booking_documents: [...persistedPropertyDocMetadataList(prop.booking_documents), ...bookingFiles.map((f) => ({ file: f }))],
+        payment_proof: [...persistedPropertyDocMetadataList(prop.payment_proof), ...paymentFiles.map((f) => ({ file: f }))],
+        spa_document: [...persistedPropertyDocMetadataList(prop.spa_document), ...spaFiles.map((f) => ({ file: f }))],
       }
     })
   }
 
   // Guard against oversized multipart uploads (server limit is 8MB).
   // Keep a safety margin for non-file form fields/boundary bytes.
-  const totalUploadBytes = documents.reduce((sum, doc) => {
+  let totalUploadBytes = documents.reduce((sum, doc) => {
     const size = doc?.file?.size || 0
     return sum + size
   }, 0)
+  if (payload.properties && Array.isArray(payload.properties)) {
+    payload.properties.forEach((prop) => {
+      ;['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents'].forEach((k) => {
+        const arr = prop[k]
+        if (!Array.isArray(arr)) return
+        arr.forEach((item) => {
+          const f = item && typeof item === 'object' && 'size' in item && isPendingUploadFile(item) ? item : item?.file
+          if (f && typeof f.size === 'number') totalUploadBytes += f.size
+        })
+      })
+    })
+  }
   const maxSafeUploadBytes = 10 * 1024 * 1024
   if (totalUploadBytes > maxSafeUploadBytes) {
     const mb = (totalUploadBytes / (1024 * 1024)).toFixed(2)
@@ -3693,11 +4038,6 @@ function hasUnresolvedInSection(section) {
 //     }
 //   })
 // }, { deep: true })
-watch(localProperties, () => {
-    if (localProperties.value.length > 0) {
-        reinitializePropertyDocuments()
-    }
-}, { deep: true, immediate: true })
 // Options for selects
 const languageOptions = [
   { value: 'arabic', text: 'Arabic' },

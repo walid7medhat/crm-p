@@ -122,8 +122,8 @@ class ListingAccessRequestResource extends JsonResource
             'can_cancel'=>auth()->user()->id==$this->request_by,
             'formatted_date' => $this->viewing_date?->format('d M Y'),
             'formatted_time' => $this->viewing_time?->format('h:i A'),
-            'full_datetime' => $this->viewing_date && $this->viewing_time 
-                ? $this->viewing_date->format('Y-m-d') . ' ' . $this->viewing_time
+            'full_datetime' => $this->viewing_date && $this->viewing_time
+                ? $this->viewing_date->format('Y-m-d') . ' ' . $this->viewing_time->format('H:i:s')
                 : null,
              'review' => $this->review,
             'reviewed_at' => $this->reviewed_at,

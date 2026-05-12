@@ -4,11 +4,21 @@ import { useDealValidation } from './useDealValidation'
 export function useStageTransition() {
   const { normalizeMissingPayload } = useDealValidation()
 
+  function isUploadFile(value) {
+    if (!value) return false
+    if (typeof File !== 'undefined' && value instanceof File) return true
+    if (typeof Blob !== 'undefined' && value instanceof Blob) return true
+    return false
+  }
+
   function normalizeExistingPropertyDocs(rawDocs = [], fallbackType) {
     if (!Array.isArray(rawDocs)) return []
     return rawDocs
       .map((doc) => {
         if (!doc || typeof doc !== 'object') return null
+        // Raw browser files / blobs belong in multipart only, never in JSON.
+        if (typeof File !== 'undefined' && doc instanceof File) return null
+        if (typeof Blob !== 'undefined' && doc instanceof Blob) return null
         // Existing docs should be preserved in properties payload, but never send File blobs here.
         if (doc.file instanceof File) return null
         const path = doc.path || doc.file_path || null
@@ -51,9 +61,27 @@ export function useStageTransition() {
       const arr = payload[key]
       if (!Array.isArray(arr)) return
       arr.forEach((doc, idx) => {
-        if (doc?.file instanceof File) {
+        if (isUploadFile(doc?.file)) {
           formData.append(`${key}[${idx}]`, doc.file)
         }
+      })
+    })
+  }
+
+  /** New property files from CompleteStageFieldsModal (payment / SPA / EOI / booking) — indexed by property row. */
+  function appendPropertyIndexedDocumentUploads(properties, formData) {
+    if (!Array.isArray(properties)) return
+    const docFields = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents']
+    properties.forEach((property, propIndex) => {
+      if (!property || typeof property !== 'object') return
+      docFields.forEach((field) => {
+        const raw = property[field]
+        if (!Array.isArray(raw)) return
+        raw.forEach((item) => {
+          const f = item && typeof item === 'object' && 'file' in item ? item.file : item
+          if (!isUploadFile(f)) return
+          formData.append(`${field}[${propIndex}][]`, f)
+        })
       })
     })
   }
@@ -102,9 +130,12 @@ export function useStageTransition() {
             // Keep existing persisted property docs so backend syncProperties doesn't wipe them.
             lightweight.payment_proof = normalizeExistingPropertyDocs(property.payment_proof, 'payment_proof')
             lightweight.spa_document = normalizeExistingPropertyDocs(property.spa_document, 'spa')
+            lightweight.eoi_documents = normalizeExistingPropertyDocs(property.eoi_documents, 'eoi')
+            lightweight.booking_documents = normalizeExistingPropertyDocs(property.booking_documents, 'booking')
             return lightweight
           })
           formData.append('properties', JSON.stringify(sanitized))
+          appendPropertyIndexedDocumentUploads(value, formData)
         }
         return
       }
@@ -115,8 +146,9 @@ export function useStageTransition() {
 
     appendRootPropertyDocFiles(payload, formData)
 
-    documents.forEach((doc, index) => {
-      if (!doc?.file) return
+    let partyDocumentIndex = 0
+    documents.forEach((doc) => {
+      if (!isUploadFile(doc?.file)) return
 
       // Property docs must also be sent as root keys so backend can merge
       // into deal_properties payment_proof / spa_document.
@@ -134,10 +166,12 @@ export function useStageTransition() {
         }
       }
 
-      formData.append(`documents[${index}]`, doc.file)
-      formData.append(`document_types[${index}]`, doc.document_type)
-      formData.append(`categories[${index}]`, doc.category)
-      formData.append(`party_types[${index}]`, doc.party_type)
+      const i = partyDocumentIndex
+      partyDocumentIndex += 1
+      formData.append(`documents[${i}]`, doc.file)
+      formData.append(`document_types[${i}]`, doc.document_type)
+      formData.append(`categories[${i}]`, doc.category)
+      formData.append(`party_types[${i}]`, doc.party_type)
     })
 
     formData.append('stage_id', stageId)
