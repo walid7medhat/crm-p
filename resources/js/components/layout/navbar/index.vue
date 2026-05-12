@@ -388,26 +388,46 @@ const dealsRef = ref(null);
 const openSettingsHub = () => {
     window.dispatchEvent(new CustomEvent('kanban-open-settings'))
 }
+const defaultFilter = { id: 'leads-in-progress', label: 'Leads In Progress' }
+
 function applySearchToApi() {
-    const base = lastQuery.value && Object.keys(lastQuery.value).length ? { ...lastQuery.value } : {}
     const term = (search.value || '').trim()
-    const query = term ? { ...base, search: term } : base
     
-    // إرسال البحث إلى Kanban component عبر events
+    // إذا كان هناك نص في البحث، نرسل query مع search term
+    // وإذا كان هناك فلتر active، ندمجهما
+    let query = null
+    
+    if (term) {
+        query = { search: term }
+        // إذا كان هناك lastQuery (فلاتر سابقة)، ندمجها
+        if (lastQuery.value && Object.keys(lastQuery.value).length) {
+            query = { ...lastQuery.value, search: term }
+        }
+    } else if (lastQuery.value && Object.keys(lastQuery.value).length) {
+        query = { ...lastQuery.value }
+    }
+    
+    console.log('Apply search to API - active tab:', activeKanbanTab.value)
+    console.log('Query to send:', query)
+    console.log('Active filters:', activeFilters.value)
+    
     const payload = { 
-        query: Object.keys(query).length ? query : null, 
+        query: query, 
         activeFilters: activeFilters.value 
     }
     
     if (activeKanbanTab.value === 'deals') {
+        console.log('Dispatching kanban-deal-search event')
         window.dispatchEvent(new CustomEvent('kanban-deal-search', { detail: payload }))
     } else if (activeKanbanTab.value === 'leads') {
+        console.log('Dispatching kanban-lead-search event')
         window.dispatchEvent(new CustomEvent('kanban-lead-search', { detail: payload }))
     }
 }
 
 // Watch على search لتطبيق البحث مع debounce
 watch(search, () => {
+    console.log('Search value changed:', search.value)
     if (searchDebounceTimer.value) {
         clearTimeout(searchDebounceTimer.value)
         searchDebounceTimer.value = null
@@ -546,60 +566,90 @@ const dropLinkedQueryKeys = (query, queryKey) => {
     }
 };
 
-// في Kanban.vue، في onLeadSearch و onDealSearch
 const onLeadSearch = (payload) => {
+    console.log('🔍 onLeadSearch called with payload:', payload)
+    
     if (payload === null || payload?.query === null) {
         activeFilter.value = null
         activeFilters.value = []
         lastQuery.value = null
-        if (leadsRef.value) {
-            const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+        
+        // استخدم الـ ref من window
+        if (window.__kanbanLeadsRef) {
+            const leadsComponent = window.__kanbanLeadsRef()
             if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+                console.log('📞 Calling fetchLeads with null query')
                 leadsComponent.fetchLeads(true, null)
+            } else {
+                console.warn('fetchLeads not found on leads component')
             }
+        } else {
+            console.warn('window.__kanbanLeadsRef is not available')
         }
-        // إرسال تحديث للهيدر
+        
         window.dispatchEvent(new CustomEvent('kanban-lead-search-update', { 
             detail: { query: null, activeFilters: [] }
         }))
         return
     }
+    
     const query = payload?.query !== undefined ? payload.query : payload
     const pill = payload?.activePill
-    console.log("pill"+pill.id);
+    
+    console.log('Query:', query)
+    console.log('Active pill:', pill)
+    
     if (pill) {
         activeFilter.value = { id: pill.id, label: pill.label }
     } else if (!activeFilter.value) {
         activeFilter.value = { ...defaultFilter }
     }
+    
     activeFilters.value = Array.isArray(payload?.activeFilters) ? payload.activeFilters : []
     lastQuery.value = query && Object.keys(query).length ? { ...query } : null
     
-    // إرسال تحديث للهيدر
+    console.log('Active filters:', activeFilters.value)
+    console.log('Last query:', lastQuery.value)
+    
     window.dispatchEvent(new CustomEvent('kanban-lead-search-update', { 
         detail: { query: lastQuery.value, activeFilters: activeFilters.value }
     }))
     
-    if (leadsRef.value) {
-        const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+    // استخدم الـ ref من window
+    if (window.__kanbanLeadsRef) {
+        const leadsComponent = window.__kanbanLeadsRef()
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+            console.log('📞 Calling fetchLeads with query:', query || null)
             leadsComponent.fetchLeads(true, query || null)
+        } else {
+            console.warn('fetchLeads not found on leads component')
         }
+    } else {
+        console.warn('window.__kanbanLeadsRef is not available')
     }
 }
 
-// نفس الكلام في onDealSearch
+// قم بتعديل دالة onDealSearch
 const onDealSearch = (payload) => {
+    console.log('🔍 onDealSearch called with payload:', payload)
+    
     if (payload === null || payload?.query === null) {
         activeFilter.value = null
         activeFilters.value = []
         lastQuery.value = null
-        if (dealsRef.value) {
-            const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+        
+        if (window.__kanbanDealsRef) {
+            const dealsComponent = window.__kanbanDealsRef()
             if (dealsComponent && typeof dealsComponent.fetchDeals === 'function') {
+                console.log('📞 Calling fetchDeals with null query')
                 dealsComponent.fetchDeals(true, null)
+            } else {
+                console.warn('fetchDeals not found on deals component')
             }
+        } else {
+            console.warn('window.__kanbanDealsRef is not available')
         }
+        
         window.dispatchEvent(new CustomEvent('kanban-deal-search-update', { 
             detail: { query: null, activeFilters: [] }
         }))
@@ -610,20 +660,27 @@ const onDealSearch = (payload) => {
     activeFilters.value = Array.isArray(payload?.activeFilters) ? payload.activeFilters : []
     lastQuery.value = query && Object.keys(query).length ? { ...query } : null
     
+    console.log('Active filters:', activeFilters.value)
+    console.log('Last query:', lastQuery.value)
+    
     window.dispatchEvent(new CustomEvent('kanban-deal-search-update', { 
         detail: { query: lastQuery.value, activeFilters: activeFilters.value }
     }))
 
-    if (dealsRef.value) {
-        const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+    if (window.__kanbanDealsRef) {
+        const dealsComponent = window.__kanbanDealsRef()
         if (dealsComponent && typeof dealsComponent.fetchDeals === 'function') {
+            console.log('📞 Calling fetchDeals with query:', query || null)
             dealsComponent.fetchDeals(true, query || null)
+        } else {
+            console.warn('fetchDeals not found on deals component')
         }
+    } else {
+        console.warn('window.__kanbanDealsRef is not available')
     }
 }
 
-
-
+// تأكد من أن دوال removeFilter و clearSearchFilter تستخدم نفس الطريقة
 const removeFilter = (f) => {
     if (!lastQuery.value) return;
     const nextQuery = { ...lastQuery.value };
@@ -689,15 +746,16 @@ const clearSearchFilter = () => {
 };
 
 const openSearchModal = () => {
+    console.log('Opening search modal')
     showSearchModal.value = true;
     searchInputFocused.value = true;
     nextTick(() => {
-        const searchInput = document.querySelector('.navbar-header .search-input');
+        const searchInput = document.querySelector('.search-input');
         if (searchInput) {
             searchInput.focus();
         }
     });
-};
+}
 
 let searchBlurTimeout = null;
 function onSearchFocus() {

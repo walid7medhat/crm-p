@@ -127,7 +127,8 @@ const showAddStageModal = ref(false)
 const searchInputFocused = ref(false)
 const leadsRef = ref(null)
 const dealsRef = ref(null)
-
+const exposeDealsRef = () => dealsRef.value;
+const exposeLeadsRef = () => leadsRef.value;
 const integrationRef = ref(null)
 const leadPoolRef = ref(null) 
 const searchDropdownAnchorRef = ref(null)
@@ -345,6 +346,17 @@ onMounted(() => {
    window.addEventListener('kanban-open-settings', () => {
         showSettingsHub.value = true
     })
+      window.__kanbanDealsRef = () => dealsRef.value;
+    window.__kanbanLeadsRef = () => leadsRef.value;
+    
+    // Setup event listeners for search
+    window.addEventListener('kanban-lead-search', (e) => {
+        onLeadSearch(e.detail);
+    });
+    
+    window.addEventListener('kanban-deal-search', (e) => {
+        onDealSearch(e.detail);
+    });
 
 })
 // في Kanban.vue
@@ -379,6 +391,8 @@ onUnmounted(() => {
   window.removeEventListener('kanban-lead-search', () => {})
   window.removeEventListener('kanban-deal-search', () => {})
       window.removeEventListener('kanban-open-settings', () => {})
+        delete window.__kanbanDealsRef;
+    delete window.__kanbanLeadsRef;
 
 })
 
@@ -560,7 +574,10 @@ const hasAnySearchCriteria = computed(() => {
     return hasTextSearch || hasPills || hasQuery
 })
 
+// في Kanban.vue، أضف console.log للتتبع
 const onLeadSearch = (payload) => {
+    console.log('📥 Kanban.onLeadSearch received:', payload)
+    
     if (payload === null || payload?.query === null) {
         activeFilter.value = null
         activeFilters.value = []
@@ -568,6 +585,7 @@ const onLeadSearch = (payload) => {
         if (leadsRef.value) {
             const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
             if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+                console.log('🔄 Fetching leads with null query')
                 leadsComponent.fetchLeads(true, null)
             }
         }
@@ -575,7 +593,7 @@ const onLeadSearch = (payload) => {
     }
     const query = payload?.query !== undefined ? payload.query : payload
     const pill = payload?.activePill
-    console.log("pill"+pill.id);
+    console.log("pill:", pill?.id);
     if (pill) {
         activeFilter.value = { id: pill.id, label: pill.label }
     } else if (!activeFilter.value) {
@@ -583,9 +601,11 @@ const onLeadSearch = (payload) => {
     }
     activeFilters.value = Array.isArray(payload?.activeFilters) ? payload.activeFilters : []
     lastQuery.value = query && Object.keys(query).length ? { ...query } : null
+    console.log('Final query to send to fetchLeads:', query)
     if (leadsRef.value) {
         const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+            console.log('🔄 Fetching leads with query:', query || null)
             leadsComponent.fetchLeads(true, query || null)
         }
     }
