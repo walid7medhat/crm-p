@@ -292,7 +292,15 @@ class Deal extends Model
             ->when($request->created_to, fn($q, $v) => $q->whereDate('created_at', '<=', $v))
             
             // Buyer party filters
-            ->when($request->buyer_first_name, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('first_name', 'like', "%$v%")))
+            ->when($request->buyer_first_name, function ($q, $v) {
+                $q->whereHas('parties', function ($p) use ($v) {
+                    $p->where('party_type', 'buyer')
+                      ->where(function ($query) use ($v) {
+                          $query->where('first_name', 'like', "%$v%")
+                                ->orWhere('last_name', 'like', "%$v%");
+                      });
+                });
+            })    
             ->when($request->buyer_last_name, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('last_name', 'like', "%$v%")))
             ->when($request->buyer_phone, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('phone', 'like', "%$v%")))
             ->when($request->buyer_email, fn($q, $v) => $q->whereHas('parties', fn($p) => $p->where('party_type', 'buyer')->where('email', 'like', "%$v%")))

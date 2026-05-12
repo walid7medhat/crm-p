@@ -210,7 +210,7 @@
                           <div v-else-if="column.hasMoreDeals" :id="`sentinel-${column.stage_id}`" class="sentinel-trigger" style="height: 10px;"></div>
                         </div>
                         <div v-if="!column.hasMoreDeals && column.deals.length > 0" class="text-center py-2">
-                          <span class="text-muted small">No more deals to load</span>
+                          <!--<span class="text-muted small">No more deals to load</span>-->
                         </div>
                       </template>
                     </draggable>

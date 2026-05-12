@@ -395,7 +395,7 @@ class DealController extends Controller
             ->when($deal->lead_id, function($q) use($deal) {
                 $q->orWhere('lead_id', $deal->lead_id);
             })
-            ->with(['user:id,name,avatar', 'deal:id,deal_name,source,unit_no,responsible_person_id', 'deal.responsiblePerson:id,name']);
+            ->with(['user:id,name,avatar', 'deal:id,deal_name,source,responsible_person_id', 'deal.responsiblePerson:id,name']);
         
         if ($request->filled('search')) {
             $searchTerm = trim((string) $request->search);
@@ -408,7 +408,7 @@ class DealController extends Controller
                   ->orWhereHas('deal', function($dealQuery) use ($searchTerm) {
                       $dealQuery->where('deal_name', 'LIKE', "%{$searchTerm}%")
                           ->orWhere('source', 'LIKE', "%{$searchTerm}%")
-                          ->orWhere('unit_no', 'LIKE', "%{$searchTerm}%")
+                        //   ->orWhere('unit_no', 'LIKE', "%{$searchTerm}%")
                           ->orWhereHas('responsiblePerson', function ($userQuery) use ($searchTerm) {
                               $userQuery->where('name', 'LIKE', "%{$searchTerm}%");
                           });

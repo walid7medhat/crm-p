@@ -303,10 +303,12 @@
                                 :options="portalSourceOptions"
                                 :reduce="opt => opt.value"
                                 label="text"
-                                placeholder="Select Portal"
-                                :clearable="hasValue(form.sourcePortal)"
+                                placeholder="Select Portals"
+                                :clearable="form.sourcePortal && form.sourcePortal.length > 0"
+                                multiple
+                                filterable
                                 append-to-body
-                                class="custom-v-select mt-2"
+                                class="custom-v-select mt-2 office-multi-select"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -631,10 +633,12 @@
                                 :options="portalSourceOptions"
                                 :reduce="opt => opt.value"
                                 label="text"
-                                placeholder="Select Portal"
-                                :clearable="hasValue(form.sourcePortal)"
+                                placeholder="Select Portals"
+                                :clearable="form.sourcePortal && form.sourcePortal.length > 0"
+                                multiple
+                                filterable
                                 append-to-body
-                                class="custom-v-select mt-2"
+                                class="custom-v-select mt-2 office-multi-select"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -954,6 +958,9 @@ const queryToFormKeys = {
 
 function normalizeSourceWebsiteForm(next) {
     const siteValues = websiteSourceOptions.value.map(o => o.value).filter(v => v != null)
+    const portalValues = portalSourceOptions.value.map(o => o.value).filter(v => v != null)
+    
+    // معالجة website
     if (Array.isArray(next.source) && next.source.length) {
         next.sourceWebsite = next.source.filter(Boolean)
         next.source = 'website'
@@ -976,6 +983,17 @@ function normalizeSourceWebsiteForm(next) {
             next.sourceWebsite = [next.sourceWebsite]
         } else {
             next.sourceWebsite = []
+        }
+    }
+    
+    // معالجة portal
+    if (next.source === 'portal') {
+        if (Array.isArray(next.sourcePortal)) {
+            next.sourcePortal = next.sourcePortal.filter(v => v != null && v !== '')
+        } else if (next.sourcePortal) {
+            next.sourcePortal = [next.sourcePortal]
+        } else {
+            next.sourcePortal = []
         }
     }
 }
@@ -1004,6 +1022,7 @@ function syncFormFromQuery(query) {
         leadName: '',
         source: '',
         sourceWebsite: [],
+        sourcePortal:[],
         interactionResult: '',
         qualityStatus: '',
         team: '',
@@ -1039,6 +1058,10 @@ function syncFormFromQuery(query) {
         const sw = query.source_website
         next.sourceWebsite = Array.isArray(sw) ? sw.filter(Boolean) : [sw].filter(Boolean)
         next.source = 'website'
+    }
+     if (next.source === 'portal' && query.source_portal) {
+        const sp = query.source_portal
+        next.sourcePortal = Array.isArray(sp) ? sp.filter(Boolean) : [sp].filter(Boolean)
     }
     normalizeSourceWebsiteForm(next)
     next.budgetFrom = formatBudgetWithCommas(next.budgetFrom)
@@ -1171,7 +1194,7 @@ const form = ref({
     leadName: '',
     source: '',
     sourceWebsite: [],
-    sourcePortal: '',
+    sourcePortal: [],
     interactionResult: '',
     qualityStatus: '',
     createdFrom: '',    
@@ -1669,15 +1692,26 @@ const budgetDisplay = computed(() => {
 })
 const createdOnDisplay = computed(() => {
     if (form.value.createdOn === 'custom_date' && form.value.createdFrom && form.value.createdTo) {
-        return `${form.value.createdFrom} to ${form.value.createdTo}`
+        // إذا كان من وإلى مختلفين
+        if (form.value.createdFrom !== form.value.createdTo) {
+            return `${form.value.createdFrom} to ${form.value.createdTo}`
+        }
+        // إذا كان تاريخ واحد فقط
+        return form.value.createdFrom
     }
     const preset = createdOnOptions.find(opt => opt.value === form.value.createdOn)
     return preset?.text || 'Select Date'
 })
 const assignedOnDisplay = computed(() => {
     if (form.value.assignedOn === 'custom_date' && form.value.assignedFrom && form.value.assignedTo) {
-        return `${form.value.assignedFrom} to ${form.value.assignedTo}`
+        // إذا كان من وإلى مختلفين
+        if (form.value.assignedFrom !== form.value.assignedTo) {
+            return `${form.value.assignedFrom} to ${form.value.assignedTo}`
+        }
+        // إذا كان تاريخ واحد فقط
+        return form.value.assignedFrom
     }
+    // للقيم الأخرى (today, yesterday, etc.)
     const preset = createdOnOptions.find(opt => opt.value === form.value.assignedOn)
     return preset?.text || 'Select Date'
 })
@@ -1883,6 +1917,27 @@ function onDocumentClick(event) {
 
 function getDisplayValue(field, rawValue) {
     if (rawValue === null || rawValue === undefined || rawValue === '') return null
+    if (field.id === 'created_on') {
+        if (form.value.createdOn === 'custom_date' && form.value.createdFrom && form.value.createdTo) {
+            if (form.value.createdFrom !== form.value.createdTo) {
+                return `${form.value.createdFrom} to ${form.value.createdTo}`
+            }
+            return form.value.createdFrom
+        }
+        const preset = createdOnOptions.find(opt => opt.value === form.value.createdOn)
+        return preset?.text || null
+    }
+    
+    if (field.id === 'assigned_on') {
+        if (form.value.assignedOn === 'custom_date' && form.value.assignedFrom && form.value.assignedTo) {
+            if (form.value.assignedFrom !== form.value.assignedTo) {
+                return `${form.value.assignedFrom} to ${form.value.assignedTo}`
+            }
+            return form.value.assignedFrom
+        }
+        const preset = createdOnOptions.find(opt => opt.value === form.value.assignedOn)
+        return preset?.text || null
+    }
     if (field.formKey === 'areaId') {
         const area = (areaOptions.value || []).find(a => String(a.id) === String(rawValue))
         if (!area) return String(rawValue)
@@ -1920,13 +1975,18 @@ function getDisplayValue(field, rawValue) {
         }
         return 'Website'
     }
-    if (field.formKey === 'source' && rawValue === 'portal') {
-     const portalValue = form.value.sourcePortal
-        if (portalValue) {
+      if (field.formKey === 'source' && rawValue === 'portal') {
+        const portals = Array.isArray(form.value.sourcePortal) 
+            ? form.value.sourcePortal.filter(v => v != null && v !== '')
+            : (form.value.sourcePortal ? [form.value.sourcePortal] : [])
+        
+        if (portals.length) {
             const opts = portalSourceOptions.value
-            const opt = opts.find(o => o.value === portalValue)
-            const portalName = opt ? opt.text : String(portalValue)
-            return `Portal (${portalName})`
+            const names = portals.map(val => {
+                const opt = opts.find(o => o.value === val)
+                return opt ? opt.text : String(val)
+            })
+            return `Portal (${names.join(', ')})`
         }
         return 'Portal'
     }
@@ -2252,13 +2312,17 @@ function applySearch() {
             sourceParam = 'website'
         }
         }else if (form.value.source === 'portal') {
-        // ✅ معالجة Portal
-        if (form.value.sourcePortal && form.value.sourcePortal !== '') {
-            sourceParam = form.value.sourcePortal
-        } else {
-            sourceParam = 'portal'
-        }
-        }  else if (form.value.source) {
+            const portals = Array.isArray(form.value.sourcePortal)
+                ? form.value.sourcePortal.filter(v => v != null && v !== '')
+                : (form.value.sourcePortal ? [form.value.sourcePortal] : [])
+            if (portals.length > 1) {
+                sourceParam = portals
+            } else if (portals.length === 1) {
+                sourceParam = portals[0]
+            } else {
+                sourceParam = 'portal'
+            }
+        }   else if (form.value.source) {
             sourceParam = form.value.source
         }
 
@@ -2307,7 +2371,7 @@ function applySearch() {
     visibleFields.forEach(field => {
         const raw = form.value[field.formKey]
        if (field.id === 'stage') return
-
+        
         if (!hasValue(raw)) return
         
         const displayValue = getDisplayValue(

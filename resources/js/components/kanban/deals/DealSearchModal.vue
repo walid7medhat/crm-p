@@ -25,7 +25,7 @@
             <div class="search-section-title">Deal Information</div>
             <div class="row g-3">
               <div v-if="fieldSettings.name" class="col-md-6">
-                <label class="form-label-custom">Name</label>
+                <label class="form-label-custom">Deal Name</label>
                 <b-form-input v-model="form.deal_name" class="custom-input deal-input-placeholder" placeholder="Enter Deals Name" />
               </div>
               <div v-if="fieldSettings.stage_changed_by" class="col-md-6">
@@ -112,13 +112,13 @@
             <div class="search-section-title">Buyer Details</div>
             <div class="row g-3">
               <div v-if="fieldSettings.buyer_first_name" class="col-md-6">
-                <label class="form-label-custom">First Name</label>
-                <b-form-input v-model="form.buyer_first_name" class="custom-input" placeholder="Enter First Name" />
+                <label class="form-label-custom"> Name</label>
+                <b-form-input v-model="form.buyer_first_name" class="custom-input" placeholder="Enter Name" />
               </div>
-              <div v-if="fieldSettings.buyer_last_name" class="col-md-6">
-                <label class="form-label-custom">Last Name</label>
-                <b-form-input v-model="form.buyer_last_name" class="custom-input" placeholder="Enter Last Name" />
-              </div>
+              <!--<div v-if="fieldSettings.buyer_last_name" class="col-md-6">-->
+              <!--  <label class="form-label-custom">Last Name</label>-->
+              <!--  <b-form-input v-model="form.buyer_last_name" class="custom-input" placeholder="Enter Last Name" />-->
+              <!--</div>-->
               <div v-if="fieldSettings.buyer_phone" class="col-md-6">
                 <label class="form-label-custom">Phone Number</label>
                 <CrmPhoneInput v-model="form.buyer_phone" placeholder="Enter Phone Number" />
@@ -848,7 +848,7 @@ const defaultFieldSettings = {
   modified_by: true,
   created_by: true,
   buyer_first_name: true,
-  buyer_last_name: true,
+//   buyer_last_name: true,
   buyer_phone: true,
   buyer_date_of_birth: false,
   buyer_email: false,
@@ -928,8 +928,8 @@ const fieldSettingsSections = [
     tab: 'deals',
     label: 'Buyer Details',
     fields: [
-      { id: 'buyer_first_name', label: 'First Name' },
-      { id: 'buyer_last_name', label: 'Last Name' },
+      { id: 'buyer_first_name', label: 'Name' },
+    //   { id: 'buyer_last_name', label: 'Last Name' },
       { id: 'buyer_date_of_birth', label: 'Date Of Birth' },
       { id: 'buyer_phone', label: 'Phone Number' },
       { id: 'buyer_email', label: 'Email' },
@@ -1516,16 +1516,19 @@ const applySearch = () => {
   const query = {}
   const activeFilters = []
 
-  const pushFilter = (id, label, value) => {
+  // queryKey defaults to id, but pass it explicitly when the actual query param differs
+  // (e.g. deal_name → query.search) so removeFilter() in kanban_deal.vue can delete the
+  // right slot from the API query.
+  const pushFilter = (id, label, value, queryKey = id) => {
     if (value !== null && value !== undefined && value !== '' && !(Array.isArray(value) && value.length === 0)) {
-      activeFilters.push({ id, label, value, queryKey: id })
+      activeFilters.push({ id, label, value, queryKey })
     }
   }
 
   // Activity fields
   if (form.value.deal_name) {
     query.search = form.value.deal_name.trim()
-    pushFilter('deal_name', 'Name', form.value.deal_name)
+    pushFilter('deal_name', 'Name', form.value.deal_name, 'search')
   }
   if (form.value.stage_group?.length) {
     query.stage_id = form.value.stage_group[0]
@@ -1555,7 +1558,7 @@ if (createdByDateRange.value.from || createdByDateRange.value.to) {
   // Buyer fields
   if (form.value.buyer_first_name) {
     query.buyer_first_name = form.value.buyer_first_name
-    pushFilter('buyer_first_name', 'Buyer First Name', form.value.buyer_first_name)
+    pushFilter('buyer_first_name', 'Buyer Name', form.value.buyer_first_name)
   }
   if (form.value.buyer_last_name) {
     query.buyer_last_name = form.value.buyer_last_name

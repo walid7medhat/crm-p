@@ -698,10 +698,10 @@ const removeFilter = (f) => {
     activeFilters.value = activeFilters.value.filter(x => x.id !== f.id);
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null;
     if (!Object.keys(nextQuery).length) {
-        activeFilter.value = null;
-        activeFilters.value = [];
-        lastQuery.value = null;
-        search.value = '';
+          activeFilter.value = null;
+            activeFilters.value = [];
+            lastQuery.value = null;
+            search.value = '';
     }
 
     const payload = { query: lastQuery.value, activeFilters: activeFilters.value };

@@ -518,66 +518,88 @@ public function respond(Request $request, ListingAccessRequest $accessRequest): 
         return true;
     }
 
-     public function cancelRequest(Request $request, $listingId)
-    {
-        try {
-            $user = Auth::user();
+ public function cancelRequest(Request $request, $listingId)
+{
+    try {
+      $user = Auth::user();
+
+        $request->validate([
+            'request_type' => 'required|in:unit_number,owner_data,viewing'
+        ]);
+
+        $isManagerOrTeamLead = $user->hasRole('manager') || $user->hasRole('team_lead');
+        
+        $listing = Listing::findOrFail($listingId);
+        
+        $isManagerOfListingAgent = false;
+        if ($isManagerOrTeamLead && $listing->agent) {
+           
+            $subordinatesIds = $user->getAllSubordinatesIds();
+            $isManagerOfListingAgent = in_array($listing->agent->id, $subordinatesIds);
+        }
+        $query = ListingAccessRequest::where('listing_id', $listingId)
+            ->where('request_type', $request->request_type);
+
+        $query->where(function ($q) use ($user, $isManagerOrTeamLead, $isManagerOfListingAgent, $request) {
+            $q->where('requested_by', $user->id);
             
-            // Validate request
-            $request->validate([
-                'request_type' => 'required|in:unit_number,owner_data,viewing'
-            ]);
-
-            // Find the pending request
-            $accessRequest = ListingAccessRequest::where('listing_id', $listingId)
-                ->where('requested_by', $user->id)
-                ->where('request_type', $request->request_type)
-                ->whereIn('status', ['pending','in_progress'])
-                ->first();
-
-            if (!$accessRequest) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Request not found or already processed'
-                ], 404);
+            if ($isManagerOrTeamLead && $isManagerOfListingAgent && $request->request_type === 'viewing') {
+                $q->orWhereHas('listing', function ($subQuery) use ($user) {
+                    $subQuery->whereIn('agent_id', $user->getAllSubordinatesIds());
+                });
             }
-              broadcast(new AccessRequestStatusUpdated($accessRequest, 'cancelled'));
+        });
 
+        if ($request->request_type === 'viewing' && ($isManagerOrTeamLead && $isManagerOfListingAgent)) {
+            $query->whereIn('status', ['pending', 'in_progress', 'approved']);
+        } else {
+            $query->whereIn('status', ['pending', 'in_progress']);
+        }
 
-            // Get property and owner details
-            $property = Listing::with(['owner', 'agent'])->find($listingId);
-            
-            if (!$property) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Property not found'
-                ], 404);
-            }
+        $accessRequest = $query->first();
 
-            // Update status to cancelled
-            $accessRequest->update([
-                'status' => 'cancelled',
-                'cancelled_at' => now(),
-                'cancelled_by' => $user->id,
-                'cancellation_reason'=>$request->cancellation_reason
-            ]);
-
-            // Send notifications
-            $this->sendCancellationNotifications($accessRequest, $property, $user);
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Request cancelled successfully',
-                'data' => $accessRequest
-            ]);
-
-        } catch (\Exception $e) {
+        if (!$accessRequest) {
             return response()->json([
                 'status' => false,
-                'message' => 'Failed to cancel request: ' . $e->getMessage()
-            ], 500);
+                'message' => 'Request not found or not allowed to cancel'
+            ], 404);
         }
+
+        
+
+        broadcast(new AccessRequestStatusUpdated($accessRequest, 'cancelled'));
+
+        $property = Listing::with(['owner', 'agent'])->find($listingId);
+
+        if (!$property) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Property not found'
+            ], 404);
+        }
+
+        $accessRequest->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+            'cancelled_by' => $user->id,
+            'cancellation_reason' => $request->cancellation_reason
+        ]);
+
+        $this->sendCancellationNotifications($accessRequest, $property, $user);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Request cancelled successfully',
+            'data' => $accessRequest
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Failed to cancel request: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     private function sendCancellationNotifications($accessRequest, $property, $cancelledByUser)
     {

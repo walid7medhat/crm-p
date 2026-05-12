@@ -15,6 +15,21 @@ class ListingAccessRequestResource extends JsonResource
     public function toArray(Request $request): array
     {
            $user = auth()->user();
+           $isManagerOrTeamLead = $user->hasRole('manager') || $user->hasRole('team_lead');
+
+                $canCancel =
+                    // pending + in_progress → requester فقط
+                    (
+                        in_array($this->status, ['pending', 'in_progress']) &&
+                        $this->requested_by === $user->id
+                    )
+                    ||
+                    // approved → manager / team_lead فقط
+                    (
+                        $this->status === 'approved' &&
+                        $this->request_type === 'viewing' &&
+                        $isManagerOrTeamLead
+                    );
 // Calculate permissions based on user role and hierarchy
         $canManageAccessRequests = $user->canManageAccessRequests();
         if($this->request_type=='viewing'){
@@ -113,7 +128,7 @@ class ListingAccessRequestResource extends JsonResource
                 'can_in_progress' => $canRespond && $this->status === 'pending',
                 'can_reject' => $canRespond && ($this->status === 'pending' || $this->status === 'in_progress'),
                 'can_convert' => $canConvert && ($this->status === 'approved' || $this->status === 'pending'),
-                'can_cancel' => $this->requested_by === $user->id && $this->status === 'pending',
+                'can_cancel' => $canCancel,
                 'can_view_property' => true,
             ],
             'can_review'=>  $user && $this->requested_by  == $user->id,

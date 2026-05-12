@@ -274,7 +274,7 @@
                                             
                                             <!-- Cancel Request -->
                                             <li v-if="request.permissions.can_cancel">
-                                                <a class="dropdown-item " href="javascript:void(0)" @click="cancelRequest(request.id)">
+                                                <a class="dropdown-item " href="javascript:void(0)" @click="cancelRequest(request.listing?.id, request.request_type)">
                                                     <iconify-icon icon="ri:close-circle-line" class="me-2 text-warning"></iconify-icon>
                                                     Cancel Request
                                                 </a>
@@ -561,7 +561,47 @@ function editViewingTime(request) {
     }
     showTimeEditModal.value = true
 }
+async function cancelRequest(id, requestType) {
+    const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "Do you really want to cancel this request?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#01062d',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, cancel it',
+        cancelButtonText: 'No'
+    })
 
+    if (!result.isConfirmed) return
+
+    try {
+        const response = await api.post(`/listings/access-requests/${id}/cancel`, {
+            request_type: requestType
+        })
+
+        if (response.data.status) {
+            Swal.fire({
+                title: 'Success!',
+                text: 'Request cancelled successfully',
+                icon: 'success',
+                confirmButtonColor: '#01062d'
+            })
+
+            await fetchMyRequests()
+        } else {
+            throw new Error(response.data.message)
+        }
+
+    } catch (err) {
+        Swal.fire({
+            title: 'Error!',
+            text: err.response?.data?.message || 'Failed to cancel request',
+            icon: 'error',
+            confirmButtonColor: '#01062d'
+        })
+    }
+}
 async function saveTimeEdit() {
     try {
         if (!timeEditData.value.date && !timeEditData.value.time) {
@@ -1552,5 +1592,7 @@ function viewProperty(propertyId) {
     font-weight: 500 !important;
     font-size: 15px !important;
     color: #000 !important;
+        display: block;
+
 }
 </style>
