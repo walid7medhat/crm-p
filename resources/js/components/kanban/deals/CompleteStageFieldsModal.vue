@@ -3174,7 +3174,8 @@ function normalizePropertyFieldKey(field) {
 const effectiveMissingFields = computed(() => {
   const direct = Array.isArray(props.missingFields) ? props.missingFields : []
   const byStage = props.groupedMissing?.by_stage || props.missingFieldsGroupedByStage?.stages || []
-  
+  console.log("direct",direct);
+  console.log("byStage",byStage);
   let allFields = []
   
   if (!Array.isArray(byStage) || byStage.length === 0) {

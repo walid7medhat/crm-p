@@ -50,7 +50,7 @@ return [
                     'purchase_price' => true,     
                
                 ],
-                 'property_documents' => ['payment_proof', 'booking'],
+                 'property_documents' => ['payment_proof', 'booking','eoi'],
             ],
             
             // ===================== SPA STAGE (order 4) =====================

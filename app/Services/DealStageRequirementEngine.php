@@ -26,8 +26,7 @@ class DealStageRequirementEngine
         'unit_size',
         'developer_id',
         'developer_name',
-        'developer_phone',
-    ];
+        'developer_phone'    ];
     
         private int $currentTargetStageOrder = 0;
     public function __construct(private readonly DealStageValidator $validator)
