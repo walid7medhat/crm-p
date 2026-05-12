@@ -146,6 +146,7 @@ const syncActiveTabWithRoute = () => {
 
 watch(activeTab, (id) => {
     persistKanbanTab(id)
+    window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: id }))
 })
 
 function updateKanbanMobileBreakpoint() {
@@ -337,6 +338,7 @@ onMounted(() => {
         activeTab.value = 'leads'
     }
     syncActiveTabWithRoute()
+    window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: activeTab.value }))
     updateKanbanMobileBreakpoint()
     window.addEventListener('resize', updateKanbanMobileBreakpoint)
     setTimeout(() => {
@@ -346,8 +348,10 @@ onMounted(() => {
    window.addEventListener('kanban-open-settings', () => {
         showSettingsHub.value = true
     })
-      window.__kanbanDealsRef = () => dealsRef.value;
-    window.__kanbanLeadsRef = () => leadsRef.value;
+      // Refs declared on components inside a v-for are arrays in Vue 3 — unwrap so
+      // external callers (navbar search handlers) get the actual component instance.
+      window.__kanbanDealsRef = () => Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value;
+    window.__kanbanLeadsRef = () => Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value;
     
     // Setup event listeners for search
     window.addEventListener('kanban-lead-search', (e) => {

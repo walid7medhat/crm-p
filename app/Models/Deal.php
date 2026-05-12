@@ -235,16 +235,33 @@ class Deal extends Model
             ->when($request->status, fn($q, $v) => $q->where('status', $v))
             ->when($request->responsible_id, fn($q, $v) => $q->where('responsible_person_id', $v))
            ->when($request->modified_by, function ($q, $v) {
-                $q->orWhereHas('histories', function ($h) use ($v) {
-                    $h->where('user_id', $v)
-                      ->orWhere('action', 'updated')
-                      ->orWhere('action', 'stage_changed');
+                // histories() returns a Builder, not a real Eloquent relation, so whereHas()
+                // throws "undefined method ... getRelated()". Inline the same OR-on-deal_id-or-
+                // lead_id predicate via whereExists. `action` lives inside the `changes` JSON.
+                $q->orWhereExists(function ($sub) use ($v) {
+                    $sub->selectRaw('1')
+                        ->from('lead_histories as lh')
+                        ->where(function ($w) {
+                            $w->whereColumn('lh.deal_id', 'deals.id')
+                              ->orWhereColumn('lh.lead_id', 'deals.lead_id');
+                        })
+                        ->where(function ($w) use ($v) {
+                            $w->where('lh.user_id', $v)
+                              ->orWhere('lh.changes->action', 'updated')
+                              ->orWhere('lh.changes->action', 'stage_changed');
+                        });
                 });
             })
             ->when($request->stage_changed_by, function ($q, $v) {
-                $q->whereHas('histories', function ($h) use ($v) {
-                    $h->where('action', 'stage_changed')
-                      ->where('user_id', $v);
+                $q->whereExists(function ($sub) use ($v) {
+                    $sub->selectRaw('1')
+                        ->from('lead_histories as lh')
+                        ->where(function ($w) {
+                            $w->whereColumn('lh.deal_id', 'deals.id')
+                              ->orWhereColumn('lh.lead_id', 'deals.lead_id');
+                        })
+                        ->where('lh.changes->action', 'stage_changed')
+                        ->where('lh.user_id', $v);
                 });
             })
             ->when($request->my_deals, function ($q, $v) {
@@ -291,8 +308,6 @@ class Deal extends Model
                     $query->where('deal_number', 'like', "%$search%")
                         ->orWhere('deal_name', 'like', "%$search%")
                         ->orWhere('source', 'like', "%$search%")
-                        ->orWhere('property_reference', 'like', "%$search%")
-                        ->orWhere('property_link', 'like', "%$search%")
                         ->orWhere('currency', 'like', "%$search%")
                         ->orWhere('lost_reason', 'like', "%$search%")
                         ->orWhereHas('responsiblePerson', fn($u) => $u->where('name', 'like', "%$search%")->orWhere('email', 'like', "%$search%"))

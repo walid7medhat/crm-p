@@ -477,6 +477,15 @@ const setActiveKanbanTab = (tabId) => {
   window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: tabId }))
 }
 
+// Sync from kanban_deal.vue when its activeTab changes (route-forced or in-page tab switch).
+// Without this, the navbar's activeKanbanTab drifts and applySearchToApi dispatches the wrong
+// event (e.g. kanban-lead-search while viewing the Deals board), so filters appear inert.
+const onKanbanTabChangeFromPage = (e) => {
+  const next = e?.detail
+  if (!next || activeKanbanTab.value === next) return
+  activeKanbanTab.value = next
+}
+
 const openKanbanSearch = () => {
   showKanbanSearchModal.value = true
 }
@@ -1154,14 +1163,16 @@ onMounted(() => {
       search.value = ''
     }
   })
-  
+
   window.addEventListener('kanban-deal-search-update', (e) => {
     if (e.detail) {
       activeFilters.value = e.detail.activeFilters || []
       lastQuery.value = e.detail.query
       search.value = ''
     }
-  }) 
+  })
+
+  window.addEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
 });
 
 onUnmounted(() => {
@@ -1169,6 +1180,7 @@ onUnmounted(() => {
    document.removeEventListener('click', onDocumentClick);
   window.removeEventListener('kanban-lead-search-update', () => {})
   window.removeEventListener('kanban-deal-search-update', () => {})
+  window.removeEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
   if (searchDebounceTimer.value) {
     clearTimeout(searchDebounceTimer.value);
     searchDebounceTimer.value = null;
