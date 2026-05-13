@@ -41,6 +41,7 @@
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
           :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -94,6 +95,7 @@
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
           :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -189,6 +191,7 @@
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
           :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -230,6 +233,8 @@
           :property-types="inlineEditLookup.propertyTypes || []"
           :developers="inlineEditLookup.developers || []"
           :selected-stage-name="selectedStageName"
+          :selected-stage-order="selectedStageOrder || 0"
+          :deal-type="deal?.deal_type || 'secondary'"
           :readonly="false"
           @property-updated="handlePropertyUpdated"
           @refresh-deal="() => emit('refresh-deal')"
@@ -249,6 +254,7 @@
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
           :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -377,6 +383,7 @@
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
           :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -465,6 +472,7 @@
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
           :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -498,6 +506,7 @@
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
           :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -559,6 +568,7 @@ const props = defineProps({
   inlineEditLoading: { type: Boolean, default: false },
   selectedStageId: { type: [Number, String], default: null },
   selectedStageName: { type: String, default: '' },
+  selectedStageOrder: { type: [Number, String], default: 0 },
   hideInlineEditActions: { type: Boolean, default: false },
 })
 const emit = defineEmits(['edit-section', 'update:inline-edit-data', 'inline-edit-save', 'inline-edit-cancel', 'search-areas', 'search-subcommunities', 'refresh-deal'])
@@ -613,9 +623,11 @@ const buyer = computed(() => {
   const d = props.deal || {}
 
   if (d.parties) {
-    return d.parties.find(
+    const party = d.parties.find(
       p => p.party_type === 'buyer' && p.party_role === 'primary'
     ) || {}
+    // Map backend `date_of_birth` to `dob` for template consumption.
+    return { ...party, dob: party.dob || party.date_of_birth || null }
   }
 
   // fallback
@@ -636,9 +648,11 @@ const seller = computed(() => {
   const d = props.deal || {}
 
   if (d.parties) {
-    return d.parties.find(
+    const party = d.parties.find(
       p => p.party_type === 'seller' && p.party_role === 'primary'
     ) || {}
+    // Map backend `date_of_birth` to `dob` for template consumption.
+    return { ...party, dob: party.dob || party.date_of_birth || null }
   }
 
   return {

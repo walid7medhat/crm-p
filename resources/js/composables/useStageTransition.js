@@ -68,10 +68,10 @@ export function useStageTransition() {
     })
   }
 
-  /** New property files from CompleteStageFieldsModal (payment / SPA / EOI / booking) — indexed by property row. */
+  /** New property files from CompleteStageFieldsModal (payment / SPA / EOI / booking / MOU / NOC) — indexed by property row. */
   function appendPropertyIndexedDocumentUploads(properties, formData) {
     if (!Array.isArray(properties)) return
-    const docFields = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents']
+    const docFields = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents']
     properties.forEach((property, propIndex) => {
       if (!property || typeof property !== 'object') return
       docFields.forEach((field) => {
@@ -117,6 +117,10 @@ export function useStageTransition() {
             'commission',
             'payment_proof',
             'spa_document',
+            'eoi_documents',
+            'booking_documents',
+            'mou_documents',
+            'noc_documents',
           ]
 
           const sanitized = value.map((property) => {
@@ -132,6 +136,8 @@ export function useStageTransition() {
             lightweight.spa_document = normalizeExistingPropertyDocs(property.spa_document, 'spa')
             lightweight.eoi_documents = normalizeExistingPropertyDocs(property.eoi_documents, 'eoi')
             lightweight.booking_documents = normalizeExistingPropertyDocs(property.booking_documents, 'booking')
+            lightweight.mou_documents = normalizeExistingPropertyDocs(property.mou_documents, 'mou')
+            lightweight.noc_documents = normalizeExistingPropertyDocs(property.noc_documents, 'noc')
             return lightweight
           })
           formData.append('properties', JSON.stringify(sanitized))
@@ -147,11 +153,15 @@ export function useStageTransition() {
     appendRootPropertyDocFiles(payload, formData)
 
     let partyDocumentIndex = 0
+    let eoiDocUploadIndex = 0
+    let bookingDocUploadIndex = 0
+    let mouDocUploadIndex = 0
+    let nocDocUploadIndex = 0
     documents.forEach((doc) => {
       if (!isUploadFile(doc?.file)) return
 
       // Property docs must also be sent as root keys so backend can merge
-      // into deal_properties payment_proof / spa_document.
+      // into deal_properties payment_proof / spa_document / eoi / booking / mou / noc.
       if (doc.category === 'property') {
         const docType = String(doc.document_type || '').toLowerCase()
         if (docType === 'payment_proof' || docType === 'payment' || docType.includes('payment')) {
@@ -162,6 +172,26 @@ export function useStageTransition() {
         if (docType === 'spa' || docType === 'spa_document' || docType.includes('spa')) {
           formData.append(`spa_document[${spaDocumentUploadIndex}]`, doc.file)
           spaDocumentUploadIndex += 1
+          return
+        }
+        if (docType === 'eoi' || docType === 'eoi_document' || docType.includes('eoi')) {
+          formData.append(`eoi_documents[${eoiDocUploadIndex}]`, doc.file)
+          eoiDocUploadIndex += 1
+          return
+        }
+        if (docType === 'booking' || docType === 'booking_document' || docType.includes('booking')) {
+          formData.append(`booking_documents[${bookingDocUploadIndex}]`, doc.file)
+          bookingDocUploadIndex += 1
+          return
+        }
+        if (docType === 'mou' || docType === 'mou_document' || docType.includes('mou')) {
+          formData.append(`mou_documents[${mouDocUploadIndex}]`, doc.file)
+          mouDocUploadIndex += 1
+          return
+        }
+        if (docType === 'noc' || docType === 'noc_document' || docType.includes('noc')) {
+          formData.append(`noc_documents[${nocDocUploadIndex}]`, doc.file)
+          nocDocUploadIndex += 1
           return
         }
       }

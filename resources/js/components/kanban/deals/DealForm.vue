@@ -175,8 +175,8 @@
             <div v-if="showErrors && fieldErrors.seller_residency_status" class="invalid-feedback d-block">{{ fieldErrors.seller_residency_status }}</div>
           </div>
           <div class="col-md-4"  v-if="form.seller_residency_status !== 'resident'">
-            <label class="form-label-custom">Country Of Residence</label>
-            <v-select v-model="form.seller_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" clearable>
+            <label class="form-label-custom">Country Of Residence <span class="text-danger">*</span></label>
+            <v-select v-model="form.seller_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.seller_country }" clearable>
               <template #open-indicator="{ attributes }">
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
@@ -259,8 +259,8 @@
             <div v-if="showErrors && fieldErrors.tenant_residency_status" class="invalid-feedback d-block">{{ fieldErrors.tenant_residency_status }}</div>
           </div>
           <div class="col-md-4" v-if="form.tenant_residency_status !== 'resident'">
-            <label class="form-label-custom">Country Of Residence</label>
-            <v-select v-model="form.tenant_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" clearable>
+            <label class="form-label-custom">Country Of Residence <span class="text-danger">*</span></label>
+            <v-select v-model="form.tenant_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.tenant_country }" clearable>
               <template #open-indicator="{ attributes }">
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
@@ -343,8 +343,8 @@
             <div v-if="showErrors && fieldErrors.landlord_residency_status" class="invalid-feedback d-block">{{ fieldErrors.landlord_residency_status }}</div>
           </div>
           <div class="col-md-4" v-if="form.landlord_residency_status !== 'resident'">
-            <label class="form-label-custom">Country Of Residence</label>
-            <v-select v-model="form.landlord_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" clearable>
+            <label class="form-label-custom">Country Of Residence <span class="text-danger">*</span></label>
+            <v-select v-model="form.landlord_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.landlord_country }" clearable>
               <template #open-indicator="{ attributes }">
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
@@ -403,6 +403,7 @@
             :required-fields="props.missingFields"
             :deal-type="dealType"
             :selected-stage-name="selectedStageName"
+            :selected-stage-order="selectedStageOrder"
           :property-doc-types="propertyDocTypes"
              :show-property-documents="showPropertyDocuments"
               :inline-mode="inlineMode"
@@ -485,7 +486,7 @@
             <span v-else>Purchase Price</span>
             <span v-if="isPurchasePriceRequired" class="text-danger">*</span>
           </label>
-        <div class="input-group"><span class="input-group-text">AED</span><b-form-input v-model="form.purchase_price" type="number" placeholder="Amount" class="custom-input" :class="{ 'is-invalid': showErrors && isPurchasePriceRequired && !form.purchase_price }" /></div></div>
+        <div class="input-group"><span class="input-group-text">AED</span><b-form-input v-model="form.purchase_price" type="text" inputmode="numeric" placeholder="Amount" class="custom-input" :class="{ 'is-invalid': showErrors && isPurchasePriceRequired && !form.purchase_price }" @keypress="onMoneyKeypress" /></div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Developer</label>
             <v-select v-model="form.developer_id" :options="developers" :reduce="item => item.id" label="name" placeholder="Select Developer" class="custom-v-select" clearable>
@@ -520,7 +521,7 @@
             <label class="form-label-custom">Deal Total Amount</label>
             <div class="input-group">
               <span class="input-group-text">AED</span>
-              <b-form-input v-model="form.deal_total_amount" type="number" placeholder="Enter Total Amount" class="custom-input" />
+              <b-form-input v-model="form.deal_total_amount" type="text" inputmode="numeric" placeholder="Enter Total Amount" class="custom-input" @keypress="onMoneyKeypress" />
             </div>
             <div v-if="showErrors && fieldErrors.deal_total_amount" class="invalid-feedback d-block">{{ fieldErrors.deal_total_amount }}</div>
           </div>
@@ -558,7 +559,9 @@
                 <b-form-input
                     :model-value="form.value.budget_from ? formatBudgetWithCommas(form.value.budget_from) : ''"
                     placeholder="0"
+                    inputmode="numeric"
                     class="custom-input budget-dropdown-input"
+                    @keypress="onMoneyKeypress"
                     @update:model-value="(val) => setBudgetValue('budget_from', val)"
                 />
             </div>
@@ -567,7 +570,9 @@
                 <b-form-input
                     :model-value="form.value.budget_to ? formatBudgetWithCommas(form.value.budget_to) : ''"
                     placeholder="0"
+                    inputmode="numeric"
                     class="custom-input budget-dropdown-input"
+                    @keypress="onMoneyKeypress"
                     @update:model-value="(val) => setBudgetValue('budget_to', val)"
                 />
             </div>
@@ -609,6 +614,7 @@ const props = defineProps({
   fieldErrors: { type: Object, default: () => ({}) },
   selectedStageId: { type: [Number, String], default: null },
   selectedStageName: { type: String, default: '' },
+  selectedStageOrder: { type: [Number, String], default: 0 },
   missingFields: { type: Array, default: () => [] },
   activeEditSection: { type: String, default: null },
   inlineMode: { type: Boolean, default: false }
@@ -652,6 +658,10 @@ function formatBudgetWithCommas(value) {
 function setBudgetValue(key, value) {
     const digits = normalizeBudgetString(value)
     form.value[key] = digits ? Number(digits) : null
+}
+
+function onMoneyKeypress(e) {
+  if (!/^\d$/.test(e.key)) e.preventDefault()
 }
 
 function getBudgetTriggerElement() {
@@ -734,8 +744,12 @@ const isBudgetRequired = computed(() => {
 })
 
 const showPurchasePrice = computed(() => {
+  const dt = props.dealType
+  if (dt !== 'primary' && dt !== 'secondary') return false
+  const order = Number(props.selectedStageOrder) || 0
+  if (order >= 3) return true
   const stageName = props.selectedStageName?.toLowerCase() || ''
-  return stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
+  return stageName.includes('booking') || stageName.includes('mou') || stageName.includes('spa') || stageName.includes('won')
 })
 
 const isPurchasePriceRequired = computed(() => {
@@ -784,38 +798,54 @@ const primaryBuyerDocTypes = computed(() => {
 })
 const propertyDocTypes = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
-  
-  // ✅ Log for debugging
-  console.log('=== propertyDocTypes Debug ===')
-  console.log('Selected Stage Name:', props.selectedStageName)
-  console.log('Stage Name (lowercase):', stageName)
-  console.log('Includes "eoi":', stageName.includes('eoi'))
-  console.log('Includes "booking":', stageName.includes('booking'))
-  console.log('Includes "spa":', stageName.includes('spa'))
-  console.log('Includes "won":', stageName.includes('won'))
-  console.log('================================')
-  
-  // EOI stage
+  const dt = props.dealType
+  const order = Number(props.selectedStageOrder) || 0
+
+  // SECONDARY: order 3 = MOU, 4 = NOC, 5 = Won. All property docs are OPTIONAL for secondary.
+  if (dt === 'secondary') {
+    if (order >= 5 || stageName.includes('won') || stageName.includes('deal won')) {
+      return [
+        { id: 'mou', name: 'MOU Document', required: false },
+        { id: 'noc', name: 'NOC Document', required: false },
+        { id: 'payment_proof', name: 'Payment Proof', required: false },
+        { id: 'spa', name: 'SPA Document', required: false },
+      ]
+    }
+    if (order >= 4 || stageName.includes('noc')) {
+      return [
+        { id: 'mou', name: 'MOU Document', required: false },
+        { id: 'noc', name: 'NOC Document', required: false },
+        { id: 'payment_proof', name: 'Payment Proof', required: false },
+      ]
+    }
+    if (order >= 3 || stageName.includes('mou')) {
+      return [
+        { id: 'mou', name: 'MOU Document', required: false },
+        { id: 'payment_proof', name: 'Payment Proof', required: false },
+      ]
+    }
+    if (order >= 2) {
+      return [
+        { id: 'payment_proof', name: 'Payment Proof', required: false },
+      ]
+    }
+    return []
+  }
+
+  // PRIMARY (existing flow)
   if (stageName.includes('eoi')) {
-    console.log('✅ Returning EOI documents')
     return [
       { id: 'eoi', name: 'EOI Document', required: true },
     ]
   }
-  
-  // Booking stage
   if (stageName.includes('booking')) {
-    console.log('✅ Returning Booking documents')
     return [
       { id: 'eoi', name: 'EOI Document', required: true },
       { id: 'booking', name: 'Booking Form', required: true },
       { id: 'payment_proof', name: 'Payment Proof', required: false },
     ]
   }
-  
-  // SPA stage
   if (stageName.includes('spa')) {
-    console.log('✅ Returning SPA documents')
     return [
       { id: 'eoi', name: 'EOI Document', required: true },
       { id: 'booking', name: 'Booking Form', required: true },
@@ -823,10 +853,7 @@ const propertyDocTypes = computed(() => {
       { id: 'spa', name: 'SPA Document', required: true },
     ]
   }
-  
-  // Won stage (or any other after SPA)
   if (stageName.includes('won') || stageName.includes('deal won')) {
-    console.log('✅ Returning Won documents')
     return [
       { id: 'eoi', name: 'EOI Document', required: true },
       { id: 'booking', name: 'Booking Form', required: true },
@@ -834,30 +861,39 @@ const propertyDocTypes = computed(() => {
       { id: 'spa', name: 'SPA Document', required: true },
     ]
   }
-  
-  console.log('❌ No matching stage, returning empty array')
-  // Default (no stage or unrecognized)
+
   return []
 })
 const secondaryBuyerDocTypes = computed(() => {
   const residencyStatus = form.value?.buyer_residency_status
   const requiredResidencyDocs = getRequiredDocumentsByResidency(residencyStatus)
+  const order = Number(props.selectedStageOrder) || 0
   const docs = []
   if (requiredResidencyDocs.includes('passport')) docs.push({ id: 'passport', name: 'Buyer Passport', required: true })
   if (requiredResidencyDocs.includes('national_id')) docs.push({ id: 'national_id', name: 'Buyer Emirates ID', required: true })
   docs.push({ id: 'kyc', name: 'Buyer KYC', required: isSpaStageOrLater.value })
-  // docs.push({ id: 'spa', name: 'Buyer SPA', required: isSpaStageOrLater.value })
-  // docs.push({ id: 'payment_proof', name: 'Buyer Payment Proof', required: isEoiStageOrLater.value })
-  docs.push({ id: 'noc', name: 'NOC Letter', required: false })
-  docs.push({ id: 'title_deed', name: 'New Title Deed / New SPA', required: false })
+  // Security Deposit appears from stage 2 (Security Deposit) onwards.
+  if (order >= 2) {
+    docs.push({ id: 'security_deposit', name: 'Buyer Security Deposit', required: false })
+  }
   return docs
 })
 
 const sellerDocTypes = computed(() => {
   const residencyStatus = form.value?.seller_residency_status
   const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
-  const allDocs = { passport: { id: 'passport', name: 'Seller Passport', required: true }, national_id: { id: 'national_id', name: 'Seller Emirates ID', required: true }, title_deed: { id: 'title_deed', name: 'Unit SPA / Title Deed', required: false } }
-  return requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
+  const order = Number(props.selectedStageOrder) || 0
+  const allDocs = {
+    passport: { id: 'passport', name: 'Seller Passport', required: true },
+    national_id: { id: 'national_id', name: 'Seller Emirates ID', required: true },
+    title_deed: { id: 'title_deed', name: 'Unit SPA / Title Deed', required: false },
+  }
+  const docs = requiredDocs.map(docType => allDocs[docType]).filter(doc => doc)
+  // Security Deposit appears from stage 2 (Security Deposit) onwards.
+  if (order >= 2) {
+    docs.push({ id: 'security_deposit', name: 'Seller Security Deposit', required: false })
+  }
+  return docs
 })
 
 const tenantDocTypes = computed(() => {
@@ -1200,9 +1236,13 @@ const onListingSelected = (listing) => {
 
 // ========== Multi Properties Functions ==========
 const checkShowMultiProperties = () => {
+  const dt = props.dealType
+  const order = Number(props.selectedStageOrder) || 0
   const stageName = props.selectedStageName?.toLowerCase() || ''
-  const stagesWithMultiProps = ['eoi', 'booking', 'spa', 'won', 'deal won']
-  const shouldShow = stagesWithMultiProps.some(stage => stageName.includes(stage))
+  const stagesWithMultiProps = ['eoi', 'booking', 'mou', 'spa', 'won', 'deal won']
+  const orderMatch = (dt === 'primary' || dt === 'secondary') && order >= 2
+  const nameMatch = stagesWithMultiProps.some(stage => stageName.includes(stage))
+  const shouldShow = orderMatch || nameMatch
   showMultiProperties.value = shouldShow
   if (shouldShow && propertiesList.value.length === 0) initPropertiesFromForm()
 }
@@ -1228,6 +1268,8 @@ const initPropertiesFromForm = () => {
     // ✅ إضافة المستندات الجديدة
     eoi_documents: Array.isArray(form.value.eoi_documents) ? [...form.value.eoi_documents] : [],
     booking_documents: Array.isArray(form.value.booking_documents) ? [...form.value.booking_documents] : [],
+    mou_documents: Array.isArray(form.value.mou_documents) ? [...form.value.mou_documents] : [],
+    noc_documents: Array.isArray(form.value.noc_documents) ? [...form.value.noc_documents] : [],
     listing_id: form.value.listing_id || null
   }
   propertiesList.value = [firstProperty]
@@ -1253,11 +1295,13 @@ const addNewProperty = () => {
     budget_to: null, 
     purchase_price: null,   
     commission: null, 
-    payment_proof: [], 
+    payment_proof: [],
     spa_document: [],
     // ✅ إضافة المستندات الجديدة
     eoi_documents: [],
     booking_documents: [],
+    mou_documents: [],
+    noc_documents: [],
     listing_id: null
   })
 }
@@ -1271,37 +1315,53 @@ const getPropertiesData = () => {
       // استخراج الملفات الفعلية فقط
       let eoiFiles = []
       let bookingFiles = []
+      let mouFiles = []
+      let nocFiles = []
       let paymentProofFiles = []
       let spaDocumentFiles = []
-      
+
       // ✅ EOI Documents
       if (prop.eoi_documents && Array.isArray(prop.eoi_documents)) {
         eoiFiles = prop.eoi_documents
           .filter(doc => doc && doc.file instanceof File)
           .map(doc => doc.file)
       }
-      
+
       // ✅ Booking Documents
       if (prop.booking_documents && Array.isArray(prop.booking_documents)) {
         bookingFiles = prop.booking_documents
           .filter(doc => doc && doc.file instanceof File)
           .map(doc => doc.file)
       }
-      
+
+      // ✅ MOU Documents
+      if (prop.mou_documents && Array.isArray(prop.mou_documents)) {
+        mouFiles = prop.mou_documents
+          .filter(doc => doc && doc.file instanceof File)
+          .map(doc => doc.file)
+      }
+
+      // ✅ NOC Documents
+      if (prop.noc_documents && Array.isArray(prop.noc_documents)) {
+        nocFiles = prop.noc_documents
+          .filter(doc => doc && doc.file instanceof File)
+          .map(doc => doc.file)
+      }
+
       // Payment Proof
       if (prop.payment_proof && Array.isArray(prop.payment_proof)) {
         paymentProofFiles = prop.payment_proof
           .filter(doc => doc && doc.file instanceof File)
           .map(doc => doc.file)
       }
-      
+
       // SPA Document
       if (prop.spa_document && Array.isArray(prop.spa_document)) {
         spaDocumentFiles = prop.spa_document
           .filter(doc => doc && doc.file instanceof File)
           .map(doc => doc.file)
       }
-      
+
       return {
         sort_order: index,
         unit_no: prop.unit_no || '',
@@ -1321,6 +1381,8 @@ const getPropertiesData = () => {
         // ✅ إضافة جميع المستندات
         eoi_documents: eoiFiles,
         booking_documents: bookingFiles,
+        mou_documents: mouFiles,
+        noc_documents: nocFiles,
         payment_proof: paymentProofFiles,
         spa_document: spaDocumentFiles,
       }
@@ -1334,6 +1396,8 @@ const getPropertiesData = () => {
 
 // ========== Watchers ==========
 watch(() => props.selectedStageName, () => checkShowMultiProperties(), { immediate: true })
+watch(() => props.selectedStageOrder, () => checkShowMultiProperties())
+watch(() => props.dealType, () => checkShowMultiProperties())
 watch(() => shouldHideSeller.value, (hide) => {
   if (hide) { form.value.seller_first_name = ''; form.value.seller_last_name = ''; form.value.seller_dob = ''; form.value.seller_phone = ''; form.value.seller_email = ''; form.value.seller_nationality = ''; form.value.seller_residency_status = ''; form.value.seller_city = ''; form.value.seller_country = ''; form.value.seller_language = ''; form.value.seller_documents = [] }
 })

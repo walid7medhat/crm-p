@@ -1366,6 +1366,8 @@ class DealController extends Controller
         $spaFiles = $this->extractPropertyFiles($request, 'spa_document', $index);
         $eoiFiles = $this->extractPropertyFiles($request, 'eoi_documents', $index);
         $bookingFiles = $this->extractPropertyFiles($request, 'booking_documents', $index);
+        $mouFiles = $this->extractPropertyFiles($request, 'mou_documents', $index);
+        $nocFiles = $this->extractPropertyFiles($request, 'noc_documents', $index);
 
         $changed = false;
 
@@ -1467,6 +1469,48 @@ class DealController extends Controller
             $changed = true;
         }
 
+        // =========================
+        // MOU documents (per property index)
+        // =========================
+        if (!empty($mouFiles)) {
+            $existing = is_array($property->mou_documents) ? $property->mou_documents : [];
+            foreach ($mouFiles as $file) {
+                $path = $file->store(
+                    "deals/{$deal->id}/properties/{$property->id}/mou_documents",
+                    'public'
+                );
+                $existing[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->mou_documents = array_values($existing);
+            $changed = true;
+        }
+
+        // =========================
+        // NOC documents (per property index)
+        // =========================
+        if (!empty($nocFiles)) {
+            $existing = is_array($property->noc_documents) ? $property->noc_documents : [];
+            foreach ($nocFiles as $file) {
+                $path = $file->store(
+                    "deals/{$deal->id}/properties/{$property->id}/noc_documents",
+                    'public'
+                );
+                $existing[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->noc_documents = array_values($existing);
+            $changed = true;
+        }
+
         if ($changed) {
             $property->save();
         }
@@ -1541,6 +1585,8 @@ class DealController extends Controller
             'ejari_document' => $propertyData['ejari_document'] ?? null,
             'eoi_documents' => $propertyData['eoi_documents'] ?? null,
             'booking_documents' => $propertyData['booking_documents'] ?? null,
+            'mou_documents' => $propertyData['mou_documents'] ?? null,
+            'noc_documents' => $propertyData['noc_documents'] ?? null,
         ]);
     }
 }
@@ -1637,6 +1683,38 @@ class DealController extends Controller
             $property->spa_document = array_values(array_merge($existing, $newSpa));
         }
 
+        // ✅ Handle MOU Documents (append)
+        if ($request->hasFile('mou_documents')) {
+            $existing = is_array($property->mou_documents) ? $property->mou_documents : [];
+            $newMou = [];
+            foreach ($request->file('mou_documents') as $file) {
+                $path = $file->store("deals/{$deal->id}/properties/mou_documents", 'public');
+                $newMou[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->mou_documents = array_values(array_merge($existing, $newMou));
+        }
+
+        // ✅ Handle NOC Documents (append)
+        if ($request->hasFile('noc_documents')) {
+            $existing = is_array($property->noc_documents) ? $property->noc_documents : [];
+            $newNoc = [];
+            foreach ($request->file('noc_documents') as $file) {
+                $path = $file->store("deals/{$deal->id}/properties/noc_documents", 'public');
+                $newNoc[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->noc_documents = array_values(array_merge($existing, $newNoc));
+        }
+
         $property->save();
 
         DB::commit();
@@ -1649,6 +1727,8 @@ class DealController extends Controller
         $payload['spa_document'] = (new PropertyDocumentResource($property->spa_document, 'spa'))->resolve($request);
         $payload['eoi_documents'] = (new PropertyDocumentResource($property->eoi_documents, 'eoi'))->resolve($request);
         $payload['booking_documents'] = (new PropertyDocumentResource($property->booking_documents, 'booking'))->resolve($request);
+        $payload['mou_documents'] = (new PropertyDocumentResource($property->mou_documents, 'mou'))->resolve($request);
+        $payload['noc_documents'] = (new PropertyDocumentResource($property->noc_documents, 'noc'))->resolve($request);
 
         return response()->json([
             'success' => true,
@@ -1704,7 +1784,7 @@ public function deletePropertyDocument(Request $request)
         }
         
         // ✅ دعم جميع أنواع المستندات
-        $validDocumentTypes = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents'];
+        $validDocumentTypes = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents'];
         $documentType = $request->document_type;
         
         if (!in_array($documentType, $validDocumentTypes, true)) {

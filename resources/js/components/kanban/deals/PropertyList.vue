@@ -25,6 +25,7 @@
       :required-fields="requiredFields"
       :deal-type="dealType"
       :selected-stage-name="selectedStageName"
+      :selected-stage-order="selectedStageOrder"
       :show-property-commission="showPropertyCommission"
       :show-purchase-price="showPurchasePrice"
       :show-property-documents="showPropertyDocuments"
@@ -51,6 +52,7 @@ const props = defineProps({
   requiredFields: { type: Array, default: () => [] },
   dealType: { type: String, default: 'primary' },
   selectedStageName: { type: String, default: '' },
+  selectedStageOrder: { type: [Number, String], default: 0 },
   showPropertyCommission: { type: Boolean, default: false },
   showPurchasePrice: { type: Boolean, default: false },
   showPropertyDocuments: { type: Boolean, default: false },
@@ -101,6 +103,10 @@ function addProperty(shouldScroll = true) {
     spa_document: [],
     contract_document: [],
     ejari_document: [],
+    eoi_documents: [],
+    booking_documents: [],
+    mou_documents: [],
+    noc_documents: [],
     listing_id: null,
     listing_status: null,
   }

@@ -36,7 +36,7 @@
     </b-modal>
 
     <CreateLeadModal v-model="showCreateModal" @lead-created="handleLeadCreated" />
-    <CreateDealModal v-model="showCreateDealModal" @deal-created="handleDealCreated" />
+    <CreateDealModal v-model="showCreateDealModal" @deal-created="handleDealCreated" :deal-type="currentDealType" />
     <CreateIntegrationModal  v-model="showCreateIntegrationModal" @integration-created="handleIntegrationCreated"  @saved="handleIntegrationCreated"
     @updated="handleIntegrationCreated"/>
     <AddStageModal v-model="showAddStageModal" @stage-created="handleStageCreated" />
@@ -62,7 +62,7 @@
                 </template>
 
                 <!-- Tab Content -->
-                <Deals v-if="tab.id === 'deals'" />
+                <Deals v-if="tab.id === 'deals'" ref="dealsRef" />
                 <Leads v-else-if="tab.id === 'leads'" ref="leadsRef" />
                 <Integration v-else-if="tab.id === 'integration'" ref="integrationRef" />
             </b-tab>
@@ -186,7 +186,14 @@ const showCreateIntegrationModal = ref(false)
 const showAddStageModal = ref(false)
 const searchInputFocused = ref(false)
 const leadsRef = ref(null)
+const dealsRef = ref(null)
 const integrationRef = ref(null)
+
+const currentDealType = computed(() => {
+    if (activeTab.value !== 'deals') return 'primary'
+    const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+    return dealsComponent?.currentDealType || 'primary'
+})
 const searchDropdownAnchorRef = ref(null)
 const search = ref(null)
 

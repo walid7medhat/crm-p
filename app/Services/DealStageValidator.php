@@ -121,14 +121,23 @@ class DealStageValidator
                 }
 
                 // Check party documents
+                // Only `passport` / `national_id` are gated by residency status.
+                // Everything else (kyc, security_deposit, title_deed, noc, payment_proof, …)
+                // must be enforced exactly as listed in the stage requirements.
+                $residencyProofDocs = ['passport', 'national_id'];
                 foreach ($requirements['documents'] ?? [] as $partyType => $docs) {
                     $party = $parties[$partyType] ?? null;
                     $residencyStatus = $party?->residency_status ?? null;
-                    $requiredDocs = $this->getRequiredDocumentsByResidency($residencyStatus);
-                    
+                    $requiredResidencyDocs = $this->getRequiredDocumentsByResidency($residencyStatus);
+
                     foreach ($docs as $docType) {
-                        if (!in_array($docType, $requiredDocs)) continue;
-                        
+                        // Skip residency-proof docs that aren't required for the current residency status
+                        // (e.g. national_id for non-residents). Non-residency docs always fall through.
+                        if (in_array($docType, $residencyProofDocs, true)
+                            && !in_array($docType, $requiredResidencyDocs, true)) {
+                            continue;
+                        }
+
                         $hasDoc = false;
                         if ($party) {
                             $hasDoc = $deal->documents()
@@ -136,7 +145,7 @@ class DealStageValidator
                                 ->where('document_type', $docType)
                                 ->exists();
                         }
-                        
+
                         if (!$hasDoc) {
                             $key = "{$partyType}_document_{$docType}";
                             $stageMissing[] = $key;
@@ -183,6 +192,22 @@ class DealStageValidator
                             break;
                         }
                         if ($docType === 'ejari' && !empty($property->ejari_document)) {
+                            $hasDoc = true;
+                            break;
+                        }
+                        if ($docType === 'eoi' && !empty($property->eoi_documents)) {
+                            $hasDoc = true;
+                            break;
+                        }
+                        if ($docType === 'booking' && !empty($property->booking_documents)) {
+                            $hasDoc = true;
+                            break;
+                        }
+                        if ($docType === 'mou' && !empty($property->mou_documents)) {
+                            $hasDoc = true;
+                            break;
+                        }
+                        if ($docType === 'noc' && !empty($property->noc_documents)) {
                             $hasDoc = true;
                             break;
                         }

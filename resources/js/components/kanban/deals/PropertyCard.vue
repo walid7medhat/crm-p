@@ -189,9 +189,11 @@
                 <input
                   :value="budgetFromDisplay"
                   placeholder="0"
+                  inputmode="numeric"
                   @click.stop
                   @mousedown.stop
                   class="custom-input budget-dropdown-input"
+                  @keypress="onMoneyKeypress"
                   @input="(e) => setBudgetValue('budget_from', e.target.value)"
                 />
               </div>
@@ -200,9 +202,11 @@
                 <input
                   :value="budgetToDisplay"
                   placeholder="0"
+                  inputmode="numeric"
                   @click.stop
                   @mousedown.stop
                   class="custom-input budget-dropdown-input"
+                  @keypress="onMoneyKeypress"
                   @input="(e) => setBudgetValue('budget_to', e.target.value)"
                 />
               </div>
@@ -220,11 +224,14 @@
         </label>
         <div class="input-group">
           <b-form-input
-            v-model="localProperty.purchase_price"
-            type="number"
+            :model-value="purchasePriceDisplay"
+            @update:model-value="setPurchasePrice"
+            type="text"
+            inputmode="numeric"
             placeholder="Amount"
             class="custom-input"
             :class="{ 'is-invalid': showErrors && isRequired('purchase_price') && !localProperty.purchase_price }"
+            @keypress="onMoneyKeypress"
           />
           <span class="input-group-text">AED</span>
         </div>
@@ -319,6 +326,7 @@ const props = defineProps({
   requiredFields: { type: Array, default: () => [] },
   dealType: { type: String, default: 'primary' },
   selectedStageName: { type: String, default: '' },
+  selectedStageOrder: { type: [Number, String], default: 0 },
   readonly: { type: Boolean, default: false },
   showPropertyCommission: { type: Boolean, default: false },
   showPurchasePrice: { type: Boolean, default: false },
@@ -341,7 +349,7 @@ const propertyDocumentsCombined = computed({
   get() {
     const obj = localProperty.value
     ensurePropertyDocumentArrays(obj)
-    
+
     const eoi = (obj.eoi_documents || []).map((d) => ({
       ...d,
       document_type: d.document_type || 'eoi'
@@ -349,6 +357,14 @@ const propertyDocumentsCombined = computed({
     const booking = (obj.booking_documents || []).map((d) => ({
       ...d,
       document_type: d.document_type || 'booking'
+    }))
+    const mou = (obj.mou_documents || []).map((d) => ({
+      ...d,
+      document_type: d.document_type || 'mou'
+    }))
+    const noc = (obj.noc_documents || []).map((d) => ({
+      ...d,
+      document_type: d.document_type || 'noc'
     }))
     const pay = (obj.payment_proof || []).map((d) => ({
       ...d,
@@ -358,8 +374,8 @@ const propertyDocumentsCombined = computed({
       ...d,
       document_type: d.document_type || 'spa'
     }))
-    
-    return [...eoi, ...booking, ...pay, ...spa]
+
+    return [...eoi, ...booking, ...mou, ...noc, ...pay, ...spa]
   },
   set(files) {
     const list = Array.isArray(files) ? files : []
@@ -368,6 +384,12 @@ const propertyDocumentsCombined = computed({
     )
     localProperty.value.booking_documents = list.filter(
       (f) => (f.document_type || '') === 'booking'
+    )
+    localProperty.value.mou_documents = list.filter(
+      (f) => (f.document_type || '') === 'mou'
+    )
+    localProperty.value.noc_documents = list.filter(
+      (f) => (f.document_type || '') === 'noc'
     )
     localProperty.value.payment_proof = list.filter(
       (f) => (f.document_type || '') === 'payment_proof'
@@ -396,18 +418,34 @@ const isWonStage = computed(() => {
   return stageName.includes('won') || stageName.includes('deal won')
 })
 const showPurchasePrice = computed(() => {
+  const dt = props.dealType
+  if (dt !== 'primary' && dt !== 'secondary') return false
+  const order = Number(props.selectedStageOrder) || 0
+  if (order >= 3) return true
   const stageName = props.selectedStageName?.toLowerCase() || ''
-  return stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
+  return stageName.includes('booking') || stageName.includes('mou') || stageName.includes('spa') || stageName.includes('won')
 })
 
 const showPropertyDocuments = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
+  const dt = props.dealType
+  const order = Number(props.selectedStageOrder) || 0
+  // SECONDARY: property docs visible from MOU (order 3) onwards.
+  if (dt === 'secondary') {
+    if (order >= 3) return true
+    return stageName.includes('mou') || stageName.includes('noc') || stageName.includes('spa') || stageName.includes('won')
+  }
+  // PRIMARY / others — keep existing name-based logic.
   return stageName.includes('eoi') || stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
 })
 
 // Check if a field is required
 function isRequired(fieldName) {
   return props.requiredFields?.includes(`property_${fieldName}`) || false
+}
+
+function onMoneyKeypress(e) {
+  if (!/^\d$/.test(e.key)) e.preventDefault()
 }
 
 // Get current user
@@ -458,6 +496,18 @@ function formatBudgetWithCommas(value) {
 function setBudgetValue(key, value) {
     const digits = normalizeBudgetString(value)
     localProperty.value[key] = digits ? Number(digits) : null
+    emitUpdate()
+}
+
+const purchasePriceDisplay = computed(() => {
+    return localProperty.value.purchase_price
+        ? formatBudgetWithCommas(localProperty.value.purchase_price)
+        : ''
+})
+
+function setPurchasePrice(value) {
+    const digits = normalizeBudgetString(value)
+    localProperty.value.purchase_price = digits ? Number(digits) : null
     emitUpdate()
 }
 

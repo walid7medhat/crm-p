@@ -113,6 +113,7 @@ return [
         ],
 
         'secondary' => [
+            // ===================== SECURITY DEPOSIT STAGE (order 2) =====================
             2 => [
                 'fields' => ['source', 'deal_name'],
                 'parties' => [
@@ -120,8 +121,8 @@ return [
                     'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status',  'language'],
                 ],
                 'documents' => [
-                    'buyer' => ['national_id', 'passport', 'kyc'],
-                    'seller' => ['national_id', 'passport'],
+                    'buyer' => ['national_id', 'passport', 'kyc', 'security_deposit'],
+                    'seller' => ['national_id', 'passport', 'security_deposit'],
                 ],
                 'requires_properties' => true,
                 'properties' => [
@@ -130,6 +131,7 @@ return [
                     'unit_no' => true,
                 ],
             ],
+            // ===================== MOU STAGE (order 3) =====================
             3 => [
                 'fields' => ['source', 'deal_name'],
                 'parties' => [
@@ -137,8 +139,8 @@ return [
                     'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
-                    'buyer' => ['national_id', 'passport', 'kyc'],
-                    'seller' => ['national_id', 'passport'],
+                    'buyer' => ['national_id', 'passport', 'kyc','security_deposit'],
+                    'seller' => ['national_id', 'passport','security_deposit'],
                 ],
                 'requires_properties' => true,
                 'properties' => [
@@ -151,8 +153,10 @@ return [
                     'developer_name'=>true,
                     'developer_phone'=>true,
                 ],
-                'property_documents' => ['payment_proof'],
+                // Property documents (NOC) are OPTIONAL for secondary — shown in UI but not blocking.
+                'property_documents' => [],
             ],
+            // ===================== MOU STAGE (order 4) =====================
             4 => [
                 'fields' => ['source', 'deal_name'],
                 'parties' => [
@@ -160,8 +164,8 @@ return [
                     'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
-                    'buyer' => ['national_id', 'passport', 'kyc'],
-                    'seller' => ['national_id', 'passport', 'title_deed'],
+                    'buyer' => ['national_id', 'passport', 'kyc','security_deposit'],
+                    'seller' => ['national_id', 'passport', 'title_deed','security_deposit'],
                 ],
                 'requires_properties' => true,
                 'properties' => [
@@ -174,7 +178,8 @@ return [
                        'developer_name'=>true,
                     'developer_phone'=>true,
                 ],
-                'property_documents' => ['payment_proof', 'spa'],
+                // Property documents (MOU + NOC) are OPTIONAL for secondary — shown in UI but not blocking.
+                'property_documents' => [],
             ],
             5 => [
                 'fields' => ['source', 'deal_name', 'deal_total_amount', 'deal_commission'],
@@ -183,8 +188,8 @@ return [
                     'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
-                    'buyer' => ['national_id', 'passport', 'kyc', 'payment_proof'],
-                    'seller' => ['national_id', 'passport', 'title_deed', 'noc'],
+                    'buyer' => ['national_id', 'passport', 'kyc', 'payment_proof','security_deposit'],
+                    'seller' => ['national_id', 'passport', 'title_deed','security_deposit'],
                 ],
                 'requires_properties' => true,
                 'properties' => [
@@ -197,7 +202,8 @@ return [
                     'developer_name'=>true,
                     'developer_phone'=>true,
                 ],
-                'property_documents' => ['payment_proof', 'spa'],
+                // Property documents (MOU/NOC/SPA) are OPTIONAL for secondary — shown in UI but not blocking.
+                'property_documents' => [],
             ],
             8 => [
                 'fields' => ['lost_reason'],

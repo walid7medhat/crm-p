@@ -101,8 +101,9 @@
               @search-subcommunities="searchSubCommunities" 
               :show-errors="showFieldErrors"     
               :field-errors="fieldErrors"           
-              :selected-stage-id="selectedStageId"  
+              :selected-stage-id="selectedStageId"
               :selected-stage-name="selectedStage?.name || ''"
+              :selected-stage-order="selectedStage?.order || 0"
                @update:hasListingId="handleHasListingIdUpdate"
             />
       </div>
@@ -266,12 +267,22 @@ const selectedStage = computed(() => {
 watch(() => props.modelValue, async (val) => {
   show.value = val
   if (val) {
+    if (props.dealType && props.dealType !== dealType.value) {
+      dealType.value = props.dealType
+    }
     validationErrors.value = []
     showFieldErrors.value = false
     await loadInitialData()
     if (props.leadId) {
       checkLeadConversionStatus()
     }
+  }
+})
+
+// Keep dealType in sync if parent updates the prop while modal is open
+watch(() => props.dealType, (val) => {
+  if (val && val !== dealType.value) {
+    dealType.value = val
   }
 })
 
@@ -968,7 +979,7 @@ async function submitForm() {
             if (value !== null && value !== undefined && value !== '') {
               // Handle file arrays
               if ((key === 'payment_proof' || key === 'spa_document'|| key === 'eoi_documents' ||
-           key === 'booking_documents') && Array.isArray(value)) {
+           key === 'booking_documents' || key === 'mou_documents' || key === 'noc_documents') && Array.isArray(value)) {
 
                 value.forEach((file, fileIndex) => {
                   if (file instanceof File) {

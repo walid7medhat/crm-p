@@ -19,7 +19,7 @@
           <div class="document-box-label">
             <div>
               {{ getDisplayName(type) }}
-              <span v-if="type.required" class="text-danger">*</span>
+              <span v-if="type.required && !isOptionalDocType(type.id)" class="text-danger">*</span>
             </div>
             <button
               type="button"
@@ -40,7 +40,10 @@
           >
             <div
               class="document-box"
-              :class="{ required: type.required, uploaded: box.files.length > 0 }"
+              :class="{
+                required: type.required && !isOptionalDocType(type.id) && box.files.length === 0 && !typeHasUploadedFile(type.id),
+                uploaded: box.files.length > 0
+              }"
             >
               <button
                 v-if="getBoxesForType(type.id).length > 1"
@@ -173,6 +176,14 @@ const alternativePairs = ref([
 
 const boxesByType = ref({})
 
+// Document types that are always OPTIONAL regardless of what parent passes —
+// box still renders so users can upload, but no red border, no asterisk, never blocks submission.
+const OPTIONAL_DOC_TYPES = new Set(['security_deposit'])
+
+function isOptionalDocType(typeId) {
+  return OPTIONAL_DOC_TYPES.has(typeId)
+}
+
 function generateId() {
   return Date.now() + '-' + Math.random().toString(36).substr(2, 9)
 }
@@ -247,6 +258,11 @@ function initializeBoxes() {
 
 function getBoxesForType(typeId) {
   return boxesByType.value[typeId] || []
+}
+
+function typeHasUploadedFile(typeId) {
+  const boxes = boxesByType.value[typeId] || []
+  return boxes.some((b) => Array.isArray(b.files) && b.files.length > 0)
 }
 
 function addNewBox(typeId) {
@@ -637,9 +653,12 @@ watch(
 )
 
 function isDocumentTypeRequired(typeId) {
+  // Forced-optional types are never required, regardless of upstream config.
+  if (isOptionalDocType(typeId)) return false
+
   const docType = props.documentTypes.find(t => t.id === typeId)
   const originalRequired = docType?.required || false
-  
+
   if (!originalRequired) return false
   if (hasFilesForType(typeId)) return false
 

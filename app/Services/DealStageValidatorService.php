@@ -67,6 +67,14 @@ $missingFields = $this->filterBudgetFieldsByStage(
 
 $missingFields = $this->filterBedroomsFieldsByPropertyType($missingFields, $deal);
     $missingByStage = $this->filterMissingByStageBedroomsFields($missingByStage, $deal);
+
+    // ✅ purchase_price required for primary/secondary at stage order >= 3 (Booking / MOU and beyond)
+    $this->ensurePurchasePriceRequiredForStage($missingFields, $missingByStage, $deal, $targetStageId, $resolvedType);
+
+    // ✅ security_deposit is OPTIONAL — strip from missing fields so it never blocks the stage transition.
+    $missingFields = $this->filterOptionalSecurityDeposit($missingFields);
+    $missingByStage = $this->filterMissingByStageSecurityDeposit($missingByStage);
+
     // ✅ تمرير effectiveListingId و resolvedType للتصفية
     $filteredMissingFields = $this->filterFieldsByListingAndType($missingFields, $effectiveListingId, $resolvedType);
     $filteredMissingByStage = $this->filterMissingByStageByListingAndType($missingByStage, $effectiveListingId, $resolvedType);
@@ -283,20 +291,29 @@ private function filterMissingByStageBudgetFields(array $missingByStage, int $ta
  */
 private function hasPropertyDocuments(Deal $deal, string $documentType): bool
 {
+    // Column mapping for each document type (payment_proof, spa, mou, noc, eoi, booking).
+    $columnMap = [
+        'payment_proof' => 'payment_proof',
+        'spa_document' => 'spa_document',
+        'spa' => 'spa_document',
+        'mou' => 'mou_documents',
+        'mou_documents' => 'mou_documents',
+        'noc' => 'noc_documents',
+        'noc_documents' => 'noc_documents',
+        'eoi' => 'eoi_documents',
+        'eoi_documents' => 'eoi_documents',
+        'booking' => 'booking_documents',
+        'booking_documents' => 'booking_documents',
+    ];
+    $column = $columnMap[$documentType] ?? 'spa_document';
+
     // التحقق المباشر من قاعدة البيانات
     $exists = \App\Models\DealProperty::where('deal_id', $deal->id)
-        ->where(function($query) use ($documentType) {
-            if ($documentType === 'payment_proof') {
-                $query->whereNotNull('payment_proof')
-                      ->where('payment_proof', '!=', '')
-                      ->where('payment_proof', '!=', '[]')
-                      ->where('payment_proof', '!=', 'null');
-            } else {
-                $query->whereNotNull('spa_document')
-                      ->where('spa_document', '!=', '')
-                      ->where('spa_document', '!=', '[]')
-                      ->where('spa_document', '!=', 'null');
-            }
+        ->where(function($query) use ($column) {
+            $query->whereNotNull($column)
+                  ->where($column, '!=', '')
+                  ->where($column, '!=', '[]')
+                  ->where($column, '!=', 'null');
         })
         ->exists();
     
@@ -340,11 +357,11 @@ private function filterPropertyDocumentFields(array $fields, Deal $deal): array
         
         // التحقق من وجود مستندات spa_document
         if (!$shouldSkip && (
-            $field === 'property_document_spa' || 
+            $field === 'property_document_spa' ||
             $field === 'property_document_spa_document' ||
             $field === 'spa_document' ||
             str_contains($field, 'spa_document'))) {
-            
+
             if ($this->hasPropertyDocuments($deal, 'spa_document')) {
                 Log::info('Skipping spa_document requirement - documents already exist', [
                     'field' => $field,
@@ -353,12 +370,46 @@ private function filterPropertyDocumentFields(array $fields, Deal $deal): array
                 $shouldSkip = true;
             }
         }
-        
+
+        // التحقق من وجود مستندات mou
+        if (!$shouldSkip && (
+            $field === 'property_document_mou' ||
+            $field === 'property_document_mou_documents' ||
+            $field === 'mou_documents' ||
+            str_contains($field, 'mou_document') ||
+            str_contains($field, '_document_mou'))) {
+
+            if ($this->hasPropertyDocuments($deal, 'mou')) {
+                Log::info('Skipping mou requirement - documents already exist', [
+                    'field' => $field,
+                    'deal_id' => $deal->id
+                ]);
+                $shouldSkip = true;
+            }
+        }
+
+        // التحقق من وجود مستندات noc (property-level)
+        if (!$shouldSkip && (
+            $field === 'property_document_noc' ||
+            $field === 'property_document_noc_documents' ||
+            $field === 'noc_documents' ||
+            str_contains($field, 'noc_document') ||
+            str_contains($field, '_document_noc'))) {
+
+            if ($this->hasPropertyDocuments($deal, 'noc')) {
+                Log::info('Skipping noc requirement - documents already exist', [
+                    'field' => $field,
+                    'deal_id' => $deal->id
+                ]);
+                $shouldSkip = true;
+            }
+        }
+
         if (!$shouldSkip) {
             $filtered[] = $field;
         }
     }
-    
+
     return $filtered;
 }
 /**
@@ -437,6 +488,118 @@ private function filterBedroomsFieldsByPropertyType(array $fields, Deal $deal): 
     }
     
     return $filtered;
+}
+
+/**
+ * يضمن أن purchase_price مطلوب في primary/secondary من Booking/MOU (order 3) فما فوق.
+ * يضيف property_{i}_purchase_price لأي عقار ليس له قيمة، حتى لو لم يصل المفتاح من DealStageValidator.
+ */
+private function ensurePurchasePriceRequiredForStage(array &$missingFields, array &$missingByStage, Deal $deal, int $targetStageId, string $dealType): void
+{
+    if (!in_array($dealType, ['primary', 'secondary'], true)) {
+        return;
+    }
+
+    $stage = \App\Models\Stage::find($targetStageId);
+    if (!$stage) {
+        return;
+    }
+    $order = (int) ($stage->order ?? 0);
+    if ($order < 3) {
+        return;
+    }
+
+    $properties = $deal->properties ?? collect();
+    $newKeys = [];
+
+    if ($properties->isEmpty()) {
+        $newKeys[] = 'property_0_purchase_price';
+    } else {
+        foreach ($properties as $index => $property) {
+            $raw = $property->purchase_price ?? null;
+            $hasValue = !is_null($raw) && $raw !== '' && $raw !== 0 && $raw !== '0';
+            // Treat numeric 0 as "filled" intentionally — only blank/null counts as missing.
+            if (is_null($raw) || $raw === '' || $raw === '0') {
+                $hasValue = false;
+            }
+            if (!$hasValue) {
+                $newKeys[] = "property_{$index}_purchase_price";
+            }
+        }
+    }
+
+    if (empty($newKeys)) {
+        return;
+    }
+
+    foreach ($newKeys as $key) {
+        if (!in_array($key, $missingFields, true)) {
+            $missingFields[] = $key;
+        }
+    }
+
+    // Merge into the target stage bucket inside missing_by_stage so UI groups it correctly.
+    $foundStageBucket = false;
+    foreach ($missingByStage as &$bucket) {
+        if ((int) ($bucket['stage_id'] ?? 0) === (int) $stage->id) {
+            $bucket['missing_fields'] = array_values(array_unique(array_merge($bucket['missing_fields'] ?? [], $newKeys)));
+            $foundStageBucket = true;
+            break;
+        }
+    }
+    unset($bucket);
+
+    if (!$foundStageBucket) {
+        $missingByStage[] = [
+            'stage_order' => $order,
+            'stage_id' => $stage->id,
+            'stage_name' => $stage->name,
+            'missing_fields' => $newKeys,
+        ];
+    }
+}
+
+/**
+ * Strip *_document_security_deposit keys from the flat missing list.
+ * security_deposit is shown in the UI for secondary stage 2+ but is OPTIONAL.
+ */
+private function filterOptionalSecurityDeposit(array $fields): array
+{
+    if (empty($fields)) {
+        return [];
+    }
+
+    return array_values(array_filter($fields, function ($field) {
+        return !preg_match('/^(buyer|seller|tenant|landlord)_document_security_deposit$/', (string) $field);
+    }));
+}
+
+/**
+ * Strip *_document_security_deposit keys from each missing_by_stage bucket
+ * and drop buckets that become empty after filtering.
+ */
+private function filterMissingByStageSecurityDeposit(array $missingByStage): array
+{
+    if (empty($missingByStage)) {
+        return [];
+    }
+
+    $filteredStages = [];
+
+    foreach ($missingByStage as $stage) {
+        $stageFields = $this->filterOptionalSecurityDeposit($stage['missing_fields'] ?? []);
+
+        if (!empty($stageFields)) {
+            $filteredStages[] = [
+                'stage_order' => $stage['stage_order'] ?? 0,
+                'stage_id' => $stage['stage_id'] ?? null,
+                'stage_name' => $stage['stage_name'] ?? '',
+                'missing_fields' => $stageFields,
+            ];
+        }
+    }
+
+    return $filteredStages;
 }
 
 /**

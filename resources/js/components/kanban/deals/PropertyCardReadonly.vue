@@ -63,10 +63,13 @@
                 </p>
             </div>
         </div>
-        <div class="col-md-6" v-if="property.purchase_price">
+        <div class="col-md-6" v-if="showPurchasePrice || property.purchase_price">
           <div class="info-group">
             <label class="info-label">Purchase Price</label>
-            <p class="info-value mb-0">{{ formatNumber(property.purchase_price) }} AED</p>
+            <p class="info-value mb-0">
+              <template v-if="property.purchase_price">{{ formatNumber(property.purchase_price) }} AED</template>
+              <template v-else>----</template>
+            </p>
           </div>
         </div>
         <div class="col-md-6">
@@ -107,9 +110,9 @@
         </div>
       </div>
 
-      <!-- Payment Proof + SPA — always visible at booking/spa/won so they sit next to property details -->
+      <!-- Property documents — show only sections relevant to the stage (or already-uploaded sections). -->
       <template v-if="showStagePropertyDocs">
-        <div class="row mt-3">
+        <div v-if="shouldShowDocSection('eoi', 'eoi_documents')" class="row mt-3">
           <div class="col-12">
             <div class="info-group">
               <label class="info-label">Eoi Document</label>
@@ -142,7 +145,7 @@
             </div>
           </div>
         </div>
-        <div class="row mt-3">
+        <div v-if="shouldShowDocSection('booking', 'booking_documents')" class="row mt-3">
           <div class="col-12">
             <div class="info-group">
               <label class="info-label">Booking Form</label>
@@ -175,7 +178,73 @@
             </div>
           </div>
         </div>
-        <div class="row mt-3">
+        <div v-if="shouldShowDocSection('mou', 'mou_documents')" class="row mt-3">
+          <div class="col-12">
+            <div class="info-group">
+              <label class="info-label">MOU Document</label>
+              <div v-if="hasPropertyDocs(property, 'mou_documents')" class="documents-grid">
+                <div
+                  v-for="(doc, idx) in getPropertyDocsList(property, 'mou_documents')"
+                  :key="idx"
+                  class="document-card"
+                >
+                  <div class="document-preview" @click="previewDocument(doc)">
+                    <img
+                      v-if="isImageDocument(doc)"
+                      :src="getDocumentUrl(doc)"
+                      :alt="doc.original_name || doc.name"
+                      class="document-thumbnail"
+                      @error="handleImageError"
+                    />
+                    <div v-else class="document-icon-placeholder">
+                      <iconify-icon :icon="getFileIcon(doc)" class="document-icon-large" />
+                    </div>
+                    <div class="document-name">{{ truncateName(doc.original_name || doc.name) }}</div>
+                  </div>
+                  <div class="document-actions">
+                    <button class="doc-action-btn view" @click.stop="previewDocument(doc)">View</button>
+                    <button class="doc-action-btn delete" @click.stop="deleteDocument(doc, 'mou_documents')">Delete</button>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="text-muted small mb-0">No documents uploaded.</p>
+            </div>
+          </div>
+        </div>
+        <div v-if="shouldShowDocSection('noc', 'noc_documents')" class="row mt-3">
+          <div class="col-12">
+            <div class="info-group">
+              <label class="info-label">NOC Document</label>
+              <div v-if="hasPropertyDocs(property, 'noc_documents')" class="documents-grid">
+                <div
+                  v-for="(doc, idx) in getPropertyDocsList(property, 'noc_documents')"
+                  :key="idx"
+                  class="document-card"
+                >
+                  <div class="document-preview" @click="previewDocument(doc)">
+                    <img
+                      v-if="isImageDocument(doc)"
+                      :src="getDocumentUrl(doc)"
+                      :alt="doc.original_name || doc.name"
+                      class="document-thumbnail"
+                      @error="handleImageError"
+                    />
+                    <div v-else class="document-icon-placeholder">
+                      <iconify-icon :icon="getFileIcon(doc)" class="document-icon-large" />
+                    </div>
+                    <div class="document-name">{{ truncateName(doc.original_name || doc.name) }}</div>
+                  </div>
+                  <div class="document-actions">
+                    <button class="doc-action-btn view" @click.stop="previewDocument(doc)">View</button>
+                    <button class="doc-action-btn delete" @click.stop="deleteDocument(doc, 'noc_documents')">Delete</button>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="text-muted small mb-0">No documents uploaded.</p>
+            </div>
+          </div>
+        </div>
+        <div v-if="shouldShowDocSection('payment_proof', 'payment_proof')" class="row mt-3">
           <div class="col-12">
             <div class="info-group">
               <label class="info-label">Payment Proof</label>
@@ -209,7 +278,7 @@
           </div>
         </div>
 
-        <div class="row mt-3">
+        <div v-if="shouldShowDocSection('spa', 'spa_document')" class="row mt-3">
           <div class="col-12">
             <div class="info-group">
               <label class="info-label">SPA Document</label>
@@ -342,9 +411,11 @@
                         <input
                             :value="budgetFromDisplay"
                             placeholder="0"
+                            inputmode="numeric"
                             @click.stop
                             @mousedown.stop
                             class="custom-input budget-dropdown-input"
+                            @keypress="onMoneyKeypress"
                             @input="(e) => setBudgetValue('budget_from', e.target.value)"
                         />
                     </div>
@@ -353,9 +424,11 @@
                         <input
                             :value="budgetToDisplay"
                             placeholder="0"
+                            inputmode="numeric"
                             @click.stop
                             @mousedown.stop
                             class="custom-input budget-dropdown-input"
+                            @keypress="onMoneyKeypress"
                             @input="(e) => setBudgetValue('budget_to', e.target.value)"
                         />
                     </div>
@@ -366,7 +439,7 @@
         <div class="col-md-6" v-if="showPurchasePrice">
           <label class="form-label-custom">Purchase Price</label>
           <div class="input-group">
-            <b-form-input v-model="editData.purchase_price" type="number" placeholder="Amount" class="custom-input" />
+            <b-form-input :model-value="purchasePriceDisplay" @update:model-value="setPurchasePrice" type="text" inputmode="numeric" placeholder="Amount" class="custom-input" @keypress="onMoneyKeypress" />
             <span class="input-group-text">AED</span>
           </div>
         </div>
@@ -490,6 +563,8 @@ const props = defineProps({
   propertyTypes: { type: Array, default: () => [] },
   developers: { type: Array, default: () => [] },
   selectedStageName: { type: String, default: '' },
+  selectedStageOrder: { type: [Number, String], default: 0 },
+  dealType: { type: String, default: 'primary' },
   readonly: { type: Boolean, default: false },
 })
 
@@ -510,8 +585,12 @@ const showBudgetFields = computed(() => {
   return stageName.includes('eoi')
 })
 const showPurchasePrice = computed(() => {
+  const dt = props.dealType
+  if (dt !== 'primary' && dt !== 'secondary') return false
+  const order = Number(props.selectedStageOrder) || 0
+  if (order >= 3) return true
   const stageName = props.selectedStageName?.toLowerCase() || ''
-  return stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
+  return stageName.includes('booking') || stageName.includes('mou') || stageName.includes('spa') || stageName.includes('won')
 })
 const showPropertyCommission = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
@@ -527,11 +606,24 @@ const showStagePropertyDocs = computed(() => true)
 /** Required for DocumentUpload: must be defined (was missing — only header showed, no Payment Proof / SPA rows). */
 const propertyEditDocTypes = computed(() => {
   const s = (props.selectedStageName || '').toLowerCase()
+  const dt = props.dealType
+  const order = Number(props.selectedStageOrder) || 0
+
+  // SECONDARY: all property documents are OPTIONAL. Surface MOU from stage 3, NOC from stage 4.
+  if (dt === 'secondary') {
+    const docs = [{ id: 'payment_proof', name: 'Payment Proof', required: false }]
+    if (order >= 3 || s.includes('mou')) docs.unshift({ id: 'mou', name: 'MOU Document', required: false })
+    if (order >= 4 || s.includes('noc')) docs.splice(1, 0, { id: 'noc', name: 'NOC Document', required: false })
+    if (order >= 5 || s.includes('won') || s.includes('spa')) docs.push({ id: 'spa', name: 'SPA Document', required: false })
+    return docs
+  }
+
+  // PRIMARY / others — keep existing name-based logic.
   const showEoi = s.includes('eoi') || s.includes('booking') || s.includes('spa') || s.includes('won')
   const showBooking = s.includes('booking') || s.includes('spa') || s.includes('won')
   const showPayment = s.includes('spa') || s.includes('won')
   const showSpa = s.includes('spa') || s.includes('won')
-  
+
   return [
     { id: 'eoi', name: 'EOI Document', required: showEoi },
     { id: 'booking', name: 'Booking Form', required: showBooking },
@@ -539,6 +631,41 @@ const propertyEditDocTypes = computed(() => {
     { id: 'spa', name: 'SPA Document', required: showSpa },
   ]
 })
+
+/**
+ * Which document types should be visible in VIEW mode for this stage + deal type.
+ * Any section that already has uploaded files is also visible so existing data isn't hidden.
+ */
+const visibleDocTypeIds = computed(() => {
+  const s = (props.selectedStageName || '').toLowerCase()
+  const dt = props.dealType
+  const order = Number(props.selectedStageOrder) || 0
+  const ids = new Set()
+
+  if (dt === 'secondary') {
+    // payment_proof is always relevant for secondary uploads
+    ids.add('payment_proof')
+    if (order >= 3 || s.includes('mou')) ids.add('mou')
+    if (order >= 4 || s.includes('noc')) ids.add('noc')
+    if (order >= 5 || s.includes('won') || s.includes('spa')) ids.add('spa')
+  } else if (dt === 'primary') {
+    if (s.includes('eoi') || s.includes('booking') || s.includes('spa') || s.includes('won')) ids.add('eoi')
+    if (s.includes('booking') || s.includes('spa') || s.includes('won')) ids.add('booking')
+    if (s.includes('booking') || s.includes('spa') || s.includes('won')) ids.add('payment_proof')
+    if (s.includes('spa') || s.includes('won')) ids.add('spa')
+  } else {
+    // rental / other — show all by default (no specific filter)
+    ids.add('payment_proof')
+    ids.add('spa')
+  }
+
+  return ids
+})
+
+function shouldShowDocSection(docId, propertyDocField) {
+  // Stage-relevant OR has uploaded files (preserve existing data).
+  return visibleDocTypeIds.value.has(docId) || hasPropertyDocs(props.property, propertyDocField)
+}
 
 const bedroomOptions = [
   { value: 'studio', text: 'Studio' },
@@ -578,11 +705,11 @@ function hasDocuments(docs) {
 /** Prefer API `payment_proof` / `spa_document`; fall back to `*_raw` if ever empty or missing. */
 function getPropertyDocsList(property, field) {
   if (!property) return []
-  
+
   // ✅ دعم الحقول الجديدة
-  const allowedFields = ['eoi_documents', 'booking_documents', 'payment_proof', 'spa_document']
+  const allowedFields = ['eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents', 'payment_proof', 'spa_document']
   if (!allowedFields.includes(field)) return []
-  
+
   const primary = getDocumentsArray(property[field])
   if (primary.length > 0) return primary
   return getDocumentsArray(property[`${field}_raw`])
@@ -600,6 +727,8 @@ function mapPropertyDocsForEditor(docs, documentTypeSlug) {
   let dt = documentTypeSlug
   if (documentTypeSlug === 'eoi') dt = 'eoi'
   if (documentTypeSlug === 'booking') dt = 'booking'
+  if (documentTypeSlug === 'mou') dt = 'mou'
+  if (documentTypeSlug === 'noc') dt = 'noc'
   if (documentTypeSlug === 'payment_proof') dt = 'payment_proof'
   if (documentTypeSlug === 'spa') dt = 'spa'
   
@@ -684,7 +813,7 @@ async function deleteDocument(doc, type) {
 
   try {
     // ✅ دعم جميع أنواع المستندات
-    const validPropertyDocTypes = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents']
+    const validPropertyDocTypes = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents']
     const isPropertyDocType = validPropertyDocTypes.includes(type)
     
     if (isPropertyDocType) {
@@ -702,6 +831,8 @@ async function deleteDocument(doc, type) {
       let documentTypeForApi = type
       if (type === 'eoi_documents') documentTypeForApi = 'eoi_documents'
       if (type === 'booking_documents') documentTypeForApi = 'booking_documents'
+      if (type === 'mou_documents') documentTypeForApi = 'mou_documents'
+      if (type === 'noc_documents') documentTypeForApi = 'noc_documents'
       if (type === 'payment_proof') documentTypeForApi = 'payment_proof'
       if (type === 'spa_document') documentTypeForApi = 'spa_document'
 
@@ -743,6 +874,8 @@ async function deleteDocument(doc, type) {
           if (isEditing.value) {
             const docTypeSlug = type === 'eoi_documents' ? 'eoi' :
                                type === 'booking_documents' ? 'booking' :
+                               type === 'mou_documents' ? 'mou' :
+                               type === 'noc_documents' ? 'noc' :
                                type === 'payment_proof' ? 'payment_proof' : 'spa'
             propertyEditDocs.value = propertyEditDocs.value.filter(d => 
               !(d.document_type === docTypeSlug && 
@@ -797,6 +930,8 @@ function startEdit() {
    propertyEditDocs.value = [
     ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'eoi_documents'), 'eoi'),
     ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'booking_documents'), 'booking'),
+    ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'mou_documents'), 'mou'),
+    ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'noc_documents'), 'noc'),
     ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'payment_proof'), 'payment_proof'),
     ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'spa_document'), 'spa'),
   ]
@@ -857,6 +992,8 @@ async function saveEdit() {
     let ppIdx = 0
     let spaIdx = 0
     
+    let mouIdx = 0
+    let nocIdx = 0
     propertyEditDocs.value.forEach((doc) => {
       const docType = doc.document_type || ''
       // ✅ فقط الملفات الجديدة (وليس الموجودة)
@@ -866,6 +1003,12 @@ async function saveEdit() {
         }
         if (docType === 'booking') {
           formData.append(`booking_documents[${bookingIdx++}]`, doc.file)
+        }
+        if (docType === 'mou') {
+          formData.append(`mou_documents[${mouIdx++}]`, doc.file)
+        }
+        if (docType === 'noc') {
+          formData.append(`noc_documents[${nocIdx++}]`, doc.file)
         }
         if (docType === 'payment_proof') {
           formData.append(`payment_proof[${ppIdx++}]`, doc.file)
@@ -1007,6 +1150,21 @@ function formatBudgetWithCommas(value) {
 function setBudgetValue(key, value) {
     const digits = normalizeBudgetString(value)
     editData.value[key] = digits ? Number(digits) : null
+}
+
+const purchasePriceDisplay = computed(() => {
+    return editData.value.purchase_price
+        ? formatBudgetWithCommas(editData.value.purchase_price)
+        : ''
+})
+
+function setPurchasePrice(value) {
+    const digits = normalizeBudgetString(value)
+    editData.value.purchase_price = digits ? Number(digits) : null
+}
+
+function onMoneyKeypress(e) {
+  if (!/^\d$/.test(e.key)) e.preventDefault()
 }
 
 function getBudgetTriggerElement() {

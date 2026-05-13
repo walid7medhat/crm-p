@@ -386,16 +386,26 @@ class StageController extends Controller
                     $assignedFrom = $request->assigned_from;
                     $assignedTo = $request->assigned_to;
                     $assignedDate = $request->assigned_at;
-                    $q->whereHas('histories', function($query) use ($assignedFrom, $assignedTo, $assignedDate) {
-                        $query->where('changes->action', 'assigned');
+                    // Match only the LATEST 'assigned' history per lead (not any prior assignment).
+                    $q->whereExists(function ($sub) use ($assignedFrom, $assignedTo, $assignedDate) {
+                        $sub->selectRaw('1')
+                            ->from('lead_histories as lh')
+                            ->whereColumn('lh.lead_id', 'leads.id')
+                            ->where('lh.changes->action', 'assigned')
+                            ->where('lh.id', '=', function ($maxQ) {
+                                $maxQ->selectRaw('MAX(lh2.id)')
+                                    ->from('lead_histories as lh2')
+                                    ->whereColumn('lh2.lead_id', 'leads.id')
+                                    ->where('lh2.changes->action', 'assigned');
+                            });
                         if ($assignedDate) {
-                            $query->whereDate('created_at', $assignedDate);
+                            $sub->whereDate('lh.created_at', $assignedDate);
                         } else {
                             if ($assignedFrom) {
-                                $query->whereDate('created_at', '>=', $assignedFrom);
+                                $sub->whereDate('lh.created_at', '>=', $assignedFrom);
                             }
                             if ($assignedTo) {
-                                $query->whereDate('created_at', '<=', $assignedTo);
+                                $sub->whereDate('lh.created_at', '<=', $assignedTo);
                             }
                         }
                     });
@@ -430,7 +440,7 @@ class StageController extends Controller
                           ->orWhereHas('responsiblePerson', function ($r) use ($search) {
                               $r->where('name', 'like', "%{$search}%");
                           })
-                           ->orWhereHas('propertyType', function ($pt) use ($search) { 
+                           ->orWhereHas('propertyType', function ($pt) use ($search) {
                                   $pt->where('name', 'like', "%{$search}%");
                               })
                           ->orWhereHas('stage', function ($st) use ($search) {
@@ -685,16 +695,26 @@ class StageController extends Controller
                     $assignedFrom = $request->assigned_from;
                     $assignedTo = $request->assigned_to;
                     $assignedDate = $request->assigned_at;
-                    $leadsQuery->whereHas('histories', function($query) use ($assignedFrom, $assignedTo, $assignedDate) {
-                        $query->where('changes->action', 'assigned');
+                    // Match only the LATEST 'assigned' history per lead.
+                    $leadsQuery->whereExists(function ($sub) use ($assignedFrom, $assignedTo, $assignedDate) {
+                        $sub->selectRaw('1')
+                            ->from('lead_histories as lh')
+                            ->whereColumn('lh.lead_id', 'leads.id')
+                            ->where('lh.changes->action', 'assigned')
+                            ->where('lh.id', '=', function ($maxQ) {
+                                $maxQ->selectRaw('MAX(lh2.id)')
+                                    ->from('lead_histories as lh2')
+                                    ->whereColumn('lh2.lead_id', 'leads.id')
+                                    ->where('lh2.changes->action', 'assigned');
+                            });
                         if ($assignedDate) {
-                            $query->whereDate('created_at', $assignedDate);
+                            $sub->whereDate('lh.created_at', $assignedDate);
                         } else {
                             if ($assignedFrom) {
-                                $query->whereDate('created_at', '>=', $assignedFrom);
+                                $sub->whereDate('lh.created_at', '>=', $assignedFrom);
                             }
                             if ($assignedTo) {
-                                $query->whereDate('created_at', '<=', $assignedTo);
+                                $sub->whereDate('lh.created_at', '<=', $assignedTo);
                             }
                         }
                     });

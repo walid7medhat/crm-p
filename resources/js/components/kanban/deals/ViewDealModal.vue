@@ -132,6 +132,7 @@
                       :inline-edit-field-errors="editFieldErrors"
                       :selected-stage-id="deal?.stage?.id"
                       :selected-stage-name="deal?.stage?.name || deal?.stage?.title || ''"
+                      :selected-stage-order="deal?.stage?.order || 0"
                       @edit-section="startEditDealFromSection"
                       @update:inline-edit-data="onInlineEditDataUpdate"
                       @inline-edit-save="saveEditDeal"
@@ -156,6 +157,7 @@
                       :inline-edit-field-errors="editFieldErrors"
                       :selected-stage-id="deal?.stage?.id"
                       :selected-stage-name="deal?.stage?.name || deal?.stage?.title || ''"
+                      :selected-stage-order="deal?.stage?.order || 0"
                       @edit-section="startEditDealFromSection"
                       @update:inline-edit-data="onInlineEditDataUpdate"
                       @inline-edit-save="saveEditDeal"
@@ -180,6 +182,7 @@
                       :inline-edit-field-errors="editFieldErrors"
                       :selected-stage-id="deal?.stage?.id"
                       :selected-stage-name="deal?.stage?.name || deal?.stage?.title || ''"
+                      :selected-stage-order="deal?.stage?.order || 0"
                       @edit-section="startEditDealFromSection"
                       @update:inline-edit-data="onInlineEditDataUpdate"
                       @inline-edit-save="saveEditDeal"
@@ -386,16 +389,22 @@ function handleActivityCreated(newActivity) {
   if (activityListRef.value?.addActivity) activityListRef.value.addActivity(newActivity)
 }
 
-function handlePersonUpdated(updatedPerson) {
+async function handlePersonUpdated(updatedPerson) {
   if (!deal.value) return
-  emit('deal-updated', {
-    ...deal.value,
-    responsible_person_id: updatedPerson?.id ?? deal.value?.responsible_person_id,
-    responsible_person: {
-      ...(deal.value?.responsible_person || {}),
-      ...(updatedPerson || {}),
-    },
-  })
+  // Optimistic local update so the section reflects the new person immediately.
+  if (hydratedDeal.value) {
+    hydratedDeal.value = {
+      ...hydratedDeal.value,
+      responsible_person_id: updatedPerson?.id ?? hydratedDeal.value?.responsible_person_id,
+      responsible_person: {
+        ...(hydratedDeal.value?.responsible_person || {}),
+        ...(updatedPerson || {}),
+      },
+    }
+  }
+  // Refetch the full deal so assigned_at / histories / parties update for the rest of the modal.
+  await hydrateDealForView()
+  emit('deal-updated', deal.value)
 }
 async function handleRefreshDeal() {
   await hydrateDealForView()

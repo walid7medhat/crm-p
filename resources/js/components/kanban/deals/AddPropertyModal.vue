@@ -15,6 +15,8 @@
         :property-types="propertyTypes"
         :developers="developers"
         :selected-stage-name="selectedStageName"
+        :selected-stage-order="selectedStageOrder"
+        :deal-type="dealType"
         @property-added="onPropertyAdded"
         @cancel="closeModal"
       />
@@ -32,7 +34,9 @@ const props = defineProps({
   areas: { type: Array, default: () => [] },
   propertyTypes: { type: Array, default: () => [] },
   developers: { type: Array, default: () => [] },
-  selectedStageName: { type: String, default: '' }
+  selectedStageName: { type: String, default: '' },
+  selectedStageOrder: { type: [Number, String], default: 0 },
+  dealType: { type: String, default: 'primary' }
 })
 
 const emit = defineEmits(['update:modelValue', 'property-added', 'refresh'])

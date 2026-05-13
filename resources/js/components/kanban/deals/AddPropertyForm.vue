@@ -105,9 +105,11 @@
                 <input
                   :value="budgetFromDisplay"
                   placeholder="0"
+                  inputmode="numeric"
                   @click.stop
                   @mousedown.stop
                   class="custom-input budget-dropdown-input"
+                  @keypress="onMoneyKeypress"
                   @input="(e) => setBudgetValue('budget_from', e.target.value)"
                 />
               </div>
@@ -116,9 +118,11 @@
                 <input
                   :value="budgetToDisplay"
                   placeholder="0"
+                  inputmode="numeric"
                   @click.stop
                   @mousedown.stop
                   class="custom-input budget-dropdown-input"
+                  @keypress="onMoneyKeypress"
                   @input="(e) => setBudgetValue('budget_to', e.target.value)"
                 />
               </div>
@@ -129,7 +133,7 @@
       <div class="col-md-6" v-if="showPurchasePrice">
         <label class="form-label-custom">Purchase Price</label>
         <div class="input-group">
-          <b-form-input v-model="formData.purchase_price" type="number" placeholder="Amount" class="custom-input" />
+          <b-form-input v-model="formData.purchase_price" type="text" inputmode="numeric" placeholder="Amount" class="custom-input" @keypress="onMoneyKeypress" />
           <span class="input-group-text">AED</span>
         </div>
       </div>
@@ -193,6 +197,8 @@ const props = defineProps({
   propertyTypes: { type: Array, default: () => [] },
   developers: { type: Array, default: () => [] },
   selectedStageName: { type: String, default: '' },
+  selectedStageOrder: { type: [Number, String], default: 0 },
+  dealType: { type: String, default: 'primary' },
   submitLabel: { type: String, default: 'Add Property' }
 })
 
@@ -219,8 +225,12 @@ const showBudgetFields = computed(() => {
   return stageName.includes('eoi')
 })
 const showPurchasePrice = computed(() => {
+  const dt = props.dealType
+  if (dt !== 'primary' && dt !== 'secondary') return false
+  const order = Number(props.selectedStageOrder) || 0
+  if (order >= 3) return true
   const stageName = props.selectedStageName?.toLowerCase() || ''
-  return stageName.includes('booking') || stageName.includes('spa') || stageName.includes('won')
+  return stageName.includes('booking') || stageName.includes('mou') || stageName.includes('spa') || stageName.includes('won')
 })
 const showPropertyCommission = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
@@ -353,6 +363,10 @@ function formatBudgetWithCommas(value) {
     const digits = normalizeBudgetString(value)
     if (!digits) return ''
     return Number(digits).toLocaleString('en-US')
+}
+
+function onMoneyKeypress(e) {
+  if (!/^\d$/.test(e.key)) e.preventDefault()
 }
 
 function setBudgetValue(key, value) {

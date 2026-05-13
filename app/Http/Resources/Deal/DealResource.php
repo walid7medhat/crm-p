@@ -99,10 +99,18 @@ class DealResource extends JsonResource
                              // ✅ EOI Documents
                         'eoi_documents_raw' => $property->eoi_documents,
                         'eoi_documents' => (new PropertyDocumentResource($property->eoi_documents, 'eoi'))->resolve($request),
-                        
+
                         // ✅ Booking Documents
                         'booking_documents_raw' => $property->booking_documents,
                         'booking_documents' => (new PropertyDocumentResource($property->booking_documents, 'booking'))->resolve($request),
+
+                        // ✅ MOU Documents (secondary order 3+)
+                        'mou_documents_raw' => $property->mou_documents,
+                        'mou_documents' => (new PropertyDocumentResource($property->mou_documents, 'mou'))->resolve($request),
+
+                        // ✅ NOC Documents (secondary order 4+)
+                        'noc_documents_raw' => $property->noc_documents,
+                        'noc_documents' => (new PropertyDocumentResource($property->noc_documents, 'noc'))->resolve($request),
                     ];
                 });
             }),

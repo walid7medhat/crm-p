@@ -440,7 +440,39 @@ private function createDealProperties(Deal $deal, $request)
                     }
                 }
             }
-            
+
+            // ✅ Handle MOU Documents
+            $mouDocumentPaths = [];
+            if (isset($propertyData['mou_documents']) && is_array($propertyData['mou_documents'])) {
+                foreach ($propertyData['mou_documents'] as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/mou_documents", 'public');
+                        $mouDocumentPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            }
+
+            // ✅ Handle NOC Documents
+            $nocDocumentPaths = [];
+            if (isset($propertyData['noc_documents']) && is_array($propertyData['noc_documents'])) {
+                foreach ($propertyData['noc_documents'] as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/noc_documents", 'public');
+                        $nocDocumentPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            }
+
             $property = $deal->properties()->create([
                 'sort_order' => $index,
                 'unit_no' => $propertyData['unit_no'] ?? null,
@@ -461,12 +493,14 @@ private function createDealProperties(Deal $deal, $request)
                 // ✅ إضافة الحقول الجديدة
                 'eoi_documents' => !empty($eoiDocumentPaths) ? json_encode($eoiDocumentPaths) : null,
                 'booking_documents' => !empty($bookingDocumentPaths) ? json_encode($bookingDocumentPaths) : null,
+                'mou_documents' => !empty($mouDocumentPaths) ? json_encode($mouDocumentPaths) : null,
+                'noc_documents' => !empty($nocDocumentPaths) ? json_encode($nocDocumentPaths) : null,
                 'contract_document' => $propertyData['contract_document'] ?? null,
                 'ejari_document' => $propertyData['ejari_document'] ?? null,
                 'commission' => $propertyData['commission'] ?? null,
             ]);
         }
-    } 
+    }
     // ========== SINGLE PROPERTY MODE ==========
     else {
         $propertyData = [];
@@ -594,13 +628,73 @@ private function createDealProperties(Deal $deal, $request)
                 ];
             }
         }
-        
+
+        // Handle mou_documents files from direct request
+        $mouDocumentPaths = [];
+        if ($request->hasFile('mou_documents')) {
+            $files = $request->file('mou_documents');
+            if (is_array($files)) {
+                foreach ($files as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/mou_documents", 'public');
+                        $mouDocumentPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
+                $path = $files->store("deals/{$deal->id}/properties/mou_documents", 'public');
+                $mouDocumentPaths[] = [
+                    'original_name' => $files->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $files->getMimeType(),
+                    'size' => $files->getSize(),
+                ];
+            }
+        }
+
+        // Handle noc_documents files from direct request
+        $nocDocumentPaths = [];
+        if ($request->hasFile('noc_documents')) {
+            $files = $request->file('noc_documents');
+            if (is_array($files)) {
+                foreach ($files as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/noc_documents", 'public');
+                        $nocDocumentPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
+                $path = $files->store("deals/{$deal->id}/properties/noc_documents", 'public');
+                $nocDocumentPaths[] = [
+                    'original_name' => $files->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $files->getMimeType(),
+                    'size' => $files->getSize(),
+                ];
+            }
+        }
+
         // Add files to property data
         if (!empty($eoiDocumentPaths)) {
             $propertyData['eoi_documents'] = json_encode($eoiDocumentPaths);
         }
         if (!empty($bookingDocumentPaths)) {
             $propertyData['booking_documents'] = json_encode($bookingDocumentPaths);
+        }
+        if (!empty($mouDocumentPaths)) {
+            $propertyData['mou_documents'] = json_encode($mouDocumentPaths);
+        }
+        if (!empty($nocDocumentPaths)) {
+            $propertyData['noc_documents'] = json_encode($nocDocumentPaths);
         }
         if (!empty($paymentProofPaths)) {
             $propertyData['payment_proof'] = json_encode($paymentProofPaths);
@@ -704,12 +798,28 @@ private function createDealProperties(Deal $deal, $request)
     }
 
     /**
+     * Normalize a date input from the request (handles ISO 8601 timestamps from AdvancedDatePicker)
+     * into a clean Y-m-d string. Returns null when blank/invalid.
+     */
+    private function normalizeDob($raw): ?string
+    {
+        if ($raw === null || $raw === '' || $raw === '0000-00-00') {
+            return null;
+        }
+        try {
+            return \Carbon\Carbon::parse($raw)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
      * Create deal parties
      */
     private function createDealParties($deal, $request)
     {
         $parties = [];
-        
+
         $hasListingId = $request->filled('listing_id');
         $listing = null;
         $isListingConverted = false;
@@ -762,7 +872,7 @@ private function createDealProperties(Deal $deal, $request)
                         'party_role' => 'primary',
                         'first_name' => $request->landlord_first_name,
                         'last_name' => $request->landlord_last_name,
-                        'date_of_birth' => $request->landlord_dob,
+                        'date_of_birth' => $this->normalizeDob($request->landlord_dob),
                         'phone' => $request->landlord_phone,
                         'email' => $request->landlord_email,
                         'nationality' => $request->landlord_nationality,
@@ -781,7 +891,7 @@ private function createDealProperties(Deal $deal, $request)
                     'party_role' => 'primary',
                     'first_name' => $request->buyer_first_name,
                     'last_name' => $request->buyer_last_name,
-                    'date_of_birth' => $request->buyer_dob,
+                    'date_of_birth' => $this->normalizeDob($request->buyer_dob),
                     'phone' => $request->buyer_phone,
                     'email' => $request->buyer_email,
                     'nationality' => $request->buyer_nationality,
@@ -813,7 +923,7 @@ private function createDealProperties(Deal $deal, $request)
                     'party_role' => 'primary',
                     'first_name' => $request->buyer_first_name,
                     'last_name' => $request->buyer_last_name,
-                    'date_of_birth' => $request->buyer_dob,
+                    'date_of_birth' => $this->normalizeDob($request->buyer_dob),
                     'phone' => $request->buyer_phone,
                     'email' => $request->buyer_email,
                     'nationality' => $request->buyer_nationality,
@@ -825,7 +935,14 @@ private function createDealProperties(Deal $deal, $request)
                 ]);
 
                 $shouldCreateSeller = !($hasListingId && $isListingConverted);
-                
+
+                Log::info('Creating seller party', [
+                    'should_create_seller' => $shouldCreateSeller,
+                    'seller_first_name' => $request->seller_first_name,
+                    'seller_dob_raw' => $request->seller_dob,
+                    'seller_dob_normalized' => $this->normalizeDob($request->seller_dob),
+                ]);
+
                 if ($shouldCreateSeller && $request->seller_first_name) {
                     $parties[] = DealParty::create([
                         'deal_id' => $deal->id,
@@ -833,7 +950,7 @@ private function createDealProperties(Deal $deal, $request)
                         'party_role' => 'primary',
                         'first_name' => $request->seller_first_name,
                         'last_name' => $request->seller_last_name,
-                        'date_of_birth' => $request->seller_dob,
+                        'date_of_birth' => $this->normalizeDob($request->seller_dob),
                         'phone' => $request->seller_phone,
                         'email' => $request->seller_email,
                         'nationality' => $request->seller_nationality,

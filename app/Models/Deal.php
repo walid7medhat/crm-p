@@ -290,6 +290,41 @@ class Deal extends Model
             
              ->when($request->created_from, fn($q, $v) => $q->whereDate('created_at', '>=', $v))
             ->when($request->created_to, fn($q, $v) => $q->whereDate('created_at', '<=', $v))
+
+            // Last-assignment date filters: match only the most recent 'assigned'
+            // history (either on the deal directly or its source lead).
+            ->when(
+                $request->filled('assigned_from') || $request->filled('assigned_to') || $request->filled('assigned_at'),
+                function ($q) use ($request) {
+                    $assignedFrom = $request->assigned_from;
+                    $assignedTo = $request->assigned_to;
+                    $assignedDate = $request->assigned_at;
+                    $q->whereExists(function ($sub) use ($assignedFrom, $assignedTo, $assignedDate) {
+                        $sub->selectRaw('1')
+                            ->from('lead_histories as lh')
+                            ->where(function ($w) {
+                                $w->whereColumn('lh.deal_id', 'deals.id')
+                                  ->orWhereColumn('lh.lead_id', 'deals.lead_id');
+                            })
+                            ->where('lh.changes->action', 'assigned')
+                            ->where('lh.id', '=', function ($maxQ) {
+                                $maxQ->selectRaw('MAX(lh2.id)')
+                                    ->from('lead_histories as lh2')
+                                    ->where(function ($w) {
+                                        $w->whereColumn('lh2.deal_id', 'deals.id')
+                                          ->orWhereColumn('lh2.lead_id', 'deals.lead_id');
+                                    })
+                                    ->where('lh2.changes->action', 'assigned');
+                            });
+                        if ($assignedDate) {
+                            $sub->whereDate('lh.created_at', $assignedDate);
+                        } else {
+                            if ($assignedFrom) $sub->whereDate('lh.created_at', '>=', $assignedFrom);
+                            if ($assignedTo) $sub->whereDate('lh.created_at', '<=', $assignedTo);
+                        }
+                    });
+                }
+            )
             
             // Buyer party filters
             ->when($request->buyer_first_name, function ($q, $v) {

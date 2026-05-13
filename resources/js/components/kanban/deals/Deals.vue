@@ -146,6 +146,58 @@
                               <div class="info-value">{{ deal.source || '—' }}</div>
                             </div>
 
+                            <!-- Responsible Person -->
+                            <div v-if="hasResponsiblePerson(deal)" class="responsible-info d-flex align-items-center justify-content-between mb-12 mt-10">
+                              <div class="d-flex align-items-center gap-2">
+                                <div
+                                  class="person-hover-anchor"
+                                  @mouseenter.stop="showPersonHoverCard(deal, 'responsible')"
+                                  @mouseleave.stop="hidePersonHoverCard"
+                                  @click.stop="openPersonProfile(deal, 'responsible', $event)"
+                                >
+                                  <img v-if="deal.responsible_person?.avatar" :src="deal.responsible_person.avatar" alt="" class="avatar-sm rounded-circle" />
+                                  <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
+                                    <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
+                                  </div>
+                                  <transition name="person-hover-pop">
+                                    <div
+                                      v-if="isPersonHoverVisible(deal, 'responsible') && activePersonHover?.data"
+                                      class="person-hover-card"
+                                      @mouseenter.stop="cancelPersonHoverHide"
+                                      @mouseleave.stop="hidePersonHoverCard"
+                                      @click.stop="openPersonProfile(deal, 'responsible', $event)"
+                                    >
+                                      <div class="person-hover-head">
+                                        <img
+                                          v-if="activePersonHover.data.avatar"
+                                          :src="activePersonHover.data.avatar"
+                                          alt=""
+                                          class="person-hover-avatar"
+                                        />
+                                        <div v-else class="person-hover-avatar person-hover-avatar-fallback d-flex align-items-center justify-content-center">
+                                          <iconify-icon icon="solar:user-bold" class="text-neutral-600" />
+                                        </div>
+                                        <div class="person-hover-head-text">
+                                          <div class="person-hover-name">{{ activePersonHover.data.name }}</div>
+                                          <div class="person-hover-role">{{ activePersonHover.data.position }}</div>
+                                        </div>
+                                      </div>
+                                      <div class="person-hover-line"><span>Reports To</span><b>{{ activePersonHover.data.manager }}</b></div>
+                                      <div class="person-hover-line"><span>Branch</span><b>{{ activePersonHover.data.branch }}</b></div>
+                                    </div>
+                                  </transition>
+                                </div>
+                                <div>
+                                  <div
+                                    class="info-value"
+                                    @mouseenter.stop="showPersonHoverCard(deal, 'responsible')"
+                                    @mouseleave.stop="hidePersonHoverCard"
+                                    @click.stop="openPersonProfile(deal, 'responsible', $event)"
+                                  >{{ deal.responsible_person?.name }}</div>
+                                </div>
+                              </div>
+                            </div>
+
                             <!-- <hr class="kanban-card-divider my-10"> -->
 
                               <!-- Assigned By -->
@@ -678,6 +730,10 @@ const cancelPersonHoverHide = () => {
 
 const isPersonHoverVisible = (task, type) => {
     return activePersonHover.value?.leadId === task?.id && activePersonHover.value?.type === type
+}
+
+const hasResponsiblePerson = (deal) => {
+    return !!(deal?.responsible_person?.name || deal?.responsible_person?.avatar)
 }
 
 // Map stage colors to header backgrounds
@@ -1882,7 +1938,7 @@ async function handleStageChangeFromModal({ dealId, originalStageId, targetStage
           dealId,
           targetStageId: targetColumn.stage_id,
           targetStageName: targetColumn.title,
-          targetStageOrder: targetColumn.Order,
+          targetStageOrder: targetColumn.order,
           originalStageId,
           originalStageName: columns.value.find((c) => String(c.stage_id) === String(originalStageId))?.title || 'Previous Stage',
            dealData: fullDealData 

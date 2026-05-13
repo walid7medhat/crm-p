@@ -41,6 +41,7 @@
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
           :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -94,6 +95,7 @@
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
           :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -200,6 +202,7 @@
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
           :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -241,6 +244,8 @@
           :property-types="inlineEditLookup.propertyTypes || []"
           :developers="inlineEditLookup.developers || []"
           :selected-stage-name="selectedStageName"
+          :selected-stage-order="selectedStageOrder || 0"
+          :deal-type="deal?.deal_type || 'primary'"
           :readonly="false"
           @property-updated="handlePropertyUpdated"
           @refresh-deal="() => emit('refresh-deal')"
@@ -260,6 +265,7 @@
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
           :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -388,6 +394,7 @@
           :lookup="inlineEditLookup"
           :selected-stage-id="selectedStageId"
           :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
           :show-errors="inlineEditShowErrors"
           :field-errors="inlineEditFieldErrors"
           :saving="inlineEditSaving"
@@ -450,6 +457,7 @@ const props = defineProps({
   inlineEditLoading: { type: Boolean, default: false },
   selectedStageId: { type: [Number, String], default: null },
   selectedStageName: { type: String, default: '' },
+  selectedStageOrder: { type: [Number, String], default: 0 },
   hideInlineEditActions: { type: Boolean, default: false },
 })
 

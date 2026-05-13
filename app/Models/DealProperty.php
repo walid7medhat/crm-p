@@ -39,17 +39,21 @@ class DealProperty extends Model
         'ejari_document',
           'eoi_documents',
         'booking_documents',
+        'mou_documents',
+        'noc_documents',
     ];
-    
+
        protected $casts = [
-        'payment_proof' => 'array',  
-        'spa_document' => 'array',   
+        'payment_proof' => 'array',
+        'spa_document' => 'array',
         'budget_from' => 'integer',
         'budget_to' => 'integer',
         'purchase_price' => 'integer',
         'commission' => 'integer',
          'eoi_documents' => 'array',
         'booking_documents' => 'array',
+        'mou_documents' => 'array',
+        'noc_documents' => 'array',
     ];
     
     // ========== Relationships ==========

@@ -335,13 +335,13 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="shouldShowField('seller_dob')">
+                    <div class="col-md-4 buyer-dob-field" v-if="shouldShowField('seller_dob')">
                       <label class="form-label-custom">Date Of Birth <span v-if="isRequiredField('seller_dob')" class="text-danger">*</span></label>
                       <AdvancedDatePicker
                         v-model="formData.seller_dob"
                         date-only
-                        placeholder="Select date"
-                        class="custom-input"
+                        dob-layout
+                        placeholder="Select date of birth"
                         :invalid="isFieldInvalid('seller_dob')"
                       />
                     </div>
@@ -748,13 +748,13 @@
                       />
                     </div>
                     
-                    <div class="col-md-4" v-if="shouldShowField('landlord_dob')">
+                    <div class="col-md-4 buyer-dob-field" v-if="shouldShowField('landlord_dob')">
                       <label class="form-label-custom">Date Of Birth <span v-if="isRequiredField('landlord_dob')" class="text-danger">*</span></label>
                       <AdvancedDatePicker
                         v-model="formData.landlord_dob"
                         date-only
-                        placeholder="Select date"
-                        class="custom-input"
+                        dob-layout
+                        placeholder="Select date of birth"
                         :invalid="isFieldInvalid('landlord_dob')"
                       />
                     </div>
@@ -1073,9 +1073,10 @@
                                     <div class="input-group">
                                         <input
                                             :value="property.purchase_price ?? ''"
+                                            @keypress="onMoneyKeypress"
                                             @input="(e) => onPropertyMoneyInput(propIndex, 'purchase_price', e.target.value)"
                                             type="text"
-                                            inputmode="decimal"
+                                            inputmode="numeric"
                                             autocomplete="off"
                                              :placeholder="isWonStage ? 'Enter Purchase Price' : 'Enter Purchase Price'"
                                             class="form-control custom-input"
@@ -1162,13 +1163,14 @@
                                             <input
                                               :value="property.budget_from ?? ''"
                                               type="text"
-                                              inputmode="decimal"
+                                              inputmode="numeric"
                                               autocomplete="off"
                                               placeholder="0"
                                               class="form-control custom-input budget-dropdown-input-stage"
                                               :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'budget_from') }"
                                               @mousedown.stop
                                               @click.stop
+                                              @keypress="onMoneyKeypress"
                                               @input="(e) => onPropertyMoneyInput(propIndex, 'budget_from', e.target.value)"
                                             />
                                           </div>
@@ -1177,13 +1179,14 @@
                                             <input
                                               :value="property.budget_to ?? ''"
                                               type="text"
-                                              inputmode="decimal"
+                                              inputmode="numeric"
                                               autocomplete="off"
                                               placeholder="0"
                                               class="form-control custom-input budget-dropdown-input-stage"
                                               :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'budget_to') }"
                                               @mousedown.stop
                                               @click.stop
+                                              @keypress="onMoneyKeypress"
                                               @input="(e) => onPropertyMoneyInput(propIndex, 'budget_to', e.target.value)"
                                             />
                                           </div>
@@ -1297,13 +1300,14 @@
                       <div class="input-group">
                         <span class="input-group-text">AED</span>
                         <input
-                          :value="computedTotalAmount"
+                          :value="displayedDealAmount"
                           type="text"
-                          inputmode="decimal"
+                          inputmode="numeric"
                           autocomplete="off"
                           placeholder="Enter deal amount"
                           class="form-control custom-input compact-placeholder-field"
                           :class="{ 'is-invalid': isFieldInvalid('deal_total_amount') }"
+                          @keypress="onMoneyKeypress"
                           @input="(e) => onDealAmountInput(e.currentTarget.value)"
                         />
                       </div>
@@ -1922,6 +1926,10 @@ function onPropertyMoneyInput(propIndex, field, rawValue) {
   updateProperty(propIndex, field, formatDealAmountThousands(rawValue))
 }
 
+function onMoneyKeypress(e) {
+  if (!/^\d$/.test(e.key)) e.preventDefault()
+}
+
 // Check if bedrooms field should be shown for property
 function showBedroomsForProperty(property) {
   const propertyTypeId = property.property_type_id
@@ -2039,9 +2047,18 @@ function formatDealAmountThousands(raw) {
   return intFormatted
 }
 
+const dealAmountManuallyEdited = ref(false)
+
 function onDealAmountInput(val) {
+  dealAmountManuallyEdited.value = true
   formData.value.deal_total_amount = formatDealAmountThousands(val)
 }
+
+const displayedDealAmount = computed(() => {
+  return dealAmountManuallyEdited.value
+    ? (formData.value.deal_total_amount ?? '')
+    : computedTotalAmount.value
+})
 
 function parseDealAmountNumeric(raw) {
   return Number(String(raw ?? '').replace(/,/g, '').trim())
@@ -2157,6 +2174,8 @@ function hydratePropertyDocsFromDealDocuments(deal) {
   const existingSpa = Array.isArray(firstProperty.spa_document) ? [...firstProperty.spa_document] : []
   const existingEoi = Array.isArray(firstProperty.eoi_documents) ? [...firstProperty.eoi_documents] : []
   const existingBooking = Array.isArray(firstProperty.booking_documents) ? [...firstProperty.booking_documents] : []
+  const existingMou = Array.isArray(firstProperty.mou_documents) ? [...firstProperty.mou_documents] : []
+  const existingNoc = Array.isArray(firstProperty.noc_documents) ? [...firstProperty.noc_documents] : []
 
   propertyDocs.forEach((doc) => {
     const rawType = String(doc?.document_type || doc?.type || '').toLowerCase()
@@ -2176,6 +2195,10 @@ function hydratePropertyDocsFromDealDocuments(deal) {
       normalizedType = 'eoi'
     } else if (rawType === 'booking' || rawType.includes('booking') || labelHint.includes('booking')) {
       normalizedType = 'booking'
+    } else if (rawType === 'mou' || rawType.includes('mou') || labelHint.includes('mou')) {
+      normalizedType = 'mou'
+    } else if (rawType === 'noc' || rawType.includes('noc') || labelHint.includes('noc')) {
+      normalizedType = 'noc'
     }
 
     const normalizedDoc = {
@@ -2200,12 +2223,20 @@ function hydratePropertyDocsFromDealDocuments(deal) {
     if (normalizedType === 'booking') {
       existingBooking.push(normalizedDoc)
     }
+    if (normalizedType === 'mou') {
+      existingMou.push(normalizedDoc)
+    }
+    if (normalizedType === 'noc') {
+      existingNoc.push(normalizedDoc)
+    }
   })
 
   firstProperty.payment_proof = existingPayment
   firstProperty.spa_document = existingSpa
   firstProperty.eoi_documents = existingEoi
   firstProperty.booking_documents = existingBooking
+  firstProperty.mou_documents = existingMou
+  firstProperty.noc_documents = existingNoc
 }
 
 function normalizeStoredDocs(raw) {
@@ -2329,6 +2360,14 @@ function getMissingPropertyDocTypesForProperty(propIndex) {
     if (key === `property_${propIndex}_document_payment_proof` || (propIndex === 0 && key === 'property_0_document_payment_proof')) {
       missing.add('payment_proof')
     }
+    // MOU
+    if (key === `property_${propIndex}_document_mou` || (propIndex === 0 && key === 'property_0_document_mou')) {
+      missing.add('mou')
+    }
+    // NOC
+    if (key === `property_${propIndex}_document_noc` || (propIndex === 0 && key === 'property_0_document_noc')) {
+      missing.add('noc')
+    }
   })
 
   const prop = localProperties.value[propIndex]
@@ -2337,6 +2376,8 @@ function getMissingPropertyDocTypesForProperty(propIndex) {
     if (propertyStoredDocArrayHasContent(prop.booking_documents)) missing.delete('booking')
     if (propertyStoredDocArrayHasContent(prop.spa_document)) missing.delete('spa')
     if (propertyStoredDocArrayHasContent(prop.payment_proof)) missing.delete('payment_proof')
+    if (propertyStoredDocArrayHasContent(prop.mou_documents)) missing.delete('mou')
+    if (propertyStoredDocArrayHasContent(prop.noc_documents)) missing.delete('noc')
   }
   
   return Array.from(missing)
@@ -2371,17 +2412,31 @@ const updatePropertyDocuments = async  (propIndex, newDocuments) => {
             (doc.original_name && doc.original_name.toLowerCase().includes('payment'))
         )
         
-        const spaDocs = newDocuments.filter(doc => 
-            doc.document_type === 'spa' || 
+        const spaDocs = newDocuments.filter(doc =>
+            doc.document_type === 'spa' ||
             doc.document_type === 'spa_document' ||
             (doc.original_name && doc.original_name.toLowerCase().includes('spa'))
         )
-        
+
+        const mouDocs = newDocuments.filter(doc =>
+            doc.document_type === 'mou' ||
+            doc.document_type === 'mou_document' ||
+            (doc.original_name && doc.original_name.toLowerCase().includes('mou'))
+        )
+
+        const nocDocs = newDocuments.filter(doc =>
+            doc.document_type === 'noc' ||
+            doc.document_type === 'noc_document' ||
+            (doc.original_name && doc.original_name.toLowerCase().includes('noc'))
+        )
+
         // تحديث المصفوفات
         localProperties.value[propIndex].eoi_documents = eoiDocs
         localProperties.value[propIndex].booking_documents = bookingDocs
         localProperties.value[propIndex].payment_proof = paymentDocs
         localProperties.value[propIndex].spa_document = spaDocs
+        localProperties.value[propIndex].mou_documents = mouDocs
+        localProperties.value[propIndex].noc_documents = nocDocs
         
         console.log('Updated localProperties:', {
             eoi_documents: localProperties.value[propIndex].eoi_documents?.length,
@@ -2454,6 +2509,14 @@ function reinitializePropertyDocuments() {
           const t = String(d?.document_type || d?.type || '').toLowerCase()
           return t === 'booking' || t.includes('booking')
         })
+        const mouFromPropertyDocs = propertyDocs.filter((d) => {
+          const t = String(d?.document_type || d?.type || '').toLowerCase()
+          return t === 'mou' || t.includes('mou')
+        })
+        const nocFromPropertyDocs = propertyDocs.filter((d) => {
+          const t = String(d?.document_type || d?.type || '').toLowerCase()
+          return t === 'noc' || t.includes('noc')
+        })
 
         const paymentProof = normalizeStoredDocs(
           property.payment_proof ||
@@ -2480,6 +2543,20 @@ function reinitializePropertyDocuments() {
           property.booking_document ||
           property.booking_documents_raw ||
           bookingFromPropertyDocs
+        )
+        const mouDocument = normalizeStoredDocs(
+          property.mou_documents ||
+          property.mou_document ||
+          property.mou ||
+          property.mou_documents_raw ||
+          mouFromPropertyDocs
+        )
+        const nocDocument = normalizeStoredDocs(
+          property.noc_documents ||
+          property.noc_document ||
+          property.noc ||
+          property.noc_documents_raw ||
+          nocFromPropertyDocs
         )
         
         let docs = []
@@ -2541,7 +2618,35 @@ function reinitializePropertyDocuments() {
                 })
             })
         }
-        
+
+        if (Array.isArray(mouDocument)) {
+            mouDocument.forEach((doc) => {
+                docs.push({
+                    ...doc,
+                    document_type: 'mou',
+                    url: doc.url || doc.path || null,
+                    file: doc.file || null,
+                    name: doc.original_name || doc.name || 'MOU Document',
+                    uploaded: true,
+                    existing: true,
+                })
+            })
+        }
+
+        if (Array.isArray(nocDocument)) {
+            nocDocument.forEach((doc) => {
+                docs.push({
+                    ...doc,
+                    document_type: 'noc',
+                    url: doc.url || doc.path || null,
+                    file: doc.file || null,
+                    name: doc.original_name || doc.name || 'NOC Document',
+                    uploaded: true,
+                    existing: true,
+                })
+            })
+        }
+
         newPropertyDocumentsCombined[idx] = docs
     })
     
@@ -2784,6 +2889,7 @@ const computedTotalAmount = computed(() => {
   return total > 0 ? formatDealAmountThousands(String(total)) : ''
 })
 watch(computedTotalAmount, (val) => {
+  if (dealAmountManuallyEdited.value) return
   formData.value.deal_total_amount = val || null
 })
 // مراقبة التغييرات على purchase_price لكل خاصية
@@ -2815,6 +2921,38 @@ const documentTypesByParty = computed(() => {
   pushDocKeys(effectiveMissingFields.value || [])
   pushDocKeys(props.requiredFields || [])
   pushDocKeys(Array.from(accumulatedRequiredKeys.value || []))
+
+  // ✅ Security Deposit appears for buyer + seller in SECONDARY deals from stage 2 (Security Deposit) onwards,
+  // even if the backend hasn't surfaced it via missing_fields and even if `targetStageOrder` is missing.
+  // OPTIONAL — shown in UI but not required (does not block submission).
+  if (normalizedDealType.value === 'secondary') {
+    const targetOrder = Number(props.targetStageOrder) || 0
+    const targetStageName = String(props.targetStageName || '').toLowerCase()
+    const shouldShowSecurityDeposit =
+      targetOrder >= 2 ||
+      targetStageName.includes('security') ||
+      targetStageName.includes('deposit') ||
+      targetStageName.includes('mou') ||
+      targetStageName.includes('noc') ||
+      targetStageName.includes('won') ||
+      targetStageName.includes('spa')
+
+    if (shouldShowSecurityDeposit) {
+      ['buyer', 'seller'].forEach((party) => {
+        const existing = result[party].find((d) => d.id === 'security_deposit')
+        if (existing) {
+          // Force-optional even if a residency/missing-key path inserted it as required earlier.
+          existing.required = false
+        } else {
+          result[party].push({
+            id: 'security_deposit',
+            name: 'Security Deposit',
+            required: false,
+          })
+        }
+      })
+    }
+  }
 
   // إضافة مستندات بناءً على حالة الإقامة ولكن فقط للأطراف المسموح بها
   const parties = ['buyer', 'seller', 'tenant', 'landlord']
@@ -2892,7 +3030,7 @@ function isPartyAllowed(party) {
 const missingDocumentTypesByParty = computed(() => {
   const result = { buyer: [], seller: [], tenant: [], landlord: [] }
   const missingKeys = effectiveMissingFields.value || []
-  
+
   missingKeys.forEach(key => {
     if (key.includes('_document_')) {
       const [partyType, docType] = key.split('_document_')
@@ -2901,6 +3039,8 @@ const missingDocumentTypesByParty = computed(() => {
       }
     }
   })
+
+  // Security Deposit is OPTIONAL for secondary at stage 2+ — visible but not required.
 
   const parties = ['buyer', 'seller', 'tenant', 'landlord']
   parties.forEach((party) => {
@@ -3014,8 +3154,9 @@ function shouldShowPropertyField(fieldName, property) {
       return dt === 'rental'
       
     case 'purchase_price':
-      if (isNewProperty && dt !== 'rental' && targetOrder>=3) return true
-      return showPurchasePrice.value && dt !== 'rental' 
+      if (dt !== 'primary' && dt !== 'secondary') return false
+      if (targetOrder >= 3) return true
+      return showPurchasePrice.value
       
     default:
       return isPropertyFieldRequired(fieldName)
@@ -3043,9 +3184,50 @@ function togglePropertyBudgetDropdown(propIndex) {
 const PROPERTY_MODAL_DOC_SPECS = [
   { id: 'eoi', name: 'EOI Document', missingFragments: ['document_eoi', 'eoi_document'], localKey: 'eoi_documents' },
   { id: 'booking', name: 'Booking Form', missingFragments: ['document_booking', 'booking_document'], localKey: 'booking_documents' },
+  { id: 'noc', name: 'NOC Document', missingFragments: ['document_noc', 'noc_document'], localKey: 'noc_documents' },
+  { id: 'mou', name: 'MOU Document', missingFragments: ['document_mou', 'mou_document'], localKey: 'mou_documents' },
   { id: 'spa', name: 'SPA Document', missingFragments: ['document_spa', 'spa_document'], localKey: 'spa_document' },
   { id: 'payment_proof', name: 'Payment Proof', missingFragments: ['document_payment', 'payment_proof'], localKey: 'payment_proof' },
 ]
+
+/**
+ * Optional doc ids to surface (always visible, never required) based on deal type + target stage order.
+ * Lets users upload secondary's MOU (stage 3) / NOC (stage 4) even though the backend doesn't list them as missing.
+ * Cumulative: MOU stays visible from stage 3 onwards; NOC from stage 4 onwards.
+ * Stage-name fallback covers cases where targetStageOrder isn't propagated correctly.
+ */
+function alwaysVisibleDocIdsForSecondary() {
+  const dt = normalizedDealType.value
+  if (dt !== 'secondary') return new Set()
+  const targetOrder = Number(props.targetStageOrder) || 0
+  const targetStageName = String(props.targetStageName || '').toLowerCase()
+
+  // Stages where MOU should still appear (MOU + all later stages).
+  const isAtOrAfterMou =
+    targetOrder >= 3 ||
+    targetStageName.includes('mou') ||
+    targetStageName.includes('noc') ||
+    targetStageName.includes('won') ||
+    targetStageName.includes('spa')
+
+  // Stages where NOC should appear (NOC + all later stages).
+  const isAtOrAfterNoc =
+    targetOrder >= 4 ||
+    targetStageName.includes('noc') ||
+    targetStageName.includes('won')
+
+  // Stages where SPA appears (Won/SPA).
+  const isAtOrAfterSpa =
+    targetOrder >= 5 ||
+    targetStageName.includes('won') ||
+    targetStageName.includes('spa')
+
+  const ids = new Set(['payment_proof'])
+  if (isAtOrAfterMou) ids.add('mou')
+  if (isAtOrAfterNoc) ids.add('noc')
+  if (isAtOrAfterSpa) ids.add('spa')
+  return ids
+}
 
 const propertyDocTypesForModal = computed(() => {
   const missingKeys = effectiveMissingFields.value || []
@@ -3060,8 +3242,10 @@ const propertyDocTypesForModal = computed(() => {
   const anyPropertyHas = (localKey) =>
     propsList.some((p) => propertyStoredDocArrayHasContent(p?.[localKey]))
 
+  const alwaysVisible = alwaysVisibleDocIdsForSecondary()
+
   return PROPERTY_MODAL_DOC_SPECS.filter(
-    (spec) => missingMatches(spec.missingFragments) || anyPropertyHas(spec.localKey)
+    (spec) => missingMatches(spec.missingFragments) || anyPropertyHas(spec.localKey) || alwaysVisible.has(spec.id)
   ).map((spec) => ({
     id: spec.id,
     name: spec.name,
@@ -3277,8 +3461,14 @@ const effectiveMissingFields = computed(() => {
     }
     return true
   })
-  
-  return finalWithBudgetFilter
+
+  // ✅ Security Deposit is OPTIONAL — strip any *_document_security_deposit keys
+  // so the badge count, submit blocker, and required indicators all ignore it.
+  const withoutSecurityDeposit = finalWithBudgetFilter.filter(
+    (field) => !/^(buyer|seller)_document_security_deposit$/.test(field)
+  )
+
+  return withoutSecurityDeposit
 })
 
 // Unresolved missing keys for submit button
@@ -3301,11 +3491,15 @@ if (key.startsWith('property_document_')) {
     normalizedDocType = 'booking_document' // ✅ إضافة معالجة booking
   } else if (rawDocType === 'eoi') {
     normalizedDocType = 'eoi_document' // ✅ إضافة معالجة eoi
+  } else if (rawDocType === 'mou') {
+    normalizedDocType = 'mou_document'
+  } else if (rawDocType === 'noc') {
+    normalizedDocType = 'noc_document'
   }
 
   // ✅ التحقق من المستندات في localProperties
   let hasPropertyDoc = false
-  
+
   // التحقق من propertyDocumentsCombined (المستندات الجديدة)
   hasPropertyDoc = localProperties.value.some((property, propIndex) => {
     const docs = propertyDocumentsCombined.value?.[propIndex] || []
@@ -3314,11 +3508,13 @@ if (key.startsWith('property_document_')) {
       // ✅ مقارنة مع normalizedDocType و rawDocType
       const hasFileOrUrl = !!(doc?.file || doc?.url)
       return hasFileOrUrl && (
-        docType === normalizedDocType || 
+        docType === normalizedDocType ||
         docType === rawDocType ||
         docType === normalizedDocType.replace('_document', '') ||
         (rawDocType === 'booking' && (docType === 'booking' || docType === 'booking_document')) ||
-        (rawDocType === 'eoi' && (docType === 'eoi' || docType === 'eoi_document'))
+        (rawDocType === 'eoi' && (docType === 'eoi' || docType === 'eoi_document')) ||
+        (rawDocType === 'mou' && (docType === 'mou' || docType === 'mou_document')) ||
+        (rawDocType === 'noc' && (docType === 'noc' || docType === 'noc_document'))
       )
     })) {
       return true
@@ -3335,6 +3531,10 @@ if (key.startsWith('property_document_')) {
         existingDocs = property.booking_documents
       } else if (normalizedDocType === 'eoi_document' || rawDocType === 'eoi') {
         existingDocs = property.eoi_documents
+      } else if (normalizedDocType === 'mou_document' || rawDocType === 'mou') {
+        existingDocs = property.mou_documents
+      } else if (normalizedDocType === 'noc_document' || rawDocType === 'noc') {
+        existingDocs = property.noc_documents
       } else if (normalizedDocType === 'spa_document' || rawDocType === 'spa') {
         existingDocs = property.spa_document
       } else if (normalizedDocType === 'payment_proof' || rawDocType === 'payment') {
@@ -3401,7 +3601,9 @@ if (key.startsWith('property_document_')) {
               docType === normalizedDocType.replace('_document', '') ||
               (rawDocType === 'booking' &&
                 (docType === 'booking' || docType === 'booking_document')) ||
-              (rawDocType === 'eoi' && (docType === 'eoi' || docType === 'eoi_document')))
+              (rawDocType === 'eoi' && (docType === 'eoi' || docType === 'eoi_document')) ||
+              (rawDocType === 'mou' && (docType === 'mou' || docType === 'mou_document')) ||
+              (rawDocType === 'noc' && (docType === 'noc' || docType === 'noc_document')))
           )
         })
       ) {
@@ -3792,7 +3994,27 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
           }
         })
       }
-      
+
+      // جمع الملفات الجديدة من mou_documents
+      const mouFiles = []
+      if (prop.mou_documents && Array.isArray(prop.mou_documents)) {
+        prop.mou_documents.forEach(doc => {
+          if (isPendingUploadFile(doc.file)) {
+            mouFiles.push(doc.file)
+          }
+        })
+      }
+
+      // جمع الملفات الجديدة من noc_documents
+      const nocFiles = []
+      if (prop.noc_documents && Array.isArray(prop.noc_documents)) {
+        prop.noc_documents.forEach(doc => {
+          if (isPendingUploadFile(doc.file)) {
+            nocFiles.push(doc.file)
+          }
+        })
+      }
+
       return {
         sort_order: index,
         unit_no: prop.unit_no || '',
@@ -3817,6 +4039,8 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
         // Persisted metadata + new files (previously only raw Files were sent — wiped EOI/booking/payment/SPA on save)
         eoi_documents: [...persistedPropertyDocMetadataList(prop.eoi_documents), ...eoiFiles.map((f) => ({ file: f }))],
         booking_documents: [...persistedPropertyDocMetadataList(prop.booking_documents), ...bookingFiles.map((f) => ({ file: f }))],
+        mou_documents: [...persistedPropertyDocMetadataList(prop.mou_documents), ...mouFiles.map((f) => ({ file: f }))],
+        noc_documents: [...persistedPropertyDocMetadataList(prop.noc_documents), ...nocFiles.map((f) => ({ file: f }))],
         payment_proof: [...persistedPropertyDocMetadataList(prop.payment_proof), ...paymentFiles.map((f) => ({ file: f }))],
         spa_document: [...persistedPropertyDocMetadataList(prop.spa_document), ...spaFiles.map((f) => ({ file: f }))],
       }
@@ -3831,7 +4055,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
   }, 0)
   if (payload.properties && Array.isArray(payload.properties)) {
     payload.properties.forEach((prop) => {
-      ;['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents'].forEach((k) => {
+      ;['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents'].forEach((k) => {
         const arr = prop[k]
         if (!Array.isArray(arr)) return
         arr.forEach((item) => {
@@ -3897,6 +4121,7 @@ function closeModal() {
   }
   formData.value = {}
   localProperties.value = []
+  dealAmountManuallyEdited.value = false
   submitting.value = false
   if (submitResetTimer) {
     clearTimeout(submitResetTimer)
@@ -3915,6 +4140,7 @@ watch(() => props.show, async (val) => {
     if (val) {
         resetAccumulatedRequiredKeys()
         accumulateRequiredKeysFromProps()
+        dealAmountManuallyEdited.value = false
         document.body?.classList?.add('complete-stage-open')
         // Prevent underlying bootstrap modal from trapping focus/clicks
         const viewModal = document.getElementById('view-deal-modal')
