@@ -39,10 +39,12 @@ public function index(Request $request): JsonResponse
     try {
         $user = Auth::user();
         $userId = $user->id;
-        
-        // مفتاح الكاش بيكون مميز لكل مستخدم
-        $cacheKey = self::CACHE_PREFIX . 'user_' . $userId . '_index_' . md5(serialize($request->all()));
-        
+
+        // Per-user version makes the cache key change whenever clearOwnersCacheFor() runs,
+        // so file/database drivers (no tag support) still invalidate correctly.
+        $version = self::getUserCacheVersion($userId);
+        $cacheKey = self::CACHE_PREFIX . 'user_' . $userId . '_v' . $version . '_index_' . md5(serialize($request->all()));
+
         // استخدام cache tags إذا كان مدعوماً
         if (method_exists(Cache::getStore(), 'tags')) {
             $owners = Cache::tags([self::CACHE_TAG, self::CACHE_TAG . '_user_' . $userId])->remember($cacheKey, self::CACHE_TTL, function () use ($request, $user) {
@@ -53,7 +55,7 @@ public function index(Request $request): JsonResponse
                 return $this->getOwnersData($request, $user);
             });
         }
-        
+
         return ApiResponse::success(
             OwnerResource::collection($owners),
             'Owners retrieved successfully'
@@ -63,6 +65,21 @@ public function index(Request $request): JsonResponse
         return $this->fallbackIndex($request, $e);
     }
 }
+
+/** Cache key suffix bumped on writes; safe across drivers without tag support. */
+public static function getUserCacheVersion(int $userId): string
+{
+    return (string) Cache::get(self::CACHE_PREFIX . 'ver_user_' . $userId, '0');
+}
+
+public static function bumpUserCacheVersion(int $userId): void
+{
+    Cache::put(
+        self::CACHE_PREFIX . 'ver_user_' . $userId,
+        (string) (microtime(true) * 1000),
+        86400 * 30
+    );
+}
     /**
      * Get owners data - منفصلة للكاش
      */
@@ -70,7 +87,7 @@ public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
         
-        $query = Owner::with('location');
+        $query = Owner::query();
         if(!($user->hasRole('admin') || $user->hasRole('super_admin') || ($user->hasRole('manager') && $user->listing_team == 1))){
                 $query->where('added_by', $user->id);
         }
@@ -500,11 +517,47 @@ public function getOwnerProperties(Owner $owner): JsonResponse
     }
 
     /**
+     * Flush the owners cache for a given user (or all users when null).
+     * Called from other controllers (e.g. ListingController::assignAgent) after
+     * an owner is created/cloned for a different agent so the new agent's
+     * cached owners list does not hide the newly-attached owner.
+     */
+    public static function clearOwnersCacheFor(?int $userId = null): void
+    {
+        try {
+            // Bump the per-user version so any cached index key under the old version is unreachable.
+            // Works on every cache driver — does not require tag support.
+            if ($userId) {
+                self::bumpUserCacheVersion($userId);
+                Cache::forget(self::CACHE_PREFIX . 'stats_' . $userId);
+            }
+            Cache::forget(self::CACHE_PREFIX . 'locations_resident');
+            Cache::forget(self::CACHE_PREFIX . 'locations_non_resident');
+
+            // Tag flush as well for drivers that support it (redis/memcached) — defensive.
+            if (method_exists(Cache::getStore(), 'tags')) {
+                $tags = [self::CACHE_TAG];
+                if ($userId) {
+                    $tags[] = self::CACHE_TAG . '_user_' . $userId;
+                }
+                Cache::tags($tags)->flush();
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Owners cache clear (static) error: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * دالة مساعدة لمسح كل الكاش - الإصلاح النهائي
      */
     private function clearCache(): void
     {
         try {
+            // Bump the current user's version unconditionally — file/database drivers don't support tag flush.
+            if (Auth::check()) {
+                self::bumpUserCacheVersion((int) Auth::id());
+            }
+
             // استخدام cache tags إذا كان مدعوماً (أفضل حل)
             if (method_exists(Cache::getStore(), 'tags')) {
                 Cache::tags([self::CACHE_TAG])->flush();

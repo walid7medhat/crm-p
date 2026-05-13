@@ -589,7 +589,7 @@ export default {
       'sale_rent', 'area_ids', 'area_id', 'project_id', 'type_id', 'beds', 'baths',
       'type_ids', 'beds_list', 'baths_list',
       'price_from', 'price_to', 'size_from', 'size_to', 'sort', 'ref',
-      'completion_status', 'agent_id', 'agent_name','additional_features'
+      'completion_status', 'occupancy_status', 'agent_id', 'agent_name','additional_features'
     ];
 
     const pruneEmptyQueryValues = (obj) => {
@@ -628,6 +628,7 @@ export default {
         sort: filters.sort || undefined,
         ref: filters.referenceNumber || undefined,
         completion_status: filters.completionStatus?.value || undefined,
+        occupancy_status: filters.occupancyStatus?.value || undefined,
         agent_id: filters.agent?.id || undefined,
          additional_features: activeFeatures.length > 0 ? activeFeatures.join(',') : undefined,
       };
@@ -708,8 +709,11 @@ const decodeFiltersFromQuery = async (query) => {
         completionStatus: query.completion_status
           ? { label: query.completion_status, value: query.completion_status }
           : null,
+        occupancyStatus: query.occupancy_status
+          ? { label: query.occupancy_status, value: query.occupancy_status }
+          : null,
         agent: query.agent_id ? { id: Number(query.agent_id) } : null,
-        selectedFeatures: selectedFeatures, 
+        selectedFeatures: selectedFeatures,
       };
     };
 
@@ -748,6 +752,9 @@ const decodeFiltersFromQuery = async (query) => {
 
      if (filters.completionStatus && filters.completionStatus.value) {
         apiFilters.completion_status = filters.completionStatus.value;
+      }
+      if (filters.occupancyStatus && filters.occupancyStatus.value) {
+        apiFilters.occupancy_status = filters.occupancyStatus.value;
       }
       // Property Type Filter
       if (Array.isArray(filters.propertyTypes) && filters.propertyTypes.length) {

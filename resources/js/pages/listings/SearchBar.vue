@@ -324,6 +324,29 @@
                   </template>
               </v-select>
               </div>
+              <div>
+                <label>Occupancy Status</label>
+                <v-select
+                  v-model="selectedOccupancyStatus"
+                  :options="occupancyStatusOptions"
+                  :searchable="false"
+                  :append-to-body="false"
+                  placeholder="Select occupancy"
+                  class="custom-select listing-pop-select"
+                  @update:modelValue="handleFilterChange"
+                >
+                  <template #open-indicator="{ attributes }">
+                    <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                    </span>
+                  </template>
+                  <template #clear-indicator="{ attributes }">
+                    <span v-bind="attributes">
+                      <i class="ri-close-line custom-clear"></i>
+                    </span>
+                  </template>
+                </v-select>
+              </div>
               <!-- ✅ Additional Features Section (جديدة وموضوعة داخل More Filters) -->
               <div class="listing-filter-section listing-pop-field--full">
                 <label class="listing-pop-label">Features </label>
@@ -547,6 +570,22 @@
             />
           </details>
 
+          <details>
+            <summary>
+              <span>Occupancy Status</span>
+              <small>{{ selectedOccupancyStatus?.label || 'Any' }}</small>
+            </summary>
+            <v-select
+              v-model="selectedOccupancyStatus"
+              :options="occupancyStatusOptions"
+              :searchable="false"
+              :append-to-body="false"
+              placeholder="Select occupancy"
+              class="custom-select listing-pop-select"
+              @update:modelValue="handleFilterChange"
+            />
+          </details>
+
         </div>
 
         <div class="mobile-filter-sticky-actions">
@@ -679,6 +718,13 @@ const bathsOptions = ["1", "2", "3", "4", "5", "6+"];
       { label: "Completed", value: "Completed" },
       { label: "Under Construction", value: "Under Construction" }
     ];
+    const occupancyStatusOptions = [
+      { label: "Owner Occupied", value: "Owner Occupied" },
+      { label: "Holiday Home", value: "Holiday Home" },
+      { label: "Rented", value: "Rented" },
+      { label: "Vacant", value: "Vacant" },
+    ];
+    const selectedOccupancyStatus = ref(null);
     const listingFeatureOptions = [
       { key: 'maid', label: 'Maid Room' },
       { key: 'storage', label: 'Storage Room' },
@@ -1230,6 +1276,9 @@ const featuresButtonLabel = computed(() => {
       if (filters.completionStatus && filters.completionStatus.value) {
         apiFilters.completion_status = filters.completionStatus.value;
       }
+      if (filters.occupancyStatus && filters.occupancyStatus.value) {
+        apiFilters.occupancy_status = filters.occupancyStatus.value;
+      }
       // Sale/Rent Filter
       if (filters.saleRent && filters.saleRent !== 'All') {
         apiFilters.listing_status = filters.saleRent.toLowerCase();
@@ -1314,6 +1363,7 @@ const featuresButtonLabel = computed(() => {
         const filters = {
           saleRent: selectedSaleRent.value,
               completionStatus: selectedCompletionStatus.value,
+          occupancyStatus: selectedOccupancyStatus.value,
           status: selectedStatus.value,
           area: selectedArea.value,
           project: selectedProject.value,
@@ -1458,6 +1508,7 @@ const featuresButtonLabel = computed(() => {
       const filters = {
         saleRent: selectedSaleRent.value,
          completionStatus: selectedCompletionStatus.value,
+        occupancyStatus: selectedOccupancyStatus.value,
         status: selectedStatus.value,
         area: selectedArea.value,
          project: selectedProject.value,
@@ -1475,7 +1526,7 @@ const featuresButtonLabel = computed(() => {
         sort: selectedSort.value,
          referenceNumber: searchReferenceNumber.value ,
           selectedFeatures: selectedFeatures.value,
-           
+
       };
       
       console.log("🔍 Manual search with filters:", filters);
@@ -1558,6 +1609,15 @@ const featuresButtonLabel = computed(() => {
         sizeTo.value = filters.sizeTo ?? 10000;
         searchReferenceNumber.value = filters.referenceNumber || "";
         selectedCompletionStatus.value = resolveCompletionForSelect(filters.completionStatus);
+        if (filters.occupancyStatus) {
+          const val = typeof filters.occupancyStatus === 'object' && filters.occupancyStatus !== null && 'value' in filters.occupancyStatus
+            ? filters.occupancyStatus.value
+            : filters.occupancyStatus;
+          selectedOccupancyStatus.value = occupancyStatusOptions.find((o) => o.value === val)
+            || (val ? { label: val, value: val } : null);
+        } else {
+          selectedOccupancyStatus.value = null;
+        }
         syncPropertyTypeAndAgentFromLoadedOptions();
       },
       { immediate: true, deep: false }
@@ -1571,6 +1631,7 @@ const featuresButtonLabel = computed(() => {
       selectedSaleRent.value = "All";
       selectedStatus.value = "All";
         selectedCompletionStatus.value = null;
+        selectedOccupancyStatus.value = null;
       selectedArea.value = [];
       selectedProject.value = null;
       selectedPropertyType.value = null;
@@ -1800,7 +1861,8 @@ fetchProjects()
       isLoadingProjects, 
       selectedSaleRent,
       selectedStatus,
-       selectedCompletionStatus, 
+       selectedCompletionStatus,
+       selectedOccupancyStatus,
       selectedArea,
       selectedProject, 
       selectedPropertyType,
@@ -1835,6 +1897,7 @@ fetchProjects()
       typeOptions,
       statusOptions,
        completionStatusOptions,
+       occupancyStatusOptions,
       bedsOptions,
       bathsOptions,
       sortOptions,

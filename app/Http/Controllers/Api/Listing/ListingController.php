@@ -9,6 +9,8 @@ use App\Http\Requests\Listing\ListingRequest;
 use App\Http\Resources\Listing\ListingResource;
 use App\Http\Resources\Listing\ListingGridResource;
 use App\Models\Listing;
+use App\Models\Owner;
+use App\Http\Controllers\Api\Listing\OwnerController;
 use App\Models\ListingAdditionalDocument;
 use App\Models\FloorPlan;
 use App\Models\Area;
@@ -383,6 +385,9 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             if($request->has('completion_status')) {
                 $completionStatus = $request->completion_status;
                 $query->where('completion_status', $completionStatus);
+            }
+            if ($request->filled('occupancy_status')) {
+                $query->where('occupancy_status', $request->occupancy_status);
             }
 
         if($request->has('is_active')) {
@@ -2256,6 +2261,51 @@ public function assignAgent(Request $request, $id)
             'assigned_by' => $currentUser->id,
             'assigned_at' => Now()
         ]);
+
+        // إن لم يكن المالك تابع للمستلم، انسخه له (أو أعد استخدام مالك مطابق) وحدّث الـ listing.
+        $ownerChangedForNewAgent = false;
+        if ($property->owner_id) {
+            $currentOwner = Owner::find($property->owner_id);
+            if ($currentOwner && (int) $currentOwner->added_by !== (int) $newAgent->id) {
+                $existing = Owner::where('added_by', $newAgent->id)
+                    ->where(function ($q) use ($currentOwner) {
+                        $q->where(function ($q2) use ($currentOwner) {
+                            $q2->where('email', $currentOwner->email)
+                               ->where('phone_number', $currentOwner->phone_number);
+                        })->orWhere(function ($q2) use ($currentOwner) {
+                            $q2->where('first_name', $currentOwner->first_name)
+                               ->where('last_name', $currentOwner->last_name)
+                               ->where('phone_number', $currentOwner->phone_number);
+                        });
+                    })
+                    ->first();
+
+                if ($existing) {
+                    $property->update([
+                        'previous_owner_id' => $property->owner_id,
+                        'owner_id' => $existing->id,
+                    ]);
+                } else {
+                    $clone = $currentOwner->replicate(['added_by']);
+                    $clone->added_by = $newAgent->id;
+                    $clone->save();
+
+                    $property->update([
+                        'previous_owner_id' => $property->owner_id,
+                        'owner_id' => $clone->id,
+                    ]);
+                }
+                $ownerChangedForNewAgent = true;
+            }
+        }
+
+        // إفراغ كاش owners عشان قائمة الـ owners للوكلاء تعكس النسخة/المالك الجديد فوراً.
+        if ($ownerChangedForNewAgent) {
+            OwnerController::clearOwnersCacheFor($newAgent->id);
+            if ($oldAgent && $oldAgent->id != $newAgent->id) {
+                OwnerController::clearOwnersCacheFor($oldAgent->id);
+            }
+        }
 
         // إشعارات كما في الكود السابق
         if ($newAgent) {

@@ -533,6 +533,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
         sort: filters.sort || undefined,
         ref: filters.referenceNumber || undefined,
         completion_status: filters.completionStatus?.value || undefined,
+        occupancy_status: filters.occupancyStatus?.value || undefined,
          additional_features: activeFeatures.length > 0 ? activeFeatures.join(',') : undefined,
       };
     };
@@ -574,7 +575,10 @@ const fetchProperties = async (filters = {}, page = 1) => {
         completionStatus: query.completion_status
           ? { label: query.completion_status, value: query.completion_status }
           : null,
-          selectedFeatures: selectedFeatures, 
+        occupancyStatus: query.occupancy_status
+          ? { label: query.occupancy_status, value: query.occupancy_status }
+          : null,
+          selectedFeatures: selectedFeatures,
       };
     };
 
@@ -649,6 +653,9 @@ const fetchProperties = async (filters = {}, page = 1) => {
       }
      if (filters.completionStatus && filters.completionStatus.value) {
         apiFilters.completion_status = filters.completionStatus.value;
+      }
+      if (filters.occupancyStatus && filters.occupancyStatus.value) {
+        apiFilters.occupancy_status = filters.occupancyStatus.value;
       }
       // Price Range Filter
       if (filters.priceFrom > 0 || filters.priceTo < 10000000) {
@@ -873,13 +880,19 @@ const fetchProperties = async (filters = {}, page = 1) => {
 
     const toCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
+    /** Force Excel to treat the value as text (preserves leading zeros, avoids scientific notation on long phone numbers). */
+    const toTextCell = (value) => {
+      const safe = String(value ?? '').replace(/"/g, '""');
+      return `="${safe}"`;
+    };
+
     const canSeeSensitiveData = computed(() => {
       try {
         const userStr = localStorage.getItem('user');
         if (!userStr) return false;
         const user = JSON.parse(userStr);
         const privilegedRoles = ['Team Lead', 'Manager', 'Admin'];
-        return privilegedRoles.includes(user.role_name);
+        return !privilegedRoles.includes(user.role_name);
       } catch (error) {
         console.error('Error checking user permissions:', error);
         return false;
@@ -961,12 +974,12 @@ const fetchProperties = async (filters = {}, page = 1) => {
           if (canSeeSensitiveData.value) {
             return [
               toCell(projectName),
-              toCell(unitNumber),
+              toTextCell(unitNumber),
               toCell(sizePerSqft),
               toCell(sellingPrice),
               toCell(status),
               toCell(ownerName),
-              toCell(ownerMobileNumber),
+              toTextCell(ownerMobileNumber),
               toCell(bedroom),
               toCell(type),
               toCell(createdAt),
