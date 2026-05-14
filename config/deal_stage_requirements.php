@@ -121,7 +121,7 @@ return [
                     'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status',  'language'],
                 ],
                 'documents' => [
-                    'buyer' => ['national_id', 'passport', 'kyc', 'security_deposit'],
+                    'buyer' => ['national_id', 'passport', 'security_deposit'],
                     'seller' => ['national_id', 'passport', 'security_deposit'],
                 ],
                 'requires_properties' => true,
@@ -139,7 +139,7 @@ return [
                     'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
-                    'buyer' => ['national_id', 'passport', 'kyc','security_deposit'],
+                    'buyer' => ['national_id', 'passport','security_deposit'],
                     'seller' => ['national_id', 'passport','security_deposit'],
                 ],
                 'requires_properties' => true,
@@ -164,7 +164,7 @@ return [
                     'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
-                    'buyer' => ['national_id', 'passport', 'kyc','security_deposit'],
+                    'buyer' => ['national_id', 'passport','security_deposit'],
                     'seller' => ['national_id', 'passport', 'title_deed','security_deposit'],
                 ],
                 'requires_properties' => true,
@@ -188,7 +188,7 @@ return [
                     'seller' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
                 ],
                 'documents' => [
-                    'buyer' => ['national_id', 'passport', 'kyc', 'payment_proof','security_deposit'],
+                    'buyer' => ['national_id', 'passport', 'payment_proof','security_deposit'],
                     'seller' => ['national_id', 'passport', 'title_deed','security_deposit'],
                 ],
                 'requires_properties' => true,

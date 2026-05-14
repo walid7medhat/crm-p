@@ -623,8 +623,10 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'search-areas', 'search-subcommunities', 'update:hasListingId', 'update:dealType'])
 
 // ========== Refs ==========
-const hasListingId = ref(false)
 const form = computed({ get: () => props.modelValue, set: (v) => emit('update:modelValue', v) })
+// Derived from form.listing_id — single source of truth. Becomes true the moment a listing is
+// chosen (only possible after picking an area that has listings) and resets when cleared.
+const hasListingId = computed(() => !!form.value?.listing_id)
 const responsiblePerson = computed(() => {
   const id = form.value?.responsible_person_id
   if (!id || !props.users.length) return null
@@ -871,7 +873,6 @@ const secondaryBuyerDocTypes = computed(() => {
   const docs = []
   if (requiredResidencyDocs.includes('passport')) docs.push({ id: 'passport', name: 'Buyer Passport', required: true })
   if (requiredResidencyDocs.includes('national_id')) docs.push({ id: 'national_id', name: 'Buyer Emirates ID', required: true })
-  docs.push({ id: 'kyc', name: 'Buyer KYC', required: isSpaStageOrLater.value })
   // Security Deposit appears from stage 2 (Security Deposit) onwards.
   if (order >= 2) {
     docs.push({ id: 'security_deposit', name: 'Buyer Security Deposit', required: false })
@@ -880,6 +881,8 @@ const secondaryBuyerDocTypes = computed(() => {
 })
 
 const sellerDocTypes = computed(() => {
+  // When a listing is attached, seller = listing's owner — no doc rows, no required asterisks.
+  if (shouldHideSeller.value) return []
   const residencyStatus = form.value?.seller_residency_status
   const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
   const order = Number(props.selectedStageOrder) || 0
@@ -904,6 +907,8 @@ const tenantDocTypes = computed(() => {
 })
 
 const landlordDocTypes = computed(() => {
+  // When a listing is attached, landlord = listing's owner — no doc rows, no required asterisks.
+  if (shouldHideLandlord.value) return []
   const residencyStatus = form.value?.landlord_residency_status
   const requiredDocs = getRequiredDocumentsByResidency(residencyStatus)
   const allDocs = { passport: { id: 'passport', name: 'Landlord Passport', required: true }, national_id: { id: 'national_id', name: 'Landlord Emirates ID', required: true }, title_deed: { id: 'title_deed', name: 'Title Deed', required: true } }
@@ -1224,8 +1229,8 @@ const onAreaSelected = (areaId) => {
 }
 
 const onListingSelected = (listing) => {
-  if (!listing) { hasListingId.value = false; emit('update:hasListingId', false); return }
-  hasListingId.value = true; emit('update:hasListingId', true)
+  // hasListingId is computed off form.listing_id — just set/clear it and the flag follows.
+  if (!listing) { form.value.listing_id = null; return }
   form.value.unit_no = listing.unit_number || ''
   form.value.property_type_id = listing.property_type_id
   form.value.bedrooms = listing.bedrooms === 0 ? 'studio' : String(listing.bedrooms)
@@ -1395,6 +1400,10 @@ const getPropertiesData = () => {
 }
 
 // ========== Watchers ==========
+// Notify parent when hasListingId flips. Source of truth is the computed above, which is
+// derived from form.listing_id — set when a listing is chosen (only after picking an area
+// that has listings) and cleared when the listing is removed.
+watch(hasListingId, (val) => emit('update:hasListingId', val), { immediate: true })
 watch(() => props.selectedStageName, () => checkShowMultiProperties(), { immediate: true })
 watch(() => props.selectedStageOrder, () => checkShowMultiProperties())
 watch(() => props.dealType, () => checkShowMultiProperties())

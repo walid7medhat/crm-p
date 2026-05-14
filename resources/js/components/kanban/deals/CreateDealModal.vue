@@ -769,59 +769,59 @@ function validateForm() {
   }
   
   if (dealType.value === 'rental') {
+    // Tenant is always required for rental — only the landlord is supplied by the listing.
+    if (!formData.value.tenant_first_name) {
+      errors.push('Tenant first name is required')
+      fieldErrorsObj.tenant_first_name = 'First name is required'
+    }
+    if (!formData.value.tenant_last_name) {
+      errors.push('Tenant last name is required')
+      fieldErrorsObj.tenant_last_name = 'Last name is required'
+    }
+    if (!formData.value.tenant_phone) {
+      errors.push('Tenant phone is required')
+      fieldErrorsObj.tenant_phone = 'Phone is required'
+    }
+    if (!formData.value.tenant_email) {
+      errors.push('Tenant email is required')
+      fieldErrorsObj.tenant_email = 'Email is required'
+    }
+    if (!formData.value.tenant_nationality) {
+      errors.push('Tenant nationality is required')
+      fieldErrorsObj.tenant_nationality = 'Nationality is required'
+    }
+    if (!formData.value.tenant_residency_status) {
+      errors.push('Tenant residency status is required')
+      fieldErrorsObj.tenant_residency_status = 'Residency status is required'
+    }
+
+    // ✅ Tenant city - مطلوب فقط للمقيمين
+    if (formData.value.tenant_residency_status === 'resident') {
+      if (!formData.value.tenant_city) {
+        errors.push('Tenant city is required')
+        fieldErrorsObj.tenant_city = 'City is required'
+      }
+    }
+
+    // ✅ Tenant country - مطلوب فقط لغير المقيمين
+    if (formData.value.tenant_residency_status !== 'resident' && formData.value.tenant_residency_status) {
+      if (!formData.value.tenant_country) {
+        errors.push('Tenant country is required')
+        fieldErrorsObj.tenant_country = 'Country is required'
+      }
+    }
+
+    if (!formData.value.tenant_language) {
+      errors.push('Tenant language is required')
+      fieldErrorsObj.tenant_language = 'Language is required'
+    }
+    if (formData.value.tenant_phone && !isNonEmptyPhoneValid(formData.value.tenant_phone)) {
+      errors.push('Tenant phone is invalid')
+      fieldErrorsObj.tenant_phone = 'Invalid phone number'
+    }
+
+    // Landlord validation — only when no listing is attached (otherwise landlord comes from the listing).
     if (!hasListingId.value) {
-      // Tenant validation
-      if (!formData.value.tenant_first_name) {
-        errors.push('Tenant first name is required')
-        fieldErrorsObj.tenant_first_name = 'First name is required'
-      }
-      if (!formData.value.tenant_last_name) {
-        errors.push('Tenant last name is required')
-        fieldErrorsObj.tenant_last_name = 'Last name is required'
-      }
-      if (!formData.value.tenant_phone) {
-        errors.push('Tenant phone is required')
-        fieldErrorsObj.tenant_phone = 'Phone is required'
-      }
-      if (!formData.value.tenant_email) {
-        errors.push('Tenant email is required')
-        fieldErrorsObj.tenant_email = 'Email is required'
-      }
-      if (!formData.value.tenant_nationality) {
-        errors.push('Tenant nationality is required')
-        fieldErrorsObj.tenant_nationality = 'Nationality is required'
-      }
-      if (!formData.value.tenant_residency_status) {
-        errors.push('Tenant residency status is required')
-        fieldErrorsObj.tenant_residency_status = 'Residency status is required'
-      }
-      
-      // ✅ Tenant city - مطلوب فقط للمقيمين
-      if (formData.value.tenant_residency_status === 'resident') {
-        if (!formData.value.tenant_city) {
-          errors.push('Tenant city is required')
-          fieldErrorsObj.tenant_city = 'City is required'
-        }
-      }
-      
-      // ✅ Tenant country - مطلوب فقط لغير المقيمين
-      if (formData.value.tenant_residency_status !== 'resident' && formData.value.tenant_residency_status) {
-        if (!formData.value.tenant_country) {
-          errors.push('Tenant country is required')
-          fieldErrorsObj.tenant_country = 'Country is required'
-        }
-      }
-      
-      if (!formData.value.tenant_language) {
-        errors.push('Tenant language is required')
-        fieldErrorsObj.tenant_language = 'Language is required'
-      }
-      if (formData.value.tenant_phone && !isNonEmptyPhoneValid(formData.value.tenant_phone)) {
-        errors.push('Tenant phone is invalid')
-        fieldErrorsObj.tenant_phone = 'Invalid phone number'
-      }
-      
-      // Landlord validation
       if (!formData.value.landlord_first_name) {
         errors.push('Landlord first name is required')
         fieldErrorsObj.landlord_first_name = 'First name is required'

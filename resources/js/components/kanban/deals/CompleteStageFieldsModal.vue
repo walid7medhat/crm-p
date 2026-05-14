@@ -1996,7 +1996,14 @@ const submitting = ref(false)
 const loading = ref(false)
 let submitResetTimer = null
 const invalidFields = ref(new Set())
-const hasListingId = ref(false)
+// Track whether the deal is tied to a listing — if so, seller (secondary) / landlord (rental)
+// come from the listing's owner and should be hidden from the change-stage modal.
+const hasListingId = computed(() => {
+  const fromForm = formData.value?.listing_id ?? formData.value?.listing?.id
+  if (fromForm) return true
+  const fromDeal = props.deal?.listing_id ?? props.deal?.listing?.id
+  return !!fromDeal
+})
 
 // Data from API
 const users = ref([])
@@ -3010,6 +3017,18 @@ const documentTypesByParty = computed(() => {
       })
   })
 
+  // ✅ Secondary deals don't request KYC for the buyer — drop any leftover injected from
+  // backend missing fields, props.requiredFields, or accumulated required keys.
+  if (normalizedDealType.value === 'secondary') {
+    result.buyer = result.buyer.filter((doc) => doc.id !== 'kyc')
+  }
+
+  // ✅ When a listing is attached, the seller (secondary) / landlord (rental) comes from the
+  // listing's owner — zero out their doc lists so the section can't render and no docs are
+  // marked required.
+  if (shouldHideSeller.value) result.seller = []
+  if (shouldHideLandlord.value) result.landlord = []
+
   return result
 })
 
@@ -3416,6 +3435,9 @@ const effectiveMissingFields = computed(() => {
       // إخفاء Tenant, Landlord
       if (field.startsWith('tenant_') || field.includes('tenant_document_')) return false
       if (field.startsWith('landlord_') || field.includes('landlord_document_')) return false
+      // When a listing is attached, the seller comes from the listing's owner — strip seller_*
+      // so it isn't counted as required or blocks submit.
+      if (hasListingId.value && (field.startsWith('seller_') || field.includes('seller_document_'))) return false
       return true
     }
 
@@ -3423,6 +3445,9 @@ const effectiveMissingFields = computed(() => {
       // إخفاء Buyer, Seller
       if (field.startsWith('buyer_') || field.includes('buyer_document_')) return false
       if (field.startsWith('seller_') || field.includes('seller_document_')) return false
+      // When a listing is attached, the landlord comes from the listing's owner — strip landlord_*
+      // so it isn't counted as required or blocks submit.
+      if (hasListingId.value && (field.startsWith('landlord_') || field.includes('landlord_document_'))) return false
       return true
     }
     
@@ -3468,7 +3493,14 @@ const effectiveMissingFields = computed(() => {
     (field) => !/^(buyer|seller)_document_security_deposit$/.test(field)
   )
 
-  return withoutSecurityDeposit
+  // ✅ KYC is not requested for SECONDARY buyer — strip `buyer_document_kyc` so it
+  // doesn't surface in missing fields, required badges, or the submit blocker.
+  const dt = normalizedDealType.value
+  const withoutSecondaryBuyerKyc = withoutSecurityDeposit.filter(
+    (field) => !(dt === 'secondary' && field === 'buyer_document_kyc')
+  )
+
+  return withoutSecondaryBuyerKyc
 })
 
 // Unresolved missing keys for submit button
@@ -4552,21 +4584,43 @@ const shouldHideSeller = computed(() => {
   const dealType = normalizedDealType.value
   // في Primary، أخفِ Seller
   if (dealType === 'primary' || dealType === 'rental') return true
-  return hasListingId.value && formData.value?.deal_type === 'secondary'
+  // Secondary: hide when a listing is attached (seller = listing's owner).
+  return dealType === 'secondary' && hasListingId.value
 })
 
 const shouldHideLandlord = computed(() => {
   const dealType = normalizedDealType.value
   // في Primary، أخفِ Landlord
   if (dealType === 'primary' || dealType === 'secondary') return true
-  return hasListingId.value && formData.value?.deal_type === 'rental'
+  // Rental: hide when a listing is attached (landlord = listing's owner).
+  return dealType === 'rental' && hasListingId.value
 })
 
 const shouldHideTenant = computed(() => {
   const dealType = normalizedDealType.value
-  // في Primary، أخفِ Tenant
+  // في Primary, Secondary، أخفِ Tenant. Tenant is always required for rental (only landlord
+  // comes from the listing), so never hide it on rental.
   if (dealType === 'primary' || dealType === 'secondary') return true
-  return hasListingId.value && formData.value?.deal_type !== 'rental'
+  return false
+})
+
+// When seller (secondary + listing) or landlord (rental + listing) becomes hidden, wipe their
+// formData so leftover values don't persist on submit.
+watch(shouldHideSeller, (hide) => {
+  if (!hide || !formData.value) return
+  ;['first_name', 'last_name', 'dob', 'phone', 'email', 'nationality',
+    'residency_status', 'city', 'country', 'language'].forEach((k) => {
+    formData.value[`seller_${k}`] = ''
+  })
+  formData.value.seller_documents = []
+})
+watch(shouldHideLandlord, (hide) => {
+  if (!hide || !formData.value) return
+  ;['first_name', 'last_name', 'dob', 'phone', 'email', 'nationality',
+    'residency_status', 'city', 'country', 'language'].forEach((k) => {
+    formData.value[`landlord_${k}`] = ''
+  })
+  formData.value.landlord_documents = []
 })
 
 // Compact modal

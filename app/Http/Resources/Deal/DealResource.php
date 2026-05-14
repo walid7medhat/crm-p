@@ -27,6 +27,7 @@ class DealResource extends JsonResource
             'status' => $this->status,
             'source' => $this->source,
             'deal_name' => $this->deal_name,
+            'listing_id' => $this->listing_id,
             
             // Financial
             'deal_total_amount' => $this->deal_total_amount,
