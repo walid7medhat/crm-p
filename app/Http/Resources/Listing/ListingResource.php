@@ -5,13 +5,53 @@ namespace App\Http\Resources\Listing;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use App\Models\User;
+use App\Models\ListingAccessRequest;
 use App\Helpers\ImageHelper;
 class ListingResource extends JsonResource
 {
+    /** Per-request memo: "{listingId}:{userId}" => list of approved request_type strings. */
+    protected static array $accessRequestCache = [];
+
+    /** True if the auth user has an approved access request of the given type for this listing. */
+    protected function hasApprovedAccess(?int $userId, string $requestType): bool
+    {
+        if (! $userId) return false;
+        $key = $this->id . ':' . $userId;
+        if (! array_key_exists($key, self::$accessRequestCache)) {
+            // Prefer the eager-loaded relation when available, fall back to a direct query.
+            self::$accessRequestCache[$key] = $this->relationLoaded('accessRequests')
+                ? $this->accessRequests
+                    ->where('requested_by', $userId)
+                    ->where('status', 'approved')
+                    ->pluck('request_type')
+                    ->all()
+                : ListingAccessRequest::query()
+                    ->where('listing_id', $this->id)
+                    ->where('requested_by', $userId)
+                    ->where('status', 'approved')
+                    ->pluck('request_type')
+                    ->all();
+        }
+        return in_array($requestType, self::$accessRequestCache[$key], true);
+    }
+
     public function toArray(Request $request): array
     {
         $user = auth()->user();
     $isTodayMain = $this->created_at?->isToday();
+
+        // Visibility policy for sensitive fields (unit_number, owner).
+        // Privileged = listing agent | super_admin | manager with listing_team=1 | (legacy) user 30.
+        $isPrivilegedViewer = $user && (
+            $user->hasRole('super_admin')
+            || $this->agent_id == $user->id
+            || ($user->hasRole('manager') && $user->listing_team == 1)
+            || $user->id == 30
+        );
+        $canSeeUnitNumber = $isPrivilegedViewer
+            || ($user && $this->hasApprovedAccess($user->id, ListingAccessRequest::TYPE_UNIT_NUMBER));
+        $canSeeOwnerData = $isPrivilegedViewer
+            || ($user && $this->hasApprovedAccess($user->id, ListingAccessRequest::TYPE_OWNER_DATA));
 
         // Manual permission check
         $canEdit = false;
@@ -66,7 +106,7 @@ $allowedAgentIds = [];
                 'is_archived' => (bool)$this->is_archived,
             'title' => $this->area?->name,
             'status' => $this->status, // draft, published, etc.
-            'unit_number' => $this->unit_number,
+            'unit_number' => $canSeeUnitNumber ? $this->unit_number : null,
             'size_sqft' => $this->size_sqft,
             'size_sqmt' => $this->size_sqmt,
             'number_of_bedrooms' => $this->number_of_bedrooms,
@@ -200,7 +240,8 @@ $allowedAgentIds = [];
                   'show_offers'=>$user->hasRole('super_admin')  ,
                   'genertae_offers'=>true ,
             ],
-            'canShowOwner' => $user && ($user->hasRole('super_admin') || $this->agent_id == $user->id) || ($user->hasRole('manager') && $user->listing_team == 1) || $user->id==30,
+            'canShowOwner' => $canSeeOwnerData,
+            'canShowUnitNumber' => $canSeeUnitNumber,
 
 // $this->isOwner($user) || ($canAssignAgent && $user->hasRole('manager') && $user->listing_team == 1)
             'is_owner' =>$this->isOwner($user) || ( $user->hasRole('manager') && $user->listing_team == 1) || $user->id==30,
@@ -268,7 +309,7 @@ $allowedAgentIds = [];
                 ];
             }),
             
-            'owner' => $this->whenLoaded('owner', new OwnerResource($this->owner)),
+            'owner' => $this->whenLoaded('owner', fn () => $canSeeOwnerData ? new OwnerResource($this->owner) : null),
             
             'developer' => $this->whenLoaded('developer', function () {
                 return [

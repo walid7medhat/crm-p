@@ -5,11 +5,48 @@ namespace App\Http\Resources\Listing;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use App\Helpers\ImageHelper;
+use App\Models\ListingAccessRequest;
 
 class ListingGridResource extends JsonResource
 {
+    /** Per-request memo: "{listingId}:{userId}" => approved request_type list. */
+    protected static array $accessRequestCache = [];
+
+    protected function hasApprovedAccess(?int $userId, string $requestType): bool
+    {
+        if (! $userId) return false;
+        $key = $this->id . ':' . $userId;
+        if (! array_key_exists($key, self::$accessRequestCache)) {
+            self::$accessRequestCache[$key] = $this->relationLoaded('accessRequests')
+                ? $this->accessRequests
+                    ->where('requested_by', $userId)
+                    ->where('status', 'approved')
+                    ->pluck('request_type')
+                    ->all()
+                : ListingAccessRequest::query()
+                    ->where('listing_id', $this->id)
+                    ->where('requested_by', $userId)
+                    ->where('status', 'approved')
+                    ->pluck('request_type')
+                    ->all();
+        }
+        return in_array($requestType, self::$accessRequestCache[$key], true);
+    }
+
     public function toArray(Request $request): array
     {$isTodayMain = $this->created_at?->isToday();
+
+        $user = auth()->user();
+        $isPrivilegedViewer = $user && (
+            $user->hasRole('super_admin')
+            || $this->agent_id == $user->id
+            || ($user->hasRole('manager') && $user->listing_team == 1)
+            || $user->id == 30
+        );
+        $canSeeUnitNumber = $isPrivilegedViewer
+            || ($user && $this->hasApprovedAccess($user->id, ListingAccessRequest::TYPE_UNIT_NUMBER));
+        $canSeeOwnerData = $isPrivilegedViewer
+            || ($user && $this->hasApprovedAccess($user->id, ListingAccessRequest::TYPE_OWNER_DATA));
 
         return [
             'id' => $this->id,
@@ -41,7 +78,7 @@ class ListingGridResource extends JsonResource
             'occupancy_status'=>$this->occupancy_status,
              'reference_number'=>$this->reference_number,
             'status' => $this->status,
-            'unit_number' => $this->unit_number,
+            'unit_number' => $canSeeUnitNumber ? $this->unit_number : null,
             'size_sqft' => $this->size_sqft,
             'size_sqmt' => $this->size_sqmt,
             'number_of_bedrooms' => $this->number_of_bedrooms,
@@ -67,7 +104,9 @@ class ListingGridResource extends JsonResource
                 'avatar' => $this->avatar ?  $this->avatar : null,
                 ];
             }),
-            'owner' => $this->whenLoaded('owner', new OwnerResource($this->owner)),
+            'owner' => $this->whenLoaded('owner', fn () => $canSeeOwnerData ? new OwnerResource($this->owner) : null),
+            'canShowOwner' => $canSeeOwnerData,
+            'canShowUnitNumber' => $canSeeUnitNumber,
             'created_at' => $this->created_at?->format('M d, Y'),
         ];
     }

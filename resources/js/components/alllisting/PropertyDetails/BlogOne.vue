@@ -620,7 +620,7 @@
               <!-- Note for owner -->
             
             </div>
-            <div class="sidebar-section" v-if="(requestStatus?.owner_info_status === 'approved' || requestStatus?.unit_number_status === 'approved') &&  !onlyShow">
+            <div class="sidebar-section" v-if="((requestStatus?.owner_info_status === 'approved' && property?.canShowOwner) || (requestStatus?.unit_number_status === 'approved' && property?.canShowUnitNumber)) && !onlyShow">
               <h6 class="sidebar-title">Request Access
                 <span v-if="loadingRequest" class="loading-spinner-small"></span>
               </h6>
@@ -629,7 +629,7 @@
                 <!-- Unit Number Request -->
                 <div class="request-action-item">
                   <!-- If unit number is approved -->
-                  <div v-if="requestStatus?.unit_number_status === 'approved'" class="approved-info">
+                  <div v-if="requestStatus?.unit_number_status === 'approved' && property?.canShowUnitNumber" class="approved-info">
                     <div class="info-display">
                       <i class="ri-home-4-line"></i>
                       <span class="info-value">{{ getUnitNumber() }}</span>
@@ -652,7 +652,7 @@
                 <!-- Owner Information Request -->
                 <div class="request-action-item">
                   <!-- If owner info is approved -->
-                  <div v-if="requestStatus?.owner_info_status === 'approved' && getApprovedOwnerData()" class="approved-info">
+                  <div v-if="requestStatus?.owner_info_status === 'approved' && property?.canShowOwner && getApprovedOwnerData()" class="approved-info">
                     <div class="info-display" @click="openOwnerDetailsModal" style="cursor: pointer;">
                       <i class="ri-user-line"></i>
                       <span class="info-value">view Owner Info</span>

@@ -891,7 +891,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
         const userStr = localStorage.getItem('user');
         if (!userStr) return false;
         const user = JSON.parse(userStr);
-        const privilegedRoles = ['Team Lead', 'Manager', 'Admin'];
+        const privilegedRoles = ['Team Lead', 'Admin'];
         return !privilegedRoles.includes(user.role_name);
       } catch (error) {
         console.error('Error checking user permissions:', error);
