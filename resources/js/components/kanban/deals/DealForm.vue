@@ -1157,6 +1157,45 @@ function validateForm() {
       }
     }
   }
+  // ========== Property field validation (primary + secondary) ==========
+  // Stage 2 (EOI/Security Deposit): area, property type, unit no required.
+  // Stage 3+ (Booking/MOU and beyond): + bedrooms, unit_size, purchase_price.
+  if (props.dealType === 'primary' || props.dealType === 'secondary') {
+    const stageOrder = Number(props.selectedStageOrder) || 0
+    const baseRequired = ['area_id', 'property_type_id', 'unit_no']
+    const stage3Plus = ['bedrooms', 'unit_size', 'purchase_price']
+    const required = stageOrder >= 3 ? [...baseRequired, ...stage3Plus] : baseRequired
+
+    const labelFor = (f) => ({
+      area_id: 'Property address',
+      property_type_id: 'Property type',
+      unit_no: 'Unit no',
+      bedrooms: 'Bedrooms',
+      unit_size: 'Unit size',
+      purchase_price: 'Purchase price',
+    }[f] || f)
+
+    const hasValue = (v) => v !== null && v !== undefined && String(v).trim() !== ''
+
+    if (showMultiProperties.value && propertiesList.value.length > 0) {
+      propertiesList.value.forEach((property, idx) => {
+        required.forEach((field) => {
+          if (!hasValue(property?.[field])) {
+            errors.push(`Property ${idx + 1}: ${labelFor(field)} is required`)
+            fieldErrorsObj[`property_${idx}_${field}`] = `${labelFor(field)} is required`
+          }
+        })
+      })
+    } else {
+      required.forEach((field) => {
+        if (!hasValue(form.value?.[field])) {
+          errors.push(`${labelFor(field)} is required`)
+          fieldErrorsObj[field] = `${labelFor(field)} is required`
+        }
+      })
+    }
+  }
+
    if (showMultiProperties.value && propertiesList.value.length > 0) {
     // في حالة الـ multi properties
     propertiesList.value.forEach((property, idx) => {

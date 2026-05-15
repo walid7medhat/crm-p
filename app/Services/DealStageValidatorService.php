@@ -71,6 +71,9 @@ $missingFields = $this->filterBedroomsFieldsByPropertyType($missingFields, $deal
     // ✅ purchase_price required for primary/secondary at stage order >= 3 (Booking / MOU and beyond)
     $this->ensurePurchasePriceRequiredForStage($missingFields, $missingByStage, $deal, $targetStageId, $resolvedType);
 
+    // ✅ Property details (area, type, unit_no, etc.) must be required for SECONDARY at every stage.
+    $this->ensurePropertyDetailsRequiredForSecondary($missingFields, $missingByStage, $deal, $targetStageId, $resolvedType);
+
     // ✅ security_deposit is OPTIONAL — strip from missing fields so it never blocks the stage transition.
     $missingFields = $this->filterOptionalSecurityDeposit($missingFields);
     $missingByStage = $this->filterMissingByStageSecurityDeposit($missingByStage);
@@ -539,6 +542,88 @@ private function ensurePurchasePriceRequiredForStage(array &$missingFields, arra
     }
 
     // Merge into the target stage bucket inside missing_by_stage so UI groups it correctly.
+    $foundStageBucket = false;
+    foreach ($missingByStage as &$bucket) {
+        if ((int) ($bucket['stage_id'] ?? 0) === (int) $stage->id) {
+            $bucket['missing_fields'] = array_values(array_unique(array_merge($bucket['missing_fields'] ?? [], $newKeys)));
+            $foundStageBucket = true;
+            break;
+        }
+    }
+    unset($bucket);
+
+    if (!$foundStageBucket) {
+        $missingByStage[] = [
+            'stage_order' => $order,
+            'stage_id' => $stage->id,
+            'stage_name' => $stage->name,
+            'missing_fields' => $newKeys,
+        ];
+    }
+}
+
+/**
+ * Property details (area, property type, unit no, etc.) are required for SECONDARY deals at
+ * every stage — stage 2 (Security Deposit) needs the basics, stage 3+ also needs bedrooms,
+ * unit size, developer info. This forces them into missing_fields if the property record
+ * doesn't have a value, even when DealStageValidator's per-stage check missed them.
+ */
+private function ensurePropertyDetailsRequiredForSecondary(
+    array &$missingFields,
+    array &$missingByStage,
+    Deal $deal,
+    int $targetStageId,
+    string $dealType
+): void {
+    if ($dealType !== 'secondary') {
+        return;
+    }
+
+    $stage = \App\Models\Stage::find($targetStageId);
+    if (!$stage) {
+        return;
+    }
+    $order = (int) ($stage->order ?? 0);
+    if ($order < 2) {
+        return;
+    }
+
+    // Stage 2 (Security Deposit) basics; stage 3+ adds the deeper property fields.
+    $required = ['area_id', 'property_type_id', 'unit_no'];
+    if ($order >= 3) {
+        $required = array_merge($required, ['bedrooms', 'unit_size', 'developer_name', 'developer_phone']);
+    }
+
+    $properties = $deal->properties ?? collect();
+    $newKeys = [];
+
+    if ($properties->isEmpty()) {
+        foreach ($required as $field) {
+            $newKeys[] = "property_0_{$field}";
+        }
+    } else {
+        foreach ($properties as $index => $property) {
+            foreach ($required as $field) {
+                $value = $property->$field ?? null;
+                $isEmpty = is_null($value) || $value === '' || $value === '0';
+                if ($isEmpty) {
+                    $newKeys[] = "property_{$index}_{$field}";
+                }
+            }
+        }
+    }
+
+    if (empty($newKeys)) {
+        return;
+    }
+
+    foreach ($newKeys as $key) {
+        if (!in_array($key, $missingFields, true)) {
+            $missingFields[] = $key;
+        }
+    }
+
+    // Merge into the target stage bucket so the UI groups them under the right stage.
     $foundStageBucket = false;
     foreach ($missingByStage as &$bucket) {
         if ((int) ($bucket['stage_id'] ?? 0) === (int) $stage->id) {

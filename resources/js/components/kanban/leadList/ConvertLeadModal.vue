@@ -1,6 +1,6 @@
 <!-- components/Deals/ConvertLeadModal.vue -->
 <template>
-    <div ref="modalRootRef" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div ref="modalRootRef" class="modal fade convert-lead-modal-root" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered convert-lead-dialog">
             <div class="modal-content convert-lead-content">
                 <div class="modal-header convert-lead-header">
@@ -124,9 +124,23 @@ const show = (leadId = null, leadData = null) => {
         const modalEl = modalRootRef.value
         if (modalEl) {
             if (!modalInstance.value) {
-                modalInstance.value = new bootstrap.Modal(modalEl)
+                // `focus: false` stops Bootstrap from auto-focusing the modal-root on open,
+                // which was triggering a browser :focus outline (rendered yellow on some
+                // OS/theme combos) on the dialog as soon as it appeared.
+                modalInstance.value = new bootstrap.Modal(modalEl, { focus: false })
             }
             modalInstance.value.show()
+            // When stacked over another modal, bump the newly-created backdrop above the
+            // parent modal (z-index 1055) but below this dialog (z-index 2080).
+            nextTick(() => {
+                const backdrops = document.querySelectorAll('.modal-backdrop')
+                const last = backdrops[backdrops.length - 1]
+                if (last) last.style.zIndex = '2070'
+                // Belt-and-braces: blur whatever Bootstrap may have left focused.
+                if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                    document.activeElement.blur()
+                }
+            })
         }
     })
 }
@@ -236,6 +250,13 @@ defineExpose({
 </script>
 
 <style scoped>
+/* When opened on top of another modal (e.g. ViewLeadModal), Bootstrap reuses z-index 1055
+ * for both this modal and the parent's backdrop, so clicks get eaten. Bumping the dialog
+ * above the standard backdrop z-index keeps interactions live. */
+.convert-lead-modal-root {
+    z-index: 2080 !important;
+}
+
 .convert-lead-dialog {
     max-width: 760px;
 }
@@ -295,10 +316,26 @@ defineExpose({
     gap: 12px;
 }
 
-.deal-type-option:hover {
-    border-color: #FAA300;
-    background: #fef9e6;
-    transform: translateY(-2px);
+/* Only show the soft hover state on non-selected options, and avoid the lift transform
+ * (it was making the yellow border read as a "stuck" focus on touch devices). */
+.deal-type-option:not(.selected):hover {
+    border-color: #d1d5db;
+    background: #f9fafb;
+}
+
+/* Hidden radio inputs can leak focus to :focus-within — kill it, the selected check icon
+ * is the affordance we want users to see. */
+.deal-type-option:focus,
+.deal-type-option:focus-within,
+.deal-type-option:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: #e5e7eb;
+}
+.deal-type-option.selected:focus,
+.deal-type-option.selected:focus-within,
+.deal-type-option.selected:focus-visible {
+    border-color: #01062C !important;
 }
 
 .deal-type-option.selected {
@@ -488,4 +525,65 @@ defineExpose({
         padding: 0 18px;
     }
 }
+/* Kill all focus rings (browser/OS default + Bootstrap defaults) on the modal element
+ * and every descendant — the modal-root has tabindex="-1" so it can grab focus and paint
+ * a yellow outline on themes that use yellow for the focus color. */
+.convert-lead-modal-root,
+.convert-lead-modal-root:focus,
+.convert-lead-modal-root:focus-visible,
+.convert-lead-modal-root .modal-dialog,
+.convert-lead-modal-root .modal-dialog:focus,
+.convert-lead-modal-root .modal-dialog:focus-visible,
+.convert-lead-modal-root .modal-content,
+.convert-lead-modal-root .modal-content:focus,
+.convert-lead-modal-root .modal-content:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.convert-lead-modal-root *:focus,
+.convert-lead-modal-root *:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Bootstrap's .btn-close adds a blue/system-color focus ring on click — strip it. */
+.convert-lead-modal-root .btn-close:focus,
+.convert-lead-modal-root .btn-close:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+.modal-backdrop {
+   
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
 </style>
+<style>
+.modal-backdrop {
+   
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}</style>

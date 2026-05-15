@@ -14,7 +14,7 @@
 
     <!-- Unified design for ALL categories (including property) -->
     <div class="document-box-grid">
-      <div v-for="type in documentTypes" :key="type.id" class="document-type-group">
+      <div v-for="type in sortedDocumentTypes" :key="type.id" class="document-type-group">
         <div class="document-type-header">
           <div class="document-box-label">
             <div>
@@ -183,6 +183,36 @@ const OPTIONAL_DOC_TYPES = new Set(['security_deposit'])
 function isOptionalDocType(typeId) {
   return OPTIONAL_DOC_TYPES.has(typeId)
 }
+
+// Canonical render order for doc rows. IDs not listed fall between known IDs and security_deposit.
+// Identification (passport, national_id) always first, security_deposit always last.
+const DOC_TYPE_ORDER = [
+  'passport',
+  'national_id',
+  'kyc',
+  'title_deed',
+  'ejari',
+  'tenancy_contract',
+  'move_in_form',
+  'payment_proof',
+  'eoi',
+  'booking',
+  'mou',
+  'noc',
+  'spa',
+  'spa_document',
+  'security_deposit',
+]
+function docTypeRank(typeId) {
+  const idx = DOC_TYPE_ORDER.indexOf(typeId)
+  if (idx !== -1) return idx
+  // Unknown ids slot just before security_deposit.
+  return DOC_TYPE_ORDER.indexOf('security_deposit') - 0.5
+}
+const sortedDocumentTypes = computed(() => {
+  const list = Array.isArray(props.documentTypes) ? props.documentTypes.slice() : []
+  return list.sort((a, b) => docTypeRank(a?.id) - docTypeRank(b?.id))
+})
 
 function generateId() {
   return Date.now() + '-' + Math.random().toString(36).substr(2, 9)
