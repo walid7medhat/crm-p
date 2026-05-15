@@ -386,26 +386,16 @@ class StageController extends Controller
                     $assignedFrom = $request->assigned_from;
                     $assignedTo = $request->assigned_to;
                     $assignedDate = $request->assigned_at;
-                    // Match only the LATEST 'assigned' history per lead (not any prior assignment).
-                    $q->whereExists(function ($sub) use ($assignedFrom, $assignedTo, $assignedDate) {
-                        $sub->selectRaw('1')
-                            ->from('lead_histories as lh')
-                            ->whereColumn('lh.lead_id', 'leads.id')
-                            ->where('lh.changes->action', 'assigned')
-                            ->where('lh.id', '=', function ($maxQ) {
-                                $maxQ->selectRaw('MAX(lh2.id)')
-                                    ->from('lead_histories as lh2')
-                                    ->whereColumn('lh2.lead_id', 'leads.id')
-                                    ->where('lh2.changes->action', 'assigned');
-                            });
+                    $q->whereHas('histories', function($query) use ($assignedFrom, $assignedTo, $assignedDate) {
+                        $query->where('changes->action', 'assigned');
                         if ($assignedDate) {
-                            $sub->whereDate('lh.created_at', $assignedDate);
+                            $query->whereDate('created_at', $assignedDate);
                         } else {
                             if ($assignedFrom) {
-                                $sub->whereDate('lh.created_at', '>=', $assignedFrom);
+                                $query->whereDate('created_at', '>=', $assignedFrom);
                             }
                             if ($assignedTo) {
-                                $sub->whereDate('lh.created_at', '<=', $assignedTo);
+                                $query->whereDate('created_at', '<=', $assignedTo);
                             }
                         }
                     });
@@ -440,7 +430,7 @@ class StageController extends Controller
                           ->orWhereHas('responsiblePerson', function ($r) use ($search) {
                               $r->where('name', 'like', "%{$search}%");
                           })
-                           ->orWhereHas('propertyType', function ($pt) use ($search) {
+                           ->orWhereHas('propertyType', function ($pt) use ($search) { 
                                   $pt->where('name', 'like', "%{$search}%");
                               })
                           ->orWhereHas('stage', function ($st) use ($search) {
@@ -459,14 +449,23 @@ class StageController extends Controller
                 $stageLeadsQuery = clone $baseLeadsQuery;
                 $stageLeadsQuery->where('stage_id', $stage->id);
 
-                $paginatedLeads = $stageLeadsQuery
-                    // ->when(
-                    //     Schema::hasColumn('leads', 'score'),
-                    //     fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
-                    //     fn ($q) => $q->orderBy('created_at', 'desc')
-                    // )
-                    ->orderBy('updated_at', 'desc')
-                    ->paginate($perPage);
+                    if ($stage->order == 1) {
+                        // Stage 1 → ترتيب بالكريت
+                        $stageLeadsQuery->orderBy('created_at', 'desc');
+                    } else {
+                        // باقي الـ stages → ترتيب بالـ updated
+                        $stageLeadsQuery->orderBy('updated_at', 'desc');
+                    }
+                
+                    $paginatedLeads = $stageLeadsQuery->paginate($perPage);
+                // $paginatedLeads = $stageLeadsQuery
+                //     // ->when(
+                //     //     Schema::hasColumn('leads', 'score'),
+                //     //     fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
+                //     //     fn ($q) => $q->orderBy('created_at', 'desc')
+                //     // )
+                //     ->orderBy('updated_at', 'desc')
+                //     ->paginate($perPage);
 
                 $stagesWithLeads[] = [
                     'id' => $stage->id,
@@ -695,26 +694,16 @@ class StageController extends Controller
                     $assignedFrom = $request->assigned_from;
                     $assignedTo = $request->assigned_to;
                     $assignedDate = $request->assigned_at;
-                    // Match only the LATEST 'assigned' history per lead.
-                    $leadsQuery->whereExists(function ($sub) use ($assignedFrom, $assignedTo, $assignedDate) {
-                        $sub->selectRaw('1')
-                            ->from('lead_histories as lh')
-                            ->whereColumn('lh.lead_id', 'leads.id')
-                            ->where('lh.changes->action', 'assigned')
-                            ->where('lh.id', '=', function ($maxQ) {
-                                $maxQ->selectRaw('MAX(lh2.id)')
-                                    ->from('lead_histories as lh2')
-                                    ->whereColumn('lh2.lead_id', 'leads.id')
-                                    ->where('lh2.changes->action', 'assigned');
-                            });
+                    $leadsQuery->whereHas('histories', function($query) use ($assignedFrom, $assignedTo, $assignedDate) {
+                        $query->where('changes->action', 'assigned');
                         if ($assignedDate) {
-                            $sub->whereDate('lh.created_at', $assignedDate);
+                            $query->whereDate('created_at', $assignedDate);
                         } else {
                             if ($assignedFrom) {
-                                $sub->whereDate('lh.created_at', '>=', $assignedFrom);
+                                $query->whereDate('created_at', '>=', $assignedFrom);
                             }
                             if ($assignedTo) {
-                                $sub->whereDate('lh.created_at', '<=', $assignedTo);
+                                $query->whereDate('created_at', '<=', $assignedTo);
                             }
                         }
                     });
@@ -760,16 +749,26 @@ class StageController extends Controller
                           });
                     });
                 }
+                 // ================= pagination =================
+                        if ($stage->order == 1) {
+                            // Stage 1 → ترتيب بالكريت
+                            $leadsQuery->orderBy('created_at', 'desc');
+                        } else {
+                            // باقي الـ stages → ترتيب بالـ updated
+                            $leadsQuery->orderBy('updated_at', 'desc');
+                        }
+                    
+                        $paginatedLeads = $leadsQuery->paginate($perPage, ['*'], 'page', $page);
 
             // ================= pagination =================
-            $paginatedLeads = $leadsQuery
-                // ->when(
-                //     Schema::hasColumn('leads', 'score'),
-                //     fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
-                //     fn ($q) => $q->orderBy('created_at', 'desc')
-                // )
-                ->orderBy('updated_at', 'desc')
-                ->paginate($perPage, ['*'], 'page', $page);
+            // $paginatedLeads = $leadsQuery
+            //     // ->when(
+            //     //     Schema::hasColumn('leads', 'score'),
+            //     //     fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
+            //     //     fn ($q) => $q->orderBy('created_at', 'desc')
+            //     // )
+            //     ->orderBy('updated_at', 'desc')
+            //     ->paginate($perPage, ['*'], 'page', $page);
 
             return ApiResponse::success([
                 'stage_id' => $stage->id,
