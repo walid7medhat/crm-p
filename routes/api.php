@@ -725,14 +725,16 @@ Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
          Route::get('/agent/vacation-mode',[ListingAccessRequestController::class,'getVacationMode']);
         Route::prefix('access-requests')->group(function () {
             Route::post('/{listing}/request', [ListingAccessRequestController::class, 'store']);
-            Route::get('/my-requests', [ListingAccessRequestController::class, 'myRequests']); 
-            Route::get('/my-orders', [ListingAccessRequestController::class, 'myOrders']);     
+            Route::get('/my-requests', [ListingAccessRequestController::class, 'myRequests']);
+            Route::get('/my-orders', [ListingAccessRequestController::class, 'myOrders']);
             Route::get('/{listing}/check-access', [ListingAccessRequestController::class, 'checkAccess']);
             Route::put('/{accessRequest}/respond', [ListingAccessRequestController::class, 'respond']);
                 Route::get('status/{listing}', [ListingAccessRequestController::class, 'getStatus']);
                 Route::post('{id}/cancel', [ListingAccessRequestController::class, 'cancelRequest']);
             Route::put('{accessRequest}/convert', [ListingAccessRequestController::class, 'markAsConverted']);
             Route::put('{accessRequest}/update-time', [ListingAccessRequestController::class, 'updateViewingTime']);
+            // Manually log an already-approved viewing (used by /my-viewings "Add Viewing" button)
+            Route::post('approved-viewing', [ListingAccessRequestController::class, 'storeApprovedViewing']);
             // Add this route
             Route::post('{accessRequest}/review', [ListingAccessRequestController::class, 'submitReview']);
         });

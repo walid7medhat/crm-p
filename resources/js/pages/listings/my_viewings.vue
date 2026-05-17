@@ -40,6 +40,9 @@
                 </div>
 
                 <button class="fc-button today-button" @click="today">today</button>
+                <button v-if="canAddViewing" class="fc-button add-viewing-btn" @click="openAddViewingModal">
+                  + Add Viewing
+                </button>
               </div>
             </div>
 
@@ -136,6 +139,99 @@
         </div>
       </div>
     </div>
+
+
+    <!-- Add Viewing Modal -->
+    <div v-if="showAddViewingModal" class="add-viewing-overlay" @click.self="closeAddViewingModal">
+      <div class="add-viewing-modal">
+        <div class="add-viewing-header">
+          <h6 class="add-viewing-title mb-0">Add Approved Viewing</h6>
+          <button class="add-viewing-close" @click="closeAddViewingModal" aria-label="Close">&times;</button>
+        </div>
+
+        <div class="add-viewing-body">
+          <div class="form-group mb-3" v-if="canPickRequester">
+            <label class="form-label">Sales (Requested By) <span class="text-danger">*</span></label>
+            <v-select
+              v-model="selectedRequester"
+              :options="availableAgents"
+              label="name"
+              :reduce="(a) => a.id"
+              :searchable="true"
+              :clearable="true"
+              :append-to-body="false"
+              placeholder="Search sales user..."
+              class="addv-select"
+            >
+             <template #open-indicator="{ attributes }">
+                <span v-bind="attributes">
+                    <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </span>
+            </template>
+           </v-select>
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label">Listing <span class="text-danger">*</span></label>
+            <v-select
+              v-model="selectedListing"
+              :options="listingOptions"
+              :get-option-label="formatListingOption"
+              :reduce="(l) => l.id"
+              :searchable="true"
+              :clearable="true"
+              :filterable="false"
+              :loading="loadingListings"
+              :append-to-body="false"
+              placeholder="Search by reference or title..."
+              class="addv-select"
+              @search="onListingSearch"
+            >
+               <template #open-indicator="{ attributes }">
+                  <span v-bind="attributes">
+                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                  </span>
+              </template>
+              <template #no-options="{ search }">
+                <span v-if="search">No listings match "{{ search }}"</span>
+                <span v-else>Type to search listings</span>
+              </template>
+            </v-select>
+          </div>
+
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group mb-3">
+                <label class="form-label">Date <span class="text-danger">*</span></label>
+                <input type="date" v-model="addViewingForm.viewing_date" class="form-control" />
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group mb-3">
+                <label class="form-label">Time <span class="text-danger">*</span></label>
+                <input type="time" v-model="addViewingForm.viewing_time" class="form-control" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group mb-2">
+            <label class="form-label">Notes (optional)</label>
+            <textarea v-model="addViewingForm.reason" class="form-control" rows="2" placeholder="Any notes about this viewing"></textarea>
+          </div>
+
+          <div v-if="addViewingError" class="alert alert-danger py-2 mt-2 mb-0" style="font-size:12px">
+            {{ addViewingError }}
+          </div>
+        </div>
+
+        <div class="add-viewing-footer">
+          <button class="btn btn-secondary btn-sm" @click="closeAddViewingModal" :disabled="submittingViewing">Cancel</button>
+          <button class="btn btn-primary btn-sm" @click="submitAddViewing" :disabled="submittingViewing">
+            {{ submittingViewing ? 'Adding...' : 'Add Viewing' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -146,6 +242,9 @@ import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
+import vSelect from 'vue-select'
+import 'vue-select/dist/vue-select.css'
+import Swal from 'sweetalert2'
 
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue'
 
@@ -250,6 +349,12 @@ const sortedViewings = computed(() => {
 
 // ─── Calendar ──────────────────────────────────────────────────────────────
 
+/** "YYYY-MM-DD" for an arbitrary Date in local time. */
+function toLocalISODate(d) {
+  if (!(d instanceof Date)) return ''
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
+
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
   initialView: 'dayGridMonth',
@@ -263,6 +368,13 @@ const calendarOptions = ref({
   nowIndicator: true,
   events: [],
   datesSet: () => {},
+
+  // Highlight the cell that matches selectedDate.
+  dayCellClassNames: (arg) => {
+    return selectedDate.value && toLocalISODate(arg.date) === selectedDate.value
+      ? ['active-day']
+      : []
+  },
 
   // Click on a day cell → filter sidebar
   dateClick: (info) => {
@@ -311,15 +423,35 @@ function syncEventsToCalendar() {
 
 watch(normalizedEvents, () => { nextTick(() => syncEventsToCalendar()) }, { deep: true })
 
+// Toggle .active-day on the matching FullCalendar day cell when selectedDate changes.
+function refreshActiveDayHighlight() {
+  const root = fullCalendar.value?.$el || document
+  const cells = root.querySelectorAll?.('.fc-daygrid-day[data-date], .fc-day[data-date]')
+  if (!cells) return
+  cells.forEach((cell) => {
+    const isActive = selectedDate.value && cell.getAttribute('data-date') === selectedDate.value
+    cell.classList.toggle('active-day', !!isActive)
+  })
+}
+watch(selectedDate, () => { nextTick(() => refreshActiveDayHighlight()) })
+// Re-apply after events sync (calendar may rerender on view change / nav)
+watch(normalizedEvents, () => { nextTick(() => refreshActiveDayHighlight()) }, { deep: true })
+
 // ─── Calendar nav ──────────────────────────────────────────────────────────
 
 function changeView(view) {
   currentView.value = view
   fullCalendar.value?.getApi?.()?.changeView?.(view)
+  nextTick(() => refreshActiveDayHighlight())
 }
-function prev()  { fullCalendar.value?.getApi?.()?.prev?.() }
-function next()  { fullCalendar.value?.getApi?.()?.next?.() }
-function today() { fullCalendar.value?.getApi?.()?.today?.() }
+function prev()  { fullCalendar.value?.getApi?.()?.prev?.();  nextTick(() => refreshActiveDayHighlight()) }
+function next()  { fullCalendar.value?.getApi?.()?.next?.();  nextTick(() => refreshActiveDayHighlight()) }
+function today() {
+  fullCalendar.value?.getApi?.()?.today?.()
+  // Also mark today as the active day so it gets highlighted + filters the sidebar.
+  selectedDate.value = toLocalISODate(new Date())
+  nextTick(() => refreshActiveDayHighlight())
+}
 
 // ─── Data fetching ─────────────────────────────────────────────────────────
 
@@ -359,6 +491,186 @@ async function fetchViewings() {
 }
 
 const pollingId = ref(null)
+
+// ─── Add Approved Viewing modal ────────────────────────────────────────────
+
+const currentUser = ref((() => {
+  try { return JSON.parse(localStorage.getItem('user') || 'null') } catch { return null }
+})())
+const userRoles = computed(() => currentUser.value?.roles || [])
+// Only managers / team_leads (and admins) can manually log approved viewings.
+const canAddViewing = computed(() =>
+  userRoles.value.some((r) => ['manager', 'team_lead', 'admin', 'super_admin'].includes(r))
+)
+const canPickRequester = computed(() => true)
+
+const showAddViewingModal = ref(false)
+const submittingViewing = ref(false)
+const addViewingError = ref('')
+const availableAgents = ref([])
+const listingOptions = ref([])
+const listingSearchQuery = ref('')
+const loadingListings = ref(false)
+const listingSearchTimer = ref(null)
+
+const addViewingForm = ref({
+  requested_by: '',
+  listing_id: '',
+  viewing_date: '',
+  viewing_time: '',
+  reason: '',
+})
+
+function formatListingOption(l) {
+  const ref = l.reference_number ? `${l.reference_number} - ` : ''
+  const title = l.title || l.project?.title || l.area?.name || l.area || 'Listing'
+  // const unit = l.unit_number ? ` (Unit ${l.unit_number})` : ''
+  return `${ref}${title}`
+}
+
+async function loadAvailableAgents() {
+  try {
+    // Hierarchy-scoped: listings=true restricts to the current user's
+    // getAllSubordinatesIds() (self + descendants), matching the backend gate.
+    const resp = await api.get('/listings/agents', { params: {  listings: true } })
+    availableAgents.value = resp?.data?.data || []
+  } catch {
+    availableAgents.value = []
+  }
+}
+
+function searchListings() {
+  if (listingSearchTimer.value) clearTimeout(listingSearchTimer.value)
+  listingSearchTimer.value = setTimeout(async () => {
+    try {
+      loadingListings.value = true
+      // my_listings=true keeps non-admins limited to their own + hierarchy listings,
+      // matching the backend authorization on storeApprovedViewing.
+      const params = { per_page: 50, my_listings: true }
+      const q = listingSearchQuery.value?.trim()
+      if (q) params.search = q
+      const resp = await api.get('/listings/properties', { params })
+      listingOptions.value = Array.isArray(resp?.data?.data) ? resp.data.data : []
+    } catch {
+      listingOptions.value = []
+    } finally {
+      loadingListings.value = false
+    }
+  }, 300)
+}
+
+/** vue-select @search handler — debounced backend search keyed off the input. */
+function onListingSearch(search, loading) {
+  listingSearchQuery.value = search || ''
+  if (listingSearchTimer.value) clearTimeout(listingSearchTimer.value)
+  if (typeof loading === 'function') loading(true)
+  listingSearchTimer.value = setTimeout(async () => {
+    try {
+      loadingListings.value = true
+      const params = { per_page: 50, my_listings: true }
+      const q = (search || '').trim()
+      if (q) params.search = q
+      const resp = await api.get('/listings/properties', { params })
+      listingOptions.value = Array.isArray(resp?.data?.data) ? resp.data.data : []
+    } catch {
+      listingOptions.value = []
+    } finally {
+      loadingListings.value = false
+      if (typeof loading === 'function') loading(false)
+    }
+  }, 300)
+}
+
+// Two-way proxies between the form ids and v-select's object models.
+const selectedRequester = computed({
+  get() {
+    const id = addViewingForm.value.requested_by
+    return id ? (availableAgents.value.find((a) => Number(a.id) === Number(id)) || null) : null
+  },
+  set(v) {
+    addViewingForm.value.requested_by = v?.id ?? v ?? ''
+  },
+})
+const selectedListing = computed({
+  get() {
+    const id = addViewingForm.value.listing_id
+    return id ? (listingOptions.value.find((l) => Number(l.id) === Number(id)) || null) : null
+  },
+  set(v) {
+    addViewingForm.value.listing_id = v?.id ?? v ?? ''
+  },
+})
+
+async function openAddViewingModal() {
+  addViewingError.value = ''
+  // Prefill date with whatever day the user clicked in the calendar (if any).
+  addViewingForm.value = {
+    requested_by: '',
+    listing_id: '',
+    viewing_date: selectedDate.value || '',
+    viewing_time: '',
+    reason: '',
+  }
+  listingSearchQuery.value = ''
+  showAddViewingModal.value = true
+  await Promise.all([loadAvailableAgents(), (async () => {
+    loadingListings.value = true
+    try {
+      const resp = await api.get('/listings/properties', { params: { per_page: 50, my_listings: true } })
+      listingOptions.value = Array.isArray(resp?.data?.data) ? resp.data.data : []
+    } catch {
+      listingOptions.value = []
+    } finally {
+      loadingListings.value = false
+    }
+  })()])
+}
+
+function closeAddViewingModal() {
+  if (submittingViewing.value) return
+  showAddViewingModal.value = false
+}
+
+async function submitAddViewing() {
+  addViewingError.value = ''
+  const f = addViewingForm.value
+  if (!f.requested_by || !f.listing_id || !f.viewing_date || !f.viewing_time) {
+    addViewingError.value = 'Please fill all required fields.'
+    return
+  }
+  try {
+    submittingViewing.value = true
+    await api.post('/listings/access-requests/approved-viewing', {
+      requested_by: f.requested_by,
+      listing_id: f.listing_id,
+      viewing_date: f.viewing_date,
+      viewing_time: f.viewing_time,
+      reason: f.reason || undefined,
+    })
+    showAddViewingModal.value = false
+    await fetchViewings()
+    nextTick(() => syncEventsToCalendar())
+    await Swal.fire({
+      icon: 'success',
+      title: 'Viewing added',
+      text: 'The approved viewing was created successfully.',
+      timer: 2200,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end',
+    })
+  } catch (e) {
+    const msg = e?.response?.data?.message || e?.message || 'Failed to add viewing'
+    addViewingError.value = msg
+    Swal.fire({
+      icon: 'error',
+      title: 'Could not add viewing',
+      text: msg,
+    })
+  } finally {
+    submittingViewing.value = false
+  }
+}
 
 onMounted(async () => {
   await fetchViewings()
@@ -516,5 +828,109 @@ onUnmounted(() => {
 }
 .fc .fc-daygrid-day-frame{
        cursor: pointer;
+}
+
+/* Highlight the day cell the user clicked (kept in sync with selectedDate). */
+:deep(.fc .fc-daygrid-day.active-day),
+:deep(.fc .fc-day.active-day) {
+  background-color: rgba(72, 127, 255, 0.14) !important;
+  box-shadow: inset 0 0 0 2px #487fff;
+  border-radius: 4px;
+}
+:deep(.fc .fc-daygrid-day.active-day .fc-daygrid-day-number),
+:deep(.fc .fc-day.active-day .fc-col-header-cell-cushion) {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+/* ── Add Viewing button ── */
+.add-viewing-btn {
+  background-color: #16a34a;
+  color: #fff;
+  border-radius: 6px;
+  border: none;
+  padding: 0 12px;
+}
+.add-viewing-btn:hover {
+  background-color: #15803d;
+  color: #fff;
+}
+
+/* ── Add Viewing modal ── */
+.add-viewing-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 16px;
+}
+.add-viewing-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25);
+}
+.add-viewing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.add-viewing-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+  letter-spacing: 0.1px;
+}
+.add-viewing-close {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: #64748b;
+}
+/* vue-select sizing inside the modal */
+:deep(.addv-select .vs__dropdown-toggle) {
+  min-height: 34px;
+  border-radius: 6px;
+}
+:deep(.addv-select .vs__selected),
+:deep(.addv-select .vs__search),
+:deep(.addv-select .vs__placeholder) {
+  font-size: 13px;
+}
+:deep(.addv-select .vs__dropdown-menu) {
+  font-size: 13px;
+}
+.add-viewing-body {
+  padding: 16px 18px;
+  overflow-y: auto;
+}
+.add-viewing-body .form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 4px;
+}
+.add-viewing-body .form-control {
+  font-size: 13px;
+}
+.add-viewing-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid #e5e7eb;
+  background: #f8fafc;
 }
 </style>

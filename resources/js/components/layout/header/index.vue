@@ -570,7 +570,9 @@ const tableItems = computed(() => {
 const requestsItems = computed(() => {
   if (isAdmin.value) {
     return [
-      { path: '/all-requests', label: 'All Requests', colorClass: 'text-white w-auto', count: 0 }
+      { path: '/all-requests', label: 'All Requests', colorClass: 'text-white w-auto', count: 0 },
+            { path: '/my-viewings', label: 'Viewings', colorClass: 'text-white w-auto', count: 0, permission: 'listings-list' },
+
     ]
   } else {
     const items = [

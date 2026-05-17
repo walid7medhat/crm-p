@@ -112,6 +112,71 @@ $activeAgent = $originalAgent->activeAgent();
     }
 }
 /**
+ * Manually create an already-approved viewing.
+ *
+ * Only team_lead / manager (and admin / super_admin) may use this. Both the
+ * requester (`requested_by`) and the listing's agent must be inside the
+ * current user's hierarchy.
+ */
+public function storeApprovedViewing(Request $request): JsonResponse
+{
+    try {
+        $user = Auth::user();
+
+        if (! $user->hasAnyRole(['super_admin', 'admin', 'manager', 'team_lead'])) {
+            return ApiResponse::error('Only managers or team leads can add approved viewings', 403);
+        }
+
+        $validated = $request->validate([
+            'listing_id'    => 'required|exists:listings,id',
+            'requested_by'  => 'required|exists:users,id',
+            'viewing_date'  => 'required|date',
+            'viewing_time'  => 'required|date_format:H:i',
+            'reason'        => 'nullable|string|max:1000',
+        ]);
+
+        $listing       = Listing::findOrFail($validated['listing_id']);
+        $requestedById = (int) $validated['requested_by'];
+
+        if (! $user->hasAnyRole(['super_admin'])) {
+            $allowedAgentIds = $user->getAllSubordinatesIds(); // self + descendants
+            if (! in_array((int) $listing->agent_id, $allowedAgentIds, true)) {
+                return ApiResponse::error('Listing must belong to an agent in your hierarchy', 403);
+            }
+            if (! in_array($requestedById, $allowedAgentIds, true)) {
+                return ApiResponse::error('Requester must be an agent in your hierarchy', 403);
+            }
+        }
+
+        DB::beginTransaction();
+
+        $accessRequest = ListingAccessRequest::create([
+            'listing_id'    => $listing->id,
+            'requested_by'  => $requestedById,
+            'owner_id'      => $listing->owner_id,
+            'request_type'  => 'viewing',
+            'reason'        => $validated['reason'] ?? ('Manually added by ' . $user->name),
+            'status'        => 'approved',
+            'viewing_date'  => $validated['viewing_date'],
+            'viewing_time'  => $validated['viewing_time'],
+            'handled_by'    => $user->id,
+            'responded_at'  => now(),
+        ]);
+
+        DB::commit();
+
+        return ApiResponse::success(
+            new ListingAccessRequestResource($accessRequest),
+            'Approved viewing added successfully',
+            201
+        );
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return ApiResponse::error('Failed to add approved viewing: ' . $e->getMessage());
+    }
+}
+
+/**
  * Update viewing time for a request
  */
 public function updateViewingTime(Request $request, ListingAccessRequest $accessRequest): JsonResponse

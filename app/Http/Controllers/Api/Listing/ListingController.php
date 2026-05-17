@@ -432,14 +432,30 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
               if($request->has('project_id')) {
                 $query->where('project_id', $request->project_id);
             }
-            if ($request->has('search')) {
-                $search = $request->search;
+            if ($request->filled('search')) {
+                $search = trim($request->search);
                 $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('reference_number','like',"%{$search}%")
+                    ->orWhere('reference_number', 'like', "%{$search}%")
                     ->orWhere('unit_number', 'like', "%{$search}%")
                     ->orWhereHas('owner', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%");
+                        $q->where('first_name', 'like', "%{$search}%")
+                          ->orWhere('last_name', 'like', "%{$search}%")
+                          ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
+                    })
+                    // Area name or any ancestor area name (handles "Dubai Marina" → its sub-communities, etc.)
+                    ->orWhereHas('area', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                          ->orWhereHas('parent', function ($p) use ($search) {
+                              $p->where('name', 'like', "%{$search}%")
+                                ->orWhereHas('parent', function ($pp) use ($search) {
+                                    $pp->where('name', 'like', "%{$search}%");
+                                });
+                          });
+                    })
+                    // Also match by project / development title.
+                    ->orWhereHas('project', function ($q) use ($search) {
+                        $q->where('title', 'like', "%{$search}%");
                     });
                 });
             }
