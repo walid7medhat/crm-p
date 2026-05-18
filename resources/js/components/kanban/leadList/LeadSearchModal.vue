@@ -2084,25 +2084,34 @@ function applySearch() {
             
     }
     
+    // Local-timezone YYYY-MM-DD — replaces `toISOString().split('T')[0]` which shifts to UTC
+    // and produced 17-05 in UAE (UTC+4) before 04:00 local when the user expected 18-05.
+    const toLocalDateStr = (d) => {
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      return `${yyyy}-${mm}-${dd}`
+    }
+
     if (form.value.createdOn) {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         
         switch (form.value.createdOn) {
             case 'today':
-                createdAt = today.toISOString().split('T')[0]
+                createdAt = toLocalDateStr(today)
                 break
                 
             case 'yesterday':
                 const yesterday = new Date(today)
                 yesterday.setDate(yesterday.getDate() - 1)
-                createdAt = yesterday.toISOString().split('T')[0]
+                createdAt = toLocalDateStr(yesterday)
                 break
                 
             case 'tomorrow':
                 const tomorrow = new Date(today)
                 tomorrow.setDate(tomorrow.getDate() + 1)
-                createdAt = tomorrow.toISOString().split('T')[0]
+                createdAt = toLocalDateStr(tomorrow)
                 break
                 
             case 'this_week': {
@@ -2113,48 +2122,48 @@ function applySearch() {
                 startOfWeek.setDate(today.getDate() - daysFromMonday)
                 const endOfWeek = new Date(startOfWeek)
                 endOfWeek.setDate(startOfWeek.getDate() + 6)
-                createdFrom = startOfWeek.toISOString().split('T')[0]
-                createdTo = endOfWeek.toISOString().split('T')[0]
+                createdFrom = toLocalDateStr(startOfWeek)
+                createdTo = toLocalDateStr(endOfWeek)
                 break
             }
                 
             case 'this_month':
-                createdFrom = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
-                createdTo = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+                createdFrom = toLocalDateStr(new Date(today.getFullYear(), today.getMonth(), 1))
+                createdTo = toLocalDateStr(new Date(today.getFullYear(), today.getMonth() + 1, 0))
                 break
                 
             case 'current_quarter':
                 const quarter = Math.floor(today.getMonth() / 3)
-                createdFrom = new Date(today.getFullYear(), quarter * 3, 1).toISOString().split('T')[0]
-                createdTo = new Date(today.getFullYear(), (quarter + 1) * 3, 0).toISOString().split('T')[0]
+                createdFrom = toLocalDateStr(new Date(today.getFullYear(), quarter * 3, 1))
+                createdTo = toLocalDateStr(new Date(today.getFullYear(), (quarter + 1) * 3, 0))
                 break
                 
             case 'last_7_days':
-                createdTo = today.toISOString().split('T')[0]
+                createdTo = toLocalDateStr(today)
                 const last7Days = new Date(today)
                 last7Days.setDate(last7Days.getDate() - 7)
-                createdFrom = last7Days.toISOString().split('T')[0]
+                createdFrom = toLocalDateStr(last7Days)
                 break
                 
             case 'last_30_days':
-                createdTo = today.toISOString().split('T')[0]
+                createdTo = toLocalDateStr(today)
                 const last30Days = new Date(today)
                 last30Days.setDate(last30Days.getDate() - 30)
-                createdFrom = last30Days.toISOString().split('T')[0]
+                createdFrom = toLocalDateStr(last30Days)
                 break
                 
             case 'last_60_days':
-                createdTo = today.toISOString().split('T')[0]
+                createdTo = toLocalDateStr(today)
                 const last60Days = new Date(today)
                 last60Days.setDate(last60Days.getDate() - 60)
-                createdFrom = last60Days.toISOString().split('T')[0]
+                createdFrom = toLocalDateStr(last60Days)
                 break
                 
             case 'last_90_days':
-                createdTo = today.toISOString().split('T')[0]
+                createdTo = toLocalDateStr(today)
                 const last90Days = new Date(today)
                 last90Days.setDate(last90Days.getDate() - 90)
-                createdFrom = last90Days.toISOString().split('T')[0]
+                createdFrom = toLocalDateStr(last90Days)
                 break
                 
             case 'last_week': {
@@ -2167,14 +2176,14 @@ function applySearch() {
                 // بداية الأسبوع الماضي (الاثنين)
                 const startOfLastWeek = new Date(endOfLastWeek)
                 startOfLastWeek.setDate(endOfLastWeek.getDate() - 6)
-                createdFrom = startOfLastWeek.toISOString().split('T')[0]
-                createdTo = endOfLastWeek.toISOString().split('T')[0]
+                createdFrom = toLocalDateStr(startOfLastWeek)
+                createdTo = toLocalDateStr(endOfLastWeek)
                 break
             }
                 
             case 'last_month':
-                createdFrom = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().split('T')[0]
-                createdTo = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split('T')[0]
+                createdFrom = toLocalDateStr(new Date(today.getFullYear(), today.getMonth() - 1, 1))
+                createdTo = toLocalDateStr(new Date(today.getFullYear(), today.getMonth(), 0))
                 break
                 
             case 'next_week': {
@@ -2186,14 +2195,14 @@ function applySearch() {
                 startOfNextWeek.setDate(today.getDate() - daysFromMonday + 7)
                 const endOfNextWeek = new Date(startOfNextWeek)
                 endOfNextWeek.setDate(startOfNextWeek.getDate() + 6)
-                createdFrom = startOfNextWeek.toISOString().split('T')[0]
-                createdTo = endOfNextWeek.toISOString().split('T')[0]
+                createdFrom = toLocalDateStr(startOfNextWeek)
+                createdTo = toLocalDateStr(endOfNextWeek)
                 break
             }
                 
             case 'next_month':
-                createdFrom = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString().split('T')[0]
-                createdTo = new Date(today.getFullYear(), today.getMonth() + 2, 0).toISOString().split('T')[0]
+                createdFrom = toLocalDateStr(new Date(today.getFullYear(), today.getMonth() + 1, 1))
+                createdTo = toLocalDateStr(new Date(today.getFullYear(), today.getMonth() + 2, 0))
                 break
                 
             case 'exact_date':
@@ -2221,12 +2230,12 @@ function applySearch() {
         today.setHours(0, 0, 0, 0)
         switch (form.value.assignedOn) {
             case 'today':
-                assignedAt = today.toISOString().split('T')[0]
+                assignedAt = toLocalDateStr(today)
                 break
             case 'yesterday': {
                 const yesterday = new Date(today)
                 yesterday.setDate(yesterday.getDate() - 1)
-                assignedAt = yesterday.toISOString().split('T')[0]
+                assignedAt = toLocalDateStr(yesterday)
                 break
             }
             case 'this_week': {
@@ -2237,40 +2246,40 @@ function applySearch() {
                 startOfWeek.setDate(today.getDate() - daysFromMonday)
                 const endOfWeek = new Date(startOfWeek)
                 endOfWeek.setDate(startOfWeek.getDate() + 6)
-                assignedFrom = startOfWeek.toISOString().split('T')[0]
-                assignedTo = endOfWeek.toISOString().split('T')[0]
+                assignedFrom = toLocalDateStr(startOfWeek)
+                assignedTo = toLocalDateStr(endOfWeek)
                 break
             }
             case 'this_month':
-                assignedFrom = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
-                assignedTo = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+                assignedFrom = toLocalDateStr(new Date(today.getFullYear(), today.getMonth(), 1))
+                assignedTo = toLocalDateStr(new Date(today.getFullYear(), today.getMonth() + 1, 0))
                 break
             case 'last_7_days': {
-                assignedTo = today.toISOString().split('T')[0]
+                assignedTo = toLocalDateStr(today)
                 const d = new Date(today)
                 d.setDate(d.getDate() - 7)
-                assignedFrom = d.toISOString().split('T')[0]
+                assignedFrom = toLocalDateStr(d)
                 break
             }
             case 'last_30_days': {
-                assignedTo = today.toISOString().split('T')[0]
+                assignedTo = toLocalDateStr(today)
                 const d = new Date(today)
                 d.setDate(d.getDate() - 30)
-                assignedFrom = d.toISOString().split('T')[0]
+                assignedFrom = toLocalDateStr(d)
                 break
             }
             case 'last_60_days': {
-                assignedTo = today.toISOString().split('T')[0]
+                assignedTo = toLocalDateStr(today)
                 const d = new Date(today)
                 d.setDate(d.getDate() - 60)
-                assignedFrom = d.toISOString().split('T')[0]
+                assignedFrom = toLocalDateStr(d)
                 break
             }
             case 'last_90_days': {
-                assignedTo = today.toISOString().split('T')[0]
+                assignedTo = toLocalDateStr(today)
                 const d = new Date(today)
                 d.setDate(d.getDate() - 90)
-                assignedFrom = d.toISOString().split('T')[0]
+                assignedFrom = toLocalDateStr(d)
                 break
             }
             case 'last_week': {
@@ -2283,13 +2292,13 @@ function applySearch() {
                 // بداية الأسبوع الماضي (الاثنين)
                 const startOfLastWeek = new Date(endOfLastWeek)
                 startOfLastWeek.setDate(endOfLastWeek.getDate() - 6)
-                assignedFrom = startOfLastWeek.toISOString().split('T')[0]
-                assignedTo = endOfLastWeek.toISOString().split('T')[0]
+                assignedFrom = toLocalDateStr(startOfLastWeek)
+                assignedTo = toLocalDateStr(endOfLastWeek)
                 break
             }
             case 'last_month':
-                assignedFrom = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().split('T')[0]
-                assignedTo = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split('T')[0]
+                assignedFrom = toLocalDateStr(new Date(today.getFullYear(), today.getMonth() - 1, 1))
+                assignedTo = toLocalDateStr(new Date(today.getFullYear(), today.getMonth(), 0))
                 break
             case 'custom_date':
                 assignedFrom = form.value.assignedFrom || undefined

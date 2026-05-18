@@ -101,17 +101,17 @@ return Application::configure(basePath: dirname(__DIR__))
          ->dailyAt('08:00')
          ->timezone('Asia/Dubai');
        
-    $schedule->command('visa:check-expiry --days=30')
+    $schedule->command('passport:check-expiry --days=30')
             ->dailyAt('09:30')
             ->timezone('Asia/Dubai')
             ->withoutOverlapping()
-            ->appendOutputTo(storage_path('logs/visa-expiry.log'));
+            ->appendOutputTo(storage_path('logs/passport-expiry.log'));
     
-    $schedule->command('visa:check-expiry --days=7')
+    $schedule->command('passport:check-expiry --days=7')
             ->everySixHours()
             ->timezone('Asia/Dubai')
             ->withoutOverlapping()
-            ->appendOutputTo(storage_path('logs/visa-expiry-urgent.log'));
+            ->appendOutputTo(storage_path('logs/passport-expiry-urgent.log'));
     $schedule->command('interviews:send-reminders --hours=24')
     ->dailyAt('09:00')
     ->timezone('Asia/Dubai');

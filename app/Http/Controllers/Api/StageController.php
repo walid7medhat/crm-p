@@ -1133,6 +1133,18 @@ public function getOffices()
             return;
         }
 
+        // When the user picks a parent source (Website or Portal) without choosing a partial,
+        // also include all of that parent's known partial values — otherwise we'd miss leads
+        // whose `lead_source` is stored as the specific website/portal (e.g. "Allproperties.ae").
+        $websitePartials = ['website', 'Allproperties.ae', 'Oiaproperties.com'];
+        $portalPartials  = ['portal', 'propertyfinder', 'bayut'];
+
+        $expand = function ($value) use ($websitePartials, $portalPartials) {
+            if ($value === 'website') return $websitePartials;
+            if ($value === 'portal')  return $portalPartials;
+            return [$value];
+        };
+
         $src = $request->source;
 
         if (is_array($src)) {
@@ -1142,15 +1154,29 @@ public function getOffices()
                 return;
             }
 
-            if (count($src) === 1) {
-                $query->where('lead_source', $src[0]);
+            // Expand each entry (so a mixed array with 'website' included also pulls the partials).
+            $expanded = [];
+            foreach ($src as $v) {
+                foreach ($expand($v) as $entry) {
+                    $expanded[] = $entry;
+                }
+            }
+            $expanded = array_values(array_unique($expanded));
+
+            if (count($expanded) === 1) {
+                $query->where('lead_source', $expanded[0]);
             } else {
-                $query->whereIn('lead_source', $src);
+                $query->whereIn('lead_source', $expanded);
             }
 
             return;
         }
 
-        $query->where('lead_source', $src);
+        $expanded = $expand($src);
+        if (count($expanded) === 1) {
+            $query->where('lead_source', $expanded[0]);
+        } else {
+            $query->whereIn('lead_source', $expanded);
+        }
     }
 }

@@ -803,26 +803,27 @@ const propertyDocTypes = computed(() => {
   const dt = props.dealType
   const order = Number(props.selectedStageOrder) || 0
 
-  // SECONDARY: order 3 = MOU, 4 = NOC, 5 = Won. All property docs are OPTIONAL for secondary.
+  // SECONDARY: order 3 = MOU (MOU required), 4 = NOC (MOU + NOC required, cumulative),
+  // 5 = Won (MOU + NOC required). Payment Proof / SPA remain optional.
   if (dt === 'secondary') {
     if (order >= 5 || stageName.includes('won') || stageName.includes('deal won')) {
       return [
-        { id: 'mou', name: 'MOU Document', required: false },
-        { id: 'noc', name: 'NOC Document', required: false },
+        { id: 'mou', name: 'MOU Document', required: true },
+        { id: 'noc', name: 'NOC Document', required: true },
         { id: 'payment_proof', name: 'Payment Proof', required: false },
         { id: 'spa', name: 'SPA Document', required: false },
       ]
     }
     if (order >= 4 || stageName.includes('noc')) {
       return [
-        { id: 'mou', name: 'MOU Document', required: false },
-        { id: 'noc', name: 'NOC Document', required: false },
+        { id: 'mou', name: 'MOU Document', required: true },
+        { id: 'noc', name: 'NOC Document', required: true },
         { id: 'payment_proof', name: 'Payment Proof', required: false },
       ]
     }
     if (order >= 3 || stageName.includes('mou')) {
       return [
-        { id: 'mou', name: 'MOU Document', required: false },
+        { id: 'mou', name: 'MOU Document', required: true },
         { id: 'payment_proof', name: 'Payment Proof', required: false },
       ]
     }
@@ -1211,6 +1212,39 @@ function validateForm() {
     if (devPhone && String(devPhone).trim() !== '' && !isNonEmptyPhoneValid(devPhone)) {
       errors.push('Developer phone is invalid')
       fieldErrorsObj.developer_phone = 'Invalid phone number'
+    }
+  }
+
+  // ========== MOU / NOC property-doc enforcement (secondary) ==========
+  // MOU required at MOU stage (order >= 3); NOC also required at NOC stage (order >= 4).
+  if (props.dealType === 'secondary') {
+    const stageOrder = Number(props.selectedStageOrder) || 0
+    const stageName = String(props.selectedStageName || '').toLowerCase()
+    const mouRequired = stageOrder >= 3 || stageName.includes('mou') || stageName.includes('noc') || stageName.includes('won')
+    const nocRequired = stageOrder >= 4 || stageName.includes('noc') || stageName.includes('won')
+
+    const hasDocs = (arr) => Array.isArray(arr) && arr.some((d) => d && (d.file || d.url || d.file_url || d.path || d.is_existing))
+
+    if (showMultiProperties.value && propertiesList.value.length > 0) {
+      propertiesList.value.forEach((property, idx) => {
+        if (mouRequired && !hasDocs(property?.mou_documents)) {
+          errors.push(`Property ${idx + 1}: MOU document is required`)
+          fieldErrorsObj[`property_${idx}_document_mou`] = 'MOU document is required'
+        }
+        if (nocRequired && !hasDocs(property?.noc_documents)) {
+          errors.push(`Property ${idx + 1}: NOC document is required`)
+          fieldErrorsObj[`property_${idx}_document_noc`] = 'NOC document is required'
+        }
+      })
+    } else {
+      if (mouRequired && !hasDocs(form.value?.mou_documents)) {
+        errors.push('MOU document is required')
+        fieldErrorsObj.property_document_mou = 'MOU document is required'
+      }
+      if (nocRequired && !hasDocs(form.value?.noc_documents)) {
+        errors.push('NOC document is required')
+        fieldErrorsObj.property_document_noc = 'NOC document is required'
+      }
     }
   }
  

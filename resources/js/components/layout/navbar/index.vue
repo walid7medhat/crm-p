@@ -457,13 +457,15 @@ const isSuperAdmin = computed(() => {
 
 // تبويبات الكانبان
 const kanbanTabs = computed(() => {
+  if (!user.value) return false
   const tabs = [
-    { id: 'deals', name: 'Deals' },
     { id: 'leads', name: 'Leads' },
-    { id: 'lead-pool', name: 'Lead Pool' }
+    { id: 'lead-pool', name: 'Lead Pool' },
+    { id: 'deals', name: 'Deals' },
+    
   ]
   
-  if (isSuperAdmin.value) {
+  if (user.value.roles?.includes('super_admin')) {
     tabs.push({ id: 'integration', name: 'Integration' })
   }
   

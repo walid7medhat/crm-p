@@ -153,10 +153,10 @@ return [
                     'developer_name'=>true,
                     'developer_phone'=>true,
                 ],
-                // Property documents (NOC) are OPTIONAL for secondary — shown in UI but not blocking.
-                'property_documents' => [],
+                // MOU is REQUIRED at MOU stage.
+                'property_documents' => ['mou'],
             ],
-            // ===================== MOU STAGE (order 4) =====================
+            // ===================== NOC STAGE (order 4) =====================
             4 => [
                 'fields' => ['source', 'deal_name'],
                 'parties' => [
@@ -178,8 +178,8 @@ return [
                        'developer_name'=>true,
                     'developer_phone'=>true,
                 ],
-                // Property documents (MOU + NOC) are OPTIONAL for secondary — shown in UI but not blocking.
-                'property_documents' => [],
+                // MOU + NOC are REQUIRED at NOC stage (cumulative).
+                'property_documents' => ['mou', 'noc'],
             ],
             5 => [
                 'fields' => ['source', 'deal_name', 'deal_total_amount', 'deal_commission'],
@@ -202,8 +202,8 @@ return [
                     'developer_name'=>true,
                     'developer_phone'=>true,
                 ],
-                // Property documents (MOU/NOC/SPA) are OPTIONAL for secondary — shown in UI but not blocking.
-                'property_documents' => [],
+                // MOU + NOC are REQUIRED at Won stage (cumulative).
+                'property_documents' => ['mou', 'noc'],
             ],
             8 => [
                 'fields' => ['lost_reason'],
