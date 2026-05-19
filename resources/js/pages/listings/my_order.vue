@@ -124,16 +124,24 @@
                                         <div class="fw-bold">
                                             {{ getActionStatusText(order) }}
                                         </div>
-                                        
+
                                         <div class="text-sm" v-if="getActionReasonText(order)">
                                             {{ getActionReasonText(order) }}
                                         </div>
                                         <span v-if="order.status === 'cancelled'"> {{ order.cancellation_reason }}</span>
                                     </div>
-                                    
+
                                     <span v-else :class="getActionStatusClass(order.status)" class="px-12 py-4 rounded fw-medium text-sm">
                                         {{ getActionStatusText(order) }}
                                     </span>
+
+                                    <button
+                                        v-if="canCancelOrder(order)"
+                                        class="btn btn-sm btn-outline-danger mt-2 cancel-order-btn"
+                                        @click="cancelOrder(order)"
+                                    >
+                                        <i class="ri-close-circle-line me-1"></i> Cancel
+                                    </button>
                                 </td>
                                 
                                  <td>
@@ -1028,31 +1036,80 @@ async function refreshOrders() {
     })
 }
 
-async function cancelOrder(orderId, request_type) {
+/** Current user can act as privileged canceller of approved viewings. */
+function isPrivilegedCanceller() {
+    try {
+        const user = JSON.parse(localStorage.getItem('user') || 'null')
+        if (!user) return false
+        const roles = user.roles || []
+        if (roles.includes('super_admin') || roles.includes('admin')) return true
+        if (roles.includes('manager') && Number(user.listing_team) === 1) return true
+        return false
+    } catch {
+        return false
+    }
+}
+
+/** Whether the cancel button should appear for this row.
+ *  - viewing + pending/in_progress → requester (anyone) can cancel
+ *  - viewing + approved            → only manager(listing_team=1) / admin / super_admin
+ *  - owner_data / unit_number      → only pending / in_progress
+ */
+function canCancelOrder(order) {
+    if (!order) return false
+    if (order.request_type === 'viewing') {
+        if (order.status === 'approved') return isPrivilegedCanceller()
+        return ['pending', 'in_progress'].includes(order.status)
+    }
+    return ['pending', 'in_progress'].includes(order.status)
+}
+
+async function cancelOrder(order) {
+    if (!order) return
+    // Backend route /listings/access-requests/{id}/cancel resolves the id as listing_id.
+    const listingId = order.listing?.id || order.listing_id
+    if (!listingId) {
+        Swal.fire({
+            title: 'Error!',
+            text: 'Cannot cancel: listing not found on this request.',
+            icon: 'error',
+            confirmButtonColor: '#01062d',
+        })
+        return
+    }
+
     const result = await Swal.fire({
         title: 'Cancel Request?',
-        text: 'Are you sure you want to cancel this request?',
+        text: order.request_type === 'viewing'
+            ? 'Are you sure you want to cancel this viewing?'
+            : 'Are you sure you want to cancel this request?',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
         confirmButtonText: 'Yes, cancel it!',
-        cancelButtonText: 'Keep Request'
+        cancelButtonText: 'Keep Request',
+        input: 'textarea',
+        inputLabel: 'Reason (optional)',
+        inputPlaceholder: 'Why are you cancelling?',
     })
 
     if (!result.isConfirmed) return
 
     try {
-        const response = await api.post(`/listings/access-requests/${orderId}/cancel`, {
-            request_type: request_type
+        const response = await api.post(`/listings/access-requests/${listingId}/cancel`, {
+            request_type: order.request_type,
+            cancellation_reason: result.value || undefined,
         })
-        
+
         if (response.data.status) {
             Swal.fire({
                 title: 'Cancelled!',
                 text: 'Request cancelled successfully',
                 icon: 'success',
-                confirmButtonColor: '#01062d'
+                confirmButtonColor: '#01062d',
+                timer: 1500,
+                showConfirmButton: false,
             })
             await fetchMyOrders()
         } else {
@@ -1062,9 +1119,9 @@ async function cancelOrder(orderId, request_type) {
         console.error('Error cancelling order:', err)
         Swal.fire({
             title: 'Error!',
-            text: 'Failed to cancel request',
+            text: err?.response?.data?.message || 'Failed to cancel request',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#01062d',
         })
     }
 }
@@ -1792,5 +1849,25 @@ td {
     font-weight: 500 !important;
     font-size: 15px !important;
     color: #000 !important;
+}
+
+/* Cancel button in the status column */
+.cancel-order-btn {
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    background: transparent;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+}
+.cancel-order-btn:hover {
+    background: #dc3545;
+    color: #fff;
+}
+.swal2-input-label{
+    margin: 0 !important;
 }
 </style>

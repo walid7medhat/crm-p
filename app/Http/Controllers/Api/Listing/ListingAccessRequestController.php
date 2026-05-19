@@ -615,7 +615,13 @@ public function respond(Request $request, ListingAccessRequest $accessRequest): 
             }
         });
 
-        if ($request->request_type === 'viewing' && ($isManagerOrTeamLead && $isManagerOfListingAgent)) {
+        // Approved viewings can only be cancelled by admin / super_admin
+        // or by a manager whose listing_team flag is set. Everyone else
+        // (sales, regular managers, team_leads) is limited to pending/in_progress.
+        $isPrivilegedCanceller = $user->hasAnyRole(['super_admin', 'admin'])
+            || ($user->hasRole('manager') && (int) $user->listing_team === 1);
+
+        if ($request->request_type === 'viewing' && $isPrivilegedCanceller) {
             $query->whereIn('status', ['pending', 'in_progress', 'approved']);
         } else {
             $query->whereIn('status', ['pending', 'in_progress']);

@@ -534,6 +534,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
         ref: filters.referenceNumber || undefined,
         completion_status: filters.completionStatus?.value || undefined,
         occupancy_status: filters.occupancyStatus?.value || undefined,
+        agent_id: filters.agent?.id || undefined,
          additional_features: activeFeatures.length > 0 ? activeFeatures.join(',') : undefined,
       };
     };
@@ -578,6 +579,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
         occupancyStatus: query.occupancy_status
           ? { label: query.occupancy_status, value: query.occupancy_status }
           : null,
+        agent: query.agent_id ? { id: Number(query.agent_id) } : null,
           selectedFeatures: selectedFeatures,
       };
     };
@@ -634,6 +636,10 @@ const fetchProperties = async (filters = {}, page = 1) => {
       }
         if (filters.project) {
         apiFilters.project_id = filters.project.id;
+      }
+      // Agent Filter (matches AllLsting.vue behavior)
+      if (filters.agent && filters.agent.id) {
+        apiFilters.agent_id = filters.agent.id;
       }
       // Bedrooms Filter
       const bedsList = Array.isArray(filters.bedsList) ? filters.bedsList : (filters.beds ? [filters.beds] : []);
