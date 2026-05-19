@@ -1062,7 +1062,7 @@ const decodeFiltersFromQuery = async (query) => {
   display: inline-block;
   text-align: center;
   width: 100%;
-  background: #FAA300;
+  background: #733E87;
   color: #ffffff;
   font-weight: 500;
   border-radius: 10px;
@@ -1254,7 +1254,7 @@ const decodeFiltersFromQuery = async (query) => {
 }
 .badge-occupancy_status{
     background: #EDEBEB !important;
-    color: #01062C !important;
+    color: #0B0736 !important;
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 0.7rem;
@@ -1264,7 +1264,7 @@ const decodeFiltersFromQuery = async (query) => {
 
 
 .status-badge {
-   background: #01062d ;
+   background: #0B0736 ;
   color: white;
   padding: 4px 8px;
   border-radius: 6px;
@@ -1282,7 +1282,7 @@ const decodeFiltersFromQuery = async (query) => {
 
 .property-listed-date i {
   font-size: 0.8rem;
-  color: #FAA300;
+  color: #733E87;
 }
 .justify-between{
     justify-content:space-between;

@@ -747,14 +747,14 @@ watch(() => props.inlineEditLookup, (newVal) => {
 h6.section-title {
   font-size: 16px !important;
   font-weight: 600;
-  color: #01062C;
+  color: #0B0736;
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   margin-bottom: 12px;
 }
 .view-card { background: #fff; border: 1px solid #F3F3F3; box-shadow: 1px 1px 5px rgba(0,0,0,0.03); }
 .radius-12 { border-radius: 12px; }
 .info-label { font-size: 12px !important; font-weight: 500; color: #64748B; display: block; margin-bottom: 6px; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
-.info-value { font-size: 14px !important; font-weight: 500; color: #01062C; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
+.info-value { font-size: 14px !important; font-weight: 500; color: #0B0736; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .department-badge { font-size: 12px; color: #475569; }
 .avatar-sm { width: 40px; height: 40px; }
 .section-head {
@@ -777,7 +777,7 @@ h6.section-title {
 }
 
 .section-highlight {
-  border-color: #faa300 !important;
+  border-color: #733E87 !important;
   box-shadow: 0 0 0 2px rgba(250, 163, 0, 0.12);
 }
 
@@ -788,7 +788,7 @@ h6.section-title {
 .inline-add-property-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--deal-navy-deep, #01062c);
+  color: var(--deal-navy-deep, #0B0736);
 }
 
 .property-inline-add-highlight {
@@ -798,12 +798,12 @@ h6.section-title {
 
 .btn-add-property-sm {
   background: transparent;
-  border: 1px solid #01062c;
+  border: 1px solid #0B0736;
   border-radius: 100px;
   padding: 4px 12px;
   font-size: 11px;
   font-weight: 500;
-  color: #01062c;
+  color: #0B0736;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -811,7 +811,7 @@ h6.section-title {
   transition: all 0.2s;
 }
 .btn-add-property-sm:hover {
-  background: #01062c;
+  background: #0B0736;
   color: #fff;
 }
 </style>

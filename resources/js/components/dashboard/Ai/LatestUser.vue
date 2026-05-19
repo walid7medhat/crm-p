@@ -441,14 +441,14 @@ export default {
 
 <style scoped>
 .bg-primary-100{
-  background-color: #FAA300 !important;
+  background-color: #733E87 !important;
   color: #ffff !important;
 }
  
 .border-gradient-tab .nav-link.active{
-  background-color:#FAA300 !important ;
+  background-color:#733E87 !important ;
   color: #ffff !important;
-  border-color:#FAA300 !important ;
+  border-color:#733E87 !important ;
 }
  
 .border-gradient-tab{
@@ -456,7 +456,7 @@ export default {
 }
  
 .border-gradient-tab .nav-link.active .notification-alert{
-  color: #FAA300 !important;
+  color: #733E87 !important;
   background-color: #ffff !important;
 }
  

@@ -550,7 +550,7 @@ const handleCancelFileModal = () => {
 .modal-title {
     font-size: 14px;
     font-weight: 400;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .custom-textarea {
@@ -618,7 +618,7 @@ const handleCancelFileModal = () => {
     padding: 5px 20px;
     border-radius: 100px;
     font-size: 14px;
-    color: #01062C;
+    color: #0B0736;
     cursor: pointer;
 }
 
@@ -627,7 +627,7 @@ const handleCancelFileModal = () => {
 }
 
 .btn-save {
-    background: #01062C;
+    background: #0B0736;
     border: none;
     padding: 5px 20px;
     border-radius: 100px;
@@ -679,7 +679,7 @@ const handleCancelFileModal = () => {
 
 .btn-close-card:hover {
     background: #F1F5F9;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .btn-close-card iconify-icon {
@@ -704,12 +704,12 @@ const handleCancelFileModal = () => {
 }
 
 .file-dropzone:hover {
-    border-color: #01062C;
+    border-color: #0B0736;
     background: #F1F5F9;
 }
 
 .file-dropzone.dragover {
-    border-color: #01062C;
+    border-color: #0B0736;
     background: #E2E8F0;
     border-style: solid;
 }
@@ -732,7 +732,7 @@ const handleCancelFileModal = () => {
 .dropzone-text {
     font-size: 14px;
     font-weight: 500;
-    color: #01062C;
+    color: #0B0736;
     margin: 0;
 }
 
@@ -749,7 +749,7 @@ const handleCancelFileModal = () => {
     padding: 8px 10px;
     font-size: 14px;
     font-weight: 400;
-    color: #01062C;
+    color: #0B0736;
     cursor: pointer;
     transition: all 0.2s;
     flex-shrink: 0;
@@ -780,7 +780,7 @@ const handleCancelFileModal = () => {
 
 .files-count {
     font-weight: 500;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .files-total-size {
@@ -820,7 +820,7 @@ const handleCancelFileModal = () => {
 .file-item-name {
     font-size: 14px;
     font-weight: 500;
-    color: #01062C;
+    color: #0B0736;
     margin: 0;
 }
 
@@ -908,7 +908,7 @@ const handleCancelFileModal = () => {
     cursor: pointer;
     text-align: left;
     font-size: 13px;
-    color: #01062C;
+    color: #0B0736;
     transition: background 0.15s;
     border-radius: 0;
 }
@@ -947,7 +947,7 @@ const handleCancelFileModal = () => {
 
 .mention-item-name {
     font-weight: 500;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .mention-fade-enter-active,

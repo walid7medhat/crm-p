@@ -1100,7 +1100,7 @@ function close() {
 .modal-title {
   font-size: clamp(14px, 2.8vw, 16px);
   font-weight: 600;
-  color: #01062c;
+  color: #0B0736;
 }
 
 .view-deal-title-truncate {
@@ -1187,7 +1187,7 @@ function close() {
   font-size: clamp(14px, 2.8vw, 16px);
   font-weight: 600;
   font-family: var(--deal-font, 'Montserrat', sans-serif);
-  color: #01062c;
+  color: #0B0736;
   line-height: 1.35;
   padding: 6px 14px;
   border-radius: 11px;
@@ -1341,7 +1341,7 @@ function close() {
     font-family: Montserrat;
     font-weight: 400;
     font-size: 13px;
-    color: #01062C;
+    color: #0B0736;
     display: block;
     width: 100%;
     overflow: hidden;
@@ -1350,7 +1350,7 @@ function close() {
 }
 
 .deal-stage-pill.active .stage-text {
-    color: #01062C;
+    color: #0B0736;
     font-weight: 400;
 }
 
@@ -1400,7 +1400,7 @@ function close() {
   font-family: var(--deal-font, 'Inter', sans-serif);
 }
 .tab-item.active {
-  color: #01062c;
+  color: #0B0736;
 }
 .tab-item.active::after {
   content: '';
@@ -1409,7 +1409,7 @@ function close() {
   left: 0;
   width: 100%;
   height: 2px;
-  background: #faa300;
+  background: #733E87;
 }
 
 .radius-12 { border-radius: 12px; }
@@ -1421,7 +1421,7 @@ function close() {
 .info-card-title {
   font-size: 13px;
   font-weight: 500;
-  color: var(--deal-navy-deep, #01062c);
+  color: var(--deal-navy-deep, #0B0736);
   letter-spacing: -0.01em;
 }
 .btn-edit-icon {
@@ -1438,7 +1438,7 @@ function close() {
 }
 .btn-edit-icon:hover {
   background: #F1F5F9;
-  color: #01062C;
+  color: #0B0736;
 }
 
 .activity-card {
@@ -1539,7 +1539,7 @@ function close() {
   color: #fff;
 }
 .btn-primary {
-  background: #01062C;
+  background: #0B0736;
   border: none;
   font-weight: 500;
 }
@@ -1565,7 +1565,7 @@ function close() {
 
 .deal-type-pencil-icon {
   font-size: 14px;
-  color: #faa300;
+  color: #733E87;
   margin-left: 2px;
   flex-shrink: 0;
 }
@@ -1669,12 +1669,12 @@ function close() {
   min-width: 0;
 }
 
-/* Child sections: section titles 16px, labels 12px #64748B, values 14px #01062C */
+/* Child sections: section titles 16px, labels 12px #64748B, values 14px #0B0736 */
 :deep(.info-card .section-title),
 :deep(.info-card h6.section-title) {
   font-size: 13px !important;
   font-weight: 500;
-  color: var(--deal-navy-deep, #01062c);
+  color: var(--deal-navy-deep, #0B0736);
   margin-bottom: 12px;
   font-family: var(--deal-font, 'Inter', sans-serif);
   letter-spacing: -0.02em;
@@ -1728,9 +1728,9 @@ function close() {
   right: -61px;
   width: 83px;
   height: 49px;
-  border: 1px solid #4fa5f7;
+  border: 1px solid rgba(115, 62, 135, 0.75);
   border-radius: 999px;
-  background: linear-gradient(90deg, #2f88ef 0%, #5db8ff 100%);
+  background: var(--gradient-crm, linear-gradient(135deg, #0b0736 0%, #733e87 100%));
   color: #ffffff;
   font-size: 18px;
   line-height: 1;
@@ -1789,7 +1789,7 @@ function close() {
 
 .edit-bar-cancel {
   background: #f4f4f4;
-  color: #01062c;
+  color: #0B0736;
 }
 
 .edit-bar-cancel:hover {
@@ -1797,7 +1797,7 @@ function close() {
 }
 
 .edit-bar-save {
-  background: #01062c;
+  background: #0B0736;
   color: #fff;
 }
 

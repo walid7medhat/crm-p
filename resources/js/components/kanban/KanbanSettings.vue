@@ -1249,7 +1249,7 @@ watch(
     font-size: 12px;
     line-height: 19px;
     letter-spacing: -0.25px;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .task-header {
@@ -1343,7 +1343,7 @@ watch(
     font-weight: 600;
     font-size: 11px;
     line-height: 1;
-    color: #01062C;
+    color: #0B0736;
     display: flex;
     align-items: center;
     justify-content: center;

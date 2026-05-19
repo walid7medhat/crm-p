@@ -839,7 +839,7 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
 
 
 /* Figma deal forms — Inter, 16px sections, 12px labels, 14px inputs */
-.section-title { font-size: 16px !important; font-weight: 600; color: var(--deal-navy-deep, #01062c); font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); margin-bottom: 10px; letter-spacing: -0.02em; line-height: 1.35; }
+.section-title { font-size: 16px !important; font-weight: 600; color: var(--deal-navy-deep, #0B0736); font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); margin-bottom: 10px; letter-spacing: -0.02em; line-height: 1.35; }
 .form-card { background: #fff; border: 1px solid #e5e7eb; box-shadow: none; padding: 0.875rem 1rem !important; }
 .radius-12 { border-radius: 8px; }
 .form-label-custom { font-size: 12px !important; font-weight: 500; color: var(--deal-text-muted, #64748b); margin-bottom: 4px; display: block; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
@@ -933,7 +933,7 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
     .location-option-name {
       font-weight: 600;
       font-size: 0.75rem;
-      color: #01062d;
+      color: #0B0736;
       line-height: 1.2;
     }
     
@@ -1029,12 +1029,12 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
 
 .btn-add-property {
   background: transparent;
-  border: 1px solid #01062C;
+  border: 1px solid #0B0736;
   border-radius: 100px;
   padding: 8px 20px;
   font-size: 13px;
   font-weight: 500;
-  color: #01062C;
+  color: #0B0736;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1042,7 +1042,7 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
 }
 
 .btn-add-property:hover {
-  background: #01062C;
+  background: #0B0736;
   color: #fff;
 }
 /* Budget Dropdown Styles - نفس نظام Lead Search */

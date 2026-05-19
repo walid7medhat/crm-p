@@ -480,7 +480,7 @@ watch(localMappings, (newVal) => {
     font-family: 'Montserrat', sans-serif;
     font-size: 16px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
     margin: 0 0 24px 0;
 }
 
@@ -688,7 +688,7 @@ watch(localMappings, (newVal) => {
     font-family: 'Montserrat', sans-serif;
     font-size: 16px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
     margin: 0 0 4px 0;
 }
 

@@ -5,7 +5,7 @@
                 <div class="info-section-title mb-0">Lead Information</div>
                 <!-- emit(edit-request) for all info-->
                 <button v-if="showEditIcon && canEdit" class="lead-edit-inline-btn" @click="emit('edit-section', 'leadInfo')">
-                    <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:pencil"></iconify-icon>
+                    <iconify-icon class="edit-icon-btn" color="#733E87" icon="lucide:pencil"></iconify-icon>
                 </button>
             </div>
             <div class="info-group">
@@ -110,7 +110,7 @@
                         title="Add client requirement"
                         @click="openClientReqModal(null)"
                     >
-                        <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:plus"></iconify-icon>
+                        <iconify-icon class="edit-icon-btn" color="#733E87" icon="lucide:plus"></iconify-icon>
                     </button>
                 </div>
             </div>
@@ -138,7 +138,7 @@
                                 title="Edit primary requirement"
                                 @click="emit('edit-section', 'clientRequirement')"
                             >
-                                <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:pencil"></iconify-icon>
+                                <iconify-icon class="edit-icon-btn" color="#733E87" icon="lucide:pencil"></iconify-icon>
                             </button>
                         </div>
                         <div v-if="hasPrimaryClientCoreContent" class="client-requirement-list">
@@ -346,7 +346,7 @@
                                 title="Edit this requirement"
                                 @click="openClientReqModal(idx)"
                             >
-                                <iconify-icon class="edit-icon-btn" color="#FAA300" icon="lucide:pencil"></iconify-icon>
+                                <iconify-icon class="edit-icon-btn" color="#733E87" icon="lucide:pencil"></iconify-icon>
                             </button>
                         </div>
                         <div class="client-requirement-list">
@@ -1894,12 +1894,12 @@ const saveClientRequirement = async () => {
 }
 
 :deep(.client-req-vselect .vs__dropdown-option--highlight) {
-    background: #FAA300 !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
 :deep(.client-req-vselect .vs__dropdown-option--selected) {
-    background: #FAA300;
+    background: #733E87;
     color: #fff;
 }
 
@@ -2231,7 +2231,7 @@ const saveClientRequirement = async () => {
 /* Edit Person Button */
 .edit-person-btn {
     text-decoration: none;
-    color: #FAA300;
+    color: #733E87;
     font-size: 12px;
     font-weight: 500;
     display: flex;
@@ -2304,7 +2304,7 @@ const saveClientRequirement = async () => {
 .search-icon {
     position: absolute;
     right: 15px;
-    color: #FAA300;
+    color: #733E87;
     font-size: 20px;
 }
 
@@ -2340,12 +2340,12 @@ const saveClientRequirement = async () => {
 
 .person-item:hover {
     background: #F8FAFC;
-    border-color: #FAA300;
+    border-color: #733E87;
 }
 
 .person-item.selected {
     background: #FFFBEB;
-    border-color: #FAA300;
+    border-color: #733E87;
 }
 
 .person-item.current {
@@ -2421,7 +2421,7 @@ const saveClientRequirement = async () => {
 }
 
 .text-warning {
-    color: #FAA300 !important;
+    color: #733E87 !important;
 }
 
 /* Modal Footer */
@@ -2444,7 +2444,7 @@ const saveClientRequirement = async () => {
 .modal-footer-custom .btn-light {
     background: #F4F4F4;
     border: none;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .modal-footer-custom .btn-light:hover {
@@ -2452,7 +2452,7 @@ const saveClientRequirement = async () => {
 }
 
 .modal-footer-custom .btn-warning {
-    background: #FAA300;
+    background: #733E87;
     border: none;
     color: #fff;
 }
@@ -2536,7 +2536,7 @@ const saveClientRequirement = async () => {
 /* تأثير الـ highlight */
 .section-highlight {
     animation: highlight-pulse 0.5s ease-in-out 3;
-    border: 2px solid #FAA300 !important;
+    border: 2px solid #733E87 !important;
     background: linear-gradient(90deg, #FFF8E7, #FFFFFF) !important;
     box-shadow: 0 0 0 2px rgba(250, 163, 0, 0.2) !important;
     transition: all 0.3s ease;
@@ -2544,7 +2544,7 @@ const saveClientRequirement = async () => {
 
 @keyframes highlight-pulse {
     0% {
-        border-color: #FAA300;
+        border-color: #733E87;
         box-shadow: 0 0 0 0 rgba(250, 163, 0, 0.4);
     }
     50% {
@@ -2552,7 +2552,7 @@ const saveClientRequirement = async () => {
         box-shadow: 0 0 0 4px rgba(250, 163, 0, 0.2);
     }
     100% {
-        border-color: #FAA300;
+        border-color: #733E87;
         box-shadow: 0 0 0 0 rgba(250, 163, 0, 0);
     }
 }

@@ -828,9 +828,9 @@ export default {
 }
 
 .owner-tabs .nav-link.active {
-    background-color: #01062d;
+    background-color: #0B0736;
     color: white;
-    border-color: #01062d;
+    border-color: #0B0736;
 }
 
 /* ============ INFO GRID ============ */
@@ -873,11 +873,11 @@ export default {
 .document-item:hover {
     transform: translateY(-5px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    border-color: #01062d;
+    border-color: #0B0736;
 }
 
 .document-icon {
-    color: #01062d;
+    color: #0B0736;
 }
 
 .document-title {
@@ -1004,7 +1004,7 @@ export default {
   display: inline-block;
   text-align: center;
   width: 100%;
-  background: #FAA300;
+  background: #733E87;
   color: #ffffff;
   font-weight: 500;
   border-radius: 10px;
@@ -1101,13 +1101,13 @@ export default {
 }
 
 .status-btn:hover {
-  border-color: #FAA300;
-  color: #FAA300;
+  border-color: #733E87;
+  color: #733E87;
 }
 
 .status-btn.active {
-  background: #FAA300;
-  border-color: #FAA300;
+  background: #733E87;
+  border-color: #733E87;
   color: white;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);

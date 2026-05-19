@@ -957,7 +957,7 @@ const today = new Date()
 
 .attendance-report-page {
   padding: 16px;
-  background: #f7f8fc;
+  background: #F4F0F8;
   min-height: 100vh;
 }
 
@@ -1029,9 +1029,9 @@ input, select {
   cursor: pointer;
 }
 
-.btn.primary { background: #0f4ae8; border-color: #0f4ae8; color: #fff; }
+.btn.primary { background: #0B0736; border-color: #0B0736; color: #fff; }
 .btn.success { background: #16a34a; border-color: #16a34a; color: #fff; }
-.btn.print { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+.btn.print { background: #733E87; border-color: #733E87; color: #fff; }
 
 .kpi-grid {
   margin-top: 12px;
@@ -1062,7 +1062,7 @@ input, select {
 
 .kpi-card.warning strong { color: #f59e0b; }
 .kpi-card.danger strong { color: #ef4444; }
-.kpi-card.present-kpi strong { color: #0ea5e9; }
+.kpi-card.present-kpi strong { color: #733E87; }
 
 .charts-grid {
   margin-top: 12px;
@@ -1150,7 +1150,7 @@ th, td {
 }
 
 th {
-  background: #f8f9fd;
+  background: #F4F0F8;
   text-align: left;
   color: #4b5563;
   font-weight: 600;
@@ -1161,7 +1161,7 @@ th {
 .employee-link {
   border: none;
   background: transparent;
-  color: #0f4ae8;
+  color: #0B0736;
   font-weight: 600;
   padding: 0;
 }
@@ -1244,7 +1244,7 @@ tr.risk-low { background: #f6fff8; }
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #0f4ae8;
+  background: #0B0736;
   color: #fff;
   font-weight: 700;
 }

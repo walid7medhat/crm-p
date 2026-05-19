@@ -226,7 +226,7 @@ const bedroomOptions = [{ value: null, text: 'Select Bedroom' }, { value: '1', t
 </script>
 
 <style scoped>
-.section-title { font-size: 16px; font-weight: 600; color: var(--deal-navy-deep, #01062c); font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); letter-spacing: -0.02em; }
+.section-title { font-size: 16px; font-weight: 600; color: var(--deal-navy-deep, #0B0736); font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); letter-spacing: -0.02em; }
 .form-card { background: #fff; border: 1px solid #F3F3F3; box-shadow: 1px 1px 5px rgba(0,0,0,0.03); }
 .radius-12 { border-radius: 12px; }
 .form-label-custom { font-size: 12px; font-weight: 500; color: var(--deal-text-muted, #64748b); margin-bottom: 6px; display: block; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }

@@ -169,7 +169,7 @@ const showCreatorCard = ref(false)
 .modal-title {
     font-size: 14px;
     font-weight: 400;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .lead-created-timeline {
@@ -289,7 +289,7 @@ const showCreatorCard = ref(false)
 .lead-created-value {
     font-size: 13px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .lead-created-avatar {

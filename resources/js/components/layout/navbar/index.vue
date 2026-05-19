@@ -2,27 +2,67 @@
   <div class="navbar-header">
     <div class="navbar-header-toolbar">
       <div class="navbar-header-left">
-        <div class="d-flex flex-wrap align-items-center gap-2 gap-md-3">
-          <button type="button" v-if="showBackButton"  class="sidebar-toggle back-button" @click="goBack" title="Go back" aria-label="Go back">
-            <iconify-icon icon="lucide:arrow-left" class="icon navbar-header-back-icon text-white"></iconify-icon>
+        <div class="navbar-header-left-row">
+          <button
+            v-if="showBackButton"
+            type="button"
+            class="sidebar-toggle back-button"
+            @click="goBack"
+            title="Go back"
+            aria-label="Go back"
+          >
+            <iconify-icon icon="lucide:arrow-left" class="icon navbar-header-back-icon text-white" />
           </button>
-          <button type="button" @click="toggleSidebarMobile" class="sidebar-mobile-toggle">
-            <iconify-icon icon="heroicons:bars-3-solid" class="icon navbar-header-menu-icon"></iconify-icon>
+          <button
+            type="button"
+            class="sidebar-mobile-toggle"
+            aria-label="Open navigation menu"
+            @click="toggleMobileMenu"
+          >
+            <iconify-icon icon="heroicons:bars-3-solid" class="icon navbar-header-menu-icon" />
           </button>
-        </div>
-
-          <div class="kanban-tabs-nav"  v-if="isKanbanRoute">
-            <button 
-              v-for="tab in kanbanTabs" 
+          <select
+            v-if="isMobileViewport && moduleHeaderTabs.length"
+            class="module-tab-select"
+            :value="mobileHeaderTabValue"
+            aria-label="Switch section view"
+            @change="onMobileModuleTabChange"
+          >
+            <option
+              v-for="tab in moduleHeaderTabs"
               :key="tab.id"
-              class="kanban-tab-btn"
-              :class="{ active: activeKanbanTab === tab.id }"
-              @click="setActiveKanbanTab(tab.id)"
+              :value="tab.id"
             >
-              {{ tab.name }}
-              <div class="active-indicator" v-if="activeKanbanTab === tab.id"></div>
-            </button>
-          </div>
+              {{ tab.label }}
+            </option>
+          </select>
+          <nav
+            v-if="moduleHeaderTabs.length"
+            class="module-tabs-nav"
+            :class="{ 'module-tabs-nav--hide-on-mobile': isMobileViewport }"
+            aria-label="Section navigation"
+          >
+            <template v-for="tab in moduleHeaderTabs" :key="tab.id">
+              <button
+                v-if="tab.type === 'event'"
+                type="button"
+                class="module-tab-btn"
+                :class="{ active: activeKanbanTab === tab.id }"
+                @click="setActiveKanbanTab(tab.id)"
+              >
+                {{ tab.label }}
+              </button>
+              <router-link
+                v-else
+                :to="tab.path"
+                class="module-tab-btn"
+                :class="{ active: isModuleTabActive(tab) }"
+              >
+                {{ tab.label }}
+              </router-link>
+            </template>
+          </nav>
+        </div>
       </div>
 
       <div class="navbar-header-right">
@@ -55,12 +95,19 @@
                         <iconify-icon icon="lucide:x" class="close-tag-icon" @click.stop="clearMoreFilters" style="cursor: pointer;"></iconify-icon>
                     </div>
                 </div>
+                <button
+                    type="button"
+                    class="search-icon-btn"
+                    aria-label="Open search filters"
+                    @click.stop="openSearchModal"
+                >
+                    <iconify-icon icon="lucide:search" />
+                </button>
                 <div
                     class="search-input-container d-flex align-items-center"
                     :class="{ 'search-input-container-tall': searchInputFocused }"
-                    @click="showSearchModal = true"
+                    @click.stop="openSearchModal"
                 >
-                    <iconify-icon icon="lucide:plus" class="search-plus-icon" style="cursor: pointer;"></iconify-icon>
                     <b-form-input
                         :placeholder="searchInputPlaceholder"
                         v-model="search"
@@ -68,29 +115,53 @@
                         @focus="onSearchFocus"
                         @blur="onSearchBlur"
                         @input="showSearchModal = false"
+                        @click.stop="openSearchModal"
                     />
                 </div>
-                <iconify-icon v-if="hasAnySearchCriteria" icon="lucide:x" class="clear-search-icon" @click="clearSearchFilter" style="cursor: pointer;"></iconify-icon>
+                <button
+                    type="button"
+                    class="search-filter-btn"
+                    aria-label="Add filter"
+                    @click.stop="openSearchModal"
+                >
+                    <iconify-icon icon="lucide:plus" />
+                </button>
+                <button
+                    v-if="hasAnySearchCriteria"
+                    type="button"
+                    class="search-clear-btn"
+                    aria-label="Clear search"
+                    @click.stop="clearSearchFilter"
+                >
+                    <iconify-icon icon="lucide:x" />
+                </button>
             </div>
-            <div v-if="showSearchModal" class="lead-search-dropdown-outer">
-                <DealSearchModal
-                    v-if="activeKanbanTab === 'deals'"
-                    v-model="showSearchModal"
-                    :as-dropdown="true"
-                    :current-query="lastQuery"
-                    :deal-type="kanbanDealType"
-                    @search="onDealSearch"
-                />
-                <LeadSearchModal
-                    v-else
-                    v-model="showSearchModal"
-                    :as-dropdown="true"
-                    :initial-active-pill="activeFilter?.id"
-                    :has-active-filters="(activeFilters && activeFilters.length) > 0"
-                    :current-query="lastQuery"
-                    @search="onLeadSearch"
-                />
-            </div>
+            <Teleport to="body">
+                <div
+                    v-if="showSearchModal"
+                    ref="searchDropdownPanelRef"
+                    class="lead-search-dropdown-outer lead-search-dropdown-outer--teleport"
+                    :style="searchDropdownStyle"
+                >
+                    <DealSearchModal
+                        v-if="activeKanbanTab === 'deals'"
+                        v-model="showSearchModal"
+                        :as-dropdown="true"
+                        :current-query="lastQuery"
+                        :deal-type="kanbanDealType"
+                        @search="onDealSearch"
+                    />
+                    <LeadSearchModal
+                        v-else
+                        v-model="showSearchModal"
+                        :as-dropdown="true"
+                        :initial-active-pill="activeFilter?.id"
+                        :has-active-filters="(activeFilters && activeFilters.length) > 0"
+                        :current-query="lastQuery"
+                        @search="onLeadSearch"
+                    />
+                </div>
+            </Teleport>
         </div>
 
         <!-- Create New Button -->
@@ -327,15 +398,22 @@
 
 <script setup>
 import { useSidebar } from '@/composables/useSidebar.js';
-import { ref, onMounted, computed, onUnmounted, watch ,nextTick } from 'vue';
+import { ref, onMounted, computed, onUnmounted, watch, nextTick, getCurrentInstance } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import {
+  resolveActiveModule,
+  buildHeaderTabs,
+  isTabActive,
+} from '@/composables/useLayoutNavigation.js';
 import { useTheme } from '@/composables/useTheme.js';
+import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import NotificationBell from '@/components/NotificationBell.vue';
 import SystemOverviewLangToggle from '@/components/system-overview/SystemOverviewLangToggle.vue';
 const userPlaceholder = '/assets/images/user.png';
 import DealSearchModal from '@/components/kanban/deals/DealSearchModal.vue';
 import LeadSearchModal from '@/components/kanban/leadList/LeadSearchModal.vue';
 const { isMobileOpen, openMobileSidebar } = useSidebar();
+const { isMobileViewport, toggleMobileMenu } = useMobileNavigation();
 import api from '@/plugins/axios';
 import Swal from 'sweetalert2';
 import { BFormInput } from 'bootstrap-vue-3';
@@ -347,7 +425,46 @@ function goBack() {
   router.back();
 }
 const route = useRoute();
+const { proxy } = getCurrentInstance();
 const user = ref(null);
+
+const isAdmin = computed(() => {
+  if (!user.value) return false;
+  return (
+    user.value.roles?.includes('super_admin') ||
+    user.value.roles?.includes('admin') ||
+    proxy?.$hasPermission?.('admin')
+  );
+});
+
+const isSuperAdmin = computed(() => user.value?.roles?.includes('super_admin') ?? false);
+
+const isCustomAdmin = computed(() => {
+  if (!user.value) return false;
+  const userId = Number(user.value.id);
+  return (
+    user.value.roles?.includes('super_admin') ||
+    (user.value.roles?.includes('admin') && (userId === 30 || userId === 33))
+  );
+});
+
+const isShowOnlyListingNav = computed(() => user.value?.roles?.includes('only show listings') ?? false);
+
+const activeLayoutModule = computed(() => resolveActiveModule(route.path));
+
+const moduleHeaderTabs = computed(() =>
+  buildHeaderTabs(activeLayoutModule.value, {
+    isAdmin: isAdmin.value,
+    isSuperAdmin: isSuperAdmin.value,
+    isCustomAdmin: isCustomAdmin.value,
+    isShowOnlyListing: isShowOnlyListingNav.value,
+    hasPermission: (p) => proxy?.$hasPermission?.(p) ?? true,
+  }),
+);
+
+function isModuleTabActive(tab) {
+  return isTabActive(route.path, tab);
+}
 
 // إعدادات الإشعارات
 const soundEnabled = ref(true);
@@ -355,17 +472,19 @@ const browserNotificationsEnabled = ref(true);
 
 // computed property للتحقق من الصلاحيات وعرض الزر
 const showCreatePropertyButton = computed(() => {
+  if (['listings', 'crm', 'settings'].includes(activeLayoutModule.value)) {
+    return false;
+  }
   const allowedRoutes = [
     '/property-form',
-    '/my-listing', 
+    '/my-listing',
     '/archive',
     '/alllisting',
     '/property-details',
-    '/properties'
+    '/properties',
   ];
-  
-  return allowedRoutes.some(allowedRoute => 
-    route.path.startsWith(allowedRoute.replace('/:id', '').replace('/:id?', ''))
+  return allowedRoutes.some((allowedRoute) =>
+    route.path.startsWith(allowedRoute.replace('/:id', '').replace('/:id?', '')),
   );
 });
 // ========== KANBAN STATE ==========
@@ -381,6 +500,8 @@ const activeFilter = ref(null);
 const showSearchModal = ref(false);
 const searchInputFocused = ref(false);
 const searchDropdownAnchorRef = ref(null);
+const searchDropdownPanelRef = ref(null);
+const searchDropdownStyle = ref({});
 const searchDebounceTimer = ref(null);
 const SEARCH_DEBOUNCE_MS = 400;
 const leadsRef = ref(null);
@@ -417,10 +538,8 @@ function applySearchToApi() {
     }
     
     if (activeKanbanTab.value === 'deals') {
-        console.log('Dispatching kanban-deal-search event')
         window.dispatchEvent(new CustomEvent('kanban-deal-search', { detail: payload }))
-    } else if (activeKanbanTab.value === 'leads') {
-        console.log('Dispatching kanban-lead-search event')
+    } else if (activeKanbanTab.value === 'leads' || activeKanbanTab.value === 'lead-pool') {
         window.dispatchEvent(new CustomEvent('kanban-lead-search', { detail: payload }))
     }
 }
@@ -445,32 +564,14 @@ watch(activeKanbanTab, () => {
     lastQuery.value = null
     activeFilter.value = null
 })
-const isKanbanRoute = computed(() => {
-  return route.path === '/kanban' || route.path === '/kanban_deal'
-})
+const isKanbanRoute = computed(() => activeLayoutModule.value === 'crm');
 
-// صلاحيات السوبر ادمن (لإضافة تبويب Integration)
-const isSuperAdmin = computed(() => {
-  if (!user.value) return false
-  return user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin')
-})
-
-// تبويبات الكانبان
-const kanbanTabs = computed(() => {
-  if (!user.value) return false
-  const tabs = [
-    { id: 'leads', name: 'Leads' },
-    { id: 'lead-pool', name: 'Lead Pool' },
-    { id: 'deals', name: 'Deals' },
-    
-  ]
-  
-  if (user.value.roles?.includes('super_admin')) {
-    tabs.push({ id: 'integration', name: 'Integration' })
-  }
-  
-  return tabs
-})
+const mobileHeaderTabValue = computed(() => {
+  if (!moduleHeaderTabs.value.length) return '';
+  if (isKanbanRoute.value) return activeKanbanTab.value;
+  const active = moduleHeaderTabs.value.find((tab) => isModuleTabActive(tab));
+  return active?.id ?? moduleHeaderTabs.value[0]?.id ?? '';
+});
 
 // وظائف الكانبان
 const setActiveKanbanTab = (tabId) => {
@@ -516,15 +617,22 @@ const onKanbanDealSearch = (payload) => {
 
 const loadStoredKanbanTab = () => {
   const stored = localStorage.getItem('kanban_active_tab')
-  if (stored && kanbanTabs.value.some(t => t.id === stored)) {
+  if (stored && moduleHeaderTabs.value.some((t) => t.id === stored && t.type === 'event')) {
     activeKanbanTab.value = stored
   }
 }
 // Search computed properties
 const searchInputPlaceholder = computed(() => {
-    if (activeKanbanTab.value === 'deals') return 'Search deals';
-    if (activeKanbanTab.value === 'leads') return 'Search leads';
-    return 'Search';
+    if (activeKanbanTab.value === 'deals') {
+        return 'Search by deal name, client, phone, or anything…';
+    }
+    if (activeKanbanTab.value === 'lead-pool') {
+        return 'Search by name, phone, email, or anything…';
+    }
+    if (activeKanbanTab.value === 'leads') {
+        return 'Search by lead name, number, email, or anything…';
+    }
+    return 'Search by name, number, email, or anything…';
 });
 
 const hasAnySearchCriteria = computed(() => {
@@ -756,17 +864,38 @@ const clearSearchFilter = () => {
     }
 };
 
+function updateSearchDropdownPosition() {
+    const anchor = searchDropdownAnchorRef.value;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    searchDropdownStyle.value = {
+        position: 'fixed',
+        top: `${Math.round(rect.bottom + 8)}px`,
+        right: `${Math.round(window.innerWidth - rect.right)}px`,
+        left: 'auto',
+        width: 'min(1140px, calc(100vw - 24px))',
+        maxWidth: 'calc(100vw - 24px)',
+        zIndex: 15000,
+    };
+}
+
+function onSearchDropdownReposition() {
+    if (showSearchModal.value) {
+        updateSearchDropdownPosition();
+    }
+}
+
 const openSearchModal = () => {
-    console.log('Opening search modal')
     showSearchModal.value = true;
     searchInputFocused.value = true;
     nextTick(() => {
-        const searchInput = document.querySelector('.search-input');
+        updateSearchDropdownPosition();
+        const searchInput = searchDropdownAnchorRef.value?.querySelector('.search-input');
         if (searchInput) {
             searchInput.focus();
         }
     });
-}
+};
 
 let searchBlurTimeout = null;
 function onSearchFocus() {
@@ -776,6 +905,7 @@ function onSearchFocus() {
     }
     searchInputFocused.value = true;
     showSearchModal.value = true;
+    nextTick(updateSearchDropdownPosition);
 }
 
 function onSearchBlur() {
@@ -787,12 +917,19 @@ function onSearchBlur() {
 
 function onDocumentClick(e) {
     if (!showSearchModal.value) return;
-    if (e.target.closest && e.target.closest('.modal')) return;
-    const el = searchDropdownAnchorRef.value;
-    if (el && !el.contains(e.target)) {
-        showSearchModal.value = false;
-    }
+    if (e.target.closest?.('.modal')) return;
+    const anchor = searchDropdownAnchorRef.value;
+    const panel = searchDropdownPanelRef.value;
+    if (anchor?.contains(e.target)) return;
+    if (panel?.contains(e.target)) return;
+    showSearchModal.value = false;
 }
+
+watch(showSearchModal, (open) => {
+    if (open) {
+        nextTick(updateSearchDropdownPosition);
+    }
+});
 // BIG Profile Details panel (slide-in from right)
 const isProfilePanelOpen = ref(false);
 const profilePanel = ref(null);
@@ -1157,6 +1294,8 @@ onMounted(() => {
   setupClickOutsideListener();
    loadStoredKanbanTab();
      document.addEventListener('click', onDocumentClick);
+     window.addEventListener('resize', onSearchDropdownReposition);
+     window.addEventListener('scroll', onSearchDropdownReposition, true);
 
      window.addEventListener('kanban-lead-search-update', (e) => {
     if (e.detail) {
@@ -1180,6 +1319,8 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
    document.removeEventListener('click', onDocumentClick);
+  window.removeEventListener('resize', onSearchDropdownReposition);
+  window.removeEventListener('scroll', onSearchDropdownReposition, true);
   window.removeEventListener('kanban-lead-search-update', () => {})
   window.removeEventListener('kanban-deal-search-update', () => {})
   window.removeEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
@@ -1239,9 +1380,17 @@ function toggleBrowserNotifications() {
   }
 }
 
-function toggleSidebarMobile() {
-  document.querySelector('.sidebar')?.classList.add('sidebar-open');
-  document.body.classList.add('overlay-active');
+function onMobileModuleTabChange(event) {
+  const tabId = event?.target?.value;
+  if (!tabId) return;
+  if (moduleHeaderTabs.value.some((t) => t.id === tabId && t.type === 'event')) {
+    setActiveKanbanTab(tabId);
+    return;
+  }
+  const tab = moduleHeaderTabs.value.find((t) => t.id === tabId);
+  if (tab?.path) {
+    router.push(tab.path);
+  }
 }
 
 function logout() {
@@ -1259,25 +1408,39 @@ const showBackButton = computed(() => {
 </script>
 
 <style scoped>
-/* Glass bar: z-index 1000 = below sidebar (1100+), below modals (global) */
+/* Glass bar: brand gradient (matches style14.css tokens) */
 .navbar-header {
-  background: rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  height: var(--app-topbar-height, 3.25rem);
-  min-height: var(--app-topbar-height, 3.25rem);
-  padding: 0.25rem 0.75rem;
-  box-sizing: border-box;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  /* Header stays below sidebar */
-  z-index: 99 !important;
+  z-index: 500 !important;
+  height: var(--app-topbar-height, 3.25rem);
+  min-height: var(--app-topbar-height, 3.25rem);
+  padding: 0.25rem 0.75rem;
+  box-sizing: border-box;
   pointer-events: auto;
   display: flex;
   align-items: center;
+  overflow: visible;
+  border-radius: 20px;
+  background: var(--gradient-crm-glass) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 24px rgba(11, 7, 54, 0.08);
+}
+
+.navbar-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--gradient-crm);
+  opacity: 0.1;
+  pointer-events: none;
 }
 
 .navbar-header-toolbar {
@@ -1293,6 +1456,30 @@ const showBackButton = computed(() => {
 .navbar-header-left {
   justify-self: start;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.navbar-header-left-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem 0.5rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+}
+
+.navbar-header-left-row .back-button {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  margin: 0;
 }
 
 .navbar-header-right {
@@ -2037,53 +2224,67 @@ const showBackButton = computed(() => {
 
 @media (max-width: 768px) {
   .sidebar-mobile-toggle {
-    display: none !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    flex-shrink: 0;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: #fff;
+    padding: 0;
   }
 }
 
-/* ========== KANBAN STYLES ========== */
-.navbar-header-toolbar {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  width: 100%;
-  gap: 0.5rem;
-}
-
-.navbar-header-center {
-  justify-self: center;
-  display: flex;
-  justify-content: center;
-}
-
-/* Kanban Tabs */
+/* ========== KANBAN / MODULE TABS ========== */
+.module-tabs-nav,
 .kanban-tabs-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px;
+  gap: 6px;
+  padding: 0 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 
+.module-tabs-nav::-webkit-scrollbar,
+.kanban-tabs-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.module-tab-btn,
 .kanban-tab-btn {
   position: relative;
-  padding: 6px;
+  padding: 5px 10px;
   background: transparent;
   border: none;
-  color: #fff;
-  font-size: 14px;
+  border-bottom: 3px solid transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
   font-weight: 700;
+  line-height: 1.2;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
+.module-tab-btn:hover,
 .kanban-tab-btn:hover {
-  color: white;
-  border-bottom: 3px solid #f2994a;
+  color: #fff;
+  border-bottom-color: var(--crm-secondary, #733e87);
 }
 
+.module-tab-btn.active,
 .kanban-tab-btn.active {
-  color: white;
- border-bottom: 3px solid #f2994a;
+  color: #fff;
+  border-bottom-color: var(--crm-secondary, #733e87);
 }
 
 .active-indicator {
@@ -2185,35 +2386,44 @@ const showBackButton = computed(() => {
 .search-area-column {
     align-items: flex-end;
     position: relative;
+    z-index: 501;
 }
 
-.lead-search-dropdown-outer {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 6px;
-    z-index: 1050;
-    /* width: 500px; */
-    max-width: calc(100vw - 32px);
+.lead-search-dropdown-outer--teleport {
+    pointer-events: auto;
+}
+
+.lead-search-dropdown-outer--teleport :deep(.lead-search-dropdown-panel) {
+    position: relative;
+    z-index: 15000;
+    box-shadow: 0 16px 48px rgba(11, 7, 54, 0.28);
 }
 
 .search-wrapper {
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid #e5e7eb;
+    background: rgba(11, 7, 54, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.28);
     border-radius: 999px;
-    height: 36px;
-    min-height: 36px;
-    gap: 8px;
-    padding: 4px 12px 4px 10px;
+    height: 34px;
+    min-height: 34px;
+    gap: 4px;
+    padding: 4px 8px 4px 6px;
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
     width: max-content;
-    max-width: 560px;
-    min-width: 360px;
-    box-shadow: 0 6px 18px rgba(2, 6, 23, 0.06);
-    transition: max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+    max-width: 720px;
+    min-width: 320px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), border-color 0.2s ease;
     cursor: text;
+}
+
+.search-wrapper:hover,
+.search-wrapper:focus-within {
+    background: rgba(11, 7, 54, 0.52);
+    border-color: rgba(255, 255, 255, 0.38);
 }
 
 .search-wrapper-expanded {
@@ -2235,13 +2445,13 @@ const showBackButton = computed(() => {
 }
 
 .search-tag {
-    background: rgba(59, 130, 246, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 12px;
+    padding: 3px 8px;
+    font-size: 11px;
     font-weight: 500;
-    color: #fff;
+    color: rgba(255, 255, 255, 0.95);
     white-space: nowrap;
     width: fit-content;
 }
@@ -2268,16 +2478,46 @@ const showBackButton = computed(() => {
     justify-content: center;
 }
 
+.search-icon-btn,
+.search-filter-btn,
+.search-clear-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.search-icon-btn:hover,
+.search-filter-btn:hover,
+.search-clear-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
 .search-input-container {
-    color: #1e293b;
-    height: 26px;
-    min-height: 26px;
+    color: rgba(255, 255, 255, 0.92);
+    height: 24px;
+    min-height: 24px;
     display: flex;
     align-items: center;
     flex: 1 1 auto;
-    min-width: 80px;
+    min-width: 120px;
     width: 100%;
-    max-width: 180px;
+    max-width: 100%;
     transition: min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
@@ -2286,37 +2526,25 @@ const showBackButton = computed(() => {
     max-width: 100%;
 }
 
-.search-plus-icon {
-    font-size: 16px;
-    color: #64748b;
-    margin-right: 4px;
-    flex-shrink: 0;
-}
-
 .search-input {
     width: 100%;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
-    color: #1e293b !important;
+    color: rgba(255, 255, 255, 0.95) !important;
     padding: 0 4px !important;
     height: 100% !important;
-    min-height: 26px;
+    min-height: 24px;
     border: none !important;
     outline: none !important;
     background: transparent !important;
+    box-shadow: none !important;
 }
 
 .search-input::placeholder {
-    color: #94A3B8;
-    font-size: 13px;
-}
-
-.clear-search-icon {
-    color: #64748b;
-    font-size: 16px;
-    cursor: pointer;
-    margin-left: 4px;
-    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
 }
 
 /* Search Modal Styles */
@@ -2369,10 +2597,11 @@ const showBackButton = computed(() => {
         padding: 6px 10px;
     }
     
-    .lead-search-dropdown-outer {
-        width: calc(100vw - 20px);
-        left: 10px;
-        right: 10px;
+    .lead-search-dropdown-outer--teleport {
+        left: 12px !important;
+        right: 12px !important;
+        width: calc(100vw - 24px) !important;
+        max-width: calc(100vw - 24px) !important;
     }
 }
 .action-icon-btn {
@@ -2401,6 +2630,134 @@ const showBackButton = computed(() => {
 
 .radius-circle {
     border-radius: 50%;
+}
+
+.module-tab-select {
+  display: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 148px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 28px 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(11, 7, 54, 0.55);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: Montserrat, Inter, system-ui, sans-serif;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  #app {
+    --app-topbar-height: 5.5rem;
+  }
+
+  .navbar-header {
+    min-height: var(--app-topbar-height, 5.5rem);
+    height: auto;
+    padding: 6px 8px;
+    border-radius: 14px;
+  }
+
+  .navbar-header-toolbar {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    gap: 6px;
+    align-items: stretch;
+  }
+
+  .navbar-header-left,
+  .navbar-header-right {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .navbar-header-left-row {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .module-tab-select {
+    display: block;
+  }
+
+  .module-tabs-nav--hide-on-mobile {
+    display: none !important;
+  }
+
+  .module-tabs-nav:not(.module-tabs-nav--hide-on-mobile) {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: 2px;
+  }
+
+  .module-tab-btn,
+  .kanban-tab-btn {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .navbar-header-right {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .search-area-column {
+    order: 10;
+    width: 100%;
+    max-width: 100%;
+    align-items: stretch !important;
+  }
+
+  .search-wrapper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    height: 40px;
+  }
+
+  .search-input-container {
+    max-width: none;
+    flex: 1 1 auto;
+  }
+
+  .search-icon-btn,
+  .search-filter-btn,
+  .search-clear-btn {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .btn-create-new,
+  .action-icon-btn,
+  .profile-avatar-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .navbar-create-listing {
+    min-height: 40px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .module-tabs-nav {
+    max-width: min(52vw, 420px);
+  }
 }
 
 </style>

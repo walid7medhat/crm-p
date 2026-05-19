@@ -611,7 +611,7 @@ function viewProperty(propertyId) {
             title: 'Error!',
             text: 'Property not found',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -625,7 +625,7 @@ function viewPropertyFromModal(propertyId) {
             title: 'Error!',
             text: 'Property not found',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -658,7 +658,7 @@ async function fetchMyOrders() {
             title: 'Error!',
             text: 'Failed to load orders',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     } finally {
         loading.value = false
@@ -701,7 +701,7 @@ async function cancelOrder(orderId,request_type) {
                 title: 'Cancelled!',
                 text: 'Request cancelled successfully',
                 icon: 'success',
-                confirmButtonColor: '#01062d'
+                confirmButtonColor: '#0B0736'
             })
             await fetchMyOrders() 
         } else {
@@ -713,7 +713,7 @@ async function cancelOrder(orderId,request_type) {
             title: 'Error!',
             text: 'Failed to cancel request',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -750,7 +750,7 @@ async function confirmConvert() {
                 title: 'Success!',
                 text: 'Request marked as Sold Out successfully',
                 icon: 'success',
-                confirmButtonColor: '#01062d'
+                confirmButtonColor: '#0B0736'
             })
             showConvertModal.value = false
             await fetchMyOrders() 
@@ -763,7 +763,7 @@ async function confirmConvert() {
             title: 'Error!',
             text: 'Failed to mark as Sold Out',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -982,7 +982,7 @@ function  hasActions(order) {
 <style scoped>
 /* Tab count badges */
 .tab-count {
-    background: #01062d;
+    background: #0B0736;
     color: white;
     border-radius: 12px;
     padding: 2px 8px;
@@ -1014,7 +1014,7 @@ function  hasActions(order) {
 }
 
 .tab-btn.active {
-    background: #01062d;
+    background: #0B0736;
     color: white;
 }
 
@@ -1023,13 +1023,13 @@ function  hasActions(order) {
 }
 
 .btn-outline-primary {
-    border: 1px solid #01062d;
-    color: #01062d;
+    border: 1px solid #0B0736;
+    color: #0B0736;
     background: transparent;
 }
 
 .btn-outline-primary:hover:not(:disabled) {
-    background: #01062d;
+    background: #0B0736;
     color: white;
 }
 
@@ -1158,7 +1158,7 @@ function  hasActions(order) {
 
 .unit-number-value {
     font-weight: 600;
-    color: #01062d;
+    color: #0B0736;
     font-size: 1.1rem;
 }
 

@@ -301,7 +301,7 @@ async function submit() {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  color: #01062c;
+  color: #0B0736;
 }
 
 .notifyme-subtitle {

@@ -78,12 +78,12 @@ export default {
         dataLabels: { enabled: false },
         fill: {
           type: 'gradient',
-          colors: ['#dae5ff'],
+          colors: ['#F4F0F8'],
           gradient: {
             shade: 'light',
             type: 'vertical',
             shadeIntensity: 0.5,
-            gradientToColors: ['#dae5ff'],
+            gradientToColors: ['#F4F0F8'],
             inverseColors: false,
             opacityFrom: 1,
             opacityTo: 1,

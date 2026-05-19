@@ -23,13 +23,13 @@
         opacity: 0.1,
       },
     },
-    colors: ['#487FFF'], // Set color for series
+    colors: ['#733E87'], // Set color for series
     dataLabels: {
       enabled: false
     },
     stroke: {
       curve: 'smooth',
-      colors: ['#487FFF'], // Specify the line color here
+      colors: ['#733E87'], // Specify the line color here
       width: 3
     },
     markers: {
@@ -93,7 +93,7 @@
         },
         fill: {
           type: 'solid',
-          color: '#487FFF40',
+          color: '#733E8740',
           // gradient: {
           //   colorFrom: '#D8E3F0',
           //   // colorTo: '#BED1E6',
@@ -158,12 +158,12 @@
       },
       fill: {
           type: 'gradient',
-          colors: ['#dae5ff'], // Set the starting color (top color) here
+          colors: ['#733E87'],
           gradient: {
-              shade: 'light', // Gradient shading type
-              type: 'vertical',  // Gradient direction (vertical)
-              shadeIntensity: 0.5, // Intensity of the gradient shading
-              gradientToColors: ['#dae5ff'], // Bottom gradient color (with transparency)
+              shade: 'light',
+              type: 'vertical',
+              shadeIntensity: 0.5,
+              gradientToColors: ['#0B0736'],
               inverseColors: false, // Do not invert colors
               opacityFrom: 1, // Starting opacity
               opacityTo: 1,  // Ending opacity
@@ -198,7 +198,7 @@
     // ================================ Users Overview Donut chart Start ================================ 
     var options = { 
       series: [500, 500, 500],
-      colors: ['#FF9F29', '#487FFF', '#E4F1FF'],
+      colors: ['#FF9F29', '#733E87', '#F4F0F8'],
       labels: ['Active', 'New', 'Total'] ,
       legend: {
           show: false 
@@ -254,7 +254,7 @@
         name: 'Revenue',
         data: [15000, 18000, 19000, 20000, 35000, 20000, 18000, 13000, 18000, 38000, 14000, 16000]
       }],
-      colors: ['#487FFF', '#FF9F29'],
+      colors: ['#733E87', '#FF9F29'],
       labels: ['Active', 'New', 'Total'],
       legend: {
           show: false 
@@ -354,11 +354,11 @@
       series: {
           regions: [{
               values: {
-                  "US": '#487FFF ',
-                  "SA": '#487FFF',
-                  "AU": '#487FFF',
-                  "CN": '#487FFF',
-                  "GB": '#487FFF',
+                  "US": '#733E87 ',
+                  "SA": '#733E87',
+                  "AU": '#733E87',
+                  "CN": '#733E87',
+                  "GB": '#733E87',
               },
               attribute: 'fill'
           }]

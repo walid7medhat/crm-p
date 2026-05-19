@@ -27,6 +27,13 @@
             <span class="mobile-create-new-fixed__plus">+</span>
             <span class="mobile-create-new-fixed__text">Create New Lead</span>
         </button>
+
+        <LeadAnalyticsShortcuts
+            :metrics="leadAnalyticsMetrics"
+            :active-filter="activeShortcutFilter"
+            @toggle-filter="onShortcutFilterToggle"
+        />
+
         <div
             ref="kanbanContainerRef"
             class="kanban-container"
@@ -121,7 +128,7 @@
                                                 :key="task.id"
                                                 class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
                                                 :class="{ 'kanban-card--mobile': kanbanIsMobile }"
-                                                v-show="!kanbanIsMobile || mobileListFilterStageId !== MOBILE_FILTER_ALL || index === getMobileCardIndex(column)"
+                                                v-show="leadMatchesShortcutFilter(task, column) && (!kanbanIsMobile || mobileListFilterStageId !== MOBILE_FILTER_ALL || index === getMobileCardIndex(column))"
                                                 @touchstart="onMobileCardTouchStart(column, $event)"
                                                 @touchmove="onMobileCardTouchMove(column, $event)"
                                                 @touchend="onMobileCardTouchEnd(column, $event)"
@@ -769,6 +776,7 @@ import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
 import ConvertLeadModal from './ConvertLeadModal.vue'
 import ProfilePopup from '../shared/ProfilePopup.vue'
+import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
 
 
 import api from '@/plugins/axios'
@@ -872,6 +880,114 @@ const totalLeadsCount = computed(() => {
         sum += typeof t === 'number' ? t : (col.leads?.length || 0)
     }
     return sum
+})
+
+const activeShortcutFilter = ref(null)
+
+function normalizeStageTitle(title) {
+    return String(title || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+function isQualifiedStageTitle(title) {
+    const n = normalizeStageTitle(title)
+    return n.includes('qualified') && !n.includes('unqualified')
+}
+
+function isFollowUpStageTitle(title) {
+    const n = normalizeStageTitle(title)
+    return n.includes('followup') || n.includes('follow') || (n.includes('contacted') && !n.includes('uncontacted'))
+}
+
+function isNewStageTitle(title) {
+    const n = normalizeStageTitle(title)
+    return n.includes('new') || n.includes('incoming') || n.includes('unassigned')
+}
+
+function isLeadUnassigned(lead) {
+    if (lead?.responsible_person_id != null && lead.responsible_person_id !== '') return false
+    return !lead?.responsible_person?.name
+}
+
+function parseLeadDate(value) {
+    if (!value) return null
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? null : d
+}
+
+function isColdLead(lead) {
+    const updated = parseLeadDate(lead?.updated_at)
+    if (!updated) return false
+    return Date.now() - updated.getTime() > 48 * 60 * 60 * 1000
+}
+
+function isFollowUpTodayLead(lead) {
+    const action = String(lead?.next_action || '').toLowerCase()
+    if (action.includes('follow') && action.includes('today')) return true
+    const updated = parseLeadDate(lead?.updated_at)
+    if (!updated) return false
+    const now = new Date()
+    return (
+        updated.getFullYear() === now.getFullYear() &&
+        updated.getMonth() === now.getMonth() &&
+        updated.getDate() === now.getDate()
+    )
+}
+
+function countStageTotalsByTitle(matcher) {
+    let sum = 0
+    for (const col of columns.value) {
+        if (!matcher(col.title)) continue
+        const t = stagePagination.value[col.status]?.total
+        sum += typeof t === 'number' ? t : (col.leads?.length || 0)
+    }
+    return sum
+}
+
+function countLoadedLeads(matcher) {
+    let count = 0
+    for (const col of columns.value) {
+        for (const lead of col.leads || []) {
+            if (matcher(lead, col)) count++
+        }
+    }
+    return count
+}
+
+const leadAnalyticsMetrics = computed(() => ({
+    total: totalLeadsCount.value,
+    newUnassigned: countLoadedLeads((lead, col) => isLeadUnassigned(lead) || isNewStageTitle(col.title)),
+    qualified: countStageTotalsByTitle(isQualifiedStageTitle),
+    followUpsToday:
+        countStageTotalsByTitle(isFollowUpStageTitle) ||
+        countLoadedLeads((lead, col) => isFollowUpStageTitle(col.title) || isFollowUpTodayLead(lead)),
+    cold: countLoadedLeads((lead) => isColdLead(lead)),
+}))
+
+function leadMatchesShortcutFilter(lead, column) {
+    if (!activeShortcutFilter.value) return true
+
+    switch (activeShortcutFilter.value) {
+        case 'total':
+            return true
+        case 'new_unassigned':
+            return isLeadUnassigned(lead) || isNewStageTitle(column?.title)
+        case 'qualified':
+            return isQualifiedStageTitle(column?.title)
+        case 'follow_today':
+            return isFollowUpStageTitle(column?.title) || isFollowUpTodayLead(lead)
+        case 'cold':
+            return isColdLead(lead)
+        default:
+            return true
+    }
+}
+
+function onShortcutFilterToggle(filterKey) {
+    activeShortcutFilter.value = filterKey || null
+}
+
+watch(appliedSearchParams, () => {
+    activeShortcutFilter.value = null
 })
 
 const mobileListFilterLabel = computed(() => {
@@ -3252,13 +3368,16 @@ const $showNotification = (message, type = 'info') => {
 
 .kanban-outer {
     position: relative;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     height: calc(100vh - 100px);
 }
 
 .kanban-container {
     padding: 12px 10px;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
     overflow-x: auto;
     overflow-y: hidden;
     width: 100%;
@@ -3486,7 +3605,7 @@ const $showNotification = (message, type = 'info') => {
     font-size: 13px;
     line-height: 12px;
     letter-spacing: 0%;
-    color: #01062C;
+    color: #0B0736;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -3732,7 +3851,7 @@ const $showNotification = (message, type = 'info') => {
     font-size: 12px;
     line-height: 19px;
     letter-spacing: -0.25px;
-    color: #01062C;
+    color: #0B0736;
 
     }
 
@@ -3823,7 +3942,7 @@ const $showNotification = (message, type = 'info') => {
     font-weight: 600;
     font-size: 11px;
     line-height: 1;
-    color: #01062C;
+    color: #0B0736;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3848,7 +3967,7 @@ const $showNotification = (message, type = 'info') => {
     font-style: SemiBold;
     font-size: 11px;
     line-height: 1.1;
-    color: #01062C;
+    color: #0B0736;
     margin: 0;
 }
 
@@ -3867,7 +3986,7 @@ const $showNotification = (message, type = 'info') => {
     font-weight: 600;
     font-style: SemiBold;
     font-size: 13px;
-    color: #01062C;
+    color: #0B0736;
     /* background: rgba(255, 255, 255, 0.2); */
     border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 4px;
@@ -3911,6 +4030,13 @@ const $showNotification = (message, type = 'info') => {
     height: auto;
     min-height: calc(100dvh - 220px);
     padding-bottom: 96px;
+    overflow-x: hidden;
+    max-width: 100vw;
+}
+
+.kanban-outer--mobile .lead-analytics-row {
+    padding-left: 6px;
+    padding-right: 6px;
 }
 
 .kanban-outer--mobile .kanban-nav-zone {

@@ -153,7 +153,7 @@ async function submitReason() {
 .modal-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--deal-navy-deep, #01062c);
+  color: var(--deal-navy-deep, #0B0736);
   margin: 0;
   letter-spacing: -0.02em;
   line-height: 1.35;

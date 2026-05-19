@@ -109,8 +109,8 @@
     border-radius: 4px;
   }
   .clickable-listing-count:hover {
-    background-color: rgba(1, 6, 45, 0.1);
-    color: #01062d;
+    background-color: rgba(11, 7, 54, 0.1);
+    color: #0B0736;
     text-decoration: underline;
   }
   </style>

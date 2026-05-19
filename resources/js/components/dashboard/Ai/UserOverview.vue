@@ -93,7 +93,7 @@ export default {
 
       const options = {
         series: [stats.value.new_leads, stats.value.approved_leads, stats.value.rejected_leads],
-        colors: ['#FAA300', '#00BE23', '#DC3645'],
+        colors: ['#733E87', '#00BE23', '#DC3645'],
         labels: ['New', 'Approved', 'Rejected'],
         legend: { 
           show: false
@@ -239,7 +239,7 @@ export default {
 }
 
 .dot-orange {
-  background-color: #FAA300;
+  background-color: #733E87;
 }
 
 .dot-green {
@@ -291,7 +291,7 @@ export default {
 
 /* تحسين مظهر التحديد */
 .form-select:focus {
-  border-color: #FAA300;
+  border-color: #733E87;
   box-shadow: 0 0 0 0.25rem rgba(250, 163, 0, 0.25);
 }
 

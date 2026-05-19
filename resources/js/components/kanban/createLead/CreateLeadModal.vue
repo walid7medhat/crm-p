@@ -1645,7 +1645,7 @@ const clearClientData = () => {
         font-weight: 600;
         font-style: SemiBold;
         font-size: 16px;
-        color: #01062C;
+        color: #0B0736;
     }
     
     
@@ -1668,7 +1668,7 @@ const clearClientData = () => {
         font-weight: 500;
         font-style: Medium;
         font-size: 13px;
-        color: #01062C;
+        color: #0B0736;
     }
     
     .custom-textarea {
@@ -1809,12 +1809,12 @@ const clearClientData = () => {
     }
     
     :deep(.custom-v-select .vs__dropdown-option--highlight) {
-        background: #FAA300 !important;
+        background: #733E87 !important;
         color: #fff !important;
     }
     
     :deep(.custom-v-select .vs__dropdown-option--selected) {
-        background: #FAA300;
+        background: #733E87;
         color: #fff;
     }
     
@@ -1909,12 +1909,12 @@ const clearClientData = () => {
     }
     
     :deep(.custom-v-select-inline .vs__dropdown-option--highlight) {
-        background: #FAA300 !important;
+        background: #733E87 !important;
         color: #fff !important;
     }
     
     :deep(.custom-v-select-inline .vs__dropdown-option--selected) {
-        background: #FAA300;
+        background: #733E87;
         color: #fff;
     }
     
@@ -2135,7 +2135,7 @@ const clearClientData = () => {
     .additional-check-label {
         font-size: 12px;
         font-weight: 600;
-        color: #01062C;
+        color: #0B0736;
         flex: 1;
     }
     
@@ -2174,7 +2174,7 @@ const clearClientData = () => {
         min-width: 210px;
         font-family: 'Montserrat';
         font-size: 12px;
-        color: #01062C;
+        color: #0B0736;
         transition: all 0.2s;
     }
     
@@ -2184,7 +2184,7 @@ const clearClientData = () => {
     }
     
     .additional-chip.active {
-        border-color: #01062C;
+        border-color: #0B0736;
     }
     
     .additional-chip .chip-label {
@@ -2223,7 +2223,7 @@ const clearClientData = () => {
         gap: 8px;
         font-family: 'Montserrat';
         font-size: 12px;
-        color: #01062C;
+        color: #0B0736;
     }
     
     .selected-pill-label {
@@ -2267,7 +2267,7 @@ const clearClientData = () => {
     .add-more-title {
         font-weight: 700;
         font-size: 12px;
-        color: #01062C;
+        color: #0B0736;
         font-family: 'Montserrat';
     }
     
@@ -2309,7 +2309,7 @@ const clearClientData = () => {
     .add-more-label {
         font-size: 12px;
         font-weight: 600;
-        color: #01062C;
+        color: #0B0736;
         font-family: 'Montserrat';
     }
     
@@ -2328,7 +2328,7 @@ const clearClientData = () => {
     
     /* Footer Buttons */
     .btn-prev {
-        background: #01062C;
+        background: #0B0736;
         border: none;
         padding: 10px 20px;
         border-radius: 100px;
@@ -2352,7 +2352,7 @@ const clearClientData = () => {
         padding: 10px 25px;
         border-radius: 100px;
         font-size: 14px;
-        color: #01062C;
+        color: #0B0736;
         cursor: pointer;
     }
     
@@ -2362,7 +2362,7 @@ const clearClientData = () => {
     }
     
     .btn-next-step {
-        background: #01062C;
+        background: #0B0736;
         border: none;
         padding: 10px 20px;
         border-radius: 100px;
@@ -2477,7 +2477,7 @@ const clearClientData = () => {
     .location-selected-name {
       font-weight: 600;
       font-size: 0.75rem;
-      color: #01062d;
+      color: #0B0736;
     }
     
     .location-selected-subtitle {
@@ -2510,7 +2510,7 @@ const clearClientData = () => {
     .location-option-name {
       font-weight: 600;
       font-size: 0.75rem;
-      color: #01062d;
+      color: #0B0736;
       line-height: 1.2;
     }
     

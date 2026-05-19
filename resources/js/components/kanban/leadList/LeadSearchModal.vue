@@ -3183,9 +3183,9 @@ onBeforeUnmount(() => {
 }
 
 .pill-btn.active {
-    background: #01062C;
+    background: #0B0736;
     color: #fff;
-    border-color: #01062C;
+    border-color: #0B0736;
 }
 
 .pill-count {
@@ -3306,7 +3306,7 @@ onBeforeUnmount(() => {
 .search-section-title {
     font-size: 13px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
     margin-bottom: 10px;
     padding-bottom: 0;
     border-bottom: none;
@@ -3403,10 +3403,10 @@ onBeforeUnmount(() => {
     align-items: center;
     border-width: 1px;
     border-style: solid;
-    border-color: rgb(79, 165, 247);
+    border-color: rgba(115, 62, 135, 0.75);
     border-image: initial;
     border-radius: 999px;
-    background: linear-gradient(90deg, rgb(47, 136, 239), rgb(93, 184, 255));
+    background: var(--gradient-crm, linear-gradient(135deg, #0b0736 0%, #733e87 100%));
     padding: 0px;
     transition: filter 0.2s;
 }
@@ -3580,8 +3580,8 @@ onBeforeUnmount(() => {
 }
 
 .lr-date-preset.active {
-    background: #01062C;
-    border-color: #01062C;
+    background: #0B0736;
+    border-color: #0B0736;
     color: #fff;
 }
 
@@ -3655,8 +3655,8 @@ onBeforeUnmount(() => {
 }
 
 .lr-day.selected {
-    background: #01062C;
-    border-color: #01062C;
+    background: #0B0736;
+    border-color: #0B0736;
     color: #fff;
 }
 
@@ -3822,12 +3822,12 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #FAA300 !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: #FAA300 !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
@@ -3843,7 +3843,7 @@ onBeforeUnmount(() => {
     padding: 10px 25px;
     border-radius: 100px;
     font-size: 14px;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .btn-search,.btn-apply {
@@ -3909,7 +3909,7 @@ onBeforeUnmount(() => {
 .lead-rp-opt .user-item-name {
     font-weight: 600;
     font-size: 14px;
-    color: #01062c;
+    color: #0B0736;
     text-transform: capitalize;
 }
 
@@ -3974,11 +3974,11 @@ onBeforeUnmount(() => {
         max-height:150px;
     }
     .vs__dropdown-option--highlight {
-        background: #FAA300 !important;
+        background: #733E87 !important;
         color: #fff !important;
     }
     .vs__dropdown-option--selected {
-        background: #FAA300 !important;
+        background: #733E87 !important;
         color: #fff !important;
     }
     .vs__dropdown-option{

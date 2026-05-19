@@ -14,6 +14,16 @@ export default {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
+            colors: {
+                crm: {
+                    primary: '#0B0736',
+                    secondary: '#733E87',
+                },
+            },
+            backgroundImage: {
+                'gradient-crm': 'linear-gradient(135deg, #0B0736 0%, #733E87 100%)',
+                'gradient-crm-vertical': 'linear-gradient(180deg, #0B0736 0%, #733E87 100%)',
+            },
         },
     },
     plugins: [],

@@ -865,7 +865,7 @@ async function submitReview() {
             title: 'Missing Review',
             text: 'Please provide your review text',
             icon: 'warning',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
         return
     }
@@ -875,7 +875,7 @@ async function submitReview() {
             title: 'Review Too Long',
             text: 'Review cannot exceed 500 characters',
             icon: 'warning',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
         return
     }
@@ -894,7 +894,7 @@ async function submitReview() {
                 title: 'Success!',
                 text: isEditingReview.value ? 'Review updated successfully' : 'Review submitted successfully',
                 icon: 'success',
-                confirmButtonColor: '#01062d',
+                confirmButtonColor: '#0B0736',
                 timer: 1500,
                 showConfirmButton: false
             })
@@ -912,7 +912,7 @@ async function submitReview() {
             title: 'Error!',
             text: err.response?.data?.message || 'Failed to submit review',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -939,7 +939,7 @@ async function deleteReview() {
                 title: 'Deleted!',
                 text: 'Review deleted successfully',
                 icon: 'success',
-                confirmButtonColor: '#01062d',
+                confirmButtonColor: '#0B0736',
                 timer: 1500,
                 showConfirmButton: false
             })
@@ -953,7 +953,7 @@ async function deleteReview() {
             title: 'Error!',
             text: 'Failed to delete review',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -967,7 +967,7 @@ function viewProperty(propertyId) {
             title: 'Error!',
             text: 'Property not found',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -981,7 +981,7 @@ function viewPropertyFromModal(propertyId) {
             title: 'Error!',
             text: 'Property not found',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -1010,7 +1010,7 @@ async function fetchMyOrders() {
             title: 'Error!',
             text: 'Failed to load orders',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     } finally {
         loading.value = false
@@ -1052,7 +1052,7 @@ async function cancelOrder(orderId, request_type) {
                 title: 'Cancelled!',
                 text: 'Request cancelled successfully',
                 icon: 'success',
-                confirmButtonColor: '#01062d'
+                confirmButtonColor: '#0B0736'
             })
             await fetchMyOrders()
         } else {
@@ -1064,7 +1064,7 @@ async function cancelOrder(orderId, request_type) {
             title: 'Error!',
             text: 'Failed to cancel request',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -1101,7 +1101,7 @@ async function confirmConvert() {
                 title: 'Success!',
                 text: 'Request marked as Sold Out successfully',
                 icon: 'success',
-                confirmButtonColor: '#01062d'
+                confirmButtonColor: '#0B0736'
             })
             showConvertModal.value = false
             await fetchMyOrders()
@@ -1114,7 +1114,7 @@ async function confirmConvert() {
             title: 'Error!',
             text: 'Failed to mark as Sold Out',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -1363,7 +1363,7 @@ onUnmounted(() => {
 <style scoped>
 /* Tab count badges */
 .tab-count {
-    background: #01062d;
+    background: #0B0736;
     color: white;
     border-radius: 12px;
     padding: 2px 8px;
@@ -1395,7 +1395,7 @@ onUnmounted(() => {
 }
 
 .tab-btn.active {
-    background: #01062d;
+    background: #0B0736;
     color: white;
 }
 
@@ -1405,13 +1405,13 @@ onUnmounted(() => {
 
 /* Refresh button styles */
 .btn-outline-primary {
-    border: 1px solid #01062d;
-    color: #01062d;
+    border: 1px solid #0B0736;
+    color: #0B0736;
     background: transparent;
 }
 
 .btn-outline-primary:hover:not(:disabled) {
-    background: #01062d;
+    background: #0B0736;
     color: white;
 }
 
@@ -1541,7 +1541,7 @@ onUnmounted(() => {
 
 .unit-number-value {
     font-weight: 600;
-    color: #01062d;
+    color: #0B0736;
     font-size: 1.1rem;
 }
 
@@ -1671,7 +1671,7 @@ onUnmounted(() => {
 }
 
 .review-summary h6 {
-    color: #01062d;
+    color: #0B0736;
     font-size: 14px;
     font-weight: 600;
 }

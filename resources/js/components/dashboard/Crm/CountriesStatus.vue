@@ -124,7 +124,7 @@ export default {
                   GB: 1,
                   AE: 1,
                 },
-                scale: ['#D1D5DB', '#487FFF'], // from gray to blue
+                scale: ['#D1D5DB', '#733E87'], // from gray to blue
                 normalizeFunction: 'polynomial',
                 attribute: 'fill',
               },

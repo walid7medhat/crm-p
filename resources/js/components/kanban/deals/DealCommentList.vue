@@ -504,7 +504,7 @@ defineExpose({
 .lead-activity-title {
     font-size: 14px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
     margin-bottom: 12px;
 }
 
@@ -541,7 +541,7 @@ defineExpose({
 .modal-title {
     font-size: 14px;
     font-weight: 400;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .timeline-icon {
@@ -556,7 +556,7 @@ defineExpose({
 }
 
 .timeline-icon-orange {
-    background: #FAA300;
+    background: #733E87;
 }
 
 .timeline-icon-content {
@@ -779,7 +779,7 @@ defineExpose({
 
 .comment-icon-content {
     font-size: 16px;
-    color: #FAA300;
+    color: #733E87;
 }
 
 .comment-text {

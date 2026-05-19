@@ -140,7 +140,7 @@
   }
   
   .fc-button {
-    color: #487fff;
+    color: #733E87;
     border: none;
     padding: 0 12px;
     font-size: 15px;
@@ -159,14 +159,14 @@
   }
   
   .fc-button.active {
-    background-color: #487fff;
+    background-color: #733E87;
     color: white;
   }
   
   /* Navigation Buttons Group */
   .nav-buttons {
     display: flex;
-    border: 1px solid #487fff;
+    border: 1px solid #733E87;
     border-radius: 6px;
     overflow: hidden;
     height: 32px;
@@ -179,7 +179,7 @@
   
   /* Today Button */
   .today-button {
-    background-color: #487fff;
+    background-color: #733E87;
     color: white;
     border-radius: 6px;
     border: none;

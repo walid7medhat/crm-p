@@ -310,12 +310,12 @@ const updateResponsiblePerson = async () => {
 .person-hover-name { font-size: 12px; font-weight: 700; color: #0f172a; }
 .person-hover-role { font-size: 11px; color: #64748b; }
 .person-hover-line { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; padding: 4px 0; border-top: 1px dashed #e2e8f0; }
-.edit-person-btn { text-decoration: none; color: #FAA300; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+.edit-person-btn { text-decoration: none; color: #733E87; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
 .edit-icon { font-size: 14px; }
 .person-list-scroll { max-height: 350px; overflow-y: auto; padding-right: 5px; }
 .person-item { cursor: pointer; border-radius: 8px; transition: all .2s; margin-bottom: 4px; border: 1px solid transparent; }
-.person-item:hover { background: #F8FAFC; border-color: #FAA300; }
-.person-item.selected { background: #FFFBEB; border-color: #FAA300; }
+.person-item:hover { background: #F8FAFC; border-color: #733E87; }
+.person-item.selected { background: #FFFBEB; border-color: #733E87; }
 .person-item.current { background: #F0F9FF; }
 .person-item-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
 .person-item-name { font-weight: 600; font-size: 14px; color: #1E293B; }
@@ -427,7 +427,7 @@ const updateResponsiblePerson = async () => {
 .user-item-name {
     font-weight: 600;
     font-size: 14px;
-    color: #01062C;
+    color: #0B0736;
     font-family: 'Montserrat';
     text-transform: capitalize;
 }

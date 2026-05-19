@@ -891,7 +891,7 @@ onUnmounted(() => {
 .lead-activity-title {
     font-size: 14px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
     margin-bottom: 12px;
 }
 
@@ -945,7 +945,7 @@ onUnmounted(() => {
 .timeline-icon-content {
     font-size: 15px;
     font-weight: 500;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .timeline-line {
@@ -1003,7 +1003,7 @@ onUnmounted(() => {
 }
 
 .activity-icon-orange {
-    background: #FAA300;
+    background: #733E87;
 }
 
 .activity-icon-green {
@@ -1080,7 +1080,7 @@ onUnmounted(() => {
 
 .task-icon-content {
     font-size: 20px;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .task-icon-content-red {
@@ -1109,7 +1109,7 @@ onUnmounted(() => {
 
 .deadline-icon {
     font-size: 12px;
-    color: #FAA300;
+    color: #733E87;
 }
 
 .lead-created-details {
@@ -1188,7 +1188,7 @@ onUnmounted(() => {
 }
 
 .btn-complete {
-    background: #01062C;
+    background: #0B0736;
     border: none;
     border-radius: 8px;
     padding: 5px 14px;
@@ -1231,7 +1231,7 @@ onUnmounted(() => {
 .modal-title {
     font-size: 14px;
     font-weight: 400;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .btn-icon {
@@ -1252,7 +1252,7 @@ onUnmounted(() => {
 }
 
 .action-icon-btn:hover {
-    color: #01062C;
+    color: #0B0736;
 }
 
 .action-icon {
@@ -1407,8 +1407,8 @@ onUnmounted(() => {
 }
 
 .reminder-checkbox.checked {
-    background: #FAA300;
-    border-color: #FAA300;
+    background: #733E87;
+    border-color: #733E87;
 }
 
 .check-icon {
@@ -1488,7 +1488,7 @@ onUnmounted(() => {
 }
 
 .btn-save-edit {
-    background: #01062C;
+    background: #0B0736;
     border: none;
     border-radius: 8px;
     padding: 5px 14px;

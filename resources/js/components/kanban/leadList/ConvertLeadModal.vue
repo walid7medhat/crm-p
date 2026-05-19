@@ -335,12 +335,12 @@ defineExpose({
 .deal-type-option.selected:focus,
 .deal-type-option.selected:focus-within,
 .deal-type-option.selected:focus-visible {
-    border-color: #01062C !important;
+    border-color: #0B0736 !important;
 }
 
 .deal-type-option.selected {
-    background: #01062C;
-    border-color: #01062C;
+    background: #0B0736;
+    border-color: #0B0736;
 }
 
 .option-icon {
@@ -390,7 +390,7 @@ defineExpose({
     align-items: center;
     justify-content: center;
     opacity: 0;
-    /* background: #FAA300;
+    /* background: #733E87;
     color: #fff; */
    
 }
@@ -407,7 +407,7 @@ defineExpose({
 }
 
 .deal-type-option.selected .selected-mark {
-    /* background: #FAA300; */
+    /* background: #733E87; */
 }
 
 .convert-lead-footer {
@@ -451,7 +451,7 @@ defineExpose({
 }
 
 .btn-add-deal:hover:not(:disabled) {
-    background: #FAA300;
+    background: #733E87;
     color: #000000;
     transform: translateY(-1px);
 }

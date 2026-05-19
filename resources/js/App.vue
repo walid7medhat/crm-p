@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <Header v-if="showLayout" />
-    <main :class="showLayout ? 'dashboard-main' : ''">
+    <main :class="showLayout ? 'dashboard-main' : 'auth-page-main'">
       <Navbar v-if="showLayout" />
       <!-- In-flow spacer: reserves height so pages never sit under the absolute navbar -->
       <div
@@ -116,6 +116,39 @@ export default {
 <style>
 #app {
   --app-topbar-height: 3.25rem;
+  overflow-x: hidden;
+  max-width: 100vw;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Auth pages: fill viewport and center content vertically */
+#app main.auth-page-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+#app main.auth-page-main > * {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+html:has(#app main.auth-page-main),
+html:has(#app main.auth-page-main) body {
+  overflow: hidden;
+  height: 100%;
+  max-height: 100dvh;
 }
 
 #app main.dashboard-main {
@@ -126,6 +159,8 @@ export default {
   box-sizing: border-box;
   min-height: 100vh;
   padding-top: 0 !important;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 /* Must match .navbar-header height; reserves space so content never slides under the bar */
@@ -142,14 +177,26 @@ export default {
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   padding-top: 0 !important;
+  overflow-x: hidden;
   /* Lets routed pages (e.g. property map) use height: 100% / flex to fill below navbar */
   display: flex;
   flex-direction: column;
 }
 
+body.mobile-nav-open {
+  overflow: hidden;
+  touch-action: none;
+}
+
 @media (max-width: 768px) {
+  #app main.dashboard-main > .app-navbar-spacer {
+    height: calc(var(--app-topbar-height, 5.5rem) + env(safe-area-inset-top, 0px)) !important;
+    min-height: calc(var(--app-topbar-height, 5.5rem) + env(safe-area-inset-top, 0px)) !important;
+  }
+
   #app main.dashboard-main > .dashboard-main-router {
     padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   }

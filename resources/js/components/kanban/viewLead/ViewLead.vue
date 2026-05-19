@@ -537,7 +537,7 @@ const $showNotification = (message, type = 'info') => {
 .modal-title {
     font-size: 16px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .settings-btn, .close-btn, .notification-btn {
@@ -589,7 +589,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .tab-item.active {
-    color: #01062C;
+    color: #0B0736;
 }
 
 .tab-item.active::after {
@@ -599,7 +599,7 @@ const $showNotification = (message, type = 'info') => {
     left: 0;
     width: 100%;
     height: 2px;
-    background: #FAA300;
+    background: #733E87;
 }
 
 .bg-light-gray {
@@ -614,7 +614,7 @@ const $showNotification = (message, type = 'info') => {
 .section-title {
     font-size: 14px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .info-label {
@@ -627,7 +627,7 @@ const $showNotification = (message, type = 'info') => {
 .info-value {
     font-size: 13px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .info-group {
@@ -657,7 +657,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .btn-toggle.active {
-    background: #01062C;
+    background: #0B0736;
     color: #fff;
     box-shadow: 0px 4px 8px rgba(1, 6, 44, 0.2);
 }
@@ -668,7 +668,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .btn-primary {
-    background: #01062C;
+    background: #0B0736;
     border: none;
     font-weight: 500;
 }

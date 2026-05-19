@@ -158,16 +158,21 @@
   --font-sm: 0.875rem;
   --font-xs: 0.75rem;
   --font-xxs: 0.625rem;
-  --primary-50: #E4F1FF;
-  --primary-100: #BFDCFF;
-  --primary-200: #95C7FF;
-  --primary-300: #6BB1FF;
-  --primary-400: #519FFF;
-  --primary-500: #458EFF;
-  --primary-600: #487FFF;
-  --primary-700: #486CEA;
-  --primary-800: #4759D6;
-  --primary-900: #4536B6;
+  --crm-primary: #0B0736;
+  --crm-secondary: #733E87;
+  --gradient-crm: linear-gradient(135deg, var(--crm-primary) 0%, var(--crm-secondary) 100%);
+  --gradient-crm-vertical: linear-gradient(180deg, var(--crm-primary) 0%, var(--crm-secondary) 100%);
+  --gradient-crm-glass: linear-gradient(135deg, rgba(11, 7, 54, 0.88) 0%, rgba(115, 62, 135, 0.72) 100%);
+  --primary-50: rgba(115, 62, 135, 0.12);
+  --primary-100: #E8DDF0;
+  --primary-200: #D4BFE0;
+  --primary-300: #B894C8;
+  --primary-400: #9B6BB0;
+  --primary-500: #825299;
+  --primary-600: #0B0736;
+  --primary-700: #2A1A4A;
+  --primary-800: #1A1040;
+  --primary-900: #0B0736;
   --neutral-50: #F5F6FA;
   --neutral-100: #F3F4F6;
   --neutral-200: #EBECEF;
@@ -237,12 +242,12 @@
   --lilac-300: #cd9ffa;
   --lilac-400: #c48afe;
   --lilac-500: #b66dff;
-  --lilac-600: #8252E9;
+  --lilac-600: #733E87;
   --lilac-700: #6f37e6;
   --lilac-800: #601eef;
   --light-50: #F5F6FA;
   --light-100: #F3F4F6;
-  --light-600: #E4F1FF;
+  --light-600: #EDE7F3;
   --light-700: #374151;
   --light-800: #1F2937;
   --success-main: #45B369;
@@ -271,7 +276,7 @@
   --danger-focus: rgba(239, 71, 112, 0.1490196078);
   --cyan: #00B8F2;
   --indigo: #7F27FF;
-  --purple: #8252E9;
+  --purple: #733E87;
   --red: #E30A0A;
   --yellow: #F4941E;
   --orange: #F86624;
@@ -285,7 +290,7 @@
   --purple-light-white: rgba(132, 90, 223, 0.25);
   --pink-light-white: rgba(250, 54, 230, 0.25);
   --base: #fff;
-  --brand: var(--primary-600);
+  --brand: var(--crm-primary);
   --button-secondary: var(--primary-50);
   --black: var(--dark-2);
   --white: var(--base);
@@ -3606,7 +3611,7 @@ html[data-theme=dark] .bg-warning-light-two {
 
 /* Stroke Class */
 .stroke-blue {
-  stroke: #487FFF !important;
+  stroke: #733E87 !important;
 }
 
 .stroke-red {

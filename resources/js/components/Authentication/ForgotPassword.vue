@@ -110,7 +110,7 @@ async function submit() {
 
 <style scoped>
 .login {
-    background-color: #01062c !important;
+    background-color: #0B0736 !important;
     height: 100vh;
     width: 100%;
     display: flex;
@@ -173,7 +173,7 @@ async function submit() {
     background-color: rgba(255, 255, 255, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px !important;
-    color: #01062c !important;
+    color: #0B0736 !important;
     font-size: 14px;
 }
 
@@ -182,12 +182,12 @@ async function submit() {
 }
 
 .icon-field input:focus {
-    border-color: #01062c !important;
+    border-color: #0B0736 !important;
     box-shadow: 0 0 0 3px rgba(1, 6, 44, 0.1) !important;
 }
 
 .btn-primary {
-    background-color: #01062c !important;
+    background-color: #0B0736 !important;
     border: none !important;
     border-radius: 8px !important;
     font-weight: 600;

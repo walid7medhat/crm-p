@@ -155,12 +155,12 @@ defineExpose({ addProperty })
 <style scoped>
 .btn-add-property {
   background: transparent;
-  border: 1px solid #01062C;
+  border: 1px solid #0B0736;
   border-radius: 100px;
   padding: 8px 20px;
   font-size: 13px;
   font-weight: 500;
-  color: #01062C;
+  color: #0B0736;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -168,7 +168,7 @@ defineExpose({ addProperty })
 }
 
 .btn-add-property:hover {
-  background: #01062C;
+  background: #0B0736;
   color: #fff;
 }
 

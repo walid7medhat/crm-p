@@ -200,7 +200,7 @@ const creatorTooltip = computed(() => creatorName.value !== '—' ? `Created by 
 .deal-created-value {
     font-size: 14px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .deal-created-avatar {

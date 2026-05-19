@@ -340,7 +340,7 @@ onUnmounted(() => {
     /* font-weight: 700; */
     font-size: 14px;
     line-height: 24px;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .close-btn {
@@ -356,7 +356,7 @@ onUnmounted(() => {
 }
 
 .close-btn:hover {
-    color: #01062C;
+    color: #0B0736;
 }
 
 .modal-body-custom {
@@ -384,7 +384,7 @@ onUnmounted(() => {
     font-weight: 600;
     font-size: 12px;
     line-height: 20px;
-    color: #01062C;
+    color: #0B0736;
     margin: 0 0 12px 0;
 }
 
