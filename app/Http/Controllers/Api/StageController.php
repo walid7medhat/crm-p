@@ -252,7 +252,7 @@ class StageController extends Controller
                     $q->whereDate('created_at', '<=', $request->created_to);
                 }
                 if ($request->filled('created_at')) {
-                    $q->whereDate('created_at', $request->created_at);
+                    $q->whereDate('created_at', '=', $request->created_at);
                 }
                 $this->applyLeadSourceFilter($q, $request);
                 if ($request->filled('bedrooms')) {
@@ -565,7 +565,7 @@ class StageController extends Controller
                 $leadsQuery->whereDate('created_at', '<=', $request->created_to);
             }
             if ($request->filled('created_at')) {
-                $leadsQuery->whereDate('created_at', $request->created_at);
+                $leadsQuery->whereDate('created_at', '=', $request->created_at);
             }
             $this->applyLeadSourceFilter($leadsQuery, $request);
             if ($request->filled('bedrooms')) {

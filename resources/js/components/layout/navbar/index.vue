@@ -84,7 +84,10 @@
           >
             <div
               class="search-wrapper kanban-mob-toolbar__search-bar d-flex align-items-center"
-              :class="{ 'search-wrapper-expanded': activeFilters && activeFilters.length }"
+              :class="{
+                'search-wrapper-expanded': hasAnySearchCriteria,
+                'search-wrapper-has-selection': hasAnySearchCriteria,
+              }"
               @click="openSearchModal"
             >
               <button
@@ -98,9 +101,11 @@
               <div class="search-input-container flex-grow-1" @click.stop="openSearchModal">
                 <b-form-input
                   :placeholder="searchInputPlaceholder"
-                  v-model="search"
+                  :model-value="searchInputDisplay"
                   class="search-input"
-                  readonly
+                  :class="{ 'search-input--has-selection': hasAnySearchCriteria }"
+                  :readonly="!!resolvedActiveFilters.length"
+                  @update:model-value="onSearchInputUpdate"
                   @focus="onSearchFocus"
                   @blur="onSearchBlur"
                   @click.stop="openSearchModal"
@@ -220,28 +225,12 @@
             <div
                 class="search-wrapper d-flex align-items-center"
                 :class="{
-                    'search-wrapper-expanded': activeFilters && activeFilters.length,
+                    'search-wrapper-expanded': hasAnySearchCriteria,
+                    'search-wrapper-has-selection': hasAnySearchCriteria,
                     'search-wrapper-tall': searchInputFocused
                 }"
                 @click="openSearchModal"
             >
-                <div v-if="activeFilters.length" class="search-filters-pills d-flex align-items-center">
-                    <div
-                        v-for="f in visibleFilterPills"
-                        :key="f.id"
-                        class="search-tag d-flex align-items-center gap-2"
-                    >
-                        <span>{{ f.label }}: {{ f.value }}</span>
-                        <iconify-icon icon="lucide:x" class="close-tag-icon" @click.stop="removeFilter(f)" style="cursor: pointer;"></iconify-icon>
-                    </div>
-                    <div
-                        v-if="moreFiltersCount > 0"
-                        class="search-tag search-tag-more d-flex align-items-center gap-2"
-                    >
-                        <span class="search-tag-more-text" @click="showSearchModal = true">+{{ moreFiltersCount }} more</span>
-                        <iconify-icon icon="lucide:x" class="close-tag-icon" @click.stop="clearMoreFilters" style="cursor: pointer;"></iconify-icon>
-                    </div>
-                </div>
                 <button
                     type="button"
                     class="search-icon-btn"
@@ -257,11 +246,13 @@
                 >
                     <b-form-input
                         :placeholder="searchInputPlaceholder"
-                        v-model="search"
+                        :model-value="searchInputDisplay"
                         class="search-input"
+                        :class="{ 'search-input--has-selection': hasAnySearchCriteria }"
+                        :readonly="!!resolvedActiveFilters.length"
+                        @update:model-value="onSearchInputUpdate"
                         @focus="onSearchFocus"
                         @blur="onSearchBlur"
-                        @input="showSearchModal = false"
                         @click.stop="openSearchModal"
                     />
                 </div>
@@ -814,6 +805,126 @@ const moreFiltersCount = computed(() => {
     const n = (activeFilters.value || []).length - 2;
     return n > 0 ? n : 0;
 });
+
+const QUERY_FILTER_LABELS = {
+    lead_name: 'Lead Name',
+    first_name: 'Client Name',
+    email: 'Email',
+    work_phone: 'Phone',
+    search: 'Search',
+    responsible_person_id: 'Responsible Person',
+    team_id: 'Team',
+    lead_branch_source: 'Lead Branch Source',
+    source: 'Source',
+    interaction_result: 'Call Result',
+    status_lead: 'Quality Status',
+    stage_id: 'Stage',
+    lead_type: 'Lead Type',
+    property_status: 'Property Status',
+    area_id: 'Location',
+    property_type_id: 'Property Type',
+    purpose_buying: 'Purpose',
+    bedrooms: 'Bedrooms',
+};
+
+function formatNavbarFilterValue(key, query) {
+    if (key === 'created_from' || key === 'created_at') {
+        if (query.created_from && query.created_to && query.created_from !== query.created_to) {
+            return `${query.created_from} to ${query.created_to}`;
+        }
+        return query.created_from || query.created_to || query.created_at || '';
+    }
+    if (key === 'assigned_from' || key === 'assigned_at') {
+        if (query.assigned_from && query.assigned_to && query.assigned_from !== query.assigned_to) {
+            return `${query.assigned_from} to ${query.assigned_to}`;
+        }
+        return query.assigned_from || query.assigned_to || query.assigned_at || '';
+    }
+    if (key === 'office_branch') {
+        const v = query.office_branch;
+        return Array.isArray(v) ? v.join(', ') : String(v ?? '');
+    }
+    if (key === 'budget_from' || key === 'budget_to') {
+        const from = query.budget_from;
+        const to = query.budget_to;
+        if (from && to) return `${from} - ${to}`;
+        if (from) return `From ${from}`;
+        if (to) return `To ${to}`;
+        return '';
+    }
+    const v = query[key];
+    if (v == null || v === '') return '';
+    return Array.isArray(v) ? v.join(', ') : String(v);
+}
+
+function buildNavbarFiltersFromQuery(query) {
+    if (!query || typeof query !== 'object') return [];
+    const filters = [];
+    const seen = new Set();
+
+    const add = (id, queryKey, label, value) => {
+        const text = value != null ? String(value).trim() : '';
+        if (!text || seen.has(id)) return;
+        seen.add(id);
+        filters.push({ id, queryKey, label, value: text });
+    };
+
+    Object.keys(QUERY_FILTER_LABELS).forEach((key) => {
+        if (query[key] !== undefined && query[key] !== '' && query[key] !== null) {
+            add(key, key, QUERY_FILTER_LABELS[key], formatNavbarFilterValue(key, query));
+        }
+    });
+
+    if (query.created_from || query.created_to || query.created_at) {
+        add(
+            'created_on',
+            'created_at',
+            'Created On',
+            formatNavbarFilterValue('created_from', query) || formatNavbarFilterValue('created_at', query),
+        );
+    }
+    if (query.assigned_from || query.assigned_to || query.assigned_at) {
+        add(
+            'assigned_on',
+            'assigned_at',
+            'Assign On',
+            formatNavbarFilterValue('assigned_from', query) || formatNavbarFilterValue('assigned_at', query),
+        );
+    }
+    if (query.budget_from || query.budget_to) {
+        add('budget_from', 'budget_from', 'Budget', formatNavbarFilterValue('budget_from', query));
+    }
+
+    return filters;
+}
+
+const resolvedActiveFilters = computed(() => {
+    const fromState = activeFilters.value || [];
+    if (fromState.length) return fromState;
+    return buildNavbarFiltersFromQuery(lastQuery.value);
+});
+
+const searchBarDisplayValue = computed(() => {
+    const filters = resolvedActiveFilters.value;
+    if (filters.length) {
+        return filters.map((f) => `${f.label}: ${f.value}`).join(' · ');
+    }
+    const term = search.value != null ? String(search.value).trim() : '';
+    if (term) return term;
+    const qTerm = lastQuery.value?.search;
+    if (qTerm != null && String(qTerm).trim()) return String(qTerm).trim();
+    return '';
+});
+
+const searchInputDisplay = computed(() => searchBarDisplayValue.value || (search.value ?? ''));
+
+function onSearchInputUpdate(val) {
+    if ((activeFilters.value || []).length) {
+        clearSearchFilter();
+    }
+    search.value = val;
+}
+
 // Search functions (same as Kanban)
 const dropLinkedQueryKeys = (query, queryKey) => {
     if (!query || !queryKey) return;
@@ -887,8 +998,18 @@ const onLeadSearch = (payload) => {
         activeFilter.value = { ...defaultFilter }
     }
     
-    activeFilters.value = Array.isArray(payload?.activeFilters) ? payload.activeFilters : []
     lastQuery.value = query && Object.keys(query).length ? { ...query } : null
+    let filters = Array.isArray(payload?.activeFilters) ? [...payload.activeFilters] : []
+    if (!filters.length && lastQuery.value) {
+        filters = buildNavbarFiltersFromQuery(lastQuery.value)
+    }
+    activeFilters.value = filters
+
+    if (query?.search != null && String(query.search).trim()) {
+        search.value = String(query.search).trim()
+    } else if (!activeFilters.value.length) {
+        search.value = ''
+    }
     
     console.log('Active filters:', activeFilters.value)
     console.log('Last query:', lastQuery.value)
@@ -897,7 +1018,6 @@ const onLeadSearch = (payload) => {
         detail: { query: lastQuery.value, activeFilters: activeFilters.value }
     }))
     
-    // استخدم الـ ref من window
     if (window.__kanbanLeadsRef) {
         const leadsComponent = window.__kanbanLeadsRef()
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
@@ -1080,7 +1200,7 @@ function onSearchBlur() {
 
 function onDocumentClick(e) {
     if (!showSearchModal.value) return;
-    if (e.target.closest?.('.lead-search-date-backdrop, .lr-date-modal')) return;
+    if (e.target.closest?.('.lead-search-date-backdrop, .lr-date-modal, .lead-search-dropdown-panel, .lead-search-dropdown-outer')) return;
     if (e.target.closest?.('.modal')) return;
     const anchor = searchDropdownAnchorRef.value;
     const panel = searchDropdownPanelRef.value;
@@ -2599,15 +2719,16 @@ const showBackButton = computed(() => {
 }
 
 .search-tag {
-    background: rgba(255, 255, 255, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(251, 191, 36, 0.24);
+    border: 1px solid rgba(251, 191, 36, 0.58);
     border-radius: 999px;
     padding: 3px 8px;
     font-size: 11px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.95);
+    font-weight: 600;
+    color: #fef9c3;
     white-space: nowrap;
     width: fit-content;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .search-tag-more {
@@ -2622,8 +2743,8 @@ const showBackButton = computed(() => {
 .close-tag-icon {
     font-size: 12px;
     cursor: pointer;
-    color: rgba(255, 255, 255, 0.9);
-    background: rgba(255, 255, 255, 0.2);
+    color: #78350f;
+    background: rgba(251, 191, 36, 0.85);
     border-radius: 50%;
     width: 16px;
     height: 16px;
@@ -2699,6 +2820,16 @@ const showBackButton = computed(() => {
     font-size: 9px;
     font-weight: 400;
     letter-spacing: -0.01em;
+}
+
+.search-input--has-selection {
+    color: #fde68a !important;
+    font-weight: 600;
+}
+
+.search-wrapper-has-selection {
+    border-color: rgba(251, 191, 36, 0.55) !important;
+    background: rgba(11, 7, 54, 0.58) !important;
 }
 
 /* Search Modal Styles */
@@ -3114,6 +3245,21 @@ const showBackButton = computed(() => {
     max-width: none;
     flex: 1 1 auto;
     min-width: 0;
+  }
+
+  .kanban-mob-toolbar__search .search-filters-pills {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .kanban-mob-toolbar__search .search-filters-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .kanban-mob-toolbar__search .search-wrapper-has-filters {
+    padding-inline: 6px 4px;
   }
 
   .kanban-mob-toolbar__search .search-filter-btn {

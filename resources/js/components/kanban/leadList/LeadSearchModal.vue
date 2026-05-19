@@ -740,8 +740,8 @@
                 </div>
 
                 <div class="lr-date-actions large">
-                    <button type="button" class="btn-cancel" @click="showDateModal = false">Cancel</button>
-                    <button type="button" class="btn-apply" @click="applyDateRange">Apply</button>
+                    <button type="button" class="btn-cancel" @click.stop="showDateModal = false">Cancel</button>
+                    <button type="button" class="btn-apply" @click.stop="applyDateRange">Apply</button>
                 </div>
             </div>
         </div>
@@ -1066,6 +1066,20 @@ function syncFormFromQuery(query) {
         next.sourcePortal = Array.isArray(sp) ? sp.filter(Boolean) : [sp].filter(Boolean)
     }
     normalizeSourceWebsiteForm(next)
+    if (next.createdFrom || next.createdTo) {
+        next.createdOn = 'custom_date'
+    } else if (query.created_at) {
+        next.createdOn = 'custom_date'
+        next.createdFrom = query.created_at
+        next.createdTo = query.created_at
+    }
+    if (next.assignedFrom || next.assignedTo) {
+        next.assignedOn = 'custom_date'
+    } else if (query.assigned_at) {
+        next.assignedOn = 'custom_date'
+        next.assignedFrom = query.assigned_at
+        next.assignedTo = query.assigned_at
+    }
     next.budgetFrom = formatBudgetWithCommas(next.budgetFrom)
     next.budgetTo = formatBudgetWithCommas(next.budgetTo)
     if (next.team !== '' && next.team != null && next.team !== undefined) {
@@ -2027,6 +2041,19 @@ function getDisplayValue(field, rawValue) {
     return String(rawValue)
 }
 
+/** Normalize lead date filters to created_from / created_to (API filters leads.created_at). */
+function normalizeLeadDateRange(from, to, exact) {
+    let dateFrom = from || undefined
+    let dateTo = to || undefined
+    if (exact && !dateFrom && !dateTo) {
+        dateFrom = exact
+        dateTo = exact
+    }
+    if (dateFrom && !dateTo) dateTo = dateFrom
+    if (dateTo && !dateFrom) dateFrom = dateTo
+    return { from: dateFrom, to: dateTo }
+}
+
 function applySearch() {
     let createdFrom = undefined
     let createdTo = undefined
@@ -2187,6 +2214,11 @@ function applySearch() {
                 createdFrom = toLocalDateStr(new Date(today.getFullYear(), today.getMonth() - 1, 1))
                 createdTo = toLocalDateStr(new Date(today.getFullYear(), today.getMonth(), 0))
                 break
+
+            case 'last_year':
+                createdFrom = toLocalDateStr(new Date(today.getFullYear() - 1, 0, 1))
+                createdTo = toLocalDateStr(new Date(today.getFullYear() - 1, 11, 31))
+                break
                 
             case 'next_week': {
                 // الأسبوع القادم: من الاثنين إلى الأحد
@@ -2222,6 +2254,11 @@ function applySearch() {
                 createdAt = undefined
                 break
         }
+
+        const normalizedCreated = normalizeLeadDateRange(createdFrom, createdTo, createdAt)
+        createdFrom = normalizedCreated.from
+        createdTo = normalizedCreated.to
+        createdAt = undefined
     }
 
     let assignedFrom = undefined
@@ -2307,7 +2344,18 @@ function applySearch() {
                 assignedTo = form.value.assignedTo || undefined
                 assignedAt = undefined
                 break
+
+            case 'last_year':
+                assignedFrom = toLocalDateStr(new Date(today.getFullYear() - 1, 0, 1))
+                assignedTo = toLocalDateStr(new Date(today.getFullYear() - 1, 11, 31))
+                assignedAt = undefined
+                break
         }
+
+        const normalizedAssigned = normalizeLeadDateRange(assignedFrom, assignedTo, assignedAt)
+        assignedFrom = normalizedAssigned.from
+        assignedTo = normalizedAssigned.to
+        assignedAt = undefined
     }
 
     let sourceParam = undefined
@@ -2351,12 +2399,10 @@ function applySearch() {
         status_lead: form.value.qualityStatus || undefined,
         why_lost_lead: (getSelectedStageOrder(form.value.stageId) === 8) ? (form.value.qualityStatus || undefined) : undefined,
 
-        created_from: createdFrom || undefined,  
-        created_to: createdTo || undefined,     
-        created_at: createdAt || undefined,   
+        created_from: createdFrom || undefined,
+        created_to: createdTo || undefined,
         assigned_from: assignedFrom || undefined,
         assigned_to: assignedTo || undefined,
-        assigned_at: assignedAt || undefined,
         team_id: teamId || undefined,
         office_branch: officeBranches || undefined,
         lead_type: form.value.leadType || undefined,
@@ -2844,7 +2890,6 @@ function applyDateRange() {
         form.value[toKey] = formatYmd(endDate.value)
     }
     showDateModal.value = false
-    applySearch()
 }
 
 const resetForm = () => {

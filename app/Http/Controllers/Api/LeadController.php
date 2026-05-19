@@ -74,7 +74,7 @@ class LeadController extends Controller
                     $leadsQuery->whereDate('created_at', '<=', $request->created_to);
                 }
                 if ($request->filled('created_at')) {
-                    $leadsQuery->whereDate('created_at', '=', $request->created_to);
+                    $leadsQuery->whereDate('created_at', '=', $request->created_at);
                 }
                 
                 if ($request->filled('search')) {
