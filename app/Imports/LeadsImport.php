@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Models\Lead;
+use App\Models\LeadComment;
 use App\Models\Stage;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -58,15 +59,44 @@ class LeadsImport extends DefaultValueBinder implements
 
                 $data = $this->normalize($row->toArray());
 
+                $nonNullFields = array_filter(
+                    $data,
+                    fn ($v) => $v !== null && $v !== ''
+                );
+
+                \Log::info('LeadsImport non-null fields', [
+                    'row'    => $this->currentRow,
+                    'fields' => $nonNullFields,
+                ]);
+
                 if (empty($data['lead_name'])) {
                     continue;
                 }
 
                 $stage  = $this->resolveStage($data['stage'] ?? null);
-                $userId = $this->resolveUser($data['responsible'] ?? null);
 
-                $phone = $data['work_phone'] ?? null;
+          
 
+                  $rawPhone = $data['work_phone']
+                      ?? $data['workphone']
+                      ?? $data['work_phone_1']
+                      ?? $data['phone']
+                      ?? $data['mobile']
+                      ?? null;
+
+                  if (empty($rawPhone)) {
+                      foreach ($data as $k => $v) {
+                          if ($v === null || $v === '') continue;
+                          if (str_contains($k, 'phone') || str_contains($k, 'mobile')) {
+                              $rawPhone = $v;
+                              break;
+                          }
+                      }
+                  }
+
+                  $phones = $this->parsePhones($rawPhone);
+
+              
                 $email = $data['work_e_mail']
                     ?? $data['home_e_mail']
                     ?? $data['other_e_mail']
@@ -85,8 +115,20 @@ class LeadsImport extends DefaultValueBinder implements
                 }
 
                 $addedBy = $this->resolveUser($data['created_by'] ?? null);
+                $modifiedBy = $this->resolveUser($data['modified_by'] ?? null);
+                $stageChangedBy = $this->resolveUser($data['stage_changed_by'] ?? null);
+                $userId = !empty($data['responsible'])
+                    ? $this->resolveUser($data['responsible'])
+                    : $addedBy;
 
-                Lead::create([
+                $createdAt = $this->parseDate($data['created'] ?? null) ?? now();
+                $updatedAt = $this->parseDate(
+                    $data['modified'] ?? $data['last_updated_on'] ?? null
+                ) ?? now();
+                $stageChangedAt = $this->parseDate($data['stage_change_date'] ?? null) ?? $createdAt;
+                $lastContactAt = $this->parseDate($data['last_contact'] ?? null);
+
+                $lead = Lead::create([
                     'email' => $email,
                     'added_by' => $addedBy ?? 1,
 
@@ -94,7 +136,7 @@ class LeadsImport extends DefaultValueBinder implements
                     'lead_number' => $data['id'] ?? null,
 
                     'stage_id' => $stage?->id,
-                    'last_stage_change_at' => now(),
+                    'last_stage_change_at' => $stageChangedAt,
 
                     'salutation' => $data['salutation'] ?? null,
                     'first_name' => $firstName,
@@ -103,12 +145,8 @@ class LeadsImport extends DefaultValueBinder implements
 
                     'date_of_birth' => $this->parseDate($data['date_of_birth'] ?? null),
 
-                    'whatsapp_number' => $data['whatsapp_number'] ?? null,
-                    'work_phone' =>  $data['work_phone']
-                        ?? null,
-                    'work_phone_2' => $data['work_phone_2']
-                        ?? $data['other_phone_number']
-                        ?? null,
+                    'work_phone' => $phones['work_phone'] ?? null,
+                    'work_phone_2' => $phones['work_phone_2'] ?? null,
 
                     'secondary_email' => $data['home_e_mail'] ?? null,
 
@@ -125,17 +163,30 @@ class LeadsImport extends DefaultValueBinder implements
 
                     'nationality' => $data['nationality'] ?? null,
 
-                    'lead_source' => $data['source'] ?? 'Excel Import',
+                    'lead_source' => $data['lead_branch_source'] ?? $data['source'] ?? 'Excel Import',
+                    'lead_branch_source' => $data['lead_branch_source'] ?? null,
                     'source_information' => $data['source_information'] ?? null,
 
                     'responsible_person_id' => $userId,
                     'initial_responsible_person_id' => $userId,
 
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'first_contacted_at' => $lastContactAt,
+
+                    'created_at' => $createdAt,
+                    'updated_at' => $updatedAt,
 
                     'raw_meta_data' => json_encode($data, JSON_UNESCAPED_UNICODE),
                 ]);
+
+                if (!empty($data['comment'])) {
+                    LeadComment::create([
+                        'lead_id' => $lead->id,
+                        'user_id' => $addedBy ?? $userId ?? 1,
+                        'comment' => (string) $data['comment'],
+                        'created_at' => $createdAt,
+                        'updated_at' => $updatedAt,
+                    ]);
+                }
 
             } catch (\Exception $e) {
 
@@ -218,5 +269,43 @@ class LeadsImport extends DefaultValueBinder implements
         } catch (\Exception $e) {
             return null;
         }
+    }
+
+ private function parsePhones(...$inputs)
+    {
+        $numbers = [];
+
+        foreach ($inputs as $input) {
+            if ($input === null || $input === '') continue;
+
+            if (is_numeric($input)) {
+                $input = number_format((float) $input, 0, '.', '');
+            }
+
+            $input = (string) $input;
+            $input = ltrim($input, "'\"`");
+
+            $parts = preg_split('/[,;|\/\s]+/', $input);
+
+            foreach ($parts as $part) {
+                $clean = trim($part);
+                $clean = ltrim($clean, "'\"`");
+                if ($clean === '') continue;
+
+                if (!str_starts_with($clean, '+') && preg_match('/^\d{8,}$/', $clean)) {
+                    $clean = '+' . $clean;
+                }
+
+                if (!in_array($clean, $numbers, true)) {
+                    $numbers[] = $clean;
+                }
+            }
+        }
+
+        return [
+            'work_phone'   => $numbers[0] ?? null,
+            'work_phone_2' => $numbers[1] ?? null,
+            'mobile'       => $numbers[2] ?? null,
+        ];
     }
 }
