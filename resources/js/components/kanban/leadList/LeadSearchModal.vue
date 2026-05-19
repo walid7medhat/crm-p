@@ -816,6 +816,10 @@ const allResponsiblePersons = ref([])
 const allTeams = ref([])
 /** Avoid team watcher re-fetch when responsible selection sets team + branch */
 const syncingFromResponsible = ref(false)
+/** While true, the form is being populated from `props.currentQuery` (modal-open restore).
+ *  Cascade watchers (responsible → team → office, team → office, etc.) skip themselves so
+ *  they don't re-fetch options and prune the just-hydrated values. */
+const hydratingFromQuery = ref(false)
 const selectedOffice = ref(null)
 const selectedPillType = ref(null)
 const validationErrors = ref({})
@@ -921,10 +925,10 @@ watch(() => props.modelValue, (val) => {
 
 watch(() => props.modelValue, (val) => {
     if (val) {
-        nextTick(() => {
-            if (!props.hasActiveFilters) resetFormValues()
-            else syncFormFromQuery(props.currentQuery)
-        })
+        // Always rehydrate from the last applied query so reopening the modal shows the
+        // previously selected filters (mirrors DealSearchModal). syncFormFromQuery resets
+        // to defaults internally when the query is empty.
+        nextTick(() => syncFormFromQuery(props.currentQuery))
     }
 })
 
@@ -1005,6 +1009,7 @@ function syncFormFromQuery(query) {
         resetFormValues()
         return
     }
+    hydratingFromQuery.value = true
     const next = {
         search: '',
         id: '',
@@ -1087,6 +1092,12 @@ function syncFormFromQuery(query) {
         if (!Number.isNaN(tn)) next.team = tn
     }
     form.value = next
+
+    // Release the hydration guard after Vue has processed the form assignment so the
+    // responsible/team watchers see the new values but don't try to "fix" them.
+    nextTick(() => {
+        hydratingFromQuery.value = false
+    })
 }
 
 watch(() => props.initialActivePill, (newVal) => {
@@ -1099,13 +1110,11 @@ watch(() => props.initialActivePill, (newVal) => {
 watch(show, (val) => {
     emit('update:modelValue', val)
     if (val) {
-        console.log('Modal opening with initialActivePill:', props.initialActivePill) 
         if (props.initialActivePill) {
             activePill.value = props.initialActivePill
-            console.log('Setting activePill to:', props.initialActivePill)
         }
-        if (!props.hasActiveFilters) resetFormValues()
-        else syncFormFromQuery(props.currentQuery)
+        // Always hydrate — syncFormFromQuery falls back to reset when query is empty.
+        syncFormFromQuery(props.currentQuery)
     }
 })
 
@@ -1114,7 +1123,8 @@ watch(() => props.hasActiveFilters, (val) => {
 })
 
 watch(() => props.currentQuery, (query) => {
-    if (show.value && props.hasActiveFilters) syncFormFromQuery(query)
+    // Keep the form in sync while the modal is open even if the active-filters flag lags.
+    if (show.value) syncFormFromQuery(query)
 }, { deep: true })
 
 const displaySavedFieldValues = () => {
@@ -1136,11 +1146,9 @@ watch(() => props.modelValue, (val) => {
     if (val) {
         restoreSavedFields()
         displaySavedFieldValues() // لعرض القيم في console
-        if (!props.hasActiveFilters) {
-            resetFormValues()
-        } else {
-            syncFormFromQuery(props.currentQuery)
-        }
+        // Always rehydrate so reopening the modal shows the previously selected filters
+        // (matches DealSearchModal behavior).
+        syncFormFromQuery(props.currentQuery)
     }
 })
 
@@ -2926,6 +2934,7 @@ const resetForm = () => {
     emit('search', { query: null, activePill: null, activeFilters: [] })
 }
 watch(() => form.value.responsible, async (newResponsibleId) => {
+    if (hydratingFromQuery.value) return
     if (!newResponsibleId) return
 
     const selectedPerson = allResponsiblePersons.value.find(p => p.id === newResponsibleId)
@@ -2962,6 +2971,7 @@ watch(() => form.value.responsible, async (newResponsibleId) => {
 watch(
     () => form.value.team,
     async (teamId) => {
+        if (hydratingFromQuery.value) return
         if (syncingFromResponsible.value) return
         if (!teamId) {
             await Promise.all([
@@ -3016,6 +3026,9 @@ watch(() => form.value.assignedOn, (newVal, oldVal) => {
 })
 
 watch(() => form.value.source, (newVal) => {
+    // Skip while hydrating from currentQuery — otherwise sourceWebsite/sourcePortal
+    // from the saved search get wiped the moment we assign form.source.
+    if (hydratingFromQuery.value) return
     if (newVal === 'website') {
         form.value.sourceWebsite = []
     } else if (newVal === 'portal') {
@@ -3028,6 +3041,8 @@ watch(() => form.value.source, (newVal) => {
 
 // Watch for stage changes to update quality_status options and interaction_result visibility
 watch(() => form.value.stageId, (newVal) => {
+    // Same hydration guard — don't strip qualityStatus/interactionResult that we just restored.
+    if (hydratingFromQuery.value) return
     const stageOrder = getSelectedStageOrder(newVal)
     
     // Clear quality_status if it doesn't match the new stage
@@ -3181,8 +3196,8 @@ function restoreDefaultFields() {
 onMounted(async () => {
     console.log('LeadSearchModal mounted, key:', props.key)
     document.addEventListener('click', onDocumentClick)
-    updateUserFromStorage() 
-    
+    updateUserFromStorage()
+
     await Promise.all([
         fetchResponsiblePersonsWithFilter(),
         fetchBranchSources(),
@@ -3193,10 +3208,19 @@ onMounted(async () => {
         fetchAreas(),
         fetchPropertyTypes()
     ])
-    
+
     // تحميل الحقول المحفوظة عند التحميل
     await restoreSavedFields()
-    
+
+    // Hydrate the form from the last-applied query NOW that all dropdown options have loaded.
+    // The modal is v-if'd in the navbar, so each open is a fresh mount — `props.modelValue`
+    // is already `true` on mount, which means the open-side watchers never fire (they only
+    // react to changes). This is the one place we know we have both `currentQuery` and
+    // all the option lists, so the saved selections will display correctly.
+    if (props.modelValue) {
+        syncFormFromQuery(props.currentQuery)
+    }
+
     console.log('Initial data loaded, selected fields:', selectedLeadFieldIds.value)
 })
 
@@ -3535,13 +3559,15 @@ onBeforeUnmount(() => {
     position: relative;
 }
 
-/* Teleported to body so modal overflow:hidden does not clip the panel */
+/* Teleported to body so modal overflow:hidden does not clip the panel. Must sit above
+ * the search modal (which uses z-index 15000+ when teleported from the navbar dropdown). */
 .budget-dropdown--portal {
     background: #fff;
     border: 1px solid #E2E8F0;
     border-radius: 10px;
     box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
     padding: 10px;
+    z-index: 100003 !important;
 }
 
 .budget-from-to-row {
@@ -4063,6 +4089,20 @@ onBeforeUnmount(() => {
 
     .modal-dialog {
         z-index: 1060 !important;
+    }
+
+    /* Field Settings modal: search modal is teleported with z-index 15000+, so the default
+     * Bootstrap modal/backdrop (~1055) ends up behind. Boost both above the search modal. */
+    #filter-field-settings-modal {
+        z-index: 100005 !important;
+    }
+    #filter-field-settings-modal .modal-dialog {
+        z-index: 100006 !important;
+    }
+    /* The backdrop Bootstrap injects right before the modal element. */
+    .modal-backdrop:has(+ #filter-field-settings-modal),
+    body > .modal-backdrop.show {
+        z-index: 100004 !important;
     }
     .vs__dropdown-menu {
         z-index: 9999 !important;

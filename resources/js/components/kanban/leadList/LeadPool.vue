@@ -5,12 +5,13 @@
                 <span class="visually-hidden">Loading...</span>
             </div>
         </div>
-        
+
         <div v-else-if="leads.length === 0" class="text-center py-5 text-muted">
             No leads found in Lead Pool
         </div>
-        
-        <div v-else class="leads-grid">
+
+        <template v-else>
+        <div class="leads-grid">
             <div 
                 v-for="lead in leads" 
                 :key="lead.id" 
@@ -190,6 +191,41 @@
                 </div>
             </div>
         </div>
+
+        <!-- Pagination -->
+        <div v-if="lastPage > 1" class="lead-pool-pagination d-flex align-items-center justify-content-center gap-2 mt-3">
+            <button
+                type="button"
+                class="page-btn"
+                :disabled="currentPage <= 1 || loading"
+                @click="goToPage(currentPage - 1)"
+            >
+                <iconify-icon icon="lucide:chevron-left" />
+            </button>
+            <button
+                v-for="p in visiblePages"
+                :key="p.key"
+                type="button"
+                class="page-btn page-btn-num"
+                :class="{ active: p.value === currentPage, ellipsis: p.value === null }"
+                :disabled="p.value === null || loading"
+                @click="p.value !== null && goToPage(p.value)"
+            >
+                {{ p.value === null ? '…' : p.value }}
+            </button>
+            <button
+                type="button"
+                class="page-btn"
+                :disabled="currentPage >= lastPage || loading"
+                @click="goToPage(currentPage + 1)"
+            >
+                <iconify-icon icon="lucide:chevron-right" />
+            </button>
+            <span class="page-summary text-secondary-light">
+                Page {{ currentPage }} / {{ lastPage }} · {{ total }} total
+            </span>
+        </div>
+        </template>
     </div>
 
     <!-- Modals -->
@@ -237,6 +273,32 @@ const profileUserId = ref(null)
 const activePersonHover = ref(null)
 const personHoverHideTimer = ref(null)
 
+// Pagination
+const currentPage = ref(1)
+const perPage = ref(20)
+const lastPage = ref(1)
+const total = ref(0)
+
+// Filters applied from the navbar search modal — merged into every fetch.
+const currentQuery = ref({})
+
+// Numeric pager with ellipsis: always show first/last + a window around current.
+const visiblePages = computed(() => {
+    const last = lastPage.value
+    const curr = currentPage.value
+    if (last <= 7) {
+        return Array.from({ length: last }, (_, i) => ({ key: `p${i + 1}`, value: i + 1 }))
+    }
+    const pages = [{ key: 'p1', value: 1 }]
+    const start = Math.max(2, curr - 1)
+    const end = Math.min(last - 1, curr + 1)
+    if (start > 2) pages.push({ key: 'gap-l', value: null })
+    for (let i = start; i <= end; i++) pages.push({ key: `p${i}`, value: i })
+    if (end < last - 1) pages.push({ key: 'gap-r', value: null })
+    pages.push({ key: `p${last}`, value: last })
+    return pages
+})
+
 // Card fields configuration (you can fetch from API or use default)
 const cardFields = ref([
     { key: 'created_at', enabled: true, order: 1, label: 'Created At' },
@@ -252,24 +314,44 @@ const cardFields = ref([
     { key: 'assigned_by', enabled: true, order: 11, label: 'Assigned By' }
 ])
 
-// Fetch leads with stage_id = 10
+// Fetch leads with stage_id = 10 (Lead Pool), paginated and filtered.
 const fetchLeadPool = async () => {
     loading.value = true
     try {
-        const response = await api.get('/leads', {
-            params: {
-                stage_id: 10
-            }
-        })
+        const params = {
+            stage_id: 10,
+            paginate: 1,
+            page: currentPage.value,
+            per_page: perPage.value,
+            ...(currentQuery.value || {}),
+        }
+        // stage_id is the lead-pool fixed scope — never overridden by the search query.
+        params.stage_id = 10
 
-        const data = response.data?.data || []
-        
-        if (data && data.length > 0 && data[0]?.leads) {
+        const response = await api.get('/leads', { params })
+        const body = response.data || {}
+        const data = body.data || []
+
+        // Backend returns flat leads array + pagination meta in paginate mode; fall back to
+        // the legacy grouped shape for safety.
+        if (Array.isArray(data) && body.pagination) {
+            leads.value = data
+            lastPage.value = Number(body.pagination.last_page) || 1
+            total.value = Number(body.pagination.total) || data.length
+            perPage.value = Number(body.pagination.per_page) || perPage.value
+            currentPage.value = Number(body.pagination.current_page) || currentPage.value
+        } else if (data && data.length > 0 && data[0]?.leads) {
             leads.value = data[0].leads
+            lastPage.value = 1
+            total.value = leads.value.length
         } else if (Array.isArray(data)) {
             leads.value = data
+            lastPage.value = 1
+            total.value = data.length
         } else {
             leads.value = []
+            lastPage.value = 1
+            total.value = 0
         }
     } catch (error) {
         console.error('Error fetching lead pool:', error)
@@ -281,10 +363,22 @@ const fetchLeadPool = async () => {
             showConfirmButton: false
         })
         leads.value = []
+        lastPage.value = 1
+        total.value = 0
     } finally {
         loading.value = false
     }
 }
+
+const goToPage = (page) => {
+    const target = Number(page)
+    if (!Number.isFinite(target)) return
+    if (target < 1 || target > lastPage.value) return
+    if (target === currentPage.value) return
+    currentPage.value = target
+    fetchLeadPool()
+}
+
 
 // Get enabled fields for lead
 const enabledFieldsForLead = (lead) => {
@@ -463,12 +557,20 @@ const formatMaskedQuestion = (questionData) => {
 }
 
 onMounted(() => {
+    // Search events come through the parent kanban (kanban_deal.vue) which calls
+    // `leadPoolRef.setQuery()` exposed below. We don't subscribe directly here to avoid
+    // double-fetches.
     fetchLeadPool()
 })
 
-// Expose refresh method
+// Expose refresh + a programmatic search-apply for the parent kanban if needed.
 defineExpose({
-    fetchLeadPool
+    fetchLeadPool,
+    setQuery(query) {
+        currentQuery.value = query && typeof query === 'object' ? { ...query } : {}
+        currentPage.value = 1
+        fetchLeadPool()
+    },
 })
 </script>
 
@@ -740,5 +842,56 @@ defineExpose({
 
 .cursor-pointer {
     cursor: pointer;
+}
+
+/* Pagination */
+.lead-pool-pagination {
+    flex-wrap: wrap;
+    padding: 8px 4px 16px;
+}
+
+.lead-pool-pagination .page-btn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #334155;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.lead-pool-pagination .page-btn:hover:not(:disabled):not(.ellipsis) {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.lead-pool-pagination .page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.lead-pool-pagination .page-btn.active {
+    background: #0B0736;
+    border-color: #0B0736;
+    color: #fff;
+}
+
+.lead-pool-pagination .page-btn.ellipsis {
+    border-color: transparent;
+    background: transparent;
+    cursor: default;
+}
+
+.lead-pool-pagination .page-summary {
+    margin-left: 8px;
+    font-size: 12px;
+    color: #64748b;
 }
 </style>

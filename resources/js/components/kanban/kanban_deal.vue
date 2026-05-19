@@ -357,7 +357,14 @@ onMounted(() => {
     window.addEventListener('kanban-lead-search', (e) => {
         onLeadSearch(e.detail);
     });
-    
+
+    // Modal applies dispatch `kanban-lead-search-update` from the navbar — forward those
+    // to the same handler so the lead-pool tab refreshes too (navbar only fires
+    // `__kanbanLeadsRef.fetchLeads()` which doesn't touch the pool).
+    window.addEventListener('kanban-lead-search-update', (e) => {
+        onLeadSearch(e.detail);
+    });
+
     window.addEventListener('kanban-deal-search', (e) => {
         onDealSearch(e.detail);
     });
@@ -365,13 +372,45 @@ onMounted(() => {
 })
 // في Kanban.vue
 watch(activeTab, async (newTab, oldTab) => {
+    // Clear any lingering search state when moving between lead-side tabs so each tab
+    // shows its own data instead of whatever the other tab filtered to.
+    const movedAmongLeadTabs =
+        (newTab === 'leads' || newTab === 'lead-pool') &&
+        (oldTab === 'leads' || oldTab === 'lead-pool') &&
+        newTab !== oldTab
+
+    if (movedAmongLeadTabs) {
+        activeFilter.value = null
+        activeFilters.value = []
+        lastQuery.value = null
+    }
+
     if (newTab === 'lead-pool' && leadPoolRef.value) {
         try {
-          
-                await leadPoolRef.value.fetchLeadPool()
-            
+            const poolComponent = Array.isArray(leadPoolRef.value) ? leadPoolRef.value[0] : leadPoolRef.value
+            // If we just came from leads with a search applied, reset the pool query so
+            // it doesn't inherit a filter the user thinks they cleared by switching tabs.
+            if (movedAmongLeadTabs && typeof poolComponent?.setQuery === 'function') {
+                poolComponent.setQuery({})
+            } else if (typeof poolComponent?.fetchLeadPool === 'function') {
+                await poolComponent.fetchLeadPool()
+            }
         } catch (error) {
             console.error('Error loading lead pool:', error)
+        }
+    }
+
+    if (newTab === 'leads' && leadsRef.value) {
+        try {
+            // Re-fetch the leads board so switching back from lead-pool surfaces fresh data
+            // (lead-pool searches don't touch the leads component, and the cached page can
+            // look empty if the user expected the unfiltered list to come back).
+            const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+            if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+                await leadsComponent.fetchLeads(true, null)
+            }
+        } catch (error) {
+            console.error('Error reloading leads board:', error)
         }
     }
 })
@@ -581,23 +620,35 @@ const hasAnySearchCriteria = computed(() => {
 // في Kanban.vue، أضف console.log للتتبع
 const onLeadSearch = (payload) => {
     console.log('📥 Kanban.onLeadSearch received:', payload)
-    
+
+    // Resolve the active component to forward the search to.
+    // - 'leads' tab → leadsRef (kanban board)
+    // - 'lead-pool' tab → leadPoolRef (paginated grid)
+    const routeToActiveLeadComponent = (query) => {
+        if (activeTab.value === 'lead-pool') {
+            const poolComponent = Array.isArray(leadPoolRef.value) ? leadPoolRef.value[0] : leadPoolRef.value
+            if (poolComponent && typeof poolComponent.setQuery === 'function') {
+                poolComponent.setQuery(query && typeof query === 'object' ? query : {})
+            }
+            return
+        }
+        if (leadsRef.value) {
+            const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+            if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+                leadsComponent.fetchLeads(true, query || null)
+            }
+        }
+    }
+
     if (payload === null || payload?.query === null) {
         activeFilter.value = null
         activeFilters.value = []
         lastQuery.value = null
-        if (leadsRef.value) {
-            const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
-            if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
-                console.log('🔄 Fetching leads with null query')
-                leadsComponent.fetchLeads(true, null)
-            }
-        }
+        routeToActiveLeadComponent(null)
         return
     }
     const query = payload?.query !== undefined ? payload.query : payload
     const pill = payload?.activePill
-    console.log("pill:", pill?.id);
     if (pill) {
         activeFilter.value = { id: pill.id, label: pill.label }
     } else if (!activeFilter.value) {
@@ -605,14 +656,7 @@ const onLeadSearch = (payload) => {
     }
     activeFilters.value = Array.isArray(payload?.activeFilters) ? payload.activeFilters : []
     lastQuery.value = query && Object.keys(query).length ? { ...query } : null
-    console.log('Final query to send to fetchLeads:', query)
-    if (leadsRef.value) {
-        const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
-        if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
-            console.log('🔄 Fetching leads with query:', query || null)
-            leadsComponent.fetchLeads(true, query || null)
-        }
-    }
+    routeToActiveLeadComponent(query)
 }
 
 const onDealSearch = (payload) => {

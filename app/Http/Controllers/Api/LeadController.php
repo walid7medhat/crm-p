@@ -55,74 +55,250 @@ class LeadController extends Controller
                     'observers.user',
                     'integration:id,project_id',
                 ]);
+
+                // ================= Full filter set (ported from StageController so lead-pool search
+                // matches the kanban-stages search modal behavior end-to-end) =================
                 if ($request->filled('responsible_person_id')) {
                     $leadsQuery->where('responsible_person_id', $request->responsible_person_id);
                 }
-                
                 if ($request->filled('stage_id')) {
                     $leadsQuery->where('stage_id', $request->stage_id);
                 }
-                
                 if ($request->filled('added_by')) {
                     $leadsQuery->where('added_by', $request->added_by);
+                }
+                if ($request->filled('email')) {
+                    $leadsQuery->where('email', $request->email);
+                }
+                if ($request->filled('work_phone')) {
+                    $leadsQuery->where(function ($query) use ($request) {
+                        $query->where('work_phone', $request->work_phone)
+                              ->orWhere('work_phone_2', $request->work_phone);
+                    });
                 }
                 if ($request->filled('created_from')) {
                     $leadsQuery->whereDate('created_at', '>=', $request->created_from);
                 }
-                
                 if ($request->filled('created_to')) {
                     $leadsQuery->whereDate('created_at', '<=', $request->created_to);
                 }
                 if ($request->filled('created_at')) {
                     $leadsQuery->whereDate('created_at', '=', $request->created_at);
                 }
-                
-                if ($request->filled('search')) {
-                    $search = $request->search;
-                    $leadsQuery->where(function($q) use ($search) {
-                        $q->where('lead_name', 'like', "%{$search}%")
-                          ->orWhere('lead_number', 'like', "%{$search}%");
+                if ($request->filled('changed_by')) {
+                    $leadsQuery->whereHas('histories', function ($query) use ($request) {
+                        $query->where('changes->action', 'stage_changed')
+                              ->where('user_id', $request->changed_by);
                     });
                 }
-                
-                // =================   source =================
-                if ($request->filled('source')) {
-                    $leadsQuery->where('lead_source', $request->source);
-                }
-                
+                $this->applyLeadSourceFilter($leadsQuery, $request);
                 if ($request->filled('source_information')) {
                     $leadsQuery->where('source_information', 'like', "%{$request->source_information}%");
                 }
-                  if ($request->filled('changed_by') ) {
-                      $leadsQuery->whereHas('histories',function($query) use($request){
-                                $query->where('changes->action', 'stage_changed')->where('user_id',$request->changed_by);
-                      });
-                  
+                if ($request->filled('bedrooms')) {
+                    $leadsQuery->where('bedrooms', $request->bedrooms);
+                }
+                if ($request->filled('closed')) {
+                    $closed = Stage::where('stage_type', 'lead')
+                        ->where('name', 'like', '%Converted%')
+                        ->orderBy('order', 'desc')
+                        ->first();
+                    if ($closed) {
+                        $leadsQuery->where('stage_id', $closed->id);
                     }
-        
-                if ($user->hasRole('super_admin') || $user->id==30) {
-                    $leads = $leadsQuery->latest()->get();
-                } elseif ($user->hasAnyRole(['manager', 'team_lead','admin'])) {
-                    $subordinatesIds = $user->getAllSubordinatesIds();
-                    $leads = $leadsQuery->where(function($query) use ($subordinatesIds, $user) {
-                                $query->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]))
-                                      ->orWhereIn('added_by', $subordinatesIds);
-                            })->latest()->get();
-                } else {
-                    $leads = $leadsQuery->where(function($query) use ($user) {
-                                $query->where('responsible_person_id', $user->id)
-                                      ->orWhere('added_by', $user->id);
-                            })->latest()->get();
+                }
+                if ($request->filled('lead_name')) {
+                    $leadsQuery->where('lead_name', 'like', "%{$request->lead_name}%");
+                }
+                if ($request->filled('first_name')) {
+                    $leadsQuery->where('first_name', 'like', "%{$request->first_name}%");
+                }
+                if ($request->filled('lead_branch_source')) {
+                    $leadsQuery->where('lead_branch_source', $request->lead_branch_source);
+                }
+                if ($request->filled('office_branch')) {
+                    $officeBranches = $request->office_branch;
+                    if (is_string($officeBranches)) {
+                        $officeBranches = explode(',', $officeBranches);
+                    }
+                    if (is_array($officeBranches) && count($officeBranches) > 0) {
+                        $allTeamMembers = [];
+                        foreach ($officeBranches as $officeBranchId) {
+                            if (is_numeric($officeBranchId)) {
+                                $branchTeam = User::find($officeBranchId);
+                                if ($branchTeam) {
+                                    $teamMembers = $branchTeam->getAllSubordinatesIds();
+                                    if (is_array($teamMembers)) {
+                                        $allTeamMembers = array_merge($allTeamMembers, $teamMembers);
+                                    }
+                                    $allTeamMembers[] = $branchTeam->id;
+                                }
+                            }
+                        }
+                        $allTeamMembers = array_unique($allTeamMembers);
+                        if (!empty($allTeamMembers)) {
+                            $leadsQuery->whereIn('responsible_person_id', $allTeamMembers);
+                        }
+                    } elseif (is_numeric($officeBranches)) {
+                        $branchTeam = User::find($officeBranches);
+                        if ($branchTeam) {
+                            $teamMembers = $branchTeam->getAllSubordinatesIds();
+                            if (is_array($teamMembers)) {
+                                $teamMembers[] = $branchTeam->id;
+                                $leadsQuery->whereIn('responsible_person_id', $teamMembers);
+                            }
+                        }
+                    }
+                }
+                if ($request->filled('team_id')) {
+                    $teamLead = User::find($request->team_id);
+                    if ($teamLead) {
+                        $teamMemberIds = $teamLead->getAllSubordinatesIds();
+                        $teamMemberIds[] = $teamLead->id;
+                        $leadsQuery->whereIn('responsible_person_id', $teamMemberIds);
+                    }
+                }
+                if ($request->filled('status_lead')) {
+                    $leadsQuery->where('status_lead', $request->status_lead);
+                }
+                if ($request->filled('why_lost_lead')) {
+                    $leadsQuery->where('why_lost_lead', $request->why_lost_lead);
+                }
+                if ($request->filled('lead_type') && $request->lead_type != 'both') {
+                    $leadsQuery->where(function ($q) use ($request) {
+                        $q->where('lead_type', $request->lead_type)
+                          ->orWhere('lead_type', 'both');
+                    });
+                }
+                if ($request->filled('property_status') && $request->property_status != 'both') {
+                    $leadsQuery->where(function ($q) use ($request) {
+                        $q->where('property_status', $request->property_status)
+                          ->orWhere('property_status', 'both');
+                    });
+                }
+                $this->applyBudgetRangeFilter($leadsQuery, $request);
+                if ($request->filled('property_type_id')) {
+                    $leadsQuery->where('property_type_id', $request->property_type_id);
+                }
+                if ($request->has('area_id') && $request->filled('area_id')) {
+                    $areaId = $request->area_id;
+                    $area = \App\Models\Area::find($areaId);
+                    if ($area) {
+                        $childAreaIds = $area->getChildIdsAttribute();
+                        $allAreaIds = array_merge([$areaId], $childAreaIds);
+                        $leadsQuery->whereIn('area_id', $allAreaIds);
+                    }
+                }
+                if ($request->filled('interaction_result')) {
+                    $leadsQuery->where('interaction_result', $request->interaction_result);
+                }
+                if ($request->filled('purpose_buying')) {
+                    $leadsQuery->where('purpose_buying', $request->purpose_buying);
+                }
+                if ($request->filled('assigned_from') || $request->filled('assigned_to') || $request->filled('assigned_at')) {
+                    $assignedFrom = $request->assigned_from;
+                    $assignedTo = $request->assigned_to;
+                    $assignedDate = $request->assigned_at;
+                    $leadsQuery->whereHas('histories', function ($query) use ($assignedFrom, $assignedTo, $assignedDate) {
+                        $query->where('changes->action', 'assigned');
+                        if ($assignedDate) {
+                            $query->whereDate('created_at', $assignedDate);
+                        } else {
+                            if ($assignedFrom) {
+                                $query->whereDate('created_at', '>=', $assignedFrom);
+                            }
+                            if ($assignedTo) {
+                                $query->whereDate('created_at', '<=', $assignedTo);
+                            }
+                        }
+                    });
+                }
+                if ($request->filled('search')) {
+                    $search = $request->search;
+                    $leadsQuery->where(function ($s) use ($search) {
+                        $s->where('lead_name', 'like', "%{$search}%")
+                          ->orWhere('lead_number', 'like', "%{$search}%")
+                          ->orWhere('first_name', 'like', "%{$search}%")
+                          ->orWhere('last_name', 'like', "%{$search}%")
+                          ->orWhere('email', 'like', "%{$search}%")
+                          ->orWhere('work_phone', 'like', "%{$search}%")
+                          ->orWhere('bedrooms', 'like', "%{$search}%")
+                          ->orWhere('work_phone_2', 'like', "%{$search}%")
+                          ->orWhere('lead_source', 'like', "%{$search}%")
+                          ->orWhere('status_lead', 'like', "%{$search}%")
+                          ->orWhere(function ($q2) use ($search) {
+                                $q2->where('lead_type', 'like', "%{$search}%")
+                                   ->orWhere('lead_type', 'both');
+                          })
+                          ->orWhere(function ($q2) use ($search) {
+                                $q2->where('property_status', 'like', "%{$search}%")
+                                   ->orWhere('property_status', 'both');
+                          })
+                          ->orWhere('budget_from', 'like', "%{$search}%")
+                          ->orWhere('budget_to', 'like', "%{$search}%")
+                          ->orWhere('source_information', 'like', "%{$search}%")
+                          ->orWhere('purpose_buying', 'like', "%{$search}%")
+                          ->orWhere('budget', 'like', "%{$search}%")
+                          ->orWhereHas('responsiblePerson', function ($r) use ($search) {
+                              $r->where('name', 'like', "%{$search}%");
+                          })
+                          ->orWhereHas('propertyType', function ($pt) use ($search) {
+                              $pt->where('name', 'like', "%{$search}%");
+                          })
+                          ->orWhereHas('stage', function ($st) use ($search) {
+                              $st->where('name', 'like', "%{$search}%");
+                          })
+                          ->orWhereHas('integration', function ($st) use ($search) {
+                              $st->where('track_keyword', 'like', "%{$search}%");
+                          });
+                    });
                 }
         
+                // Apply permission scope to the query (without consuming it with ->get()) so
+                // we can either paginate or fetch all leads depending on the request.
+                if ($user->hasRole('super_admin') || $user->id == 30) {
+                    // super admin sees everything
+                } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+                    $subordinatesIds = $user->getAllSubordinatesIds();
+                    $leadsQuery->where(function ($query) use ($subordinatesIds, $user) {
+                        $query->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]))
+                            ->orWhereIn('added_by', $subordinatesIds);
+                    });
+                } else {
+                    $leadsQuery->where(function ($query) use ($user) {
+                        $query->where('responsible_person_id', $user->id)
+                            ->orWhere('added_by', $user->id);
+                    });
+                }
+
+                // Paginated response (used by Lead Pool view) — flat leads array + pagination meta.
+                if ($request->filled('paginate') && (string) $request->paginate === '1') {
+                    $paginator = $leadsQuery->latest()->paginate($perPage);
+                    return response()->json([
+                        'success' => true,
+                        'data' => LeadResource::collection($paginator->items()),
+                        'pagination' => [
+                            'current_page' => $paginator->currentPage(),
+                            'last_page'    => $paginator->lastPage(),
+                            'per_page'     => $paginator->perPage(),
+                            'total'        => $paginator->total(),
+                            'has_more_pages' => $paginator->hasMorePages(),
+                        ],
+                        'message' => 'Leads retrieved successfully',
+                    ]);
+                }
+
+                // Default: grouped-by-stage response (existing callers).
+                $leads = $leadsQuery->latest()->get();
+
                 $stagesWithLeads = $leads->groupBy('stage_id')->map(function($leadsGroup, $stageId) {
-                    $stage = $leadsGroup->first()->stage; 
+                    $stage = $leadsGroup->first()->stage;
                     return [
                         'stage_name' => $stage?->name ?? 'No Stage',
                         'stage_id' => $stage?->id,
                         'leads' => LeadResource::collection($leadsGroup),
                     ];
-                })->values(); 
+                })->values();
                 return ApiResponse::success(
                     $stagesWithLeads,
                     'Leads grouped by stage retrieved successfully'
@@ -1177,6 +1353,110 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
     /**
      * جلب قائمة العملاء مع إمكانية البحث والتصفية
      */
+    /**
+     * Expand "website" / "portal" parent source picks into all their known partial values
+     * (mirrors StageController::applyLeadSourceFilter so lead-pool search behaves identically).
+     */
+    private function applyLeadSourceFilter($query, Request $request): void
+    {
+        if (! $request->filled('source')) {
+            return;
+        }
+
+        $websitePartials = ['website', 'Allproperties.ae', 'Oiaproperties.com'];
+        $portalPartials  = ['portal', 'propertyfinder', 'bayut'];
+
+        $expand = function ($value) use ($websitePartials, $portalPartials) {
+            if ($value === 'website') return $websitePartials;
+            if ($value === 'portal')  return $portalPartials;
+            return [$value];
+        };
+
+        $src = $request->source;
+
+        if (is_array($src)) {
+            $src = array_values(array_filter($src, fn ($v) => $v !== null && $v !== ''));
+            if (count($src) === 0) {
+                return;
+            }
+            $expanded = [];
+            foreach ($src as $v) {
+                foreach ($expand($v) as $entry) {
+                    $expanded[] = $entry;
+                }
+            }
+            $expanded = array_values(array_unique($expanded));
+            if (count($expanded) === 1) {
+                $query->where('lead_source', $expanded[0]);
+            } else {
+                $query->whereIn('lead_source', $expanded);
+            }
+            return;
+        }
+
+        $expanded = $expand($src);
+        if (count($expanded) === 1) {
+            $query->where('lead_source', $expanded[0]);
+        } else {
+            $query->whereIn('lead_source', $expanded);
+        }
+    }
+
+    /**
+     * Budget filter with range-overlap support (mirrors StageController).
+     */
+    private function applyBudgetRangeFilter($query, Request $request): void
+    {
+        $min = $request->filled('budget_from') ? (float) $request->budget_from : null;
+        $max = $request->filled('budget_to') ? (float) $request->budget_to : null;
+
+        if ($min === null && $max === null) {
+            return;
+        }
+
+        if ($min !== null && $max !== null && $min > $max) {
+            [$min, $max] = [$max, $min];
+        }
+
+        if ($min !== null && $max !== null) {
+            $query->where(function ($q) use ($min, $max) {
+                $q->where(function ($w) use ($min, $max) {
+                    $w->whereNotNull('budget_from')
+                      ->whereNotNull('budget_to')
+                      ->where('budget_from', '<=', $max)
+                      ->where('budget_to', '>=', $min);
+                })
+                ->orWhereBetween('budget', [$min, $max])
+                ->orWhere(function ($w) use ($min, $max) {
+                    $w->whereNotNull('budget_from')
+                      ->whereNull('budget_to')
+                      ->whereBetween('budget_from', [$min, $max]);
+                })
+                ->orWhere(function ($w) use ($min, $max) {
+                    $w->whereNotNull('budget_to')
+                      ->whereNull('budget_from')
+                      ->whereBetween('budget_to', [$min, $max]);
+                });
+            });
+            return;
+        }
+
+        if ($min !== null) {
+            $query->where(function ($q) use ($min) {
+                $q->where('budget', '>=', $min)
+                  ->orWhere('budget_from', '>=', $min)
+                  ->orWhere('budget_to', '>=', $min);
+            });
+            return;
+        }
+
+        $query->where(function ($q) use ($max) {
+            $q->where('budget', '<=', $max)
+              ->orWhere('budget_from', '<=', $max)
+              ->orWhere('budget_to', '<=', $max);
+        });
+    }
+
     public function getClientsList(Request $request)
     {
         try {

@@ -579,7 +579,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -1657,16 +1657,72 @@ watch(
     if (v !== 'custom') createdByCustomYmd.value = ''
   },
 )
+// Hydrate the form from the last-applied query so reopening the modal shows what the user
+// already searched (instead of starting from a blank slate).
+function hydrateFormFromQuery(q) {
+  if (!q || typeof q !== 'object') return
+
+  // Activity / Deal info
+  form.value.deal_name              = q.search || ''
+  form.value.stage_group            = q.stage_id ? [q.stage_id] : []
+  form.value.responsible_person_id  = q.responsible_id ?? null
+  form.value.stage_changed_by       = q.stage_changed_by ?? null
+  form.value.modified_by            = q.modified_by ?? null
+
+  // Created date range (drives the createdByDateRange + display).
+  if (q.created_from || q.created_to) {
+    createdByDateRange.value = {
+      from: q.created_from || null,
+      to: q.created_to || null,
+    }
+    if (q.created_from) tempStartDate.value = new Date(q.created_from)
+    if (q.created_to) tempEndDate.value = new Date(q.created_to)
+  } else {
+    createdByDateRange.value = { from: null, to: null }
+    tempStartDate.value = null
+    tempEndDate.value = null
+  }
+
+  // Buyer
+  form.value.buyer_first_name        = q.buyer_first_name ?? ''
+  form.value.buyer_last_name         = q.buyer_last_name ?? ''
+  form.value.buyer_phone             = q.buyer_phone ?? ''
+  form.value.buyer_dob               = q.buyer_dob ?? ''
+  form.value.buyer_email             = q.buyer_email ?? ''
+  form.value.buyer_residency_status  = q.buyer_residency_status ?? ''
+  form.value.buyer_country           = q.buyer_country ?? ''
+  form.value.buyer_nationality       = q.buyer_nationality ?? ''
+  form.value.buyer_city              = q.buyer_city ?? ''
+
+  // Financial
+  form.value.amount   = q.amount ?? ''
+  form.value.currency = q.currency ?? ''
+
+  // Property
+  form.value.unit_no          = q.unit_no ?? ''
+  form.value.property_type_id = q.property_type_id ?? null
+  form.value.bedrooms         = q.bedrooms ?? null
+  form.value.project_id       = q.project_id ?? null
+  form.value.developer_id     = q.developer_id ?? null
+  form.value.area_id          = q.area_id ?? null
+  form.value.subcommunity_id  = q.subcommunity_id ?? null
+  form.value.unit_size        = q.unit_size ?? ''
+
+  // Scope
+  form.value.my_deals = !!q.my_deals
+}
+
+watch(() => props.currentQuery, hydrateFormFromQuery, { immediate: true, deep: true })
+
+// Re-hydrate every time the modal opens — covers cases where the modal stays mounted
+// (e.g. as-dropdown teleport that toggles via v-if) and `currentQuery` didn't change reference.
 watch(
-  () => props.currentQuery,
-  (q) => {
-    if (!q || typeof q !== 'object') return
-    form.value.deal_name = q.search || ''
-    form.value.stage_group = q.stage_id ? [q.stage_id] : []
-    form.value.responsible_person_id = q.responsible_id || null
-    // Add other field mappings as needed
+  () => props.modelValue,
+  (open) => {
+    if (open) {
+      nextTick(() => hydrateFormFromQuery(props.currentQuery))
+    }
   },
-  { immediate: true },
 )
 
 watch(() => props.dealType, fetchStages)
@@ -1678,6 +1734,13 @@ onMounted(async () => {
   await Promise.all([fetchUsers(), fetchStages(),fetchAreasData(),
         fetchPropertyTypesData(),
         fetchDevelopersData()])
+
+  // The modal is v-if'd in the navbar — each open is a fresh mount, so the modelValue
+  // watcher (which only fires on changes) doesn't run for the initial true state.
+  // Rehydrate after dropdown options have loaded so saved selections render correctly.
+  if (props.modelValue) {
+    hydrateFormFromQuery(props.currentQuery)
+  }
 })
 </script>
 
