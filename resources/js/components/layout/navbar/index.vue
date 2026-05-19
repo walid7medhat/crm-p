@@ -98,6 +98,26 @@
               >
                 <iconify-icon icon="lucide:search" />
               </button>
+              <div
+                v-if="resolvedActiveFilters.length"
+                class="search-filters-pills d-flex align-items-center flex-shrink-1"
+                @click.stop
+              >
+                <div
+                  v-for="f in visibleFilterPillsResolved"
+                  :key="f.id"
+                  class="search-tag d-flex align-items-center gap-2"
+                >
+                  <span>{{ f.label }}: {{ f.value }}</span>
+                  <iconify-icon icon="lucide:x" class="close-tag-icon" @click.stop="removeFilter(f)" />
+                </div>
+                <div
+                  v-if="moreFiltersCountResolved > 0"
+                  class="search-tag search-tag-more d-flex align-items-center gap-2"
+                >
+                  <span class="search-tag-more-text" @click.stop="showSearchModal = true">+{{ moreFiltersCountResolved }} more</span>
+                </div>
+              </div>
               <div class="search-input-container flex-grow-1" @click.stop="openSearchModal">
                 <b-form-input
                   :placeholder="searchInputPlaceholder"
@@ -239,6 +259,26 @@
                 >
                     <iconify-icon icon="lucide:search" />
                 </button>
+                <div
+                    v-if="resolvedActiveFilters.length"
+                    class="search-filters-pills d-flex align-items-center"
+                    @click.stop
+                >
+                    <div
+                        v-for="f in visibleFilterPillsResolved"
+                        :key="f.id"
+                        class="search-tag d-flex align-items-center gap-2"
+                    >
+                        <span>{{ f.label }}: {{ f.value }}</span>
+                        <iconify-icon icon="lucide:x" class="close-tag-icon" @click.stop="removeFilter(f)" />
+                    </div>
+                    <div
+                        v-if="moreFiltersCountResolved > 0"
+                        class="search-tag search-tag-more d-flex align-items-center gap-2"
+                    >
+                        <span class="search-tag-more-text" @click.stop="showSearchModal = true">+{{ moreFiltersCountResolved }} more</span>
+                    </div>
+                </div>
                 <div
                     class="search-input-container d-flex align-items-center"
                     :class="{ 'search-input-container-tall': searchInputFocused }"
@@ -653,28 +693,22 @@ const defaultFilter = { id: 'leads-in-progress', label: 'Leads In Progress' }
 
 function applySearchToApi() {
     const term = (search.value || '').trim()
-    
-    // إذا كان هناك نص في البحث، نرسل query مع search term
-    // وإذا كان هناك فلتر active، ندمجهما
     let query = null
-    
-    if (term) {
-        query = { search: term }
-        // إذا كان هناك lastQuery (فلاتر سابقة)، ندمجها
-        if (lastQuery.value && Object.keys(lastQuery.value).length) {
-            query = { ...lastQuery.value, search: term }
-        }
-    } else if (lastQuery.value && Object.keys(lastQuery.value).length) {
+
+    if (lastQuery.value && Object.keys(lastQuery.value).length) {
         query = { ...lastQuery.value }
+        if (term) {
+            query.search = term
+        } else {
+            delete query.search
+        }
+    } else if (term) {
+        query = { search: term }
     }
-    
-    console.log('Apply search to API - active tab:', activeKanbanTab.value)
-    console.log('Query to send:', query)
-    console.log('Active filters:', activeFilters.value)
-    
-    const payload = { 
-        query: query, 
-        activeFilters: activeFilters.value 
+
+    const payload = {
+        query,
+        activeFilters: activeFilters.value || [],
     }
     
     if (activeKanbanTab.value === 'deals') {
@@ -789,13 +823,6 @@ const searchInputPlaceholder = computed(() => {
     return 'Search by name, number, email, or anything…';
 });
 
-const hasAnySearchCriteria = computed(() => {
-    const hasTextSearch = search.value != null && String(search.value).trim() !== '';
-    const hasPills = Array.isArray(activeFilters.value) && activeFilters.value.length > 0;
-    const hasQuery = !!(lastQuery.value && Object.keys(lastQuery.value).length);
-    return hasTextSearch || hasPills || hasQuery;
-});
-
 const visibleFilterPills = computed(() => {
     const list = activeFilters.value || [];
     return list.slice(0, 2);
@@ -904,10 +931,19 @@ const resolvedActiveFilters = computed(() => {
     return buildNavbarFiltersFromQuery(lastQuery.value);
 });
 
+const visibleFilterPillsResolved = computed(() => resolvedActiveFilters.value.slice(0, 2));
+
+const moreFiltersCountResolved = computed(() => {
+    const n = resolvedActiveFilters.value.length - 2;
+    return n > 0 ? n : 0;
+});
+
 const searchBarDisplayValue = computed(() => {
     const filters = resolvedActiveFilters.value;
     if (filters.length) {
-        return filters.map((f) => `${f.label}: ${f.value}`).join(' · ');
+        const parts = filters.map((f) => `${f.label}: ${f.value}`);
+        if (parts.length <= 2) return parts.join(' · ');
+        return `${parts.slice(0, 2).join(' · ')} +${parts.length - 2} more`;
     }
     const term = search.value != null ? String(search.value).trim() : '';
     if (term) return term;
@@ -918,8 +954,15 @@ const searchBarDisplayValue = computed(() => {
 
 const searchInputDisplay = computed(() => searchBarDisplayValue.value || (search.value ?? ''));
 
+const hasAnySearchCriteria = computed(() => {
+    const hasTextSearch = search.value != null && String(search.value).trim() !== '';
+    const hasPills = resolvedActiveFilters.value.length > 0;
+    const hasQuery = !!(lastQuery.value && Object.keys(lastQuery.value).length);
+    return hasTextSearch || hasPills || hasQuery;
+});
+
 function onSearchInputUpdate(val) {
-    if ((activeFilters.value || []).length) {
+    if (resolvedActiveFilters.value.length) {
         clearSearchFilter();
     }
     search.value = val;
@@ -1007,7 +1050,7 @@ const onLeadSearch = (payload) => {
 
     if (query?.search != null && String(query.search).trim()) {
         search.value = String(query.search).trim()
-    } else if (!activeFilters.value.length) {
+    } else {
         search.value = ''
     }
     
@@ -1585,7 +1628,9 @@ onMounted(() => {
     if (e.detail) {
       activeFilters.value = e.detail.activeFilters || []
       lastQuery.value = e.detail.query
-      search.value = ''
+      if (!e.detail.query?.search) {
+        search.value = ''
+      }
     }
   })
 
@@ -1593,7 +1638,9 @@ onMounted(() => {
     if (e.detail) {
       activeFilters.value = e.detail.activeFilters || []
       lastQuery.value = e.detail.query
-      search.value = ''
+      if (!e.detail.query?.search) {
+        search.value = ''
+      }
     }
   })
 

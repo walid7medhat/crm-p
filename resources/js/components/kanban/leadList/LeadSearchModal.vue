@@ -2458,6 +2458,34 @@ function applySearch() {
             })
         }
     })
+
+    const appendFilterIfMissing = (id, queryKey, label, value) => {
+        const text = value != null ? String(value).trim() : ''
+        if (!text || activeFilters.some((f) => f.id === id)) return
+        activeFilters.push({ id, queryKey, label, value: text })
+    }
+
+    if (createdFrom || createdTo) {
+        let createdLabel = createdFrom || ''
+        if (createdFrom && createdTo && createdFrom !== createdTo) {
+            createdLabel = `${createdFrom} to ${createdTo}`
+        } else if (createdTo) {
+            createdLabel = createdTo
+        }
+        appendFilterIfMissing('created_on', 'created_at', 'Created On', createdLabel)
+    }
+
+    if (sourceParam) {
+        const sourceField = searchFieldsConfig.value.find((f) => f.id === 'source')
+        const sourceDisplay = getDisplayValue(
+            {
+                ...sourceField,
+                options: sourceOptions.value,
+            },
+            form.value.source,
+        )
+        appendFilterIfMissing('source', 'source', 'Source', sourceDisplay || String(sourceParam))
+    }
     
     const pill = sidebarPills.value.find(p => p.id === activePill.value)
     const pillData = pill ? { id: pill.id, label: pill.label } : null

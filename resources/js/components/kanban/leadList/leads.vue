@@ -1214,9 +1214,52 @@ const fetchCardSettings = async () => {
         console.error('Error fetching card settings:', error)
     }
 }
+function buildLeadSearchApiParams(q = {}) {
+    const params = {
+        ...(q.search && { search: q.search }),
+        ...(q.lead_name && { lead_name: q.lead_name }),
+        ...(q.first_name && { first_name: q.first_name }),
+        ...(q.responsible_person_id != null && q.responsible_person_id !== '' && { responsible_person_id: q.responsible_person_id }),
+        ...(q.created_at && { created_at: q.created_at }),
+        ...(q.created_from && { created_from: q.created_from }),
+        ...(q.created_to && { created_to: q.created_to }),
+        ...(q.source != null && q.source !== '' && (!Array.isArray(q.source) || q.source.length > 0) && { source: q.source }),
+        ...(q.lead_branch_source && { lead_branch_source: q.lead_branch_source }),
+        ...(q.stage_id != null && q.stage_id !== '' && { stage_id: q.stage_id }),
+        ...(q.closed !== undefined && q.closed !== null && q.closed !== '' && { closed: q.closed }),
+        ...(q.work_phone && { work_phone: q.work_phone }),
+        ...(q.email && { email: q.email }),
+        ...(q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '' && { bedrooms: q.bedrooms }),
+        ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id }),
+        ...(q.budget_from != null && q.budget_from !== '' && { budget_from: q.budget_from }),
+        ...(q.budget_to != null && q.budget_to !== '' && { budget_to: q.budget_to }),
+        ...(q.interaction_result != null && q.interaction_result !== '' && { interaction_result: q.interaction_result }),
+        ...(q.lead_type != null && q.lead_type !== '' && { lead_type: q.lead_type }),
+        ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status }),
+        ...(q.property_type_id != null && q.property_type_id !== '' && { property_type_id: q.property_type_id }),
+        ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
+        ...(q.assigned_at != null && q.assigned_at !== '' && { assigned_at: q.assigned_at }),
+        ...(q.assigned_from != null && q.assigned_from !== '' && { assigned_from: q.assigned_from }),
+        ...(q.assigned_to != null && q.assigned_to !== '' && { assigned_to: q.assigned_to }),
+        ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
+        ...(q.purpose_buying != null && q.purpose_buying !== '' && { purpose_buying: q.purpose_buying }),
+        ...(q.why_lost_lead != null && q.why_lost_lead !== '' && { status_lead: q.why_lost_lead }),
+    }
+
+    if (q.office_branch != null && q.office_branch !== '') {
+        if (Array.isArray(q.office_branch) && q.office_branch.length > 0) {
+            params.office_branch = q.office_branch
+        } else if (!Array.isArray(q.office_branch)) {
+            params.office_branch = q.office_branch
+        }
+    }
+
+    return params
+}
+
 const fetchLeads = async (immediate = false, queryOverride = undefined) => {
     if (queryOverride !== undefined) {
-        appliedSearchParams.value = queryOverride && Object.keys(queryOverride).length ? queryOverride : null
+        appliedSearchParams.value = queryOverride && Object.keys(queryOverride).length ? { ...queryOverride } : null
     }
     // Clear any pending debounce
     if (fetchDebounceTimer.value) {
@@ -1281,53 +1324,12 @@ const executeFetchLeads = async () => {
     
     try {
         const q = appliedSearchParams.value || {}
-        
+
         const params = {
             per_page: leadsPerPage.value,
-            ...(q.search && { search: q.search }),
-            ...(q.lead_name && { lead_name: q.lead_name }),
-            ...(q.first_name && { first_name: q.first_name }),
-            ...(q.responsible_person_id != null && q.responsible_person_id !== '' && { responsible_person_id: q.responsible_person_id }),
-            ...(q.created_at && { created_at: q.created_at }),
-            ...(q.created_from && { created_from: q.created_from }),
-            ...(q.created_to && { created_to: q.created_to }),
-            ...(q.source != null && q.source !== '' && (!Array.isArray(q.source) || q.source.length > 0) && { source: q.source }),
-            ...(q.lead_branch_source && { lead_branch_source: q.lead_branch_source }),
-            ...(q.stage_id != null && q.stage_id !== '' && { stage_id: q.stage_id }),
-            ...(q.closed !== undefined && q.closed !== null && q.closed !== '' && { closed: q.closed }),
-            ...(q.work_phone && { work_phone: q.work_phone }),
-            ...(q.email && { email: q.email }),
-            ...(q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '' && { bedrooms: q.bedrooms }),
-            ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id }),
-            ...(q.budget_from != null && q.budget_from !== '' && { budget_from: q.budget_from }),
-            ...(q.budget_to != null && q.budget_to !== '' && { budget_to: q.budget_to }),
-            ...(q.interaction_result != null && q.interaction_result !== '' && { interaction_result: q.interaction_result }),
-            ...(q.lead_type != null && q.lead_type !== '' && { lead_type: q.lead_type }),
-            ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status }),
-             ...(q.property_type_id != null && q.property_type_id !== '' && { property_type_id: q.property_type_id }),
-            ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
-            ...(q.assigned_at != null && q.assigned_at !== '' && { assigned_at: q.assigned_at }),
-            ...(q.assigned_from != null && q.assigned_from !== '' && { assigned_from: q.assigned_from }),
-            ...(q.assigned_to != null && q.assigned_to !== '' && { assigned_to: q.assigned_to }),
-            ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
-            ...(q.purpose_buying != null && q.purpose_buying !== '' && { purpose_buying: q.purpose_buying }),
-            ...(q.why_lost_lead != null && q.why_lost_lead !== '' && { status_lead: q.why_lost_lead }),
-            
-            // ...(q.office_branch != null && q.office_branch !== '' && { team_id: q.office_branch })
+            ...buildLeadSearchApiParams(q),
         }
-         // Handle office_branch as array for multi-select
-        if (q.office_branch != null && q.office_branch !== '') {
-            // If office_branch is an array and not empty
-            if (Array.isArray(q.office_branch) && q.office_branch.length > 0) {
-                // Send as array to backend
-                params.office_branch = q.office_branch
-            } 
-            // If it's a single value (for backward compatibility)
-            else if (!Array.isArray(q.office_branch)) {
-                params.office_branch = q.office_branch
-            }
-        }
-        
+
         const response = await api.get('/stages/kanban/stages-with-leads', {
             params,
             signal: abortController.value.signal
@@ -1480,35 +1482,7 @@ async function fetchMoreLeadsFromApi(stageId) {
         const params = {
             page: nextPage,
             per_page: leadsPerPage.value,
-            ...(q.search && { search: q.search }),
-            ...(q.lead_name && { lead_name: q.lead_name }),
-            ...(q.first_name && { first_name: q.first_name }),
-            ...(q.responsible_person_id != null && q.responsible_person_id !== '' && { responsible_person_id: q.responsible_person_id }),
-            ...(q.created_at && { created_at: q.created_at }),
-            ...(q.created_from && { created_from: q.created_from }),
-            ...(q.created_to && { created_to: q.created_to }),
-            ...(q.source != null && q.source !== '' && (!Array.isArray(q.source) || q.source.length > 0) && { source: q.source }),
-            ...(q.lead_branch_source && { lead_branch_source: q.lead_branch_source }),
-            ...(q.stage_id != null && q.stage_id !== '' && { stage_id: q.stage_id }),
-            ...(q.closed !== undefined && q.closed !== null && q.closed !== '' && { closed: q.closed }),
-            ...(q.work_phone && { work_phone: q.work_phone }),
-            ...(q.email && { email: q.email }),
-            ...(q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '' && { bedrooms: q.bedrooms }),
-            ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id }),
-            ...(q.property_type_id != null && q.property_type_id !== '' && { property_type_id: q.property_type_id }),
-            ...(q.budget_from != null && q.budget_from !== '' && { budget_from: q.budget_from }),
-            ...(q.budget_to != null && q.budget_to !== '' && { budget_to: q.budget_to }),
-            ...(q.interaction_result != null && q.interaction_result !== '' && { interaction_result: q.interaction_result }),
-            ...(q.lead_type != null && q.lead_type !== '' && { lead_type: q.lead_type }),
-            ...(q.property_status != null && q.property_status !== '' && { property_status: q.property_status }),
-            ...(q.assigned_at != null && q.assigned_at !== '' && { assigned_at: q.assigned_at }),
-            ...(q.assigned_from != null && q.assigned_from !== '' && { assigned_from: q.assigned_from }),
-            ...(q.assigned_to != null && q.assigned_to !== '' && { assigned_to: q.assigned_to }),
-            ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
-            ...(q.why_lost_lead != null && q.why_lost_lead !== '' && { status_lead: q.why_lost_lead }),
-            ...(q.purpose_buying != null && q.purpose_buying !== '' && { purpose_buying: q.purpose_buying }),
-            ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
-            
+            ...buildLeadSearchApiParams(q),
         }
         const response = await api.get(`/stages/kanban/stage/${stageId}/more-leads`, {
             params
