@@ -192,13 +192,18 @@ body.mobile-nav-open {
 }
 
 @media (max-width: 768px) {
+  #app {
+    --app-topbar-height: 5.25rem;
+  }
+
   #app main.dashboard-main > .app-navbar-spacer {
-    height: calc(var(--app-topbar-height, 5.5rem) + env(safe-area-inset-top, 0px)) !important;
-    min-height: calc(var(--app-topbar-height, 5.5rem) + env(safe-area-inset-top, 0px)) !important;
+    height: calc(var(--app-topbar-height, 5.25rem) + env(safe-area-inset-top, 0px)) !important;
+    min-height: calc(var(--app-topbar-height, 5.25rem) + env(safe-area-inset-top, 0px)) !important;
   }
 
   #app main.dashboard-main > .dashboard-main-router {
-    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    overflow-x: hidden;
   }
 }
 </style>

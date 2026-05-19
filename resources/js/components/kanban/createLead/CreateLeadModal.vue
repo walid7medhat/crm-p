@@ -11,7 +11,7 @@
         >
             <div class="create-lead-modal-content p-3">
                 <!-- Header with Close Button -->
-                <ModalHeader title="Create New Lead" @close="show = false" />
+                <ModalHeader title="Create New Lead" @close="closeModal" />
     
                 <!-- Stage Selector -->
                 <StageSelector class="px-1" v-model="form.stage_id"    :require-validation="false"
@@ -626,10 +626,31 @@
                         {{ errorMessage }}
                     </div>
                     
-                    <div class="d-flex align-items-center justify-content-end gap-3">
-                        <button class="btn-clear" @click="resetForm" :disabled="isSubmitting">Clear</button>
-                        <button 
-                            class="btn-next-step" 
+                    <div
+                        class="d-flex align-items-center gap-3"
+                        :class="isMobileModal ? 'modal-footer-actions--mobile' : 'justify-content-end'"
+                    >
+                        <button
+                            v-if="isMobileModal"
+                            type="button"
+                            class="btn-clear btn-cancel-mobile"
+                            @click="closeModal"
+                            :disabled="isSubmitting"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            v-else
+                            type="button"
+                            class="btn-clear"
+                            @click="resetForm"
+                            :disabled="isSubmitting"
+                        >
+                            Clear
+                        </button>
+                        <button
+                            type="button"
+                            class="btn-next-step"
                             @click="submitForm"
                             :disabled="isSubmitting"
                         >
@@ -643,7 +664,7 @@
     </template>
     
     <script setup>
-    import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+    import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick, inject } from 'vue'
     import { BModal, BFormInput, BFormSelect, BFormTextarea } from 'bootstrap-vue-3'
     import vSelect from 'vue-select'
     import 'vue-select/dist/vue-select.css'
@@ -664,6 +685,19 @@
     const emit = defineEmits(['update:modelValue', 'lead-created'])
     
     const show = ref(props.modelValue)
+    const kanbanIsMobile = inject('kanbanIsMobile', ref(false))
+    const isMobileViewportLocal = ref(false)
+    const isMobileModal = computed(() => Boolean(kanbanIsMobile.value) || isMobileViewportLocal.value)
+
+    const syncMobileModal = () => {
+        if (typeof window === 'undefined') return
+        isMobileViewportLocal.value = window.matchMedia('(max-width: 768px)').matches
+    }
+
+    const closeModal = () => {
+        show.value = false
+        emit('update:modelValue', false)
+    }
     const users = ref([])
     const sources = ref([])
     const isLoadingUsers = ref(false)
@@ -1056,20 +1090,10 @@ const clearClientData = () => {
     })
     
     watch(show, (val) => {
+        emit('update:modelValue', val)
         if (val) {
-            // Reset stage_id when modal opens
-            console.log('Modal opened, resetting stage_id to null')
             form.value.stage_id = null
-            
-            // Ensure the StageSelector gets the null value
-            emit('update:modelValue', null)
-            
-            // Force refresh of StageSelector
-            nextTick(() => {
-                console.log('Form stage_id after reset:', form.value.stage_id)
-            })
         } else {
-            // Clear validation errors when modal is closed
             validationErrors.value = {}
             errorMessage.value = ''
         }
@@ -1166,6 +1190,8 @@ const clearClientData = () => {
         }
     })
     onMounted(() => {
+        syncMobileModal()
+        window.addEventListener('resize', syncMobileModal, { passive: true })
         document.addEventListener('click', onDocumentClick)
         fetchUsers()
         fetchSources()
@@ -1176,6 +1202,7 @@ const clearClientData = () => {
     })
     
     onBeforeUnmount(() => {
+        window.removeEventListener('resize', syncMobileModal)
         document.removeEventListener('click', onDocumentClick)
     })
     
@@ -2584,17 +2611,31 @@ const clearClientData = () => {
         background: #f8fbff;
       }
       :deep(.header-modal-wrapper) {
+        position: sticky;
+        top: 0;
+        z-index: 5;
         margin: 0 !important;
-        padding: 4px 2px 12px !important;
+        padding: 8px 12px 12px !important;
+        background: #f8fbff;
       }
-      /* :deep(.header-close-btn-top) {
-        width: 40px;
-        height: 40px;
-        border-radius: 999px;
-        border: 1px solid #e5e7eb;
-        background: #f8fafc;
+      :deep(.header-close-btn-top) {
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 999px !important;
+        border: 1px solid #e5e7eb !important;
+        background: #f8fafc !important;
+        color: #0b0736 !important;
+        box-shadow: none !important;
+        z-index: 2 !important;
         margin-bottom: 0 !important;
-      } */
+      }
+      :deep(.header-close-btn-top iconify-icon),
+      :deep(.header-close-btn-top svg) {
+        color: #0b0736 !important;
+      }
       :deep(.header-modal-title) {
         font-size: 17px !important;
         font-weight: 700 !important;
@@ -2688,6 +2729,19 @@ const clearClientData = () => {
         border-top: 1px solid #edf2f7;
         padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
         z-index: 6;
+      }
+      .modal-footer-actions--mobile {
+        justify-content: stretch !important;
+      }
+      .modal-footer-actions--mobile .btn-clear,
+      .modal-footer-actions--mobile .btn-next-step {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+      .btn-cancel-mobile {
+        background: #fff !important;
+        border: 1px solid #d1d9e6 !important;
+        color: #0b0736 !important;
       }
       .btn-clear,
       .btn-next-step {

@@ -34,18 +34,34 @@
       </video>
 
       <style>
-        .crm-bg-video{
+        html, body {
+          margin: 0;
+          padding: 0;
+          overflow-x: hidden;
+          max-width: 100vw;
+        }
+        .crm-bg-video {
           position: fixed;
           inset: 0;
           width: 100%;
           height: 100%;
+          min-width: 100%;
+          min-height: 100%;
           object-fit: cover;
+          object-position: center center;
           z-index: -1;
           pointer-events: none;
         }
-        #app{
+        #app {
           position: relative;
           z-index: 1;
+          min-height: 100vh;
+          min-height: 100dvh;
+        }
+        @media (max-width: 768px) {
+          .crm-bg-video {
+            object-position: center top;
+          }
         }
       </style>
 

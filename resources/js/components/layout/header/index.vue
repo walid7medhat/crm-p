@@ -1,27 +1,13 @@
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isMobileViewport && isMobileMenuOpen"
-      class="mobile-nav-overlay"
-      aria-hidden="true"
-      @click="closeSidebar"
-    />
-  </Teleport>
-
   <aside
+    v-if="!isMobileViewport"
     class="sidebar"
     :class="{
-      'sidebar-open': isMobileViewport ? isMobileMenuOpen : isMobileOpen,
-      'sidebar--mobile-drawer': isMobileViewport,
-      active: !isMobileViewport && isSidebarActive,
+      active: isSidebarActive,
     }"
     @mouseenter="sidebarHover = true"
     @mouseleave="sidebarHover = false"
   >
-    <!-- Mobile Close -->
-    <button type="button" class="sidebar-close-btn" @click="closeSidebar">
-      <iconify-icon icon="radix-icons:cross-2" />
-    </button>
     <div class="sidebar-toggle-container sidebar-header d-flex align-items-center" :class="{ 'sidebar-header--open': !isSidebarActive, 'sidebar-header--closed': isSidebarActive }">
       <div
         class="sidebar-toggle-wrap"
@@ -884,18 +870,9 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .mobile-sidebar-dock {
     position: fixed;
-    left: 8px;
-    right: 8px;
-    bottom: calc(2px + env(safe-area-inset-bottom, 0px));
     z-index: 1200;
-    height: 54px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 5px 8px;
-    border-radius: 18px;
-    background: #0B0736;
-    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.28);
     overflow-x: auto;
     overflow-y: visible;
     -webkit-overflow-scrolling: touch;
@@ -921,20 +898,33 @@ onUnmounted(() => {
   }
 
   .mobile-sidebar-dock__item.is-active {
-    background: rgba(245, 158, 11, 0.2);
-    color: #f5b749;
+    background: #ffffff;
+    color: #0b0736;
+    box-shadow: 0 2px 10px rgba(11, 7, 54, 0.22);
+  }
+
+  .mobile-sidebar-dock__item.is-active .mobile-sidebar-dock__icon,
+  .mobile-sidebar-dock__item.is-active .mobile-sidebar-dock__label {
+    color: #0b0736;
+  }
+
+  .mobile-sidebar-dock__item.is-active :deep(iconify-icon),
+  .mobile-sidebar-dock__item.is-active :deep(svg) {
+    color: #0b0736 !important;
   }
 
   .mobile-sidebar-dock__icon {
     font-size: 14px;
     line-height: 1;
+    color: inherit;
   }
 
   .mobile-sidebar-dock__label {
     font-size: 8px;
-    font-weight: 600;
-    line-height: 1;
+    font-weight: 700;
+    line-height: 1.1;
     white-space: nowrap;
+    color: inherit;
   }
 
   .mobile-sidebar-dock__item.is-chat .mobile-sidebar-dock__icon {
@@ -1324,45 +1314,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  aside.sidebar.sidebar--mobile-drawer {
-    display: flex !important;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    margin: 0 !important;
-    width: min(288px, 88vw) !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    border-radius: 0 16px 16px 0 !important;
-    transform: translate3d(-110%, 0, 0);
-    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 2400 !important;
-    overflow: hidden;
-  }
-
-  aside.sidebar.sidebar--mobile-drawer.sidebar-open {
-    transform: translate3d(0, 0, 0);
-  }
-
-  aside.sidebar.sidebar--mobile-drawer .sidebar-close-btn {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
-    z-index: 2;
-  }
-
-  aside.sidebar.sidebar--mobile-drawer .sidebar-menu-area {
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  }
-
-  aside.sidebar.sidebar--mobile-drawer .sidebar-menu li a {
-    min-height: 44px;
-  }
-
   .mobile-sidebar-dock {
     height: 58px;
     padding: 6px 10px;
@@ -1438,13 +1389,4 @@ onUnmounted(() => {
   }
 }
 
-@media (min-width: 769px) {
-  .mobile-nav-overlay {
-    display: none !important;
-  }
-
-  aside.sidebar.sidebar--mobile-drawer {
-    transform: none;
-  }
-}
 </style>

@@ -1,0 +1,247 @@
+/**
+ * Mobile layout (320px–768px). Desktop (769px+) unchanged.
+ */
+
+@media (max-width: 768px) {
+  html,
+  body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  #app {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  /* —— Hide desktop sidebar drawer; navigation uses bottom dock only —— */
+  aside.sidebar,
+  aside.sidebar.sidebar--mobile-drawer,
+  aside.sidebar.sidebar-open {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transform: none !important;
+  }
+
+  .mobile-nav-overlay {
+    display: none !important;
+  }
+
+  .sidebar-mobile-toggle {
+    display: none !important;
+  }
+
+  body.overlay-active::after,
+  body.mobile-nav-open {
+    overflow-x: hidden;
+  }
+
+  body.mobile-nav-open {
+    touch-action: auto;
+  }
+
+  /* Full-width main content (no sidebar offset) */
+  main.dashboard-main,
+  main.dashboard-main.active {
+    margin: 0 !important;
+    margin-inline-start: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    min-height: 100dvh;
+    box-sizing: border-box;
+  }
+
+  .dashboard-main-body,
+  .dashboard-main-body-inner {
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+
+  #app main.dashboard-main > .dashboard-main-router {
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* —— Video background (auth + app shell) —— */
+  .crm-bg-video {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-width: 100%;
+    min-height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    z-index: -1;
+    pointer-events: none;
+    transform: translateZ(0);
+  }
+
+  /* Auth shell renders its own video; hide duplicate from welcome.blade.php */
+  html:has(#app main.auth-page-main) .crm-bg-video {
+    display: none;
+  }
+
+  html:has(#app main.auth-page-main) body {
+    overflow: hidden;
+    max-height: 100dvh;
+  }
+
+  /* —— Bottom dock (floating pill) —— */
+  .mobile-sidebar-dock {
+    left: 10px !important;
+    right: 10px !important;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 8px 10px !important;
+    height: auto !important;
+    min-height: 62px !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    background: linear-gradient(
+      135deg,
+      rgba(11, 7, 54, 0.95) 0%,
+      rgba(115, 62, 135, 0.9) 100%
+    ) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(2, 6, 23, 0.35) !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    justify-content: space-around;
+    gap: 4px;
+  }
+
+  .mobile-sidebar-dock__item,
+  .mobile-sidebar-dock__btn {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 76px;
+    min-height: 46px;
+    padding: 5px 4px;
+    gap: 4px;
+    color: rgba(255, 255, 255, 0.92) !important;
+    border-radius: 14px;
+    text-decoration: none;
+  }
+
+  .mobile-sidebar-dock__icon {
+    font-size: 20px !important;
+    line-height: 1;
+    color: inherit !important;
+  }
+
+  .mobile-sidebar-dock__label {
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.1;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    white-space: nowrap;
+    color: inherit !important;
+  }
+
+  .mobile-sidebar-dock__item.is-active,
+  .mobile-sidebar-dock__btn.is-active {
+    background: #ffffff !important;
+    color: #0b0736 !important;
+    box-shadow: 0 2px 12px rgba(11, 7, 54, 0.25);
+  }
+
+  .mobile-sidebar-dock__item.is-active .mobile-sidebar-dock__label,
+  .mobile-sidebar-dock__item.is-active .mobile-sidebar-dock__icon,
+  .mobile-sidebar-dock__btn.is-active .mobile-sidebar-dock__label,
+  .mobile-sidebar-dock__btn.is-active .mobile-sidebar-dock__icon {
+    color: #0b0736 !important;
+  }
+
+  .mobile-sidebar-dock__item.is-active :deep(iconify-icon),
+  .mobile-sidebar-dock__item.is-active :deep(svg),
+  .mobile-sidebar-dock__btn.is-active :deep(iconify-icon),
+  .mobile-sidebar-dock__btn.is-active :deep(svg) {
+    color: #0b0736 !important;
+  }
+
+  /* —— Kanban page overflow —— */
+  .kanban-outer--mobile {
+    min-height: 0;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .kanban-wrapper {
+    min-width: 0 !important;
+  }
+
+  /* —— Chat FAB above bottom dock —— */
+  .chat-floating-btn {
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 12px !important;
+  }
+
+  .mobile-create-new-fixed {
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    z-index: 1100;
+  }
+
+  /* All modules: compact mobile header, no hamburger */
+  .navbar-header .sidebar-mobile-toggle {
+    display: none !important;
+  }
+
+  #app main.dashboard-main:has(.navbar-header--mobile-compact):not(:has(.navbar-header--kanban-mobile)) {
+    --app-topbar-height: 3.75rem;
+  }
+
+  #app main.dashboard-main:has(.navbar-header--mobile-compact):not(:has(.navbar-header--kanban-mobile)) > .app-navbar-spacer {
+    min-height: calc(3.75rem + env(safe-area-inset-top, 0px)) !important;
+    height: calc(3.75rem + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  .dashboard-main-body .top-search-toolbar {
+    margin-top: 0 !important;
+    margin-bottom: 8px !important;
+  }
+
+  .dashboard-main-body .container-fluid.mt-4 {
+    margin-top: 0.35rem !important;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  #app main.dashboard-main:has(.navbar-header--kanban-mobile) {
+    --app-topbar-height: 7.75rem;
+  }
+
+  #app main.dashboard-main:has(.navbar-header--kanban-mobile) > .app-navbar-spacer {
+    min-height: calc(7.75rem + env(safe-area-inset-top, 0px)) !important;
+    height: calc(7.75rem + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  /* Create is in the header row — hide duplicate FAB */
+  .kanban-outer--mobile .mobile-create-new-fixed {
+    display: none !important;
+  }
+
+  .auth-landing__video {
+    object-position: center top;
+  }
+}
+
+@media (max-width: 390px) {
+  .mobile-sidebar-dock__label {
+    font-size: 8px;
+  }
+
+  .mobile-sidebar-dock__icon {
+    font-size: 16px !important;
+  }
+}

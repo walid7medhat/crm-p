@@ -3931,6 +3931,13 @@ fetchProjects()
 
 /* Mobile-first simplified search/filter UX */
 @media (max-width: 768px) {
+  .listing-search-shell {
+    padding: 10px 12px 12px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+    max-width: 100% !important;
+  }
+
   .listing-headline {
     display: none;
   }
@@ -3938,6 +3945,13 @@ fetchProjects()
   .listing-main-search {
     position: relative;
     width: 100%;
+    margin-bottom: 8px;
+  }
+
+  :deep(.listing-main-location .vs__dropdown-toggle) {
+    min-height: 38px !important;
+    padding-left: 34px !important;
+    font-size: 13px !important;
   }
 
   .listing-main-search .listing-main-location {
@@ -4000,9 +4014,9 @@ fetchProjects()
   }
 
   .mobile-quick-chips {
-    margin-top: 8px;
+    margin-top: 6px;
     display: flex;
-    gap: 8px;
+    gap: 6px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -4013,7 +4027,7 @@ fetchProjects()
     background: #fff;
     color: #334155;
     border-radius: 999px;
-    padding: 6px 10px;
+    padding: 5px 9px;
     font-size: 11px;
     font-weight: 600;
     white-space: nowrap;

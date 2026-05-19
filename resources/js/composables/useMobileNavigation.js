@@ -16,10 +16,9 @@ export function syncMobileViewport() {
 }
 
 export function openMobileMenu() {
+  /* Mobile uses bottom dock only; desktop sidebar drawer is not shown ≤768px */
   if (!isMobileViewport.value) return;
-  isMobileMenuOpen.value = true;
-  document.body.classList.add('overlay-active', 'mobile-nav-open');
-  document.querySelector('aside.sidebar')?.classList.add('sidebar-open');
+  isMobileMenuOpen.value = false;
 }
 
 export function closeMobileMenu() {

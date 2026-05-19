@@ -18,15 +18,6 @@
             </div>
         </div>
 
-        <button
-            v-if="kanbanIsMobile"
-            type="button"
-            class="mobile-create-new-fixed"
-            @click="onMobileColumnAddLead"
-        >
-            <span class="mobile-create-new-fixed__plus">+</span>
-            <span class="mobile-create-new-fixed__text">Create New Lead</span>
-        </button>
 
         <LeadAnalyticsShortcuts
             :metrics="leadAnalyticsMetrics"
@@ -4028,10 +4019,11 @@ const $showNotification = (message, type = 'info') => {
 /* —— Mobile Kanban (injected kanbanIsMobile) —— */
 .kanban-outer--mobile {
     height: auto;
-    min-height: calc(100dvh - 220px);
-    padding-bottom: 96px;
+    min-height: 0;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
     overflow-x: hidden;
     max-width: 100vw;
+    box-sizing: border-box;
 }
 
 .kanban-outer--mobile .lead-analytics-row {
@@ -4130,7 +4122,7 @@ const $showNotification = (message, type = 'info') => {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 8px 10px 8px;
+    margin: 6px 8px 8px;
     padding: 10px 12px;
     background: #fff;
     border-radius: 12px;

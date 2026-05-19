@@ -21,6 +21,7 @@ import 'vue-slick-carousel/dist/vue-slick-carousel-theme.css'
 import 'vue-select/dist/vue-select.css'
 import '../css/vue-select-overrides.css'
 import '../css/form-placeholders.css'
+import '../css/mobile-layout.css'
 
 const addCSS = (url) => {
   const link = document.createElement('link')

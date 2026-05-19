@@ -1,7 +1,7 @@
 <template>
     <div class="header-modal-wrapper d-flex justify-content-between align-items-center mx-3 border-bottom">
         <span class="header-modal-title">{{ title }}</span>
-        <button class="header-close-btn-top" @click="$emit('close')">
+        <button type="button" class="header-close-btn-top" aria-label="Close" @click="$emit('close')">
             <iconify-icon icon="lucide:x"></iconify-icon>
         </button>
     </div>
@@ -65,24 +65,40 @@ defineEmits(['close'])
 
 @media (max-width: 768px) {
     .header-modal-wrapper {
+        position: relative;
         margin: 0 !important;
-        padding: 4px 2px 10px !important;
+        padding: 8px 12px 12px !important;
         border-bottom: 1px solid #eef2f7;
     }
 
     .header-modal-title {
         font-size: 18px;
         font-weight: 700;
+        flex: 1 1 auto;
+        min-width: 0;
+        padding-right: 8px;
     }
 
     .header-close-btn-top {
-        width: 36px;
-        height: 36px;
+        position: relative;
+        top: auto;
+        right: auto;
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
         border-radius: 999px;
         background: #f8fafc;
         border: 1px solid #e5e7eb;
         margin-bottom: 0;
-        font-size: 18px;
+        font-size: 20px;
+        color: #0b0736;
+        box-shadow: none;
+        z-index: 2;
+    }
+
+    .header-close-btn-top :deep(iconify-icon),
+    .header-close-btn-top :deep(svg) {
+        color: #0b0736 !important;
     }
 }
 </style>
