@@ -476,7 +476,7 @@ const formatDateShort = (dateString) => {
     align-items: center;
     gap: 8px;
     padding: 10px 20px;
-    background: #01062C;
+    background: #0B0736;
     color: #FFFFFF;
     border: none;
     border-radius: 8px;

@@ -1256,7 +1256,7 @@ onBeforeUnmount(() => {
 .property-documents-heading {
   font-size: 16px;
   font-weight: 600;
-  color: #01062c;
+  color: #0B0736;
   margin-bottom: 10px;
 }
 
@@ -1287,7 +1287,7 @@ onBeforeUnmount(() => {
 .info-value {
   font-size: 14px !important;
   font-weight: 500;
-  color: #01062C;
+  color: #0B0736;
 }
 .form-label-custom {
   font-size: 12px !important;
@@ -1370,7 +1370,7 @@ onBeforeUnmount(() => {
 }
 .section-edit-btn:hover {
   background: #fef3c7;
-  border-color: #faa300;
+  border-color: #733E87;
 }
 .input-group-text {
   background: #f8fafc;
@@ -1567,7 +1567,7 @@ onBeforeUnmount(() => {
 
 .property-card-edit-bottom-bar .edit-bar-cancel {
   background: #f4f4f4;
-  color: #01062c;
+  color: #0B0736;
 }
 
 .property-card-edit-bottom-bar .edit-bar-cancel:hover {
@@ -1575,7 +1575,7 @@ onBeforeUnmount(() => {
 }
 
 .property-card-edit-bottom-bar .edit-bar-save {
-  background: #01062c;
+  background: #0B0736;
   color: #fff;
 }
 

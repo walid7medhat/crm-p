@@ -4731,7 +4731,7 @@ onMounted(async () => {
 .modal-title {
   font-weight: 500;
   font-size: 14px;
-  color: #01062C;
+  color: #0B0736;
 }
 
 .close-btn {
@@ -4750,10 +4750,10 @@ onMounted(async () => {
     align-items: center;
     border-width: 1px;
     border-style: solid;
-    border-color: #4fa5f7;
+    border-color: rgba(115, 62, 135, 0.75);
     border-image: initial;
     border-radius: 999px;
-    background: linear-gradient(90deg, #2f88ef, #5db8ff);
+    background: var(--gradient-crm, linear-gradient(135deg, #0b0736 0%, #733e87 100%));
     padding: 0;
     transition: filter .2s;
 }
@@ -4806,7 +4806,7 @@ onMounted(async () => {
 
 .section-collapsible-header.has-required {
   background: #fff8eb;
-  border-left: 3px solid #faa300;
+  border-left: 3px solid #733E87;
 }
 
 .collapse-icon {
@@ -4818,7 +4818,7 @@ onMounted(async () => {
 .section-title {
   font-size: 13px !important;
   font-weight: 600;
-  color: #01062c;
+  color: #0B0736;
   margin: 0;
 }
 
@@ -4827,7 +4827,7 @@ onMounted(async () => {
   font-size: 10px;
   padding: 2px 8px;
   border-radius: 12px;
-  background: #faa300;
+  background: #733E87;
   color: white;
   font-weight: 500;
 }
@@ -4977,14 +4977,14 @@ textarea.is-invalid {
   height: 40px;
   border-radius: 100px;
   font-size: 14px;
-  color: #01062C;
+  color: #0B0736;
   cursor: pointer;
     text-align: center;
   justify-content: center;
 }
 
 .btn-next-step {
-  background: #01062C;
+  background: #0B0736;
   border: none;
   width: 96px;
   height: 40px;
@@ -5088,7 +5088,7 @@ textarea.is-invalid {
 
 .section-collapsible-header.has-required {
   background: #fff8eb;
-  border-left: 3px solid #faa300;
+  border-left: 3px solid #733E87;
 }
 </style>
 <style>

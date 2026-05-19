@@ -909,15 +909,15 @@ export default {
     width: 14px;
     left: 2px;
     bottom: 4px;
-    background-color: #01062C;
+    background-color: #0B0736;
     transition: .4s;
     border-radius: 50%;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 .toggle-input:checked + .toggle-slider {
-    background-color: #01062C;
-    border-color: #01062C;
+    background-color: #0B0736;
+    border-color: #0B0736;
 }
 
 .toggle-input:checked + .toggle-slider:before {

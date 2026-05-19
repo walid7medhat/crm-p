@@ -511,7 +511,7 @@ onUnmounted(() => {
   font-size: 28px;
   font-weight: bold;
   margin-bottom: 8px;
-  color: #01062d;
+  color: #0B0736;
 }
 
 .stat-card p {

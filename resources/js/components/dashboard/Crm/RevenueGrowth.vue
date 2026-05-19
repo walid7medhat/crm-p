@@ -26,7 +26,7 @@
   
   // Chart colors
   const chartId = 'revenue-chart'
-  const chartColor = '#487fff'
+  const chartColor = '#733E87'
   
   const createChart = () => {
     const options = {

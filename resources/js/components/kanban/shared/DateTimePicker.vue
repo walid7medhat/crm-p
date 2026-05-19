@@ -1,4 +1,5 @@
 <template>
+    <Teleport to="body">
     <div v-if="show" class="date-time-picker-overlay" @click.self="handleCancel">
         <div class="date-time-picker-modal" :class="{ 'is-dob-layout': dateOnly && dobLayout }" @click.stop>
             <!-- Month / Year (calendar nav) -->
@@ -142,6 +143,7 @@
             </div>
         </div>
     </div>
+    </Teleport>
 </template>
 
 <script setup>
@@ -696,7 +698,7 @@ const handleCancel = () => {
 .month-year-text {
     font-size: 16px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
     text-align: center;
     flex: 1;
     letter-spacing: -0.2px;
@@ -737,7 +739,7 @@ const handleCancel = () => {
     justify-content: center;
     font-size: 14px;
     font-weight: 400;
-    color: #01062C;
+    color: #0B0736;
     cursor: pointer;
     border-radius: 50%;
     transition: all 0.2s;
@@ -755,20 +757,20 @@ const handleCancel = () => {
 }
 
 .calendar-day.selected {
-    background: #FAA300;
+    background: #733E87;
     color: #fff;
     font-weight: 500;
     border-radius: 50%;
 }
 
 .calendar-day.selected:hover {
-    background: #FAA300;
+    background: #733E87;
     opacity: 0.9;
 }
 
 .calendar-day.today:not(.selected) {
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .calendar-day.is-future-dob {
@@ -806,7 +808,7 @@ const handleCancel = () => {
     padding: 8px 32px 8px 12px;
     font-size: 14px;
     font-weight: 400;
-    color: #01062C;
+    color: #0B0736;
     cursor: pointer;
     min-width: 60px;
     text-align: center;
@@ -819,7 +821,7 @@ const handleCancel = () => {
 
 .time-dropdown:focus {
     outline: none;
-    border-color: #FAA300;
+    border-color: #733E87;
     box-shadow: 0 0 0 3px rgba(250, 163, 0, 0.1);
 }
 
@@ -836,7 +838,7 @@ const handleCancel = () => {
 .time-separator {
     font-size: 18px;
     font-weight: 500;
-    color: #01062C;
+    color: #0B0736;
     padding: 0 4px;
 }
 
@@ -869,7 +871,7 @@ const handleCancel = () => {
     border-radius: 8px;
     font-size: 14px;
     font-weight: 400;
-    color: #01062C;
+    color: #0B0736;
     cursor: pointer;
     transition: all 0.2s;
     min-width: 70px;

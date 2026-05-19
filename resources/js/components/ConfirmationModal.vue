@@ -146,7 +146,7 @@ defineExpose({
 .confirmation-modal-title {
     font-size: 18px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
     margin: 0;
     font-family: 'Montserrat', sans-serif;
 }
@@ -166,7 +166,7 @@ defineExpose({
 
 .confirmation-modal-close:hover {
     background: #F1F5F9;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .confirmation-modal-body {

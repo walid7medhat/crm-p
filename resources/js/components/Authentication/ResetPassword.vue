@@ -154,7 +154,7 @@ export default {
 
 <style scoped>
 .login {
-  background-color: #01062C !important;
+  background-color: #0B0736 !important;
   height: 100vh;
   width: 100%;
   display: flex;
@@ -226,7 +226,7 @@ export default {
   background-color: rgba(255, 255, 255, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px !important;
-  color: #01062C !important;
+  color: #0B0736 !important;
   font-size: 14px;
 }
 
@@ -235,13 +235,13 @@ export default {
 }
 
 .icon-field input:focus {
-  border-color: #01062C !important;
+  border-color: #0B0736 !important;
   box-shadow: 0 0 0 3px rgba(1, 6, 44, 0.1) !important;
 }
 
 /* زر تسجيل الدخول */
 .btn-primary {
-  background-color: #01062C !important;
+  background-color: #0B0736 !important;
   border: none !important;
   border-radius: 8px !important;
   font-weight: 600;
@@ -263,8 +263,8 @@ export default {
 
 /* Remember me checkbox */
 .form-check-input:checked {
-  background-color: #01062C;
-  border-color: #01062C;
+  background-color: #0B0736;
+  border-color: #0B0736;
 }
 
 .form-check-label {
@@ -274,7 +274,7 @@ export default {
 
 /* الروابط */
 .text-primary-600 {
-  color: #01062C !important;
+  color: #0B0736 !important;
   font-weight: 600;
   text-decoration: none;
 }
@@ -298,7 +298,7 @@ export default {
 }
 
 .toggle-password:hover {
-  color: #01062C;
+  color: #0B0736;
 }
 
 /* الشعار */

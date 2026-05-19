@@ -77,16 +77,16 @@ export default {
             opacity: 0.1,
           },
         },
-        colors: ['#FAA300'],
+        colors: ['#733E87'],
         dataLabels: { enabled: false },
         stroke: {
           curve: 'smooth',
-          colors: ['#FAA300'],
+          colors: ['#733E87'],
           width: 3,
         },
         markers: {
           size: 5,
-          colors: ['#FAA300'],
+          colors: ['#733E87'],
           strokeColors: '#fff',
           strokeWidth: 2,
           hover: { 
@@ -113,7 +113,7 @@ export default {
           },
           marker: {
             show: true,
-            fillColors: ['#FAA300']
+            fillColors: ['#733E87']
           },
           style: {
             fontSize: '12px',
@@ -187,7 +187,7 @@ export default {
             width: 1,
             position: 'back',
             stroke: {
-              color: '#FAA300',
+              color: '#733E87',
               width: 1,
               dashArray: 0
             },
@@ -214,12 +214,12 @@ export default {
             colorStops: [
               {
                 offset: 0,
-                color: '#FAA300',
+                color: '#733E87',
                 opacity: 0.4
               },
               {
                 offset: 100,
-                color: '#FAA300',
+                color: '#733E87',
                 opacity: 0.1
               }
             ]
@@ -252,20 +252,20 @@ export default {
 <style scoped>
 /* يمكن إضافة ألوان مخصصة إذا لزم الأمر */
 :deep(.apexcharts-tooltip) {
-  border-color: #FAA300 !important;
+  border-color: #733E87 !important;
 }
 
 :deep(.apexcharts-tooltip-title) {
-  background-color: #FAA300 !important;
+  background-color: #733E87 !important;
   color: white !important;
-  border-color: #FAA300 !important;
+  border-color: #733E87 !important;
 }
 
 :deep(.apexcharts-xcrosshairs) {
-  stroke: #FAA300 !important;
+  stroke: #733E87 !important;
 }
 
 :deep(.apexcharts-ycrosshairs) {
-  stroke: #FAA300 !important;
+  stroke: #733E87 !important;
 }
 </style>

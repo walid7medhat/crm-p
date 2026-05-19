@@ -42,7 +42,7 @@
       const customerData = ref([
         { label: 'Total', value: 500, color: '#45B369' },
         { label: 'New', value: 500, color: '#FF9F29' },
-        { label: 'Active', value: 1500, color: '#487FFF' }
+        { label: 'Active', value: 1500, color: '#733E87' }
       ]);
   
       // Timeframe Selection

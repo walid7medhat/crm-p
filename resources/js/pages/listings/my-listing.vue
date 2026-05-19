@@ -1207,13 +1207,13 @@ const fetchProperties = async (filters = {}, page = 1) => {
 }
 
 .status-btn:hover {
-  border-color: #faa300;
-  color: #faa300;
+  border-color: #733E87;
+  color: #733E87;
   background: #fff9ef;
 }
 
 .status-btn.active {
-  background: linear-gradient(135deg, #faa300 0%, #ffb224 100%);
+  background: linear-gradient(135deg, #733E87 0%, #ffb224 100%);
   border-color: #f1a10a;
   color: white;
   box-shadow: 0 4px 10px rgba(250, 163, 0, 0.22);
@@ -1266,7 +1266,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
 .view-more-btn {
   display: inline-block;
   text-align: center;
-  background: #FAA300;
+  background: #733E87;
   color: #ffffff;
   font-weight: 500;
   border-radius: 10px;
@@ -1524,7 +1524,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
 }
 .badge-occupancy_status{
     background: #EDEBEB !important;
-    color: #01062C !important;
+    color: #0B0736 !important;
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 0.7rem;
@@ -1534,7 +1534,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
 
 
 .status-badge {
-   background: #01062d ;
+   background: #0B0736 ;
   color: white;
   padding: 4px 8px;
   border-radius: 6px;
@@ -1552,7 +1552,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
 
 .property-listed-date i {
   font-size: 0.8rem;
-  color: #FAA300;
+  color: #733E87;
 }
 .justify-between{
     justify-content:space-between;

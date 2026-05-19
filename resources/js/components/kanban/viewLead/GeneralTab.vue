@@ -560,7 +560,7 @@ onMounted(() => {
 .modal-title {
     font-size: 14px;
     font-weight: 400;
-    color: #01062C;
+    color: #0B0736;
 }
 
 /* Activity/Comment Toggle Styles */
@@ -654,7 +654,7 @@ onMounted(() => {
 }
 
 .btn-toggle.active {
-    background: #01062C;
+    background: #0B0736;
     color: #fff;
     font-weight: 400;
     box-shadow: 0px 4px 8px rgba(1, 6, 44, 0.2);
@@ -696,7 +696,7 @@ onMounted(() => {
 
 .edit-bar-cancel {
     background: #F4F4F4;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .edit-bar-cancel:hover {
@@ -704,7 +704,7 @@ onMounted(() => {
 }
 
 .edit-bar-save {
-    background: #01062C;
+    background: #0B0736;
     color: #fff;
 }
 

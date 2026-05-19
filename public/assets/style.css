@@ -330,7 +330,7 @@
 
   --primary-500: #458EFF;
 
-  --primary-600: #487FFF;
+  --primary-600: #733E87;
 
   --primary-700: #486CEA;
 
@@ -476,7 +476,7 @@
 
   --lilac-500: #b66dff;
 
-  --lilac-600: #8252E9;
+  --lilac-600: #733E87;
 
   --lilac-700: #6f37e6;
 
@@ -544,7 +544,7 @@
 
   --indigo: #7F27FF;
 
-  --purple: #8252E9;
+  --purple: #733E87;
 
   --red: #E30A0A;
 
@@ -7226,7 +7226,7 @@ html[data-theme=dark] .bg-warning-light-two {
 
 .stroke-blue {
 
-  stroke: #487FFF !important;
+  stroke: #733E87 !important;
 
 }
 
@@ -31184,7 +31184,7 @@ td.fc-header-center {
 
   background: none;
 
-  color: #FAA300;
+  color: #733E87;
 
 }
 
@@ -31396,11 +31396,11 @@ td.fc-header-center {
 
 .btn-primary{
 
-  background-color: #FAA300;
+  background-color: #733E87;
 
   color: #FFFFFF;
 
-  border: 1px solid #FAA300;
+  border: 1px solid #733E87;
 
 }
 
@@ -31437,23 +31437,23 @@ main.dashboard-main > .row>* {
     margin-bottom: 0  !important;
 }
 .card-footer.text-end .btn.btn-outline-primary {
-    background: #01062C;
-    border-color: #01062C;
+    background: #0B0736;
+    border-color: #0B0736;
     color: #fff;
 }
 .card-footer.text-end .btn.btn-outline-primary:hover {
-    border-color: #FAA300 !important;
+    border-color: #733E87 !important;
     background: transparent !important;
-    color:#FAA300  !important;
+    color:#733E87  !important;
 }
 .card-footer.text-end .btn.btn-primary:hover {
-    border-color: #FAA300 !important;
-    background: #FAA300 !important;
+    border-color: #733E87 !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 .btn-primary:hover{
-  border-color: #01062C !important;
-    background: #01062C !important;
+  border-color: #0B0736 !important;
+    background: #0B0736 !important;
     color: #fff !important;
 }
 
@@ -31483,7 +31483,7 @@ main.dashboard-main > .row>* {
 .btn-primary:disabled{
     border-color: #EDEBEB !important;
     background: #F3F3F3 !important;
-    color: #01062C !important;
+    color: #0B0736 !important;
 }
 
 .dashboard-main-body>.row>.col {

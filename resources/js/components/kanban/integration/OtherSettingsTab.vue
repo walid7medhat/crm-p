@@ -187,7 +187,7 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
     font-family: 'Montserrat', sans-serif;
     font-size: 16px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
     margin: 0 0 24px 0;
 }
 
@@ -222,7 +222,7 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 
 .form-input:focus {
     outline: none;
-    border-color: #01062C;
+    border-color: #0B0736;
     box-shadow: 0 0 0 3px rgba(1, 6, 44, 0.1);
 }
 
@@ -264,7 +264,7 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 }
 
 .toggle-switch.active {
-    background-color: #01062C;
+    background-color: #0B0736;
 }
 
 .toggle-slider {
@@ -293,7 +293,7 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 }
 
 .toggle-label.active {
-    color: #01062C;
+    color: #0B0736;
     font-weight: 600;
 }
 
@@ -312,7 +312,7 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 }
 
 .keyword-label {
-    color: #01062C;
+    color: #0B0736;
     font-weight: 600;
     margin-bottom: 8px;
 }
@@ -329,7 +329,7 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 
 .keyword-input {
     padding-right: 40px;
-    border-color: #01062C;
+    border-color: #0B0736;
     background-color: #FFFFFF;
 }
 
@@ -399,12 +399,12 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 }
 
 .checkbox-container:hover .checkmark {
-    border-color: #FAA300;
+    border-color: #733E87;
 }
 
 .custom-checkbox:checked ~ .checkmark {
-    background-color: #FAA300;
-    border-color: #FAA300;
+    background-color: #733E87;
+    border-color: #733E87;
 }
 
 .checkmark:after {

@@ -861,7 +861,7 @@ onMounted(() => {
 }
 
 .clear-search-icon {
-    color: #FAA300;
+    color: #733E87;
     font-size: 16px;
     cursor: pointer;
     padding: 2px;
@@ -1234,7 +1234,7 @@ onMounted(() => {
     width: 3rem;
     height: 3rem;
     border-width: 0.3em;
-    color: #FAA300;
+    color: #733E87;
 }
 
 /* Empty State */

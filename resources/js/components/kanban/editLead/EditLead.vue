@@ -1597,12 +1597,12 @@ defineExpose({
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #FAA300 !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: #FAA300;
+    background: #733E87;
     color: #fff;
 }
 
@@ -1689,7 +1689,7 @@ defineExpose({
 .additional-check-label {
     font-size: 12px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
     flex: 1;
 }
 
@@ -1720,7 +1720,7 @@ defineExpose({
     gap: 8px;
     font-family: 'Montserrat';
     font-size: 12px;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .selected-pill-label {
@@ -1842,12 +1842,12 @@ defineExpose({
 }
 
 :deep(.custom-v-select-inline .vs__dropdown-option--highlight) {
-    background: #FAA300 !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
 :deep(.custom-v-select-inline .vs__dropdown-option--selected) {
-    background: #FAA300;
+    background: #733E87;
     color: #fff;
 }
 
@@ -1920,7 +1920,7 @@ defineExpose({
     padding: 5px 20px;
     border-radius: 100px;
     font-size: 14px;
-    color: #01062C;
+    color: #0B0736;
     cursor: pointer;
 }
 
@@ -1929,7 +1929,7 @@ defineExpose({
 }
 
 .btn-save {
-    background: #01062C;
+    background: #0B0736;
     border: none;
     padding: 5px 20px;
     border-radius: 100px;
@@ -1969,7 +1969,7 @@ defineExpose({
 
 .change-person-icon {
     font-size: 14px;
-    color: #FAA300;
+    color: #733E87;
     transition: color 0.2s;
 }
 
@@ -1996,7 +1996,7 @@ defineExpose({
     font-weight: 500;
     font-style: Medium;
     font-size: 14px;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .search-input-wrapper {
@@ -2017,7 +2017,7 @@ defineExpose({
 .search-icon {
     position: absolute;
     right: 15px;
-    color: #FAA300;
+    color: #733E87;
     font-size: 20px;
 }
 
@@ -2067,7 +2067,7 @@ defineExpose({
 .user-item-name {
     font-weight: 600;
     font-size: 14px;
-    color: #01062C;
+    color: #0B0736;
     font-family: 'Montserrat';
 }
 
@@ -2078,7 +2078,7 @@ defineExpose({
 }
 
 .text-warning {
-    color: #FAA300;
+    color: #733E87;
 }
 
 /* Validation Error Styles */
@@ -2171,7 +2171,7 @@ defineExpose({
 .location-selected-name {
   font-weight: 600;
   font-size: 0.75rem;
-  color: #01062d;
+  color: #0B0736;
 }
 
 .location-selected-subtitle {
@@ -2204,7 +2204,7 @@ defineExpose({
 .location-option-name {
   font-weight: 600;
   font-size: 0.75rem;
-  color: #01062d;
+  color: #0B0736;
   line-height: 1.2;
 }
 
@@ -2303,7 +2303,7 @@ defineExpose({
 /* تأثير الـ highlight */
 .section-highlight {
     animation: highlight-pulse 0.5s ease-in-out 3;
-    border: 2px solid #FAA300 !important;
+    border: 2px solid #733E87 !important;
     background: linear-gradient(90deg, #FFF8E7, #FFFFFF) !important;
     box-shadow: 0 0 0 2px rgba(250, 163, 0, 0.2) !important;
     transition: all 0.3s ease;
@@ -2311,7 +2311,7 @@ defineExpose({
 
 @keyframes highlight-pulse {
     0% {
-        border-color: #FAA300;
+        border-color: #733E87;
         box-shadow: 0 0 0 0 rgba(250, 163, 0, 0.4);
     }
     50% {
@@ -2319,7 +2319,7 @@ defineExpose({
         box-shadow: 0 0 0 4px rgba(250, 163, 0, 0.2);
     }
     100% {
-        border-color: #FAA300;
+        border-color: #733E87;
         box-shadow: 0 0 0 0 rgba(250, 163, 0, 0);
     }
 }

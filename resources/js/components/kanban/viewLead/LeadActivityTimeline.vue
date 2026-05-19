@@ -367,14 +367,14 @@ onMounted(() => {
 .modal-title {
     font-size: 14px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .loading-state .spinner-border {
     width: 2rem;
     height: 2rem;
     border-width: 0.2em;
-    color: #FAA300;
+    color: #733E87;
 }
 
 .empty-icon {
@@ -527,7 +527,7 @@ onMounted(() => {
 .activity-type-label {
     font-size: 12px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .activity-meta {

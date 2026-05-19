@@ -2339,7 +2339,7 @@ font-weight: 600;
     font-style: SemiBold;
     font-size: 11px;
     line-height: 1.1;
-    color: #01062c;
+    color: #0B0736;
     margin: 0;
 }
 
@@ -2422,7 +2422,7 @@ font-weight: 600;
   font-weight: 600;
   font-size: 11px;
   line-height: 1.1;
-  color: #01062c;
+  color: #0B0736;
   margin: 0;
 }
 
@@ -2438,7 +2438,7 @@ font-weight: 600;
 .header-title-input {
   font-weight: 600;
   font-size: 13px;
-  color: #01062C;
+  color: #0B0736;
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 4px;
@@ -2508,7 +2508,7 @@ font-weight: 600;
   font-size: 12px;
   line-height: 1.25;
   letter-spacing: -0.02em;
-  color: #01062c;
+  color: #0B0736;
 }
 
 .task-header {
@@ -2551,7 +2551,7 @@ font-weight: 600;
 }
 
 .mobile-action-origin {
-  border-color: #faa300 !important;
+  border-color: #733E87 !important;
   box-shadow: 0 0 0 2px rgba(250, 163, 0, 0.25);
 }
 
@@ -2791,7 +2791,7 @@ font-weight: 600;
 }
 
 .mobile-action-item.active {
-  border-color: #faa300;
+  border-color: #733E87;
   background: #fff8eb;
 }
 

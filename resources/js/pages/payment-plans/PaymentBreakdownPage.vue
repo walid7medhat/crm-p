@@ -641,7 +641,7 @@ onMounted(() => {
 
 <style scoped>
 .plan-page {
-  --brand: #01062d;
+  --brand: #0B0736;
   --brand-soft: #eef0f8;
   --brand-border: #cfd5ec;
   background: #f2f3f7;
@@ -706,7 +706,7 @@ onMounted(() => {
 .btn.primary {
   background: var(--brand);
   color: #fff;
-  box-shadow: 0 8px 20px rgba(1, 6, 45, 0.28);
+  box-shadow: 0 8px 20px rgba(11, 7, 54, 0.28);
 }
 .btn:disabled {
   opacity: 0.65;
@@ -812,7 +812,7 @@ onMounted(() => {
 .plan-select:focus {
   outline: none;
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(1, 6, 45, 0.14);
+  box-shadow: 0 0 0 3px rgba(11, 7, 54, 0.14);
 }
 .plan-select-arrow {
   position: absolute;
@@ -1287,7 +1287,7 @@ th {
   display: block;
   margin-top: 4px;
   font-size: 20px;
-  color: #01062d;
+  color: #0B0736;
 }
 
 .pdf-timeline,

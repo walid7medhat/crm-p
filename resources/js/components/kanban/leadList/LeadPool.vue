@@ -474,69 +474,83 @@ defineExpose({
 
 <style scoped>
 .lead-pool-wrapper {
-    padding: 20px;
+    padding: 16px 20px;
     min-height: calc(100vh - 72px);
 }
 
 .leads-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 10px;
 }
 
-.kanban-card {
+.lead-pool-wrapper .kanban-card {
+    padding: 10px !important;
+    border-radius: 11px !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     color: #1e293b;
     border: 1px solid #e5e7eb !important;
 }
 
-.kanban-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+.lead-pool-wrapper .kanban-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08) !important;
 }
 
-.task-title {
+.lead-pool-wrapper .task-title {
     font-family: Montserrat;
     font-weight: 700;
     font-size: 12px;
-    line-height: 19px;
+    line-height: 1.4;
     letter-spacing: -0.25px;
-    color: #01062C;
+    color: #0B0736;
+}
+
+.lead-pool-wrapper .mb-12 {
+    margin-bottom: 8px !important;
+}
+
+.lead-pool-wrapper .mb-8 {
+    margin-bottom: 6px !important;
+}
+
+.lead-pool-wrapper .task-info hr {
+    margin: 6px 0 !important;
 }
 
 .task-header {
     align-items: flex-start;
 }
 
-.info-label {
+.lead-pool-wrapper .info-label {
     color: #979797;
     font-weight: 500;
     font-size: 11px;
 }
 
-.info-value {
+.lead-pool-wrapper .info-value {
     font-weight: 500;
     font-size: 11px;
-    line-height: 12px;
+    line-height: 1.3;
     color: #353535;
 }
 
-.avatar-sm {
-    width: 32px;
-    height: 32px;
+.lead-pool-wrapper .avatar-sm {
+    width: 28px;
+    height: 28px;
     object-fit: cover;
 }
 
-.assignedBy .avatar-sm {
-    width: 28px;
-    height: 28px;
+.lead-pool-wrapper .assignedBy .avatar-sm {
+    width: 26px;
+    height: 26px;
 }
 
-.date-info {
+.lead-pool-wrapper .date-info {
     font-family: Montserrat;
     font-weight: 500;
     font-size: 10px;
-    line-height: 9px;
+    line-height: 1.2;
     color: #64748b;
 }
 
@@ -567,19 +581,19 @@ defineExpose({
     cursor: pointer;
 }
 
-.duplicate-icon-wrapper {
+.lead-pool-wrapper .duplicate-icon-wrapper {
     position: relative;
-    width: 24px;
-    height: 28px;
+    width: 22px;
+    height: 26px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.duplicate-rectangle {
+.lead-pool-wrapper .duplicate-rectangle {
     position: absolute;
-    width: 20px;
-    height: 24px;
+    width: 18px;
+    height: 22px;
     background-color: #FFFFFF;
     border: 1px solid #D1D5DB;
     border-radius: 4px;
@@ -588,33 +602,33 @@ defineExpose({
     justify-content: center;
 }
 
-.duplicate-rectangle-back {
-    top: 4px;
-    left: 4px;
+.lead-pool-wrapper .duplicate-rectangle-back {
+    top: 3px;
+    left: 3px;
     z-index: 1;
 }
 
-.duplicate-rectangle-front {
+.lead-pool-wrapper .duplicate-rectangle-front {
     top: 0;
     left: 0;
     z-index: 2;
 }
 
-.duplicate-number {
+.lead-pool-wrapper .duplicate-number {
     font-family: Montserrat;
     font-weight: 600;
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1;
-    color: #01062C;
+    color: #0B0736;
 }
 
-.service-dup-badge {
+.lead-pool-wrapper .service-dup-badge {
     background: #ff4d4f;
     color: white;
     font-size: 10px;
     padding: 2px 6px;
-    border-radius: 6px;
-    margin-left: 6px;
+    border-radius: 5px;
+    margin-left: 5px;
 }
 
 /* Person hover card styles */
@@ -651,9 +665,9 @@ defineExpose({
     margin-bottom: 8px;
 }
 
-.person-hover-avatar {
-    width: 34px;
-    height: 34px;
+.lead-pool-wrapper .person-hover-avatar {
+    width: 32px;
+    height: 32px;
     border-radius: 999px;
     object-fit: cover;
     border: 1px solid #e2e8f0;
@@ -720,19 +734,7 @@ defineExpose({
     border-radius: 12px;
 }
 
-.p-12 {
-    padding: 12px;
-}
-
-.mb-12 {
-    margin-bottom: 12px;
-}
-
-.mb-8 {
-    margin-bottom: 8px;
-}
-
-.gap-2 {
+.lead-pool-wrapper .gap-2 {
     gap: 8px;
 }
 

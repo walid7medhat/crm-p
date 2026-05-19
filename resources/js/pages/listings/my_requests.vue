@@ -567,7 +567,7 @@ async function cancelRequest(id, requestType) {
         text: "Do you really want to cancel this request?",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#01062d',
+        confirmButtonColor: '#0B0736',
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Yes, cancel it',
         cancelButtonText: 'No'
@@ -585,7 +585,7 @@ async function cancelRequest(id, requestType) {
                 title: 'Success!',
                 text: 'Request cancelled successfully',
                 icon: 'success',
-                confirmButtonColor: '#01062d'
+                confirmButtonColor: '#0B0736'
             })
 
             await fetchMyRequests()
@@ -598,7 +598,7 @@ async function cancelRequest(id, requestType) {
             title: 'Error!',
             text: err.response?.data?.message || 'Failed to cancel request',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -625,7 +625,7 @@ async function saveTimeEdit() {
                 title: 'Success!',
                 text: 'Viewing time updated successfully',
                 icon: 'success',
-                confirmButtonColor: '#01062d'
+                confirmButtonColor: '#0B0736'
             })
            
             await fetchMyRequests()
@@ -639,7 +639,7 @@ async function saveTimeEdit() {
             title: 'Error!',
             text: 'Failed to update viewing time',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -852,7 +852,7 @@ async function fetchMyRequests() {
             title: 'Error!',
             text: 'Failed to load requests',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     } finally {
         loading.value = false
@@ -911,7 +911,7 @@ async function confirmResponse() {
                 title: 'Success!',
                 text: `Request ${currentResponseType.value} successfully`,
                 icon: 'success',
-                confirmButtonColor: '#01062d'
+                confirmButtonColor: '#0B0736'
             })
             showResponseModal.value = false
             await fetchMyRequests()
@@ -935,7 +935,7 @@ async function confirmResponse() {
             title: 'Error!',
             text: errorMessage,
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -960,7 +960,7 @@ async function confirmConvert() {
                 title: 'Success!',
                 text: 'Request marked as Sold Out successfully',
                 icon: 'success',
-                confirmButtonColor: '#01062d'
+                confirmButtonColor: '#0B0736'
             })
             showConvertModal.value = false
             await fetchMyRequests()
@@ -973,7 +973,7 @@ async function confirmConvert() {
             title: 'Error!',
             text: 'Failed to mark as Sold Out',
             icon: 'error',
-            confirmButtonColor: '#01062d'
+            confirmButtonColor: '#0B0736'
         })
     }
 }
@@ -1190,14 +1190,14 @@ function viewProperty(propertyId) {
 }
 
 .stat-card.active {
-    border-color: #01062d;
+    border-color: #0B0736;
     background: #f8f9ff;
 }
 
 .stat-number {
     font-size: 24px;
     font-weight: 700;
-    color: #01062d;
+    color: #0B0736;
 }
 
 .stat-label {
@@ -1232,9 +1232,9 @@ function viewProperty(propertyId) {
 }
 
 .tab-btn.active {
-    background: #01062d;
+    background: #0B0736;
     color: white;
-    border-color: #01062d;
+    border-color: #0B0736;
 }
 
 .tab-btn:hover:not(.active) {
@@ -1302,7 +1302,7 @@ function viewProperty(propertyId) {
 
 .modal-header h5 {
     margin: 0;
-    color: #01062d;
+    color: #0B0736;
     font-weight: 600;
 }
 
@@ -1328,7 +1328,7 @@ function viewProperty(propertyId) {
 }
 
 .btn-primary {
-    background: #01062d;
+    background: #0B0736;
     color: white;
 }
 
@@ -1386,8 +1386,8 @@ function viewProperty(propertyId) {
 
 .form-control:focus {
     outline: none;
-    border-color: #01062d;
-    box-shadow: 0 0 0 3px rgba(1, 6, 45, 0.1);
+    border-color: #0B0736;
+    box-shadow: 0 0 0 3px rgba(11, 7, 54, 0.1);
 }
 
 .form-control.is-invalid {
@@ -1427,13 +1427,13 @@ function viewProperty(propertyId) {
 
 /* Refresh button styles */
 .btn-outline-primary {
-    border: 1px solid #01062d;
-    color: #01062d;
+    border: 1px solid #0B0736;
+    color: #0B0736;
     background: transparent;
 }
 
 .btn-outline-primary:hover:not(:disabled) {
-    background: #01062d;
+    background: #0B0736;
     color: white;
     transform: translateY(-1px);
 }

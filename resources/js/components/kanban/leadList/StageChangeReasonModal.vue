@@ -1443,10 +1443,10 @@ defineExpose({
     align-items: center;
     border-width: 1px;
     border-style: solid;
-    border-color: rgb(79, 165, 247);
+    border-color: rgba(115, 62, 135, 0.75);
     border-image: initial;
     border-radius: 999px;
-    background: linear-gradient(90deg, rgb(47, 136, 239), rgb(93, 184, 255));
+    background: var(--gradient-crm, linear-gradient(135deg, #0b0736 0%, #733e87 100%));
     padding: 0px;
     transition: filter 0.2s;
 }
@@ -1867,12 +1867,12 @@ defineExpose({
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #FAA300 !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: #FAA300 !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
@@ -2105,12 +2105,12 @@ defineExpose({
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #FAA300 !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: #FAA300 !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 

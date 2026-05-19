@@ -217,7 +217,7 @@ export default {
 
 <style scoped>
 .primary-background {
-  background-color: #FAA300 !important;
+  background-color: #733E87 !important;
 }
 
 .hover-card {
@@ -236,7 +236,7 @@ export default {
 }
 
 .inbound-outbound-text a:hover {
-  color: #01062d;
+  color: #0B0736;
   text-decoration: underline;
 }
 
@@ -247,7 +247,7 @@ a.router-link-active {
 
 /* Admin Requests Card specific styling */
 .card .order-2 h6 {
-  color: #01062d;
+  color: #0B0736;
   font-size: 1.5rem;
 }
 

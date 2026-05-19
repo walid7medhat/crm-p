@@ -1208,7 +1208,7 @@ onMounted(() => {
   font-size: 14px;
   line-height: 1.2;
   letter-spacing: -0.02em;
-  color: var(--deal-navy-deep, #01062c);
+  color: var(--deal-navy-deep, #0B0736);
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
@@ -1248,10 +1248,10 @@ onMounted(() => {
     align-items: center;
     border-width: 1px;
     border-style: solid;
-    border-color: #4fa5f7;
+    border-color: rgba(115, 62, 135, 0.75);
     border-image: initial;
     border-radius: 999px;
-    background: linear-gradient(90deg, #2f88ef, #5db8ff);
+    background: var(--gradient-crm, linear-gradient(135deg, #0b0736 0%, #733e87 100%));
     padding: 0;
     transition: filter .2s;
 }
@@ -1318,7 +1318,7 @@ onMounted(() => {
     font-family: Montserrat;
     font-weight: 400;
     font-size: 13px;
-    color: #01062C;
+    color: #0B0736;
     display: block;
     width: 100%;
     overflow: hidden;
@@ -1327,7 +1327,7 @@ onMounted(() => {
 }
 
 .deal-stage-pill.active .stage-text {
-    color: #01062C;
+    color: #0B0736;
     font-weight: 400;
 }
 
@@ -1368,7 +1368,7 @@ onMounted(() => {
   border-radius: 100px;
   font-size: 14px;
   font-weight: 500;
-  color: #01062C;
+  color: #0B0736;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1377,7 +1377,7 @@ onMounted(() => {
 }
 
 .btn-next-step {
-  background: #01062C;
+  background: #0B0736;
   border: none;
   width: 110px;
   height: 40px;
@@ -1402,7 +1402,7 @@ onMounted(() => {
 :deep(.deal-form-container .section-title) {
   font-size: 13px !important;
   font-weight: 500;
-  color: #01062C;
+  color: #0B0736;
   margin-bottom: 8px;
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }

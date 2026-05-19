@@ -1084,7 +1084,7 @@ export default {
       border-radius:5px;
   }
   .bg-success{
-    background-color:#FAA300 !important;
+    background-color:#733E87 !important;
   }
    .bg-info{
     background-color:#B8B8B8 !important;
@@ -1100,7 +1100,7 @@ export default {
     border: none;
   }
   .border-gradient-tab .nav-link.active{
-    background-color: #0D1237 !important;
+    background-color: #0B0736 !important;
     color: #fff !important;
     border-radius: 5px;
     margin: 10px;
@@ -1112,7 +1112,7 @@ export default {
     border:none
   }
     .btn-primary{
-    background-color: #FAA300 !important;
+    background-color: #733E87 !important;
     color: #fff !important;
     border:none
   }

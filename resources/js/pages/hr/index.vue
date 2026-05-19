@@ -3153,10 +3153,10 @@ const overviewStats = computed(() => {
   const active = employeesDirectory.value.filter(e => e.employment_status === 'active' || e.status === 'active').length
   
   return [
-    { key: 'employees', label: 'Total Employees', value: total, icon: 'lucide:users', bgColor: '#ebf4ff', iconColor: '#2f65f6' },
+    { key: 'employees', label: 'Total Employees', value: total, icon: 'lucide:users', bgColor: 'rgba(115, 62, 135, 0.12)', iconColor: '#733E87' },
     { key: 'applications', label: 'Job Applications', value: 352, icon: 'lucide:file-text', bgColor: '#f4e8ff', iconColor: '#9333ea' },
     { key: 'new-employees', label: 'New Employees', value: 56, icon: 'lucide:user-round-plus', bgColor: '#e8f8ed', iconColor: '#16a34a' },
-    { key: 'attendance', label: 'Todays Attendance', value: active, icon: 'lucide:calendar-check-2', bgColor: '#e8fbff', iconColor: '#0ea5e9' },
+    { key: 'attendance', label: 'Todays Attendance', value: active, icon: 'lucide:calendar-check-2', bgColor: 'rgba(115, 62, 135, 0.1)', iconColor: '#733E87' },
   ]
 })
 
@@ -3166,10 +3166,10 @@ const employeeStats = computed(() => {
   const inactive = employeesDirectory.value.filter(e => e.status === 'in_active').length
   
   return [
-    { key: 'employees', label: 'Total Employees', value: total, icon: 'lucide:users', bgColor: '#ebf4ff', iconColor: '#2f65f6' },
+    { key: 'employees', label: 'Total Employees', value: total, icon: 'lucide:users', bgColor: 'rgba(115, 62, 135, 0.12)', iconColor: '#733E87' },
     { key: 'applications', label: 'New Employees', value: 25, icon: 'lucide:file-text', bgColor: '#f4e8ff', iconColor: '#9333ea' },
     { key: 'new-employees', label: 'Resigned Employees', value: 5, icon: 'lucide:user-round-plus', bgColor: '#e8f8ed', iconColor: '#16a34a' },
-    { key: 'attendance', label: 'Active Employees', value: active, icon: 'lucide:calendar-check-2', bgColor: '#e8fbff', iconColor: '#0ea5e9' },
+    { key: 'attendance', label: 'Active Employees', value: active, icon: 'lucide:calendar-check-2', bgColor: 'rgba(115, 62, 135, 0.1)', iconColor: '#733E87' },
   ]
 })
 
@@ -5534,13 +5534,22 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.hr-screen { padding-top: 8px; }
+.hr-screen {
+  padding-top: 8px;
+  --hr-primary: #0b0736;
+  --hr-secondary: #733e87;
+  --hr-gradient: linear-gradient(135deg, var(--hr-primary) 0%, var(--hr-secondary) 100%);
+  --hr-gradient-vertical: linear-gradient(180deg, var(--hr-primary) 0%, var(--hr-secondary) 100%);
+  --hr-border: rgba(115, 62, 135, 0.45);
+  --hr-surface-tint: #f4f0f8;
+  --hr-surface-border: #e8ddf0;
+}
 .hr-frame {
-  background: linear-gradient(180deg, #1136c7 0%, #0a29a2 100%);
+  background: var(--hr-gradient-vertical);
   border-radius: 18px;
-  border: 1px solid #3657d7;
+  border: 1px solid var(--hr-border);
   padding: 10px;
-  box-shadow: 0 14px 32px rgba(16, 32, 97, 0.2);
+  box-shadow: 0 14px 32px rgba(11, 7, 54, 0.25);
 }
 .hr-topbar {
   background: #fff;
@@ -5569,7 +5578,7 @@ onBeforeUnmount(() => {
 .hr-tab.active {
   color: #111827;
   font-weight: 600;
-  border-bottom: 2px solid #f5c543;
+  border-bottom: 2px solid var(--hr-secondary);
   border-radius: 0;
 }
 .hr-tab-chevron { font-size: 12px; color: #9ca3af; }
@@ -5619,7 +5628,7 @@ onBeforeUnmount(() => {
 }
 .hr-generate-btn {
   border: none;
-  background: #0d1f77;
+  background: var(--hr-gradient);
   color: #fff;
   border-radius: 24px;
   padding: 10px 16px;
@@ -5669,13 +5678,13 @@ onBeforeUnmount(() => {
 
 .hr-content-card {
   margin-top: 12px;
-  border: 1px solid rgba(189, 203, 255, 0.55);
+  border: 1px solid var(--hr-border);
   border-radius: 14px;
   padding: 12px;
 }
 .hr-content-shell {
   background: #fff;
-  border: 1px solid #d6dff8;
+  border: 1px solid var(--hr-surface-border);
   border-radius: 12px;
   padding: 14px;
 }
@@ -5712,7 +5721,7 @@ onBeforeUnmount(() => {
 .employee-export-btn { color: #111827; }
 .employee-overview-table-wrap {
   margin-top: 10px;
-  border: 1px solid #edf1f8;
+  border: 1px solid #EDE7F3;
   border-radius: 12px;
   overflow-x: auto;
   overflow-y: visible;
@@ -5734,7 +5743,7 @@ onBeforeUnmount(() => {
   position: sticky;
   right: 0;
   z-index: 4;
-  background: #fafbfe;
+  background: #F4F0F8;
   box-shadow: -8px 0 12px -10px rgba(15, 23, 42, 0.35);
 }
 .employee-overview-table tbody td.col-action {
@@ -5765,7 +5774,7 @@ onBeforeUnmount(() => {
 }
 .assets-table-wrap {
   margin-top: 10px;
-  border: 1px solid #edf1f8;
+  border: 1px solid #EDE7F3;
   border-radius: 12px;
   overflow-x: auto;
   overflow-y: visible;
@@ -5794,14 +5803,14 @@ onBeforeUnmount(() => {
   box-shadow: -10px 0 16px -12px rgba(15, 23, 42, 0.35);
 }
 .assets-table thead .sticky-action-col {
-  background: #fafbfe;
+  background: #F4F0F8;
   z-index: 7;
 }
 .assets-table thead th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #fafbfe;
+  background: #F4F0F8;
 }
 .assets-table .employee-cell {
   display: flex;
@@ -5858,7 +5867,7 @@ onBeforeUnmount(() => {
 }
 .leave-table-wrap {
   margin-top: 10px;
-  border: 1px solid #edf1f8;
+  border: 1px solid #EDE7F3;
   border-radius: 12px;
   overflow-x: auto;
   overflow-y: visible;
@@ -5877,7 +5886,7 @@ onBeforeUnmount(() => {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #fafbfe;
+  background: #F4F0F8;
   font-size: 13px;
   font-weight: 600;
   color: #6b7280;
@@ -5896,7 +5905,7 @@ onBeforeUnmount(() => {
   box-shadow: -10px 0 16px -12px rgba(15, 23, 42, 0.35);
 }
 .leave-table thead .sticky-action-col {
-  background: #fafbfe;
+  background: #F4F0F8;
   z-index: 7;
 }
 .leave-status-badge {
@@ -5983,7 +5992,7 @@ onBeforeUnmount(() => {
   box-shadow: -10px 0 16px -12px rgba(15, 23, 42, 0.35);
 }
 .career-table thead .sticky-action-col {
-  background: #fafbfe;
+  background: #F4F0F8;
   z-index: 7;
 }
 .career-manager-cell {
@@ -6165,7 +6174,7 @@ onBeforeUnmount(() => {
   padding: 10px 4px;
 }
 .career-applicant-list-item.active {
-  background: #f8fbff;
+  background: #F4F0F8;
   border-radius: 10px;
 }
 .career-applicant-list-item img {
@@ -6389,7 +6398,7 @@ onBeforeUnmount(() => {
   box-shadow: -10px 0 16px -12px rgba(15, 23, 42, 0.35);
 }
 .hr-table thead .sticky-action-col {
-  background: #fafbfe;
+  background: #F4F0F8;
   z-index: 7;
 }
 .attendance-row-menu {
@@ -7118,11 +7127,11 @@ onBeforeUnmount(() => {
   display: inline-flex;
 }
 .employee-detail-page {
-  background: linear-gradient(135deg, #0c1b88 0%, #0d3ea4 55%, #0a60b8 100%);
-  border: 1px solid rgba(191, 213, 255, 0.6);
+  background: var(--hr-gradient);
+  border: 1px solid var(--hr-border);
 }
 .employee-detail-breadcrumb {
-  color: #d1dcff;
+  color: rgba(255, 255, 255, 0.82);
   font-size: 12px;
   display: inline-flex;
   align-items: center;
@@ -7365,7 +7374,7 @@ onBeforeUnmount(() => {
   border-radius: 8px;
 }
 .request-doc-modal .add-field :deep(.vs__dropdown-option--highlight) {
-  background: #f6f7fb;
+  background: #F4F0F8;
   color: #111827;
 }
 .request-doc-modal .add-field :deep(.vs__dropdown-option--selected) {
@@ -8242,7 +8251,7 @@ onBeforeUnmount(() => {
 .hr-inner-tab.active {
   background: #eef4ff;
   color: #1d4ed8;
-  border-color: #cfdcff;
+  border-color: #D4BFE0;
 }
 
 .hr-summary-row {
@@ -8276,13 +8285,13 @@ onBeforeUnmount(() => {
 
 .hr-table-wrap {
   margin-top: 12px;
-  border: 1px solid #edf1f8;
+  border: 1px solid #EDE7F3;
   border-radius: 12px;
   overflow: hidden;
 }
 .hr-table thead th {
-  background: #fafbfe;
-  border-bottom: 1px solid #edf1f8;
+  background: #F4F0F8;
+  border-bottom: 1px solid #EDE7F3;
   font-size: 12px;
   font-weight: 500;
   color: #6b7280;
@@ -8290,7 +8299,7 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 .hr-table tbody td {
-  border-bottom: 1px solid #edf1f8;
+  border-bottom: 1px solid #EDE7F3;
   font-size: 13px;
   color: #374151;
   padding: 12px 10px;
@@ -8308,7 +8317,7 @@ onBeforeUnmount(() => {
   height: 28px;
   border-radius: 50%;
   background: #e0ecff;
-  color: #2f65f6;
+  color: #733E87;
   font-size: 10px;
   display: inline-flex;
   align-items: center;
@@ -8363,7 +8372,7 @@ onBeforeUnmount(() => {
   font-weight: 500;
 }
 .hr-table tbody tr { transition: background-color .18s ease; }
-.hr-table tbody tr:hover { background: #f8fbff; }
+.hr-table tbody tr:hover { background: #F4F0F8; }
 
 .hr-footer {
   margin-top: 12px;
@@ -8403,7 +8412,7 @@ onBeforeUnmount(() => {
 .hr-skeleton {
   height: 24px;
   border-radius: 8px;
-  background: linear-gradient(90deg, #f5f7fb 25%, #e9edf5 37%, #f5f7fb 63%);
+  background: linear-gradient(90deg, #F4F0F8 25%, #EDE7F3 37%, #F4F0F8 63%);
   background-size: 400px 100%;
   animation: hrShimmer 1.1s infinite linear;
 }
@@ -8431,7 +8440,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 14px;
-  border-bottom: 1px solid #edf1f8;
+  border-bottom: 1px solid #EDE7F3;
 }
 
 .team-attendance-count {
@@ -8471,9 +8480,9 @@ onBeforeUnmount(() => {
 }
 
 .department-box-card {
-  border: 1px solid #dbe4f0;
+  border: 1px solid #E8DDF0;
   border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #F4F0F8 100%);
   padding: 20px 18px;
   text-align: center;
   display: flex;
@@ -8593,7 +8602,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
-  border-bottom: 1px solid #edf1f8;
+  border-bottom: 1px solid #EDE7F3;
 }
 .edit-modal-head h6 {
   margin: 0;
@@ -8729,7 +8738,7 @@ onBeforeUnmount(() => {
     border: none;
     padding: 0;
     box-shadow: none;
-    background: #f1f3f6;
+    background: var(--hr-surface-tint);
   }
   .hr-topbar {
     width: 100%;

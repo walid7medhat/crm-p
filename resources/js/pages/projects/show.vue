@@ -342,7 +342,7 @@ export default {
           title: 'No Floor Plans',
           text: 'No floor plan images available.',
           icon: 'warning',
-          confirmButtonColor: '#01062d'
+          confirmButtonColor: '#0B0736'
         });
         return;
       }
@@ -399,7 +399,7 @@ export default {
           title: 'No Images',
           text: 'No images available for this project.',
           icon: 'warning',
-          confirmButtonColor: '#01062d'
+          confirmButtonColor: '#0B0736'
         });
         return;
       }
@@ -464,7 +464,7 @@ export default {
             title: 'Deleted!',
             text: 'Project has been deleted successfully.',
             icon: 'success',
-            confirmButtonColor: '#01062d',
+            confirmButtonColor: '#0B0736',
             timer: 2000,
             showConfirmButton: false
           });
@@ -476,7 +476,7 @@ export default {
           title: 'Error!',
           text: 'Failed to delete project.',
           icon: 'error',
-          confirmButtonColor: '#01062d'
+          confirmButtonColor: '#0B0736'
         });
       }
     };
@@ -610,7 +610,7 @@ export default {
 .property-price {
   font-size: 24px !important;
   font-weight: 800;
-  color: #01062d;
+  color: #0B0736;
   margin: 0 0 15px 0 !important;
   line-height: 1;
 }
@@ -648,7 +648,7 @@ export default {
 .spec-main-value {
   font-size: 16px;
   font-weight: 700;
-  color: #01062d;
+  color: #0B0736;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -684,7 +684,7 @@ export default {
 .section-title {
   font-size: 20px !important;
   font-weight: 600;
-  color: #01062d;
+  color: #0B0736;
   padding: 10px 12px;
 }
 
@@ -713,7 +713,7 @@ export default {
 
 .info-value {
   font-weight: 800;
-  color: #01062d;
+  color: #0B0736;
   font-size: 13px;
 }
 
@@ -774,7 +774,7 @@ export default {
   height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #01062d;
+  border: 2px solid #0B0736;
 }
 
 .agent-sidebar-info {
@@ -863,7 +863,7 @@ export default {
   align-items: center;
   justify-content: space-between;
   padding: 8px;
-  background: #FAA300;
+  background: #733E87;
   color: white;
   border: none;
   border-radius: 6px;
@@ -876,7 +876,7 @@ export default {
 
 .dropdown-toggle:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(1, 6, 45, 0.3);
+  box-shadow: 0 4px 12px rgba(11, 7, 54, 0.3);
 }
 
 .dropdown-container {
@@ -990,7 +990,7 @@ export default {
 
 .lightbox-close:hover {
   background: #e9ecef;
-  color: #01062d;
+  color: #0B0736;
 }
 
 .lightbox-main {
@@ -1005,7 +1005,7 @@ export default {
 
 .lightbox-nav {
   background: rgba(255, 255, 255, 0.9);
-  color: #01062d;
+  color: #0B0736;
   border: none;
   width: 60px;
   height: 60px;
@@ -1021,7 +1021,7 @@ export default {
 }
 
 .lightbox-nav:hover:not(:disabled) {
-  background: #01062d;
+  background: #0B0736;
   color: white;
 }
 
@@ -1064,7 +1064,7 @@ export default {
 }
 
 .lightbox-thumbnail.active {
-  border-color: #01062d;
+  border-color: #0B0736;
 }
 
 .lightbox-thumbnail:hover {
@@ -1194,13 +1194,13 @@ export default {
 }
 
 .btn-primary {
-  background-color: #01062d;
-  border-color: #01062d;
+  background-color: #0B0736;
+  border-color: #0B0736;
 }
 
 .btn-primary:hover, .btn-primary:active, .btn-primary:focus {
-  background-color: #FAA300 !important;
-  border-color: #FAA300 !important;
+  background-color: #733E87 !important;
+  border-color: #733E87 !important;
 }
 .floor-plan-card {
   background: white;
@@ -1234,7 +1234,7 @@ export default {
 .floor-plan-name {
   font-size: 14px !important;
   font-weight: 600;
-  color: #01062d;
+  color: #0B0736;
   margin: 0;
   line-height: 1.4;
 }

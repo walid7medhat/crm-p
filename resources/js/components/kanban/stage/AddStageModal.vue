@@ -409,12 +409,12 @@ const $showNotification = (message, type = 'info') => {
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #FAA300 !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: #FAA300;
+    background: #733E87;
     color: #fff;
 }
 
@@ -447,7 +447,7 @@ const $showNotification = (message, type = 'info') => {
     padding: 10px 25px;
     border-radius: 100px;
     font-size: 14px;
-    color: #01062C;
+    color: #0B0736;
     cursor: pointer;
 }
 
@@ -456,7 +456,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .btn-save {
-    background: #01062C;
+    background: #0B0736;
     border: none;
     padding: 10px 20px;
     border-radius: 100px;

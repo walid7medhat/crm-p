@@ -151,7 +151,7 @@ watch(duplicateHandling, (newVal) => {
     font-family: 'Montserrat', sans-serif;
     font-size: 16px;
     font-weight: 600;
-    color: #01062C;
+    color: #0B0736;
     margin: 0 0 24px 0;
 }
 
@@ -183,8 +183,8 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .entity-card.selected {
-    border-color: #01062C;
-    background: #01062C;
+    border-color: #0B0736;
+    background: #0B0736;
     box-shadow: 0px 2px 8px rgba(1, 6, 44, 0.15);
 }
 
@@ -200,7 +200,7 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .entity-card.selected .entity-icon {
-    color: #FAA300;
+    color: #733E87;
 }
 
 .entity-label {
@@ -260,8 +260,8 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .expert-mode-checkbox:checked {
-    background-color: #FAA300;
-    border-color: #FAA300;
+    background-color: #733E87;
+    border-color: #733E87;
 }
 
 .expert-mode-checkbox:checked::after {
@@ -278,7 +278,7 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .expert-mode-checkbox:hover {
-    border-color: #FAA300;
+    border-color: #733E87;
 }
 
 .expert-mode-label {
@@ -357,8 +357,8 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .duplicate-checkbox:checked {
-    background-color: #FAA300;
-    border-color: #FAA300;
+    background-color: #733E87;
+    border-color: #733E87;
 }
 
 .duplicate-checkbox:checked::after {
@@ -375,7 +375,7 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .duplicate-checkbox:hover {
-    border-color: #FAA300;
+    border-color: #733E87;
 }
 
 .duplicate-label {

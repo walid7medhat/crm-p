@@ -93,12 +93,12 @@
           },
           fill: {
             type: 'gradient',
-            colors: ['#487FFF'],
+            colors: ['#733E87'],
             gradient: {
               shade: 'light',
               type: 'vertical',
               shadeIntensity: 0.5,
-              gradientToColors: ['#487FFF'],
+              gradientToColors: ['#0B0736'],
               inverseColors: false,
               opacityFrom: 1,
               opacityTo: 1,

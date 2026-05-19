@@ -607,7 +607,7 @@ watch(selectedLeadValue, (newVal) => {
 
 .add-project-icon {
     font-size: 16px;
-    color: #FAA300;
+    color: #733E87;
     flex-shrink: 0;
 }
 
@@ -620,7 +620,7 @@ watch(selectedLeadValue, (newVal) => {
 
 .add-project-option .add-project-icon {
     font-size: 16px;
-    color: #FAA300;
+    color: #733E87;
     flex-shrink: 0;
 }
 
@@ -655,7 +655,7 @@ watch(selectedLeadValue, (newVal) => {
 }
 
 .add-project-input:focus {
-    border-color: #01062C;
+    border-color: #0B0736;
     box-shadow: 0 0 0 3px rgba(1, 6, 44, 0.1);
     outline: none;
 }
@@ -728,7 +728,7 @@ watch(selectedLeadValue, (newVal) => {
 .add-project-modal-content .modal-title {
     font-family: 'Montserrat', sans-serif;
     font-size: 14px;
-    color: #01062C;
+    color: #0B0736;
     margin: 0;
 }
 
@@ -747,7 +747,7 @@ watch(selectedLeadValue, (newVal) => {
 
 .add-project-modal-content .close-btn:hover {
     background: #F1F5F9;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .add-project-modal-content .close-icon {
@@ -791,7 +791,7 @@ watch(selectedLeadValue, (newVal) => {
 }
 
 .add-project-modal-content .footer-btn.apply-btn {
-    background: #01062C;
+    background: #0B0736;
     color: #FFFFFF;
 }
 

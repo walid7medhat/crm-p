@@ -1,8 +1,20 @@
 <template>
+  <Teleport to="body">
+    <div
+      v-if="isMobileViewport && isMobileMenuOpen"
+      class="mobile-nav-overlay"
+      aria-hidden="true"
+      @click="closeSidebar"
+    />
+  </Teleport>
+
   <aside
-    v-if="!isMobileViewport"
     class="sidebar"
-    :class="{ 'sidebar-open': isMobileOpen, active: isSidebarActive }"
+    :class="{
+      'sidebar-open': isMobileViewport ? isMobileMenuOpen : isMobileOpen,
+      'sidebar--mobile-drawer': isMobileViewport,
+      active: !isMobileViewport && isSidebarActive,
+    }"
     @mouseenter="sidebarHover = true"
     @mouseleave="sidebarHover = false"
   >
@@ -36,371 +48,93 @@
     <!-- Menu -->
     <div class="sidebar-menu-area">
       <ul class="sidebar-menu">
-        <li >
-          <router-link  :to="isShowOnlyListing ? '/alllisting' : '/'"
-                    :class="{ active: isActive(isShowOnlyListing ? '/alllisting' : '/') }">
-            <!--<iconify-icon icon="solar:home-smile-angle-outline" class="menu-icon" />-->
-            <img :src="dashboardIcon" class="imgicon"/>
+        <li>
+          <router-link
+            :to="isShowOnlyListing ? '/alllisting' : '/'"
+            :class="{ active: activeLayoutModule === 'dashboard' || isActive(isShowOnlyListing ? '/alllisting' : '/') }"
+          >
+            <img :src="dashboardIcon" class="imgicon" alt="" />
             <span>Dashboard</span>
           </router-link>
         </li>
-        <!-- CRM analytics & tools: super_admin only -->
-       
-          <li v-if="isAdmin" >
-            <router-link to="/kanban" :class="{ 'active-page': isActive('/kanban') }">
-              <iconify-icon icon="material-symbols:map-outline" class="menu-icon" />
-              <span>Kanban</span>
+
+        <li v-if="isAdmin">
+          <router-link to="/kanban" :class="{ active: activeLayoutModule === 'crm' }">
+            <iconify-icon icon="lucide:handshake" class="menu-icon" />
+            <span>CRM</span>
             </router-link>
           </li>
-          <li v-if="isSuperAdmin   || user.id === 186">
-            <router-link to="/hr" :class="{ 'active-page': isActive('/hr') }">
+
+        <li v-if="isSuperAdmin || user.id === 186">
+          <router-link to="/hr" :class="{ active: activeLayoutModule === 'hr' }">
               <iconify-icon icon="lucide:users-round" class="menu-icon" />
               <span>HR</span>
             </router-link>
           </li>
-            <li v-if="isSuperAdmin">
-            <router-link to="/logs" :class="{ 'active-page': isActive('/logs') }">
-              <iconify-icon icon="lucide:users-round" class="menu-icon" />
-              <span>Logs</span>
-            </router-link>
-          </li>
-          <li v-if="isAdmin">
-            <router-link to="/system-overview" :class="{ 'active-page': isActive('/system-overview') }">
-              <iconify-icon icon="lucide:layout-dashboard" class="menu-icon" />
-              <span>System map</span>
-            </router-link>
-          </li>
-          <li v-if="isSuperAdmin">
-            <router-link to="/attendance-monthly-reports" :class="{ 'active-page': isActive('/attendance-monthly-reports') }">
-              <iconify-icon icon="lucide:users-round" class="menu-icon" />
-              <span>Reports</span>
-            </router-link>
-          </li>
-        <!-- Listings Dropdown -->
-        <li v-if="filteredTableItems.length > 0 && !isShowOnlyListing" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'table',
-          'active-parent': isTableActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('table')" :class="{ active: isTableActive }">
-            <!--<iconify-icon icon="mingcute:storage-line" class="menu-icon"></iconify-icon>-->
-             <img :src="listingsIcon" class="imgicon"/>
-            <span>Listings</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'table' }"></span>
-          </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'table'" ref="tableMenu" class="sidebar-submenu">
-              <li v-for="item in filteredTableItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                  
-                  <span class="menu-label">{{ item.label }}</span>
-                  <span v-if="item.count > 0" class="menu-count">{{ item.count }}</span>
-                  <span v-else-if="countsLoading" class="menu-count loading">...</span>
-                </router-link>
-              </li>
-            </ul>
-          </transition>
-        </li>
-         <!--features-->
-          <li v-if="filteredProjectsItems.length > 0" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'projects',
-          'active-parent': isProjectsActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('projects')" :class="{ active: isProjectsActive }">
-            <!--<iconify-icon icon="lucide:building" class="menu-icon"></iconify-icon>-->
-            <img :src="propertyIcon" class="imgicon"/>
-            <span>Projects</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'projects' }"></span>
-          </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'projects'" ref="ProjectsMenu" class="sidebar-submenu">
-              <li v-for="item in filteredProjectsItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                  {{ item.label }}
-                </router-link>
-              </li>
-            </ul>
-          </transition>
-        </li>
-        <!-- Requests & Orders Dropdown -->
-        <li v-if="filteredRequestsItems.length > 0 && !isShowOnlyListing" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'requests',
-          'active-parent': isRequestsActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('requests')" :class="{ active: isRequestsActive }">
-            <!--<iconify-icon icon="lucide:shield-question" class="menu-icon"></iconify-icon>-->
-             <img :src="requestsIcon" class="imgicon"/>
-            <span>Requests</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'requests' }"></span>
-          </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'requests'" ref="requestsMenu" class="sidebar-submenu">
-              <li v-for="item in filteredRequestsItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                  
-                  <span class="menu-label">{{ item.label }}</span>
-                  <span v-if="item.count > 0" class="menu-count">{{ item.count }}</span>
-                  <span v-else-if="countsLoading" class="menu-count loading">...</span>
-                </router-link>
-              </li>
-            </ul>
-          </transition>
-        </li>
 
-        <!-- Developers Dropdown -->
-         <li v-if="filteredDevelopersItems.length > 0" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'developers',
-          'active-parent': isDevelopersActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('developers')" :class="{ active: isDevelopersActive }">
-            <iconify-icon icon="lucide:code" class="menu-icon"></iconify-icon>
-            <span>Developers</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'developers' }"></span>
-          </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'developers'" ref="developersMenu" class="sidebar-submenu">
-              <li v-for="item in filteredDevelopersItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                  {{ item.label }}
-                </router-link>
-              </li>
-            </ul>
-          </transition>
-        </li> 
-
-        <!-- Owners Dropdown -->
-        <li v-if="filteredOwnersItems.length > 0" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'owners',
-          'active-parent': isOwnersActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('owners')" :class="{ active: isOwnersActive }">
-            <!--<iconify-icon icon="lucide:users" class="menu-icon"></iconify-icon>-->
-            <img :src="ownersIcon" class="imgicon"/>
-            <span>Owners</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'owners' }"></span>
-          </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'owners'" ref="ownersMenu" class="sidebar-submenu">
-              <li v-for="item in filteredOwnersItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                  {{ item.label }}
-                </router-link>
-              </li>
-            </ul>
-          </transition>
-        </li>
-
-        <!-- Property Types Dropdown -->
-        <li v-if="filteredPropertyTypesItems.length > 0" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'property_types',
-          'active-parent': isPropertyTypesActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('property_types')" :class="{ active: isPropertyTypesActive }">
-            <!--<iconify-icon icon="lucide:building" class="menu-icon"></iconify-icon>-->
-            <img :src="propertyIcon" class="imgicon"/>
-            <span>Property Types</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'property_types' }"></span>
-          </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'property_types'" ref="PropertyTypesMenu" class="sidebar-submenu">
-              <li v-for="item in filteredPropertyTypesItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                  {{ item.label }}
-                </router-link>
-              </li>
-            </ul>
-          </transition>
-        </li>
-        <!--features-->
-          <li v-if="filteredFeaturesItems.length > 0" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'features',
-          'active-parent': isFeaturesActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('features')" :class="{ active: isFeaturesActive }">
-            <!--<iconify-icon icon="lucide:building" class="menu-icon"></iconify-icon>-->
-            <img :src="propertyIcon" class="imgicon"/>
-            <span>Features</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'features' }"></span>
-          </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'features'" ref="FeaturesMenu" class="sidebar-submenu">
-              <li v-for="item in filteredFeaturesItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                  {{ item.label }}
-                </router-link>
-              </li>
-            </ul>
-          </transition>
-        </li>
-                      
-        <!-- Unit Views Dropdown -->
-        <li v-if="filteredUnitViewsItems.length > 0" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'unit_views',
-          'active-parent': isUnitViewsActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('unit_views')" :class="{ active: isUnitViewsActive }">
-            <!--<iconify-icon icon="lucide:eye" class="menu-icon"></iconify-icon>-->
-            <img :src="unitViewIcon" class="imgicon"/>
-
-            <span>Unit Views</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'unit_views' }"></span>
-          </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'unit_views'" ref="UnitViewsMenu" class="sidebar-submenu">
-              <li v-for="item in filteredUnitViewsItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                  {{ item.label }}
-                </router-link>
-              </li>
-            </ul>
-          </transition>
-        </li>
-
-        <!-- Layout Types Dropdown -->
-        <li v-if="filteredLayoutTypesItems.length > 0" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'layout_types',
-          'active-parent': isLayoutTypesActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('layout_types')" :class="{ active: isLayoutTypesActive }">
-            <!--<iconify-icon icon="lucide:grid-3x3" class="menu-icon"></iconify-icon>-->
-            <img :src="layoutTypeIcon" class="imgicon"/>
-            <span>Layout Types</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'layout_types' }"></span>
-          </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'layout_types'" ref="LayoutTypesMenu" class="sidebar-submenu">
-              <li v-for="item in filteredLayoutTypesItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                  {{ item.label }}
-                </router-link>
-              </li>
-            </ul>
-          </transition>
-        </li>
-              
-        <!-- Areas Dropdown -->
-        <li v-if="filteredAreasItems.length > 0" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'areas',
-          'active-parent': isAreasActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('areas')" :class="{ active: isAreasActive }">
-            <!--<iconify-icon icon="lucide:map-pinned"  class="menu-icon"></iconify-icon>-->
-            <img :src="locationIcon" class="imgicon"/>
-            <span>Areas</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'areas' }"></span>
-          </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'areas'" ref="AreasMenu" class="sidebar-submenu">
-              <li v-for="item in filteredAreasItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                  {{ item.label }}
-                </router-link>
-              </li>
-            </ul>
-          </transition>
-        </li>
-          
-        <!-- Users Dropdown -->
-        <li v-if="filteredUsersItems.length > 0" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'users',
-          'active-parent': isUsersActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('users')" :class="{ active: isUsersActive }">
-            <!--<iconify-icon icon="flowbite:users-group-outline" class="menu-icon"></iconify-icon>-->
-            <img :src="agentsIcon" class="imgicon"/>
+        <li
+          v-if="filteredUsersItems.length > 0"
+          :class="{ dropdown: true, open: activeDropdown === 'users', 'active-parent': activeLayoutModule === 'agents' }"
+        >
+          <a href="javascript:void(0)" @click="toggleDropdown('users')" :class="{ active: activeLayoutModule === 'agents' }">
+            <img :src="agentsIcon" class="imgicon" alt="" />
             <span>Agents</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'users' }"></span>
+            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'users' }" />
           </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'users'" ref="usersMenu" class="sidebar-submenu">
+          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
+            <ul v-show="activeDropdown === 'users'" class="sidebar-submenu">
               <li v-for="item in filteredUsersItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                  {{ item.label }}
-                </router-link>
+                <router-link :to="item.path">{{ item.label }}</router-link>
               </li>
             </ul>
           </transition>
         </li>
 
-        <!-- Role & Access Dropdown -->
-        <li v-if="filteredRolesItems.length > 0" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'role',
-          'active-parent': isRolesActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('role')" :class="{ active: isRolesActive }">
-            <!--<i class="ri-user-settings-line text-xl me-14 d-flex w-auto"></i>-->
-            <img :src="roleIcon" class="imgicon"/>
-            <span>Role & Access</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'role' }"></span>
+        <li
+          v-if="listingsSidebarSections.length > 0 && !isShowOnlyListing"
+          :class="{ dropdown: true, open: activeDropdown === 'listings', 'active-parent': activeLayoutModule === 'listings' }"
+        >
+          <a href="javascript:void(0)" @click="toggleDropdown('listings')" :class="{ active: activeLayoutModule === 'listings' }">
+            <img :src="listingsIcon" class="imgicon" alt="" />
+            <span>Listings</span>
+            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'listings' }" />
           </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'role'" ref="roleMenu" class="sidebar-submenu">
-              <li v-for="item in filteredRolesItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
+          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
+            <ul v-show="activeDropdown === 'listings'" class="sidebar-submenu sidebar-submenu--grouped">
+              <template v-for="section in listingsSidebarSections" :key="section.key">
+                <li class="sidebar-submenu__heading">{{ section.title }}</li>
+                <li v-for="item in section.items" :key="`${section.key}-${item.path}`" :class="['nav-link', { 'active-page': isActive(item.path) }]">
                 <router-link :to="item.path">
-                  {{ item.label }}
+                    <span class="menu-label">{{ item.label }}</span>
+                    <span v-if="item.count > 0" class="menu-count">{{ item.count }}</span>
+                    <span v-else-if="countsLoading && item.count !== undefined" class="menu-count loading">…</span>
                 </router-link>
               </li>
+              </template>
             </ul>
           </transition>
         </li>
-
-        <!-- All Chats (Super Admin only) -->
-        <li v-if="isCustomAdmin" class="sidebar-item-all-chats">
-          <router-link to="/admin/chat" :class="{ 'active-page': isActive('/admin/chat') }">
-            <iconify-icon icon="ri-chat-3-line" class="menu-icon" />
-            <span>All Chats</span>
-          </router-link>
-        </li>
-
-        <!-- Suggestion -->
-        <li v-if="!isShowOnlyListing">
-          <router-link to="/suggestion" :class="{ 'active-page': isActive('/suggestion') }">
-            <iconify-icon icon="lucide:lightbulb" class="menu-icon" />
-            <span>Suggestion</span>
-          </router-link>
-        </li>
-        <li v-if="filteredMainMenuItems.length > 0" :class="{ 
-          dropdown: true, 
-          open: activeDropdown === 'main_menu',
-          'active-parent': isMainMenuActive 
-        }">
-          <a href="javascript:void(0)" @click="toggleDropdown('main_menu')" :class="{ active: isMainMenuActive }">
-            <iconify-icon icon="lucide:layout-grid" class="menu-icon" />
-            <span>Insights</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'main_menu' }"></span>
+        <li
+          v-if="settingsSidebarSections.length > 0"
+          class="sidebar-menu__settings"
+          :class="{ dropdown: true, open: activeDropdown === 'settings', 'active-parent': activeLayoutModule === 'settings' }"
+        >
+          <a href="javascript:void(0)" @click="toggleDropdown('settings')" :class="{ active: activeLayoutModule === 'settings' }">
+            <iconify-icon icon="lucide:settings" class="menu-icon" />
+            <span>Settings</span>
+            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'settings' }" />
           </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave"
-            @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'main_menu'" class="sidebar-submenu">
-              <li v-for="item in filteredMainMenuItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
+          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
+            <ul v-show="activeDropdown === 'settings'" class="sidebar-submenu sidebar-submenu--grouped">
+              <template v-for="section in settingsSidebarSections" :key="section.key">
+                <li class="sidebar-submenu__heading">{{ section.title }}</li>
+                <li v-for="item in section.items" :key="`${section.key}-${item.path}`" :class="['nav-link', { 'active-page': isActive(item.path) }]">
                 <router-link :to="item.path">
-                  <iconify-icon :icon="item.icon" class="menu-icon" />
+                    <iconify-icon v-if="item.icon" :icon="item.icon" class="menu-icon submenu-icon" />
                   <span>{{ item.label }}</span>
                 </router-link>
               </li>
+              </template>
             </ul>
           </transition>
         </li>
@@ -408,7 +142,7 @@
     </div>
   </aside>
 
-  <nav v-else class="mobile-sidebar-dock" aria-label="Mobile menu">
+  <nav v-if="isMobileViewport" class="mobile-sidebar-dock" aria-label="Mobile menu">
     <template v-for="item in mobileDockItems" :key="item.key || item.path">
       <button
         v-if="item.children"
@@ -444,18 +178,57 @@
             <iconify-icon icon="lucide:x" />
           </button>
         </div>
-        <div class="mobile-dock-sheet__list" :class="{ 'mobile-dock-sheet__list--inline-two': (activeMobileDockGroup?.children?.length || 0) === 2 }">
-          <router-link
-            v-for="child in activeMobileDockGroup.children"
-            :key="child.path"
-            :to="child.path"
-            class="mobile-dock-sheet__item"
-            :class="{ 'is-active': isDockActive(child.path) }"
-            @click="closeMobileDockGroup"
-          >
-            <span>{{ child.label }}</span>
-            <span v-if="child.count > 0" class="mobile-dock-sheet__count">{{ child.count }}</span>
-          </router-link>
+        <div class="mobile-dock-sheet__list" :class="{ 'mobile-dock-sheet__list--inline-two': !activeMobileDockGroup?.sections?.length && (activeMobileDockGroup?.children?.length || 0) === 2 }">
+          <template v-if="activeMobileDockGroup?.sections?.length">
+            <div
+              v-for="section in activeMobileDockGroup.sections"
+              :key="section.key"
+              class="mobile-dock-accordion"
+            >
+              <button
+                type="button"
+                class="mobile-dock-accordion__trigger"
+                :aria-expanded="mobileDockExpandedSection === section.key"
+                @click="toggleMobileDockSection(section.key)"
+              >
+                <span>{{ section.title }}</span>
+                <iconify-icon
+                  icon="lucide:chevron-down"
+                  class="mobile-dock-accordion__chevron"
+                  :class="{ 'is-open': mobileDockExpandedSection === section.key }"
+                />
+              </button>
+              <div
+                v-show="mobileDockExpandedSection === section.key"
+                class="mobile-dock-accordion__panel"
+              >
+                <router-link
+                  v-for="child in section.items"
+                  :key="child.path"
+                  :to="child.path"
+                  class="mobile-dock-sheet__item"
+                  :class="{ 'is-active': isDockActive(child.path) }"
+                  @click="closeMobileDockGroup"
+                >
+                  <span>{{ child.label }}</span>
+                  <span v-if="child.count > 0" class="mobile-dock-sheet__count">{{ child.count }}</span>
+                </router-link>
+              </div>
+            </div>
+          </template>
+          <template v-else>
+            <router-link
+              v-for="child in activeMobileDockGroup.children"
+              :key="child.path"
+              :to="child.path"
+              class="mobile-dock-sheet__item"
+              :class="{ 'is-active': isDockActive(child.path) }"
+              @click="closeMobileDockGroup"
+            >
+              <span>{{ child.label }}</span>
+              <span v-if="child.count > 0" class="mobile-dock-sheet__count">{{ child.count }}</span>
+            </router-link>
+          </template>
         </div>
       </div>
     </div>
@@ -467,6 +240,12 @@ import { ref, computed, onMounted, onUnmounted, getCurrentInstance, watch } from
 import { useRoute } from 'vue-router';
 import api from '@/plugins/axios';
 import { useSidebar } from '@/composables/useSidebar.js';
+import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
+import {
+  resolveActiveModule,
+  buildListingsSidebarSections,
+  buildSettingsSidebarSections,
+} from '@/composables/useLayoutNavigation.js';
 
 const logo = ref('/assets/images/LogoWhite.png');
 const dashboardIcon=ref('/assets/icons/dashboard-icon.svg');
@@ -484,25 +263,28 @@ const roleIcon=ref('/assets/icons/role-icon.svg');
 const route = useRoute();
 const activeDropdown = ref(null);
 const countsLoading = ref(false);
-const isMobileViewport = ref(false);
 const { proxy } = getCurrentInstance();
 const { isSidebarActive, toggleSidebarDesktop } = useSidebar();
+const {
+  isMobileViewport,
+  isMobileMenuOpen,
+  closeMobileMenu,
+  toggleMobileMenu,
+  syncMobileViewport,
+} = useMobileNavigation();
 
 const sidebarHeaderHover = ref(false);
 const sidebarHover = ref(false);
 
 const closeSidebar = () => {
+  if (isMobileViewport.value) {
+    closeMobileMenu();
+    return;
+  }
   isMobileOpen.value = false;
   document.body.classList.remove('overlay-active');
-  const asideEl = document.querySelector('aside.sidebar');
-  if (asideEl) asideEl.classList.remove('sidebar-open');
+  document.querySelector('aside.sidebar')?.classList.remove('sidebar-open');
 };
-
-function toggleSidebarMobile() {
-  isMobileOpen.value = true;
-  document.querySelector('.sidebar')?.classList.add('sidebar-open');
-  document.body.classList.add('overlay-active');
-}
 
 const getUserFromStorage = () => {
   try {
@@ -760,14 +542,26 @@ const filteredUsersItems = computed(() => {
   });
 });
 
+const activeLayoutModule = computed(() => resolveActiveModule(route.path));
+
+const listingsSidebarSections = computed(() =>
+  buildListingsSidebarSections({
+    listings: filteredTableItems.value,
+    projects: filteredProjectsItems.value,
+    requests: filteredRequestsItems.value,
+    developers: filteredDevelopersItems.value,
+    owners: filteredOwnersItems.value,
+    property_types: filteredPropertyTypesItems.value,
+    features: filteredFeaturesItems.value,
+    unit_views: filteredUnitViewsItems.value,
+    layout_types: filteredLayoutTypesItems.value,
+    areas: filteredAreasItems.value,
+  }),
+);
+
 const mainMenuItems = computed(() => {
   const items = [];
 
-//   items.push({ path: '/payment-breakdown', label: 'Breakdown', icon: 'lucide:receipt-text' });
-
-  if (isAdmin.value) {
-    items.push({ path: '/system-overview', label: 'System overview', icon: 'lucide:layout-dashboard' });
-  }
   if (isSuperAdmin.value) {
     items.push({ path: '/lead-reports', label: 'Lead Reports', icon: 'lucide:bar-chart-2' });
     items.push({ path: '/sales-intelligence', label: 'Sales Intelligence', icon: 'lucide:sparkles' });
@@ -784,58 +578,43 @@ const mainMenuItems = computed(() => {
 
 const filteredMainMenuItems = computed(() => mainMenuItems.value.filter((item) => !!item.path));
 
-const isMainMenuActive = computed(() =>
-  filteredMainMenuItems.value.some((item) => isActive(item.path))
+const settingsSidebarSections = computed(() => {
+  const system = [];
+  if (isAdmin.value) {
+    system.push({ path: '/system-overview', label: 'System Map', icon: 'lucide:layout-dashboard' });
+  }
+  if (isSuperAdmin.value) {
+    system.push({ path: '/logs', label: 'Logs', icon: 'lucide:scroll-text' });
+    system.push({ path: '/attendance-monthly-reports', label: 'Reports', icon: 'lucide:bar-chart-3' });
+  }
+
+  const chat = isCustomAdmin.value
+    ? [{ path: '/admin/chat', label: 'All Chats', icon: 'ri-chat-3-line' }]
+    : [];
+
+  const other = !isShowOnlyListing.value
+    ? [{ path: '/suggestion', label: 'Suggestions', icon: 'lucide:lightbulb' }]
+    : [];
+
+  return buildSettingsSidebarSections({
+    system,
+    roles: filteredRolesItems.value,
+    insights: filteredMainMenuItems.value,
+    chat,
+    other,
+  });
+});
+
+const allListingsMenuPaths = computed(() =>
+  listingsSidebarSections.value.flatMap((s) => s.items.map((i) => i.path)),
 );
 
-const isTableActive = computed(() => 
-  filteredTableItems.value.some(item => isActive(item.path))
-);
-
-const isRequestsActive = computed(() => 
-  filteredRequestsItems.value.some(item => isActive(item.path))
-);
-
-const isDevelopersActive = computed(() => 
-  filteredDevelopersItems.value.some(item => isActive(item.path))
-);
-
-const isOwnersActive = computed(() => 
-  filteredOwnersItems.value.some(item => isActive(item.path))
-);
-
-const isPropertyTypesActive = computed(() => 
-  filteredPropertyTypesItems.value.some(item => isActive(item.path))
-);
-const isFeaturesActive = computed(() => 
-  filteredFeaturesItems.value.some(item => isActive(item.path))
-);
-const isProjectsActive = computed(() => 
-  filteredProjectsItems.value.some(item => isActive(item.path))
-);
-
-const isUnitViewsActive = computed(() => 
-  filteredUnitViewsItems.value.some(item => isActive(item.path))
-);
-
-const isLayoutTypesActive = computed(() => 
-  filteredLayoutTypesItems.value.some(item => isActive(item.path))
-);
-
-const isAreasActive = computed(() => 
-  filteredAreasItems.value.some(item => isActive(item.path))
-);
-
-const isUsersActive = computed(() => 
-  filteredUsersItems.value.some(item => isActive(item.path))
-);
-
-const isRolesActive = computed(() => 
-  filteredRolesItems.value.some(item => isActive(item.path))
+const allSettingsMenuPaths = computed(() =>
+  settingsSidebarSections.value.flatMap((s) => s.items.map((i) => i.path)),
 );
 
 function syncViewport() {
-  isMobileViewport.value = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+  syncMobileViewport();
   if (!isMobileViewport.value) {
     closeMobileDockGroup();
   }
@@ -843,88 +622,72 @@ function syncViewport() {
 
 const showMobileDockSheet = ref(false);
 const activeMobileDockGroup = ref(null);
+const mobileDockExpandedSection = ref(null);
 
 const mobileDockItems = computed(() => {
-  const groups = [];
+  const listingChildren = listingsSidebarSections.value
+    .flatMap((s) => s.items)
+    .slice(0, 8)
+    .map((it) => ({ path: it.path, label: it.label, count: it.count || 0 }));
 
-  const preferredListingChildren = filteredTableItems.value
-    .filter((it) => it.path === '/alllisting' || it.path === '/property-form')
-    .map((it) => ({
-      path: it.path,
-      label: it.label,
-      count: it.count || 0
-    }));
+  const settingsChildren = settingsSidebarSections.value
+    .flatMap((s) => s.items)
+    .slice(0, 6)
+    .map((it) => ({ path: it.path, label: it.label }));
 
-  const fallbackListingChildren = filteredTableItems.value
-    .filter((it) => it.path !== '/notify-me')
-    .map((it) => ({
-      path: it.path,
-      label: it.label,
-      count: it.count || 0
-    }));
+  const items = [
+    { path: isShowOnlyListing.value ? '/alllisting' : '/', label: 'Home', icon: 'solar:home-smile-angle-outline' },
+  ];
 
-  const listingChildren = (preferredListingChildren.length ? preferredListingChildren : fallbackListingChildren).slice(0, 2);
-
-  if (listingChildren.length) {
-    groups.push({
+  if (isAdmin.value) {
+    items.push({ path: '/kanban', label: 'CRM', icon: 'lucide:handshake' });
+  }
+  if (isSuperAdmin.value || user.value?.id === 186) {
+    items.push({ path: '/hr', label: 'HR', icon: 'lucide:users-round' });
+  }
+  if (filteredUsersItems.value.length) {
+    items.push({
+      key: 'group-agents',
+      label: 'Agents',
+      icon: 'lucide:user-round',
+      children: filteredUsersItems.value.map((it) => ({ path: it.path, label: it.label })),
+    });
+  }
+  if (listingsSidebarSections.value.length) {
+    items.push({
       key: 'group-listings',
       label: 'Listings',
       icon: 'lucide:building-2',
       children: listingChildren,
+      sections: listingsSidebarSections.value.map((section) => ({
+        key: section.key,
+        title: section.title,
+        items: section.items.map((it) => ({
+          path: it.path,
+          label: it.label,
+          count: it.count || 0,
+        })),
+      })),
+    });
+  }
+  if (settingsSidebarSections.value.length) {
+    items.push({
+      key: 'group-settings',
+      label: 'Settings',
+      icon: 'lucide:settings',
+      children: settingsChildren,
+      sections: settingsSidebarSections.value.map((section) => ({
+        key: section.key,
+        title: section.title,
+        items: section.items.map((it) => ({
+          path: it.path,
+          label: it.label,
+        })),
+      })),
     });
   }
 
-  if (filteredRequestsItems.value.length) {
-    groups.push({
-      key: 'group-requests',
-      label: 'Requests',
-      icon: 'lucide:clipboard-list',
-      children: filteredRequestsItems.value.map((it) => ({ path: it.path, label: it.label, count: it.count || 0 })),
-    });
-  }
-
-  if (filteredProjectsItems.value.length) {
-    groups.push({
-      key: 'group-projects',
-      label: 'Projects',
-      icon: 'lucide:building',
-      children: filteredProjectsItems.value.map((it) => ({ path: it.path, label: it.label })),
-    });
-  }
-
-  const items = [
-    { path: '/', label: 'Home', icon: 'solar:home-smile-angle-outline' },
-    ...groups,
-  ];
-
-  if (isAdmin.value) {
-    items.splice(1, 0, { path: '/kanban', label: 'CRM', icon: 'lucide:handshake' });
-    items.splice(2, 0, { path: '/hr', label: 'HR', icon: 'lucide:users-round' });
-    items.push({ path: '/system-overview', label: 'Overview', icon: 'lucide:layout-dashboard' });
-  }
-  if (isSuperAdmin.value) {
-    items.push({ path: '/lead-reports', label: 'Reports', icon: 'lucide:bar-chart-3' });
-    items.push({ path: '/sales-intelligence', label: 'Intel', icon: 'lucide:sparkles' });
-  }
-  if (filteredOwnersItems.value.length) items.push({ path: filteredOwnersItems.value[0].path, label: 'Owners', icon: 'lucide:users' });
-  if (filteredDevelopersItems.value.length) items.push({ path: filteredDevelopersItems.value[0].path, label: 'Developers', icon: 'lucide:code' });
-  if (filteredPropertyTypesItems.value.length) items.push({ path: filteredPropertyTypesItems.value[0].path, label: 'Types', icon: 'lucide:grid-2x2' });
-  if (filteredFeaturesItems.value.length) items.push({ path: filteredFeaturesItems.value[0].path, label: 'Features', icon: 'lucide:layers' });
-  if (filteredUnitViewsItems.value.length) items.push({ path: filteredUnitViewsItems.value[0].path, label: 'Views', icon: 'lucide:eye' });
-  if (filteredLayoutTypesItems.value.length) items.push({ path: filteredLayoutTypesItems.value[0].path, label: 'Layouts', icon: 'lucide:layout-template' });
-  if (filteredAreasItems.value.length) items.push({ path: filteredAreasItems.value[0].path, label: 'Areas', icon: 'lucide:map-pin' });
-  if (filteredUsersItems.value.length) items.push({ path: filteredUsersItems.value[0].path, label: 'Agents', icon: 'lucide:user-round' });
-  if (filteredRolesItems.value.length) items.push({ path: filteredRolesItems.value[0].path, label: 'Roles', icon: 'lucide:shield-check' });
-  if (isCustomAdmin.value) items.push({ path: '/admin/chat', label: 'Chats', icon: 'ri-chat-3-line' });
-  items.push({ path: '/suggestion', label: 'Ideas', icon: 'lucide:lightbulb' });
-
-  const seen = new Set();
-  return items.filter((item) => {
-    const uniqueKey = item.key || item.path;
-    if (seen.has(uniqueKey)) return false;
-    seen.add(uniqueKey);
-    return true;
-  });
+  return items;
 });
 
 function isDockActive(path) {
@@ -939,12 +702,19 @@ function isDockGroupActive(group) {
 
 function openMobileDockGroup(group) {
   activeMobileDockGroup.value = group;
+  mobileDockExpandedSection.value = group?.sections?.[0]?.key ?? null;
   showMobileDockSheet.value = true;
 }
 
 function closeMobileDockGroup() {
   showMobileDockSheet.value = false;
   activeMobileDockGroup.value = null;
+  mobileDockExpandedSection.value = null;
+}
+
+function toggleMobileDockSection(sectionKey) {
+  mobileDockExpandedSection.value =
+    mobileDockExpandedSection.value === sectionKey ? null : sectionKey;
 }
 
 
@@ -1002,64 +772,38 @@ function afterLeave(el) {
   el.style.overflow = '';
 }
 
-// Watch for route changes
-watch(() => route.path, (newPath) => {
-  closeMobileDockGroup();
-  const menus = {
-    table: filteredTableItems.value,
-    requests: filteredRequestsItems.value,
-    developers: filteredDevelopersItems.value,
-    owners: filteredOwnersItems.value,
-    property_types: filteredPropertyTypesItems.value,
-    features: filteredFeaturesItems.value,
-    projects: filteredProjectsItems.value,
-    unit_views: filteredUnitViewsItems.value,
-    layout_types: filteredLayoutTypesItems.value,
-    areas: filteredAreasItems.value,
-    users: filteredUsersItems.value,
-    role: filteredRolesItems.value
-  };
-
-  for (const [menuName, items] of Object.entries(menus)) {
-    if (items.some(item => isActive(item.path))) {
-      activeDropdown.value = menuName;
-      localStorage.setItem('activeDropdown', menuName);
-      break;
-    }
+function syncSidebarDropdownFromRoute() {
+  if (allListingsMenuPaths.value.some((p) => isActive(p))) {
+    activeDropdown.value = 'listings';
+    localStorage.setItem('activeDropdown', 'listings');
+    return;
   }
+  if (allSettingsMenuPaths.value.some((p) => isActive(p))) {
+    activeDropdown.value = 'settings';
+    localStorage.setItem('activeDropdown', 'settings');
+    return;
+  }
+  if (filteredUsersItems.value.some((item) => isActive(item.path))) {
+    activeDropdown.value = 'users';
+    localStorage.setItem('activeDropdown', 'users');
+  }
+}
+
+watch(() => route.path, () => {
+  closeMobileDockGroup();
+  closeMobileMenu();
+  syncSidebarDropdownFromRoute();
 });
 
 onMounted(() => {
   syncViewport();
   window.addEventListener('resize', syncViewport);
   const savedDropdown = localStorage.getItem('activeDropdown');
-  if (savedDropdown) {
+  if (savedDropdown && ['listings', 'settings', 'users'].includes(savedDropdown)) {
     activeDropdown.value = savedDropdown;
   }
-
-  const menus = {
-    table: filteredTableItems.value,
-    requests: filteredRequestsItems.value,
-    developers: filteredDevelopersItems.value,
-    owners: filteredOwnersItems.value,
-    property_types: filteredPropertyTypesItems.value,
-    features: filteredFeaturesItems.value,
-    unit_views: filteredUnitViewsItems.value,
-    layout_types: filteredLayoutTypesItems.value,
-    areas: filteredAreasItems.value,
-    users: filteredUsersItems.value,
-    role: filteredRolesItems.value
-  };
-
-  for (const [menuName, items] of Object.entries(menus)) {
-    if (items.some(item => isActive(item.path))) {
-      activeDropdown.value = menuName;
-      break;
-    }
-  }
-
+  syncSidebarDropdownFromRoute();
   fetchAllCounts();
-
   setInterval(fetchAllCounts, 60000);
 });
 
@@ -1071,11 +815,12 @@ onUnmounted(() => {
 <style scoped>
 /* 1. Default / open sidebar: same as header bar (light transparent glass) */
 .sidebar {
-  /*background: rgba(255, 255, 255, 0.12);*/
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  /*border: 1px solid rgba(255, 255, 255, 0.2);*/
-  /* Keep sidebar above header in all states */
+  display: flex;
+  flex-direction: column;
+  background: var(--gradient-crm-glass) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-color: rgba(255, 255, 255, 0.12) !important;
   z-index: 99 !important;
   position: fixed;
 }
@@ -1083,6 +828,17 @@ onUnmounted(() => {
 .sidebar-menu-area {
   position: relative;
   z-index: 1201;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .sidebar-submenu {
@@ -1096,7 +852,7 @@ onUnmounted(() => {
   box-sizing: border-box;
   justify-content: flex-start;
   background: transparent;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 .sidebar-menu li a {
     padding: 0.45rem 0.5rem !important;
@@ -1109,7 +865,7 @@ onUnmounted(() => {
 /* 2. Darker only on hover when collapsed (.sidebar.active = collapsed) */
 .sidebar.active:hover {
   width: auto;
-   background: rgb(1 6 45 / 56%) !important;
+   background: var(--gradient-crm-glass) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   /*border-color: rgba(255, 255, 255, 0.12);*/
@@ -1117,9 +873,9 @@ onUnmounted(() => {
 }
 @media (max-width: 991px) {
   .sidebar.sidebar-open {
-    background: rgb(1 6 45 / 56%) !important;;
-    backdrop-filter: blur(16px) !important;;
-    -webkit-backdrop-filter: blur(16px) !important;;
+    background: var(--gradient-crm-glass) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
             z-index: 100 !important;
 
   }
@@ -1138,7 +894,7 @@ onUnmounted(() => {
     gap: 8px;
     padding: 5px 8px;
     border-radius: 18px;
-    background: #01062c;
+    background: #0B0736;
     box-shadow: 0 10px 30px rgba(2, 6, 23, 0.28);
     overflow-x: auto;
     overflow-y: visible;
@@ -1519,6 +1275,36 @@ onUnmounted(() => {
     margin-inline-end: 0rem !important;
 }
 
+.sidebar-menu__settings {
+  margin-top: auto;
+}
+
+.sidebar-submenu--grouped {
+  padding-top: 2px;
+}
+
+.sidebar-submenu__heading {
+  list-style: none;
+  padding: 8px 12px 4px;
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+}
+
+.sidebar-submenu__heading:first-child {
+  padding-top: 4px;
+}
+
+.submenu-icon {
+  font-size: 1rem;
+  margin-inline-end: 6px;
+  flex-shrink: 0;
+}
+
 .sidebar-item-all-chats a,
 .sidebar-item-all-chats a span {
   font-size: 0.8rem !important;
@@ -1526,5 +1312,139 @@ onUnmounted(() => {
 }
 .sidebar-item-all-chats .menu-icon {
   font-size: 1rem !important;
+}
+
+.mobile-nav-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2350;
+  background: rgba(11, 7, 54, 0.48);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+@media (max-width: 768px) {
+  aside.sidebar.sidebar--mobile-drawer {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    margin: 0 !important;
+    width: min(288px, 88vw) !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 16px 16px 0 !important;
+    transform: translate3d(-110%, 0, 0);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2400 !important;
+    overflow: hidden;
+  }
+
+  aside.sidebar.sidebar--mobile-drawer.sidebar-open {
+    transform: translate3d(0, 0, 0);
+  }
+
+  aside.sidebar.sidebar--mobile-drawer .sidebar-close-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    z-index: 2;
+  }
+
+  aside.sidebar.sidebar--mobile-drawer .sidebar-menu-area {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  aside.sidebar.sidebar--mobile-drawer .sidebar-menu li a {
+    min-height: 44px;
+  }
+
+  .mobile-sidebar-dock {
+    height: 58px;
+    padding: 6px 10px;
+    background: var(--gradient-crm-glass, linear-gradient(135deg, rgba(11, 7, 54, 0.92) 0%, rgba(115, 62, 135, 0.82) 100%));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .mobile-sidebar-dock__item,
+  .mobile-sidebar-dock__btn {
+    min-width: 56px;
+    min-height: 44px;
+    padding: 6px 10px;
+  }
+
+  .mobile-dock-sheet {
+    max-height: min(72vh, 520px);
+  }
+
+  .mobile-dock-sheet__close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .mobile-dock-accordion {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .mobile-dock-accordion__trigger {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border: none;
+    background: #f8fafc;
+    color: #0b0736;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .mobile-dock-accordion__chevron {
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .mobile-dock-accordion__chevron.is-open {
+    transform: rotate(180deg);
+  }
+
+  .mobile-dock-accordion__panel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 8px 8px;
+    max-height: 40vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-dock-sheet__item {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-nav-overlay {
+    display: none !important;
+  }
+
+  aside.sidebar.sidebar--mobile-drawer {
+    transform: none;
+  }
 }
 </style>

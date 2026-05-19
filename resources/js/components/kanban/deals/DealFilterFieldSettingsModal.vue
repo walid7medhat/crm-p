@@ -147,7 +147,7 @@ const apply = () => {
   font-weight: 500;
   font-size: 14px;
 }
-.modal-title-custom { font-size: 14px !important; font-weight: 600 !important; color: #01062c; }
+.modal-title-custom { font-size: 14px !important; font-weight: 600 !important; color: #0B0736; }
 .close-btn-custom { background: transparent; border: none; color: #000; padding: 0; display: flex; align-items: center; justify-content: center; }
 .border-bottom-light { border-bottom: 1px solid #f1f5f9 !important; }
 .tab-btn {
@@ -160,7 +160,7 @@ const apply = () => {
   color: #666;
   position: relative;
 }
-.tab-btn.active { background: #01062c; color: #fff; border-color: #01062c; }
+.tab-btn.active { background: #0B0736; color: #fff; border-color: #0B0736; }
 .check-badge {
   position: absolute;
   top: -6px;
@@ -190,7 +190,7 @@ const apply = () => {
   background: #fff;
 }
 .settings-subsection-head { border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 10px; }
-.settings-subsection-title { font-size: 13px; color: #01062c; font-weight: 600; }
+.settings-subsection-title { font-size: 13px; color: #0B0736; font-weight: 600; }
 .fields-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 22px; }
 .field-checkbox { font-size: 13px !important; font-weight: 400 !important; color: #666 !important; }
 
@@ -210,7 +210,7 @@ const apply = () => {
   background-size: 18px 18px !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
-  box-shadow: 0 0 5px 4px #faa30026 !important;
+  box-shadow: 0 0 5px 4px #733E8726 !important;
 }
 .btn-cancel {
   background: #f4f4f4;
@@ -218,7 +218,7 @@ const apply = () => {
   padding: 9px 28px;
   border-radius: 100px;
   font-size: 14px;
-  color: #01062c;
+  color: #0B0736;
 }
 .btn-apply {
   background: #000;

@@ -211,7 +211,7 @@ const parentName = computed(() => {
     font-weight: 500;
     font-style: Medium;
     font-size: 13px;
-    color: #01062C;
+    color: #0B0736;
 }
 
 .responsible-avatar {
@@ -252,11 +252,11 @@ const parentName = computed(() => {
 }
 
 .info-value {
-    color: #01062C;
+    color: #0B0736;
 }
 
 .btn-change-person {
-    background:#FAA300;
+    background:#733E87;
     border: none;
     height: 36px;
     padding: 0 16px;
@@ -337,7 +337,7 @@ const parentName = computed(() => {
 .search-icon {
     position: absolute;
     right: 15px;
-    color: #FAA300;
+    color: #733E87;
     font-size: 20px;
 }
 
@@ -387,7 +387,7 @@ const parentName = computed(() => {
 .user-item-name {
     font-weight: 600;
     font-size: 14px;
-    color: #01062C;
+    color: #0B0736;
     font-family: var(--deal-font, 'Montserrat', sans-serif);
     text-transform: capitalize;
 }

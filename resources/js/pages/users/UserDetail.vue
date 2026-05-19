@@ -731,7 +731,7 @@ export default {
         rgba(5, 10, 40, 0.95) 100%    
 
     ); */
-    background-color: #FAA300;
+    background-color: #733E87;
     color: white;
     padding: 5px 10px;
     border-radius: 5px;
@@ -920,7 +920,7 @@ export default {
 }
 
 .stat-card:hover {
-    border-color: #FAA300;
+    border-color: #733E87;
     box-shadow: 0 6px 20px rgba(108, 92, 231, 0.15);
 }
 
@@ -1103,7 +1103,7 @@ export default {
 
 .detail-item i {
     font-size: 1rem;
-    color: #FAA300;
+    color: #733E87;
     margin-bottom: 0.25rem;
 }
 
@@ -1122,7 +1122,7 @@ export default {
 }
 
 .team-member-card:hover {
-    border-color: #FAA300;
+    border-color: #733E87;
     box-shadow: 0 6px 20px rgba(108, 92, 231, 0.1);
 }
 
@@ -1413,7 +1413,7 @@ export default {
   display: inline-block;
   text-align: center;
   width: 100%;
-  background: #FAA300;
+  background: #733E87;
   color: #ffffff;
   font-weight: 500;
   border-radius: 10px;
@@ -1432,8 +1432,8 @@ export default {
   pointer-events: none; /* لمنع النقر على الزر نفسه بشكل منفصل */
 }
 .btn-success{
-    background-color: #0D1237 !important;
-    border: 1px solid #0D1237 !important ;
+    background-color: #0B0736 !important;
+    border: 1px solid #0B0736 !important ;
     border-radius: 5px !important;
 }
 .btn-outline-secondary{
@@ -1495,7 +1495,7 @@ export default {
 
 
 .status-badge {
-   background: #01062d ;
+   background: #0B0736 ;
   color: white;
   padding: 4px 8px;
   border-radius: 6px;
@@ -1513,7 +1513,7 @@ export default {
 
 .property-listed-date i {
   font-size: 0.8rem;
-  color: #FAA300;
+  color: #733E87;
 }
 .justify-between{
     justify-content:space-between;
@@ -1528,7 +1528,7 @@ export default {
 }
 .badge-occupancy_status{
     background: #EDEBEB !important;
-    color: #01062C !important;
+    color: #0B0736 !important;
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 0.7rem;

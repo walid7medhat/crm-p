@@ -368,7 +368,7 @@ onUnmounted(() => {
 .modal-title {
     font-size: 14px;
     font-weight: 400;
-    color: #01062C;
+    color: #0B0736;
 }
 
 /* Activity/Comment Section Styles */
@@ -459,7 +459,7 @@ onUnmounted(() => {
 }
 
 .activity-control-icon.bell-icon {
-    color: #FAA300;
+    color: #733E87;
 }
 
 .activity-control-text {
@@ -485,7 +485,7 @@ onUnmounted(() => {
     padding: 5px 20px;
     border-radius: 100px;
     font-size: 14px;
-    color: #01062C;
+    color: #0B0736;
     cursor: pointer;
 }
 
@@ -494,7 +494,7 @@ onUnmounted(() => {
 }
 
 .btn-save {
-    background: #01062C;
+    background: #0B0736;
     border: none;
     padding: 5px 20px;
     border-radius: 100px;
@@ -596,8 +596,8 @@ onUnmounted(() => {
 }
 
 .reminder-checkbox.checked {
-    background: #FAA300;
-    border-color: #FAA300;
+    background: #733E87;
+    border-color: #733E87;
 }
 
 .check-icon {

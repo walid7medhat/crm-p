@@ -401,7 +401,7 @@ onUnmounted(() => {
     border-color: rgba(250, 163, 0, 0.55);
     background: rgba(255, 255, 255, 0.5);
     box-shadow: 0 4px 18px rgba(1, 6, 44, 0.08);
-    color: #01062c;
+    color: #0B0736;
 }
 
 .scroll-hover-edge:active .scroll-edge-inner {
@@ -503,7 +503,7 @@ onUnmounted(() => {
 }
 
 .stage-pill.active .stage-text {
-    color: #01062C;
+    color: #0B0736;
     font-weight: 400;
 }
 

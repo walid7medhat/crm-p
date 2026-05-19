@@ -523,8 +523,9 @@
     @apply="onCreatedByCustomDateApply"
     @cancel="onCreatedByCustomDateCancel"
   />
-  <!-- Custom Date Modal for Created By -->
-<div v-if="showCreatedByDateModal" class="lr-modal-backdrop" @click.stop>
+  <!-- Custom Date Modal for Created By (teleported so dropdown/modal overflow does not clip) -->
+  <Teleport to="body">
+  <div v-if="showCreatedByDateModal" class="lr-modal-backdrop" @click.stop>
     <div class="lr-date-modal">
         <div class="lr-date-left">
             <button
@@ -573,7 +574,8 @@
             </div>
         </div>
     </div>
-</div>
+  </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -1716,10 +1718,10 @@ onMounted(async () => {
     align-items: center;
     border-width: 1px;
     border-style: solid;
-    border-color: #4fa5f7;
+    border-color: rgba(115, 62, 135, 0.75);
     border-image: initial;
     border-radius: 999px;
-    background: linear-gradient(90deg, #2f88ef, #5db8ff);
+    background: var(--gradient-crm, linear-gradient(135deg, #0b0736 0%, #733e87 100%));
     padding: 0;
     transition: filter .2s;
 }
@@ -1753,8 +1755,8 @@ onMounted(async () => {
 }
 
 .deal-pill-btn.active {
-  background: #01062c;
-  border-color: #01062c;
+  background: #0B0736;
+  border-color: #0B0736;
   color: #fff;
 }
 
@@ -1788,7 +1790,7 @@ onMounted(async () => {
 .search-section-title {
   font-size: 13px;
   font-weight: 600;
-  color: #01062c;
+  color: #0B0736;
   margin-bottom: 10px;
 }
 
@@ -2004,7 +2006,7 @@ onMounted(async () => {
 
 :deep(.custom-v-select .vs__dropdown-option--highlight),
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-  background: #faa300 !important;
+  background: #733E87 !important;
   color: #fff !important;
 }
 
@@ -2120,7 +2122,7 @@ onMounted(async () => {
 
 .btn-reset {
   background: #f4f4f4;
-  color: #01062c;
+  color: #0B0736;
 }
 
 .btn-search {
@@ -2343,13 +2345,13 @@ onMounted(async () => {
 
 /* LR Modal Backdrop & Date Modal Styles */
 .lr-modal-backdrop {
-    position: inherit;
+    position: fixed;
     inset: 0;
     background: rgba(2, 6, 23, 0.45);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10070;
+    z-index: 11000;
     padding: 12px;
 }
 
@@ -2385,8 +2387,8 @@ onMounted(async () => {
 }
 
 .lr-date-preset.active {
-    background: #01062C;
-    border-color: #01062C;
+    background: #0B0736;
+    border-color: #0B0736;
     color: #fff;
 }
 
@@ -2479,8 +2481,8 @@ onMounted(async () => {
 }
 
 .lr-day.selected {
-    background: #01062C;
-    border-color: #01062C;
+    background: #0B0736;
+    border-color: #0B0736;
     color: #fff;
 }
 
@@ -2503,7 +2505,7 @@ onMounted(async () => {
     padding: 8px 20px;
     border-radius: 100px;
     font-size: 13px;
-    color: #01062C;
+    color: #0B0736;
     cursor: pointer;
     transition: all 0.2s;
 }
