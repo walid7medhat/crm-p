@@ -30,7 +30,7 @@
         aria-hidden="true"
         tabindex="-1"
       >
-        <source src="{{ asset('videos/vibecode.mp4') }}" type="video/mp4">
+        <source src="{{ asset('videos/vibecode.mp4') }}?v=2" type="video/mp4">
       </video>
 
       <style>

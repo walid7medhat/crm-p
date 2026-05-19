@@ -1,5 +1,19 @@
 <template>
   <section class="auth-landing">
+    <video
+      ref="bgVideoRef"
+      class="auth-landing__video"
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="auto"
+      aria-hidden="true"
+      tabindex="-1"
+    >
+      <source :src="backgroundVideoSrc" type="video/mp4" />
+    </video>
+    <div class="auth-landing__overlay" aria-hidden="true" />
     <div class="auth-landing__mesh" aria-hidden="true" />
     <div class="auth-landing__glow auth-landing__glow--one" aria-hidden="true" />
     <div class="auth-landing__glow auth-landing__glow--two" aria-hidden="true" />
@@ -58,6 +72,8 @@ import { ref, onMounted, onUnmounted } from 'vue';
 
 const altcrmLogo = '/assets/images/auth/altcrm-logo.png';
 const oiaLogo = '/assets/images/auth/oia-properties-logo.png';
+const backgroundVideoSrc = '/videos/vibecode.mp4';
+const bgVideoRef = ref(null);
 
 const featureCards = [
   {
@@ -126,6 +142,10 @@ function startCarouselAutoplay() {
 
 onMounted(() => {
   startCarouselAutoplay();
+  const video = bgVideoRef.value;
+  if (video) {
+    video.play().catch(() => {});
+  }
 });
 
 onUnmounted(() => {
@@ -150,15 +170,40 @@ onUnmounted(() => {
   max-height: 100vh;
   max-height: 100dvh;
   overflow: hidden;
-  background: linear-gradient(125deg, var(--auth-bg) 0%, var(--auth-bg-mid) 42%, var(--auth-bg-light) 68%, #1e0d4a 100%);
+  background: transparent;
   color: #fff;
   font-family: Montserrat, Inter, system-ui, sans-serif;
   box-sizing: border-box;
 }
 
+.auth-landing__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.auth-landing__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    125deg,
+    rgba(11, 7, 54, 0.82) 0%,
+    rgba(26, 10, 66, 0.78) 42%,
+    rgba(43, 20, 88, 0.72) 68%,
+    rgba(30, 13, 74, 0.8) 100%
+  );
+}
+
 .auth-landing__mesh {
   position: absolute;
   inset: 0;
+  z-index: 0;
   pointer-events: none;
   background:
     radial-gradient(ellipse 55% 45% at 8% 92%, rgba(192, 38, 211, 0.45) 0%, transparent 70%),
@@ -167,6 +212,7 @@ onUnmounted(() => {
 
 .auth-landing__glow {
   position: absolute;
+  z-index: 0;
   border-radius: 50%;
   pointer-events: none;
   filter: blur(90px);
