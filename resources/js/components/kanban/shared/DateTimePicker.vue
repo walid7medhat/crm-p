@@ -161,11 +161,27 @@ const props = defineProps({
         type: Boolean,
         default: false
     },
-    /** Birthday-style UI: Month / Day / Year dropdowns + no future dates. */
+    /** Month / Day / Year dropdowns + compact calendar. */
     dobLayout: {
         type: Boolean,
         default: false
+    },
+    /** Block dates after today (default true when dobLayout). Set false for schedules / handover. */
+    blockFutureDates: {
+        type: Boolean,
+        default: undefined
     }
+})
+
+const shouldBlockFuture = computed(() => {
+    if (props.blockFutureDates !== undefined) return props.blockFutureDates
+    return props.dobLayout && props.dateOnly
+})
+
+const maxSelectableDate = computed(() => {
+    if (!shouldBlockFuture.value) return null
+    const t = new Date()
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate())
 })
 
 const dobMonthLabels = [
@@ -173,19 +189,14 @@ const dobMonthLabels = [
     'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
-/** Start of today in local calendar (no time) — max selectable DOB. */
-const dobMaxCalendarDate = computed(() => {
-    const t = new Date()
-    return new Date(t.getFullYear(), t.getMonth(), t.getDate())
-})
-
 const dobMonthChoices = computed(() =>
     dobMonthLabels.map((label, idx) => ({ value: idx + 1, label }))
 )
 
 const dobYearOptions = computed(() => {
-    const maxY = dobMaxCalendarDate.value.getFullYear()
-    const minY = maxY - 110
+    const todayY = new Date().getFullYear()
+    const maxY = shouldBlockFuture.value ? todayY : todayY + 50
+    const minY = shouldBlockFuture.value ? todayY - 110 : todayY - 30
     const list = []
     for (let y = maxY; y >= minY; y--) list.push(y)
     return list
@@ -230,8 +241,8 @@ function normalizeDobSelection() {
     const maxD = new Date(y, m + 1, 0).getDate()
     let d = selectedDate.value ? Math.min(selectedDate.value.getDate(), maxD) : 1
     let cand = new Date(y, m, d)
-    const maxC = dobMaxCalendarDate.value
-    if (compareCalendarOnly(cand, maxC) > 0) {
+    const maxC = maxSelectableDate.value
+    if (maxC && compareCalendarOnly(cand, maxC) > 0) {
         cand = new Date(maxC)
         currentDate.value = new Date(cand.getFullYear(), cand.getMonth(), 1)
     }
@@ -278,8 +289,9 @@ const dobSelDayOneBased = computed({
         const y = currentDate.value.getFullYear()
         const m = currentDate.value.getMonth()
         let cand = new Date(y, m, d)
-        if (compareCalendarOnly(cand, dobMaxCalendarDate.value) > 0) {
-            cand = new Date(dobMaxCalendarDate.value)
+        const maxC = maxSelectableDate.value
+        if (maxC && compareCalendarOnly(cand, maxC) > 0) {
+            cand = new Date(maxC)
         }
         selectedDate.value = cand
         currentDate.value = new Date(cand.getFullYear(), cand.getMonth(), 1)
@@ -354,7 +366,7 @@ const calendarDays = computed(() => {
     const days = []
     
     // Previous month days
-    const maxSel = props.dobLayout && props.dateOnly ? dobMaxCalendarDate.value : null
+    const maxSel = props.dobLayout && props.dateOnly ? maxSelectableDate.value : null
     for (let i = firstDayOfWeek - 1; i >= 0; i--) {
         const day = prevMonthLastDay - i
         const date = new Date(year, month - 1, day)
@@ -446,9 +458,9 @@ const handleApply = () => {
         selectedDate.value = new Date()
     }
 
-    if (props.dateOnly && props.dobLayout) {
-        if (compareCalendarOnly(selectedDate.value, dobMaxCalendarDate.value) > 0) {
-            selectedDate.value = new Date(dobMaxCalendarDate.value)
+    if (props.dateOnly && props.dobLayout && maxSelectableDate.value) {
+        if (compareCalendarOnly(selectedDate.value, maxSelectableDate.value) > 0) {
+            selectedDate.value = new Date(maxSelectableDate.value)
         }
     }
     

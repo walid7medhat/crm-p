@@ -16,6 +16,7 @@
       :model-value="pickerDate"
       :date-only="dateOnly"
       :dob-layout="dobLayout"
+      :block-future-dates="blockFutureDates"
       @update:show="showPicker = $event"
       @apply="onApply"
       @cancel="onCancel"
@@ -38,8 +39,10 @@ const props = defineProps({
   modelValue: { type: [String, Date], default: null },
   /** When true, hide time controls and emit YYYY-MM-DD (DOB / date filters). */
   dateOnly: { type: Boolean, default: true },
-  /** Rich DOB UX: Month / Day / Year dropdowns + calendar; future dates blocked. */
+  /** Rich DOB UX: Month / Day / Year dropdowns + calendar; future dates blocked by default. */
   dobLayout: { type: Boolean, default: false },
+  /** When false with dobLayout, allows future dates (e.g. handover / installments). Default: true if dobLayout. */
+  blockFutureDates: { type: Boolean, default: undefined },
   placeholder: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   invalid: { type: Boolean, default: false },
