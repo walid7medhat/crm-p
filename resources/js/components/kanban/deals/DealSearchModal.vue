@@ -523,8 +523,9 @@
     @apply="onCreatedByCustomDateApply"
     @cancel="onCreatedByCustomDateCancel"
   />
-  <!-- Custom Date Modal for Created By -->
-<div v-if="showCreatedByDateModal" class="lr-modal-backdrop" @click.stop>
+  <!-- Custom Date Modal for Created By (teleported so dropdown/modal overflow does not clip) -->
+  <Teleport to="body">
+  <div v-if="showCreatedByDateModal" class="lr-modal-backdrop" @click.stop>
     <div class="lr-date-modal">
         <div class="lr-date-left">
             <button
@@ -573,7 +574,8 @@
             </div>
         </div>
     </div>
-</div>
+  </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -2343,13 +2345,13 @@ onMounted(async () => {
 
 /* LR Modal Backdrop & Date Modal Styles */
 .lr-modal-backdrop {
-    position: inherit;
+    position: fixed;
     inset: 0;
     background: rgba(2, 6, 23, 0.45);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10070;
+    z-index: 11000;
     padding: 12px;
 }
 

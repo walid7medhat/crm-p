@@ -695,6 +695,7 @@
         @apply="onFilterApply"
     />
 
+    <Teleport to="body">
     <div v-if="showDateModal" class="lr-modal-backdrop" @click.stop>
         <div class="lr-date-modal">
             <div class="lr-date-left">
@@ -745,6 +746,7 @@
             </div>
         </div>
     </div>
+    </Teleport>
 
     <Teleport to="body">
         <div
@@ -3538,14 +3540,15 @@ onBeforeUnmount(() => {
 }
 
 
+/* Teleported to body so search modal/dropdown overflow does not clip the calendar */
 .lr-modal-backdrop {
-    position: inherit !important;
+    position: fixed;
     inset: 0;
     background: rgba(2, 6, 23, 0.45);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 4000;
+    z-index: 11000;
     padding: 12px;
 }
 

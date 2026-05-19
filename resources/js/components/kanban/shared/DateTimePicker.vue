@@ -1,4 +1,5 @@
 <template>
+    <Teleport to="body">
     <div v-if="show" class="date-time-picker-overlay" @click.self="handleCancel">
         <div class="date-time-picker-modal" :class="{ 'is-dob-layout': dateOnly && dobLayout }" @click.stop>
             <!-- Month / Year (calendar nav) -->
@@ -142,6 +143,7 @@
             </div>
         </div>
     </div>
+    </Teleport>
 </template>
 
 <script setup>
