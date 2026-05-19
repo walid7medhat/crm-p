@@ -525,7 +525,7 @@
   />
   <!-- Custom Date Modal for Created By (teleported so dropdown/modal overflow does not clip) -->
   <Teleport to="body">
-  <div v-if="showCreatedByDateModal" class="lr-modal-backdrop" @click.stop>
+  <div v-if="showCreatedByDateModal" class="lr-modal-backdrop lead-search-date-backdrop" @click.stop>
     <div class="lr-date-modal">
         <div class="lr-date-left">
             <button
@@ -2215,6 +2215,16 @@ onMounted(async () => {
 }
 </style>
 <style>
+.lead-search-date-backdrop.lr-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100002 !important;
+    padding: 12px;
+}
 
 .custom-v-select .vs__dropdown-option {
   padding: 5px 10px;
@@ -2351,7 +2361,7 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 11000;
+    z-index: 100002;
     padding: 12px;
 }
 

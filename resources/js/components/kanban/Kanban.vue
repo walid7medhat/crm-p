@@ -313,6 +313,7 @@ watch(showSearchModal, (isOpen) => {
 
 function onDocumentClick(e) {
     if (!showSearchModal.value) return
+    if (e.target.closest?.('.lead-search-date-backdrop, .lr-date-modal')) return
     if (e.target.closest && e.target.closest('.modal')) return
     const el = searchDropdownAnchorRef.value
     if (el && !el.contains(e.target)) {

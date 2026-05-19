@@ -917,6 +917,7 @@ function onSearchBlur() {
 
 function onDocumentClick(e) {
     if (!showSearchModal.value) return;
+    if (e.target.closest?.('.lead-search-date-backdrop, .lr-date-modal')) return;
     if (e.target.closest?.('.modal')) return;
     const anchor = searchDropdownAnchorRef.value;
     const panel = searchDropdownPanelRef.value;

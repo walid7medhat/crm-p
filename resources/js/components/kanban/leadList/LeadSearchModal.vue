@@ -60,7 +60,7 @@
                                 v-if="field.id === 'created_on' || field.id === 'assigned_on'"
                                 type="button"
                                 class="custom-date-trigger"
-                                @click="openDatePicker(field.id)"
+                                @click.stop="openDatePicker(field.id, $event)"
                             >
                                 <span>{{ field.id === 'assigned_on' ? assignedOnDisplay : createdOnDisplay }}</span>
                                 <iconify-icon icon="lucide:calendar-days" />
@@ -409,7 +409,7 @@
                                 v-if="field.id === 'created_on' || field.id === 'assigned_on'"
                                 type="button"
                                 class="custom-date-trigger"
-                                @click="openDatePicker(field.id)"
+                                @click.stop="openDatePicker(field.id, $event)"
                             >
                                 <span>{{ field.id === 'assigned_on' ? assignedOnDisplay : createdOnDisplay }}</span>
                                 <iconify-icon icon="lucide:calendar-days" />
@@ -696,7 +696,7 @@
     />
 
     <Teleport to="body">
-    <div v-if="showDateModal" class="lr-modal-backdrop" @click.stop>
+    <div v-if="showDateModal" class="lr-modal-backdrop lead-search-date-backdrop" @click.stop>
         <div class="lr-date-modal">
             <div class="lr-date-left">
                 <button
@@ -2730,7 +2730,8 @@ const calendarCells = computed(() => {
     return cells
 })
 
-function openDatePicker(fieldId = 'created_on') {
+function openDatePicker(fieldId = 'created_on', event) {
+    event?.stopPropagation?.()
     activeDateField.value = fieldId
     const isAssigned = fieldId === 'assigned_on'
     const dateKey = isAssigned ? 'assignedOn' : 'createdOn'
@@ -3548,7 +3549,8 @@ onBeforeUnmount(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 11000;
+    /* Above navbar search panel (15000) and kanban overlays */
+    z-index: 100002;
     padding: 12px;
 }
 
@@ -3969,6 +3971,23 @@ onBeforeUnmount(() => {
 
 </style>
 <style>
+    /* Global: teleported date picker must sit above search dropdown (z-index 15000+) */
+    .lead-search-date-backdrop.lr-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(2, 6, 23, 0.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100002 !important;
+        padding: 12px;
+    }
+
+    .lead-search-date-backdrop .lr-date-modal {
+        position: relative;
+        z-index: 1;
+    }
+
     .modal-dialog {
         z-index: 1060 !important;
     }
