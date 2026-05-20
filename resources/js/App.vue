@@ -1,15 +1,21 @@
 <template>
   <div id="app">
-    <Header v-if="showLayout" />
+    <AppLoader :show="isAppLoading" @hidden="onLoaderHidden" />
+    <Header v-show="showLayout && !isAppLoading" />
     <main :class="showLayout ? 'dashboard-main' : 'auth-page-main'">
-      <Navbar v-if="showLayout" />
+      <Navbar v-show="showLayout && !isAppLoading" />
       <!-- In-flow spacer: reserves height so pages never sit under the absolute navbar -->
       <div
-        v-if="showLayout"
+        v-show="showNavbarSpacer"
         class="app-navbar-spacer"
         aria-hidden="true"
       />
-      <div :class="showLayout ? 'dashboard-main-router' : ''">
+      <div
+        :class="[
+          showLayout ? 'dashboard-main-router' : '',
+          { 'dashboard-main-router--loading': isAppLoading && showLayout },
+        ]"
+      >
         <router-view />
       </div>
       <Footer v-if="showLayout" />
@@ -32,17 +38,20 @@
 </template>
 
 <script>
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Header from './components/layout/header/index.vue'
 import Navbar from './components/layout/navbar/index.vue'
 import Footer from './components/layout/footer/index.vue'
 import ChatPopup from './components/chat/ChatPopup.vue'
 import ChatFloatingButton from './components/chat/ChatFloatingButton.vue'
+import AppLoader from './components/layout/AppLoader.vue'
+import { useAppLoader } from './composables/useAppLoader.js'
 
 export default {
   name: 'App',
   components: {
+    AppLoader,
     Header,
     Navbar,
     Footer,
@@ -51,7 +60,14 @@ export default {
   },
   setup() {
     const route = useRoute()
+    const { isAppLoading, onLoaderHidden } = useAppLoader()
     const showLayout = computed(() => route.meta.layout !== false)
+    const isKanbanShellRoute = computed(() =>
+      ['/kanban', '/kanban_deal'].some((p) => route.path.startsWith(p))
+    )
+    const showNavbarSpacer = computed(
+      () => showLayout.value && !isAppLoading.value && !isKanbanShellRoute.value
+    )
     const chatOpen = ref(false)
     const chatAgent = ref(null)
     const chatListingId = ref(null)
@@ -91,15 +107,27 @@ export default {
       chatOpen.value = false
     }
 
+    function syncVideoBgClass() {
+      document.body.classList.toggle('app-has-video-bg', showLayout.value)
+    }
+
     onMounted(() => {
       window.__openPropertyChat = openPropertyChat
+      syncVideoBgClass()
     })
     onUnmounted(() => {
       window.__openPropertyChat = null
+      document.body.classList.remove('app-has-video-bg')
     })
 
+    watch(showLayout, syncVideoBgClass)
+
     return {
+      isAppLoading,
+      onLoaderHidden,
       showLayout,
+      showNavbarSpacer,
+      isKanbanShellRoute,
       chatOpen,
       chatAgent,
       chatListingId,
@@ -184,6 +212,12 @@ html:has(#app main.auth-page-main) body {
   /* Lets routed pages (e.g. property map) use height: 100% / flex to fill below navbar */
   display: flex;
   flex-direction: column;
+}
+
+/* Route mounts behind loader; keep layout stable without flashing old page */
+#app main.dashboard-main > .dashboard-main-router--loading {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 body.mobile-nav-open {

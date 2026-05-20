@@ -67,24 +67,10 @@
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* —— Video background (auth + app shell) —— */
-  .crm-bg-video {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    min-width: 100%;
-    min-height: 100%;
-    object-fit: cover;
-    object-position: center center;
-    z-index: -1;
-    pointer-events: none;
-    transform: translateZ(0);
-  }
-
-  /* Auth shell renders its own video; hide duplicate from welcome.blade.php */
-  html:has(#app main.auth-page-main) .crm-bg-video {
-    display: none;
+  /* Video + overlay: global rules in app.css; auth hides duplicate welcome video */
+  html:has(#app main.auth-page-main) .crm-bg-video,
+  html:has(#app main.auth-page-main) .crm-bg-video-overlay {
+    display: none !important;
   }
 
   html:has(#app main.auth-page-main) body {

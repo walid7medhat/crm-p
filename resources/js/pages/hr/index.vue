@@ -5545,11 +5545,11 @@ onBeforeUnmount(() => {
   --hr-surface-border: #e8ddf0;
 }
 .hr-frame {
-  background: var(--hr-gradient-vertical);
+  background: transparent;
   border-radius: 18px;
-  border: 1px solid var(--hr-border);
+  border: none;
   padding: 10px;
-  box-shadow: 0 14px 32px rgba(11, 7, 54, 0.25);
+  box-shadow: none;
 }
 .hr-topbar {
   background: #fff;

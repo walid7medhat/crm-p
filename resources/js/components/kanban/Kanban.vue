@@ -705,11 +705,12 @@ const $showNotification = (message, type = 'info') => {
 
 <style scoped>
 .kanban-main-wrapper {
-    min-height: calc(100vh - 72px);
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
     display: flex;
     flex-direction: column;
     background-color: transparent !important;
-    /*margin: 8px 12px 0;*/
     border-radius: 16px;
 }
 

@@ -3336,7 +3336,9 @@ const $showNotification = (message, type = 'info') => {
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: calc(100vh - 100px);
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
 }
 
 .kanban-container {
