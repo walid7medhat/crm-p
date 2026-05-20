@@ -23,8 +23,8 @@
             :src="card.iconSrc"
             alt=""
             class="lead-analytics-card__img"
-            width="14"
-            height="14"
+            width="11"
+            height="11"
             loading="lazy"
             decoding="async"
           />
@@ -86,7 +86,7 @@ function onCardClick(key) {
 <style scoped>
 .lead-analytics-row {
   flex-shrink: 0;
-  padding: 2px 10px 4px;
+  padding: 0 6px 2px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -96,7 +96,7 @@ function onCardClick(key) {
   flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-start;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
   min-width: 0;
 }
@@ -108,7 +108,7 @@ function onCardClick(key) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
+  height: 28px;
   margin: 0;
   padding: 0 10px;
   border-radius: 8px;
@@ -150,8 +150,8 @@ function onCardClick(key) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   line-height: 0;
   box-shadow: 0 1px 2px rgba(11, 7, 54, 0.18);
@@ -159,8 +159,8 @@ function onCardClick(key) {
 
 .lead-analytics-card__img {
   display: block;
-  width: 15px;
-  height: 15px;
+  width: 11px;
+  height: 11px;
   object-fit: contain;
   pointer-events: none;
 }

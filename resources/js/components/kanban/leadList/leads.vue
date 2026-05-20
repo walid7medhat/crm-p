@@ -55,7 +55,7 @@
                     class="kanban-column radius-12 flex-column"
                     :style="{ '--column-color': column.color }"
                 >
-                    <div class=" p-0 overflow-visible shadow-none border-0 bg-transparent h-100 d-flex flex-column">
+                    <div class="p-0 overflow-visible shadow-none border-0 bg-transparent h-100 d-flex flex-column">
                         <div class="card-body p-0 d-flex flex-column h-100">
                             <!-- Column Header -->
                             <div
@@ -3312,11 +3312,15 @@ const $showNotification = (message, type = 'info') => {
     display: none;
 }
 
-/* Vertical scroll inside each stage – scrollbar visible only on column hover */
+/* Vertical scroll inside each stage (fills column below header) */
 .column-content-scrollable {
+    flex: 1 1 auto;
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
+    max-height: calc(100dvh - 168px);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     scrollbar-width: none;
     transition: scrollbar-color 0.2s ease;
 }
@@ -3351,11 +3355,11 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .kanban-column:hover .column-content-scrollable::-webkit-scrollbar-thumb {
-    background: transparent;
+    background: #cbd5e1;
 }
 
 .kanban-column:hover .column-content-scrollable::-webkit-scrollbar-thumb:hover {
-    background: transparent;
+    background: #94a3b8;
 }
 
 .kanban-outer {
@@ -3363,15 +3367,17 @@ const $showNotification = (message, type = 'info') => {
     display: flex;
     flex-direction: column;
     width: 100%;
-    flex: 1 1 auto;
-    min-height: 0;
-    height: 100%;
+    height: calc(100dvh - 118px);
+    min-height: 520px;
+    padding-bottom: 12px;
+    box-sizing: border-box;
 }
 
 .kanban-container {
-    padding: 12px 10px;
+    padding: 6px 4px 8px 4px;
     flex: 1;
     min-height: 0;
+    height: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     width: 100%;
@@ -3509,17 +3515,20 @@ const $showNotification = (message, type = 'info') => {
     height: 100%;
     width: max-content;
     min-width: 100%;
+    min-height: 100%;
     display: flex !important;
     flex-wrap: nowrap !important;
     flex-shrink: 0;
+    align-items: stretch !important;
 }
 
 .kanban-wrapper-tight {
-    gap: 8px;
+    gap: 10px;
 }
 
-/* Stages: no solid box; vertical dashed line between columns (first column has no left border) */
+/* Equal-height stages; same full-height dashed border-left on each (not first) */
 .kanban-column {
+    position: relative;
     min-width: 247px;
     width: 247px;
     max-width: 247px;
@@ -3528,14 +3537,32 @@ const $showNotification = (message, type = 'info') => {
     background-color: transparent;
     border-radius: 12px;
     border: none;
-    border-left: 1px dashed rgba(255, 255, 255, 0.55);
-    height: 100%;
+    align-self: stretch;
+    min-height: 100%;
+    height: auto;
     flex-shrink: 0;
     overflow: visible;
+    box-sizing: border-box;
 }
 
-.kanban-column:first-child {
-    border-left: none;
+.kanban-column:not(:first-child) {
+    border-left: 1px dashed rgba(255, 255, 255, 0.72);
+}
+
+.kanban-column > div {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 100%;
+    height: 100%;
+}
+
+.kanban-column .card-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
 }
 
 .column-header {
@@ -4003,6 +4030,11 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .kanban-outer--mobile .lead-analytics-row {
+    flex-shrink: 0;
+}
+
+/* duplicate selector block below may exist — ensure analytics doesn't steal column height */
+.kanban-outer > .lead-analytics-row {
     padding-left: 6px;
     padding-right: 6px;
 }

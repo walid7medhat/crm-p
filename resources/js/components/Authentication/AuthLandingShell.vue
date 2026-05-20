@@ -319,11 +319,11 @@ onUnmounted(() => {
 .auth-landing__feature-title {
   margin: 0;
   flex: 0 0 auto;
-  font-size: clamp(0.44rem, 0.48vw, 0.5rem);
-  font-weight: 500;
-  line-height: 1.15;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: clamp(11px, 0.95vw, 13px) !important;
+  font-weight: 500 !important;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.85);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -439,6 +439,10 @@ onUnmounted(() => {
     min-height: 0;
     max-height: 200px;
     scroll-snap-align: start;
+  }
+
+  .auth-landing__feature-title {
+    font-size: clamp(11px, 2.8vw, 12px) !important;
   }
 
   .auth-landing__feature-image {

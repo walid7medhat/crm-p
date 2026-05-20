@@ -1,0 +1,106 @@
+/**
+ * Kanban board — equal-height columns, dividers, compact spacing.
+ */
+
+/* Less gap above Deals type tabs (Primary / Secondary / Rental) */
+.deals-tab-content.deal-figma-ui {
+  padding: 0 4px 8px 2px !important;
+}
+
+.deals-tab-content.deal-figma-ui .deals-type-tabs {
+  margin-top: 0 !important;
+  margin-bottom: 6px !important;
+}
+
+/* Tighter board: less space between sidebar and stages */
+.dashboard-main-body:has(.kanban-main-wrapper) {
+  margin: 4px 4px 6px 4px !important;
+}
+
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.kanban-main-wrapper) {
+  padding-top: 0 !important;
+}
+
+body.app-has-video-bg .kanban-content-area {
+  padding-top: 0 !important;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) {
+  min-height: calc(100dvh - 118px);
+  padding-bottom: 12px;
+  box-sizing: border-box;
+}
+
+body.app-has-video-bg .kanban-outer:not(.kanban-outer--mobile) {
+  min-height: calc(100dvh - 118px) !important;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-container {
+  min-height: 100%;
+  height: 100%;
+  padding: 4px 2px 8px 2px !important;
+  box-sizing: border-box;
+}
+
+/* Smaller lead shortcut icons (Total / New / Qualified / Follow-ups / Cold) */
+.lead-analytics-row .lead-analytics-card__icon {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.lead-analytics-row .lead-analytics-card__img {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+.lead-analytics-row {
+  padding: 0 4px 2px !important;
+}
+
+/* All stages same height = full board; dividers match on every column */
+.kanban-outer:not(.kanban-outer--mobile) .kanban-wrapper {
+  align-items: stretch !important;
+  height: 100% !important;
+  min-height: 100%;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-column {
+  align-self: stretch !important;
+  height: auto !important;
+  min-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative;
+  box-sizing: border-box;
+  border: none !important;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-column:not(:first-child) {
+  border-left: 1px dashed rgba(255, 255, 255, 0.72) !important;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-column:not(:first-child)::before {
+  display: none !important;
+  content: none !important;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-column > div,
+.kanban-outer:not(.kanban-outer--mobile) .kanban-column .card-body {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 100% !important;
+  height: 100% !important;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-column .column-header {
+  flex-shrink: 0 !important;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-column .column-content-scrollable {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}

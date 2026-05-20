@@ -1,9 +1,9 @@
 <template>
   <div id="app">
     <AppLoader :show="isAppLoading" @hidden="onLoaderHidden" />
-    <Header v-show="showLayout && !isAppLoading" />
+    <Header v-if="showLayout && !isAppLoading" />
     <main :class="showLayout ? 'dashboard-main' : 'auth-page-main'">
-      <Navbar v-show="showLayout && !isAppLoading" />
+      <Navbar v-if="showLayout && !isAppLoading" />
       <div
         :class="[
           showLayout ? 'dashboard-main-router' : '',
@@ -41,6 +41,7 @@ import ChatPopup from './components/chat/ChatPopup.vue'
 import ChatFloatingButton from './components/chat/ChatFloatingButton.vue'
 import AppLoader from './components/layout/AppLoader.vue'
 import { useAppLoader } from './composables/useAppLoader.js'
+import { resetSidebarLayout } from './composables/useSidebar.js'
 
 export default {
   name: 'App',
@@ -102,13 +103,21 @@ export default {
     onMounted(() => {
       window.__openPropertyChat = openPropertyChat
       syncVideoBgClass()
+      if (!showLayout.value) {
+        resetSidebarLayout()
+      }
     })
     onUnmounted(() => {
       window.__openPropertyChat = null
       document.body.classList.remove('app-has-video-bg')
     })
 
-    watch(showLayout, syncVideoBgClass)
+    watch(showLayout, (visible) => {
+      syncVideoBgClass()
+      if (!visible) {
+        resetSidebarLayout()
+      }
+    })
 
     return {
       isAppLoading,
@@ -164,6 +173,20 @@ html:has(#app main.auth-page-main) body {
   overflow: hidden;
   height: 100%;
   max-height: 100dvh;
+}
+
+/* Auth screens: never show app sidebar / mobile dock (e.g. after logout) */
+html:has(#app main.auth-page-main) .sidebar,
+html:has(#app main.auth-page-main) .mobile-sidebar-dock,
+html:has(#app main.auth-page-main) .mobile-dock-sheet-overlay {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+html:has(#app main.auth-page-main) #app main.dashboard-main,
+html:has(#app main.auth-page-main) .dashboard-main.active {
+  margin-inline-start: 0 !important;
 }
 
 #app main.dashboard-main {

@@ -576,7 +576,7 @@
 </template>
 
 <script setup>
-import { useSidebar } from '@/composables/useSidebar.js';
+import { useSidebar, resetSidebarLayout } from '@/composables/useSidebar.js';
 import { ref, onMounted, computed, onUnmounted, watch, nextTick, getCurrentInstance } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
@@ -816,15 +816,15 @@ const loadStoredKanbanTab = () => {
 // Search computed properties
 const searchInputPlaceholder = computed(() => {
     if (activeKanbanTab.value === 'deals') {
-        return 'Search by deal name, client, phone, or anything…';
+        return 'Search deals, client, phone…';
     }
     if (activeKanbanTab.value === 'lead-pool') {
-        return 'Search by name, phone, email, or anything…';
+        return 'Search name, phone, email…';
     }
     if (activeKanbanTab.value === 'leads') {
-        return 'Search by lead name, number, email, or anything…';
+        return 'Search leads, phone, email…';
     }
-    return 'Search by name, number, email, or anything…';
+    return 'Search name, phone, email…';
 });
 
 const visibleFilterPills = computed(() => {
@@ -1729,8 +1729,11 @@ function onMobileModuleTabChange(event) {
 }
 
 function logout() {
+  resetSidebarLayout();
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('searchFilters');
   sessionStorage.removeItem('token');
   router.push('/sign-in');
 }
@@ -2869,11 +2872,15 @@ const showBackButton = computed(() => {
     box-shadow: none !important;
 }
 
+.search-input-container :deep(input)::placeholder,
+.search-input-container :deep(.form-control)::placeholder,
 .search-input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 9px;
-    font-weight: 400;
+    color: rgba(255, 255, 255, 0.55) !important;
+    font-size: 11px !important;
+    font-weight: 400 !important;
     letter-spacing: -0.01em;
+    line-height: 1.25;
+    opacity: 1;
 }
 
 .search-input--has-selection {
@@ -3299,6 +3306,11 @@ const showBackButton = computed(() => {
     max-width: none;
     flex: 1 1 auto;
     min-width: 0;
+  }
+
+  .kanban-mob-toolbar__search .search-input-container :deep(input)::placeholder,
+  .kanban-mob-toolbar__search .search-input::placeholder {
+    font-size: 11px !important;
   }
 
   .kanban-mob-toolbar__search .search-filters-pills {

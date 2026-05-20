@@ -969,7 +969,7 @@ const $showNotification = (message, type = 'info') => {
 .kanban-content-area {
     flex-grow: 1;
     padding: 0;
-    overflow: auto;
+    overflow: visible;
     background: transparent;
 }
 .btn-create-new-icon {

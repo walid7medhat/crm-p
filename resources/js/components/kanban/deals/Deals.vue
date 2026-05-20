@@ -1,7 +1,7 @@
 <template>
   <div class="deals-tab-content deal-figma-ui" :class="{ 'deals-tab-content--mobile': kanbanIsMobile }">
     <!-- Top tabs: Primary/Off-Plan, Secondary, Rental -->
-    <div class="deals-type-tabs d-flex gap-2 mb-24">
+    <div class="deals-type-tabs d-flex gap-2">
       <button
         v-for="tab in typeTabs"
         :key="tab.id"
@@ -2228,14 +2228,14 @@ defineExpose({
 
 <style scoped>
 .deals-tab-content {
-  padding: 24px;
+  padding: 0 6px 8px 4px;
   min-height: 500px;
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   position: relative;
 }
 
 .deals-type-tabs {
-  margin-bottom: 20px;
+  margin: 0 0 6px 0;
 }
 
 .deals-type-tab {
@@ -2271,8 +2271,13 @@ defineExpose({
 /* Kanban Outer Container */
 .kanban-outer {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  height: calc(100vh - 160px);
+  height: calc(100dvh - 118px);
+  min-height: 520px;
+  padding-bottom: 12px;
+  box-sizing: border-box;
 }
 
 .kanban-container {
@@ -2306,10 +2311,12 @@ defineExpose({
   height: 100%;
   width: max-content;
   min-width: 100%;
+  min-height: 100%;
   display: flex !important;
   flex-wrap: nowrap !important;
   flex-shrink: 0;
-  gap: 8px;
+  align-items: stretch !important;
+  gap: 10px;
 }
 
 
@@ -2320,14 +2327,37 @@ defineExpose({
   background-color: transparent;
   border-radius: 12px;
   border: none;
-  border-left: 1px dashed rgba(148, 163, 184, 0.45);
-  height: 100%;
+  align-self: stretch;
+  min-height: 100%;
+  height: auto;
   flex-shrink: 0;
   overflow: visible;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
-.kanban-column:first-child {
-  border-left: none;
+
+.kanban-column:not(:first-child) {
+  border-left: 1px dashed rgba(255, 255, 255, 0.72);
 }
+
+.kanban-column > div {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 100%;
+  height: 100%;
+}
+
+.kanban-column .card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
 .column-content {
   background: transparent;
   border-radius: 0;
@@ -2378,11 +2408,15 @@ font-weight: 600;
 
 /* Column content scroll */
 .column-content-scrollable {
+  flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
+  max-height: calc(100dvh - 168px);
   scrollbar-width: none;
   transition: scrollbar-color 0.2s ease;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .column-content-scrollable::-webkit-scrollbar {

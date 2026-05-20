@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { resetSidebarLayout } from './composables/useSidebar.js'
 
 // DashBoard
 import Ai from './pages/dashboard/ai.vue'
@@ -308,11 +309,12 @@ const isTokenValid = () => {
 }
 
 const logout = () => {
-     localStorage.removeItem('searchFilters')
+  resetSidebarLayout()
+  localStorage.removeItem('searchFilters')
   localStorage.removeItem('token')
   localStorage.removeItem('user')
   localStorage.removeItem('refreshToken')
-  
+
   window.location.href = '/sign-in'
 }
 

@@ -28,6 +28,7 @@ export default {
 .dashboard-main-body {
     color: rgba(255, 255, 255, 0.95);
     background: transparent;
+    margin: 4px 4px 6px 4px;
 }
 
 @media (max-width: 768px) {

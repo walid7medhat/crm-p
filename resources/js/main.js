@@ -22,6 +22,7 @@ import 'vue-select/dist/vue-select.css'
 import '../css/vue-select-overrides.css'
 import '../css/form-placeholders.css'
 import '../css/mobile-layout.css'
+import '../css/kanban-layout.css'
 
 const addCSS = (url) => {
   const link = document.createElement('link')
@@ -92,7 +93,9 @@ axios.interceptors.response.use(
         text: 'Your session has expired. Please login again.',
         confirmButtonText: 'Login',
         allowOutsideClick: false
-      }).then(() => {
+      }).then(async () => {
+        const { resetSidebarLayout } = await import('./composables/useSidebar.js')
+        resetSidebarLayout()
         localStorage.clear()
         sessionStorage.clear()
         window.location.href = '/sign-in'
