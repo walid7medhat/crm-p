@@ -136,6 +136,12 @@ const selectedLeadForConversion = ref(null)
 const selectedLeadData = ref(null)
 const convertModalRef = ref(null)
 
+function handleLeadConverted() {
+    selectedLeadForConversion.value = null
+    selectedLeadData.value = null
+    emit('lead-updated', lead.value)
+}
+
 const canViewHistory = computed(() => {
     if (!user.value || !lead.value) return false
 

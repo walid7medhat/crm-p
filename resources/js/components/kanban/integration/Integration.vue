@@ -1,13 +1,12 @@
 <template>
     <div class="integration-container">
-        <!-- Header with Create Button -->
-        <!--<div class="integration-header">-->
-        <!--    <p class="integration-title">CRM Forms</p>-->
-        <!--    <button class="create-btn" @click="openCreateModal">-->
-        <!--        <iconify-icon icon="lucide:plus" class="create-icon"></iconify-icon>-->
-        <!--        Create Integration-->
-        <!--    </button>-->
-        <!--</div>-->
+        <div class="integration-header">
+            <p class="integration-title">CRM Forms</p>
+            <button type="button" class="create-btn" @click="openCreateModal">
+                <iconify-icon icon="lucide:plus" class="create-icon"></iconify-icon>
+                Create Integration
+            </button>
+        </div>
 
         <!-- Loading / Error -->
         <div v-if="loading" class="loading-state">

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Helpers\ApiResponse;
 use App\Http\Requests\Stage\StageRequest;
 use App\Http\Requests\Stage\StageReorderRequest;
+use App\Http\Resources\Lead\KanbanLeadCardResource;
 use App\Http\Resources\Lead\LeadResource;
 use App\Http\Resources\Stage\StageResource;
 use App\Http\Resources\Stage\StageCollection;
@@ -190,13 +191,13 @@ class StageController extends Controller
             $stages = $stagesQuery->get();
 
             // ================= leads query with permissions =================
-            $baseLeadsQuery = Lead::with([
-                'stage', 
-                'addedBy', 
-                'responsiblePerson', 
-                'participants',
-                'observers.user'
-            ]);
+            $baseLeadsQuery = Lead::query();
+            $kanbanEagerLoads = [
+                'addedBy:id,name,avatar',
+                'responsiblePerson:id,name,avatar',
+                'propertyType:id,name',
+                'area:id,name',
+            ];
 
             // ================= permissions =================
             if ($user->hasRole('super_admin')  || auth()->user()->id ==30 || auth()->user()->id ==33) {
@@ -443,47 +444,65 @@ class StageController extends Controller
                 }
             });
 
-            // ================= get paginated leads for each stage =================
-            $stagesWithLeads = [];
-            foreach ($stages as $stage) {
-                $stageLeadsQuery = clone $baseLeadsQuery;
-                $stageLeadsQuery->where('stage_id', $stage->id);
+            // ================= leads per stage (one count query + limit per stage) =================
+            $stageIds = $stages->pluck('id')->all();
+            $leadCountsByStage = collect();
+            if (! empty($stageIds)) {
+                $leadCountsByStage = (clone $baseLeadsQuery)
+                    ->select('stage_id', DB::raw('COUNT(*) as aggregate'))
+                    ->whereIn('stage_id', $stageIds)
+                    ->groupBy('stage_id')
+                    ->pluck('aggregate', 'stage_id');
+            }
 
-                    if ($stage->order == 1) {
-                        // Stage 1 → ترتيب بالكريت
-                        $stageLeadsQuery->orderBy('created_at', 'desc');
-                    } else {
-                        // باقي الـ stages → ترتيب بالـ updated
-                        $stageLeadsQuery->orderBy('updated_at', 'desc');
-                    }
-                
-                    $paginatedLeads = $stageLeadsQuery->paginate($perPage);
-                // $paginatedLeads = $stageLeadsQuery
-                //     // ->when(
-                //     //     Schema::hasColumn('leads', 'score'),
-                //     //     fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
-                //     //     fn ($q) => $q->orderBy('created_at', 'desc')
-                //     // )
-                //     ->orderBy('updated_at', 'desc')
-                //     ->paginate($perPage);
+            $stagesWithLeads = [];
+            $allLeadsForMeta = collect();
+
+            foreach ($stages as $stage) {
+                $stageLeadsQuery = (clone $baseLeadsQuery)
+                    ->with($kanbanEagerLoads)
+                    ->where('stage_id', $stage->id);
+
+                if ($stage->order == 1) {
+                    $stageLeadsQuery->orderBy('created_at', 'desc');
+                } else {
+                    $stageLeadsQuery->orderBy('updated_at', 'desc');
+                }
+
+                $total = (int) ($leadCountsByStage[$stage->id] ?? 0);
+                $leads = $stageLeadsQuery->limit($perPage)->get();
+                $allLeadsForMeta = $allLeadsForMeta->merge($leads);
 
                 $stagesWithLeads[] = [
                     'id' => $stage->id,
                     'name' => $stage->name,
                     'order' => $stage->order,
                     'color' => $stage->color,
-                    'lead_count' => $paginatedLeads->total(),
-                    'leads' => LeadResource::collection($paginatedLeads),
+                    'lead_count' => $total,
+                    'leads' => $leads,
                     'pagination' => [
-                        'current_page' => $paginatedLeads->currentPage(),
-                        'last_page' => $paginatedLeads->lastPage(),
-                        'per_page' => $paginatedLeads->perPage(),
-                        'total' => $paginatedLeads->total(),
-                        'has_more_pages' => $paginatedLeads->hasMorePages()
+                        'current_page' => 1,
+                        'last_page' => max(1, (int) ceil($total / max(1, $perPage))),
+                        'per_page' => $perPage,
+                        'total' => $total,
+                        'has_more_pages' => $total > $perPage,
                     ],
                     'created_at' => $stage->created_at?->toISOString(),
                     'updated_at' => $stage->updated_at?->toISOString(),
                 ];
+            }
+
+            $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($allLeadsForMeta);
+            $serviceDupFlags = $this->kanbanServiceDuplicateFlags($allLeadsForMeta);
+            KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
+
+            try {
+                foreach ($stagesWithLeads as &$stageRow) {
+                    $stageRow['leads'] = KanbanLeadCardResource::collection($stageRow['leads']);
+                }
+                unset($stageRow);
+            } finally {
+                KanbanLeadCardResource::clearKanbanMeta();
             }
 
             return ApiResponse::success([
@@ -511,10 +530,10 @@ class StageController extends Controller
             $page = $request->get('page', 1);
 
             $leadsQuery = $stage->leads()->with([
-                'addedBy', 
-                'responsiblePerson', 
-                'participants',
-                'observers.user'
+                'addedBy:id,name,avatar',
+                'responsiblePerson:id,name,avatar',
+                'propertyType:id,name',
+                'area:id,name',
             ]);
 
             if ($user->hasRole('super_admin')  || auth()->user()->id ==30 || auth()->user()->id ==33) {
@@ -770,9 +789,20 @@ class StageController extends Controller
             //     ->orderBy('updated_at', 'desc')
             //     ->paginate($perPage, ['*'], 'page', $page);
 
+            $leadsCollection = $paginatedLeads->getCollection();
+            $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($leadsCollection);
+            $serviceDupFlags = $this->kanbanServiceDuplicateFlags($leadsCollection);
+            KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
+
+            try {
+                $leadsPayload = KanbanLeadCardResource::collection($paginatedLeads);
+            } finally {
+                KanbanLeadCardResource::clearKanbanMeta();
+            }
+
             return ApiResponse::success([
                 'stage_id' => $stage->id,
-                'leads' => LeadResource::collection($paginatedLeads),
+                'leads' => $leadsPayload,
                 'pagination' => [
                     'current_page' => $paginatedLeads->currentPage(),
                     'last_page' => $paginatedLeads->lastPage(),
@@ -1178,5 +1208,76 @@ public function getOffices()
         } else {
             $query->whereIn('lead_source', $expanded);
         }
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
+     * @return array<string, int>
+     */
+    private function kanbanDuplicateCountsByWorkPhone($leads): array
+    {
+        $phones = $leads->pluck('work_phone')->filter()->unique()->values()->all();
+        if ($phones === []) {
+            return [];
+        }
+
+        $rows = Lead::query()
+            ->select('work_phone', DB::raw('COUNT(*) as cnt'))
+            ->whereIn('work_phone', $phones)
+            ->whereNotNull('work_phone')
+            ->groupBy('work_phone')
+            ->get();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[$row->work_phone] = max(0, (int) $row->cnt - 1);
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
+     * @return array<int, bool>
+     */
+    private function kanbanServiceDuplicateFlags($leads): array
+    {
+        $phones = $leads->pluck('work_phone')->filter()->unique()->values()->all();
+        $emails = $leads->pluck('email')->filter()->unique()->values()->all();
+
+        if ($phones === [] && $emails === []) {
+            return [];
+        }
+
+        $blacklistQuery = Lead::query()
+            ->where('status_lead', 'blacklist')
+            ->where(function ($q) use ($phones, $emails) {
+                if ($phones !== []) {
+                    $q->whereIn('work_phone', $phones);
+                }
+                if ($emails !== []) {
+                    $q->orWhereIn('email', $emails);
+                }
+            });
+
+        $blacklistPhones = [];
+        $blacklistEmails = [];
+        foreach ($blacklistQuery->get(['id', 'work_phone', 'email']) as $row) {
+            if ($row->work_phone) {
+                $blacklistPhones[$row->work_phone] = true;
+            }
+            if ($row->email) {
+                $blacklistEmails[$row->email] = true;
+            }
+        }
+
+        $flags = [];
+        foreach ($leads as $lead) {
+            $flags[$lead->id] =
+                ($lead->work_phone && isset($blacklistPhones[$lead->work_phone]))
+                || ($lead->email && isset($blacklistEmails[$lead->email]));
+        }
+
+        return $flags;
     }
 }

@@ -8,6 +8,8 @@ import {
 
 const MIN_DISPLAY_MS = 900
 const NAV_MIN_DISPLAY_MS = 650
+const KANBAN_MIN_DISPLAY_MS = 400
+const KANBAN_NAV_MIN_DISPLAY_MS = 300
 const MAX_WAIT_MS = 8000
 
 function wait(ms) {
@@ -53,9 +55,22 @@ export function useAppLoader() {
   let initialBootstrapDone = false
   let activeLoadId = 0
 
-  async function runLoader({ minDisplayMs = MIN_DISPLAY_MS, route } = {}) {
+  function resolveMinDisplayMs(route, overrideMs) {
+    if (overrideMs != null) return overrideMs
+    const path = route?.path ?? router.currentRoute.value?.path ?? ''
+    return isKanbanRoute(path) ? KANBAN_MIN_DISPLAY_MS : MIN_DISPLAY_MS
+  }
+
+  function resolveNavMinDisplayMs(route, overrideMs) {
+    if (overrideMs != null) return overrideMs
+    const path = route?.path ?? ''
+    return isKanbanRoute(path) ? KANBAN_NAV_MIN_DISPLAY_MS : NAV_MIN_DISPLAY_MS
+  }
+
+  async function runLoader({ minDisplayMs, route } = {}) {
     const loadId = ++activeLoadId
     const startedAt = performance.now()
+    const effectiveMinMs = resolveMinDisplayMs(route ?? router.currentRoute.value, minDisplayMs)
 
     isAppLoading.value = true
     document.body.classList.add('app-loader-active')
@@ -69,7 +84,7 @@ export function useAppLoader() {
     if (loadId !== activeLoadId) return
 
     const elapsed = performance.now() - startedAt
-    const remaining = Math.max(0, minDisplayMs - elapsed)
+    const remaining = Math.max(0, effectiveMinMs - elapsed)
     if (remaining > 0) {
       await wait(remaining)
     }
@@ -103,7 +118,7 @@ export function useAppLoader() {
     router.afterEach(async (to, from) => {
       if (!initialBootstrapDone) return
       if (!shouldUseNavLoader(to, from)) return
-      await runLoader({ minDisplayMs: NAV_MIN_DISPLAY_MS, route: to })
+      await runLoader({ minDisplayMs: resolveNavMinDisplayMs(to), route: to })
     })
   })
 

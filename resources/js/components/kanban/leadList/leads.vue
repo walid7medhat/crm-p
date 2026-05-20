@@ -598,7 +598,8 @@
             </div>
         </div>
     </Teleport>
-   <ProfilePopup 
+   <ProfilePopup
+        v-if="showProfilePopup && profileUserId"
         v-model="showProfilePopup"
         :user-id="profileUserId"
         @update:model-value="closeProfilePopup"
@@ -804,6 +805,11 @@ const openPersonProfile = (task, type, event) => {
     profileUserId.value = person.id
     profileTriggerType.value = type
     showProfilePopup.value = true
+}
+
+const closeProfilePopup = () => {
+    showProfilePopup.value = false
+    profileUserId.value = null
 }
 
 // Get user from storage (same pattern as header/index.vue)
@@ -1353,6 +1359,7 @@ const executeFetchLeads = async () => {
         }))
         
         columns.value = newData
+        syncStageOrderMapFromColumns(newData)
         
         // تحديث visibleLeadCounts (العدد المرئي)
         const nextCounts = {}
@@ -1414,19 +1421,30 @@ function saveColumnsToCache() {
     }
 }
 
+function syncStageOrderMapFromColumns(cols) {
+    const map = {}
+    ;(cols || []).forEach((col) => {
+        if (col?.status != null) {
+            map[col.status] = col.order ?? 0
+        }
+    })
+    stageOrderMap.value = map
+}
+
 function loadCachedColumns() {
     try {
         const raw = localStorage.getItem(KANBAN_LEADS_CACHE_KEY)
-        if (!raw) return
+        if (!raw) return false
         const parsed = JSON.parse(raw)
-        if (!parsed || !Array.isArray(parsed.columns)) return
+        if (!parsed || !Array.isArray(parsed.columns)) return false
 
         const now = Date.now()
         if (parsed.cachedAt && now - parsed.cachedAt > KANBAN_LEADS_CACHE_TTL_MS) {
-            return
+            return false
         }
 
         columns.value = parsed.columns
+        syncStageOrderMapFromColumns(parsed.columns)
 
         // Initialize visible counts based on cached data
         const nextCounts = {}
@@ -1438,8 +1456,10 @@ function loadCachedColumns() {
 
         loading.value = false
         error.value = null
+        return true
     } catch (e) {
         // ignore cache errors
+        return false
     }
 }
 
@@ -1994,18 +2014,20 @@ watch(cardFields, () => {
     console.log('Card fields updated:', cardFields.value)
 }, { deep: true })
 onMounted(async () => {
-    loadCachedColumns()
+    const hadCache = loadCachedColumns()
+    if (hadCache) {
+        markKanbanReady()
+    }
 
     try {
-        await Promise.all([
-            fetchLeads(true),
-            fetchResponsiblePersons(),
-            fetchCardSettings(),
-            fetchStageOrders(),
-        ])
+        await fetchLeads(true)
     } finally {
         markKanbanReady()
     }
+
+    fetchResponsiblePersons()
+    fetchCardSettings()
+
     nextTick(() => updateScrollArrows())
     window.addEventListener('resize', updateScrollArrows)
     setTimeout(() => {
@@ -2828,7 +2850,10 @@ const fetchStageOrders = async () => {
         const response = await api.get('/stages')
         let stages = []
         
-        if (response.data && response.data.data) {
+        const payload = response.data?.data
+        if (payload?.data && Array.isArray(payload.data)) {
+            stages = payload.data
+        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
             stages = response.data.data
         } else if (response.data && Array.isArray(response.data)) {
             stages = response.data

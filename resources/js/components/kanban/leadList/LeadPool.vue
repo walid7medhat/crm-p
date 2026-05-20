@@ -242,7 +242,8 @@
         @view-lead="handleViewDuplicateLead"
     />
     
-    <ProfilePopup 
+    <ProfilePopup
+        v-if="showProfilePopup && profileUserId"
         v-model="showProfilePopup"
         :user-id="profileUserId"
         @update:model-value="closeProfilePopup"

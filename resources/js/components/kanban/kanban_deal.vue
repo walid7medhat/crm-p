@@ -32,13 +32,15 @@
         size="xl"
         centered
     >
-        <SettingsHub @close="showSettingsHub = false" />
+        <SettingsHub
+            :initial-section="settingsHubInitialSection"
+            @close="onSettingsHubClose"
+        />
     </b-modal>
 
-    <CreateLeadModal v-model="showCreateModal" @lead-created="handleLeadCreated" />
-    <CreateDealModal v-model="showCreateDealModal" @deal-created="handleDealCreated" :deal-type="currentDealType" />
-    <CreateIntegrationModal v-model="showCreateIntegrationModal" @integration-created="handleIntegrationCreated" />
-    <AddStageModal v-model="showAddStageModal"   :stage-type="currentStageType"
+    <CreateLeadModal v-if="showCreateModal" v-model="showCreateModal" @lead-created="handleLeadCreated" />
+    <CreateDealModal v-if="showCreateDealModal" v-model="showCreateDealModal" @deal-created="handleDealCreated" :deal-type="currentDealType" />
+    <AddStageModal v-if="showAddStageModal" v-model="showAddStageModal"   :stage-type="currentStageType"
         :deal-type="currentDealType"
         @stage-created="handleStageCreated" />
     <div class="kanban-main-wrapper" :class="{ 'deal-figma-ui': activeTab === 'deals', 'kanban-shell--mobile': kanbanIsMobile }">
@@ -67,7 +69,6 @@
                 <Leads v-else-if="tab.id === 'leads'" ref="leadsRef"  @deal-created="handleDealCreatedFromLeads" />
                 
                  <LeadPool v-else-if="tab.id === 'lead-pool'" ref="leadPoolRef" />
-                 <Integration v-else-if="tab.id === 'integration'" ref="integrationRef" />
 
             </b-tab>
 
@@ -80,12 +81,10 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide } from 'vue'
 import Deals from './deals/Deals.vue'
 import Leads from './leadList/leads.vue'
-import Integration from './integration/Integration.vue'
 import LeadSearchModal from './leadList/LeadSearchModal.vue'
 import DealSearchModal from './deals/DealSearchModal.vue'
 import CreateLeadModal from './createLead/CreateLeadModal.vue'
 import CreateDealModal from './deals/CreateDealModal.vue'
-import CreateIntegrationModal from './integration/CreateIntegrationModal.vue'
 import AddStageModal from './stage/AddStageModal.vue'
 import LeadPool from './leadList/LeadPool.vue'
 
@@ -102,7 +101,8 @@ const KANBAN_ACTIVE_TAB_KEY = 'kanban_active_tab'
 function readStoredKanbanTab() {
     try {
         const v = localStorage.getItem(KANBAN_ACTIVE_TAB_KEY)
-        if (['deals', 'leads', 'lead-pool', 'integration'].includes(v)) return v
+        if (v === 'integration') return 'leads'
+        if (['deals', 'leads', 'lead-pool'].includes(v)) return v
     } catch {
         /* ignore */
     }
@@ -123,14 +123,13 @@ const showSelectedFiltersModal = ref(false)
 const showSettingsHub = ref(false)
 const showCreateModal = ref(false)
 const showCreateDealModal = ref(false)
-const showCreateIntegrationModal = ref(false)
 const showAddStageModal = ref(false)
+const settingsHubInitialSection = ref(null)
 const searchInputFocused = ref(false)
 const leadsRef = ref(null)
 const dealsRef = ref(null)
 const exposeDealsRef = () => dealsRef.value;
 const exposeLeadsRef = () => leadsRef.value;
-const integrationRef = ref(null)
 const leadPoolRef = ref(null) 
 const searchDropdownAnchorRef = ref(null)
 const search = ref(null)
@@ -148,7 +147,7 @@ const syncActiveTabWithRoute = () => {
 watch(activeTab, (id) => {
     persistKanbanTab(id)
     window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: id }))
-    if (id === 'lead-pool' || id === 'integration') {
+    if (id === 'lead-pool') {
         nextTick(() => markKanbanReady())
     }
 }, { immediate: true })
@@ -195,10 +194,6 @@ const tabs = computed(() => {
         // { id: 'costumers', name: 'Costumers', hasChevron: true },
         // { id: 'analytics', name: 'Analytics', hasChevron: false }
     ]
-    
-    if (isSuperAdmin.value) {
-        baseTabs.push({ id: 'integration', name: 'Integration', hasChevron: false })
-    }
     
     return baseTabs
 })
@@ -320,7 +315,8 @@ const setupKanbanListeners = () => {
     if (tab === 'deals') {
       showCreateDealModal.value = true
     } else if (tab === 'integration') {
-      showCreateIntegrationModal.value = true
+      settingsHubInitialSection.value = 'integrations'
+      showSettingsHub.value = true
     } else {
       showCreateModal.value = true
     }
@@ -338,7 +334,7 @@ const setupKanbanListeners = () => {
 
 onMounted(() => {
        setupKanbanListeners()
-    if (activeTab.value === 'integration' && !isSuperAdmin.value) {
+    if (activeTab.value === 'integration') {
         activeTab.value = 'leads'
     }
     syncActiveTabWithRoute()
@@ -349,9 +345,7 @@ onMounted(() => {
         initializeStageUpdates()
     }, 1000)
     document.addEventListener('click', onDocumentClick)
-   window.addEventListener('kanban-open-settings', () => {
-        showSettingsHub.value = true
-    })
+   window.addEventListener('kanban-open-settings', onKanbanOpenSettings)
       // Refs declared on components inside a v-for are arrays in Vue 3 — unwrap so
       // external callers (navbar search handlers) get the actual component instance.
       window.__kanbanDealsRef = () => Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value;
@@ -437,7 +431,7 @@ onUnmounted(() => {
   window.removeEventListener('kanban-create-new', () => {})
   window.removeEventListener('kanban-lead-search', () => {})
   window.removeEventListener('kanban-deal-search', () => {})
-      window.removeEventListener('kanban-open-settings', () => {})
+      window.removeEventListener('kanban-open-settings', onKanbanOpenSettings)
         delete window.__kanbanDealsRef;
     delete window.__kanbanLeadsRef;
 
@@ -803,11 +797,20 @@ function onSearchBlur() {
 const handleCreateNew = () => {
     if (activeTab.value === 'deals') {
         showCreateDealModal.value = true
-    } else if (activeTab.value === 'integration') {
-        showCreateIntegrationModal.value = true
     } else {
         showCreateModal.value = true
     }
+}
+
+function onKanbanOpenSettings(event) {
+    const section = event?.detail?.section ?? null
+    settingsHubInitialSection.value = section
+    showSettingsHub.value = true
+}
+
+function onSettingsHubClose() {
+    showSettingsHub.value = false
+    settingsHubInitialSection.value = null
 }
 
 const handleDealCreated = (payload) => {
@@ -832,12 +835,6 @@ const handleLeadCreated = async () => {
             await leadsComponent.fetchLeads(true) // Immediate execution
         }
     }
-}
-
-const handleIntegrationCreated = (data) => {
-    $showNotification('Integration created successfully!', 'success')
-    const comp = integrationRef.value && (Array.isArray(integrationRef.value) ? integrationRef.value[0] : integrationRef.value)
-    if (comp && typeof comp.loadIntegrations === 'function') comp.loadIntegrations()
 }
 
 const handleStageCreated = async (stageData) => {

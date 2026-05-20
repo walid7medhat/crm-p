@@ -457,7 +457,8 @@
     </div>
     
   </div>
-     <ProfilePopup 
+     <ProfilePopup
+        v-if="showProfilePopup && profileUserId"
         v-model="showProfilePopup"
         :user-id="profileUserId"
         @update:model-value="closeProfilePopup"
@@ -672,6 +673,10 @@ const openPersonProfile = (task, type, event) => {
     showProfilePopup.value = true
 }
 
+const closeProfilePopup = () => {
+    showProfilePopup.value = false
+    profileUserId.value = null
+}
 
 const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallbackName = 'Unknown') => {
     const name = person?.name || person?.full_name || fallbackName

@@ -5,10 +5,6 @@
         <h6 class="settings-hub-title">Settings System</h6>
         <p class="settings-hub-subtitle">Choose a section to configure your Kanban experience.</p>
       </div>
-      <!--<div class="settings-hub-badge">-->
-      <!--  <iconify-icon icon="lucide:settings-2" class="badge-icon" />-->
-      <!--  Unified UI-->
-      <!--</div>-->
 
       <button
         type="button"
@@ -23,7 +19,7 @@
     <div class="settings-hub-layout">
       <aside class="settings-hub-nav">
         <button
-          v-for="s in sections"
+          v-for="s in visibleSections"
           :key="s.id"
           type="button"
           class="settings-nav-item"
@@ -45,16 +41,41 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch, defineAsyncComponent } from 'vue'
 import KanbanSettings from '../KanbanSettings.vue'
 import LeadScoringSettings from '../LeadScoringSettings.vue'
 import StageVisibility from '../stage/StageVisibility.vue'
 import DealsSettings from './DealsSettings.vue'
 import LeadAssignmentEngine from './LeadAssignmentEngine.vue'
 
+const IntegrationPanel = defineAsyncComponent(() =>
+  import('../integration/Integration.vue')
+)
+
+const props = defineProps({
+  /** Open directly to a settings section (e.g. "integrations"). */
+  initialSection: {
+    type: String,
+    default: null,
+  },
+})
+
 const emit = defineEmits(['close'])
 
-const sections = [
+function getUserFromStorage() {
+  try {
+    const userData = localStorage.getItem('user')
+    return userData ? JSON.parse(userData) : null
+  } catch {
+    return null
+  }
+}
+
+const user = ref(getUserFromStorage())
+
+const isSuperAdmin = computed(() => user.value?.roles?.includes('super_admin') ?? false)
+
+const baseSections = [
   { id: 'leads', label: 'Leads Settings', icon: 'lucide:layout-template', component: KanbanSettings },
   { id: 'stages', label: 'Lead Stages', icon: 'lucide:eye', component: StageVisibility },
   { id: 'deals', label: 'Deal Stage Settings', icon: 'lucide:badge-dollar-sign', component: DealsSettings },
@@ -62,10 +83,43 @@ const sections = [
   { id: 'lead-assignment', label: 'Lead Assignment Engine', icon: 'lucide:git-branch-plus', component: LeadAssignmentEngine },
 ]
 
-const activeSectionId = ref(sections[0].id)
+const visibleSections = computed(() => {
+  const sections = [...baseSections]
+  if (isSuperAdmin.value) {
+    sections.push({
+      id: 'integrations',
+      label: 'Integrations',
+      icon: 'lucide:plug',
+      component: IntegrationPanel,
+    })
+  }
+  return sections
+})
+
+const activeSectionId = ref(baseSections[0].id)
 
 const activeComponent = computed(() => {
-  return sections.find(s => s.id === activeSectionId.value)?.component || null
+  return visibleSections.value.find((s) => s.id === activeSectionId.value)?.component || null
+})
+
+function applyInitialSection(sectionId) {
+  if (!sectionId) return
+  if (visibleSections.value.some((s) => s.id === sectionId)) {
+    activeSectionId.value = sectionId
+  }
+}
+
+watch(
+  () => props.initialSection,
+  (sectionId) => applyInitialSection(sectionId),
+  { immediate: true }
+)
+
+watch(visibleSections, () => {
+  if (!visibleSections.value.some((s) => s.id === activeSectionId.value)) {
+    activeSectionId.value = visibleSections.value[0]?.id ?? baseSections[0].id
+  }
+  applyInitialSection(props.initialSection)
 })
 </script>
 
@@ -104,20 +158,6 @@ const activeComponent = computed(() => {
   line-height: 1.4;
 }
 
-.settings-hub-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 999px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  color: #334155;
-  font-weight: 700;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 .settings-hub-close {
   border: 1px solid #e2e8f0;
   background: #fff;
@@ -139,11 +179,6 @@ const activeComponent = computed(() => {
 .settings-hub-close-icon {
   font-size: 18px;
   color: #64748b;
-}
-
-.badge-icon {
-  font-size: 16px;
-  color: #1d4ed8;
 }
 
 .settings-hub-layout {
@@ -243,4 +278,3 @@ const activeComponent = computed(() => {
   padding: 0 !important;
 }
 </style>
-

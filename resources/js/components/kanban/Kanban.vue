@@ -32,14 +32,15 @@
       size="xl"
       centered
     >
-      <SettingsHub @close="showSettingsHub = false" />
+      <SettingsHub
+        :initial-section="settingsHubInitialSection"
+        @close="onSettingsHubClose"
+      />
     </b-modal>
 
-    <CreateLeadModal v-model="showCreateModal" @lead-created="handleLeadCreated" />
-    <CreateDealModal v-model="showCreateDealModal" @deal-created="handleDealCreated" :deal-type="currentDealType" />
-    <CreateIntegrationModal  v-model="showCreateIntegrationModal" @integration-created="handleIntegrationCreated"  @saved="handleIntegrationCreated"
-    @updated="handleIntegrationCreated"/>
-    <AddStageModal v-model="showAddStageModal" @stage-created="handleStageCreated" />
+    <CreateLeadModal v-if="showCreateModal" v-model="showCreateModal" @lead-created="handleLeadCreated" />
+    <CreateDealModal v-if="showCreateDealModal" v-model="showCreateDealModal" @deal-created="handleDealCreated" :deal-type="currentDealType" />
+    <AddStageModal v-if="showAddStageModal" v-model="showAddStageModal" @stage-created="handleStageCreated" />
     <div class="kanban-main-wrapper" :class="{ 'kanban-shell--mobile': isMobileKanban }">
         <b-tabs 
             v-model="activeTabIndex"
@@ -64,7 +65,6 @@
                 <!-- Tab Content -->
                 <Deals v-if="tab.id === 'deals'" ref="dealsRef" />
                 <Leads v-else-if="tab.id === 'leads'" ref="leadsRef" />
-                <Integration v-else-if="tab.id === 'integration'" ref="integrationRef" />
             </b-tab>
 
             <!-- Header Actions at the end of the tabs row -->
@@ -148,7 +148,7 @@
                         
                         <button
                           v-if="isSuperAdmin"
-                          @click="showSettingsHub = true"
+                          @click="onKanbanOpenSettings()"
                           class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border"
                           type="button"
                         >
@@ -166,11 +166,9 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide } from 'vue'
 import Deals from './deals/Deals.vue'
 import Leads from './leadList/leads.vue'
-import Integration from './integration/Integration.vue'
 import LeadSearchModal from './leadList/LeadSearchModal.vue'
 import CreateLeadModal from './createLead/CreateLeadModal.vue'
 import CreateDealModal from './deals/CreateDealModal.vue'
-import CreateIntegrationModal from './integration/CreateIntegrationModal.vue'
 import AddStageModal from './stage/AddStageModal.vue'
 import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem, BModal, BButton } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
@@ -182,13 +180,11 @@ const showSelectedFiltersModal = ref(false)
 const showSettingsHub = ref(false)
 const showCreateModal = ref(false)
 const showCreateDealModal = ref(false)
-const showCreateIntegrationModal = ref(false)
 const showAddStageModal = ref(false)
+const settingsHubInitialSection = ref(null)
 const searchInputFocused = ref(false)
 const leadsRef = ref(null)
 const dealsRef = ref(null)
-const integrationRef = ref(null)
-
 const currentDealType = computed(() => {
     if (activeTab.value !== 'deals') return 'primary'
     const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
@@ -233,10 +229,6 @@ const tabs = computed(() => {
         // { id: 'costumers', name: 'Costumers', hasChevron: true },
         // { id: 'analytics', name: 'Analytics', hasChevron: false }
     ]
-    
-    if (isSuperAdmin.value) {
-        baseTabs.push({ id: 'integration', name: 'Integration', hasChevron: false })
-    }
     
     return baseTabs
 })
@@ -324,6 +316,7 @@ function onDocumentClick(e) {
 onMounted(() => {
     updateKanbanMobileBreakpoint()
     window.addEventListener('resize', updateKanbanMobileBreakpoint)
+    window.addEventListener('kanban-open-settings', onKanbanOpenSettings)
     setTimeout(() => {
         initializeStageUpdates()
     }, 1000)
@@ -332,6 +325,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     window.removeEventListener('resize', updateKanbanMobileBreakpoint)
+    window.removeEventListener('kanban-open-settings', onKanbanOpenSettings)
     document.removeEventListener('click', onDocumentClick)
     if (searchDebounceTimer.value) {
         clearTimeout(searchDebounceTimer.value)
@@ -626,11 +620,19 @@ function onSearchBlur() {
 const handleCreateNew = () => {
     if (activeTab.value === 'deals') {
         showCreateDealModal.value = true
-    } else if (activeTab.value === 'integration') {
-        showCreateIntegrationModal.value = true
     } else {
         showCreateModal.value = true
     }
+}
+
+function onKanbanOpenSettings(event) {
+    settingsHubInitialSection.value = event?.detail?.section ?? null
+    showSettingsHub.value = true
+}
+
+function onSettingsHubClose() {
+    showSettingsHub.value = false
+    settingsHubInitialSection.value = null
 }
 
 provide('kanbanOpenCreateLead', handleCreateNew)
@@ -655,21 +657,6 @@ const handleLeadCreated = async () => {
         if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
             console.log('✅ Calling fetchLeads after lead creation (no real-time updates)')
             await leadsComponent.fetchLeads(true) // Immediate execution
-        }
-    }
-}
-
-const handleIntegrationCreated = (data) => {
-    console.log('📦 Integration created:', data)
-    $showNotification('Integration created successfully!', 'success')
-    
-    // تحديث التبويب Integration
-    if (integrationRef.value) {
-        const comp = Array.isArray(integrationRef.value) 
-            ? integrationRef.value[0] 
-            : integrationRef.value
-        if (comp && typeof comp.loadIntegrations === 'function') {
-            comp.loadIntegrations()
         }
     }
 }

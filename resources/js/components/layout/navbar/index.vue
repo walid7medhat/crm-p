@@ -686,8 +686,12 @@ const searchDebounceTimer = ref(null);
 const SEARCH_DEBOUNCE_MS = 400;
 const leadsRef = ref(null);
 const dealsRef = ref(null);
-const openSettingsHub = () => {
-    window.dispatchEvent(new CustomEvent('kanban-open-settings'))
+const openSettingsHub = (section = null) => {
+    window.dispatchEvent(
+        new CustomEvent('kanban-open-settings', {
+            detail: section ? { section } : {},
+        })
+    )
 }
 const defaultFilter = { id: 'leads-in-progress', label: 'Leads In Progress' }
 

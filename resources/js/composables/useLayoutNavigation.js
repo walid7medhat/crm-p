@@ -98,15 +98,11 @@ export function buildHeaderTabs(module, ctx = {}) {
   const { isAdmin, isSuperAdmin, isCustomAdmin, isShowOnlyListing, hasPermission } = ctx;
 
   if (module === LAYOUT_MODULES.CRM) {
-    const tabs = [
+    return [
       { id: 'leads', label: 'Leads', type: 'event' },
       { id: 'lead-pool', label: 'Lead Pool', type: 'event' },
       { id: 'deals', label: 'Deals', type: 'event' },
     ];
-    if (isSuperAdmin) {
-      tabs.push({ id: 'integration', label: 'Integration', type: 'event' });
-    }
-    return tabs;
   }
 
   if (module === LAYOUT_MODULES.LISTINGS && !isShowOnlyListing) {
