@@ -80,4 +80,9 @@ typings/
 
 # Large local assets / archives (do not push to GitHub)
 /vendor.zip
+public/videos/*.mov
+public/videos/*.webm
 public/videos/1724186_Nebula_Wallpaper_3840x2160.mp4
+public/videos/crm-background.mp4
+public/videos/nebula-wallpaper.mp4
+public/videos/GettyImages-*.mov

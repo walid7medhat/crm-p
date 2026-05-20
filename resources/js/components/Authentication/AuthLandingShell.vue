@@ -72,7 +72,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 
 const altcrmLogo = '/assets/images/auth/altcrm-logo.png';
 const oiaLogo = '/assets/images/auth/oia-properties-logo.png';
-const backgroundVideoSrc = '/videos/vibecode.mp4';
+const backgroundVideoSrc = '/videos/vibecode.mp4?v=3';
 const bgVideoRef = ref(null);
 
 const featureCards = [

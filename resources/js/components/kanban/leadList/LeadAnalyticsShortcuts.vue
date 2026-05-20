@@ -14,8 +14,20 @@
         :title="card.label"
         @click="onCardClick(card.key)"
       >
-        <span class="lead-analytics-card__icon" aria-hidden="true">
-          <iconify-icon :icon="card.icon" />
+        <span
+          class="lead-analytics-card__icon"
+          :style="{ background: card.iconBg }"
+          aria-hidden="true"
+        >
+          <img
+            :src="card.iconSrc"
+            alt=""
+            class="lead-analytics-card__img"
+            width="14"
+            height="14"
+            loading="lazy"
+            decoding="async"
+          />
         </span>
         <span class="lead-analytics-card__line">
           <span class="lead-analytics-card__value">{{ formatValue(metrics[card.metricKey]) }}</span>
@@ -46,12 +58,14 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle-filter'])
 
+const LEAD_SHORTCUT_ICONS = '/assets/images/kanban/lead-shortcuts'
+
 const cardDefs = [
-  { key: 'total', metricKey: 'total', label: 'Total Leads', shortLabel: 'Total Leads', icon: 'lucide:folder', tone: 'primary' },
-  { key: 'new_unassigned', metricKey: 'newUnassigned', label: 'New / Unassigned', shortLabel: 'New Leads', icon: 'lucide:user-plus', tone: 'warning' },
-  { key: 'qualified', metricKey: 'qualified', label: 'Total Qualified', shortLabel: 'Qualified', icon: 'lucide:circle-check', tone: 'success' },
-  { key: 'follow_today', metricKey: 'followUpsToday', label: 'Follow-ups Today', shortLabel: 'Follow-ups', icon: 'lucide:clock', tone: 'urgent' },
-  { key: 'cold', metricKey: 'cold', label: 'Cold Leads (No Action > 48h)', shortLabel: 'Cold Leads', icon: 'lucide:snowflake', tone: 'muted' },
+  { key: 'total', metricKey: 'total', label: 'Total Leads', shortLabel: 'Total Leads', iconSrc: `${LEAD_SHORTCUT_ICONS}/total-leads.svg`, tone: 'primary', iconBg: '#00A7FA' },
+  { key: 'new_unassigned', metricKey: 'newUnassigned', label: 'New / Unassigned', shortLabel: 'New Leads', iconSrc: `${LEAD_SHORTCUT_ICONS}/new-leads.svg`, tone: 'new', iconBg: '#17C3B2' },
+  { key: 'qualified', metricKey: 'qualified', label: 'Total Qualified', shortLabel: 'Qualified', iconSrc: `${LEAD_SHORTCUT_ICONS}/qualified.svg`, tone: 'qualified', iconBg: '#A5E835' },
+  { key: 'follow_today', metricKey: 'followUpsToday', label: 'Follow-ups Today', shortLabel: 'Follow-ups', iconSrc: `${LEAD_SHORTCUT_ICONS}/follow-ups.svg`, tone: 'follow', iconBg: '#22C55E' },
+  { key: 'cold', metricKey: 'cold', label: 'Cold Leads (No Action > 48h)', shortLabel: 'Cold Leads', iconSrc: `${LEAD_SHORTCUT_ICONS}/cold-leads.svg`, tone: 'cold', iconBg: '#F97316' },
 ]
 
 function formatValue(value) {
@@ -136,11 +150,19 @@ function onCardClick(key) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  font-size: 12px;
-  line-height: 1;
+  line-height: 0;
+  box-shadow: 0 1px 2px rgba(11, 7, 54, 0.18);
+}
+
+.lead-analytics-card__img {
+  display: block;
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .lead-analytics-card__line {
@@ -165,47 +187,24 @@ function onCardClick(key) {
   color: rgba(255, 255, 255, 0.92);
 }
 
-/* Icon accents */
-.lead-analytics-card--primary .lead-analytics-card__icon {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+.lead-analytics-card--primary.is-active {
+  border-color: rgba(0, 167, 250, 0.55);
 }
 
-.lead-analytics-card--warning .lead-analytics-card__icon {
-  background: rgba(251, 191, 36, 0.35);
-  color: #fde68a;
+.lead-analytics-card--new.is-active {
+  border-color: rgba(23, 195, 178, 0.55);
 }
 
-.lead-analytics-card--warning.is-active {
-  border-color: rgba(251, 191, 36, 0.55);
+.lead-analytics-card--qualified.is-active {
+  border-color: rgba(165, 232, 53, 0.55);
 }
 
-.lead-analytics-card--success .lead-analytics-card__icon {
-  background: rgba(52, 211, 153, 0.28);
-  color: #a7f3d0;
+.lead-analytics-card--follow.is-active {
+  border-color: rgba(34, 197, 94, 0.55);
 }
 
-.lead-analytics-card--urgent .lead-analytics-card__icon {
-  background: rgba(56, 189, 248, 0.28);
-  color: #bae6fd;
-}
-
-.lead-analytics-card--muted {
-  background: linear-gradient(
-    135deg,
-    rgba(11, 7, 54, 0.55) 0%,
-    rgba(71, 85, 105, 0.45) 100%
-  );
-}
-
-.lead-analytics-card--muted .lead-analytics-card__icon {
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.65);
-}
-
-.lead-analytics-card--muted .lead-analytics-card__value,
-.lead-analytics-card--muted .lead-analytics-card__label {
-  color: rgba(255, 255, 255, 0.72);
+.lead-analytics-card--cold.is-active {
+  border-color: rgba(249, 115, 22, 0.55);
 }
 
 @media (max-width: 1024px) and (min-width: 769px) {
