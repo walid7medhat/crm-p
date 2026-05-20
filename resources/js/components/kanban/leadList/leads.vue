@@ -31,13 +31,8 @@
             @scroll="updateScrollArrows"
             @dragover.prevent="onContainerDragOver"
         >
-        <!-- Non-blocking loading state -->
-        <div v-if="loading" class="kanban-loading-inline">
-            <div class="kanban-loading-inline-dot"></div>
-            <span>Updating stages...</span>
-        </div>
         <!-- Error state -->
-        <div v-if="error && columns.length === 0" class="kanban-empty-state kanban-error-state">
+        <div v-if="error && columns.length === 0 && !loading" class="kanban-empty-state kanban-error-state">
             <iconify-icon icon="lucide:alert-circle" class="kanban-empty-icon"></iconify-icon>
             <p class="kanban-empty-title">Could not load stages</p>
             <p class="kanban-empty-text">{{ error }}</p>
@@ -50,7 +45,7 @@
             <p class="kanban-empty-text">Use the menu above to add a new stage and start organizing your leads.</p>
         </div>
         <!-- Draggable Columns -->
-        <draggable v-else v-model="columns" item-key="status" class="kanban-wrapper kanban-wrapper-tight d-flex h-100" :group="'columns'"
+        <draggable v-else-if="columns.length > 0" v-model="columns" item-key="status" class="kanban-wrapper kanban-wrapper-tight d-flex h-100" :group="'columns'"
             handle=".column-header"
             :disabled="kanbanIsMobile"
             :ghost-class="'ghost'" :drag-class="'dragging'">
@@ -771,6 +766,7 @@ import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
 
 
 import api from '@/plugins/axios'
+import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
 import Swal from 'sweetalert2'
 
@@ -1320,7 +1316,9 @@ const executeFetchLeads = async () => {
     
     abortController.value = new AbortController()
     isFetching.value = true
-    loading.value = true
+    if (!columns.value.length) {
+        loading.value = true
+    }
     
     try {
         const q = appliedSearchParams.value || {}
@@ -1388,6 +1386,7 @@ const executeFetchLeads = async () => {
         isFetching.value = false
         loading.value = false
         abortController.value = null
+        markKanbanReady()
     }
 }
 
@@ -1995,15 +1994,18 @@ watch(cardFields, () => {
     console.log('Card fields updated:', cardFields.value)
 }, { deep: true })
 onMounted(async () => {
-    // Try to show cached stages/leads immediately while fresh data loads
-    // loadCachedColumns()
+    loadCachedColumns()
 
-    await Promise.all([
-        fetchLeads(true), // Immediate on mount
-        fetchResponsiblePersons(),
-         fetchCardSettings() ,
-         fetchStageOrders()
-    ])
+    try {
+        await Promise.all([
+            fetchLeads(true),
+            fetchResponsiblePersons(),
+            fetchCardSettings(),
+            fetchStageOrders(),
+        ])
+    } finally {
+        markKanbanReady()
+    }
     nextTick(() => updateScrollArrows())
     window.addEventListener('resize', updateScrollArrows)
     setTimeout(() => {
@@ -3442,33 +3444,6 @@ const $showNotification = (message, type = 'info') => {
 }
 .kanban-empty-btn:hover {
     background: #f8fafc;
-}
-.kanban-loading-inline {
-    position: absolute;
-    top: 10px;
-    right: 14px;
-    z-index: 4;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    border: 1px solid #e2e8f0;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.95);
-    color: #64748b;
-    font-size: 12px;
-    font-weight: 600;
-}
-.kanban-loading-inline-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #3b82f6;
-    animation: kanban-pulse 1s ease-in-out infinite;
-}
-@keyframes kanban-pulse {
-    0%, 100% { opacity: 0.35; transform: scale(0.85); }
-    50% { opacity: 1; transform: scale(1); }
 }
 .kanban-loading .kanban-empty-title {
     color: #64748B;

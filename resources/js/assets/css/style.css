@@ -15571,8 +15571,12 @@ td.fc-header-center {
 .app-navbar-spacer {
   flex: 0 0 auto;
   width: 100%;
-  height: calc(var(--app-topbar-height, 3.25rem) + env(safe-area-inset-top, 0px));
-  min-height: calc(var(--app-topbar-height, 3.25rem) + env(safe-area-inset-top, 0px));
+  height: calc(
+    var(--app-topbar-height, 4.5rem) + var(--app-header-below-gap, 1rem) + env(safe-area-inset-top, 0px)
+  );
+  min-height: calc(
+    var(--app-topbar-height, 4.5rem) + var(--app-header-below-gap, 1rem) + env(safe-area-inset-top, 0px)
+  );
   pointer-events: none;
   box-sizing: border-box;
 }
@@ -15690,7 +15694,8 @@ body.swal2-toast-shown  {
    ========================================================================== */
 :root {
   /* Must equal .navbar-header + .app-navbar-spacer height (#app also sets this) */
-  --app-topbar-height: 3.25rem;
+  --app-topbar-height: 2.75rem;
+  --app-header-below-gap: 0.5rem;
 }
 
 body {
@@ -15751,11 +15756,15 @@ body {
   background: transparent;
   /* Top bar gap is on .dashboard-main-router; keep light inner rhythm only */
   padding-top: 0.5rem;
-  scroll-margin-top: calc(var(--app-topbar-height, 3.25rem) + env(safe-area-inset-top, 0px));
+  scroll-margin-top: calc(
+    var(--app-topbar-height, 4.5rem) + var(--app-header-below-gap, 1rem) + env(safe-area-inset-top, 0px)
+  );
 }
 
 html {
-  scroll-padding-top: calc(var(--app-topbar-height, 3.25rem) + env(safe-area-inset-top, 0px));
+  scroll-padding-top: calc(
+    var(--app-topbar-height, 4.5rem) + var(--app-header-below-gap, 1rem) + env(safe-area-inset-top, 0px)
+  );
 }
 
 .page-investment-analysis {

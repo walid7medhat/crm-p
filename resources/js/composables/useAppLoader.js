@@ -1,5 +1,10 @@
 import { ref, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import {
+  isKanbanRoute,
+  resetKanbanReady,
+  waitForKanbanReady,
+} from './useKanbanReady.js'
 
 const MIN_DISPLAY_MS = 900
 const NAV_MIN_DISPLAY_MS = 650
@@ -30,8 +35,11 @@ function shouldUseNavLoader(to, from) {
   return true
 }
 
-async function prepareRoute() {
+async function prepareRoute(route) {
   await nextTick()
+  if (route && isKanbanRoute(route.path)) {
+    await waitForKanbanReady()
+  }
   await withTimeout(waitForPaint(), MAX_WAIT_MS)
   await waitForPaint()
 }
@@ -45,7 +53,7 @@ export function useAppLoader() {
   let initialBootstrapDone = false
   let activeLoadId = 0
 
-  async function runLoader({ minDisplayMs = MIN_DISPLAY_MS } = {}) {
+  async function runLoader({ minDisplayMs = MIN_DISPLAY_MS, route } = {}) {
     const loadId = ++activeLoadId
     const startedAt = performance.now()
 
@@ -53,7 +61,7 @@ export function useAppLoader() {
     document.body.classList.add('app-loader-active')
 
     try {
-      await prepareRoute()
+      await prepareRoute(route ?? router.currentRoute.value)
     } catch {
       /* always dismiss */
     }
@@ -82,6 +90,9 @@ export function useAppLoader() {
       }
 
       if (shouldUseNavLoader(to, from)) {
+        if (isKanbanRoute(to.path)) {
+          resetKanbanReady()
+        }
         isAppLoading.value = true
         document.body.classList.add('app-loader-active')
       }
@@ -92,7 +103,7 @@ export function useAppLoader() {
     router.afterEach(async (to, from) => {
       if (!initialBootstrapDone) return
       if (!shouldUseNavLoader(to, from)) return
-      await runLoader({ minDisplayMs: NAV_MIN_DISPLAY_MS })
+      await runLoader({ minDisplayMs: NAV_MIN_DISPLAY_MS, route: to })
     })
   })
 

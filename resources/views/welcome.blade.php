@@ -9,7 +9,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-        <link rel="preload" href="{{ asset('videos/vibecode.mp4') }}?v=5" as="video" type="video/mp4">
+        <link rel="preload" href="{{ asset('assets/images/crm-bg.png') }}?v=2" as="image" type="image/png">
         <script>
             window.__API_BASE_URL__ = "{{ url('/api') }}";
             window.__APP_ORIGIN__ = "{{ url('') }}";
@@ -17,19 +17,7 @@
         @vite('resources/js/main.js')
     </head>
     <body class="antialiased app-loader-active">
-        <video
-            class="crm-bg-video"
-            id="crm-bg-video"
-            autoplay
-            muted
-            loop
-            playsinline
-            preload="auto"
-            aria-hidden="true"
-            tabindex="-1"
-        >
-            <source src="{{ asset('videos/vibecode.mp4') }}?v=5" type="video/mp4">
-        </video>
+        <div class="crm-bg-image" aria-hidden="true"></div>
 
         <style>
             html, body {
@@ -44,6 +32,18 @@
                 overflow: hidden;
             }
 
+            .crm-bg-image {
+                position: fixed;
+                inset: 0;
+                z-index: 0;
+                pointer-events: none;
+                background-color: #0b0736;
+                background-image: url("{{ asset('assets/images/crm-bg.png') }}?v=2");
+                background-size: cover;
+                background-position: center center;
+                background-repeat: no-repeat;
+            }
+
             #app {
                 position: relative;
                 z-index: 1;
@@ -53,8 +53,8 @@
             }
 
             @media (max-width: 768px) {
-                .crm-bg-video {
-                    object-position: center top;
+                .crm-bg-image {
+                    background-position: center top;
                 }
             }
         </style>
@@ -70,19 +70,6 @@
                     document.body.classList.add('app-has-video-bg');
                 }
             } catch (e) { /* ignore */ }
-
-            (function startBackgroundVideo() {
-                var video = document.getElementById('crm-bg-video');
-                if (!video) return;
-                var play = function () {
-                    var p = video.play();
-                    if (p && typeof p.catch === 'function') p.catch(function () {});
-                };
-                video.addEventListener('loadeddata', play, { once: true });
-                video.addEventListener('canplay', play, { once: true });
-                if (video.readyState >= 2) play();
-                else play();
-            })();
         </script>
     </body>
 </html>

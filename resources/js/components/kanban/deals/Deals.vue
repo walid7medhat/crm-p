@@ -468,6 +468,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch, inject } from 'vue'
 import draggable from 'vuedraggable'
 import axios from '@/plugins/axios'
+import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useIntersectionObserver } from '@vueuse/core' 
 import Swal from 'sweetalert2'
 import ViewDealModal from './ViewDealModal.vue'
@@ -982,7 +983,9 @@ async function executeFetchDeals() {
   
   abortController.value = new AbortController();
   isFetching.value = true;
-  loading.value = true;
+  if (!columns.value.length) {
+    loading.value = true;
+  }
   
   try {
     // هذه الجلب الآن يجلب فقط الأعمدة (بدون صفقات) أو الصفقات الأولى للعرض الأولي
@@ -1023,6 +1026,7 @@ async function executeFetchDeals() {
     loading.value = false;
     isFetching.value = false;
     abortController.value = null;
+    markKanbanReady();
   }
 }
 
@@ -2176,7 +2180,11 @@ watch(() => columns.value, () => {
 
 // Lifecycle hooks
 onMounted(async () => {
-  await fetchDeals(true);
+  try {
+    await fetchDeals(true);
+  } finally {
+    markKanbanReady();
+  }
   nextTick(() => {
     updateScrollArrows();
     setupInfiniteScroll();

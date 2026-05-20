@@ -1,33 +1,35 @@
 /**
- * Loaded after style14.css — single full-screen video, no second background layer.
+ * Loaded after style14.css — single full-screen background image (fast load).
  */
 
-html:has(.crm-bg-video),
-html:has(.crm-bg-video) body,
+html:has(.crm-bg-image),
+html:has(.crm-bg-image) body,
 body.app-has-video-bg {
   background: transparent !important;
   background-color: transparent !important;
   background-image: none !important;
 }
 
-.crm-bg-video-overlay {
+.crm-bg-video-overlay,
+.crm-bg-video {
   display: none !important;
 }
 
-.crm-bg-video {
+.crm-bg-image {
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
-  min-width: 100%;
-  min-height: 100%;
-  object-fit: cover;
-  object-position: center center;
   z-index: 0;
   pointer-events: none;
+  background-color: #0b0736;
+  background-image: url('/assets/images/crm-bg.png?v=2');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
 }
 
-html:has(#app main.auth-page-main) .crm-bg-video {
+html:has(#app main.auth-page-main) .crm-bg-image {
   display: none !important;
 }
 
@@ -46,29 +48,87 @@ body.app-has-video-bg #app main.dashboard-main {
   background: transparent !important;
 }
 
+/* Compact navbar in document flow — override style14 (was 4.5rem + heavy padding) */
+body.app-has-video-bg #app main.dashboard-main > .navbar-header {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: var(--app-topbar-height, 2.75rem) !important;
+  max-height: none !important;
+  padding: 0.2rem 0.5rem !important;
+  margin-bottom: var(--app-header-below-gap, 0.5rem) !important;
+  border-radius: 12px !important;
+  box-sizing: border-box !important;
+}
+
+body.app-has-video-bg #app main.dashboard-main > .navbar-header .module-tab-btn {
+  padding: 3px 8px !important;
+  font-size: 12px !important;
+  line-height: 1.15 !important;
+  border-bottom-width: 2px !important;
+}
+
+body.app-has-video-bg #app main.dashboard-main > .navbar-header .navbar-header-left-row .back-button {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+body.app-has-video-bg #app main.dashboard-main > .navbar-header .w-40-px,
+body.app-has-video-bg #app main.dashboard-main > .navbar-header .h-40-px {
+  width: 32px !important;
+  height: 32px !important;
+}
+
 body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
+  padding-top: var(--app-header-below-gap, 0.5rem) !important;
   background: transparent !important;
+}
+
+body.app-has-video-bg .property-show-page {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Kanban / HR shells: internal scroll only */
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.kanban-main-wrapper),
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.kanban-outer) {
+  overflow: hidden;
 }
 
 body.app-has-video-bg .dashboard-main-body,
 body.app-has-video-bg .dashboard-main-body-inner {
-  flex: 1 1 auto;
-  min-height: 0 !important;
-  height: 100% !important;
+  flex: 0 0 auto;
+  min-height: auto !important;
+  height: auto !important;
   margin: 0 !important;
-  padding: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden;
+  padding: 0 0 1rem 0 !important;
+  display: block;
+  overflow: visible;
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
+}
+
+body.app-has-video-bg .dashboard-main-body:has(.kanban-main-wrapper),
+body.app-has-video-bg .dashboard-main-body:has(.kanban-outer) {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden;
 }
 
 body.app-has-video-bg .hr-screen,
@@ -84,7 +144,7 @@ body.app-has-video-bg .kanban-main-wrapper {
   height: 100% !important;
   max-height: 100% !important;
   box-sizing: border-box;
-  padding-top: calc(var(--app-topbar-height, 3.25rem) + 6px);
+  padding-top: 0 !important;
   background: transparent !important;
 }
 
@@ -104,4 +164,52 @@ body.app-has-video-bg a.property-card-link .property-content.p-3 {
 
 body.app-has-video-bg .listing-search-shell {
   background: #fff !important;
+}
+
+/* Property details: full page scroll + sticky action sidebar */
+body.app-has-video-bg .property-show-page,
+body.app-has-video-bg .property-show-inner {
+  overflow: visible !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+@media (min-width: 992px) {
+  body.app-has-video-bg .property-show-inner .property-show-row {
+    align-items: stretch !important;
+  }
+
+  body.app-has-video-bg .property-show-sidebar-col {
+    align-self: stretch !important;
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+  }
+
+  body.app-has-video-bg .property-show-sidebar-col .sidebar-sticky-container {
+    position: sticky !important;
+    top: 0.5rem !important;
+    z-index: 40 !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  body.app-has-video-bg .property-show-sidebar-col .sidebar-sticky-container {
+    position: static !important;
+    max-height: none;
+  }
+
+  body.app-has-video-bg .property-show-sidebar-col .agent-sidebar-card {
+    max-height: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .crm-bg-image {
+    background-position: center top;
+  }
+
+  body.app-has-video-bg #app main.dashboard-main > .navbar-header {
+    min-height: var(--app-topbar-height, 3.25rem) !important;
+  }
 }

@@ -4,12 +4,6 @@
     <Header v-show="showLayout && !isAppLoading" />
     <main :class="showLayout ? 'dashboard-main' : 'auth-page-main'">
       <Navbar v-show="showLayout && !isAppLoading" />
-      <!-- In-flow spacer: reserves height so pages never sit under the absolute navbar -->
-      <div
-        v-show="showNavbarSpacer"
-        class="app-navbar-spacer"
-        aria-hidden="true"
-      />
       <div
         :class="[
           showLayout ? 'dashboard-main-router' : '',
@@ -62,12 +56,6 @@ export default {
     const route = useRoute()
     const { isAppLoading, onLoaderHidden } = useAppLoader()
     const showLayout = computed(() => route.meta.layout !== false)
-    const isKanbanShellRoute = computed(() =>
-      ['/kanban', '/kanban_deal'].some((p) => route.path.startsWith(p))
-    )
-    const showNavbarSpacer = computed(
-      () => showLayout.value && !isAppLoading.value && !isKanbanShellRoute.value
-    )
     const chatOpen = ref(false)
     const chatAgent = ref(null)
     const chatListingId = ref(null)
@@ -126,8 +114,6 @@ export default {
       isAppLoading,
       onLoaderHidden,
       showLayout,
-      showNavbarSpacer,
-      isKanbanShellRoute,
       chatOpen,
       chatAgent,
       chatListingId,
@@ -143,7 +129,8 @@ export default {
 <!-- Global layout: keeps every routed page below the glass top navbar (sidebar is separate). -->
 <style>
 #app {
-  --app-topbar-height: 3.25rem;
+  --app-topbar-height: 2.75rem;
+  --app-header-below-gap: 0.5rem;
   overflow-x: hidden;
   max-width: 100vw;
   min-height: 100vh;
@@ -191,23 +178,13 @@ html:has(#app main.auth-page-main) body {
   max-width: 100vw;
 }
 
-/* Must match .navbar-header height; reserves space so content never slides under the bar */
-#app main.dashboard-main > .app-navbar-spacer {
-  flex: 0 0 auto !important;
-  width: 100% !important;
-  height: calc(var(--app-topbar-height) + env(safe-area-inset-top, 0px)) !important;
-  min-height: calc(var(--app-topbar-height) + env(safe-area-inset-top, 0px)) !important;
-  pointer-events: none;
-  box-sizing: border-box;
-}
-
 #app main.dashboard-main > .dashboard-main-router {
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding-top: 0 !important;
+  padding-top: var(--app-header-below-gap, 0.5rem) !important;
   overflow-x: hidden;
   /* Lets routed pages (e.g. property map) use height: 100% / flex to fill below navbar */
   display: flex;
@@ -227,12 +204,8 @@ body.mobile-nav-open {
 
 @media (max-width: 768px) {
   #app {
-    --app-topbar-height: 5.25rem;
-  }
-
-  #app main.dashboard-main > .app-navbar-spacer {
-    height: calc(var(--app-topbar-height, 5.25rem) + env(safe-area-inset-top, 0px)) !important;
-    min-height: calc(var(--app-topbar-height, 5.25rem) + env(safe-area-inset-top, 0px)) !important;
+    --app-topbar-height: 3.25rem;
+    --app-header-below-gap: 0.5rem;
   }
 
   #app main.dashboard-main > .dashboard-main-router {

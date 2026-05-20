@@ -1,5 +1,5 @@
 <template>
-    <div class="dashboard-main-body">
+    <div class="dashboard-main-body property-show-page">
         <Breadcrumb title="Property Details" :breadcrumbs="[
             { name: 'Property Details' }
         ]" />

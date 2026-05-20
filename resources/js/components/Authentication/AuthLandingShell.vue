@@ -1,18 +1,6 @@
 <template>
   <section class="auth-landing">
-    <video
-      ref="bgVideoRef"
-      class="auth-landing__video"
-      autoplay
-      muted
-      loop
-      playsinline
-      preload="auto"
-      aria-hidden="true"
-      tabindex="-1"
-    >
-      <source :src="backgroundVideoSrc" type="video/mp4" />
-    </video>
+    <div class="auth-landing__bg-image" aria-hidden="true" />
     <div class="auth-landing__overlay" aria-hidden="true" />
     <div class="auth-landing__mesh" aria-hidden="true" />
     <div class="auth-landing__glow auth-landing__glow--one" aria-hidden="true" />
@@ -72,8 +60,6 @@ import { ref, onMounted, onUnmounted } from 'vue';
 
 const altcrmLogo = '/assets/images/auth/altcrm-logo.png';
 const oiaLogo = '/assets/images/auth/oia-properties-logo.png';
-const backgroundVideoSrc = '/videos/vibecode.mp4?v=5';
-const bgVideoRef = ref(null);
 
 const featureCards = [
   {
@@ -142,10 +128,6 @@ function startCarouselAutoplay() {
 
 onMounted(() => {
   startCarouselAutoplay();
-  const video = bgVideoRef.value;
-  if (video) {
-    video.play().catch(() => {});
-  }
 });
 
 onUnmounted(() => {
@@ -176,17 +158,16 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-.auth-landing__video {
+.auth-landing__bg-image {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  min-width: 100%;
-  min-height: 100%;
-  object-fit: cover;
-  object-position: center center;
   z-index: 0;
   pointer-events: none;
+  background-color: #0b0736;
+  background-image: url('/assets/images/crm-bg.png?v=2');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
 }
 
 .auth-landing__overlay {

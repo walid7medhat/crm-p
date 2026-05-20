@@ -1741,20 +1741,23 @@ const showBackButton = computed(() => {
 <style scoped>
 /* Glass bar: brand gradient (matches style14.css tokens) */
 .navbar-header {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  flex: 0 0 auto;
+  width: 100%;
   z-index: 500 !important;
-  height: var(--app-topbar-height, 3.25rem);
-  min-height: var(--app-topbar-height, 3.25rem);
-  padding: 0.25rem 0.75rem;
+  height: auto;
+  min-height: var(--app-topbar-height, 2.75rem);
+  margin-bottom: var(--app-header-below-gap, 0.5rem);
+  padding: 0.2rem 0.5rem;
   box-sizing: border-box;
   pointer-events: auto;
   display: flex;
   align-items: center;
   overflow: visible;
-  border-radius: 20px;
+  border-radius: 12px;
   background: var(--gradient-crm-glass) !important;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -1807,8 +1810,8 @@ const showBackButton = computed(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   margin: 0;
 }
@@ -1839,13 +1842,13 @@ const showBackButton = computed(() => {
 }
 
 .navbar-profile-img {
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
 .navbar-create-listing {
-  padding: 0.5rem 0.75rem !important;
-  min-height: 40px;
+  padding: 0.35rem 0.6rem !important;
+  min-height: 32px;
   font-size: 0.75rem !important;
   line-height: 1.2;
 }
@@ -1879,11 +1882,11 @@ const showBackButton = computed(() => {
 }
 
 .w-40-px {
-  width: 40px;
+  width: 32px;
 }
 
 .h-40-px {
-  height: 40px;
+  height: 32px;
 }
 
 .dropdown-menu.show {
@@ -2582,14 +2585,14 @@ const showBackButton = computed(() => {
 .module-tab-btn,
 .kanban-tab-btn {
   position: relative;
-  padding: 5px 10px;
+  padding: 3px 8px;
   background: transparent;
   border: none;
-  border-bottom: 3px solid transparent;
+  border-bottom: 2px solid transparent;
   color: rgba(255, 255, 255, 0.82);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.15;
   cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease;
   text-decoration: none;
@@ -3096,7 +3099,7 @@ const showBackButton = computed(() => {
 
   /* Kanban mobile only — compact header (Leads row + search) */
   .navbar-header.navbar-header--kanban-mobile {
-    --app-topbar-height: 7.75rem;
+    --app-topbar-height: 6rem;
     min-height: var(--app-topbar-height);
     padding: 8px 10px 10px;
     border-radius: 0;
@@ -3123,7 +3126,7 @@ const showBackButton = computed(() => {
   }
 
   .navbar-header.navbar-header--mobile-compact:not(.navbar-header--kanban-mobile) {
-    --app-topbar-height: 3.75rem;
+    --app-topbar-height: 3.25rem;
     min-height: var(--app-topbar-height);
     padding: 8px 10px;
     border-radius: 0;

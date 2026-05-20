@@ -95,6 +95,7 @@ import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import SettingsHub from './settings/SettingsHub.vue'
 import { useRoute } from 'vue-router'
+import { markKanbanReady } from '@/composables/useKanbanReady.js'
 
 const KANBAN_ACTIVE_TAB_KEY = 'kanban_active_tab'
 
@@ -147,7 +148,10 @@ const syncActiveTabWithRoute = () => {
 watch(activeTab, (id) => {
     persistKanbanTab(id)
     window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: id }))
-})
+    if (id === 'lead-pool' || id === 'integration') {
+        nextTick(() => markKanbanReady())
+    }
+}, { immediate: true })
 
 function updateKanbanMobileBreakpoint() {
     kanbanIsMobile.value = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches

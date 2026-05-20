@@ -1,6 +1,6 @@
 <template>
-  <div class="dashboard-main-body-inner">
-    <div class="row gy-4">
+  <div class="dashboard-main-body-inner property-show-inner">
+    <div class="row gy-4 property-show-row">
       <!-- Main Content -->
       <div class="col-lg-8">
         <div class="card card-main p-0 radius-12 overflow-hidden">
@@ -567,8 +567,9 @@
       </div>
 
       <!-- Sidebar -->
-      <div class="col-lg-4">
-        <div class="sidebar-sticky-container">
+      <div ref="propertySidebarColRef" class="col-lg-4 property-show-sidebar-col">
+        <div ref="propertySidebarSpacerRef" class="property-sidebar-spacer" aria-hidden="true"></div>
+        <div ref="propertySidebarStickyRef" class="sidebar-sticky-container">
           <div class="agent-sidebar-card">
             
             <!-- Agent Profile Section -->
@@ -2089,7 +2090,7 @@
 </template>
 
 <script>
-import { ref, onMounted, getCurrentInstance, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, getCurrentInstance, computed, watch, nextTick } from 'vue';
 // import lastSlideBgImg from '@/assets/images/lastslide-bg.png';
 
 import { useRoute, useRouter } from 'vue-router';
@@ -2121,11 +2122,61 @@ const logo  =  '/assets/images/oiaLogo.jpg';
 const locationIcon  =  '/assets/images/Location.png';
 const OiaLogo = '/assets/images/LogoWhite.png';
 
-const LastSlide_bg = '/assets/images/lastslide-bg.png';  
+const LastSlide_bg = '/assets/images/lastslide-bg.png';
+
+    const propertySidebarColRef = ref(null);
+    const propertySidebarStickyRef = ref(null);
+    const propertySidebarSpacerRef = ref(null);
+    let propertySidebarScrollRoot = null;
+    let propertySidebarSyncRaf = null;
+
+    const getPropertyScrollRoot = () =>
+      document.querySelector('.dashboard-main-router') ||
+      document.querySelector('.dashboard-main-body');
+
+    const syncPropertySidebarPosition = () => {
+      const sticky = propertySidebarStickyRef.value;
+      const spacer = propertySidebarSpacerRef.value;
+      if (!sticky) return;
+      sticky.classList.remove('is-sidebar-fixed');
+      sticky.style.position = '';
+      sticky.style.top = '';
+      sticky.style.left = '';
+      sticky.style.width = '';
+      sticky.style.bottom = '';
+      if (spacer) spacer.style.height = '0px';
+    };
+
+    const schedulePropertySidebarSync = () => {
+      if (propertySidebarSyncRaf) {
+        cancelAnimationFrame(propertySidebarSyncRaf);
+      }
+      propertySidebarSyncRaf = requestAnimationFrame(() => {
+        propertySidebarSyncRaf = null;
+        syncPropertySidebarPosition();
+      });
+    };
+
+    const bindPropertySidebarScroll = () => {
+      propertySidebarScrollRoot = getPropertyScrollRoot();
+      if (!propertySidebarScrollRoot) return;
+      propertySidebarScrollRoot.addEventListener('scroll', schedulePropertySidebarSync, { passive: true });
+      window.addEventListener('resize', schedulePropertySidebarSync, { passive: true });
+      window.addEventListener('orientationchange', schedulePropertySidebarSync, { passive: true });
+    };
+
+    const unbindPropertySidebarScroll = () => {
+      if (propertySidebarScrollRoot) {
+        propertySidebarScrollRoot.removeEventListener('scroll', schedulePropertySidebarSync);
+      }
+      window.removeEventListener('resize', schedulePropertySidebarSync);
+      window.removeEventListener('orientationchange', schedulePropertySidebarSync);
+      propertySidebarScrollRoot = null;
+    };
 
         onMounted(() => {
       setTimeout(() => {
-        const container = document.querySelector(".dashboard-main-body");
+        const container = getPropertyScrollRoot();
         if (container) {
           container.scrollTop = 0;
         }
@@ -5604,6 +5655,7 @@ const windowWidth = ref(window.innerWidth);
   console.log('canApproveListings:', canApproveListings.value);
         window.addEventListener('resize', () => {
           windowWidth.value = window.innerWidth;
+          schedulePropertySidebarSync();
         });
       fetchProperty();
       fetchComments();
@@ -5619,6 +5671,29 @@ const windowWidth = ref(window.innerWidth);
       setTimeout(() => {
         listenForAccessRequestUpdates();
       }, 1000);
+
+      bindPropertySidebarScroll();
+      nextTick(() => {
+        schedulePropertySidebarSync();
+        setTimeout(schedulePropertySidebarSync, 100);
+        setTimeout(schedulePropertySidebarSync, 500);
+      });
+    });
+
+    onUnmounted(() => {
+      unbindPropertySidebarScroll();
+      if (propertySidebarSyncRaf) {
+        cancelAnimationFrame(propertySidebarSyncRaf);
+      }
+    });
+
+    watch(loading, (isLoading) => {
+      if (!isLoading) {
+        nextTick(() => {
+          schedulePropertySidebarSync();
+          setTimeout(schedulePropertySidebarSync, 150);
+        });
+      }
     });
 
     // Cleanup listeners
@@ -5787,6 +5862,9 @@ const openDriveLink = () => {
 }
 
     return {
+      propertySidebarColRef,
+      propertySidebarStickyRef,
+      propertySidebarSpacerRef,
       property,
       logo,
       propertyIcon,
@@ -6895,12 +6973,42 @@ margin-top: 20px;
   font-size: 14px;
   margin: 0;
 }
+.property-show-row {
+  align-items: stretch;
+}
+
+.property-show-sidebar-col {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+.property-sidebar-spacer {
+  width: 100%;
+  height: 0;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.property-show-sidebar-col {
+  position: relative;
+}
+
 .sidebar-sticky-container {
   position: sticky;
-  top: 90px;
+  top: 0.5rem;
+  z-index: 30;
+  width: 100%;
+  flex: 0 0 auto;
+  align-self: flex-start;
   height: fit-content;
+  max-height: calc(100dvh - 1rem);
   border-radius: 20px;
+}
 
+.sidebar-sticky-container.is-sidebar-fixed {
+  position: sticky !important;
+  z-index: 30;
 }
 
 /* Agent Sidebar Card - Improved Styles */
@@ -6911,9 +7019,8 @@ margin-top: 20px;
   padding: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e9ecef;
-  position: sticky;
-  top: 100px;
-  /* max-height: calc(100vh - 120px); */
+  position: relative;
+  max-height: calc(100dvh - 24px);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #c1c1c1 transparent;

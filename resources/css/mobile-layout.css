@@ -67,7 +67,8 @@
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Video + overlay: global rules in app.css; auth hides duplicate welcome video */
+  /* Auth uses its own background image; hide global shell background */
+  html:has(#app main.auth-page-main) .crm-bg-image,
   html:has(#app main.auth-page-main) .crm-bg-video,
   html:has(#app main.auth-page-main) .crm-bg-video-overlay {
     display: none !important;
