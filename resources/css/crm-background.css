@@ -1,5 +1,5 @@
 /**
- * Loaded after style14.css — single full-screen background image (fast load).
+ * App shell background (static image) and dashboard layout — bundled via Vite.
  */
 
 html:has(.crm-bg-image),
