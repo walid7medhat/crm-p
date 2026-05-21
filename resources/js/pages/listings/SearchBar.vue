@@ -3775,7 +3775,7 @@ fetchProjects()
   border: none;
   border-radius: 8px;
   color: #1f2937;
-  font-size: 16px;
+  font-size: 14px;
   padding:  8px;
   border: 1px solid #dbe2ee;
   text-align:center;
