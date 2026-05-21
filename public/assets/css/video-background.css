@@ -39,9 +39,9 @@ html:has(#app main.auth-page-main) .crm-bg-image {
 }
 
 body.app-has-video-bg #app main.dashboard-main {
-  height: 100dvh;
+  /* height: 100dvh;
   max-height: 100dvh;
-  overflow: hidden;
+  overflow: hidden; */
   display: flex !important;
   flex-direction: column !important;
   flex-wrap: nowrap !important;
@@ -67,7 +67,7 @@ body.app-has-video-bg #app main.dashboard-main > .navbar-header {
 
 body.app-has-video-bg #app main.dashboard-main > .navbar-header .module-tab-btn {
   padding: 3px 8px !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
   line-height: 1.15 !important;
   border-bottom-width: 2px !important;
 }

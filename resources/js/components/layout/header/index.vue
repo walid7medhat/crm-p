@@ -19,7 +19,7 @@
           class="sidebar-toggle"
           :class="{ 'sidebar-toggle-with-label': !isSidebarActive || (isSidebarActive && (sidebarHeaderHover || sidebarHover)) }"
           :title="isSidebarActive ? 'Expand menu' : 'Oia Properties'"
-          @click="toggleSidebarDesktop"
+          @click="handleSidebarToggleClick"
           aria-label="Toggle menu"
         >
           <iconify-icon icon="material-symbols:menu-rounded" class="sidebar-menu-icon" />
@@ -51,6 +51,31 @@
             </router-link>
           </li>
 
+        <li
+          v-if="listingsSidebarSections.length > 0 && !isShowOnlyListing"
+          :class="{ dropdown: true, open: activeDropdown === 'listings', 'active-parent': activeLayoutModule === 'listings' }"
+        >
+          <a href="javascript:void(0)" @click.stop.prevent="handleListingsClick" :class="{ active: activeLayoutModule === 'listings' }">
+            <img :src="listingsIcon" class="imgicon" alt="" />
+            <span>Listings</span>
+            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'listings' }" />
+          </a>
+          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
+            <ul v-show="activeDropdown === 'listings'" class="sidebar-submenu sidebar-submenu--grouped">
+              <template v-for="section in listingsSidebarSections" :key="section.key">
+                <li class="sidebar-submenu__heading">{{ section.title }}</li>
+                <li v-for="item in section.items" :key="`${section.key}-${item.path}`" :class="['nav-link', { 'active-page': isActive(item.path) }]">
+                <router-link :to="item.path">
+                    <span class="menu-label">{{ item.label }}</span>
+                    <span v-if="item.count > 0" class="menu-count">{{ item.count }}</span>
+                    <span v-else-if="countsLoading && item.count !== undefined" class="menu-count loading">…</span>
+                </router-link>
+              </li>
+              </template>
+            </ul>
+          </transition>
+        </li>
+
         <li v-if="isSuperAdmin || user.id === 186">
           <router-link to="/hr" :class="{ active: activeLayoutModule === 'hr' }">
               <iconify-icon icon="lucide:users-round" class="menu-icon" />
@@ -72,31 +97,6 @@
               <li v-for="item in filteredUsersItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
                 <router-link :to="item.path">{{ item.label }}</router-link>
               </li>
-            </ul>
-          </transition>
-        </li>
-
-        <li
-          v-if="listingsSidebarSections.length > 0 && !isShowOnlyListing"
-          :class="{ dropdown: true, open: activeDropdown === 'listings', 'active-parent': activeLayoutModule === 'listings' }"
-        >
-          <a href="javascript:void(0)" @click="toggleDropdown('listings')" :class="{ active: activeLayoutModule === 'listings' }">
-            <img :src="listingsIcon" class="imgicon" alt="" />
-            <span>Listings</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'listings' }" />
-          </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'listings'" class="sidebar-submenu sidebar-submenu--grouped">
-              <template v-for="section in listingsSidebarSections" :key="section.key">
-                <li class="sidebar-submenu__heading">{{ section.title }}</li>
-                <li v-for="item in section.items" :key="`${section.key}-${item.path}`" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                    <span class="menu-label">{{ item.label }}</span>
-                    <span v-if="item.count > 0" class="menu-count">{{ item.count }}</span>
-                    <span v-else-if="countsLoading && item.count !== undefined" class="menu-count loading">…</span>
-                </router-link>
-              </li>
-              </template>
             </ul>
           </transition>
         </li>
@@ -223,7 +223,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, getCurrentInstance, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
 import { useSidebar } from '@/composables/useSidebar.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
@@ -247,6 +247,7 @@ const agentsIcon=ref('/assets/icons/agents-icon.svg');
 const roleIcon=ref('/assets/icons/role-icon.svg');
 
 const route = useRoute();
+const router = useRouter();
 const activeDropdown = ref(null);
 const countsLoading = ref(false);
 const { proxy } = getCurrentInstance();
@@ -261,6 +262,10 @@ const {
 
 const sidebarHeaderHover = ref(false);
 const sidebarHover = ref(false);
+
+const handleSidebarToggleClick = () => {
+  toggleSidebarDesktop();
+};
 
 const closeSidebar = () => {
   if (isMobileViewport.value) {
@@ -709,6 +714,15 @@ function toggleMobileDockSection(sectionKey) {
 const toggleDropdown = (name) => {
   activeDropdown.value = activeDropdown.value === name ? null : name;
   localStorage.setItem('activeDropdown', activeDropdown.value || '');
+};
+
+const handleListingsClick = () => {
+  activeDropdown.value = 'listings';
+  localStorage.setItem('activeDropdown', 'listings');
+  const dashboardPath = isShowOnlyListing.value ? '/alllisting' : '/';
+  if (route.path !== dashboardPath) {
+    router.push(dashboardPath);
+  }
 };
 
 

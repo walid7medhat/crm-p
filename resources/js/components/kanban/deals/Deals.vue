@@ -2328,8 +2328,8 @@ defineExpose({
   border-radius: 12px;
   border: none;
   align-self: stretch;
-  min-height: 100%;
-  height: auto;
+  min-height: calc(100dvh - 140px);
+  height: calc(100dvh - 140px);
   flex-shrink: 0;
   overflow: visible;
   position: relative;
@@ -2354,7 +2354,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 100%;
   height: 100%;
 }
 
@@ -2411,8 +2411,10 @@ font-weight: 600;
   flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
-  min-height: 0;
-  max-height: calc(100dvh - 168px);
+  min-height: calc(100dvh - 180px);
+  height: calc(100dvh - 180px);
+  display: flex;
+  flex-direction: column;
   scrollbar-width: none;
   transition: scrollbar-color 0.2s ease;
   -webkit-overflow-scrolling: touch;
@@ -2614,11 +2616,16 @@ font-weight: 600;
 
 .tasks-list {
   min-height: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
 .min-height-cards {
-  min-height: 40px;
+  min-height: 100%;
+  height: 100%;
 }
 
 /* Draggable styles */

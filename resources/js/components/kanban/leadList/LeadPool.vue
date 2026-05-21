@@ -302,17 +302,13 @@ const visiblePages = computed(() => {
 
 // Card fields configuration (you can fetch from API or use default)
 const cardFields = ref([
-    { key: 'created_at', enabled: true, order: 1, label: 'Created At' },
-    { key: 'created_by', enabled: true, order: 2, label: 'Created By' },
-    { key: 'first_name', enabled: true, order: 3, label: 'Name' },
-    { key: 'lead_source', enabled: true, order: 4, label: 'Source' },
-    { key: 'lead_branch_source', enabled: true, order: 5, label: 'Lead Branch Source' },
-    { key: 'work_phone', enabled: true, order: 6, label: 'Phone' },
-    { key: 'email', enabled: true, order: 7, label: 'Email' },
-    { key: 'whatsapp_number', enabled: true, order: 8, label: 'WhatsApp' },
-    { key: 'api_first_question', enabled: true, order: 9, label: 'More Information' },
-    { key: 'responsible_person', enabled: true, order: 10, label: 'Responsible Person' },
-    { key: 'assigned_by', enabled: true, order: 11, label: 'Assigned By' }
+    { key: 'first_name', enabled: true, order: 1, label: 'Name' },
+    { key: 'lead_source', enabled: true, order: 2, label: 'Source' },
+    { key: 'lead_branch_source', enabled: true, order: 3, label: 'Lead Branch Source' },
+    { key: 'work_phone', enabled: true, order: 4, label: 'Phone' },
+    { key: 'email', enabled: true, order: 5, label: 'Email' },
+    { key: 'whatsapp_number', enabled: true, order: 6, label: 'WhatsApp' },
+    { key: 'api_first_question', enabled: true, order: 7, label: 'More Information' }
 ])
 
 // Fetch leads with stage_id = 10 (Lead Pool), paginated and filtered.
@@ -385,9 +381,7 @@ const goToPage = (page) => {
 const enabledFieldsForLead = (lead) => {
     return cardFields.value
         .filter(field => field.enabled)
-        .filter(field => hasDynamicFieldValue(lead, field.key) || 
-                        field.key === 'responsible_person' || 
-                        field.key === 'assigned_by')
+        .filter(field => hasDynamicFieldValue(lead, field.key))
         .sort((a, b) => a.order - b.order)
 }
 
@@ -584,7 +578,14 @@ defineExpose({
 .leads-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-auto-rows: 1fr;
     gap: 10px;
+    align-items: stretch;
+}
+
+.lead-pool-wrapper .lead-card {
+    display: flex;
+    height: 100%;
 }
 
 .lead-pool-wrapper .kanban-card {
@@ -593,6 +594,14 @@ defineExpose({
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     color: #1e293b;
     border: 1px solid #e5e7eb !important;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+}
+
+.lead-pool-wrapper .kanban-card .task-info {
+    flex: 1 1 auto;
 }
 
 .lead-pool-wrapper .kanban-card:hover {

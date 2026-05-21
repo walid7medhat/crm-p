@@ -14,24 +14,24 @@
         :title="card.label"
         @click="onCardClick(card.key)"
       >
-        <span
-          class="lead-analytics-card__icon"
-          :style="{ background: card.iconBg }"
-          aria-hidden="true"
-        >
-          <img
-            :src="card.iconSrc"
-            alt=""
-            class="lead-analytics-card__img"
-            width="11"
-            height="11"
-            loading="lazy"
-            decoding="async"
-          />
-        </span>
-        <span class="lead-analytics-card__line">
+        <span class="lead-analytics-card__label">{{ card.shortLabel }}</span>
+        <span class="lead-analytics-card__row">
+          <span
+            class="lead-analytics-card__icon"
+            :style="{ background: card.iconBg }"
+            aria-hidden="true"
+          >
+            <img
+              :src="card.iconSrc"
+              alt=""
+              class="lead-analytics-card__img"
+              width="22"
+              height="22"
+              loading="lazy"
+              decoding="async"
+            />
+          </span>
           <span class="lead-analytics-card__value">{{ formatValue(metrics[card.metricKey]) }}</span>
-          <span class="lead-analytics-card__label">{{ card.shortLabel }}</span>
         </span>
       </button>
     </div>
@@ -87,6 +87,7 @@ function onCardClick(key) {
 .lead-analytics-row {
   flex-shrink: 0;
   padding: 0 6px 2px;
+  margin-bottom: 12px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -94,24 +95,26 @@ function onCardClick(key) {
 .lead-analytics-track {
   display: flex;
   flex-wrap: nowrap;
-  align-items: center;
+  align-items: stretch;
   justify-content: flex-start;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
   min-width: 0;
 }
 
 .lead-analytics-card {
-  flex: 0 0 auto;
-  width: auto;
-  max-width: max-content;
+  flex: 1 1 0;
+  min-width: 132px;
+  max-width: 180px;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  height: 28px;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 96px;
   margin: 0;
-  padding: 0 10px;
-  border-radius: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: linear-gradient(
     135deg,
@@ -127,6 +130,7 @@ function onCardClick(key) {
   font-family: Montserrat, Inter, system-ui, sans-serif;
   -webkit-appearance: none;
   appearance: none;
+  text-align: center;
 }
 
 .lead-analytics-card:hover {
@@ -145,13 +149,21 @@ function onCardClick(key) {
   filter: brightness(1.1);
 }
 
+.lead-analytics-card__row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
 .lead-analytics-card__icon {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   line-height: 0;
   box-shadow: 0 1px 2px rgba(11, 7, 54, 0.18);
@@ -159,32 +171,31 @@ function onCardClick(key) {
 
 .lead-analytics-card__img {
   display: block;
-  width: 11px;
-  height: 11px;
+  width: 22px;
+  height: 22px;
   object-fit: contain;
   pointer-events: none;
 }
 
-.lead-analytics-card__line {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  line-height: 1;
-}
-
 .lead-analytics-card__value {
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: #fff;
+  line-height: 1;
 }
 
 .lead-analytics-card__label {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   color: rgba(255, 255, 255, 0.92);
+  line-height: 1.2;
+  text-align: center;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lead-analytics-card--primary.is-active {
@@ -211,7 +222,7 @@ function onCardClick(key) {
   .lead-analytics-track {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    gap: 10px;
   }
 
   .lead-analytics-card {
@@ -223,19 +234,21 @@ function onCardClick(key) {
 @media (max-width: 768px) {
   .lead-analytics-row {
     padding: 4px 8px 6px;
+    margin-bottom: 10px;
     overflow: hidden;
   }
 
   .lead-analytics-track {
     display: flex;
     flex-wrap: nowrap;
-    gap: 8px;
+    gap: 10px;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     padding-bottom: 2px;
+    align-items: stretch;
   }
 
   .lead-analytics-track::-webkit-scrollbar {
@@ -245,18 +258,28 @@ function onCardClick(key) {
   .lead-analytics-card {
     flex: 0 0 auto;
     scroll-snap-align: start;
-    min-height: 40px;
-    height: 40px;
-    padding: 0 10px;
-    max-width: none;
+    min-width: 130px;
+    min-height: 90px;
+    max-width: 160px;
+    padding: 10px 12px;
+  }
+
+  .lead-analytics-card__icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .lead-analytics-card__img {
+    width: 25px;
+    height: 25px;
   }
 
   .lead-analytics-card__value {
-    font-size: 13px;
+    font-size: 20px;
   }
 
   .lead-analytics-card__label {
-    font-size: 10px;
+    font-size: 11px;
   }
 }
 
@@ -270,8 +293,8 @@ function onCardClick(key) {
 
   .lead-analytics-card {
     width: 100%;
-    min-height: 38px;
-    height: 38px;
+    max-width: none;
+    min-height: 86px;
   }
 }
 </style>

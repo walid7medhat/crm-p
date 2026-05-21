@@ -1756,9 +1756,9 @@ const showBackButton = computed(() => {
   width: 100%;
   z-index: 500 !important;
   height: auto;
-  min-height: var(--app-topbar-height, 2.75rem);
+  min-height: var(--app-topbar-height, 3.75rem);
   margin-bottom: var(--app-header-below-gap, 0.5rem);
-  padding: 0.2rem 0.5rem;
+  padding: 0.45rem 0.65rem;
   box-sizing: border-box;
   pointer-events: auto;
   display: flex;
@@ -1792,6 +1792,7 @@ const showBackButton = computed(() => {
   gap: 0.5rem;
   min-height: 0;
   flex: 1 1 auto;
+  padding: 10px 0;
 }
 
 .navbar-header-left {
@@ -2731,40 +2732,40 @@ const showBackButton = computed(() => {
 }
 
 .search-wrapper {
-    background: rgba(11, 7, 54, 0.42);
-    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.32);
     border-radius: 999px;
-    height: 34px;
-    min-height: 34px;
+    height: 38px;
+    min-height: 38px;
     gap: 4px;
-    padding: 4px 8px 4px 6px;
+    padding: 4px 10px 4px 8px;
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
     width: max-content;
-    max-width: 720px;
-    min-width: 320px;
+    max-width: 900px;
+    min-width: 460px;
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
     transition: max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), border-color 0.2s ease;
     cursor: text;
 }
 
 .search-wrapper:hover,
 .search-wrapper:focus-within {
-    background: rgba(11, 7, 54, 0.52);
-    border-color: rgba(255, 255, 255, 0.38);
+    background: rgba(255, 255, 255, 0.26);
+    border-color: rgba(255, 255, 255, 0.45);
 }
 
 .search-wrapper-expanded {
-    max-width: 900px;
-    min-width: 400px;
+    max-width: 1080px;
+    min-width: 560px;
 }
 
 .search-wrapper-tall {
-    max-width: 600px;
-    min-width: 480px;
+    max-width: 760px;
+    min-width: 620px;
 }
 
 .search-filters-pills {
@@ -2842,19 +2843,19 @@ const showBackButton = computed(() => {
 
 .search-input-container {
     color: rgba(255, 255, 255, 0.92);
-    height: 24px;
-    min-height: 24px;
+    height: 28px;
+    min-height: 28px;
     display: flex;
     align-items: center;
     flex: 1 1 auto;
-    min-width: 120px;
+    min-width: 200px;
     width: 100%;
     max-width: 100%;
     transition: min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 .search-input-container-tall {
-    min-width: 200px;
+    min-width: 320px;
     max-width: 100%;
 }
 

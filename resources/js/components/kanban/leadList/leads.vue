@@ -3317,8 +3317,10 @@ const $showNotification = (message, type = 'info') => {
     flex: 1 1 auto;
     overflow-y: auto;
     overflow-x: hidden;
-    min-height: 0;
-    max-height: calc(100dvh - 168px);
+    min-height: calc(100dvh - 240px);
+    height: calc(100dvh - 240px);
+    display: flex;
+    flex-direction: column;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     scrollbar-width: none;
@@ -3538,8 +3540,8 @@ const $showNotification = (message, type = 'info') => {
     border-radius: 12px;
     border: none;
     align-self: stretch;
-    min-height: 100%;
-    height: auto;
+    min-height: calc(100dvh - 200px);
+    height: calc(100dvh - 200px);
     flex-shrink: 0;
     overflow: visible;
     box-sizing: border-box;
@@ -3561,7 +3563,7 @@ const $showNotification = (message, type = 'info') => {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: 100%;
     height: 100%;
 }
 
@@ -3820,7 +3822,8 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .tasks-list {
-    min-height: 0;
+    min-height: 100%;
+    height: 100%;
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;

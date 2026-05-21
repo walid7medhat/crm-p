@@ -44,13 +44,13 @@ body.app-has-video-bg .kanban-outer:not(.kanban-outer--mobile) {
 
 /* Smaller lead shortcut icons (Total / New / Qualified / Follow-ups / Cold) */
 .lead-analytics-row .lead-analytics-card__icon {
-  width: 18px !important;
-  height: 18px !important;
+  width: 25px !important;
+  height: 25px !important;
 }
 
 .lead-analytics-row .lead-analytics-card__img {
-  width: 11px !important;
-  height: 11px !important;
+  width: 20px !important;
+  height: 20px !important;
 }
 
 .lead-analytics-row {
