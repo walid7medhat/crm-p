@@ -6524,6 +6524,7 @@ margin-bottom: 20px;
   height: 100%;
   /* object-fit: cover; */
   transition: transform 0.3s ease;
+      max-height: 400px;
 }
 
 .main-image-section:hover .main-image {
@@ -6582,6 +6583,7 @@ margin-bottom: 20px;
   flex-direction: column;
   gap: 8px;
   height: 100%;
+      max-height: 400px;
 }
 
 .side-image {
@@ -8905,7 +8907,7 @@ ease;
 }
 
 .info-value {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #0B0736;
 }
