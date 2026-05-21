@@ -243,6 +243,21 @@ class Listing extends Model
     {
         return $this->belongsTo(User::class, 'converted_by');
     }
+
+    /**
+     * The original agent of this listing while it is temporarily delegated
+     * because that agent is on vacation. NULL when the listing is not delegated.
+     */
+    public function vacationHolder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'vacation_holder_id');
+    }
+
+    /** Convenience flag — true while this listing is being held by a delegate. */
+    public function getIsDelegatedForVacationAttribute(): bool
+    {
+        return !empty($this->vacation_holder_id);
+    }
     
     public function canUserManageAccessRequests(User $user): bool
     {

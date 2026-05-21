@@ -841,20 +841,72 @@ public function markAsConverted(Request $request, ListingAccessRequest $accessRe
             ? $request->delegate_id
             : null
     ]);
-  if($request->active==false){
 
-      $requests=ListingAccessRequest::where('handled_by',$old_delegate)->whereHas('listing',function($q) use($user){
-          $q->where('agent_id',$user->id);
-      })->get();
-      foreach($requests as  $request){
-          $request->update(['handled_by'=>null]);
-      }
-  }
+    if ($request->active) {
+        $this->transferListingsForVacation($user, (int) $request->delegate_id);
+    } else {
+        $this->restoreListingsFromVacation($user);
+
+        $requests=ListingAccessRequest::where('handled_by',$old_delegate)->whereHas('listing',function($q) use($user){
+            $q->where('agent_id',$user->id);
+        })->get();
+        foreach($requests as  $request){
+            $request->update(['handled_by'=>null]);
+        }
+    }
 
     return ApiResponse::success(
         $user->only(['on_vacation', 'delegate_agent_id']),
         'Vacation mode updated successfully'
     );
+}
+
+/**
+ * When vacation activates: copy the absent agent's listings to the delegate.
+ * Stores the original agent in vacation_holder_id so we can revert later.
+ * Idempotent — skips listings already delegated for the same holder.
+ */
+private function transferListingsForVacation(User $holder, int $delegateId): void
+{
+    Listing::where('agent_id', $holder->id)
+        ->whereNull('vacation_holder_id')
+        ->update([
+            'vacation_holder_id' => $holder->id,
+            'agent_id'           => $delegateId,
+        ]);
+
+    // Bulk update bypasses model events — invalidate any cached listing pages
+    // for both the holder (their "my listings" was full) and the delegate
+    // (their "my listings" now includes new rows).
+    ListingController::clearListingsCacheFor($holder->id);
+    ListingController::clearListingsCacheFor($delegateId);
+}
+
+/**
+ * When vacation deactivates: restore the listings that were temporarily delegated
+ * for this holder back to them.
+ */
+private function restoreListingsFromVacation(User $holder): void
+{
+    // Capture the delegate ids that currently hold these rows so we can also
+    // bust their cache after we move the listings back.
+    $delegateIds = Listing::where('vacation_holder_id', $holder->id)
+        ->pluck('agent_id')
+        ->unique()
+        ->all();
+
+    Listing::where('vacation_holder_id', $holder->id)
+        ->update([
+            'agent_id'           => $holder->id,
+            'vacation_holder_id' => null,
+        ]);
+
+    ListingController::clearListingsCacheFor($holder->id);
+    foreach ($delegateIds as $did) {
+        if ($did) {
+            ListingController::clearListingsCacheFor((int) $did);
+        }
+    }
 }
 public function getVacationMode()
 {
@@ -921,15 +973,20 @@ public function setUserVacationMode(Request $request, User $user)
         'delegate_agent_id' => $request->active ? $request->delegate_id : null,
     ]);
 
-    // When turning vacation OFF, hand requests that were redirected to the
-    // old delegate back to the original agent (mirrors setVacationMode()).
-    if ($request->active == false && $oldDelegate) {
-        $requests = ListingAccessRequest::where('handled_by', $oldDelegate)
-            ->whereHas('listing', function ($q) use ($user) {
-                $q->where('agent_id', $user->id);
-            })->get();
-        foreach ($requests as $req) {
-            $req->update(['handled_by' => null]);
+    // Transfer listings to the delegate while on vacation; restore on return.
+    if ($request->active) {
+        $this->transferListingsForVacation($user, (int) $request->delegate_id);
+    } else {
+        $this->restoreListingsFromVacation($user);
+
+        if ($oldDelegate) {
+            $requests = ListingAccessRequest::where('handled_by', $oldDelegate)
+                ->whereHas('listing', function ($q) use ($user) {
+                    $q->where('agent_id', $user->id);
+                })->get();
+            foreach ($requests as $req) {
+                $req->update(['handled_by' => null]);
+            }
         }
     }
 

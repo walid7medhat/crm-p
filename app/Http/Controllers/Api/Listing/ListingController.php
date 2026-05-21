@@ -62,13 +62,16 @@ class ListingController extends Controller
   public function index(Request $request): JsonResponse
 {
     try {
-        // 1) cache key
+        // 1) cache key — per-user version is bumped on writes so file/database
+        // drivers (no tag support) still invalidate correctly.
         $filtersHash = md5(serialize($request->all()));
+        $userId      = (int) Auth::id();
+        $version     = self::getUserCacheVersion($userId);
 
         if ($request->boolean('my_listings')) {
-            $cacheKey = self::CACHE_PREFIX . 'my_' . Auth::id() . '_' . $filtersHash;
+            $cacheKey = self::CACHE_PREFIX . 'my_' . $userId . '_v' . $version . '_' . $filtersHash;
         } else {
-            $cacheKey = self::CACHE_PREFIX . 'index_' . Auth::id() . '_'. $filtersHash;
+            $cacheKey = self::CACHE_PREFIX . 'index_' . $userId . '_v' . $version . '_' . $filtersHash;
         }
 
         if (method_exists(Cache::getStore(), 'tags')) {
@@ -1898,9 +1901,44 @@ private function sendResubmissionNotification($listing, $user)
             }
         } catch (\Exception $e) {
             \Log::warning('Listings cache clear error: ' . $e->getMessage());
-            
+
             Cache::flush();
             \Log::info('Full cache flush as fallback for listings');
+        }
+    }
+
+    /** Cache key suffix bumped on writes; safe across drivers without tag support. */
+    public static function getUserCacheVersion(int $userId): string
+    {
+        return (string) Cache::get(self::CACHE_PREFIX . 'ver_user_' . $userId, '0');
+    }
+
+    public static function bumpUserCacheVersion(int $userId): void
+    {
+        Cache::put(
+            self::CACHE_PREFIX . 'ver_user_' . $userId,
+            (string) (microtime(true) * 1000),
+            86400 * 30
+        );
+    }
+
+    /**
+     * Public, static cache invalidator usable from other controllers
+     * (e.g. ListingAccessRequestController after a bulk agent reassignment).
+     * Bumps the per-user version (works on every driver) AND flushes the
+     * shared tag if the cache store supports it.
+     */
+    public static function clearListingsCacheFor(?int $userId = null): void
+    {
+        try {
+            if ($userId) {
+                self::bumpUserCacheVersion($userId);
+            }
+            if (method_exists(Cache::getStore(), 'tags')) {
+                Cache::tags([self::CACHE_TAG])->flush();
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Listings cache clear (static) error: ' . $e->getMessage());
         }
     }
 

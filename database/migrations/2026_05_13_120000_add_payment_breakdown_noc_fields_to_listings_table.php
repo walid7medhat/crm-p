@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('listings', function (Blueprint $table) {
             if (! Schema::hasColumn('listings', 'handover_date')) {
-                $table->date('handover_date')->nullable()->after('selling_price');
+                $table->date('handover_date')->nullable();
             }
             if (! Schema::hasColumn('listings', 'noc_percentage')) {
                 $table->unsignedTinyInteger('noc_percentage')->nullable()->after('handover_date');

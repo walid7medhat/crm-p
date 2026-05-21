@@ -305,7 +305,22 @@ $allowedAgentIds = [];
                     'id' => $this->agent->id,
                     'name' => $this->agent->name,
                     'email' => $this->agent->email,
-                    'avatar' => $this->agent->avatar ? asset('storage/'. $this->agent->avatar)   : null, 
+                    'avatar' => $this->agent->avatar ? asset('storage/'. $this->agent->avatar)   : null,
+                ];
+            }),
+
+            // Vacation delegation: while the original agent is on vacation, agent_id points to
+            // the delegate and vacation_holder_id holds the original. Surface both so the UI can
+            // render a "covering for …" hint and admins can see the real owner.
+            'vacation_holder_id' => $this->vacation_holder_id,
+            'is_delegated_for_vacation' => (bool) $this->vacation_holder_id,
+            'vacation_holder' => $this->whenLoaded('vacationHolder', function () {
+                if (!$this->vacationHolder) return null;
+                return [
+                    'id' => $this->vacationHolder->id,
+                    'name' => $this->vacationHolder->name,
+                    'email' => $this->vacationHolder->email,
+                    'avatar' => $this->vacationHolder->avatar ? asset('storage/' . $this->vacationHolder->avatar) : null,
                 ];
             }),
             
