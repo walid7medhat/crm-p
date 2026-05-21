@@ -568,6 +568,7 @@ const settingsSidebarSections = computed(() => {
   const system = [];
   if (isAdmin.value) {
     system.push({ path: '/system-overview', label: 'System Map', icon: 'lucide:layout-dashboard' });
+    system.push({ path: '/import-pitrix', label: 'Import Leads', icon: 'lucide:cloud-download' });
   }
   if (isSuperAdmin.value) {
     system.push({ path: '/logs', label: 'Logs', icon: 'lucide:scroll-text' });

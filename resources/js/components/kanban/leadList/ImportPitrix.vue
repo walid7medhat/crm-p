@@ -226,11 +226,159 @@
           <div class="text-center mt-3">
             <small class="text-muted" style="font-size: 11px;">
               <i class="ri-question-line me-1"></i>
-              Need help? Check our 
+              Need help? Check our
               <a href="#" class="text-decoration-none" style="color: #1a2a6c;">documentation</a>
             </small>
           </div>
-          
+
+          <!-- ====================== Bitrix24 Sync Card ====================== -->
+          <div class="card shadow-lg border-0 rounded-4 overflow-hidden p-3 mt-4">
+            <div class="card-header bg-gradient-dark text-white py-3 px-4 border-0">
+              <div class="d-flex align-items-center gap-2">
+                <div class="header-icon">
+                  <i class="ri-cloud-line fs-4"></i>
+                </div>
+                <div>
+                  <h5 class="fw-bold mb-0 text-white">Sync from Bitrix24</h5>
+                  <small class="mb-0 opacity-75">Pull all leads, comments and activities from your Bitrix24 portal</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body p-4">
+              <div class="alert alert-warning border-0 rounded-3 py-2 px-3 mb-3" style="font-size: 12.5px;">
+                <i class="ri-alert-line me-1"></i>
+                Re-running this sync will create duplicate leads (configured for one-time migration).
+              </div>
+
+              <!-- Progress -->
+              <div v-if="b24.running || b24.processed > 0 || b24.total > 0" class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <small class="fw-semibold" style="color: #1a2a6c;">
+                    Imported {{ b24.processed }}<template v-if="b24.total"> / {{ b24.total }}</template>
+                  </small>
+                  <small class="text-muted">
+                    {{ b24.errors.length }} error<span v-if="b24.errors.length !== 1">s</span>
+                  </small>
+                </div>
+                <div class="progress" style="height: 8px;">
+                  <div
+                    class="progress-bar"
+                    :style="{ width: b24ProgressPct + '%', background: 'linear-gradient(135deg, #1a2a6c 0%, #16215c 100%)' }"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- Fetch single -->
+              <div class="row g-2 align-items-end mb-3">
+                <div class="col-md-8">
+                  <label class="form-label small fw-semibold mb-1" style="color: #1a2a6c;">
+                    <i class="ri-search-line me-1"></i>Fetch a single lead by Bitrix24 ID
+                  </label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    style="font-size: 13px;"
+                    v-model="b24.singleId"
+                    placeholder="e.g. 42"
+                    :disabled="b24.running"
+                  />
+                </div>
+                <div class="col-md-4">
+                  <button
+                    class="btn btn-outline-secondary w-100"
+                    style="padding: 8px 12px; font-size: 13px;"
+                    :disabled="b24.running || !b24.singleId"
+                    @click="fetchOneBitrix24"
+                  >
+                    <i class="ri-download-cloud-2-line me-1"></i> Fetch lead
+                  </button>
+                </div>
+              </div>
+
+              <!-- Range Section -->
+              <label class="form-label small fw-semibold mb-2" style="color: #1a2a6c;">
+                <i class="ri-table-line me-1"></i>Lead range (in Bitrix24 list order, by ID ascending)
+              </label>
+              <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label small text-muted mb-1" style="font-size: 11px;">From</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0" style="padding: 4px 8px;">
+                      <i class="ri-arrow-right-up-line" style="font-size: 12px;"></i>
+                    </span>
+                    <input
+                      type="number"
+                      class="form-control border-start-0 ps-0"
+                      style="font-size: 13px; padding: 6px 8px;"
+                      v-model.number="b24.fromRow"
+                      min="1"
+                      :disabled="b24.running"
+                    />
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small text-muted mb-1" style="font-size: 11px;">To</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0" style="padding: 4px 8px;">
+                      <i class="ri-arrow-right-down-line" style="font-size: 12px;"></i>
+                    </span>
+                    <input
+                      type="number"
+                      class="form-control border-start-0 ps-0"
+                      style="font-size: 13px; padding: 6px 8px;"
+                      v-model.number="b24.toRow"
+                      min="1"
+                      :disabled="b24.running"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="form-text mt-1 mb-3" style="font-size: 11px;">
+                <i class="ri-lightbulb-line me-1"></i>
+                Leave To empty to sync all leads from "From" onwards.
+              </div>
+
+              <!-- Run sync -->
+              <button
+                class="btn btn-primary w-100"
+                style="padding: 8px 12px; font-size: 13px;"
+                :disabled="b24.running"
+                @click="startBitrix24Sync"
+              >
+                <span v-if="b24.running" class="spinner-border spinner-border-sm me-2"></span>
+                <i v-else class="ri-refresh-line me-2"></i>
+                {{ b24.running ? 'Syncing...' : 'Start Bitrix24 sync' }}
+              </button>
+
+              <!-- Result alerts -->
+              <transition name="slide-fade">
+                <div v-if="b24.done && !b24.error" class="alert alert-success mt-3 border-0 rounded-3 py-2 px-3" style="font-size: 13px;">
+                  <i class="ri-checkbox-circle-fill me-1"></i>
+                  Sync complete. Imported {{ b24.processed }} leads.
+                </div>
+              </transition>
+
+              <transition name="slide-fade">
+                <div v-if="b24.error" class="alert alert-danger mt-3 border-0 rounded-3 py-2 px-3" style="font-size: 13px;">
+                  <i class="ri-error-warning-line me-1"></i>
+                  {{ b24.error }}
+                </div>
+              </transition>
+
+              <details v-if="b24.errors.length" class="mt-2">
+                <summary class="small text-muted" style="font-size: 11px; cursor: pointer;">
+                  Show per-lead errors ({{ b24.errors.length }})
+                </summary>
+                <ul class="small mt-2 mb-0" style="font-size: 11px;">
+                  <li v-for="(e, i) in b24.errors" :key="i">
+                    Bitrix24 #{{ e.bitrix24_id ?? '?' }}: {{ e.error }}
+                  </li>
+                </ul>
+              </details>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -238,7 +386,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import axios from 'axios'
 
 const file = ref(null)
@@ -250,6 +398,100 @@ const isDragOver = ref(false)
 const loading = ref(false)
 const success = ref(false)
 const error = ref(null)
+
+const b24 = reactive({
+  running: false,
+  done: false,
+  processed: 0,
+  total: 0,
+  next: 0,
+  errors: [],
+  error: null,
+  singleId: '',
+  fromRow: 1,
+  toRow: 1000,
+})
+
+const b24ProgressPct = computed(() => {
+  if (!b24.total) return b24.running ? 5 : 0
+  return Math.min(100, Math.round((b24.processed / b24.total) * 100))
+})
+
+const resetBitrix24State = () => {
+  b24.done = false
+  b24.processed = 0
+  b24.total = 0
+  b24.next = 0
+  b24.errors = []
+  b24.error = null
+}
+
+const startBitrix24Sync = async () => {
+  if (b24.running) return
+
+  // 1-indexed inputs from the UI -> 0-indexed Bitrix24 offset.
+  const fromRow = Math.max(1, Number(b24.fromRow) || 1)
+  const toRow = Number(b24.toRow) > 0 ? Number(b24.toRow) : null
+  if (toRow !== null && toRow < fromRow) {
+    b24.error = 'To must be >= From'
+    return
+  }
+
+  const rangeLabel = toRow ? `rows ${fromRow} to ${toRow}` : `from row ${fromRow} onwards`
+  if (!window.confirm(`Pull Bitrix24 leads (${rangeLabel})? This will create new local leads — duplicates if you have synced before.`)) {
+    return
+  }
+
+  resetBitrix24State()
+  b24.running = true
+  try {
+    let cursor = fromRow - 1
+    const stopAtCursor = toRow !== null ? toRow : null   // exclusive upper bound on the 0-indexed offset
+    while (true) {
+      const remaining = stopAtCursor !== null ? (stopAtCursor - cursor) : null
+      if (remaining !== null && remaining <= 0) {
+        b24.done = true
+        break
+      }
+      const batchSize = remaining !== null ? Math.min(25, remaining) : 25
+      const { data } = await axios.post('/api/leads/bitrix24/sync', {
+        start: cursor,
+        batch_size: batchSize,
+      })
+      const payload = data?.data ?? data
+      b24.processed += payload.imported_in_batch || 0
+      b24.total = payload.total || b24.total
+      if (Array.isArray(payload.errors) && payload.errors.length) {
+        b24.errors.push(...payload.errors)
+      }
+      if (payload.done || payload.next === null || payload.next === undefined) {
+        b24.done = true
+        break
+      }
+      cursor = payload.next
+    }
+  } catch (err) {
+    b24.error = err.response?.data?.message || err.message || 'Bitrix24 sync failed'
+  } finally {
+    b24.running = false
+  }
+}
+
+const fetchOneBitrix24 = async () => {
+  if (b24.running || !b24.singleId) return
+  resetBitrix24State()
+  b24.running = true
+  try {
+    await axios.post(`/api/leads/bitrix24/fetch/${encodeURIComponent(b24.singleId)}`)
+    b24.processed = 1
+    b24.total = 1
+    b24.done = true
+  } catch (err) {
+    b24.error = err.response?.data?.message || err.message || 'Bitrix24 fetch failed'
+  } finally {
+    b24.running = false
+  }
+}
 
 const handleFile = (e) => {
   const selectedFile = e.target.files[0]

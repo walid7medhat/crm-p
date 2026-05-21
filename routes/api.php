@@ -49,6 +49,7 @@ use App\Http\Controllers\Api\AbuDhabiBenchmarkController;
 use App\Http\Controllers\Api\AdminEmailController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\LeadImportController;
+use App\Http\Controllers\Api\Bitrix24SyncController;
 use App\Http\Controllers\Api\SalesIntelligence\SalesIntelligenceController;
 use App\Http\Controllers\Api\Mobile\MobileKanbanController;
 use App\Http\Controllers\Api\Mobile\MobileLeadMoveController;
@@ -452,6 +453,10 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/leads/convert/to-deal', [LeadConversionController::class, 'convert']);
     Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);
     Route::post('/leads/import', [LeadImportController::class, 'import']);
+
+    // === Bitrix24 sync (admin-only, batched) ===
+    Route::post('/leads/bitrix24/sync', [Bitrix24SyncController::class, 'syncBatch']);
+    Route::post('/leads/bitrix24/fetch/{bitrixId}', [Bitrix24SyncController::class, 'fetchOne']);
     // === Deals API ===
     Route::prefix('deals')->group(function () {
         Route::get('/', [DealController::class, 'index']);
