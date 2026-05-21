@@ -49,8 +49,8 @@ body.app-has-video-bg .kanban-outer:not(.kanban-outer--mobile) {
 }
 
 .lead-analytics-row .lead-analytics-card__img {
-  width: 20px !important;
-  height: 20px !important;
+  width: 18px !important;
+  height: 18px !important;
 }
 
 .lead-analytics-row {

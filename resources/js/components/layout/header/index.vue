@@ -34,7 +34,7 @@
     <!-- Menu -->
     <div class="sidebar-menu-area">
       <ul class="sidebar-menu">
-        <li>
+        <!-- <li>
           <router-link
             :to="isShowOnlyListing ? '/alllisting' : '/'"
             :class="{ active: activeLayoutModule === 'dashboard' || isActive(isShowOnlyListing ? '/alllisting' : '/') }"
@@ -42,7 +42,7 @@
             <img :src="dashboardIcon" class="imgicon" alt="" />
             <span>Dashboard</span>
           </router-link>
-        </li>
+        </li> -->
 
         <li v-if="isAdmin">
           <router-link to="/kanban" :class="{ active: activeLayoutModule === 'crm' }">
@@ -717,8 +717,7 @@ const toggleDropdown = (name) => {
 };
 
 const handleListingsClick = () => {
-  activeDropdown.value = 'listings';
-  localStorage.setItem('activeDropdown', 'listings');
+  toggleDropdown('listings');
   const dashboardPath = isShowOnlyListing.value ? '/alllisting' : '/';
   if (route.path !== dashboardPath) {
     router.push(dashboardPath);
@@ -799,11 +798,15 @@ watch(() => route.path, () => {
 onMounted(() => {
   syncViewport();
   window.addEventListener('resize', syncViewport);
-  const savedDropdown = localStorage.getItem('activeDropdown');
-  if (savedDropdown && ['listings', 'settings', 'users'].includes(savedDropdown)) {
-    activeDropdown.value = savedDropdown;
+  const onListingsPath = allListingsMenuPaths.value.some((p) => isActive(p));
+  const onSettingsPath = allSettingsMenuPaths.value.some((p) => isActive(p));
+  const onUsersPath = filteredUsersItems.value.some((item) => isActive(item.path));
+  if (onListingsPath || onSettingsPath || onUsersPath) {
+    syncSidebarDropdownFromRoute();
+  } else {
+    activeDropdown.value = null;
+    localStorage.removeItem('activeDropdown');
   }
-  syncSidebarDropdownFromRoute();
   fetchAllCounts();
   setInterval(fetchAllCounts, 60000);
 });
