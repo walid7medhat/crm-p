@@ -199,7 +199,8 @@ class AttendanceController extends Controller
 
             $usersByBioCode = User::query()
                 ->whereNotNull('biometric_code')
-                ->get(['id', 'name', 'email', 'biometric_code','department_id'])
+                ->with(['employeeProfile.department:id,name'])
+                ->get(['id', 'name', 'email', 'biometric_code'])
                 ->keyBy('biometric_code');
 
             $safeRows = collect($rows)->filter(fn ($row) => is_array($row))->values();

@@ -633,18 +633,65 @@
                   @click="openDatePicker('dateFilter')"
                 />
               </div>
-              <div class="hr-search-wrap">
-                <iconify-icon icon="lucide:plus" />
-                <input
-                  :value="attendanceSearchSummary"
-                  type="text"
-                  class="hr-search-input"
-                  placeholder="Filter and search Attendance"
-                  readonly
-                  @click="showAttendanceSearchModal = true"
-                  @focus="showAttendanceSearchModal = true"
-                />
-                <iconify-icon icon="lucide:search" />
+              <div ref="attendanceSearchAnchorRef" class="hr-search-anchor position-relative">
+                <div
+                  class="hr-search-wrap hr-search-wrap--kanban"
+                  :class="{
+                    'hr-search-wrap--focused': attendanceSearchInputFocused,
+                    'hr-search-wrap--filtered': hasActiveAttendanceFilters,
+                  }"
+                >
+                  <iconify-icon
+                    icon="lucide:plus"
+                    class="hr-search-plus"
+                    @click.stop="openAttendanceSearchDropdown(true)"
+                  />
+                  <input
+                    ref="attendanceSearchInputRef"
+                    v-model="searchKeyword"
+                    type="text"
+                    class="hr-search-input"
+                    placeholder="Search attendance (name, ID, status, department…)"
+                    autocomplete="off"
+                    @focus="onAttendanceSearchFocus"
+                    @click="onAttendanceSearchFocus"
+                    @blur="onAttendanceSearchBlur"
+                    @input="onAttendanceQuickSearchInput"
+                  />
+                  <iconify-icon
+                    v-if="hasActiveAttendanceFilters || searchKeyword"
+                    icon="lucide:x"
+                    class="hr-search-clear"
+                    @click.stop="clearAttendanceSearch"
+                  />
+                  <iconify-icon
+                    icon="lucide:search"
+                    class="hr-search-icon"
+                    @click.stop="openAttendanceSearchDropdown(true)"
+                  />
+                </div>
+                <div
+                  v-if="showAttendanceSearchModal"
+                  class="hr-attendance-search-dropdown-outer"
+                  @mousedown.prevent
+                >
+                  <HrAttendanceSearchDropdown
+                    :filters="attendanceSearchFilters"
+                    :chips="attendanceSearchChips"
+                    :selected-chip="selectedAttendanceSearchChip"
+                    :employee-options="attendanceEmployeeOptions"
+                    :department-options="attendanceDepartmentOptions"
+                    :type-options="attendanceTypeOptions"
+                    :status-options="attendanceStatusOptions"
+                    :date-display="formatDateDisplay(attendanceSearchFilters.attendanceDate)"
+                    @close="showAttendanceSearchModal = false"
+                    @reset="resetAttendanceSearchFilters"
+                    @apply="applyAttendanceSearchFilters"
+                    @select-chip="selectAttendanceSearchChip"
+                    @open-date-picker="openDatePicker('attendanceSearchFilters.attendanceDate')"
+                    @update:filters="onAttendanceSearchFiltersPatch"
+                  />
+                </div>
               </div>
               <div v-if="hrSectionTab === 'team'" class="hr-sales-position-filter">
                 <label>Sales Position</label>
@@ -1636,64 +1683,6 @@
       </div>
     </div>
 
-    <div v-if="showAttendanceSearchModal" class="edit-overlay" @click.self="showAttendanceSearchModal = false">
-      <div class="employee-filter-modal leave-search-modal attendance-search-modal">
-        <button type="button" class="employee-filter-close" @click="showAttendanceSearchModal = false">
-          <iconify-icon icon="lucide:x" />
-        </button>
-        <div class="asset-search-left">
-          <button
-            v-for="chip in attendanceSearchChips"
-            :key="chip"
-            type="button"
-            class="asset-search-chip"
-            :class="{ active: selectedAttendanceSearchChip === chip }"
-            @click="selectedAttendanceSearchChip = chip"
-          >
-            {{ chip }}
-          </button>
-        </div>
-        <div class="asset-search-right">
-          <div class="asset-search-section">
-            <h6>Select Employee</h6>
-            <div class="add-grid-one">
-              <div class="add-field">
-                <SearchableSelect v-model="attendanceSearchFilters.employee" :options="leaveEmployeeOptions" placeholder="Search Employee or id" />
-              </div>
-            </div>
-          </div>
-          <div class="asset-search-section">
-            <h6>Attendance Date</h6>
-            <div class="add-grid-one">
-              <div class="add-field">
-                <input :value="formatDateDisplay(attendanceSearchFilters.attendanceDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('attendanceSearchFilters.attendanceDate')" />
-              </div>
-            </div>
-          </div>
-          <div class="asset-search-section">
-            <h6>Type</h6>
-            <div class="add-grid-one">
-              <div class="add-field">
-                <SearchableSelect v-model="attendanceSearchFilters.type" :options="attendanceTypeOptions" placeholder="Select Status" />
-              </div>
-            </div>
-          </div>
-          <div class="asset-search-section">
-            <h6>Status</h6>
-            <div class="add-grid-one">
-              <div class="add-field">
-                <SearchableSelect v-model="attendanceSearchFilters.status" :options="attendanceStatusOptions" placeholder="Select Status" />
-              </div>
-            </div>
-          </div>
-          <div class="employee-filter-actions mt-2">
-            <button type="button" class="employee-filter-btn ghost" @click="resetAttendanceSearchFilters">Reset</button>
-            <button type="button" class="employee-filter-btn primary" @click="applyAttendanceSearchFilters">Search</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div v-if="showAssetEditModal" class="edit-overlay add-employee-overlay" @click.self="closeAssetEditModal">
       <div class="add-employee-modal asset-create-modal">
         <div class="add-employee-head">
@@ -2648,6 +2637,7 @@ import { useRoute } from 'vue-router'
 import ApexCharts from 'vue3-apexcharts'
 import api from '@/plugins/axios'
 import HrTeamTreePanel from '@/components/hr/HrTeamTreePanel.vue'
+import HrAttendanceSearchDropdown from '@/components/hr/HrAttendanceSearchDropdown.vue'
 import StatsCards from '@/components/hr/overview/StatsCards.vue'
 import EmployeesTable from '@/components/hr/overview/EmployeesTable.vue'
 import EmployeeDetails from '@/components/hr/overview/EmployeeDetails.vue'
@@ -2809,6 +2799,10 @@ const leaveSectionMode = ref('leave')
 const showLeaveSearchModal = ref(false)
 const showCareerSearchModal = ref(false)
 const showAttendanceSearchModal = ref(false)
+const attendanceSearchAnchorRef = ref(null)
+const attendanceSearchInputRef = ref(null)
+const attendanceSearchInputFocused = ref(false)
+let attendanceSearchBlurTimer = null
 const showAnnouncementSearchModal = ref(false)
 const showAnnouncementModal = ref(false)
 const openLeaveRowMenuId = ref(null)
@@ -3287,7 +3281,7 @@ const defaultLeaveSearchFilters = () => ({
 })
 const leaveSearchFilters = ref(defaultLeaveSearchFilters())
 const attendanceSearchChips = ['Present', 'Absent', 'Late', 'Half Day']
-const selectedAttendanceSearchChip = ref('Late')
+const selectedAttendanceSearchChip = ref('')
 const attendanceTypeOptions = ['Present', 'Absent', 'Late', 'Half Day']
 const attendanceStatusOptions = ['Present', 'Absent', 'Late', 'Half Day']
 const attendanceCreateTypeOptions = ['Visit', 'Office', 'Call', 'Work From Home', 'Out Of Office', 'Official Deputation', 'Paid Time Off', 'Remote Work']
@@ -3295,18 +3289,53 @@ const attendanceBreakOptions = ['0 Mnts', '30 Mnts', '1 hr', '1 hr 30 mnts', '2 
 const attendanceOtOptions = ['0 Mnts', '30 Mnts', '1 hr', '1 hr 30 mnts', '2 hr']
 const defaultAttendanceSearchFilters = () => ({
   employee: '',
+  department: '',
   attendanceDate: '',
   type: '',
   status: '',
 })
 const attendanceSearchFilters = ref(defaultAttendanceSearchFilters())
-const attendanceSearchSummary = computed(() => {
-  const active = []
-  if (attendanceSearchFilters.value.employee) active.push('Employee')
-  if (attendanceSearchFilters.value.attendanceDate) active.push('Date')
-  if (attendanceSearchFilters.value.type) active.push('Type')
-  if (attendanceSearchFilters.value.status) active.push('Status')
-  return active.length ? `Filter Attendance (${active.length})` : 'Filter and search Attendance'
+const hasActiveAttendanceFilters = computed(() => {
+  const f = attendanceSearchFilters.value
+  return !!(
+    f.employee ||
+    f.department ||
+    f.attendanceDate ||
+    f.type ||
+    f.status ||
+    selectedAttendanceSearchChip.value
+  )
+})
+const attendanceEmployeeOptions = computed(() => {
+  const seen = new Set()
+  const options = []
+  const add = (id, code, name) => {
+    const label = code && name ? `#${code} ${name}` : (name || (id ? `#EMP${formatEmpId(id)}` : ''))
+    const key = String(id || label).trim()
+    if (!label || seen.has(key)) return
+    seen.add(key)
+    options.push(label)
+  }
+  for (const emp of employeesDirectory.value || []) {
+    add(emp.id, emp.employee_code, emp.name)
+  }
+  for (const row of employees.value || []) {
+    const code = String(row.employee_id || '').startsWith('EMP') ? row.employee_id : `EMP-${row.employee_id}`
+    add(row.employee_id, code, row.employee_name)
+  }
+  return options.sort((a, b) => a.localeCompare(b))
+})
+const attendanceDepartmentOptions = computed(() => {
+  const set = new Set()
+  for (const emp of employeesDirectory.value || []) {
+    const d = String(emp.department || '').trim()
+    if (d && d !== '-') set.add(d)
+  }
+  for (const row of employees.value || []) {
+    const d = String(row.department || '').trim()
+    if (d && d !== '-') set.add(d)
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b))
 })
 const defaultApplyLeaveForm = () => ({
   employee: '',
@@ -3756,14 +3785,68 @@ const assetsPaginationItems = computed(() => {
 })
 
 // ========== ATTENDANCE FUNCTIONS ==========
+function normalizeAttendanceStatus(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function getAttendanceRowDepartment(row) {
+  const fromRow = String(row?.department || '').trim()
+  if (fromRow && fromRow !== '-') return fromRow
+  return String(employeeDepartmentById.value.get(String(row?.employee_id || '').trim()) || '').trim()
+}
+
+function matchAttendanceEmployeeFilter(row, filterLabel) {
+  const q = String(filterLabel || '').trim().toLowerCase()
+  if (!q) return true
+  const name = String(row.employee_name || '').toLowerCase()
+  const id = String(row.employee_id || '').toLowerCase()
+  const empId = `emp${formatEmpId(row.employee_id)}`.toLowerCase()
+  const directory = employeesDirectory.value.find((emp) => {
+    const label = `#${emp.employee_code} ${emp.name}`.toLowerCase()
+    return label === q || label.includes(q)
+  })
+  if (directory && String(directory.id) === String(row.employee_id)) return true
+  return name.includes(q) || id.includes(q) || empId.includes(q.replace(/\s/g, '')) || q.includes(name)
+}
+
+function attendanceRowSearchBlob(row) {
+  return [
+    row.employee_name,
+    row.employee_id,
+    `EMP${formatEmpId(row.employee_id)}`,
+    row.status,
+    row.department,
+    getAttendanceRowDepartment(row),
+    formatDate(row.date),
+    formatTime(row.check_in),
+    formatTime(row.check_out),
+    formatBreakDisplay(row),
+    formatOtDisplay(row),
+  ]
+    .map((v) => String(v || '').toLowerCase())
+    .join(' ')
+}
+
 const filteredRows = computed(() => {
+  const f = attendanceSearchFilters.value
+  const chip = selectedAttendanceSearchChip.value
   const keyword = searchKeyword.value.trim().toLowerCase()
-  if (!keyword) return employees.value
-  return employees.value.filter((row) => {
-    const name = String(row.employee_name || '').toLowerCase()
-    const status = String(row.status || '').toLowerCase()
-    const id = String(row.employee_id || '').toLowerCase()
-    return name.includes(keyword) || status.includes(keyword) || id.includes(keyword)
+
+  return (employees.value || []).filter((row) => {
+    if (chip && normalizeAttendanceStatus(row.status) !== normalizeAttendanceStatus(chip)) return false
+    if (f.employee && !matchAttendanceEmployeeFilter(row, f.employee)) return false
+    if (f.department) {
+      const dept = getAttendanceRowDepartment(row).toLowerCase()
+      if (dept !== String(f.department).trim().toLowerCase()) return false
+    }
+    if (f.attendanceDate) {
+      const rowDate = row.date ? String(row.date).slice(0, 10) : ''
+      if (rowDate !== String(f.attendanceDate).slice(0, 10)) return false
+    }
+    if (f.type && normalizeAttendanceStatus(row.status) !== normalizeAttendanceStatus(f.type)) return false
+    if (f.status && normalizeAttendanceStatus(row.status) !== normalizeAttendanceStatus(f.status)) return false
+    if (keyword && !attendanceRowSearchBlob(row).includes(keyword)) return false
+    return true
   })
 })
 
@@ -3951,6 +4034,20 @@ const attendanceEditDuration = computed(() => {
 watch(searchKeyword, () => {
   page.value = 1
 })
+
+watch(
+  () => [
+    attendanceSearchFilters.value.employee,
+    attendanceSearchFilters.value.department,
+    attendanceSearchFilters.value.attendanceDate,
+    attendanceSearchFilters.value.type,
+    attendanceSearchFilters.value.status,
+    selectedAttendanceSearchChip.value,
+  ],
+  () => {
+    page.value = 1
+  },
+)
 
 watch(totalPages, (tp) => {
   if (page.value > tp) page.value = tp
@@ -4395,6 +4492,13 @@ function menuItemIcon(item) {
 }
 
 function onDocumentClick(event) {
+  if (showAttendanceSearchModal.value) {
+    if (event.target.closest?.('.lr-date-modal, .lead-search-date-backdrop, .flatpickr-calendar')) return
+    const anchor = attendanceSearchAnchorRef.value
+    if (anchor && !anchor.contains(event.target)) {
+      showAttendanceSearchModal.value = false
+    }
+  }
   if (!topbarTabsRef.value) return
   if (!topbarTabsRef.value.contains(event.target)) {
     openHeaderMenu.value = null
@@ -4765,16 +4869,68 @@ function exportCareerJobs() {
   URL.revokeObjectURL(link.href)
 }
 
-function resetAttendanceSearchFilters() {
-  attendanceSearchFilters.value = defaultAttendanceSearchFilters()
-  selectedAttendanceSearchChip.value = 'Late'
-  searchKeyword.value = ''
+function openAttendanceSearchDropdown(focusInput = false) {
+  if (!attendanceSearchFilters.value.attendanceDate && dateFilter.value) {
+    attendanceSearchFilters.value.attendanceDate = dateFilter.value
+  }
+  showAttendanceSearchModal.value = true
+  attendanceSearchInputFocused.value = true
+  if (focusInput) {
+    nextTick(() => {
+      attendanceSearchInputRef.value?.focus?.()
+    })
+  }
 }
 
-function applyAttendanceSearchFilters() {
-  const employeeLabel = String(attendanceSearchFilters.value.employee || '').trim()
-  const statusLabel = String(attendanceSearchFilters.value.status || '').trim()
-  searchKeyword.value = employeeLabel || statusLabel || ''
+function onAttendanceSearchFocus() {
+  if (attendanceSearchBlurTimer) {
+    clearTimeout(attendanceSearchBlurTimer)
+    attendanceSearchBlurTimer = null
+  }
+  attendanceSearchInputFocused.value = true
+  openAttendanceSearchDropdown()
+}
+
+function onAttendanceSearchBlur() {
+  attendanceSearchBlurTimer = setTimeout(() => {
+    attendanceSearchInputFocused.value = false
+    attendanceSearchBlurTimer = null
+  }, 200)
+}
+
+function onAttendanceQuickSearchInput() {
+  page.value = 1
+}
+
+function onAttendanceSearchFiltersPatch(next) {
+  attendanceSearchFilters.value = { ...defaultAttendanceSearchFilters(), ...next }
+  page.value = 1
+}
+
+function selectAttendanceSearchChip(chip) {
+  selectedAttendanceSearchChip.value = chip
+  attendanceSearchFilters.value.status = chip || ''
+  page.value = 1
+}
+
+function clearAttendanceSearch() {
+  resetAttendanceSearchFilters()
+  showAttendanceSearchModal.value = false
+}
+
+function resetAttendanceSearchFilters() {
+  attendanceSearchFilters.value = defaultAttendanceSearchFilters()
+  selectedAttendanceSearchChip.value = ''
+  searchKeyword.value = ''
+  page.value = 1
+}
+
+async function applyAttendanceSearchFilters() {
+  const filterDate = String(attendanceSearchFilters.value.attendanceDate || '').trim()
+  if (filterDate && filterDate !== dateFilter.value) {
+    dateFilter.value = filterDate
+    await loadAttendance()
+  }
   page.value = 1
   showAttendanceSearchModal.value = false
 }
@@ -5528,6 +5684,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  if (attendanceSearchBlurTimer) clearTimeout(attendanceSearchBlurTimer)
   window.removeEventListener('resize', syncMobileViewport)
   document.removeEventListener('click', onDocumentClick)
 })
@@ -8205,6 +8362,9 @@ onBeforeUnmount(() => {
   border: 1px solid #eceff5;
   font-size: 12px;
 }
+.hr-search-anchor {
+  min-width: 360px;
+}
 .hr-search-wrap {
   min-width: 360px;
   display: flex;
@@ -8216,12 +8376,54 @@ onBeforeUnmount(() => {
   padding: 9px 12px;
   color: #9ca3af;
 }
+.hr-search-wrap--kanban {
+  cursor: text;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.hr-search-wrap--focused,
+.hr-search-wrap--filtered {
+  border-color: #d4bfe0;
+  box-shadow: 0 6px 18px rgba(115, 62, 135, 0.1);
+}
+.hr-search-plus,
+.hr-search-icon,
+.hr-search-clear {
+  flex-shrink: 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+.hr-search-clear:hover {
+  color: #733e87;
+}
 .hr-search-input {
   border: none;
   outline: none;
   width: 100%;
+  min-width: 0;
   font-size: 12px;
-  color: #4b5563;
+  color: #111827;
+  background: transparent;
+  pointer-events: auto;
+  cursor: text;
+}
+.hr-search-input::placeholder {
+  color: #9ca3af;
+}
+.hr-attendance-search-dropdown-outer {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1050;
+}
+.hr-attendance-search-dropdown-outer :deep(.hr-attendance-search-field__label) {
+  margin: 0 0 4px !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+  color: #6b7280 !important;
+}
+.hr-attendance-search-dropdown-outer :deep(.hr-attendance-search-field) {
+  padding: 8px 10px;
 }
 .hr-export-btn {
   border: 1px solid #eceff5;
