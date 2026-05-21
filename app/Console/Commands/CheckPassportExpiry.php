@@ -33,8 +33,9 @@ class CheckPassportExpiry extends Command
         // جلب الموظفين الذين تنتهي صلاحية جوازاتهم خلال الفترة
         $users = User::whereHas('employeeProfile', function($query) use ($today, $expiryThreshold) {
             $query->whereNotNull('passport_expiry_date')
-                  ->where('passport_expiry_date', '>=', $today)
-                  ->where('passport_expiry_date', '<=', $expiryThreshold);
+                //   ->where('passport_expiry_date', '>=', $today)
+                //   ->where('passport_expiry_date', '<=', $expiryThreshold);
+                ->whereDate('passport_expiry_date', '=', $expiryThreshold);
         })->with('employeeProfile')->get();
         
         if ($users->isEmpty()) {
