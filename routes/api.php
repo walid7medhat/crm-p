@@ -723,6 +723,9 @@ Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
          Route::get('/agents', [ListingController::class, 'getAgents']);
          Route::post('/agent/vacation',[ListingAccessRequestController::class,'setVacationMode']);
          Route::get('/agent/vacation-mode',[ListingAccessRequestController::class,'getVacationMode']);
+         // Manager (listing_team=1) can manage vacation for a team member
+         Route::get('/agent/{user}/vacation-mode',[ListingAccessRequestController::class,'getUserVacationMode']);
+         Route::post('/agent/{user}/vacation',[ListingAccessRequestController::class,'setUserVacationMode']);
         Route::prefix('access-requests')->group(function () {
             Route::post('/{listing}/request', [ListingAccessRequestController::class, 'store']);
             Route::get('/my-requests', [ListingAccessRequestController::class, 'myRequests']);

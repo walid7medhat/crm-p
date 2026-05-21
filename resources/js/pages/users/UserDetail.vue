@@ -84,16 +84,22 @@
                             </div>
                             
                              <div class="user-actions">
-                                <div class="d-flex flex-sm-row gap-2" style="max-width: 200px;">
+                                <div class="d-flex flex-sm-row gap-2 flex-wrap">
                                     <button class="btn btn-outline-secondary btn-sm" @click="$router.back()">
                                         <i class="ri-arrow-left-line me-1"></i>
                                         <span class="d-sm-inline">Back</span>
                                     </button>
-                                    <button v-if="$hasPermission('users-edit')" 
+                                    <button v-if="$hasPermission('users-edit')"
                                             class="btn btn-success btn-sm"
                                             @click="$router.push(`/users/${user.id}/edit`)">
                                         <i class="ri-edit-line me-1"></i>
                                         <span class="d-sm-inline">Edit User</span>
+                                    </button>
+                                    <button v-if="canManageVacation"
+                                            class="btn btn-warning btn-sm"
+                                            @click="openVacationModal">
+                                        <i class="ri-suitcase-line me-1"></i>
+                                        <span class="d-sm-inline">Vacation</span>
                                     </button>
                                 </div>
                             </div>
@@ -117,7 +123,6 @@
                     </div>
                 </div>
 
-          
 
                 <!-- Tab Content -->
                 <div class="tab-content" id="userTabContent">
@@ -298,6 +303,71 @@
                 </div>
             </div>
         </div>
+
+        <!-- Vacation Mode Modal -->
+        <div v-if="showVacationModal" class="vacation-modal-overlay" @click.self="closeVacationModal">
+            <div class="vacation-modal" @click.stop>
+                <div class="vacation-modal-head">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="ri-suitcase-line"></i>
+                        <h6 class="mb-0">Vacation Mode</h6>
+                        <span :class="['vacation-badge ms-2', vacationData.active ? 'on' : 'off']">
+                            {{ vacationData.active ? 'On Vacation' : 'Active' }}
+                        </span>
+                    </div>
+                    <button class="vacation-modal-close" @click="closeVacationModal" aria-label="Close">&times;</button>
+                </div>
+
+                <div class="vacation-modal-body">
+                    <div v-if="vacationLoading" class="vacation-loading">
+                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                        <span class="ms-2">Loading...</span>
+                    </div>
+
+                    <div v-else>
+                        <p class="text-muted small mb-3" v-if="user">
+                            Managing vacation for <strong>{{ user.name }}</strong>.
+                        </p>
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox"
+                                   v-model="vacationData.active"
+                                   :disabled="vacationSaving"
+                                   id="userVacationSwitch">
+                            <label class="form-check-label" for="userVacationSwitch">
+                                {{ vacationData.active ? 'Active' : 'Inactive' }}
+                            </label>
+                        </div>
+
+                        <div v-if="vacationData.active" class="mb-3">
+                            <label class="form-label">Delegate Agent <span class="text-danger">*</span></label>
+                            <select class="form-select" v-model="vacationData.delegate_id" :disabled="vacationSaving">
+                                <option value="">Select a delegate</option>
+                                <option v-for="a in delegateOptions" :key="a.id" :value="a.id">
+                                    {{ a.name }}
+                                </option>
+                            </select>
+                            <small class="text-muted">This agent will receive new requests while {{ user.name }} is on vacation.</small>
+                        </div>
+
+                        <div v-else class="alert alert-light mb-0">
+                            Vacation mode is off. Toggle it on to assign a delegate for this user.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vacation-modal-foot">
+                    <button class="btn btn-secondary btn-sm" @click="closeVacationModal" :disabled="vacationSaving">
+                        Cancel
+                    </button>
+                    <button class="btn btn-primary btn-sm"
+                            @click="saveUserVacation"
+                            :disabled="vacationSaving || vacationLoading || (vacationData.active && !vacationData.delegate_id)">
+                        {{ vacationSaving ? 'Saving...' : 'Save' }}
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -317,9 +387,9 @@ export default {
             teamMembers: [],
             userPermissions: [],
             error: null,
-    
+
             showAllTeamMembers: false,
-            
+
             // Agent Properties
             agentProperties: [],
             agentPropertiesLoading: false,
@@ -329,7 +399,17 @@ export default {
             bedIcon : '/assets/icons/bedroom-icon.svg',
             bathIcon : '/assets/icons/bathroom-icon.svg',
             sqftIcon : '/assets/icons/area-size.svg',
-            userPlaceholder:'/assets/images/user.png'
+            userPlaceholder:'/assets/images/user.png',
+
+            // Vacation mode (manager-of-listing-team flow)
+            showVacationModal: false,
+            vacationLoading: false,
+            vacationSaving: false,
+            vacationData: {
+                active: false,
+                delegate_id: '',
+            },
+            delegateOptions: [],
         };
     },
     computed: {
@@ -399,6 +479,24 @@ export default {
         
         soldAgentProperties() {
             return this.agentProperties.filter(p => p.status === 'converted').length;
+        },
+
+        /** Current logged-in user can manage vacation for the viewed user.
+         *  Allowed: admin / super_admin, OR manager with listing_team=1 (the
+         *  backend additionally verifies the viewed user is in their hierarchy).
+         */
+        canManageVacation() {
+            if (!this.user) return false;
+            try {
+                const me = JSON.parse(localStorage.getItem('user') || 'null');
+                if (!me || Number(me.id) === Number(this.user.id)) return false;
+                const roles = me.roles || [];
+                if (roles.includes('super_admin') || roles.includes('admin')) return true;
+                if (roles.includes('manager') && Number(me.is_listing_team) === 1) return true;
+                return false;
+            } catch {
+                return false;
+            }
         }
     },
     mounted() {
@@ -439,7 +537,7 @@ export default {
                     if (this.isAgent) {
                         promises.push(this.fetchAgentProperties());
                     }
-                    
+
                     await Promise.allSettled(promises);
                     
                 } else if (response.status === 404) {
@@ -535,6 +633,93 @@ export default {
                 this.agentProperties = [];
             } finally {
                 this.agentPropertiesLoading = false;
+            }
+        },
+
+        /** Open the modal and lazily load vacation state + delegate options. */
+        async openVacationModal() {
+            this.showVacationModal = true;
+            await Promise.allSettled([
+                this.fetchUserVacation(),
+                this.delegateOptions.length === 0 ? this.fetchDelegateOptions() : Promise.resolve(),
+            ]);
+        },
+
+        closeVacationModal() {
+            if (this.vacationSaving) return;
+            this.showVacationModal = false;
+        },
+
+        /** Read the viewed user's current vacation state. */
+        async fetchUserVacation() {
+            if (!this.user?.id) return;
+            try {
+                this.vacationLoading = true;
+                const token = localStorage.getItem('token');
+                const resp = await fetch(`/api/listings/agent/${this.user.id}/vacation-mode`, {
+                    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
+                });
+                if (!resp.ok) return;
+                const json = await resp.json();
+                const d = json.data || {};
+                this.vacationData.active = !!d.on_vacation;
+                this.vacationData.delegate_id = d.delegate_agent_id || '';
+            } catch (e) {
+                console.error('Failed to load vacation:', e);
+            } finally {
+                this.vacationLoading = false;
+            }
+        },
+
+        /** Load sales agents available as delegates (manager's hierarchy). */
+        async fetchDelegateOptions() {
+            try {
+                const token = localStorage.getItem('token');
+                const resp = await fetch('/api/listings/agents?role=sales&listings=true', {
+                    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
+                });
+                if (!resp.ok) return;
+                const json = await resp.json();
+                const all = Array.isArray(json.data) ? json.data : [];
+                // Don't let the manager set the viewed user as their own delegate.
+                this.delegateOptions = all.filter(a => Number(a.id) !== Number(this.user.id));
+            } catch (e) {
+                this.delegateOptions = [];
+            }
+        },
+
+        /** Save vacation toggle / delegate for the viewed user. */
+        async saveUserVacation() {
+            if (this.vacationData.active && !this.vacationData.delegate_id) {
+                this.showNotification('Please select a delegate agent', 'warning');
+                return;
+            }
+            try {
+                this.vacationSaving = true;
+                const token = localStorage.getItem('token');
+                const resp = await fetch(`/api/listings/agent/${this.user.id}/vacation`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        active: this.vacationData.active,
+                        delegate_id: this.vacationData.active ? this.vacationData.delegate_id : null,
+                    }),
+                });
+                const json = await resp.json();
+                if (!resp.ok || json.status === false) {
+                    throw new Error(json.message || 'Failed to update vacation');
+                }
+                this.showNotification('Vacation mode updated', 'success');
+                this.showVacationModal = false;
+            } catch (e) {
+                console.error('Failed to save vacation:', e);
+                this.showNotification(e.message || 'Failed to update vacation', 'error');
+            } finally {
+                this.vacationSaving = false;
             }
         },
 
@@ -1537,6 +1722,98 @@ export default {
 .icons img{
     width: 17px;
     height: 17px;
+}
+
+/* Vacation Mode modal (opened from "Vacation" button next to Edit User) */
+.vacation-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1060;
+    padding: 16px;
+}
+.vacation-modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    overflow: hidden;
+}
+.vacation-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.vacation-modal-head h6 {
+    font-size: 0.95rem;
+    color: #0B0736;
+    font-weight: 700;
+}
+.vacation-modal-head i {
+    color: #733E87;
+    font-size: 1.1rem;
+}
+.vacation-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    line-height: 1;
+    color: #64748b;
+    cursor: pointer;
+}
+.vacation-modal-body {
+    padding: 16px;
+    overflow-y: auto;
+}
+.vacation-modal-body .form-label {
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #495057;
+}
+.vacation-modal-body .alert-light {
+    background: #f8f9fa;
+    border: 1px dashed #ced4da;
+    color: #6c757d;
+    font-size: 0.85rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 8px;
+}
+.vacation-modal-foot {
+    padding: 12px 16px;
+    border-top: 1px solid #e5e7eb;
+    background: #f8fafc;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+.vacation-badge {
+    font-size: 0.7rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+}
+.vacation-badge.on {
+    background: #fff3cd;
+    color: #856404;
+}
+.vacation-badge.off {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+.vacation-loading {
+    display: flex;
+    align-items: center;
+    color: #6c757d;
+    font-size: 0.85rem;
 }
 </style>
 

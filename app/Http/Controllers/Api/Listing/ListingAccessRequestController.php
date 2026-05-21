@@ -867,5 +867,77 @@ public function getVacationMode()
     ], 'Vacation mode fetched successfully');
 }
 
+/**
+ * Authorization helper for the manager-managed vacation endpoints below.
+ * Allowed: admin / super_admin, OR manager with listing_team=1 whose hierarchy
+ * contains the target user. Returns the target User or null if not allowed.
+ */
+private function authorizeUserVacationAccess(User $target): bool
+{
+    $current = auth()->user();
+    if (!$current) return false;
+    if ($current->hasAnyRole(['super_admin', 'admin'])) return true;
+    if (!$current->hasRole('manager')) return false;
+    if ((int) $current->listing_team !== 1) return false;
+    return in_array((int) $target->id, $current->getAllSubordinatesIds(), true);
+}
+
+/** Manager (listing_team=1) reads vacation status of a team member. */
+public function getUserVacationMode(User $user)
+{
+    if (!$this->authorizeUserVacationAccess($user)) {
+        return ApiResponse::error('Not allowed to view this user\'s vacation', 403);
+    }
+    return ApiResponse::success([
+        'id' => $user->id,
+        'name' => $user->name,
+        'on_vacation' => (bool) $user->on_vacation,
+        'delegate_agent_id' => $user->delegate_agent_id,
+    ], 'User vacation mode fetched successfully');
+}
+
+/** Manager (listing_team=1) sets vacation for a team member. */
+public function setUserVacationMode(Request $request, User $user)
+{
+    if (!$this->authorizeUserVacationAccess($user)) {
+        return ApiResponse::error('Not allowed to manage this user\'s vacation', 403);
+    }
+
+    $request->validate([
+        'active' => 'required|boolean',
+        'delegate_id' => 'nullable|exists:users,id',
+    ]);
+
+    if ($request->active && !$request->delegate_id) {
+        return ApiResponse::error('Delegate agent is required');
+    }
+    if ($request->active && (int) $request->delegate_id === (int) $user->id) {
+        return ApiResponse::error('Delegate cannot be the same user');
+    }
+
+    $oldDelegate = $user->delegate_agent_id;
+    $user->update([
+        'on_vacation' => $request->active,
+        'delegate_agent_id' => $request->active ? $request->delegate_id : null,
+    ]);
+
+    // When turning vacation OFF, hand requests that were redirected to the
+    // old delegate back to the original agent (mirrors setVacationMode()).
+    if ($request->active == false && $oldDelegate) {
+        $requests = ListingAccessRequest::where('handled_by', $oldDelegate)
+            ->whereHas('listing', function ($q) use ($user) {
+                $q->where('agent_id', $user->id);
+            })->get();
+        foreach ($requests as $req) {
+            $req->update(['handled_by' => null]);
+        }
+    }
+
+    return ApiResponse::success(
+        $user->only(['id', 'name', 'on_vacation', 'delegate_agent_id']),
+        'User vacation mode updated successfully'
+    );
+}
+
 
 }
