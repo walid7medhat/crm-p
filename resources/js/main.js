@@ -23,6 +23,7 @@ import '../css/vue-select-overrides.css'
 import '../css/form-placeholders.css'
 import '../css/mobile-layout.css'
 import '../css/kanban-layout.css'
+import '../css/crm-background.css'
 
 const addCSS = (url) => {
   const link = document.createElement('link')
@@ -31,7 +32,6 @@ const addCSS = (url) => {
   document.head.appendChild(link)
 }
 addCSS('/assets/css/style14.css')
-addCSS('/assets/css/video-background.css')
 addCSS('https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css')
 
 
