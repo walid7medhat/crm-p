@@ -728,6 +728,7 @@ const handleListingsClick = () => {
 const isActive = (path) => {
   if (path === '/') {
     return route.path === '/';
+       activeLayoutModule.value = 'listings' 
   }
   return route.path === path || route.path.startsWith(path + '/');
 };

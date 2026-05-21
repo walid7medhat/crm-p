@@ -2,19 +2,19 @@
   <div class="dashboard-main-body-inner property-show-inner">
     <div class="row gy-4 property-show-row">
       <!-- Main Content -->
-      <div class="col-lg-8">
+      <div class="col-lg-9">
         <div class="card card-main p-0 radius-12 overflow-hidden">
-          <div class="card-body p-0">
+          <div class="card-body ">
          
             <!-- Carousel Section -->
             <div class="property-gallery" v-if="property && property.gallery_images">
               <div class="gallery-container">
                 <div class="main-image-section" @click="openLightbox(0)">
                   <img :src="getFirstGalleryImage()" alt="Property main image" class="main-image" />
-                  <div class="image-overlay">
+                  <!-- <div class="image-overlay">
                     <i class="ri-image-fill"></i>
                     <span>View All Photos</span>
-                  </div>
+                  </div> -->
                     <div class="image-overlay image-overlay-right"   v-if="property?.drive_link"
                         @click.stop="openDriveLink">
                 
@@ -22,24 +22,32 @@
                         <span>GOOGLE DRIVE</span> 
                       </div>
                 </div>
-                <!-- <div class="side-images">
-                  <div 
-                    v-for="(image, index) in getGalleryThumbnails()" 
-                    :key="index" 
+                <div class="side-images">
+                  <div
+                    v-for="(image, index) in getGalleryThumbnails()"
+                    :key="index"
                     class="side-image"
-                    :class="{ active: currentMainImage === getImageUrl(image.image_url) }"
-                    @click="setMainImage(getImageUrl(image.image_url))"
+                    :class="{
+                      active: currentMainImage === getImageUrl(image.image_url),
+                      'has-view-all': index === getGalleryThumbnails().length - 1 && property.gallery_images && property.gallery_images.length > 3,
+                    }"
+                    @click="index === getGalleryThumbnails().length - 1 && property.gallery_images && property.gallery_images.length > 3
+                      ? openLightbox(0)
+                      : setMainImage(getImageUrl(image.image_url))"
                   >
                     <img :src="getImageUrl(image.image_url)" alt="Property thumbnail" />
-                  </div>
-                  <div class="side-image view-all" @click="openLightbox(0)" v-if="property.gallery_images && property.gallery_images.length > 3">
-                    <div class="view-all-content">
-                      <i class="ri-gallery-view-2"></i>
-                      <span>View All</span>
-                      <small>{{ property.gallery_images?.length || 0 }} photos</small>
+                    <div
+                      v-if="index === getGalleryThumbnails().length - 1 && property.gallery_images && property.gallery_images.length > 3"
+                      class="view-all-overlay"
+                    >
+                      <div class="view-all-content">
+                        <i class="ri-gallery-view-2"></i>
+                        <span>View All</span>
+                        <small>{{ property.gallery_images?.length || 0 }} photos</small>
+                      </div>
                     </div>
                   </div>
-                </div> -->
+                </div>
               </div>
             </div>
            <div v-if="hasRejectionReason" class="rejection-alert-container mb-4">
@@ -83,10 +91,10 @@
                   <button class="btn btn-primary" >
                  {{ property.listing_status || "Not specified" }}
                 </button>
-                  <button class="btn btn-success" @click="openFloorPlanSlider(0)" v-if="property?.floor_plans?.length > 0">
+                  <!-- <button class="btn btn-success" @click="openFloorPlanSlider(0)" v-if="property?.floor_plans?.length > 0">
                     <iconify-icon icon="iconamoon:eye-light"></iconify-icon>
                     VIEW FLOOR PLAN
-                  </button>
+                  </button> -->
                 </div>
                 <div class="price-main">
                   <h3 class="property-price">AED {{ formatPrice(property.price) }}</h3>
@@ -567,7 +575,7 @@
       </div>
 
       <!-- Sidebar -->
-      <div ref="propertySidebarColRef" class="col-lg-4 property-show-sidebar-col">
+      <div ref="propertySidebarColRef" class="col-lg-3 property-show-sidebar-col">
         <div ref="propertySidebarSpacerRef" class="property-sidebar-spacer" aria-hidden="true"></div>
         <div ref="propertySidebarStickyRef" class="sidebar-sticky-container">
           <div class="agent-sidebar-card">
@@ -6499,7 +6507,7 @@ margin-bottom: 20px;
 
 .gallery-container {
   display: grid;
-  /* grid-template-columns: 1fr 120px; */
+  grid-template-columns: 2fr 1fr;
   gap: 12px;
   height: 400px;
 }
@@ -6573,10 +6581,11 @@ margin-bottom: 20px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  height: 100%;
 }
 
 .side-image {
-  height: calc(33.333% - 5.333px);
+  height: calc(50% - 4px);
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
@@ -6599,16 +6608,34 @@ margin-bottom: 20px;
   transform: scale(1.02);
 }
 
-.side-image.view-all {
-  background: #0B0736;
+.side-image.has-view-all {
+  cursor: pointer;
+}
+
+.view-all-overlay {
+  position: absolute;
+  inset: 0;
+  /* background: rgba(11, 7, 54, 0.65);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px); */
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #ffffff;
+  transition: background 0.3s ease;
+}
+
+.side-image.has-view-all:hover .view-all-overlay {
+  background: rgba(11, 7, 54, 0.78);
 }
 
 .view-all-content {
   text-align: center;
+  padding: 10px;
+  background: #0b0736a6;
+  backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  border-radius: 10px;
 }
 
 .view-all-content i {
@@ -6624,8 +6651,8 @@ margin-bottom: 20px;
 }
 
 .view-all-content small {
-  font-size: 10px;
-  opacity: 0.8;
+  font-size: 11px;
+  opacity: 0.85;
 }
 
 /* Lightbox Styles */
@@ -6739,37 +6766,59 @@ margin-bottom: 20px;
 }
 
 .lightbox-thumbnails {
-  display: none;
+  display: flex;
   gap: 8px;
-  padding: 16px 24px;
-  /* background: #f8f9fa;
-  border-top: 1px solid #e9ecef; */
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.35);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.45) transparent;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
+.lightbox-thumbnails::-webkit-scrollbar {
+  height: 6px;
+}
+
+.lightbox-thumbnails::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+}
+
+.lightbox-thumbnails::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .lightbox-thumbnail {
-  width: 80px;
-  height: 60px;
+  width: 72px;
+  height: 54px;
   border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: all 0.3s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
   flex-shrink: 0;
+  opacity: 0.65;
 }
 
 .lightbox-thumbnail.active {
-  border-color: #0B0736;
+  border-color: #ffffff;
+  opacity: 1;
 }
 
 .lightbox-thumbnail:hover {
   transform: scale(1.05);
+  opacity: 1;
 }
 
 .lightbox-thumbnail img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 /* Property Content Styles */
@@ -9197,4 +9246,9 @@ margin: 0 2px;
   }
 }
 
+</style>
+<style>
+.property-show-inner{
+  padding:0 1rem 1rem 0 !important;
+}
 </style>

@@ -2877,7 +2877,7 @@ fetchProjects()
 .listing-main-search {
   position: relative;
   margin-bottom: 12px;
-  max-width: 710px;
+  max-width: 810px;
 }
 
 .listing-main-search-icon {
@@ -3200,10 +3200,14 @@ fetchProjects()
 }
 
 .listing-pop-actions .btn {
-  flex: 1;
-  min-height: 30px;
-  border-radius: 12px;
-  font-weight: 500;
+    flex: 1;
+    min-height: 30px;
+    border-radius: 12px;
+    font-weight: 500;
+    text-align: center !important;
+    align-items: center;
+    display: block;
+    width: 100%;
 }
 
 @media (max-width: 991px) {
@@ -3773,8 +3777,9 @@ fetchProjects()
   color: #1f2937;
   font-size: 16px;
   padding:  8px;
-    border: 1px solid #dbe2ee;
-    text-align:center;
+  border: 1px solid #dbe2ee;
+  text-align:center;
+  font-weight: 500;
 }
 
 .listing-tab-switch-purpose .listing-tab-btn.active {
@@ -4350,7 +4355,7 @@ fetchProjects()
   border: 1px solid #e5e7eb;
   background: #fff;
   color: #4b5563;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   display: inline-flex;
   align-items: center;

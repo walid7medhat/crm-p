@@ -111,7 +111,7 @@ function onCardClick(key) {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: 96px;
+  min-height: 80px;
   margin: 0;
   padding: 12px 14px;
   border-radius: 14px;
@@ -179,8 +179,8 @@ function onCardClick(key) {
 
 .lead-analytics-card__value {
   flex-shrink: 0;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   letter-spacing: -0.02em;
   color: #fff;
   line-height: 1;
