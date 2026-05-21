@@ -103,6 +103,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             // Additional
             'address' => $this->address,
             'comment' => $this->comment,
+            'more_information' => $this->more_information,
             'additional_services' => $this->additional_services,
             
             'responsible_person_id' => $this->responsible_person_id,

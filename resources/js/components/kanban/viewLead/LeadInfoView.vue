@@ -69,7 +69,15 @@
 
         <div class="info-section" v-if="hasAdditionalQuestions">
             <div class="info-section-title">More Information</div>
-           
+            
+            <div class="info-group" v-if="lead?.more_information">
+                <label class="form-label-custom">Comments</label>
+                <div class="info-value">
+                    <span >{{ lead?.more_information || '—' }}</span>
+                  
+                </div>
+            </div>
+            
             <template v-if="hasAdditionalQuestions">
                 <div class="info-group" v-for="(answer, question) in facebookQuestions" :key="question">
                     <label class="form-label-custom">{{ formatQuestion(question) }}</label>
