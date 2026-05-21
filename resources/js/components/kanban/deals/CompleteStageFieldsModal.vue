@@ -5156,4 +5156,8 @@ textarea.is-invalid {
   border-radius: 8px !important;
   border: 1px solid #E2E8F0 !important;
 }
+ textarea:focus, textarea:active{
+   border: none !important;
+    width: 100% !important;
+}
 </style>
