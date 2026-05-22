@@ -9,7 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-
+use \App\Models\BitrixSyncState;
 class SyncBitrix24LeadsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -25,36 +25,44 @@ class SyncBitrix24LeadsJob implements ShouldQueue
         $this->skipExisting = $skipExisting;
     }
 
-    public function handle(): void
-    {
-        $client = new Bitrix24Client();
-        $importer = new Bitrix24LeadImporter($client, $this->userId);
+   public function handle(): void
+{
+    $state = BitrixSyncState::firstOrCreate([
+        'key' => 'global_sync'
+    ]);
 
-        $cursor = $this->start;
+    $cursor = $state->cursor; // 👈 هنا السر
 
-        while (true) {
+    $client = new Bitrix24Client();
+    $importer = new Bitrix24LeadImporter($client, $this->userId);
 
-            $page = $client->listLeads($cursor);
+    while (true) {
 
-            $b24Leads = $page['result'] ?? [];
+        $page = $client->listLeads($cursor);
 
-            foreach ($b24Leads as $lead) {
-                try {
-                    $importer->importOne($lead);
-                } catch (\Throwable $e) {
-                    \Log::error('Bitrix sync error', [
-                        'lead' => $lead['ID'] ?? null,
-                        'error' => $e->getMessage()
-                    ]);
-                }
+        $b24Leads = $page['result'] ?? [];
+
+        foreach ($b24Leads as $lead) {
+            try {
+                $importer->importOne($lead);
+            } catch (\Throwable $e) {
+                \Log::error('Bitrix sync error', [
+                    'lead' => $lead['ID'] ?? null,
+                    'error' => $e->getMessage()
+                ]);
             }
+        }
 
-            // move cursor
-            if (empty($page['next'])) {
-                break;
-            }
+        // 🔥 هنا بنحفظ آخر نقطة وصلنا لها
+        $cursor = $page['next'] ?? null;
 
-            $cursor = $page['next'];
+        $state->update([
+            'cursor' => $cursor ?? $state->cursor
+        ]);
+
+        if (!$cursor) {
+            break;
         }
     }
+}
 }

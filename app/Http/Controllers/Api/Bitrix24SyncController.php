@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Jobs\SyncBitrix24LeadsJob;
 use App\Services\Bitrix24\Bitrix24Client;
 use App\Services\Bitrix24\Bitrix24Exception;
 use App\Services\Bitrix24\Bitrix24LeadImporter;
@@ -166,27 +167,18 @@ class Bitrix24SyncController extends Controller
             return ApiResponse::error('Bitrix24 fetch failed: ' . $e->getMessage(), 500);
         }
     }
-    public function start(Request $request)
-    {
-        $user = auth()->user();
+   public function start(Request $request)
+{
+    $user = auth()->user();
 
-        if (!$user || !$user->hasRole(['admin', 'super_admin'])) {
-            return ApiResponse::error('Unauthorized', 403);
-        }
-
-        $request->validate([
-            'start' => 'nullable|integer|min:0',
-            'skip_existing' => 'nullable|boolean'
-        ]);
-
-        SyncBitrix24LeadsJob::dispatch(
-            $user->id,
-            (int) $request->input('start', 0),
-            (bool) $request->input('skip_existing', false)
-        );
-
-        return ApiResponse::success([
-            'status' => 'queued'
-        ], 'Bitrix24 sync queued successfully');
+    if (!$user || !$user->hasRole(['admin', 'super_admin'])) {
+        return ApiResponse::error('Unauthorized', 403);
     }
+
+    SyncBitrix24LeadsJob::dispatch($user->id);
+
+    return ApiResponse::success([
+        'status' => 'queued'
+    ], 'Sync started from last saved position');
+}
 }
