@@ -237,7 +237,10 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
      *   Priority:
      *     1. Bitrix24 LAST_ACTIVITY_TIME + LAST_ACTIVITY_BY (mapped to local user)
      *     2. Latest LeadHistory row's created_at + user
-     *     3. Fall back to assignment history's user + the lead's updated_at
+     *
+     * Strictly nullable — does NOT fall back to assignedBy/addedBy. The frontend
+     * activity tile then either resolves to a real activity user or hides
+     * itself; the assignment user shows up in its own tile, not here.
      *
      * @return array{0: \Carbon\Carbon|\Illuminate\Support\Carbon|string|null, 1: \App\Models\User|null}
      */
@@ -268,7 +271,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
 
         return [
             $lastActivityAt ?? $this->updated_at,
-            $lastActivityUser ?? $assignedByFallback,
+            $lastActivityUser, // strictly nullable — no assignedBy fallback
         ];
     }
 

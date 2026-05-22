@@ -811,8 +811,10 @@ const openPersonProfile = (task, type, event) => {
     showProfilePopup.value = true
 }
 
-// Activity-tile data sources (last_activity_user > parent for backwards compat).
-const activityPerson = (task) => task?.last_activity_user || task?.parent || null
+// Activity-tile person: strictly the last-activity user from the resource.
+// (No parent fallback — if last_activity_user is missing, the tile + click
+// resolve to nothing rather than silently opening the assignment user's profile.)
+const activityPerson = (task) => task?.last_activity_user || null
 
 const closeProfilePopup = () => {
     showProfilePopup.value = false
