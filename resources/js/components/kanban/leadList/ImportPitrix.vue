@@ -120,6 +120,11 @@
           {{ actionMessage }}
         </div>
 
+        <div v-if="!migrationsOk" class="alert alert-warning mt-3 mb-0 py-2 px-3" style="font-size: 13px;">
+          Database migrations are missing on this server. Run
+          <code>php artisan migrate --force</code> then reset and start sync again.
+        </div>
+
         <div v-if="queue.last_error" class="alert alert-danger mt-3 mb-0 py-2 px-3" style="font-size: 13px;">
           <i class="ri-error-warning-line me-1"></i>
           {{ queue.last_error }}
@@ -142,12 +147,13 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
-import axios from 'axios'
+import api from '@/plugins/axios'
 
 const loading = ref(false)
 const canceling = ref(false)
 const resetting = ref(false)
 const skipExisting = ref(true)
+const migrationsOk = ref(true)
 const actionMessage = ref('')
 const isPolling = ref(false)
 const lastFetchedAt = ref(null)
@@ -230,15 +236,24 @@ const apiErrorMessage = (err, fallback) => {
 }
 
 /**
- * Unwrap Laravel ApiResponse { status: true, message, data: { status: 'running', ... } }.
- * Never confuse API success flag (boolean) with sync status (string).
+ * Unwrap Laravel ApiResponse { status: true, message, data: { status: 'running', processed, ... } }.
+ * Never treat boolean `status: true` (API success) as sync status.
  */
 const parseQueuePayload = (response) => {
   const body = response?.data ?? response
   if (!body || typeof body !== 'object') return {}
 
-  if (body.data && typeof body.data === 'object' && typeof body.data.status === 'string') {
-    return body.data
+  const data = body.data
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    const syncStatus = data.status
+    const hasCounters = data.processed != null
+      || data.new_count != null
+      || data.existing_count != null
+      || data.total != null
+
+    if (typeof syncStatus === 'string' || hasCounters) {
+      return data
+    }
   }
 
   if (typeof body.status === 'string') {
@@ -278,6 +293,7 @@ const applyQueuePayload = (q) => {
   queue.updated_at     = q.updated_at || null
   queue.leads_per_sec  = Number(q.leads_per_sec) || 0
   queue.eta_seconds    = q.eta_seconds != null ? Number(q.eta_seconds) : null
+  migrationsOk.value   = q.migrations_ok !== false
 
   if (prev.processed !== queue.processed) pulseStat('processed')
   if (prev.new !== queue.new) pulseStat('new')
@@ -303,7 +319,7 @@ const formatEta = (seconds) => {
 
 const fetchStatus = async () => {
   try {
-    const response = await axios.get('/api/bitrix24/queue-status', {
+    const response = await api.get('/bitrix24/queue-status', {
       params: { _: Date.now() },
       headers: { 'Cache-Control': 'no-cache' },
     })
@@ -347,14 +363,12 @@ const startQueue = async () => {
   queue.last_error = null
 
   try {
-    const response = await axios.post('/api/leads/bitrix24/start-queue', {
+    const response = await api.post('/leads/bitrix24/start-queue', {
       skip_existing: skipExisting.value,
     })
 
     applyQueuePayload(parseQueuePayload(response))
-    if (queue.status !== 'running') {
-      queue.status = 'running'
-    }
+    queue.status = 'running'
 
     actionMessage.value = response?.data?.message || 'Sync queued — waiting for worker...'
     startPolling()
@@ -375,7 +389,7 @@ const cancelQueue = async () => {
   canceling.value = true
   actionMessage.value = ''
   try {
-    await axios.post('/api/leads/bitrix24/cancel-queue')
+    await api.post('/leads/bitrix24/cancel-queue')
     actionMessage.value = 'Cancellation requested.'
     await fetchStatus()
   } catch (e) {
@@ -390,7 +404,7 @@ const resetQueue = async () => {
   resetting.value = true
   actionMessage.value = ''
   try {
-    await axios.post('/api/leads/bitrix24/reset-queue')
+    await api.post('/leads/bitrix24/reset-queue')
     actionMessage.value = 'Sync state reset. You can start again.'
     await fetchStatus()
   } catch (e) {

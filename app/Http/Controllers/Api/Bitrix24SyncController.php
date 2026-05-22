@@ -19,6 +19,64 @@ use Illuminate\Http\Request;
 class Bitrix24SyncController extends Controller
 {
     /**
+     * @return array<string, mixed>
+     */
+    private function stateToApiPayload(?BitrixSyncState $state): array
+    {
+        if (!$state) {
+            return [
+                'status'           => 'idle',
+                'progress'         => 0,
+                'processed'        => 0,
+                'total'            => 0,
+                'new_count'        => 0,
+                'existing_count'   => 0,
+                'error_count'      => 0,
+                'cursor'           => 0,
+                'last_error'       => null,
+                'started_at'       => null,
+                'finished_at'      => null,
+                'updated_at'       => null,
+                'skip_existing'    => false,
+                'leads_per_sec'    => 0,
+                'eta_seconds'      => null,
+                'parallel_shards'  => 1,
+                'shards_completed' => 0,
+                'sync_mode'        => 'sequential',
+                'migrations_ok'    => Bitrix24Schema::syncStateTableExists(),
+            ];
+        }
+
+        $total     = (int) $state->total;
+        $processed = (int) $state->processed;
+        $progress  = $total > 0
+            ? (int) min(100, floor(($processed / $total) * 100))
+            : ($state->status === 'done' ? 100 : 0);
+
+        return [
+            'status'            => $state->status ?: 'idle',
+            'progress'          => $progress,
+            'processed'         => $processed,
+            'total'             => $total,
+            'new_count'         => (int) $state->new_count,
+            'existing_count'    => (int) $state->existing_count,
+            'error_count'       => (int) $state->error_count,
+            'cursor'            => (int) $state->cursor,
+            'last_error'        => $state->last_error,
+            'started_at'        => optional($state->started_at)->toIso8601String(),
+            'finished_at'       => optional($state->finished_at)->toIso8601String(),
+            'updated_at'        => optional($state->updated_at)->toIso8601String(),
+            'skip_existing'     => (bool) $state->skip_existing,
+            'leads_per_sec'     => (float) ($state->leads_per_sec ?? 0),
+            'eta_seconds'       => $state->eta_seconds,
+            'parallel_shards'   => (int) ($state->parallel_shards ?? 1),
+            'shards_completed'  => (int) ($state->shards_completed ?? 0),
+            'sync_mode'         => $state->sync_mode ?? 'sequential',
+            'migrations_ok'     => Bitrix24Schema::syncStateTableExists(),
+        ];
+    }
+
+    /**
      * Synchronous batched sync (legacy, kept for compatibility / one-off small ranges).
      * For 30k-lead full sync prefer POST /api/leads/bitrix24/start-queue.
      */
@@ -240,16 +298,17 @@ class Bitrix24SyncController extends Controller
             'started_at' => $state->started_at ?? now(),
         ])->save();
 
-        return ApiResponse::success([
-            'status'          => 'queued',
+        $state->refresh();
+
+        return ApiResponse::success(array_merge($this->stateToApiPayload($state), [
+            'status'          => 'running',
             'resumed'         => $resume,
-            'cursor'          => (int) $state->cursor,
             'skip_existing'   => $skipExisting,
             'parallel_shards' => (int) config('bitrix24.parallel_shards', 1),
             'sync_mode'       => $resume
                 ? ($state->sync_mode ?: 'sequential')
                 : (Bitrix24SyncOrchestrator::shouldUseParallelShards() ? 'parallel' : 'sequential'),
-        ], $resume
+        ]), $resume
             ? "Resuming sync from cursor {$state->cursor}."
             : 'Sync queued — starting from the beginning.');
     }
@@ -263,54 +322,12 @@ class Bitrix24SyncController extends Controller
     {
         $state = BitrixSyncState::where('key', 'global_sync')->first();
 
-        if (!$state) {
-            return ApiResponse::success([
-                'status'           => 'idle',
-                'progress'         => 0,
-                'processed'        => 0,
-                'total'            => 0,
-                'new_count'        => 0,
-                'existing_count'   => 0,
-                'error_count'      => 0,
-                'cursor'           => 0,
-                'last_error'       => null,
-                'started_at'       => null,
-                'finished_at'      => null,
-                'skip_existing'    => false,
-                'leads_per_sec'    => 0,
-                'eta_seconds'      => null,
-                'parallel_shards'  => 1,
-                'shards_completed' => 0,
-                'sync_mode'        => 'sequential',
-            ], 'No sync has been started yet');
-        }
+        $message = $state ? 'Sync status' : 'No sync has been started yet';
 
-        $total     = (int) $state->total;
-        $processed = (int) $state->processed;
-        $progress  = $total > 0
-            ? (int) min(100, floor(($processed / $total) * 100))
-            : ($state->status === 'done' ? 100 : 0);
-
-        return ApiResponse::success([
-            'status'            => $state->status ?: 'idle',
-            'progress'          => $progress,
-            'processed'         => $processed,
-            'total'             => $total,
-            'new_count'         => (int) $state->new_count,
-            'existing_count'    => (int) $state->existing_count,
-            'error_count'       => (int) $state->error_count,
-            'cursor'            => (int) $state->cursor,
-            'last_error'        => $state->last_error,
-            'started_at'        => optional($state->started_at)->toIso8601String(),
-            'finished_at'       => optional($state->finished_at)->toIso8601String(),
-            'updated_at'        => optional($state->updated_at)->toIso8601String(),
-            'skip_existing'     => (bool) $state->skip_existing,
-            'leads_per_sec'     => (float) ($state->leads_per_sec ?? 0),
-            'eta_seconds'       => $state->eta_seconds,
-            'parallel_shards'   => (int) ($state->parallel_shards ?? 1),
-            'shards_completed'  => (int) ($state->shards_completed ?? 0),
-            'sync_mode'         => $state->sync_mode ?? 'sequential',
-        ], 'Sync status')->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+        return ApiResponse::success(
+            $this->stateToApiPayload($state),
+            $message,
+        )->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
     /**

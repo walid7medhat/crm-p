@@ -15,8 +15,8 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
 /**
- * One Bitrix24 page (50 leads) per job, with live DB progress during import.
- * Self-chains so the monitor UI updates every ~5–30 seconds.
+ * Fetches multiple Bitrix24 pages per run (configurable, default ~20 × 50 leads),
+ * saves progress after each page so the Vue monitor updates live.
  */
 class SyncBitrix24LeadsJob implements ShouldQueue
 {
@@ -48,36 +48,64 @@ class SyncBitrix24LeadsJob implements ShouldQueue
                 Bitrix24SyncProgress::markRunning($this->userId, $this->skipExisting, 'sequential');
             }
 
+            $configuredPages = (int) config('bitrix24.pages_per_job', 20);
+            if (!$this->skipExisting) {
+                $configuredPages = min(
+                    $configuredPages,
+                    (int) config('bitrix24.pages_per_job_enrich_max', 2)
+                );
+            }
+
+            $pagesPerJob = Bitrix24SyncThrottler::resolvePagesPerJob($configuredPages);
+
             $client = new Bitrix24Client();
             $importer = new Bitrix24LeadImporter($client, $this->userId);
 
             $cursor = (int) ($state->cursor ?? 0);
             $total = (int) ($state->total ?? 0);
             $lastSnap = ['processed' => 0, 'new' => 0, 'existing' => 0, 'errors' => 0];
+            $next = $cursor;
 
-            Log::info('Bitrix24 sync page started', [
-                'cursor'        => $cursor,
-                'skip_existing' => $this->skipExisting,
+            Log::info('Bitrix24 sync chunk started', [
+                'cursor'          => $cursor,
+                'pages_per_job'   => $pagesPerJob,
+                'skip_existing'   => $this->skipExisting,
             ]);
 
-            $page = $client->listLeads($cursor);
-            $total = (int) ($page['total'] ?? $total);
-            $b24Leads = $page['result'] ?? [];
-            $next = isset($page['next']) ? (int) $page['next'] : null;
+            for ($pageNum = 0; $pageNum < $pagesPerJob; $pageNum++) {
+                if (Bitrix24SyncProgress::isCancelled()) {
+                    return;
+                }
 
-            $onProgress = function (array $stats) use (&$lastSnap, $total) {
-                Bitrix24SyncProgress::flushImportProgress($stats, $lastSnap, null, $total);
-            };
+                $page = $client->listLeads($next);
+                $total = (int) ($page['total'] ?? $total);
+                $b24Leads = $page['result'] ?? [];
+                $pageNext = isset($page['next']) ? (int) $page['next'] : null;
 
-            $pageStats = $importer->importBatch($b24Leads, $this->skipExisting, null, $onProgress);
+                $onProgress = function (array $stats) use (&$lastSnap, $total) {
+                    Bitrix24SyncProgress::flushImportProgress($stats, $lastSnap, null, $total);
+                };
 
-            Bitrix24SyncProgress::flushImportProgress($pageStats, $lastSnap, $next ?? $cursor, $total);
+                $pageStats = $importer->importBatch($b24Leads, $this->skipExisting, null, $onProgress);
 
-            Log::info('Bitrix24 sync page finished', $pageStats + ['next' => $next]);
+                Bitrix24SyncProgress::flushImportProgress(
+                    $pageStats,
+                    $lastSnap,
+                    $pageNext ?? $next,
+                    $total,
+                );
 
-            if ($next === null) {
-                Bitrix24SyncProgress::markDone();
-                return;
+                Log::info('Bitrix24 sync page finished', $pageStats + [
+                    'page' => $pageNum + 1,
+                    'next' => $pageNext,
+                ]);
+
+                if ($pageNext === null) {
+                    Bitrix24SyncProgress::markDone();
+                    return;
+                }
+
+                $next = $pageNext;
             }
 
             if (Bitrix24SyncProgress::isCancelled()) {

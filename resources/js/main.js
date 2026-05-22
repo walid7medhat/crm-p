@@ -56,7 +56,6 @@ axios.interceptors.request.use(
     let token = localStorage.getItem('token') || 
                 localStorage.getItem('access_token') ||
                 sessionStorage.getItem('token')
-console.log(token);
     // Check cookies
     if (!token) {
       const cookies = document.cookie.split('; ')

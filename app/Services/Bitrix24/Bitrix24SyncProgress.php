@@ -117,14 +117,15 @@ class Bitrix24SyncProgress
             $lastAt = $locked->last_progress_at;
             $lastSnap = (int) $locked->last_processed_snapshot;
             if ($lastAt && $processed > 0) {
-                $elapsed = max(0.001, $now->diffInMilliseconds($lastAt) / 1000);
+                // Minimum 1s window avoids absurd rates (e.g. 50k/sec) when flushes are sub-second.
+                $elapsed = max(1.0, $now->diffInMilliseconds($lastAt) / 1000);
                 $delta = max(0, $newProcessed - $lastSnap);
-                $instantRate = $delta / $elapsed;
+                $instantRate = min(500.0, $delta / $elapsed);
                 $prevRate = (float) ($locked->leads_per_sec ?? 0);
                 $smoothed = $prevRate > 0
                     ? ($prevRate * 0.7) + ($instantRate * 0.3)
                     : $instantRate;
-                $updates['leads_per_sec'] = round($smoothed, 2);
+                $updates['leads_per_sec'] = round(min(500.0, $smoothed), 2);
                 $updates['last_progress_at'] = $now;
                 $updates['last_processed_snapshot'] = $newProcessed;
 
