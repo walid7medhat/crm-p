@@ -1,5 +1,16 @@
 # Bitrix24 lead sync — scaling guide
 
+## Production deploy (required after pull)
+
+```bash
+php artisan migrate --force
+php artisan config:clear
+php artisan bitrix24:doctor
+php artisan queue:work database --queue=default,bitrix24 --timeout=900 --memory=256
+```
+
+If cancel/reset returned **500** with `bitrix_sync_shards doesn't exist`, migrations were not applied. Run migrate, then **Reset state** in the UI and start sync again.
+
 ## Local vs production (queue / Redis)
 
 | Environment | `QUEUE_CONNECTION` | Redis |

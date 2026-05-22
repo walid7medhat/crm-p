@@ -48,9 +48,11 @@ class Bitrix24DoctorCommand extends Command
             return self::FAILURE;
         }
 
-        foreach (['jobs', 'failed_jobs', 'job_batches', 'bitrix_sync_states'] as $table) {
+        foreach (['jobs', 'failed_jobs', 'job_batches', 'bitrix_sync_states', 'bitrix_sync_shards'] as $table) {
             if (!Schema::hasTable($table)) {
-                $this->warn("Table missing: {$table} — run php artisan migrate");
+                $this->error("Table missing: {$table} — run: php artisan migrate --force");
+            } else {
+                $this->line("Table OK: {$table}");
             }
         }
 

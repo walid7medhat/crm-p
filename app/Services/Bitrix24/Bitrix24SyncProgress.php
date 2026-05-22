@@ -4,6 +4,7 @@ namespace App\Services\Bitrix24;
 
 use App\Models\BitrixSyncShard;
 use App\Models\BitrixSyncState;
+use App\Support\Bitrix24Schema;
 use Illuminate\Support\Facades\DB;
 
 class Bitrix24SyncProgress
@@ -179,6 +180,11 @@ class Bitrix24SyncProgress
 
     public static function markShardDone(BitrixSyncShard $shard): void
     {
+        if (!Bitrix24Schema::shardsTableExists()) {
+            static::markDone();
+            return;
+        }
+
         $shard->forceFill([
             'status'      => 'done',
             'finished_at' => now(),
@@ -202,6 +208,10 @@ class Bitrix24SyncProgress
 
     public static function aggregateShardTotals(): void
     {
+        if (!Bitrix24Schema::shardsTableExists()) {
+            return;
+        }
+
         $totals = BitrixSyncShard::where('sync_key', self::SYNC_KEY)
             ->selectRaw('SUM(processed) as processed, SUM(new_count) as new_count, SUM(existing_count) as existing_count, SUM(error_count) as error_count')
             ->first();

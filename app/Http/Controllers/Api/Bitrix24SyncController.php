@@ -12,6 +12,7 @@ use App\Services\Bitrix24\Bitrix24Client;
 use App\Services\Bitrix24\Bitrix24SyncOrchestrator;
 use App\Services\Bitrix24\Bitrix24Exception;
 use App\Services\Bitrix24\Bitrix24LeadImporter;
+use App\Support\Bitrix24Schema;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -209,7 +210,12 @@ class Bitrix24SyncController extends Controller
         ])->save();
 
         try {
-            if ($resume && $state->sync_mode === 'parallel' && BitrixSyncShard::incomplete()->exists()) {
+            if (
+                $resume
+                && $state->sync_mode === 'parallel'
+                && Bitrix24Schema::shardsTableExists()
+                && BitrixSyncShard::incomplete()->exists()
+            ) {
                 Bitrix24SyncOrchestrator::resumeShards($user->id, $skipExisting);
             } elseif (!$resume && Bitrix24SyncOrchestrator::shouldUseParallelShards()) {
                 Bitrix24SyncOrchestrator::startFresh($user->id, $skipExisting);
@@ -328,12 +334,16 @@ class Bitrix24SyncController extends Controller
             return ApiResponse::error('No running sync to cancel.', 409);
         }
 
-        $state->forceFill([
-            'status'      => 'cancelled',
-            'finished_at' => now(),
-        ])->save();
+        try {
+            $state->forceFill([
+                'status'      => 'cancelled',
+                'finished_at' => now(),
+            ])->save();
 
-        Bitrix24SyncOrchestrator::cancelShards();
+            Bitrix24SyncOrchestrator::cancelShards();
+        } catch (\Throwable $e) {
+            return ApiResponse::error('Failed to cancel sync: ' . $e->getMessage(), 500);
+        }
 
         return ApiResponse::success(null, 'Sync cancellation requested — will stop after the current chunk.');
     }
@@ -349,17 +359,26 @@ class Bitrix24SyncController extends Controller
             return ApiResponse::error('Unauthorized', 403);
         }
 
-        $state = BitrixSyncState::where('key', 'global_sync')->first();
-        if ($state) {
-            $state->forceFill([
-                'status'      => 'cancelled',
-                'finished_at' => now(),
-                'last_error'  => null,
-            ])->save();
+        try {
+            $state = BitrixSyncState::where('key', 'global_sync')->first();
+            if ($state) {
+                $state->forceFill([
+                    'status'      => 'cancelled',
+                    'finished_at' => now(),
+                    'last_error'  => null,
+                    'sync_mode'   => 'sequential',
+                ])->save();
+            }
+
+            Bitrix24SyncOrchestrator::cancelShards();
+        } catch (\Throwable $e) {
+            return ApiResponse::error('Failed to reset sync: ' . $e->getMessage(), 500);
         }
 
-        Bitrix24SyncOrchestrator::cancelShards();
+        $hint = Bitrix24Schema::shardsTableExists()
+            ? null
+            : ' Run php artisan migrate on the server to enable full Bitrix24 sync features.';
 
-        return ApiResponse::success(null, 'Sync state reset. You can start a fresh sync.');
+        return ApiResponse::success(null, 'Sync state reset. You can start a fresh sync.' . ($hint ?? ''));
     }
 }

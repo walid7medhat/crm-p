@@ -8,6 +8,7 @@ use App\Models\BitrixSyncShard;
 use App\Models\BitrixSyncState;
 use App\Services\Bitrix24\Bitrix24SyncOrchestrator;
 use App\Services\Bitrix24\Bitrix24SyncProgress;
+use App\Support\Bitrix24Schema;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -47,7 +48,11 @@ class Bitrix24RetryStuckCommand extends Command
         $userId = (int) ($state->user_id ?? 1);
         $skip = (bool) $state->skip_existing;
 
-        if ($state->sync_mode === 'parallel' && BitrixSyncShard::incomplete()->exists()) {
+        if (
+            $state->sync_mode === 'parallel'
+            && Bitrix24Schema::shardsTableExists()
+            && BitrixSyncShard::incomplete()->exists()
+        ) {
             $shards = BitrixSyncShard::incomplete()->get();
             foreach ($shards as $shard) {
                 SyncBitrix24ShardJob::dispatch($userId, $skip, $shard->id);

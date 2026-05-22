@@ -5,6 +5,7 @@ namespace App\Services\Bitrix24;
 use App\Jobs\SyncBitrix24ShardJob;
 use App\Models\BitrixSyncShard;
 use App\Models\BitrixSyncState;
+use App\Support\Bitrix24Schema;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 
@@ -12,7 +13,7 @@ class Bitrix24SyncOrchestrator
 {
     public static function shouldUseParallelShards(): bool
     {
-        return (int) config('bitrix24.parallel_shards', 1) > 1;
+        return Bitrix24Schema::parallelShardsEnabled();
     }
 
     public static function startFresh(int $userId, bool $skipExisting): void
@@ -41,6 +42,11 @@ class Bitrix24SyncOrchestrator
         $total = (int) $bounds['total'];
 
         if ($maxId <= $minId) {
+            \App\Jobs\SyncBitrix24LeadsJob::dispatch($userId, $skipExisting);
+            return;
+        }
+
+        if (!Bitrix24Schema::shardsTableExists()) {
             \App\Jobs\SyncBitrix24LeadsJob::dispatch($userId, $skipExisting);
             return;
         }
@@ -115,6 +121,11 @@ class Bitrix24SyncOrchestrator
 
     public static function resumeShards(int $userId, bool $skipExisting): void
     {
+        if (!Bitrix24Schema::shardsTableExists()) {
+            \App\Jobs\SyncBitrix24LeadsJob::dispatch($userId, $skipExisting);
+            return;
+        }
+
         $shards = BitrixSyncShard::where('sync_key', Bitrix24SyncProgress::SYNC_KEY)
             ->incomplete()
             ->orderBy('shard_index')
@@ -151,6 +162,10 @@ class Bitrix24SyncOrchestrator
 
     public static function cancelShards(): void
     {
+        if (!Bitrix24Schema::shardsTableExists()) {
+            return;
+        }
+
         BitrixSyncShard::where('sync_key', Bitrix24SyncProgress::SYNC_KEY)
             ->whereNotIn('status', ['done', 'cancelled'])
             ->update([
