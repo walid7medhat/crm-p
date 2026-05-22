@@ -10,6 +10,7 @@ use App\Services\Bitrix24\Bitrix24Exception;
 use App\Services\Bitrix24\Bitrix24LeadImporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Models\BitrixSyncState;
 
 class Bitrix24SyncController extends Controller
 {
@@ -181,4 +182,24 @@ class Bitrix24SyncController extends Controller
         'status' => 'queued'
     ], 'Sync started from last saved position');
 }
+
+public function status()
+{
+    $state = \App\Models\BitrixSyncState::first();
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'status' => 'running',
+            'progress' => 0,
+            'processed' => 0,
+            'total' => 0,
+            'new_count' => 0,
+            'existing_count' => 0,
+            'error_count' => 0,
+            'cursor' => $state->cursor ?? 0,
+        ]
+    ]);
 }
+}
+
