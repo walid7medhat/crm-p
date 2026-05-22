@@ -28,14 +28,14 @@
                     :key="index"
                     class="side-image"
                     :class="{
-                      active: currentMainImage === getImageUrl(image.image_url),
+                      active: currentMainImage === getImageUrl(image.image_url_final),
                       'has-view-all': index === getGalleryThumbnails().length - 1 && property.gallery_images && property.gallery_images.length > 3,
                     }"
                     @click="index === getGalleryThumbnails().length - 1 && property.gallery_images && property.gallery_images.length > 3
                       ? openLightbox(0)
-                      : setMainImage(getImageUrl(image.image_url))"
+                      : setMainImage(getImageUrl(image.image_url_final))"
                   >
-                    <img :src="getImageUrl(image.image_url)" alt="Property thumbnail" />
+                    <img :src="getImageUrl(image.image_url_final)" alt="Property thumbnail" />
                     <div
                       v-if="index === getGalleryThumbnails().length - 1 && property.gallery_images && property.gallery_images.length > 3"
                       class="view-all-overlay"
