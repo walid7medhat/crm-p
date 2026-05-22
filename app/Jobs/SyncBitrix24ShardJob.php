@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\RetriesBitrix24Sync;
 use App\Models\BitrixSyncShard;
 use App\Services\Bitrix24\Bitrix24Client;
 use App\Services\Bitrix24\Bitrix24LeadImporter;
@@ -21,13 +22,15 @@ use Illuminate\Support\Facades\Log;
  */
 class SyncBitrix24ShardJob implements ShouldQueue
 {
-    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, RetriesBitrix24Sync, SerializesModels;
 
     public int $timeout = 900;
 
-    public int $tries = 2;
+    public int $tries = 50;
 
-    public int $backoff = 30;
+    public int $maxExceptions = 50;
+
+    public int $backoff = 60;
 
     public function __construct(
         public int $userId,
@@ -125,8 +128,20 @@ class SyncBitrix24ShardJob implements ShouldQueue
                 return;
             }
 
-            self::dispatch($this->userId, $this->skipExisting, $this->shardId);
+            $delay = max(0, (int) config('bitrix24.chain_delay_seconds', 1));
+            $dispatch = self::dispatch($this->userId, $this->skipExisting, $this->shardId);
+            if ($delay > 0) {
+                $dispatch->delay(now()->addSeconds($delay));
+            }
         } catch (\Throwable $e) {
+            if (self::isRecoverableError($e)) {
+                Bitrix24SyncProgress::noteTransientError($e->getMessage());
+                $delay = self::retryDelaySeconds($e);
+                self::dispatch($this->userId, $this->skipExisting, $this->shardId)
+                    ->delay(now()->addSeconds($delay));
+                return;
+            }
+
             $shard = BitrixSyncShard::find($this->shardId);
             if ($shard) {
                 $shard->forceFill([
@@ -148,6 +163,14 @@ class SyncBitrix24ShardJob implements ShouldQueue
 
     public function failed(\Throwable $exception): void
     {
+        if (self::isRecoverableError($exception)) {
+            Bitrix24SyncProgress::noteTransientError($exception->getMessage());
+            $delay = self::retryDelaySeconds($exception);
+            self::dispatch($this->userId, $this->skipExisting, $this->shardId)
+                ->delay(now()->addSeconds($delay));
+            return;
+        }
+
         $shard = BitrixSyncShard::find($this->shardId);
         if ($shard) {
             $shard->forceFill([
@@ -156,6 +179,7 @@ class SyncBitrix24ShardJob implements ShouldQueue
                 'finished_at' => now(),
             ])->save();
         }
+        Bitrix24SyncProgress::markFailed($exception->getMessage());
         Log::error('SyncBitrix24ShardJob failed', [
             'shard_id' => $this->shardId,
             'error'    => $exception->getMessage(),

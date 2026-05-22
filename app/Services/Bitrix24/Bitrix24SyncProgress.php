@@ -149,6 +149,33 @@ class Bitrix24SyncProgress
         ])->save();
     }
 
+    /** Keep sync running; UI shows warning while worker auto-retries. */
+    public static function noteTransientError(string $message): void
+    {
+        $state = static::globalState();
+        $state->forceFill([
+            'status'      => 'running',
+            'last_error'  => $message,
+            'finished_at' => null,
+        ])->save();
+    }
+
+    /**
+     * Only mark complete when Bitrix24 pagination truly ended.
+     */
+    public static function shouldMarkComplete(int $total, int $processed, int $pageLeadCount, ?int $pageNext): bool
+    {
+        if ($pageNext !== null) {
+            return false;
+        }
+
+        if ($pageLeadCount > 0 && $total > 0 && $processed < max(100, (int) ($total * 0.9))) {
+            return false;
+        }
+
+        return true;
+    }
+
     public static function markDone(): void
     {
         static::globalState()->forceFill([

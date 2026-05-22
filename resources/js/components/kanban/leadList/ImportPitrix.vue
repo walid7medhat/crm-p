@@ -125,9 +125,17 @@
           <code>php artisan migrate --force</code> then reset and start sync again.
         </div>
 
-        <div v-if="queue.last_error" class="alert alert-danger mt-3 mb-0 py-2 px-3" style="font-size: 13px;">
+        <div
+          v-if="queue.last_error"
+          class="alert mt-3 mb-0 py-2 px-3"
+          :class="isRunning ? 'alert-warning' : 'alert-danger'"
+          style="font-size: 13px;"
+        >
           <i class="ri-error-warning-line me-1"></i>
           {{ queue.last_error }}
+          <span v-if="isRunning && String(queue.last_error).includes('auto-retry')" class="d-block small mt-1">
+            Sync is still running — the worker will continue automatically.
+          </span>
         </div>
 
         <details class="mt-3">

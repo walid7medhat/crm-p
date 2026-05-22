@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\RetriesBitrix24Sync;
 use App\Services\Bitrix24\Bitrix24Client;
 use App\Services\Bitrix24\Bitrix24LeadImporter;
 use App\Services\Bitrix24\Bitrix24SyncProgress;
@@ -15,18 +16,21 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Fetches multiple Bitrix24 pages per run (configurable, default ~20 × 50 leads),
- * saves progress after each page so the Vue monitor updates live.
+ * Multi-page Bitrix24 import per run. Self-chains until all leads are fetched.
+ * Never stops on rate limits — schedules delayed auto-retry instead.
  */
 class SyncBitrix24LeadsJob implements ShouldQueue
 {
-    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, RetriesBitrix24Sync, SerializesModels;
 
     public int $timeout = 900;
 
-    public int $tries = 2;
+    /** High try count; recoverable errors re-dispatch without throwing. */
+    public int $tries = 50;
 
-    public int $backoff = 30;
+    public int $maxExceptions = 50;
+
+    public int $backoff = 60;
 
     public function __construct(
         public int $userId,
@@ -44,8 +48,10 @@ class SyncBitrix24LeadsJob implements ShouldQueue
 
             $state = Bitrix24SyncProgress::globalState();
 
-            if ($state->status !== 'running') {
+            if (!in_array($state->status, ['running', 'paused'], true)) {
                 Bitrix24SyncProgress::markRunning($this->userId, $this->skipExisting, 'sequential');
+            } elseif ($state->status === 'paused') {
+                $state->forceFill(['status' => 'running', 'finished_at' => null])->save();
             }
 
             $configuredPages = (int) config('bitrix24.pages_per_job', 20);
@@ -67,9 +73,9 @@ class SyncBitrix24LeadsJob implements ShouldQueue
             $next = $cursor;
 
             Log::info('Bitrix24 sync chunk started', [
-                'cursor'          => $cursor,
-                'pages_per_job'   => $pagesPerJob,
-                'skip_existing'   => $this->skipExisting,
+                'cursor'        => $cursor,
+                'pages_per_job' => $pagesPerJob,
+                'skip_existing' => $this->skipExisting,
             ]);
 
             for ($pageNum = 0; $pageNum < $pagesPerJob; $pageNum++) {
@@ -77,10 +83,15 @@ class SyncBitrix24LeadsJob implements ShouldQueue
                     return;
                 }
 
+                if ($pageNum > 0) {
+                    $this->interPageDelay();
+                }
+
                 $page = $client->listLeads($next);
                 $total = (int) ($page['total'] ?? $total);
                 $b24Leads = $page['result'] ?? [];
                 $pageNext = isset($page['next']) ? (int) $page['next'] : null;
+                $pageCount = count($b24Leads);
 
                 $onProgress = function (array $stats) use (&$lastSnap, $total) {
                     Bitrix24SyncProgress::flushImportProgress($stats, $lastSnap, null, $total);
@@ -95,13 +106,31 @@ class SyncBitrix24LeadsJob implements ShouldQueue
                     $total,
                 );
 
+                $processedNow = (int) Bitrix24SyncProgress::globalState()->processed;
+
                 Log::info('Bitrix24 sync page finished', $pageStats + [
-                    'page' => $pageNum + 1,
-                    'next' => $pageNext,
+                    'page'      => $pageNum + 1,
+                    'next'      => $pageNext,
+                    'total'     => $total,
+                    'processed' => $processedNow,
                 ]);
 
-                if ($pageNext === null) {
+                if (Bitrix24SyncProgress::shouldMarkComplete($total, $processedNow, $pageCount, $pageNext)) {
                     Bitrix24SyncProgress::markDone();
+                    Log::info('Bitrix24 sync completed', [
+                        'processed' => $processedNow,
+                        'total'     => $total,
+                    ]);
+                    return;
+                }
+
+                if ($pageNext === null) {
+                    Log::warning('Bitrix24 pagination ended early — scheduling retry', [
+                        'processed' => $processedNow,
+                        'total'     => $total,
+                        'cursor'    => $next,
+                    ]);
+                    $this->chainNextJob($this->userId, $this->skipExisting);
                     return;
                 }
 
@@ -112,10 +141,16 @@ class SyncBitrix24LeadsJob implements ShouldQueue
                 return;
             }
 
-            self::dispatch($this->userId, $this->skipExisting);
+            $state->forceFill(['last_error' => null])->save();
+            $this->chainNextJob($this->userId, $this->skipExisting);
         } catch (\Throwable $e) {
+            if (self::isRecoverableError($e)) {
+                $this->scheduleSyncRetry($e, $this->userId, $this->skipExisting);
+                return;
+            }
+
             Bitrix24SyncProgress::markFailed($e->getMessage());
-            Log::error('SyncBitrix24LeadsJob failed', ['error' => $e->getMessage()]);
+            Log::error('SyncBitrix24LeadsJob failed (non-recoverable)', ['error' => $e->getMessage()]);
             throw $e;
         } finally {
             Bitrix24SyncThrottler::reset();
@@ -124,6 +159,11 @@ class SyncBitrix24LeadsJob implements ShouldQueue
 
     public function failed(\Throwable $exception): void
     {
+        if (self::isRecoverableError($exception)) {
+            $this->scheduleSyncRetry($exception, $this->userId, $this->skipExisting);
+            return;
+        }
+
         Bitrix24SyncProgress::markFailed($exception->getMessage());
     }
 }
