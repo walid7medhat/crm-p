@@ -292,13 +292,15 @@
                                                                 </div>
                                                             </div>
                                                             
-                                                            <!-- Assigned By -->
+                                                            <!-- Activity (last change in Bitrix24 / locally) — replaces the
+                                                                 old "Assigned By" tile. Shows the date of the latest change
+                                                                 and the person who made it, mirroring Bitrix24's lead card. -->
                                                             <div v-else-if="field.key === 'assigned_by' && hasAssignedBy(task)">
                                                                 <hr class="mb-2 border-neutral-200">
                                                                 <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
                                                                     <div class="info-item">
-                                                                        <div class="info-label text-secondary-light text-xs mb-1">Assigned </div>
-                                                                        <div class="info-value">{{ formatDate(task.assigned_at) }}</div>
+                                                                        <div class="info-label text-secondary-light text-xs mb-1">Activity</div>
+                                                                        <div class="info-value">{{ formatDate(task.last_activity_at || task.assigned_at) }}</div>
                                                                     </div>
                                                                     <div
                                                                         class="person-hover-anchor"
@@ -306,7 +308,7 @@
                                                                         @mouseleave.stop="hidePersonHoverCard"
                                                                           @click.stop="openPersonProfile(task, 'assigned', $event)"
                                                                     >
-                                                                        <img v-if="task?.parent?.avatar" :src="task.parent.avatar"   alt="" class="avatar-sm rounded-circle" />
+                                                                        <img v-if="activityPerson(task)?.avatar" :src="activityPerson(task).avatar"   alt="" class="avatar-sm rounded-circle" />
                                                                         <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
                                                                             <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
                                                                         </div>
@@ -798,14 +800,19 @@ const profileTriggerType = ref(null)
 
 const openPersonProfile = (task, type, event) => {
     if (event) event.stopPropagation()
-    
-    const person = type === 'assigned' ? task?.parent : task?.responsible_person
+
+    // The "assigned" tile is now driven by last_activity_user (Bitrix24-style
+    // last-changer). Falls back to parent for legacy/non-B24 leads.
+    const person = type === 'assigned' ? activityPerson(task) : task?.responsible_person
     if (!person?.id) return
-    
+
     profileUserId.value = person.id
     profileTriggerType.value = type
     showProfilePopup.value = true
 }
+
+// Activity-tile data sources (last_activity_user > parent for backwards compat).
+const activityPerson = (task) => task?.last_activity_user || task?.parent || null
 
 const closeProfilePopup = () => {
     showProfilePopup.value = false
@@ -1648,7 +1655,10 @@ const hasResponsiblePerson = (task) => {
 }
 
 const hasAssignedBy = (task) => {
-    return !!(task?.assigned_at || task?.parent?.name || task?.parent?.avatar)
+    return !!(
+        task?.last_activity_at || task?.last_activity_user?.name ||
+        task?.assigned_at || task?.parent?.name || task?.parent?.avatar
+    )
 }
 
 const enabledFieldsForColumn = (column, task) => {
@@ -1722,8 +1732,10 @@ const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallb
 
 const showPersonHoverCard = (task, type) => {
     cancelPersonHoverHide()
-    const person = type === 'assigned' ? task?.parent : task?.responsible_person
-    const fallbackName = type === 'assigned' ? (task?.parent?.name || 'Assigned By') : (task?.responsible_person?.name || 'Responsible Person')
+    const person = type === 'assigned' ? activityPerson(task) : task?.responsible_person
+    const fallbackName = type === 'assigned'
+        ? (activityPerson(task)?.name || 'Activity')
+        : (task?.responsible_person?.name || 'Responsible Person')
     activePersonHover.value = {
         leadId: task?.id,
         type,

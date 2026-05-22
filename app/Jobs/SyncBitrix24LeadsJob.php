@@ -62,7 +62,7 @@ class SyncBitrix24LeadsJob implements ShouldQueue
 
         // Restore auth context so LeadHistoryHelper::log gets the right user_id
         // (auth()->id() is null inside a queued job by default).
-        Auth::loginUsingId($this->userId);
+        // Auth::loginUsingId($this->userId);
 
         $client   = new Bitrix24Client();
         $importer = new Bitrix24LeadImporter($client, $this->userId);

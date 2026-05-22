@@ -177,34 +177,48 @@ class Bitrix24SyncController extends Controller
         );
 
         if ($state->status === 'running') {
-            return ApiResponse::error('A sync is already running. Wait for it to finish (or set its status to "cancelled" to stop).', 409);
+            return ApiResponse::error('A sync is already running. Wait for it to finish (or cancel it first).', 409);
         }
 
-        // Fresh start: reset all counters + cursor. Next-run-resume only happens
-        // automatically when a previous run was killed mid-sync without writing
-        // status='done' or 'failed' — but we don't reset 'paused'/'cancelled' to
-        // 'idle' here, so a deliberate pause is preserved.
+        // Decide: resume (keep cursor + counters) vs fresh start (reset everything).
+        //   done   → fresh start, the previous sync already completed.
+        //   cancelled / failed / paused → resume from saved cursor + counters.
+        //   idle (never run, or just reset) → starts from cursor 0 anyway.
+        $resume = in_array($state->status, ['cancelled', 'failed', 'paused'], true);
+
+        if (!$resume) {
+            $state->forceFill([
+                'cursor'         => 0,
+                'total'          => 0,
+                'processed'      => 0,
+                'new_count'      => 0,
+                'existing_count' => 0,
+                'error_count'    => 0,
+                'started_at'     => null,
+                'finished_at'    => null,
+            ])->save();
+        }
+
+        // Flip status to 'idle' so the job's cancel-gate doesn't trip; clear
+        // last_error either way; remember which user kicked it off + the flag.
         $state->forceFill([
-            'status'         => 'idle',
-            'cursor'         => 0,
-            'total'          => 0,
-            'processed'      => 0,
-            'new_count'      => 0,
-            'existing_count' => 0,
-            'error_count'    => 0,
-            'last_error'     => null,
-            'started_at'     => null,
-            'finished_at'    => null,
-            'user_id'        => $user->id,
-            'skip_existing'  => $skipExisting,
+            'status'        => 'idle',
+            'last_error'    => null,
+            'finished_at'   => null,
+            'user_id'       => $user->id,
+            'skip_existing' => $skipExisting,
         ])->save();
 
         SyncBitrix24LeadsJob::dispatch($user->id, $skipExisting);
 
         return ApiResponse::success([
             'status'        => 'queued',
+            'resumed'       => $resume,
+            'cursor'        => (int) $state->cursor,
             'skip_existing' => $skipExisting,
-        ], 'Sync queued. Poll /api/bitrix24/queue-status for progress.');
+        ], $resume
+            ? "Resuming sync from cursor {$state->cursor}."
+            : 'Sync queued — starting from the beginning.');
     }
 
     /**

@@ -1,12 +1,15 @@
 <template>
-  <div class="container py-4">
-    <div class="card shadow-sm">
-      <div class="card-header bg-dark text-white d-flex align-items-center justify-content-between">
-        <h5 class="mb-0">Bitrix24 Queue Monitor</h5>
+  <div class="container py-4 b24-page">
+    <div class="card shadow-sm b24-card">
+      <div class="card-header b24-card__header text-white d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+          <i class="ri-cloud-line fs-4"></i>
+          <h5 class="mb-0">Bitrix24 Queue Monitor</h5>
+        </div>
         <span class="badge" :class="badgeClass">{{ statusLabel }}</span>
       </div>
 
-      <div class="card-body">
+      <div class="card-body b24-card__body">
 
         <!-- Controls -->
         <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
@@ -15,10 +18,10 @@
             :disabled="loading || isRunning"
             @click="startQueue"
           >
-            <span v-if="loading">Starting...</span>
+            <span v-if="loading">{{ canResume ? 'Resuming...' : 'Starting...' }}</span>
             <span v-else-if="isRunning">Sync in progress</span>
-            <span v-else-if="queue.status === 'done'">Restart sync</span>
-            <span v-else-if="queue.status === 'failed' || queue.status === 'cancelled'">Retry sync</span>
+            <span v-else-if="queue.status === 'done'">Restart sync (fresh)</span>
+            <span v-else-if="canResume">Resume sync (cursor {{ queue.cursor }})</span>
             <span v-else>Start Queue Sync</span>
           </button>
 
@@ -140,6 +143,12 @@ const queue = reactive({
 
 const isRunning = computed(() => queue.status === 'running')
 
+// Cancelled / failed / paused → "Resume sync" picks up from saved cursor.
+// done → "Restart sync (fresh)" resets to 0. idle → first run from 0.
+const canResume = computed(() =>
+  ['cancelled', 'failed', 'paused'].includes(queue.status)
+)
+
 const statusLabel = computed(() => {
   const labels = {
     idle: 'Idle',
@@ -260,15 +269,51 @@ onUnmounted(stopPolling)
 </script>
 
 <style scoped>
-.card {
-  border-radius: 12px;
+.b24-page {
+  /* soft tinted backdrop so the card "lifts" off the page */
+  background: linear-gradient(180deg, #eef2ff 0%, #f5f7fb 60%, #f8fafc 100%);
+  border-radius: 16px;
+  padding-top: 1.5rem !important;
+  padding-bottom: 1.5rem !important;
+}
+
+.b24-card {
+  border: none;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.b24-card__header {
+  background: linear-gradient(135deg, #0ea5e9 0%, #1d4ed8 60%, #1e1b4b 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 14px 18px;
+}
+
+.b24-card__header h5 {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.b24-card__body {
+  background: #ffffff;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.06), transparent 40%),
+    radial-gradient(at 100% 0%, rgba(30, 64, 175, 0.05), transparent 40%);
+  padding: 22px 22px 18px;
 }
 
 .stat-tile {
-  background: #f8fafc;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 10px 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stat-tile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
 }
 
 .stat-tile__label {
@@ -282,5 +327,15 @@ onUnmounted(stopPolling)
   font-size: 22px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* slim progress bar pops on the lighter card body */
+:deep(.progress) {
+  background-color: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+:deep(.progress-bar) {
+  border-radius: 999px;
 }
 </style>

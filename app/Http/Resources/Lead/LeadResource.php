@@ -24,14 +24,19 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
 }
         $assignmentHistory = $this->histories()
             ->where('changes->action', 'assigned')
-            ->orderBy('created_at', 'desc') 
+            ->orderBy('created_at', 'desc')
             ->first();
-        
+
         if ($assignmentHistory && $assignmentHistory->user) {
             $assignedBy = $assignmentHistory->user;
         } else {
             $assignedBy = $this->addedBy;
         }
+
+        // "Last activity" — Bitrix24-style "who last touched this lead and when".
+        // Prefers B24's LAST_ACTIVITY_TIME / LAST_ACTIVITY_BY mirror columns;
+        // falls back to the most recent history row for non-B24 leads.
+        [$lastActivityAt, $lastActivityUser] = $this->resolveLastActivity($assignedBy);
         return [
             'id' => $this->id,
             'added_by' => $this->added_by,
@@ -135,6 +140,18 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
                         'facebook_questions_answers' =>$facebookFields,
             'parent'=>new \App\Http\Resources\User\UserResource($assignedBy),
             'assigned_at'=>$assignmentHistory?$assignmentHistory->created_at:$this->created_at,
+            // Activity-tracker (Bitrix24-style). Frontend lead card now reads
+            // these instead of `assigned_at` / `parent` for the "who changed it
+            // last and when" tile.
+            'last_activity_at'   => $lastActivityAt,
+            'last_activity_user' => $lastActivityUser
+                ? new \App\Http\Resources\User\UserResource($lastActivityUser)
+                : null,
+            // Bitrix24 ID of the user who did the last activity, in case the
+            // local mapping (by email) didn't resolve.
+            'bitrix24_last_activity_by_id' => $this->bitrix24_last_activity_by_id,
+            'bitrix24_last_activity_at'    => $this->bitrix24_last_activity_at,
+            'bitrix24_moved_at'            => $this->bitrix24_moved_at,
             'property_type'=>$this->propertyType?->name,
             'area'=>$this->area?->title,
             'property_type_id'=>$this->propertyType?->id,
@@ -215,7 +232,47 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
     
     return null;
 }
- protected function hasServiceDuplicate(): bool
+    /**
+     * Resolve "last activity" timestamp + user for the activity tile.
+     *   Priority:
+     *     1. Bitrix24 LAST_ACTIVITY_TIME + LAST_ACTIVITY_BY (mapped to local user)
+     *     2. Latest LeadHistory row's created_at + user
+     *     3. Fall back to assignment history's user + the lead's updated_at
+     *
+     * @return array{0: \Carbon\Carbon|\Illuminate\Support\Carbon|string|null, 1: \App\Models\User|null}
+     */
+    protected function resolveLastActivity($assignedByFallback): array
+    {
+        $lastActivityAt   = $this->bitrix24_last_activity_at;
+        $lastActivityUser = null;
+
+        if ($this->bitrix24_last_activity_by_id) {
+            $data = is_string($this->bitrix24_data)
+                ? json_decode($this->bitrix24_data, true)
+                : $this->bitrix24_data;
+            $localId = data_get($data, '_users.last_activity.local_user_id');
+            if ($localId) {
+                $lastActivityUser = \App\Models\User::find($localId);
+            }
+        }
+
+        if (!$lastActivityUser || !$lastActivityAt) {
+            $latest = $this->histories()
+                ->orderBy('created_at', 'desc')
+                ->first();
+            if ($latest) {
+                $lastActivityAt   = $lastActivityAt ?? $latest->created_at;
+                $lastActivityUser = $lastActivityUser ?? $latest->user;
+            }
+        }
+
+        return [
+            $lastActivityAt ?? $this->updated_at,
+            $lastActivityUser ?? $assignedByFallback,
+        ];
+    }
+
+    protected function hasServiceDuplicate(): bool
 {
     return Lead::query()
         ->where('id', '!=', $this->id)
