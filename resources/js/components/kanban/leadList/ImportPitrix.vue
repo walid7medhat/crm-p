@@ -3,7 +3,49 @@
     <div class="container py-4 ">
       <div class="row justify-content-center">
         <div class="col-lg-8 col-md-10">
-          
+                    <!-- ===================== GLOBAL QUEUE STATUS ===================== -->
+          <div v-if="queue.active" class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-body p-3">
+
+              <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="spinner-border spinner-border-sm text-primary"></div>
+                  <strong class="small">Bitrix24 Sync Running...</strong>
+                </div>
+
+                <span class="badge bg-primary">
+                  {{ queue.status }}
+                </span>
+              </div>
+
+              <!-- Progress -->
+              <div class="progress mb-2" style="height: 8px;">
+                <div
+                  class="progress-bar"
+                  :style="{ width: queue.progress + '%' }"
+                ></div>
+              </div>
+
+              <div class="d-flex justify-content-between small text-muted">
+                <div>
+                  Processed: <strong>{{ queue.processed }}</strong>
+                  / {{ queue.total || '...' }}
+                </div>
+
+                <div class="d-flex gap-2">
+                  <span class="text-success">New: {{ queue.new }}</span>
+                  <span class="text-secondary">Existing: {{ queue.existing }}</span>
+                  <span class="text-danger">Errors: {{ queue.errors }}</span>
+                </div>
+              </div>
+
+              <!-- Optional current message -->
+              <div v-if="queue.message" class="mt-2 small text-muted">
+                {{ queue.message }}
+              </div>
+
+            </div>
+          </div>
          
 
           <!-- Main Card -->
@@ -503,7 +545,18 @@ const isDragOver = ref(false)
 const loading = ref(false)
 const success = ref(false)
 const error = ref(null)
-
+const queue = reactive({
+  active: false,
+  jobId: null,
+  status: 'queued',
+  progress: 0,
+  processed: 0,
+  total: 0,
+  new: 0,
+  existing: 0,
+  errors: 0,
+  message: ''
+})
 const b24 = reactive({
   running: false,
   done: false,
@@ -733,6 +786,52 @@ const uploadFile = async () => {
   } finally {
     loading.value = false
   }
+}
+const startQueueSync = async () => {
+  try {
+    queue.active = true
+    queue.status = 'starting'
+
+    const { data } = await axios.post('/api/leads/bitrix24/sync-queue', {
+      from: b24.fromRow,
+      to: b24.toRow,
+      skip_existing: b24.skipExisting,
+    })
+
+    queue.jobId = data.data.job_id
+    queue.status = 'running'
+
+    startPollingQueue()
+
+  } catch (err) {
+    queue.active = false
+    error.value = err.response?.data?.message
+  }
+}
+let queueInterval = null
+
+const startPollingQueue = () => {
+  queueInterval = setInterval(async () => {
+    if (!queue.jobId) return
+
+    const { data } = await axios.get(`/api/bitrix24/jobs/${queue.jobId}`)
+    const job = data.data
+
+    queue.status = job.status
+    queue.progress = job.progress
+    queue.processed = job.processed
+    queue.total = job.total
+    queue.new = job.new_count
+    queue.existing = job.existing_count
+    queue.errors = job.error_count
+    queue.message = job.message
+
+    if (job.status === 'done' || job.status === 'failed') {
+      clearInterval(queueInterval)
+      queue.active = false
+    }
+
+  }, 2000)
 }
 </script>
 
