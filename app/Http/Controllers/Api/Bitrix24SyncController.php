@@ -32,12 +32,14 @@ class Bitrix24SyncController extends Controller
         }
 
         $request->validate([
-            'start'      => 'nullable|integer|min:0',
-            'batch_size' => 'nullable|integer|min:1|max:50',
+            'start'         => 'nullable|integer|min:0',
+            'batch_size'    => 'nullable|integer|min:1|max:50',
+            'skip_existing' => 'nullable|boolean',
         ]);
 
         $batchSize = (int) ($request->input('batch_size') ?? config('bitrix24.batch_size', 25));
         $start = (int) ($request->input('start') ?? 0);
+        $skipExisting = (bool) $request->input('skip_existing', false);
 
         try {
             $client   = new Bitrix24Client();
@@ -49,11 +51,41 @@ class Bitrix24SyncController extends Controller
 
             $sliced = array_slice($b24Leads, 0, $batchSize);
 
+            // When skip-existing is on, pre-resolve which Bitrix24 IDs in this
+            // page already exist locally. Saves us from calling importOne for
+            // each, which would still refresh comments/activities/timeline —
+            // wasted work when the caller just wants to fill gaps.
+            $skippedExistingIds = [];
+            if ($skipExisting && !empty($sliced)) {
+                $b24IdsInPage = array_values(array_filter(array_map(
+                    fn ($l) => (int) ($l['ID'] ?? 0),
+                    $sliced
+                ), fn ($id) => $id > 0));
+                if (!empty($b24IdsInPage)) {
+                    $skippedExistingIds = \App\Models\Lead::whereIn('bitrix24_id', $b24IdsInPage)
+                        ->pluck('bitrix24_id')
+                        ->map(fn ($v) => (int) $v)
+                        ->all();
+                }
+            }
+            $skippedSet = array_flip($skippedExistingIds);
+
             $imported = 0;
             $newLeads = [];
             $existingLeads = [];
             $errors = [];
             foreach ($sliced as $b24) {
+                $b24Id = (int) ($b24['ID'] ?? 0);
+                if ($skipExisting && isset($skippedSet[$b24Id])) {
+                    // Found locally; record it as existing but skip the import work.
+                    $localId = \App\Models\Lead::where('bitrix24_id', $b24Id)->value('id');
+                    $existingLeads[] = [
+                        'lead_id'     => (int) $localId,
+                        'bitrix24_id' => $b24Id,
+                    ];
+                    $imported++;
+                    continue;
+                }
                 try {
                     $r = $importer->importOne($b24);
                     $imported++;
@@ -94,6 +126,7 @@ class Bitrix24SyncController extends Controller
                 'next'              => $nextCursor,
                 'total'             => $total,
                 'done'              => $done,
+                'skip_existing'     => $skipExisting,
             ], $done ? 'Bitrix24 sync complete' : 'Batch imported');
         } catch (\Throwable $e) {
             return ApiResponse::error('Bitrix24 sync failed: ' . $e->getMessage(), 500);
