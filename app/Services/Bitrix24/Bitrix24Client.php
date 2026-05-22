@@ -2,12 +2,15 @@
 
 namespace App\Services\Bitrix24;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class Bitrix24Client
 {
     private string $baseUrl;
     private int $timeout;
+    private int $maxRetries;
 
     public function __construct()
     {
@@ -16,42 +19,311 @@ class Bitrix24Client
             throw new \RuntimeException('BITRIX24_WEBHOOK_URL is not configured.');
         }
         $this->baseUrl = rtrim($url, '/') . '/';
-        $this->timeout = (int) config('bitrix24.http_timeout', 30);
+        $this->timeout = (int) config('bitrix24.http_timeout', 60);
+        $this->maxRetries = (int) config('bitrix24.api_max_retries', 5);
     }
 
     public function call(string $method, array $params = []): array
     {
-        $response = Http::timeout($this->timeout)
-            ->asForm()
-            ->post($this->baseUrl . $method, $params);
+        $attempt = 0;
+        $lastException = null;
 
-        $json = $response->json();
+        while ($attempt < $this->maxRetries) {
+            $attempt++;
 
-        // Bitrix24 returns JSON with `error` / `error_description` on most failures,
-        // sometimes with HTTP 4xx (e.g. lead not found returns 400). Prefer the
-        // structured description over raw body.
-        if (is_array($json) && (isset($json['error']) || isset($json['error_description']))) {
-            $desc = $json['error_description'] ?? $json['error'] ?? 'unknown error';
-            throw new Bitrix24Exception("Bitrix24 {$method}: {$desc}", $response->status(), $desc);
+            try {
+                $response = Http::timeout($this->timeout)
+                    ->asForm()
+                    ->post($this->baseUrl . $method, $params);
+
+                $json = $response->json();
+                $status = $response->status();
+
+                if (is_array($json) && $this->isRateLimited($json, $status)) {
+                    $code = (string) ($json['error'] ?? 'rate_limit');
+                    $this->sleepBackoff($attempt, $method, $code);
+                    continue;
+                }
+
+                if (is_array($json) && (isset($json['error']) || isset($json['error_description']))) {
+                    $desc = $json['error_description'] ?? $json['error'] ?? 'unknown error';
+                    $code = (string) ($json['error'] ?? '');
+
+                    if ($this->isRetryableErrorCode($code)) {
+                        $this->sleepBackoff($attempt, $method, $code);
+                        continue;
+                    }
+
+                    throw new Bitrix24Exception("Bitrix24 {$method}: {$desc}", $status, $desc);
+                }
+
+                if (!$response->successful()) {
+                    if ($this->isRetryableHttpStatus($status)) {
+                        $this->sleepBackoff($attempt, $method, 'http_' . $status);
+                        continue;
+                    }
+
+                    throw new Bitrix24Exception(
+                        "Bitrix24 {$method} failed: HTTP {$status} " . $response->body(),
+                        $status
+                    );
+                }
+
+                return is_array($json) ? $json : [];
+            } catch (ConnectionException $e) {
+                $lastException = $e;
+                $this->sleepBackoff($attempt, $method, 'connection');
+                continue;
+            } catch (Bitrix24Exception $e) {
+                throw $e;
+            } catch (\Throwable $e) {
+                $lastException = $e;
+                if ($attempt < $this->maxRetries) {
+                    $this->sleepBackoff($attempt, $method, 'exception');
+                    continue;
+                }
+                throw $e;
+            }
         }
 
-        if (!$response->successful()) {
-            throw new Bitrix24Exception(
-                "Bitrix24 {$method} failed: HTTP " . $response->status() . ' ' . $response->body(),
-                $response->status()
-            );
-        }
+        Log::error('Bitrix24 API exhausted retries', [
+            'method'   => $method,
+            'attempts' => $this->maxRetries,
+            'error'    => $lastException?->getMessage(),
+        ]);
 
-        return is_array($json) ? $json : [];
+        $hint = str_contains((string) $lastException?->getMessage(), 'OPERATION_TIME_LIMIT')
+            ? ' Bitrix24 portal is rate-limited — wait 15–30 minutes and retry with fewer parallel workers.'
+            : '';
+
+        throw new Bitrix24Exception(
+            "Bitrix24 {$method}: failed after {$this->maxRetries} attempts"
+            . ($lastException ? ' — ' . $lastException->getMessage() : '')
+            . $hint,
+            503
+        );
     }
 
-    public function listLeads(?int $start = 0): array
+    private function isRateLimited(array $json, int $httpStatus): bool
     {
-        return $this->call('crm.lead.list', [
-            'start'  => $start,
+        $error = (string) ($json['error'] ?? '');
+        $desc = strtolower((string) ($json['error_description'] ?? ''));
+
+        return $httpStatus === 429
+            || $error === 'QUERY_LIMIT_EXCEEDED'
+            || $error === 'OPERATION_TIME_LIMIT'
+            || str_contains($desc, 'operation time limit')
+            || str_contains($desc, 'limit')
+            || str_contains($desc, 'too many')
+            || str_contains($desc, 'blocked');
+    }
+
+    private function isRetryableErrorCode(string $code): bool
+    {
+        return in_array($code, [
+            'QUERY_LIMIT_EXCEEDED',
+            'OPERATION_TIME_LIMIT',
+            'INTERNAL_SERVER_ERROR',
+            'SERVER_ERROR',
+            'SERVICE_UNAVAILABLE',
+        ], true);
+    }
+
+    private function isRetryableHttpStatus(int $status): bool
+    {
+        return in_array($status, [429, 500, 502, 503, 504], true);
+    }
+
+    private function sleepBackoff(int $attempt, string $method, string $reason): void
+    {
+        $baseMs = (int) config('bitrix24.api_retry_base_ms', 500);
+        $maxMs = (int) config('bitrix24.api_retry_max_ms', 30000);
+        $sleepMs = min($maxMs, $baseMs * (2 ** max(0, $attempt - 1)));
+
+        // Portal-wide block (OPERATION_TIME_LIMIT) needs longer waits than query limits.
+        if (str_contains(strtolower($reason), 'operation_time_limit')
+            || str_contains(strtolower($reason), 'rate_limit')
+        ) {
+            $sleepMs = min(180000, 30000 * $attempt);
+        }
+
+        Log::warning('Bitrix24 API retry', [
+            'method'    => $method,
+            'attempt'   => $attempt,
+            'reason'    => $reason,
+            'sleep_ms'  => $sleepMs,
+        ]);
+
+        usleep($sleepMs * 1000);
+    }
+
+    public function listLeads(?int $start = 0, array $filter = []): array
+    {
+        $params = [
+            'start'  => $start ?? 0,
             'order'  => ['ID' => 'ASC'],
             'select' => ['*', 'UF_*', 'EMAIL', 'PHONE'],
-        ]);
+        ];
+        if (!empty($filter)) {
+            $params['filter'] = $filter;
+        }
+
+        return $this->call('crm.lead.list', $params);
+    }
+
+    /**
+     * Fetch multiple consecutive Bitrix24 pages in one job (50 leads/page API max).
+     *
+     * @return array{result: array, total: int, next: int|null, pages_fetched: int}
+     */
+    public function listLeadPages(?int $start, int $maxPages): array
+    {
+        $maxPages = max(1, min(50, $maxPages));
+        $merged = [];
+        $total = 0;
+        $next = $start ?? 0;
+        $pages = 0;
+
+        $hardCap = (int) config('bitrix24.max_pages_per_request', 50);
+
+        do {
+            $page = $this->listLeads($next);
+            $total = (int) ($page['total'] ?? $total);
+            $chunk = $page['result'] ?? [];
+            if (!empty($chunk)) {
+                $merged = array_merge($merged, $chunk);
+            }
+            $next = isset($page['next']) ? (int) $page['next'] : null;
+            $pages++;
+
+            if ($pages >= $hardCap) {
+                Log::warning('Bitrix24 listLeadPages hit hard page cap', [
+                    'cap'   => $hardCap,
+                    'next'  => $next,
+                ]);
+                break;
+            }
+        } while ($next !== null && $pages < $maxPages);
+
+        return [
+            'result'         => $merged,
+            'total'          => $total,
+            'next'           => $next,
+            'pages_fetched'  => $pages,
+        ];
+    }
+
+    /**
+     * Fetch pages for an ID shard using filter + pagination.
+     */
+    public function listLeadPagesForShard(
+        int $minId,
+        int $maxId,
+        ?int $start,
+        int $maxPages,
+    ): array {
+        return $this->listLeadPagesWithFilter(
+            ['>=ID' => $minId, '<=ID' => $maxId],
+            $start,
+            $maxPages,
+        );
+    }
+
+    /**
+     * @return array{result: array, total: int, next: int|null, pages_fetched: int}
+     */
+    public function listLeadPagesWithFilter(array $filter, ?int $start, int $maxPages): array
+    {
+        $maxPages = max(1, min(50, $maxPages));
+        $merged = [];
+        $total = 0;
+        $next = $start ?? 0;
+        $pages = 0;
+
+        do {
+            $page = $this->listLeads($next, $filter);
+            $total = (int) ($page['total'] ?? $total);
+            $chunk = $page['result'] ?? [];
+            if (!empty($chunk)) {
+                foreach ($chunk as $row) {
+                    $id = (int) ($row['ID'] ?? 0);
+                    if ($id >= ($filter['>=ID'] ?? 0) && $id <= ($filter['<=ID'] ?? PHP_INT_MAX)) {
+                        $merged[] = $row;
+                    }
+                }
+            }
+            $next = isset($page['next']) ? (int) $page['next'] : null;
+            $pages++;
+        } while ($next !== null && $pages < $maxPages);
+
+        return [
+            'result'        => $merged,
+            'total'         => $total,
+            'next'          => $next,
+            'pages_fetched' => $pages,
+        ];
+    }
+
+    /**
+     * Probe portal bounds for parallel ID-range sharding.
+     *
+     * @return array{min_id: int, max_id: int, total: int}
+     */
+    public function probeLeadIdBounds(): array
+    {
+        $first = $this->listLeads(0);
+        $total = (int) ($first['total'] ?? 0);
+        $firstRows = $first['result'] ?? [];
+        $minId = 0;
+        foreach ($firstRows as $row) {
+            $id = (int) ($row['ID'] ?? 0);
+            if ($id > 0 && ($minId === 0 || $id < $minId)) {
+                $minId = $id;
+            }
+        }
+
+        $maxId = $minId;
+        foreach ($firstRows as $row) {
+            $id = (int) ($row['ID'] ?? 0);
+            if ($id > $maxId) {
+                $maxId = $id;
+            }
+        }
+
+        if ($total > 50) {
+            $lastStart = max(0, $total - 50);
+            $last = $this->listLeads($lastStart);
+            foreach ($last['result'] ?? [] as $row) {
+                $id = (int) ($row['ID'] ?? 0);
+                if ($id > $maxId) {
+                    $maxId = $id;
+                }
+            }
+        }
+
+        if ($minId === 0 && $maxId === 0) {
+            $minId = 1;
+        }
+
+        return [
+            'min_id' => $minId,
+            'max_id' => $maxId,
+            'total'  => $total,
+        ];
+    }
+
+    /**
+     * Bitrix24 REST batch — up to 50 commands per HTTP request.
+     *
+     * @param  array<string, string>  $commands  e.g. ['p0' => 'crm.lead.list?start=0']
+     */
+    public function batch(array $commands): array
+    {
+        if (empty($commands)) {
+            return [];
+        }
+
+        return $this->call('batch', ['cmd' => $commands]);
     }
 
     public function getLead(int $id): ?array

@@ -145,7 +145,8 @@ return [
 
     'redis' => [
 
-        'client' => env('REDIS_CLIENT', 'phpredis'),
+        // phpredis extension preferred; predis (composer) used when extension missing.
+        'client' => env('REDIS_CLIENT', extension_loaded('redis') ? 'phpredis' : 'predis'),
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),

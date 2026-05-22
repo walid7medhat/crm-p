@@ -14,6 +14,7 @@ use App\Observers\DealAssignmentLearningObserver;
 use App\Observers\LeadFirstContactObserver;
 use App\Observers\SalesIntelligenceDealObserver;
 use App\Observers\SalesIntelligenceLeadActivityObserver;
+use App\Support\InfrastructureBootstrap;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        InfrastructureBootstrap::boot($this->app);
     }
 
     /**

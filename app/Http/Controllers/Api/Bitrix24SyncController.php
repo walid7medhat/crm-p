@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Jobs\SyncBitrix24LeadsJob;
+use App\Models\BitrixSyncShard;
 use App\Models\BitrixSyncState;
 use App\Models\Lead;
 use App\Services\Bitrix24\Bitrix24Client;
+use App\Services\Bitrix24\Bitrix24SyncOrchestrator;
 use App\Services\Bitrix24\Bitrix24Exception;
 use App\Services\Bitrix24\Bitrix24LeadImporter;
 use Illuminate\Http\JsonResponse;
@@ -199,23 +201,48 @@ class Bitrix24SyncController extends Controller
             ])->save();
         }
 
-        // Flip status to 'idle' so the job's cancel-gate doesn't trip; clear
-        // last_error either way; remember which user kicked it off + the flag.
         $state->forceFill([
-            'status'        => 'idle',
             'last_error'    => null,
             'finished_at'   => null,
             'user_id'       => $user->id,
             'skip_existing' => $skipExisting,
         ])->save();
 
-        SyncBitrix24LeadsJob::dispatch($user->id, $skipExisting);
+        try {
+            if ($resume && $state->sync_mode === 'parallel' && BitrixSyncShard::incomplete()->exists()) {
+                Bitrix24SyncOrchestrator::resumeShards($user->id, $skipExisting);
+            } elseif (!$resume && Bitrix24SyncOrchestrator::shouldUseParallelShards()) {
+                Bitrix24SyncOrchestrator::startFresh($user->id, $skipExisting);
+            } else {
+                SyncBitrix24LeadsJob::dispatch($user->id, $skipExisting);
+            }
+        } catch (\Throwable $e) {
+            $state->forceFill([
+                'status'     => 'failed',
+                'last_error' => 'Failed to queue sync: ' . $e->getMessage(),
+            ])->save();
+
+            return ApiResponse::error(
+                'Failed to queue Bitrix24 sync. Check queue driver and run: php artisan bitrix24:doctor',
+                500
+            );
+        }
+
+        // Mark running immediately so the UI poller shows progress (do not leave as idle).
+        $state->forceFill([
+            'status'     => 'running',
+            'started_at' => $state->started_at ?? now(),
+        ])->save();
 
         return ApiResponse::success([
-            'status'        => 'queued',
-            'resumed'       => $resume,
-            'cursor'        => (int) $state->cursor,
-            'skip_existing' => $skipExisting,
+            'status'          => 'queued',
+            'resumed'         => $resume,
+            'cursor'          => (int) $state->cursor,
+            'skip_existing'   => $skipExisting,
+            'parallel_shards' => (int) config('bitrix24.parallel_shards', 1),
+            'sync_mode'       => $resume
+                ? ($state->sync_mode ?: 'sequential')
+                : (Bitrix24SyncOrchestrator::shouldUseParallelShards() ? 'parallel' : 'sequential'),
         ], $resume
             ? "Resuming sync from cursor {$state->cursor}."
             : 'Sync queued — starting from the beginning.');
@@ -232,18 +259,23 @@ class Bitrix24SyncController extends Controller
 
         if (!$state) {
             return ApiResponse::success([
-                'status'         => 'idle',
-                'progress'       => 0,
-                'processed'      => 0,
-                'total'          => 0,
-                'new_count'      => 0,
-                'existing_count' => 0,
-                'error_count'    => 0,
-                'cursor'         => 0,
-                'last_error'     => null,
-                'started_at'     => null,
-                'finished_at'    => null,
-                'skip_existing'  => false,
+                'status'           => 'idle',
+                'progress'         => 0,
+                'processed'        => 0,
+                'total'            => 0,
+                'new_count'        => 0,
+                'existing_count'   => 0,
+                'error_count'      => 0,
+                'cursor'           => 0,
+                'last_error'       => null,
+                'started_at'       => null,
+                'finished_at'      => null,
+                'skip_existing'    => false,
+                'leads_per_sec'    => 0,
+                'eta_seconds'      => null,
+                'parallel_shards'  => 1,
+                'shards_completed' => 0,
+                'sync_mode'        => 'sequential',
             ], 'No sync has been started yet');
         }
 
@@ -254,19 +286,25 @@ class Bitrix24SyncController extends Controller
             : ($state->status === 'done' ? 100 : 0);
 
         return ApiResponse::success([
-            'status'         => $state->status ?: 'idle',
-            'progress'       => $progress,
-            'processed'      => $processed,
-            'total'          => $total,
-            'new_count'      => (int) $state->new_count,
-            'existing_count' => (int) $state->existing_count,
-            'error_count'    => (int) $state->error_count,
-            'cursor'         => (int) $state->cursor,
-            'last_error'     => $state->last_error,
-            'started_at'     => optional($state->started_at)->toIso8601String(),
-            'finished_at'    => optional($state->finished_at)->toIso8601String(),
-            'skip_existing'  => (bool) $state->skip_existing,
-        ], 'Sync status');
+            'status'            => $state->status ?: 'idle',
+            'progress'          => $progress,
+            'processed'         => $processed,
+            'total'             => $total,
+            'new_count'         => (int) $state->new_count,
+            'existing_count'    => (int) $state->existing_count,
+            'error_count'       => (int) $state->error_count,
+            'cursor'            => (int) $state->cursor,
+            'last_error'        => $state->last_error,
+            'started_at'        => optional($state->started_at)->toIso8601String(),
+            'finished_at'       => optional($state->finished_at)->toIso8601String(),
+            'updated_at'        => optional($state->updated_at)->toIso8601String(),
+            'skip_existing'     => (bool) $state->skip_existing,
+            'leads_per_sec'     => (float) ($state->leads_per_sec ?? 0),
+            'eta_seconds'       => $state->eta_seconds,
+            'parallel_shards'   => (int) ($state->parallel_shards ?? 1),
+            'shards_completed'  => (int) ($state->shards_completed ?? 0),
+            'sync_mode'         => $state->sync_mode ?? 'sequential',
+        ], 'Sync status')->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
     /**
@@ -282,7 +320,11 @@ class Bitrix24SyncController extends Controller
         }
 
         $state = BitrixSyncState::where('key', 'global_sync')->first();
-        if (!$state || $state->status !== 'running') {
+        if (!$state) {
+            return ApiResponse::error('No sync state found.', 404);
+        }
+
+        if (!in_array($state->status, ['running', 'paused'], true)) {
             return ApiResponse::error('No running sync to cancel.', 409);
         }
 
@@ -291,6 +333,33 @@ class Bitrix24SyncController extends Controller
             'finished_at' => now(),
         ])->save();
 
+        Bitrix24SyncOrchestrator::cancelShards();
+
         return ApiResponse::success(null, 'Sync cancellation requested — will stop after the current chunk.');
+    }
+
+    /**
+     * Force-reset stuck sync UI state (admin). Clears running flag without deleting leads.
+     *   POST /api/leads/bitrix24/reset-queue
+     */
+    public function reset(): JsonResponse
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+
+        $state = BitrixSyncState::where('key', 'global_sync')->first();
+        if ($state) {
+            $state->forceFill([
+                'status'      => 'cancelled',
+                'finished_at' => now(),
+                'last_error'  => null,
+            ])->save();
+        }
+
+        Bitrix24SyncOrchestrator::cancelShards();
+
+        return ApiResponse::success(null, 'Sync state reset. You can start a fresh sync.');
     }
 }

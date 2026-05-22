@@ -10,6 +10,7 @@ use App\Models\LeadHistory;
 use App\Models\Stage;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -178,85 +179,7 @@ class Bitrix24LeadImporter
             }
         }
 
-        $emails = $this->collectMultifield($b24Lead['EMAIL'] ?? []);
-        $phones = $this->collectMultifield($b24Lead['PHONE'] ?? []);
-        $webs   = $this->collectMultifield($b24Lead['WEB'] ?? []);
-        $ims    = $this->collectMultifield($b24Lead['IM'] ?? []);
-
-        $addedBy = $this->mapBitrixUser($b24Lead['CREATED_BY_ID'] ?? null);
-        $responsible = $this->mapBitrixUser($b24Lead['ASSIGNED_BY_ID'] ?? null) ?? $addedBy;
-
-        $createdAt = $this->parseDate($b24Lead['DATE_CREATE'] ?? null);
-        $updatedAt = $this->parseDate($b24Lead['DATE_MODIFY'] ?? null);
-        $birthDate = $this->parseDate($b24Lead['BIRTHDATE'] ?? null);
-
-        $title = trim((string) ($b24Lead['TITLE'] ?? ''));
-        $nameParts = trim(trim((string) ($b24Lead['NAME'] ?? '')) . ' ' . trim((string) ($b24Lead['LAST_NAME'] ?? '')));
-        $leadName = $nameParts !== '' ? $nameParts : ($title !== '' ? $title : ('Bitrix24 Lead #' . $b24Id));
-
-        $firstName = trim((string) ($b24Lead['NAME'] ?? ''));
-        if ($firstName === '') {
-            $firstName = explode(' ', $leadName)[0] ?? 'Unknown';
-        }
-
-        $statusId = $b24Lead['STATUS_ID'] ?? null;
-
-        $attributes = [
-            'bitrix24_id'                   => $b24Id ?: null,
-            'lead_name'                     => $title !== '' ? $title : $leadName,
-            'first_name'                    => $firstName,
-            'second_name'                   => $b24Lead['SECOND_NAME'] ?? null,
-            'last_name'                     => $b24Lead['LAST_NAME'] ?? null,
-            'salutation'                    => $b24Lead['HONORIFIC'] ?? null,
-            'date_of_birth'                 => $birthDate?->toDateString(),
-            'email'                         => $emails[0] ?? null,
-            'secondary_email'               => $emails[1] ?? null,
-            'work_phone'                    => $phones[0] ?? null,
-            'work_phone_2'                  => $phones[1] ?? null,
-            'website'                       => $webs[0] ?? null,
-            'messenger'                     => $ims[0] ?? null,
-            'address'                       => $this->composeAddress($b24Lead),
-            'company_name'                  => $b24Lead['COMPANY_TITLE'] ?? null,
-            'position'                      => $b24Lead['POST'] ?? null,
-            'lead_source'                   => $b24Lead['SOURCE_ID'] ??  'Bitrix24',
-            'source_information'            => $b24Lead['SOURCE_DESCRIPTION'] ?? null,
-            'more_information'              => $this->cleanRichText($b24Lead['COMMENTS'] ?? null),
-            'status_lead'                   => $this->statusName($statusId),
-            'budget'                        => $this->numericOrNull($b24Lead['OPPORTUNITY'] ?? null),
-            'added_by'                      => $addedBy ?? $this->fallbackUserId,
-            'responsible_person_id'         => $responsible ?? $this->fallbackUserId,
-            'initial_responsible_person_id' => $responsible ?? $this->fallbackUserId,
-            'stage_id'                      => $this->resolveStageId($statusId),
-            'last_stage_change_at'          => $createdAt ?? now(),
-            // Random suffix kept so a legacy import that pre-dates the bitrix24_id
-            // column (no idempotency mark) doesn't collide with another fresh insert.
-            'lead_number'                   => 'B24-' . $b24Id . '-' . Str::lower(Str::random(4)),
-            // {field_data: [{name, values}]} envelope matches Meta Webhook /
-            // website intake (IntegrationController) so LeadResource builds
-            // facebook_questions_answers the same way. Standard B24 fields
-            // (already in dedicated columns) are excluded to avoid noise.
-            'raw_meta_data'                 => json_encode(
-                ['field_data' => $this->buildFieldData($b24Lead)],
-                JSON_UNESCAPED_UNICODE
-            ),
-            // Full Bitrix24 lead payload + resolved user info — every field
-            // returned by crm.lead.get, including UF_*, multi-fields, and a
-            // synthesized `_users` map with display names for the responsible /
-            // creator / mover / last-activity Bitrix24 users. Lets downstream
-            // code introspect anything we didn't promote to a column.
-            'bitrix24_data'                 => json_encode(
-                $b24Lead + ['_users' => $this->collectUserInfo($b24Lead)],
-                JSON_UNESCAPED_UNICODE
-            ),
-            // Indexed/sortable mirrors of B24's activity timestamps + user IDs.
-            'bitrix24_last_activity_at'     => $this->parseDate($b24Lead['LAST_ACTIVITY_TIME'] ?? null),
-            'bitrix24_moved_at'             => $this->parseDate($b24Lead['MOVED_TIME'] ?? null),
-            'bitrix24_last_activity_by_id'  => isset($b24Lead['LAST_ACTIVITY_BY']) ? (int) $b24Lead['LAST_ACTIVITY_BY'] : null,
-            'bitrix24_assigned_user_id'     => isset($b24Lead['ASSIGNED_BY_ID']) ? (int) $b24Lead['ASSIGNED_BY_ID'] : null,
-            'created_at'                    => $createdAt ?? now(),
-            'updated_at'                    => $updatedAt ?? now(),
-        ];
-
+        $attributes = $this->prepareLeadRow($b24Lead, $b24Id);
         $lead = Lead::withoutEvents(fn () => Lead::create($attributes));
 
         LeadHistoryHelper::log($lead->id, [
@@ -1277,6 +1200,11 @@ class Bitrix24LeadImporter
         }
     }
 
+    private function formatDateTime(?Carbon $dt): ?string
+    {
+        return $dt?->format('Y-m-d H:i:s');
+    }
+
     private function numericOrNull($v)
     {
         if ($v === null || $v === '') {
@@ -1284,6 +1212,298 @@ class Bitrix24LeadImporter
         }
         return is_numeric($v) ? (float) $v : null;
     }
+
+    /**
+     * Build attributes for a new local lead row (no DB write).
+     */
+    public function prepareLeadRow(array $b24Lead, ?int $b24Id = null): array
+    {
+        $b24Id = $b24Id ?? (int) ($b24Lead['ID'] ?? 0);
+
+        $emails = $this->collectMultifield($b24Lead['EMAIL'] ?? []);
+        $phones = $this->collectMultifield($b24Lead['PHONE'] ?? []);
+        $webs   = $this->collectMultifield($b24Lead['WEB'] ?? []);
+        $ims    = $this->collectMultifield($b24Lead['IM'] ?? []);
+
+        $addedBy = $this->mapBitrixUser($b24Lead['CREATED_BY_ID'] ?? null);
+        $responsible = $this->mapBitrixUser($b24Lead['ASSIGNED_BY_ID'] ?? null) ?? $addedBy;
+
+        $createdAt = $this->parseDate($b24Lead['DATE_CREATE'] ?? null);
+        $updatedAt = $this->parseDate($b24Lead['DATE_MODIFY'] ?? null);
+        $birthDate = $this->parseDate($b24Lead['BIRTHDATE'] ?? null);
+
+        $title = trim((string) ($b24Lead['TITLE'] ?? ''));
+        $nameParts = trim(trim((string) ($b24Lead['NAME'] ?? '')) . ' ' . trim((string) ($b24Lead['LAST_NAME'] ?? '')));
+        $leadName = $nameParts !== '' ? $nameParts : ($title !== '' ? $title : ('Bitrix24 Lead #' . $b24Id));
+
+        $firstName = trim((string) ($b24Lead['NAME'] ?? ''));
+        if ($firstName === '') {
+            $firstName = explode(' ', $leadName)[0] ?? 'Unknown';
+        }
+
+        $statusId = $b24Lead['STATUS_ID'] ?? null;
+        $suffix = substr(md5((string) $b24Id), 0, 4);
+        $created = $createdAt ?? now();
+        $updated = $updatedAt ?? now();
+
+        return [
+            'bitrix24_id'                   => $b24Id ?: null,
+            'lead_name'                     => $title !== '' ? $title : $leadName,
+            'first_name'                    => $firstName,
+            'second_name'                   => $b24Lead['SECOND_NAME'] ?? null,
+            'last_name'                     => $b24Lead['LAST_NAME'] ?? null,
+            'salutation'                    => $b24Lead['HONORIFIC'] ?? null,
+            'date_of_birth'                 => $birthDate?->toDateString(),
+            'email'                         => $emails[0] ?? null,
+            'secondary_email'               => $emails[1] ?? null,
+            'work_phone'                    => $phones[0] ?? null,
+            'work_phone_2'                  => $phones[1] ?? null,
+            'website'                       => $webs[0] ?? null,
+            'messenger'                     => $ims[0] ?? null,
+            'address'                       => $this->composeAddress($b24Lead),
+            'company_name'                  => $b24Lead['COMPANY_TITLE'] ?? null,
+            'position'                      => $b24Lead['POST'] ?? null,
+            'lead_source'                   => $b24Lead['SOURCE_ID'] ?? 'Bitrix24',
+            'source_information'            => $b24Lead['SOURCE_DESCRIPTION'] ?? null,
+            'more_information'              => $this->cleanRichText($b24Lead['COMMENTS'] ?? null),
+            'status_lead'                   => $this->statusName($statusId),
+            'budget'                        => $this->numericOrNull($b24Lead['OPPORTUNITY'] ?? null),
+            'added_by'                      => $addedBy ?? $this->fallbackUserId,
+            'responsible_person_id'         => $responsible ?? $this->fallbackUserId,
+            'initial_responsible_person_id' => $responsible ?? $this->fallbackUserId,
+            'stage_id'                      => $this->resolveStageId($statusId),
+            'last_stage_change_at'          => $created->format('Y-m-d H:i:s'),
+            'lead_number'                   => 'B24-' . $b24Id . '-' . $suffix,
+            'raw_meta_data'                 => json_encode(
+                ['field_data' => $this->buildFieldData($b24Lead)],
+                JSON_UNESCAPED_UNICODE
+            ),
+            'bitrix24_data'                 => json_encode(
+                $b24Lead + ['_users' => $this->collectUserInfo($b24Lead)],
+                JSON_UNESCAPED_UNICODE
+            ),
+            'bitrix24_last_activity_at'     => $this->formatDateTime($this->parseDate($b24Lead['LAST_ACTIVITY_TIME'] ?? null)),
+            'bitrix24_moved_at'             => $this->formatDateTime($this->parseDate($b24Lead['MOVED_TIME'] ?? null)),
+            'bitrix24_last_activity_by_id'  => isset($b24Lead['LAST_ACTIVITY_BY']) ? (int) $b24Lead['LAST_ACTIVITY_BY'] : null,
+            'bitrix24_assigned_user_id'     => isset($b24Lead['ASSIGNED_BY_ID']) ? (int) $b24Lead['ASSIGNED_BY_ID'] : null,
+            'created_at'                    => $created->format('Y-m-d H:i:s'),
+            'updated_at'                    => $updated->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * High-throughput batch import for queue sync (bulk insert + batched dedup).
+     *
+     * @return array{new: int, existing: int, errors: int, processed: int}
+     */
+    /**
+     * @param  callable(array{new: int, existing: int, errors: int, processed: int}): void|null  $onProgress
+     */
+    public function importBatch(array $b24Leads, bool $skipExisting, ?bool $enrich = null, ?callable $onProgress = null): array
+    {
+        $stats = ['new' => 0, 'existing' => 0, 'errors' => 0, 'processed' => 0];
+        $reportEvery = (int) config('bitrix24.progress_report_every', 5);
+
+        if (empty($b24Leads)) {
+            return $stats;
+        }
+
+        $enrich = $enrich ?? (
+            !$skipExisting && (bool) config('bitrix24.enrich_existing', true)
+        );
+
+        $fastSkip = $skipExisting && (bool) config('bitrix24.fast_skip_existing', true);
+
+        $ids = array_values(array_filter(
+            array_map(fn ($l) => (int) ($l['ID'] ?? 0), $b24Leads),
+            fn ($v) => $v > 0
+        ));
+
+        $existingMap = $this->preloadExistingBitrixIds($ids);
+        $toInsert = [];
+        $toUpdate = [];
+
+        foreach ($b24Leads as $b24) {
+            $b24Id = (int) ($b24['ID'] ?? 0);
+            if ($b24Id <= 0) {
+                continue;
+            }
+
+            if ($skipExisting && isset($existingMap[$b24Id])) {
+                $stats['existing']++;
+                $stats['processed']++;
+                $this->reportImportProgress($stats, $onProgress, $reportEvery);
+                continue;
+            }
+
+            if (isset($existingMap[$b24Id])) {
+                $toUpdate[] = ['b24' => $b24, 'local_id' => (int) $existingMap[$b24Id]];
+            } else {
+                $toInsert[] = $b24;
+            }
+        }
+
+        if (!empty($toInsert) && $fastSkip) {
+            $inserted = $this->bulkInsertLeads($toInsert);
+            $stats['new'] += $inserted;
+            $stats['processed'] += $inserted;
+            $this->reportImportProgress($stats, $onProgress, 1);
+        } elseif (!empty($toInsert)) {
+            foreach ($toInsert as $b24) {
+                try {
+                    $r = $this->importOne($b24);
+                    if ($r['created']) {
+                        $stats['new']++;
+                    } else {
+                        $stats['existing']++;
+                    }
+                    $stats['processed']++;
+                } catch (\Throwable $e) {
+                    $stats['errors']++;
+                    $stats['processed']++;
+                    Log::error('Bitrix24 importBatch insert failed', [
+                        'bitrix24_id' => (int) ($b24['ID'] ?? 0),
+                        'error'       => $e->getMessage(),
+                    ]);
+                }
+                $this->reportImportProgress($stats, $onProgress, $reportEvery);
+            }
+        }
+
+        foreach ($toUpdate as $item) {
+            $stats['processed']++;
+            try {
+                if ($enrich) {
+                    $this->importOne($item['b24']);
+                    $stats['existing']++;
+                } else {
+                    $lead = Lead::find($item['local_id']);
+                    if ($lead) {
+                        $this->syncStageForExistingLead($lead, $item['b24']);
+                        $stats['existing']++;
+                    }
+                }
+            } catch (\Throwable $e) {
+                $stats['errors']++;
+                Log::error('Bitrix24 importBatch update failed', [
+                    'bitrix24_id' => (int) ($item['b24']['ID'] ?? 0),
+                    'error'       => $e->getMessage(),
+                ]);
+            }
+            $this->reportImportProgress($stats, $onProgress, $reportEvery);
+        }
+
+        $this->reportImportProgress($stats, $onProgress, 1);
+
+        return $stats;
+    }
+
+    private function reportImportProgress(array $stats, ?callable $onProgress, int $every): void
+    {
+        if (!$onProgress || $every < 1) {
+            return;
+        }
+        if ($stats['processed'] % $every !== 0 && $stats['processed'] > 0) {
+            return;
+        }
+        $onProgress($stats);
+    }
+
+    /**
+     * @return array<int, int> bitrix24_id => local lead id
+     */
+    public function preloadExistingBitrixIds(array $bitrixIds): array
+    {
+        if (empty($bitrixIds)) {
+            return [];
+        }
+
+        $map = [];
+        foreach (array_chunk(array_unique($bitrixIds), 2000) as $chunk) {
+            $rows = DB::table('leads')
+                ->whereIn('bitrix24_id', $chunk)
+                ->pluck('id', 'bitrix24_id');
+            foreach ($rows as $b24Id => $localId) {
+                $map[(int) $b24Id] = (int) $localId;
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * Bulk insert new leads via query builder (skips Eloquent events/jobs).
+     */
+    public function bulkInsertLeads(array $b24Leads): int
+    {
+        if (empty($b24Leads)) {
+            return 0;
+        }
+
+        $chunkSize = \App\Services\Bitrix24\Bitrix24SyncThrottler::resolveDbInsertChunk(
+            (int) config('bitrix24.db_insert_chunk', 500)
+        );
+        $inserted = 0;
+        $historyRows = [];
+        $now = now();
+
+        foreach (array_chunk($b24Leads, $chunkSize) as $chunk) {
+            $rows = [];
+            $b24Ids = [];
+
+            foreach ($chunk as $b24) {
+                $b24Id = (int) ($b24['ID'] ?? 0);
+                if ($b24Id <= 0) {
+                    continue;
+                }
+                $rows[] = $this->prepareLeadRow($b24, $b24Id);
+                $b24Ids[] = $b24Id;
+            }
+
+            if (empty($rows)) {
+                continue;
+            }
+
+            DB::table('leads')->insert($rows);
+            $inserted += count($rows);
+
+            $idMap = DB::table('leads')
+                ->whereIn('bitrix24_id', $b24Ids)
+                ->pluck('id', 'bitrix24_id');
+
+            foreach ($idMap as $b24Id => $leadId) {
+                $historyRows[] = [
+                    'lead_id'     => (int) $leadId,
+                    'user_id'     => $this->fallbackUserId,
+                    'bitrix24_id' => null,
+                    'changes'     => json_encode([
+                        'action'      => 'created',
+                        'source'      => 'bitrix24',
+                        'bitrix24_id' => (int) $b24Id,
+                    ], JSON_UNESCAPED_UNICODE),
+                    'created_at'  => $now,
+                    'updated_at'  => $now,
+                ];
+            }
+
+            if (count($historyRows) >= $chunkSize) {
+                DB::table('lead_histories')->insert($historyRows);
+                $historyRows = [];
+            }
+
+            unset($rows, $b24Ids, $idMap);
+            if (function_exists('gc_collect_cycles')) {
+                gc_collect_cycles();
+            }
+        }
+
+        if (!empty($historyRows)) {
+            DB::table('lead_histories')->insert($historyRows);
+        }
+
+        return $inserted;
+    }
+
     // أضف هذه الدالة لفحص الـ timeline مباشرة
 public function debugTimeline(int $b24LeadId): void
 {

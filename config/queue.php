@@ -13,6 +13,7 @@ return [
     |
     */
 
+    // Resolved at boot via InfrastructureBootstrap (Redis → database fallback when unavailable).
     'default' => env('QUEUE_CONNECTION', 'database'),
 
     /*
