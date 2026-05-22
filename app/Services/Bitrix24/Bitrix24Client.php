@@ -45,7 +45,7 @@ class Bitrix24Client
         return is_array($json) ? $json : [];
     }
 
-    public function listLeads(int $start = 0): array
+    public function listLeads(?int $start = 0): array
     {
         return $this->call('crm.lead.list', [
             'start'  => $start,

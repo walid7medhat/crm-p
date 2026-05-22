@@ -44,6 +44,7 @@ class Bitrix24SyncController extends Controller
     try {
         $client   = new Bitrix24Client();
         $importer = new Bitrix24LeadImporter($client, $user->id);
+$start = $start ?? 0;
 
         // ✅ call Bitrix
         $page = $client->listLeads($start);
