@@ -16,7 +16,10 @@ const HR_PREFIXES = ['/hr'];
 
 const AGENTS_PREFIXES = ['/users', '/add-user', '/team-tree', '/view-profile', '/invited'];
 
+export const LISTINGS_OVERVIEW_PATH = '/listings/overview';
+
 const LISTINGS_PREFIXES = [
+  LISTINGS_OVERVIEW_PATH,
   '/alllisting',
   '/my-listing',
   '/property-form',
@@ -105,12 +108,41 @@ export function buildHeaderTabs(module, ctx = {}) {
     ];
   }
 
+  if (module === LAYOUT_MODULES.AGENTS) {
+    const tabs = [
+      {
+        id: 'list',
+        label: 'Agents List',
+        type: 'route',
+        path: '/users',
+        matchPaths: ['/users', '/view-profile', '/team-tree', '/invited'],
+      },
+    ];
+    if (!hasPermission || hasPermission('users-create')) {
+      tabs.push({
+        id: 'create',
+        label: 'Add Agent',
+        type: 'route',
+        path: '/add-user',
+        matchPaths: ['/add-user'],
+      });
+    }
+    return tabs;
+  }
+
   if (module === LAYOUT_MODULES.LISTINGS && !isShowOnlyListing) {
     const mainPath =
       isAdmin || (hasPermission && hasPermission('listings-list'))
         ? '/alllisting'
         : '/my-listing';
     const tabs = [
+      {
+        id: 'overview',
+        label: 'Overview',
+        type: 'route',
+        path: LISTINGS_OVERVIEW_PATH,
+        matchPaths: [LISTINGS_OVERVIEW_PATH],
+      },
       {
         id: 'main',
         label: 'Main Listings',

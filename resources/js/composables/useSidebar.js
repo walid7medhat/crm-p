@@ -43,6 +43,14 @@ export function useSidebar() {
     localStorage.setItem('sidebarActive', isSidebarActive.value.toString())
   }
 
+  function expandSidebarDesktop() {
+    if (isSidebarActive.value) return
+    isSidebarActive.value = true
+    document.querySelector('.sidebar')?.classList.add('active')
+    document.querySelector('.dashboard-main')?.classList.add('active')
+    localStorage.setItem('sidebarActive', 'true')
+  }
+
   onMounted(() => {
     applySidebarLayoutFromStorage()
   })
@@ -50,6 +58,7 @@ export function useSidebar() {
   return {
     isSidebarActive,
     toggleSidebarDesktop,
+    expandSidebarDesktop,
     resetSidebarLayout,
   }
 }

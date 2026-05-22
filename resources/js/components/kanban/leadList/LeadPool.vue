@@ -11,14 +11,69 @@
         </div>
 
         <template v-else>
-        <div class="leads-grid">
-            <div 
-                v-for="lead in leads" 
-                :key="lead.id" 
-                class="lead-card"
-                @click="viewLead(lead)"
+        <div class="lead-pool-toolbar">
+            <button
+                v-if="!selectMode"
+                type="button"
+                class="lead-pool-toolbar__btn lead-pool-toolbar__btn--primary"
+                @click="enterSelectMode"
             >
-                <div class="kanban-card bg-white p-12 radius-12 shadow-sm border-0 cursor-pointer">
+                <iconify-icon icon="lucide:check-square" />
+                <span>Select leads</span>
+            </button>
+
+            <template v-else>
+                <button
+                    type="button"
+                    class="lead-pool-toolbar__btn lead-pool-toolbar__btn--ghost"
+                    @click="exitSelectMode"
+                >
+                    <iconify-icon icon="lucide:x" />
+                    <span>Done</span>
+                </button>
+
+                <label class="lead-pool-toolbar__select-all">
+                    <input
+                        type="checkbox"
+                        :checked="allOnPageSelected"
+                        :indeterminate="someOnPageSelected && !allOnPageSelected"
+                        @change="onSelectAllChange"
+                    />
+                    <span>All on page</span>
+                </label>
+
+                <span class="lead-pool-toolbar__count">{{ selection.count }} selected</span>
+
+                <button
+                    type="button"
+                    class="lead-pool-toolbar__btn lead-pool-toolbar__btn--assign"
+                    :disabled="!selection.hasSelection || isAssigning"
+                    @click="handleBulkAssignToMe"
+                >
+                    <iconify-icon
+                        :icon="isAssigning ? 'lucide:loader-2' : 'lucide:user-check'"
+                        :class="{ 'lead-pool-toolbar__spin': isAssigning }"
+                    />
+                    <span>{{ isAssigning ? 'Assigning…' : 'Assign To Me' }}</span>
+                </button>
+            </template>
+        </div>
+
+        <p v-if="selectMode" class="lead-pool-toolbar__tip">
+            Tap cards to select · Shift+click for range · Esc to cancel
+        </p>
+
+        <div class="leads-grid" :class="{ 'leads-grid--select-mode': selectMode }">
+            <LeadPoolCard
+                v-for="lead in leads"
+                :key="lead.id"
+                v-memo="[lead.id, selection.isSelected(lead.id), selectMode]"
+                :selected="selection.isSelected(lead.id)"
+                :select-mode="selectMode"
+                @toggle="(e) => selection.handleCardClick(lead.id, e)"
+                @open="viewLead(lead)"
+            >
+                <div class="kanban-card bg-white p-12 radius-12 shadow-sm border-0 cursor-pointer lead-card">
                     <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
                         <p class="task-title flex-grow-1 mb-0">{{ lead.lead_name || lead.name || 'Untitled Lead' }}</p>
                         <span 
@@ -189,7 +244,7 @@
                         </template>
                     </div>
                 </div>
-            </div>
+            </LeadPoolCard>
         </div>
 
         <!-- Pagination -->
@@ -251,12 +306,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import ViewLeadModal from '../viewLead/ViewLeadModal.vue'
 import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
 import ProfilePopup from '../shared/ProfilePopup.vue'
+import LeadPoolCard from './LeadPoolCard.vue'
+import { useLeadPoolSelection } from './composables/useLeadPoolSelection.js'
+import { useLeadPoolBulkActions } from './composables/useLeadPoolBulkActions.js'
 
 // Emits
 const emit = defineEmits(['lead-clicked'])
@@ -273,6 +331,76 @@ const showProfilePopup = ref(false)
 const profileUserId = ref(null)
 const activePersonHover = ref(null)
 const personHoverHideTimer = ref(null)
+
+const selectMode = ref(false)
+const orderedLeadIds = computed(() => leads.value.map((l) => l.id))
+const selection = useLeadPoolSelection(() => orderedLeadIds.value)
+const { isAssigning, assignToMe } = useLeadPoolBulkActions()
+
+function enterSelectMode() {
+  selectMode.value = true
+}
+
+function exitSelectMode() {
+  selectMode.value = false
+  selection.clear()
+}
+
+const allOnPageSelected = computed(
+  () => leads.value.length > 0 && leads.value.every((l) => selection.isSelected(l.id)),
+)
+const someOnPageSelected = computed(() => leads.value.some((l) => selection.isSelected(l.id)))
+
+function onSelectAllChange(event) {
+  if (event.target.checked) selection.selectAllOnPage()
+  else selection.clear()
+}
+
+async function handleBulkAssignToMe() {
+  if (isAssigning.value) return
+  const ids = selection.selectedIds.value.map(Number).filter(Boolean)
+  if (!ids.length) return
+
+  try {
+    const { ok, failed } = await assignToMe(ids)
+    if (ok.length) {
+      window.$showNotification?.(
+        ok.length === 1
+          ? '1 lead assigned to you and moved to Assigned'
+          : `${ok.length} leads assigned to you and moved to Assigned`,
+        'success',
+      )
+      exitSelectMode()
+      await fetchLeadPool()
+    }
+    if (failed.length) {
+      const msg =
+        failed.length === 1
+          ? failed[0].message
+          : `${failed.length} leads could not be assigned`
+      window.$showNotification?.(msg, failed.length === ids.length ? 'error' : 'warning')
+      if (ok.length) await fetchLeadPool()
+    }
+  } catch (err) {
+    window.$showNotification?.(err?.message || 'Assignment failed', 'error')
+  }
+}
+
+function onLeadPoolKeydown(event) {
+  const tag = event.target?.tagName?.toLowerCase()
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || event.target?.isContentEditable) {
+    return
+  }
+  if (event.key === 'Escape') {
+    if (selectMode.value) exitSelectMode()
+    else selection.clear()
+    return
+  }
+  if (selectMode.value && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
+    event.preventDefault()
+    selection.selectAllOnPage()
+  }
+}
 
 // Pagination
 const currentPage = ref(1)
@@ -552,10 +680,12 @@ const formatMaskedQuestion = (questionData) => {
 }
 
 onMounted(() => {
-    // Search events come through the parent kanban (kanban_deal.vue) which calls
-    // `leadPoolRef.setQuery()` exposed below. We don't subscribe directly here to avoid
-    // double-fetches.
+    window.addEventListener('keydown', onLeadPoolKeydown)
     fetchLeadPool()
+})
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', onLeadPoolKeydown)
 })
 
 // Expose refresh + a programmatic search-apply for the parent kanban if needed.
@@ -586,6 +716,92 @@ defineExpose({
 .lead-pool-wrapper .lead-card {
     display: flex;
     height: 100%;
+    width: 100%;
+}
+
+.lead-pool-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lead-pool-toolbar__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: Montserrat, Inter, system-ui, sans-serif;
+    cursor: pointer;
+}
+
+.lead-pool-toolbar__btn--primary {
+    color: #fff;
+    background: rgba(0, 167, 250, 0.35);
+    border-color: rgba(0, 167, 250, 0.5);
+}
+
+.lead-pool-toolbar__btn--ghost {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.lead-pool-toolbar__btn--assign {
+    margin-left: auto;
+    color: #fff;
+    background: linear-gradient(135deg, #00a7fa 0%, #733e87 100%);
+}
+
+.lead-pool-toolbar__btn--assign:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.lead-pool-toolbar__spin {
+    animation: lead-pool-spin 0.8s linear infinite;
+}
+
+@keyframes lead-pool-spin {
+    to { transform: rotate(360deg); }
+}
+
+.lead-pool-toolbar__select-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+}
+
+.lead-pool-toolbar__count {
+    font-size: 12px;
+    font-weight: 700;
+    color: #7dd3fc;
+}
+
+.lead-pool-toolbar__tip {
+    margin: 0 0 10px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.leads-grid--select-mode {
+    padding: 4px;
+    border-radius: 12px;
+    outline: 1px dashed rgba(0, 167, 250, 0.25);
 }
 
 .lead-pool-wrapper .kanban-card {

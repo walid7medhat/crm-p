@@ -66,10 +66,19 @@ body.app-has-video-bg #app main.dashboard-main > .navbar-header {
 }
 
 body.app-has-video-bg #app main.dashboard-main > .navbar-header .module-tab-btn {
-  padding: 3px 8px !important;
-  font-size: 14px !important;
-  line-height: 1.15 !important;
-  border-bottom-width: 2px !important;
+  padding: 7px 14px !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  border-radius: 10px !important;
+  border-bottom: none !important;
+}
+
+body.app-has-video-bg #app main.dashboard-main > .navbar-header .module-tab-btn.active {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
 body.app-has-video-bg #app main.dashboard-main > .navbar-header .navbar-header-left-row .back-button {
@@ -172,12 +181,25 @@ body.app-has-video-bg .listing-search-shell {
   background: #fff !important;
 }
 
-/* Property details: full page scroll + sticky action sidebar */
+/* Property details + listing form: single page scroll */
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.property-show-page),
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.property-show-inner),
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.property-form-page) {
+  flex: 0 0 auto !important;
+  min-height: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
 body.app-has-video-bg .property-show-page,
-body.app-has-video-bg .property-show-inner {
+body.app-has-video-bg .property-show-inner,
+body.app-has-video-bg .property-form-page,
+body.app-has-video-bg .property-form-root {
   overflow: visible !important;
   height: auto !important;
   min-height: 0 !important;
+  max-height: none !important;
 }
 
 @media (min-width: 992px) {
@@ -194,8 +216,28 @@ body.app-has-video-bg .property-show-inner {
 
   body.app-has-video-bg .property-show-sidebar-col .sidebar-sticky-container {
     position: sticky !important;
-    top: 0.5rem !important;
+    top: calc(var(--app-topbar-height, 2.75rem) + var(--app-header-below-gap, 0.5rem) + 0.75rem) !important;
     z-index: 40 !important;
+    align-self: flex-start !important;
+  }
+
+  body.app-has-video-bg .property-show-sidebar-col .sidebar-sticky-container.is-sidebar-fixed {
+    position: fixed !important;
+    z-index: 45 !important;
+  }
+
+  body.app-has-video-bg .property-show-sidebar-col .sidebar-sticky-container.is-sidebar-fixed.is-sidebar-at-bottom {
+    position: absolute !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+  }
+
+  body.app-has-video-bg .property-show-sidebar-col .agent-sidebar-card {
+    max-height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem) - 1.5rem) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
   }
 }
 

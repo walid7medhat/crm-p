@@ -12,6 +12,7 @@ import MyListing from './pages/listings/my-listing.vue'
 import Archive from './pages/listings/archive.vue'
 import NotifyMe from './pages/listings/notify-me.vue'
 import PropertyMapPage from './pages/listings/property-map.vue'
+import ListingsOverview from './pages/listings/overview.vue'
 
 // Table
 import BasicTable from './pages/table/table-basic.vue'
@@ -151,6 +152,7 @@ const baseRoutes = [
   { path: '/table-basic', component: BasicTable, meta: { requiresAuth: true } },
   { path: '/table-data', component: DataTable, meta: { requiresAuth: true } },
   { path: '/property-form', component: PropertyForm, meta: { requiresAuth: true } },
+  { path: '/listings/overview', component: ListingsOverview, meta: { requiresAuth: true } },
   { path: '/my-listing', component: MyListing, meta: { requiresAuth: true } },
   { path: '/archive', component: Archive, meta: { requiresAuth: true } },
   { path: '/alllisting', component: AllLsting, meta: { requiresAuth: true } },

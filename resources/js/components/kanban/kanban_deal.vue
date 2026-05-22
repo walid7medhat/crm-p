@@ -367,7 +367,25 @@ onMounted(() => {
         onDealSearch(e.detail);
     });
 
+    window.addEventListener('kanban-leads-board-refresh', onKanbanLeadsBoardRefresh);
+
 })
+
+async function onKanbanLeadsBoardRefresh() {
+    try {
+        const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+        if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+            await leadsComponent.fetchLeads(true, null)
+        }
+        const poolComponent = Array.isArray(leadPoolRef.value) ? leadPoolRef.value[0] : leadPoolRef.value
+        if (poolComponent && typeof poolComponent.fetchLeadPool === 'function') {
+            await poolComponent.fetchLeadPool()
+        }
+    } catch (error) {
+        console.error('Error refreshing leads board after pool assign:', error)
+    }
+}
+
 // في Kanban.vue
 watch(activeTab, async (newTab, oldTab) => {
     // Clear any lingering search state when moving between lead-side tabs so each tab

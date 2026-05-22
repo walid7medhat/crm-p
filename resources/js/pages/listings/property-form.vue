@@ -1,4 +1,5 @@
 <template>
+  <div class="dashboard-main-body property-form-page">
   <div class="row gy-4 mt-2 property-form-root">
 
     <!-- 🏡 Property Details -->
@@ -1879,6 +1880,7 @@
     </div>
   </div>
 </Teleport>
+  </div>
   </div>
 </template>
 

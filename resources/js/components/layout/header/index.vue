@@ -53,9 +53,9 @@
 
         <li
           v-if="listingsSidebarSections.length > 0 && !isShowOnlyListing"
-          :class="{ dropdown: true, open: activeDropdown === 'listings', 'active-parent': activeLayoutModule === 'listings' }"
+          :class="{ dropdown: true, open: activeDropdown === 'listings', 'dropdown-open': activeDropdown === 'listings', 'active-parent': isListingsMenuActive }"
         >
-          <a href="javascript:void(0)" @click.stop.prevent="handleListingsClick" :class="{ active: activeLayoutModule === 'listings' }">
+          <a href="javascript:void(0)" @click.stop.prevent="handleListingsClick" :class="{ active: isListingsMenuActive }">
             <img :src="listingsIcon" class="imgicon" alt="" />
             <span>Listings</span>
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'listings' }" />
@@ -222,7 +222,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, getCurrentInstance, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, getCurrentInstance, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
 import { useSidebar } from '@/composables/useSidebar.js';
@@ -231,6 +231,7 @@ import {
   resolveActiveModule,
   buildListingsSidebarSections,
   buildSettingsSidebarSections,
+  LISTINGS_OVERVIEW_PATH,
 } from '@/composables/useLayoutNavigation.js';
 
 const logo = ref('/assets/images/LogoWhite.png');
@@ -251,7 +252,7 @@ const router = useRouter();
 const activeDropdown = ref(null);
 const countsLoading = ref(false);
 const { proxy } = getCurrentInstance();
-const { isSidebarActive, toggleSidebarDesktop } = useSidebar();
+const { isSidebarActive, toggleSidebarDesktop, expandSidebarDesktop } = useSidebar();
 const {
   isMobileViewport,
   isMobileMenuOpen,
@@ -322,6 +323,7 @@ const isSuperAdmin = computed(() => {
 
 const tableItems = computed(() => {
   const items = [
+    { path: LISTINGS_OVERVIEW_PATH, label: 'Overview', colorClass: 'text-white w-auto', count: 0 },
     { path: '/alllisting', label: 'All Listing', colorClass: 'text-warning-main w-auto', count: 0,permission: 'listings-list' },
     { path: '/property-form', label: 'Create Listing', colorClass: 'text-info-main w-auto', permission: 'listings-create', count: 0 },
     { path: '/notify-me', label: 'Notify me', colorClass: 'text-info-main w-auto', count: 0 ,permission: 'listings-list'},
@@ -535,6 +537,12 @@ const filteredUsersItems = computed(() => {
 
 const activeLayoutModule = computed(() => resolveActiveModule(route.path));
 
+const listingsOverviewPath = computed(() =>
+  isShowOnlyListing.value ? '/alllisting' : LISTINGS_OVERVIEW_PATH,
+);
+
+const isListingsMenuActive = computed(() => activeLayoutModule.value === 'listings');
+
 const listingsSidebarSections = computed(() =>
   buildListingsSidebarSections({
     listings: filteredTableItems.value,
@@ -692,7 +700,14 @@ function isDockGroupActive(group) {
   return group.children.some((child) => isDockActive(child.path));
 }
 
-function openMobileDockGroup(group) {
+async function openMobileDockGroup(group) {
+  if (group?.key === 'group-listings') {
+    openListingsDropdown();
+    const overviewPath = listingsOverviewPath.value;
+    if (route.path !== overviewPath) {
+      await router.push(overviewPath);
+    }
+  }
   activeMobileDockGroup.value = group;
   mobileDockExpandedSection.value = group?.sections?.[0]?.key ?? null;
   showMobileDockSheet.value = true;
@@ -716,19 +731,34 @@ const toggleDropdown = (name) => {
   localStorage.setItem('activeDropdown', activeDropdown.value || '');
 };
 
-const handleListingsClick = () => {
-  toggleDropdown('listings');
-  const dashboardPath = isShowOnlyListing.value ? '/alllisting' : '/';
-  if (route.path !== dashboardPath) {
-    router.push(dashboardPath);
-  }
+const openListingsDropdown = () => {
+  activeDropdown.value = 'listings';
+  localStorage.setItem('activeDropdown', 'listings');
 };
 
+const closeListingsDropdown = () => {
+  activeDropdown.value = null;
+  localStorage.removeItem('activeDropdown');
+};
+
+const handleListingsClick = async () => {
+  expandSidebarDesktop();
+
+  if (activeDropdown.value === 'listings') {
+    closeListingsDropdown();
+    return;
+  }
+
+  openListingsDropdown();
+  const overviewPath = listingsOverviewPath.value;
+  if (route.path !== overviewPath) {
+    await router.push(overviewPath);
+  }
+};
 
 const isActive = (path) => {
   if (path === '/') {
     return route.path === '/';
-       activeLayoutModule.value = 'listings' 
   }
   return route.path === path || route.path.startsWith(path + '/');
 };
@@ -775,8 +805,13 @@ function afterLeave(el) {
 
 function syncSidebarDropdownFromRoute() {
   if (allListingsMenuPaths.value.some((p) => isActive(p))) {
-    activeDropdown.value = 'listings';
-    localStorage.setItem('activeDropdown', 'listings');
+    openListingsDropdown();
+    return;
+  }
+  if (route.path === listingsOverviewPath.value) {
+    if (localStorage.getItem('activeDropdown') === 'listings') {
+      openListingsDropdown();
+    }
     return;
   }
   if (allSettingsMenuPaths.value.some((p) => isActive(p))) {
@@ -799,12 +834,13 @@ watch(() => route.path, () => {
 onMounted(() => {
   syncViewport();
   window.addEventListener('resize', syncViewport);
-  const onListingsPath = allListingsMenuPaths.value.some((p) => isActive(p));
-  const onSettingsPath = allSettingsMenuPaths.value.some((p) => isActive(p));
-  const onUsersPath = filteredUsersItems.value.some((item) => isActive(item.path));
-  if (onListingsPath || onSettingsPath || onUsersPath) {
-    syncSidebarDropdownFromRoute();
-  } else {
+  syncSidebarDropdownFromRoute();
+  if (
+    !allListingsMenuPaths.value.some((p) => isActive(p)) &&
+    route.path !== listingsOverviewPath.value &&
+    !allSettingsMenuPaths.value.some((p) => isActive(p)) &&
+    !filteredUsersItems.value.some((item) => isActive(item.path))
+  ) {
     activeDropdown.value = null;
     localStorage.removeItem('activeDropdown');
   }
@@ -849,6 +885,13 @@ onUnmounted(() => {
 .sidebar-submenu {
   position: relative;
   z-index: 1202;
+}
+
+/* Submenu must stay visible when Listings is expanded (global CSS hides it on collapsed sidebar) */
+.sidebar:not(.active) .sidebar-menu li.dropdown.open .sidebar-submenu,
+.sidebar:not(.active) .sidebar-menu li.dropdown.dropdown-open .sidebar-submenu {
+  display: block !important;
+  visibility: visible !important;
 }
 
 .sidebar-header {
@@ -1158,22 +1201,23 @@ onUnmounted(() => {
   fill: currentColor;
 }
 
-/* .sidebar-menu .dropdown.active-parent > a {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-  border-right: 3px solid #3b82f6;
-} */
+.sidebar-menu .dropdown.active-parent > a {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+}
 
-/* .sidebar-menu .nav-link.active-page a {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-  border-right: 3px solid #3b82f6;
-} */
-/* 
+.sidebar-menu .nav-link.active-page a {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
 .sidebar-menu .dropdown.active-parent .menu-icon,
 .sidebar-menu .nav-link.active-page .menu-icon {
-  color: #3b82f6;
-} */
+  color: #fff;
+}
 
 .sidebar-menu li a.active {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);

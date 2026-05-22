@@ -42,15 +42,14 @@ body.app-has-video-bg .kanban-outer:not(.kanban-outer--mobile) {
   box-sizing: border-box;
 }
 
-/* Smaller lead shortcut icons (Total / New / Qualified / Follow-ups / Cold) */
-.lead-analytics-row .lead-analytics-card__icon {
-  width: 25px !important;
-  height: 25px !important;
+/* Lead KPI shortcut row spacing */
+.lead-analytics-row {
+  padding: 0 4px 6px !important;
+  margin-bottom: 10px !important;
 }
 
-.lead-analytics-row .lead-analytics-card__img {
-  width: 16px !important;
-  height: 16px !important;
+.lead-analytics-row .lead-kpi-card {
+  min-height: 72px;
 }
 
 .lead-analytics-row {

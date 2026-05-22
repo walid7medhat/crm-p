@@ -209,9 +209,19 @@ html:has(#app main.auth-page-main) .dashboard-main.active {
   box-sizing: border-box;
   padding-top: var(--app-header-below-gap, 0.5rem) !important;
   overflow-x: hidden;
-  /* Lets routed pages (e.g. property map) use height: 100% / flex to fill below navbar */
+  overflow-y: visible;
   display: flex;
   flex-direction: column;
+}
+
+#app main.dashboard-main > .dashboard-main-router:has(.property-form-page),
+#app main.dashboard-main > .dashboard-main-router:has(.property-show-page),
+#app main.dashboard-main > .dashboard-main-router:has(.property-show-inner) {
+  flex: 0 0 auto;
+  min-height: auto;
+  height: auto;
+  max-height: none;
+  overflow: visible;
 }
 
 /* Route mounts behind loader; keep layout stable without flashing old page */

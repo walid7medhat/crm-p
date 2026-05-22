@@ -2593,16 +2593,23 @@ const showBackButton = computed(() => {
 .module-tab-btn,
 .kanban-tab-btn {
   position: relative;
-  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 14px;
   background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.2;
   cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
   text-decoration: none;
   white-space: nowrap;
 }
@@ -2610,13 +2617,19 @@ const showBackButton = computed(() => {
 .module-tab-btn:hover,
 .kanban-tab-btn:hover {
   color: #fff;
-  border-bottom-color: var(--crm-secondary, #733e87);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
+/* Unified pill highlight — no underline (CRM, Listings, Settings, Agents) */
 .module-tab-btn.active,
 .kanban-tab-btn.active {
   color: #fff;
-  border-bottom-color: var(--crm-secondary, #733e87);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .active-indicator {

@@ -5,33 +5,37 @@
         v-for="card in cardDefs"
         :key="card.key"
         type="button"
-        class="lead-analytics-card"
+        class="lead-kpi-card"
         :class="[
-          `lead-analytics-card--${card.tone}`,
-          { 'is-active': activeFilter === card.key },
+          `lead-kpi-card--${card.tone}`,
+          {
+            'is-active': activeFilter === card.key || (card.key === 'total' && !activeFilter),
+            'is-zero': !metrics[card.metricKey],
+          },
         ]"
-        :aria-pressed="activeFilter === card.key"
+        :style="{ '--kpi-accent': card.accent }"
+        :aria-pressed="card.key === 'total' ? !activeFilter : activeFilter === card.key"
         :title="card.label"
         @click="onCardClick(card.key)"
       >
-        <span class="lead-analytics-card__label">{{ card.shortLabel }}</span>
-        <span class="lead-analytics-card__row">
-          <span
-            class="lead-analytics-card__icon"
-            :style="{ background: card.iconBg }"
-            aria-hidden="true"
-          >
-            <img
-              :src="card.iconSrc"
-              alt=""
-              class="lead-analytics-card__img"
-              width="22"
-              height="22"
-              loading="lazy"
-              decoding="async"
-            />
-          </span>
-          <span class="lead-analytics-card__value">{{ formatValue(metrics[card.metricKey]) }}</span>
+        <span class="lead-kpi-card__glow" aria-hidden="true" />
+        <span class="lead-kpi-card__accent" aria-hidden="true" />
+
+        <span class="lead-kpi-card__icon" aria-hidden="true">
+          <img
+            :src="card.iconSrc"
+            alt=""
+            class="lead-kpi-card__img"
+            width="20"
+            height="20"
+            loading="lazy"
+            decoding="async"
+          />
+        </span>
+
+        <span class="lead-kpi-card__content">
+          <span class="lead-kpi-card__label">{{ card.shortLabel }}</span>
+          <span class="lead-kpi-card__value">{{ formatValue(metrics[card.metricKey]) }}</span>
         </span>
       </button>
     </div>
@@ -61,11 +65,51 @@ const emit = defineEmits(['toggle-filter'])
 const LEAD_SHORTCUT_ICONS = '/assets/images/kanban/lead-shortcuts'
 
 const cardDefs = [
-  { key: 'total', metricKey: 'total', label: 'Total Leads', shortLabel: 'Total Leads', iconSrc: `${LEAD_SHORTCUT_ICONS}/total-leads.svg`, tone: 'primary', iconBg: '#00A7FA' },
-  { key: 'new_unassigned', metricKey: 'newUnassigned', label: 'New / Unassigned', shortLabel: 'New Leads', iconSrc: `${LEAD_SHORTCUT_ICONS}/new-leads.svg`, tone: 'new', iconBg: '#17C3B2' },
-  { key: 'qualified', metricKey: 'qualified', label: 'Total Qualified', shortLabel: 'Qualified', iconSrc: `${LEAD_SHORTCUT_ICONS}/qualified.svg`, tone: 'qualified', iconBg: '#A5E835' },
-  { key: 'follow_today', metricKey: 'followUpsToday', label: 'Follow-ups Today', shortLabel: 'Follow-ups', iconSrc: `${LEAD_SHORTCUT_ICONS}/follow-ups.svg`, tone: 'follow', iconBg: '#22C55E' },
-  { key: 'cold', metricKey: 'cold', label: 'Cold Leads (No Action > 48h)', shortLabel: 'Cold Leads', iconSrc: `${LEAD_SHORTCUT_ICONS}/cold-leads.svg`, tone: 'cold', iconBg: '#F97316' },
+  {
+    key: 'total',
+    metricKey: 'total',
+    label: 'Total Leads',
+    shortLabel: 'Total Leads',
+    iconSrc: `${LEAD_SHORTCUT_ICONS}/total-leads.svg`,
+    tone: 'primary',
+    accent: '#00A7FA',
+  },
+  {
+    key: 'new_unassigned',
+    metricKey: 'newUnassigned',
+    label: 'New / Unassigned',
+    shortLabel: 'New Leads',
+    iconSrc: `${LEAD_SHORTCUT_ICONS}/new-leads.svg`,
+    tone: 'new',
+    accent: '#17C3B2',
+  },
+  {
+    key: 'qualified',
+    metricKey: 'qualified',
+    label: 'Total Qualified',
+    shortLabel: 'Qualified',
+    iconSrc: `${LEAD_SHORTCUT_ICONS}/qualified.svg`,
+    tone: 'qualified',
+    accent: '#A5E835',
+  },
+  {
+    key: 'follow_today',
+    metricKey: 'followUpsToday',
+    label: 'Follow-ups Today',
+    shortLabel: 'Follow-ups',
+    iconSrc: `${LEAD_SHORTCUT_ICONS}/follow-ups.svg`,
+    tone: 'follow',
+    accent: '#22C55E',
+  },
+  {
+    key: 'cold',
+    metricKey: 'cold',
+    label: 'Cold Leads (No Action > 48h)',
+    shortLabel: 'Cold Leads',
+    iconSrc: `${LEAD_SHORTCUT_ICONS}/cold-leads.svg`,
+    tone: 'cold',
+    accent: '#F97316',
+  },
 ]
 
 function formatValue(value) {
@@ -86,8 +130,8 @@ function onCardClick(key) {
 <style scoped>
 .lead-analytics-row {
   flex-shrink: 0;
-  padding: 0 6px 2px;
-  margin-bottom: 12px;
+  padding: 0 4px 4px;
+  margin-bottom: 10px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -96,190 +140,239 @@ function onCardClick(key) {
   display: flex;
   flex-wrap: nowrap;
   align-items: stretch;
-  justify-content: flex-start;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   min-width: 0;
 }
 
-.lead-analytics-card {
+.lead-kpi-card {
+  --kpi-accent: #733e87;
+  position: relative;
   flex: 1 1 0;
-  min-width: 132px;
-  max-width: 180px;
-  display: inline-flex;
-  flex-direction: column;
+  min-width: 118px;
+  max-width: 200px;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 80px;
+  gap: 10px;
+  min-height: 72px;
   margin: 0;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 10px 12px 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   background: linear-gradient(
-    135deg,
-    rgba(11, 7, 54, 0.72) 0%,
-    rgba(115, 62, 135, 0.58) 100%
+    145deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(11, 7, 54, 0.55) 48%,
+    rgba(115, 62, 135, 0.42) 100%
   );
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 1px 3px rgba(11, 7, 54, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    0 1px 2px rgba(11, 7, 54, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   color: #fff;
   cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  overflow: hidden;
+  text-align: left;
   font-family: Montserrat, Inter, system-ui, sans-serif;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
   -webkit-appearance: none;
   appearance: none;
-  text-align: center;
 }
 
-.lead-analytics-card:hover {
-  border-color: rgba(255, 255, 255, 0.38);
-  filter: brightness(1.06);
+.lead-kpi-card__glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120px 80px at 0% 100%,
+    color-mix(in srgb, var(--kpi-accent) 35%, transparent),
+    transparent 70%
+  );
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
 }
 
-.lead-analytics-card:focus-visible {
-  outline: 2px solid var(--crm-secondary, #733e87);
-  outline-offset: 1px;
+.lead-kpi-card__accent {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: var(--kpi-accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--kpi-accent) 65%, transparent);
 }
 
-.lead-analytics-card.is-active {
-  border-color: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 0 0 1px rgba(115, 62, 135, 0.65), 0 2px 6px rgba(11, 7, 54, 0.25);
-  filter: brightness(1.1);
-}
-
-.lead-analytics-card__row {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-}
-
-.lead-analytics-card__icon {
+.lead-kpi-card__icon {
+  position: relative;
+  z-index: 1;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  line-height: 0;
-  box-shadow: 0 1px 2px rgba(11, 7, 54, 0.18);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--kpi-accent) 22%, rgba(255, 255, 255, 0.06));
+  border: 1px solid color-mix(in srgb, var(--kpi-accent) 40%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-.lead-analytics-card__img {
+.lead-kpi-card__img {
   display: block;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
   pointer-events: none;
 }
 
-.lead-analytics-card__value {
-  flex-shrink: 0;
-  font-size: 20px;
+.lead-kpi-card__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.lead-kpi-card__label {
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.lead-kpi-card__value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
   color: #fff;
   line-height: 1;
 }
 
-.lead-analytics-card__label {
-  font-size: 14px;
-  font-weight: 600;
+.lead-kpi-card.is-zero .lead-kpi-card__value {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.lead-kpi-card:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--kpi-accent) 45%, rgba(255, 255, 255, 0.2));
+  box-shadow:
+    0 4px 14px rgba(11, 7, 54, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.lead-kpi-card:hover .lead-kpi-card__glow {
+  opacity: 0.85;
+}
+
+.lead-kpi-card:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--kpi-accent) 70%, #fff);
+  outline-offset: 2px;
+}
+
+.lead-kpi-card.is-active {
+  border-color: color-mix(in srgb, var(--kpi-accent) 55%, rgba(255, 255, 255, 0.35));
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(11, 7, 54, 0.62) 45%,
+    color-mix(in srgb, var(--kpi-accent) 28%, rgba(115, 62, 135, 0.5)) 100%
+  );
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--kpi-accent) 40%, transparent),
+    0 6px 18px rgba(11, 7, 54, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.lead-kpi-card.is-active .lead-kpi-card__glow {
+  opacity: 1;
+}
+
+.lead-kpi-card.is-active .lead-kpi-card__label {
   color: rgba(255, 255, 255, 0.92);
-  line-height: 1.2;
-  text-align: center;
-  width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.lead-analytics-card--primary.is-active {
-  border-color: rgba(0, 167, 250, 0.55);
-}
-
-.lead-analytics-card--new.is-active {
-  border-color: rgba(23, 195, 178, 0.55);
-}
-
-.lead-analytics-card--qualified.is-active {
-  border-color: rgba(165, 232, 53, 0.55);
-}
-
-.lead-analytics-card--follow.is-active {
-  border-color: rgba(34, 197, 94, 0.55);
-}
-
-.lead-analytics-card--cold.is-active {
-  border-color: rgba(249, 115, 22, 0.55);
+.lead-kpi-card.is-active .lead-kpi-card__value {
+  color: #fff;
 }
 
 @media (max-width: 1024px) and (min-width: 769px) {
   .lead-analytics-track {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
   }
 
-  .lead-analytics-card {
-    width: 100%;
+  .lead-kpi-card {
     max-width: none;
+    width: 100%;
   }
 }
 
 @media (max-width: 768px) {
   .lead-analytics-row {
-    padding: 4px 8px 6px;
-    margin-bottom: 10px;
+    padding: 2px 6px 4px;
+    margin-bottom: 8px;
     overflow: hidden;
   }
 
   .lead-analytics-track {
-    display: flex;
     flex-wrap: nowrap;
-    gap: 10px;
+    gap: 8px;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     padding-bottom: 2px;
-    align-items: stretch;
   }
 
   .lead-analytics-track::-webkit-scrollbar {
     display: none;
   }
 
-  .lead-analytics-card {
+  .lead-kpi-card {
     flex: 0 0 auto;
     scroll-snap-align: start;
-    min-width: 130px;
-    min-height: 90px;
-    max-width: 160px;
-    padding: 10px 12px;
+    min-width: 128px;
+    max-width: 148px;
+    min-height: 68px;
+    padding: 8px 10px 8px 12px;
   }
 
-  .lead-analytics-card__icon {
+  .lead-kpi-card__icon {
     width: 32px;
     height: 32px;
+    border-radius: 8px;
   }
 
-  .lead-analytics-card__img {
-    width: 25px;
-    height: 25px;
+  .lead-kpi-card__img {
+    width: 18px;
+    height: 18px;
   }
 
-  .lead-analytics-card__value {
+  .lead-kpi-card__value {
     font-size: 20px;
   }
 
-  .lead-analytics-card__label {
-    font-size: 11px;
+  .lead-kpi-card__label {
+    font-size: 10px;
   }
 }
 
@@ -291,10 +384,10 @@ function onCardClick(key) {
     scroll-snap-type: none;
   }
 
-  .lead-analytics-card {
+  .lead-kpi-card {
     width: 100%;
     max-width: none;
-    min-height: 86px;
+    min-width: 0;
   }
 }
 </style>

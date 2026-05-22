@@ -2138,21 +2138,65 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
     let propertySidebarScrollRoot = null;
     let propertySidebarSyncRaf = null;
 
-    const getPropertyScrollRoot = () =>
-      document.querySelector('.dashboard-main-router') ||
-      document.querySelector('.dashboard-main-body');
+    const SIDEBAR_TOP_GAP = 10;
+
+    const getSidebarTopOffset = () => {
+      const nav = document.querySelector('#app main.dashboard-main > .navbar-header');
+      if (nav) {
+        return nav.getBoundingClientRect().bottom + SIDEBAR_TOP_GAP;
+      }
+      const root = document.documentElement;
+      const topbar =
+        parseFloat(getComputedStyle(root).getPropertyValue('--app-topbar-height')) || 44;
+      const gap =
+        parseFloat(getComputedStyle(root).getPropertyValue('--app-header-below-gap')) || 8;
+      return topbar + gap + SIDEBAR_TOP_GAP;
+    };
+
+    const resetPropertySidebarStyles = (sticky, spacer) => {
+      if (!sticky) return;
+      sticky.classList.remove('is-sidebar-fixed', 'is-sidebar-at-bottom');
+      sticky.style.cssText = '';
+      if (spacer) spacer.style.height = '0px';
+    };
 
     const syncPropertySidebarPosition = () => {
+      const col = propertySidebarColRef.value;
       const sticky = propertySidebarStickyRef.value;
       const spacer = propertySidebarSpacerRef.value;
-      if (!sticky) return;
-      sticky.classList.remove('is-sidebar-fixed');
-      sticky.style.position = '';
-      sticky.style.top = '';
-      sticky.style.left = '';
-      sticky.style.width = '';
-      sticky.style.bottom = '';
-      if (spacer) spacer.style.height = '0px';
+      if (!col || !sticky) return;
+
+      if (window.innerWidth < 992) {
+        resetPropertySidebarStyles(sticky, spacer);
+        return;
+      }
+
+      const topOffset = getSidebarTopOffset();
+      const colRect = col.getBoundingClientRect();
+      const stickyHeight = sticky.offsetHeight;
+
+      if (colRect.top >= topOffset) {
+        resetPropertySidebarStyles(sticky, spacer);
+        return;
+      }
+
+      if (spacer) spacer.style.height = `${stickyHeight}px`;
+
+      if (colRect.bottom <= topOffset + stickyHeight) {
+        sticky.classList.add('is-sidebar-fixed', 'is-sidebar-at-bottom');
+        sticky.style.top = 'auto';
+        sticky.style.bottom = '0';
+        sticky.style.left = '0';
+        sticky.style.width = '100%';
+        return;
+      }
+
+      sticky.classList.add('is-sidebar-fixed');
+      sticky.classList.remove('is-sidebar-at-bottom');
+      sticky.style.top = `${topOffset}px`;
+      sticky.style.bottom = 'auto';
+      sticky.style.left = `${colRect.left}px`;
+      sticky.style.width = `${colRect.width}px`;
     };
 
     const schedulePropertySidebarSync = () => {
@@ -2166,31 +2210,26 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
     };
 
     const bindPropertySidebarScroll = () => {
-      propertySidebarScrollRoot = getPropertyScrollRoot();
-      if (!propertySidebarScrollRoot) return;
-      propertySidebarScrollRoot.addEventListener('scroll', schedulePropertySidebarSync, { passive: true });
+      window.addEventListener('scroll', schedulePropertySidebarSync, { passive: true });
       window.addEventListener('resize', schedulePropertySidebarSync, { passive: true });
       window.addEventListener('orientationchange', schedulePropertySidebarSync, { passive: true });
+      propertySidebarScrollRoot = document.querySelector('.dashboard-main-router');
+      if (propertySidebarScrollRoot) {
+        propertySidebarScrollRoot.addEventListener('scroll', schedulePropertySidebarSync, {
+          passive: true,
+        });
+      }
     };
 
     const unbindPropertySidebarScroll = () => {
+      window.removeEventListener('scroll', schedulePropertySidebarSync);
+      window.removeEventListener('resize', schedulePropertySidebarSync);
+      window.removeEventListener('orientationchange', schedulePropertySidebarSync);
       if (propertySidebarScrollRoot) {
         propertySidebarScrollRoot.removeEventListener('scroll', schedulePropertySidebarSync);
       }
-      window.removeEventListener('resize', schedulePropertySidebarSync);
-      window.removeEventListener('orientationchange', schedulePropertySidebarSync);
       propertySidebarScrollRoot = null;
     };
-
-        onMounted(() => {
-      setTimeout(() => {
-        const container = getPropertyScrollRoot();
-        if (container) {
-          container.scrollTop = 0;
-        }
-        window.scrollTo(0, 0);
-      }, 50);
-    });
     const route = useRoute();
     const router = useRouter();
     const { proxy } = getCurrentInstance();
@@ -7047,19 +7086,29 @@ margin-top: 20px;
 
 .sidebar-sticky-container {
   position: sticky;
-  top: 0.5rem;
-  z-index: 30;
+  top: calc(var(--app-topbar-height, 2.75rem) + var(--app-header-below-gap, 0.5rem) + 0.75rem);
+  z-index: 40;
   width: 100%;
   flex: 0 0 auto;
   align-self: flex-start;
   height: fit-content;
-  max-height: calc(100dvh - 1rem);
   border-radius: 20px;
 }
 
 .sidebar-sticky-container.is-sidebar-fixed {
-  position: sticky !important;
-  z-index: 30;
+  position: fixed !important;
+  z-index: 45;
+}
+
+.sidebar-sticky-container.is-sidebar-fixed.is-sidebar-at-bottom {
+  position: absolute !important;
+  top: auto !important;
+  left: 0 !important;
+  width: 100% !important;
+}
+
+.sidebar-sticky-container.is-sidebar-fixed .agent-sidebar-card {
+  box-shadow: 0 8px 28px rgba(11, 7, 54, 0.18);
 }
 
 /* Agent Sidebar Card - Improved Styles */
@@ -7071,7 +7120,8 @@ margin-top: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e9ecef;
   position: relative;
-  max-height: calc(100dvh - 24px);
+  max-height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem) - 1.5rem);
+  overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #c1c1c1 transparent;
