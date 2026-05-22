@@ -120,7 +120,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ->everyMinute()
         ->timezone('Asia/Dubai');
         
-            $schedule->command('bitrix:sync-leads')->hourly();
+            $schedule->command('bitrix:sync-leads')->everyThirtyMinutes();
 
         // ==================== TEST COMMANDS ====================
         // $schedule->command('activities:send-reminders --timeframe=today --test')
