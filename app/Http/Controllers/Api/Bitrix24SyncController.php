@@ -5,131 +5,113 @@ namespace App\Http\Controllers\Api;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Jobs\SyncBitrix24LeadsJob;
+use App\Models\BitrixSyncState;
+use App\Models\Lead;
 use App\Services\Bitrix24\Bitrix24Client;
 use App\Services\Bitrix24\Bitrix24Exception;
 use App\Services\Bitrix24\Bitrix24LeadImporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Models\BitrixSyncState;
 
 class Bitrix24SyncController extends Controller
 {
     /**
-     * Synchronous batched sync. Frontend calls this repeatedly with the
-     * `next` cursor returned by the previous response, until `done` is true.
-     *
-     *   POST /api/leads/bitrix24/sync { start?: int, batch_size?: int (max 50) }
-     *   -> {
-     *        imported_in_batch, new_count, existing_count,
-     *        new_leads:      [{ lead_id, bitrix24_id }, ...],
-     *        existing_leads: [{ lead_id, bitrix24_id }, ...],
-     *        errors, next (int|null), total, done
-     *      }
+     * Synchronous batched sync (legacy, kept for compatibility / one-off small ranges).
+     * For 30k-lead full sync prefer POST /api/leads/bitrix24/start-queue.
      */
-   public function syncBatch(Request $request): JsonResponse
-{
-    $user = auth()->user();
-    if (!$user || !$user->hasRole(['admin', 'super_admin'])) {
-        return ApiResponse::error('Only admins can sync from Bitrix24', 403);
-    }
-
-    $request->validate([
-        'start'         => 'nullable|integer|min:0',
-        'skip_existing' => 'nullable|boolean',
-    ]);
-
-    $start = (int) ($request->input('start') ?? 0);
-    $skipExisting = (bool) $request->input('skip_existing', false);
-
-    try {
-        $client   = new Bitrix24Client();
-        $importer = new Bitrix24LeadImporter($client, $user->id);
-$start = $start ?? 0;
-
-        // ✅ call Bitrix
-        $page = $client->listLeads($start);
-
-        $b24Leads = $page['result'] ?? [];
-        $total    = (int) ($page['total'] ?? 0);
-
-        // ❌ مفيش slicing تاني
-        $imported = 0;
-        $newLeads = [];
-        $existingLeads = [];
-        $errors = [];
-
-        // ✅ check existing مرة واحدة
-        $existingIds = [];
-        if ($skipExisting && !empty($b24Leads)) {
-            $ids = array_map(fn ($l) => (int) ($l['ID'] ?? 0), $b24Leads);
-
-            $existingIds = \App\Models\Lead::whereIn('bitrix24_id', $ids)
-                ->pluck('bitrix24_id')
-                ->map(fn ($v) => (int) $v)
-                ->all();
+    public function syncBatch(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Only admins can sync from Bitrix24', 403);
         }
 
-        $existingSet = array_flip($existingIds);
+        $request->validate([
+            'start'         => 'nullable|integer|min:0',
+            'skip_existing' => 'nullable|boolean',
+        ]);
 
-        foreach ($b24Leads as $b24) {
-            $b24Id = (int) ($b24['ID'] ?? 0);
+        $start = (int) ($request->input('start') ?? 0);
+        $skipExisting = (bool) $request->input('skip_existing', false);
 
-            if ($skipExisting && isset($existingSet[$b24Id])) {
-                $localId = \App\Models\Lead::where('bitrix24_id', $b24Id)->value('id');
+        try {
+            $client   = new Bitrix24Client();
+            $importer = new Bitrix24LeadImporter($client, $user->id);
 
-                $existingLeads[] = [
-                    'lead_id'     => (int) $localId,
-                    'bitrix24_id' => $b24Id,
-                ];
+            $page = $client->listLeads($start);
+            $b24Leads = $page['result'] ?? [];
+            $total    = (int) ($page['total'] ?? 0);
 
-                $imported++;
-                continue;
+            $existingMap = [];
+            if ($skipExisting && !empty($b24Leads)) {
+                $ids = array_filter(
+                    array_map(fn ($l) => (int) ($l['ID'] ?? 0), $b24Leads),
+                    fn ($v) => $v > 0
+                );
+                if (!empty($ids)) {
+                    $existingMap = Lead::whereIn('bitrix24_id', $ids)
+                        ->pluck('id', 'bitrix24_id')
+                        ->all();
+                }
             }
 
-            try {
-                $r = $importer->importOne($b24);
+            $imported = 0;
+            $newLeads = [];
+            $existingLeads = [];
+            $errors = [];
 
-                $entry = [
-                    'lead_id'     => $r['lead']->id,
-                    'bitrix24_id' => $r['bitrix24_id'],
-                ];
+            foreach ($b24Leads as $b24) {
+                $b24Id = (int) ($b24['ID'] ?? 0);
 
-                if ($r['created']) {
-                    $newLeads[] = $entry;
-                } else {
-                    $existingLeads[] = $entry;
+                if ($skipExisting && isset($existingMap[$b24Id])) {
+                    $existingLeads[] = [
+                        'lead_id'     => (int) $existingMap[$b24Id],
+                        'bitrix24_id' => $b24Id,
+                    ];
+                    $imported++;
+                    continue;
                 }
 
-                $imported++;
-            } catch (\Throwable $e) {
-                $errors[] = [
-                    'bitrix24_id' => $b24['ID'] ?? null,
-                    'error'       => $e->getMessage(),
-                ];
+                try {
+                    $r = $importer->importOne($b24);
+                    $entry = [
+                        'lead_id'     => $r['lead']->id,
+                        'bitrix24_id' => $r['bitrix24_id'],
+                    ];
+                    if ($r['created']) {
+                        $newLeads[] = $entry;
+                    } else {
+                        $existingLeads[] = $entry;
+                    }
+                    $imported++;
+                } catch (\Throwable $e) {
+                    $errors[] = [
+                        'bitrix24_id' => $b24Id ?: null,
+                        'error'       => $e->getMessage(),
+                    ];
+                }
             }
+
+            // Trust Bitrix24's own paging cursor for next.
+            $nextCursor = $page['next'] ?? null;
+            $done = $nextCursor === null;
+
+            return ApiResponse::success([
+                'imported_in_batch' => $imported,
+                'new_count'         => count($newLeads),
+                'existing_count'    => count($existingLeads),
+                'new_leads'         => $newLeads,
+                'existing_leads'    => $existingLeads,
+                'errors'            => $errors,
+                'next'              => $nextCursor,
+                'total'             => $total,
+                'done'              => $done,
+                'skip_existing'     => $skipExisting,
+            ], $done ? 'Bitrix24 sync complete' : 'Batch imported');
+        } catch (\Throwable $e) {
+            return ApiResponse::error('Bitrix24 sync failed: ' . $e->getMessage(), 500);
         }
-
-        // ✅ أهم جزء: next من Bitrix نفسه
-        $nextCursor = $page['next'] ?? null;
-        $done = $nextCursor === null;
-
-        return ApiResponse::success([
-            'imported_in_batch' => $imported,
-            'new_count'         => count($newLeads),
-            'existing_count'    => count($existingLeads),
-            'new_leads'         => $newLeads,
-            'existing_leads'    => $existingLeads,
-            'errors'            => $errors,
-            'next'              => $nextCursor,
-            'total'             => $total,
-            'done'              => $done,
-            'skip_existing'     => $skipExisting,
-        ], $done ? 'Bitrix24 sync complete' : 'Batch imported');
-
-    } catch (\Throwable $e) {
-        return ApiResponse::error('Bitrix24 sync failed: ' . $e->getMessage(), 500);
     }
-}
 
     /**
      * Fetch + import a single Bitrix24 lead by its Bitrix24 ID.
@@ -152,11 +134,13 @@ $start = $start ?? 0;
             $r = $importer->importOne($b24);
 
             return ApiResponse::success([
-                'lead_id'      => $r['lead']->id,
-                'bitrix24_id'  => $bitrixId,
-                'created'      => $r['created'],
+                'lead_id'         => $r['lead']->id,
+                'bitrix24_id'     => $bitrixId,
+                'created'         => $r['created'],
                 'already_existed' => !$r['created'],
-            ], $r['created'] ? 'Lead imported from Bitrix24' : 'Lead already existed locally — refreshed timeline and stage.');
+            ], $r['created']
+                ? 'Lead imported from Bitrix24'
+                : 'Lead already existed locally — refreshed timeline and stage.');
         } catch (Bitrix24Exception $e) {
             if ($e->isNotFound()) {
                 return ApiResponse::error(
@@ -169,38 +153,130 @@ $start = $start ?? 0;
             return ApiResponse::error('Bitrix24 fetch failed: ' . $e->getMessage(), 500);
         }
     }
-   public function start(Request $request)
-{
-    $user = auth()->user();
 
-    if (!$user || !$user->hasRole(['admin', 'super_admin'])) {
-        return ApiResponse::error('Unauthorized', 403);
+    /**
+     * Queue a full Bitrix24 sync. Resets progress, dispatches the self-chaining
+     * job which will process one Bitrix24 page (~50 leads) per run.
+     *   POST /api/leads/bitrix24/start-queue { skip_existing?: bool }
+     */
+    public function start(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+
+        $request->validate([
+            'skip_existing' => 'nullable|boolean',
+        ]);
+        $skipExisting = (bool) $request->input('skip_existing', false);
+
+        $state = BitrixSyncState::firstOrCreate(
+            ['key' => 'global_sync'],
+            ['status' => 'idle', 'cursor' => 0],
+        );
+
+        if ($state->status === 'running') {
+            return ApiResponse::error('A sync is already running. Wait for it to finish (or set its status to "cancelled" to stop).', 409);
+        }
+
+        // Fresh start: reset all counters + cursor. Next-run-resume only happens
+        // automatically when a previous run was killed mid-sync without writing
+        // status='done' or 'failed' — but we don't reset 'paused'/'cancelled' to
+        // 'idle' here, so a deliberate pause is preserved.
+        $state->forceFill([
+            'status'         => 'idle',
+            'cursor'         => 0,
+            'total'          => 0,
+            'processed'      => 0,
+            'new_count'      => 0,
+            'existing_count' => 0,
+            'error_count'    => 0,
+            'last_error'     => null,
+            'started_at'     => null,
+            'finished_at'    => null,
+            'user_id'        => $user->id,
+            'skip_existing'  => $skipExisting,
+        ])->save();
+
+        SyncBitrix24LeadsJob::dispatch($user->id, $skipExisting);
+
+        return ApiResponse::success([
+            'status'        => 'queued',
+            'skip_existing' => $skipExisting,
+        ], 'Sync queued. Poll /api/bitrix24/queue-status for progress.');
     }
 
-    SyncBitrix24LeadsJob::dispatch($user->id);
+    /**
+     * Live sync state for the UI poller. Reads BitrixSyncState — no hardcoded
+     * values; numbers reflect the running job's progress.
+     *   GET /api/bitrix24/queue-status
+     */
+    public function status(): JsonResponse
+    {
+        $state = BitrixSyncState::where('key', 'global_sync')->first();
 
-    return ApiResponse::success([
-        'status' => 'queued'
-    ], 'Sync started from last saved position');
+        if (!$state) {
+            return ApiResponse::success([
+                'status'         => 'idle',
+                'progress'       => 0,
+                'processed'      => 0,
+                'total'          => 0,
+                'new_count'      => 0,
+                'existing_count' => 0,
+                'error_count'    => 0,
+                'cursor'         => 0,
+                'last_error'     => null,
+                'started_at'     => null,
+                'finished_at'    => null,
+                'skip_existing'  => false,
+            ], 'No sync has been started yet');
+        }
+
+        $total     = (int) $state->total;
+        $processed = (int) $state->processed;
+        $progress  = $total > 0
+            ? (int) min(100, floor(($processed / $total) * 100))
+            : ($state->status === 'done' ? 100 : 0);
+
+        return ApiResponse::success([
+            'status'         => $state->status ?: 'idle',
+            'progress'       => $progress,
+            'processed'      => $processed,
+            'total'          => $total,
+            'new_count'      => (int) $state->new_count,
+            'existing_count' => (int) $state->existing_count,
+            'error_count'    => (int) $state->error_count,
+            'cursor'         => (int) $state->cursor,
+            'last_error'     => $state->last_error,
+            'started_at'     => optional($state->started_at)->toIso8601String(),
+            'finished_at'    => optional($state->finished_at)->toIso8601String(),
+            'skip_existing'  => (bool) $state->skip_existing,
+        ], 'Sync status');
+    }
+
+    /**
+     * Cancel a running sync — flips status to 'cancelled' so the next
+     * self-chained job run sees it and exits cleanly.
+     *   POST /api/leads/bitrix24/cancel-queue
+     */
+    public function cancel(): JsonResponse
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+
+        $state = BitrixSyncState::where('key', 'global_sync')->first();
+        if (!$state || $state->status !== 'running') {
+            return ApiResponse::error('No running sync to cancel.', 409);
+        }
+
+        $state->forceFill([
+            'status'      => 'cancelled',
+            'finished_at' => now(),
+        ])->save();
+
+        return ApiResponse::success(null, 'Sync cancellation requested — will stop after the current chunk.');
+    }
 }
-
-public function status()
-{
-    $state = \App\Models\BitrixSyncState::first();
-
-    return response()->json([
-        'success' => true,
-        'data' => [
-            'status' => 'running',
-            'progress' => 0,
-            'processed' => 0,
-            'total' => 0,
-            'new_count' => 0,
-            'existing_count' => 0,
-            'error_count' => 0,
-            'cursor' => $state->cursor ?? 0,
-        ]
-    ]);
-}
-}
-

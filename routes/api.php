@@ -457,11 +457,9 @@ Route::middleware('jwt.auth')->group(function () {
     // === Bitrix24 sync (admin-only, batched) ===
     Route::post('/leads/bitrix24/sync', [Bitrix24SyncController::class, 'syncBatch']);
     Route::post('/leads/bitrix24/fetch/{bitrixId}', [Bitrix24SyncController::class, 'fetchOne']);
-    Route::post('/leads/bitrix24/start-queue', [
-    Bitrix24SyncController::class,
-    'start'
-]);
-Route::get('/bitrix24/queue-status', [Bitrix24SyncController::class, 'status']);
+    Route::post('/leads/bitrix24/start-queue', [Bitrix24SyncController::class, 'start']);
+    Route::post('/leads/bitrix24/cancel-queue', [Bitrix24SyncController::class, 'cancel']);
+    Route::get('/bitrix24/queue-status', [Bitrix24SyncController::class, 'status']);
     // === Deals API ===
     Route::prefix('deals')->group(function () {
         Route::get('/', [DealController::class, 'index']);
