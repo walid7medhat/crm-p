@@ -365,9 +365,23 @@
                   </div>
                 </div>
               </div>
-              <div class="form-text mt-1 mb-3" style="font-size: 11px;">
+              <div class="form-text mt-1 mb-2" style="font-size: 11px;">
                 <i class="ri-lightbulb-line me-1"></i>
                 Leave To empty to sync all leads from "From" onwards.
+              </div>
+
+              <!-- Skip already-imported toggle -->
+              <div class="form-check mb-3">
+                <input
+                  id="b24-skip-existing"
+                  class="form-check-input"
+                  type="checkbox"
+                  v-model="b24.skipExisting"
+                  :disabled="b24.running"
+                />
+                <label class="form-check-label small" for="b24-skip-existing" style="font-size: 12px;">
+                  Skip leads already imported (faster — does not refresh their timeline)
+                </label>
               </div>
 
               <!-- Run sync -->
@@ -505,7 +519,21 @@ const b24 = reactive({
   singleId: '',
   fromRow: 1,
   toRow: 1000,
+  skipExisting: false,
 })
+
+// Dedup helper — push only entries whose bitrix24_id isn't already in the list.
+// Defensive against any pagination edge-case that might surface the same
+// Bitrix24 lead twice across batches.
+const pushUnique = (list, entries) => {
+  const seen = new Set(list.map(e => e.bitrix24_id))
+  for (const e of entries) {
+    if (e && e.bitrix24_id != null && !seen.has(e.bitrix24_id)) {
+      list.push(e)
+      seen.add(e.bitrix24_id)
+    }
+  }
+}
 
 // Separate state for the single-fetch card so it doesn't share `running` with
 // the range sync — both cards should be usable independently.
@@ -531,6 +559,7 @@ const resetBitrix24State = () => {
   b24.existingLeads = []
   b24.errors = []
   b24.error = null
+  // newCount / existingCount also accumulate across iterations; reset both.
 }
 
 const startBitrix24Sync = async () => {
@@ -564,6 +593,7 @@ const startBitrix24Sync = async () => {
       const { data } = await axios.post('/api/leads/bitrix24/sync', {
         start: cursor,
         batch_size: batchSize,
+        skip_existing: b24.skipExisting,
       })
       const payload = data?.data ?? data
       b24.processed += payload.imported_in_batch || 0
@@ -571,10 +601,10 @@ const startBitrix24Sync = async () => {
       b24.newCount += payload.new_count || 0
       b24.existingCount += payload.existing_count || 0
       if (Array.isArray(payload.new_leads) && payload.new_leads.length) {
-        b24.newLeads.push(...payload.new_leads)
+        pushUnique(b24.newLeads, payload.new_leads)
       }
       if (Array.isArray(payload.existing_leads) && payload.existing_leads.length) {
-        b24.existingLeads.push(...payload.existing_leads)
+        pushUnique(b24.existingLeads, payload.existing_leads)
       }
       if (Array.isArray(payload.errors) && payload.errors.length) {
         b24.errors.push(...payload.errors)
