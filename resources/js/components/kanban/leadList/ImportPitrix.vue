@@ -6,19 +6,14 @@
           <i class="ri-cloud-line fs-4"></i>
           <h5 class="mb-0">Bitrix24 Queue Monitor</h5>
         </div>
-        <div class="d-flex align-items-center gap-2">
-          <span v-if="isPolling" class="badge bg-light text-primary b24-live">
-            <span class="b24-live__dot"></span> Live
-          </span>
-          <span class="badge" :class="badgeClass">{{ statusLabel }}</span>
-        </div>
+        <span class="badge" :class="badgeClass">{{ statusLabel }}</span>
       </div>
 
       <div class="card-body b24-card__body">
 
+        <!-- Controls -->
         <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
           <button
-            type="button"
             class="btn btn-primary"
             :disabled="loading || isRunning"
             @click="startQueue"
@@ -32,22 +27,11 @@
 
           <button
             v-if="isRunning"
-            type="button"
             class="btn btn-outline-danger"
             :disabled="canceling"
             @click="cancelQueue"
           >
             {{ canceling ? 'Cancelling...' : 'Cancel sync' }}
-          </button>
-
-          <button
-            v-if="!isRunning && queue.status !== 'idle'"
-            type="button"
-            class="btn btn-outline-secondary btn-sm"
-            :disabled="resetting"
-            @click="resetQueue"
-          >
-            {{ resetting ? 'Resetting...' : 'Reset state' }}
           </button>
 
           <div class="form-check ms-auto">
@@ -64,87 +48,69 @@
           </div>
         </div>
 
+        <!-- Progress bar -->
         <div class="progress mb-2" style="height: 10px;">
           <div
             class="progress-bar"
             :class="progressBarClass"
-            :style="{ width: Math.min(100, queue.progress) + '%' }"
+            :style="{ width: queue.progress + '%' }"
             role="progressbar"
             :aria-valuenow="queue.progress"
           ></div>
         </div>
-        <small class="text-muted d-block">
-          {{ queue.processed.toLocaleString() }} / {{ queue.total ? queue.total.toLocaleString() : '—' }} leads processed ({{ queue.progress }}%)
-          <span v-if="isRunning && queue.leads_per_sec > 0" class="ms-2">
-            · {{ queue.leads_per_sec }} leads/sec
-            <span v-if="queue.eta_seconds"> · ~{{ formatEta(queue.eta_seconds) }} left</span>
-          </span>
-          <span v-if="isRunning && lastFetchedAt" class="ms-2 text-primary">
-            · updated {{ secondsSinceFetch }}s ago
-          </span>
+        <small class="text-muted">
+          {{ queue.processed }} / {{ queue.total || '—' }} leads processed ({{ queue.progress }}%)
         </small>
 
+        <!-- Stats -->
         <div class="row g-2 mt-3">
           <div class="col-6 col-md-3">
-            <div class="stat-tile" :class="{ 'stat-tile--pulse': statPulse.new }">
+            <div class="stat-tile">
               <div class="stat-tile__label">New</div>
-              <div class="stat-tile__value text-success">{{ queue.new.toLocaleString() }}</div>
+              <div class="stat-tile__value text-success">{{ queue.new }}</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
-            <div class="stat-tile" :class="{ 'stat-tile--pulse': statPulse.existing }">
+            <div class="stat-tile">
               <div class="stat-tile__label">Already existed</div>
-              <div class="stat-tile__value text-secondary">{{ queue.existing.toLocaleString() }}</div>
+              <div class="stat-tile__value text-secondary">{{ queue.existing }}</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
-            <div class="stat-tile" :class="{ 'stat-tile--pulse': statPulse.errors }">
+            <div class="stat-tile">
               <div class="stat-tile__label">Errors</div>
-              <div class="stat-tile__value text-danger">{{ queue.errors.toLocaleString() }}</div>
+              <div class="stat-tile__value text-danger">{{ queue.errors }}</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
-            <div class="stat-tile" :class="{ 'stat-tile--pulse': statPulse.processed }">
-              <div class="stat-tile__label">Processed</div>
-              <div class="stat-tile__value">{{ queue.processed.toLocaleString() }}</div>
+            <div class="stat-tile">
+              <div class="stat-tile__label">Cursor</div>
+              <div class="stat-tile__value">{{ queue.cursor }}</div>
             </div>
           </div>
         </div>
 
+        <!-- Timing -->
         <div v-if="queue.started_at" class="text-muted small mt-3">
           Started: {{ formatDate(queue.started_at) }}
           <span v-if="queue.finished_at"> · Finished: {{ formatDate(queue.finished_at) }}</span>
         </div>
 
-        <div v-if="actionMessage" class="alert alert-info mt-3 mb-0 py-2 px-3" style="font-size: 13px;">
-          {{ actionMessage }}
-        </div>
-
-        <div v-if="!migrationsOk" class="alert alert-warning mt-3 mb-0 py-2 px-3" style="font-size: 13px;">
-          Database migrations are missing on this server. Run
-          <code>php artisan migrate --force</code> then reset and start sync again.
-        </div>
-
-        <div
-          v-if="queue.last_error"
-          class="alert mt-3 mb-0 py-2 px-3"
-          :class="isRunning ? 'alert-warning' : 'alert-danger'"
-          style="font-size: 13px;"
-        >
+        <!-- Error -->
+        <div v-if="queue.last_error" class="alert alert-danger mt-3 mb-0 py-2 px-3" style="font-size: 13px;">
           <i class="ri-error-warning-line me-1"></i>
           {{ queue.last_error }}
-          <span v-if="isRunning && String(queue.last_error).includes('auto-retry')" class="d-block small mt-1">
-            Sync is still running — the worker will continue automatically.
-          </span>
         </div>
 
+        <!-- How it works -->
         <details class="mt-3">
           <summary class="text-muted small" style="cursor: pointer;">How does this work?</summary>
           <p class="small text-muted mt-2 mb-0">
-            Run a queue worker in a terminal:
-            <code>php artisan queue:work database --queue=default,bitrix24 --timeout=900</code>.
-            Counters refresh every second while sync is running (every ~5 leads during import). Check
-            <strong>Skip already-imported</strong> for fastest import of 160k+ leads.
+            The job processes Bitrix24 in chunks of ~50 leads (one Bitrix24 page per run).
+            After each chunk it saves progress, then dispatches the next chunk as a fresh
+            queue job — so the worker timeout never expires mid-sync, and progress survives
+            a worker restart. The UI here polls every 2 seconds and stops when the job
+            reports <code>done</code>, <code>failed</code>, or <code>cancelled</code>.
           </p>
         </details>
 
@@ -155,17 +121,11 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
-import api from '@/plugins/axios'
+import axios from 'axios'
 
 const loading = ref(false)
 const canceling = ref(false)
-const resetting = ref(false)
-const skipExisting = ref(true)
-const migrationsOk = ref(true)
-const actionMessage = ref('')
-const isPolling = ref(false)
-const lastFetchedAt = ref(null)
-const tickNow = ref(Date.now())
+const skipExisting = ref(false)
 
 const queue = reactive({
   status: 'idle',
@@ -179,22 +139,12 @@ const queue = reactive({
   last_error: null,
   started_at: null,
   finished_at: null,
-  updated_at: null,
-  leads_per_sec: 0,
-  eta_seconds: null,
 })
-
-const statPulse = reactive({
-  processed: false,
-  new: false,
-  existing: false,
-  errors: false,
-})
-
-let pulseTimers = {}
 
 const isRunning = computed(() => queue.status === 'running')
 
+// Cancelled / failed / paused → "Resume sync" picks up from saved cursor.
+// done → "Restart sync (fresh)" resets to 0. idle → first run from 0.
 const canResume = computed(() =>
   ['cancelled', 'failed', 'paused'].includes(queue.status)
 )
@@ -208,7 +158,7 @@ const statusLabel = computed(() => {
     cancelled: 'Cancelled',
     paused: 'Paused',
   }
-  return labels[queue.status] || String(queue.status)
+  return labels[queue.status] || queue.status
 })
 
 const badgeClass = computed(() => ({
@@ -228,86 +178,6 @@ const progressBarClass = computed(() => ({
 }))
 
 let pollInterval = null
-let tickInterval = null
-const POLL_MS = 1000
-
-const secondsSinceFetch = computed(() => {
-  if (!lastFetchedAt.value) return null
-  return Math.max(0, Math.floor((tickNow.value - lastFetchedAt.value) / 1000))
-})
-
-const apiErrorMessage = (err, fallback) => {
-  const body = err?.response?.data
-  if (typeof body?.message === 'string') return body.message
-  if (typeof body?.errors === 'string') return body.errors
-  return err?.message || fallback
-}
-
-/**
- * Unwrap Laravel ApiResponse { status: true, message, data: { status: 'running', processed, ... } }.
- * Never treat boolean `status: true` (API success) as sync status.
- */
-const parseQueuePayload = (response) => {
-  const body = response?.data ?? response
-  if (!body || typeof body !== 'object') return {}
-
-  const data = body.data
-  if (data && typeof data === 'object' && !Array.isArray(data)) {
-    const syncStatus = data.status
-    const hasCounters = data.processed != null
-      || data.new_count != null
-      || data.existing_count != null
-      || data.total != null
-
-    if (typeof syncStatus === 'string' || hasCounters) {
-      return data
-    }
-  }
-
-  if (typeof body.status === 'string') {
-    return body
-  }
-
-  return {}
-}
-
-const pulseStat = (key) => {
-  statPulse[key] = true
-  if (pulseTimers[key]) clearTimeout(pulseTimers[key])
-  pulseTimers[key] = setTimeout(() => {
-    statPulse[key] = false
-  }, 600)
-}
-
-const applyQueuePayload = (q) => {
-  const prev = {
-    processed: queue.processed,
-    new: queue.new,
-    existing: queue.existing,
-    errors: queue.errors,
-  }
-
-  queue.status         = typeof q.status === 'string' ? q.status : 'idle'
-  queue.progress       = Number(q.progress) || 0
-  queue.processed      = Number(q.processed) || 0
-  queue.total          = Number(q.total) || 0
-  queue.new            = Number(q.new_count) || 0
-  queue.existing       = Number(q.existing_count) || 0
-  queue.errors         = Number(q.error_count) || 0
-  queue.cursor         = Number(q.cursor) || 0
-  queue.last_error     = q.last_error || null
-  queue.started_at     = q.started_at || null
-  queue.finished_at    = q.finished_at || null
-  queue.updated_at     = q.updated_at || null
-  queue.leads_per_sec  = Number(q.leads_per_sec) || 0
-  queue.eta_seconds    = q.eta_seconds != null ? Number(q.eta_seconds) : null
-  migrationsOk.value   = q.migrations_ok !== false
-
-  if (prev.processed !== queue.processed) pulseStat('processed')
-  if (prev.new !== queue.new) pulseStat('new')
-  if (prev.existing !== queue.existing) pulseStat('existing')
-  if (prev.errors !== queue.errors) pulseStat('errors')
-}
 
 const formatDate = (iso) => {
   if (!iso) return ''
@@ -318,126 +188,89 @@ const formatDate = (iso) => {
   }
 }
 
-const formatEta = (seconds) => {
-  const s = Number(seconds) || 0
-  if (s < 60) return `${s}s`
-  if (s < 3600) return `${Math.floor(s / 60)}m`
-  return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`
-}
-
 const fetchStatus = async () => {
   try {
-    const response = await api.get('/bitrix24/queue-status', {
-      params: { _: Date.now() },
-      headers: { 'Cache-Control': 'no-cache' },
-    })
-    applyQueuePayload(parseQueuePayload(response))
-    lastFetchedAt.value = Date.now()
+    const { data } = await axios.get('/api/bitrix24/queue-status')
+    const q = data?.data ?? data
+    queue.status      = q.status || 'idle'
+    queue.progress    = q.progress || 0
+    queue.processed   = q.processed || 0
+    queue.total       = q.total || 0
+    queue.new         = q.new_count || 0
+    queue.existing    = q.existing_count || 0
+    queue.errors      = q.error_count || 0
+    queue.cursor      = q.cursor || 0
+    queue.last_error  = q.last_error || null
+    queue.started_at  = q.started_at || null
+    queue.finished_at = q.finished_at || null
 
-    if (queue.status === 'running') {
-      startPolling()
-    } else {
+    // Stop polling once the job reaches a terminal state.
+    if (['done', 'failed', 'cancelled', 'idle'].includes(queue.status)) {
       stopPolling()
     }
   } catch (e) {
     console.error('queue-status fetch failed', e)
-    queue.last_error = apiErrorMessage(e, 'Could not load sync status')
   }
 }
 
 const startPolling = () => {
   stopPolling()
-  isPolling.value = true
-  pollInterval = setInterval(fetchStatus, POLL_MS)
-  if (!tickInterval) {
-    tickInterval = setInterval(() => {
-      tickNow.value = Date.now()
-    }, 1000)
-  }
+  pollInterval = setInterval(fetchStatus, 2000)
 }
 
 const stopPolling = () => {
-  isPolling.value = false
-  if (pollInterval) {
-    clearInterval(pollInterval)
-    pollInterval = null
-  }
+  if (pollInterval) clearInterval(pollInterval)
+  pollInterval = null
 }
 
 const startQueue = async () => {
-  if (isRunning.value || loading.value) return
+  if (isRunning.value) return
   loading.value = true
-  actionMessage.value = ''
-  queue.last_error = null
-
   try {
-    const response = await api.post('/leads/bitrix24/start-queue', {
+    await axios.post('/api/leads/bitrix24/start-queue', {
       skip_existing: skipExisting.value,
     })
-
-    applyQueuePayload(parseQueuePayload(response))
+    // Optimistic UI; the next poll will reflect the real state.
     queue.status = 'running'
-
-    actionMessage.value = response?.data?.message || 'Sync queued — waiting for worker...'
+    queue.progress = 0
+    queue.processed = 0
+    queue.new = 0
+    queue.existing = 0
+    queue.errors = 0
+    queue.last_error = null
     startPolling()
     await fetchStatus()
   } catch (e) {
-    const msg = apiErrorMessage(e, 'Failed to start sync')
-    queue.last_error = msg
-    if (e?.response?.status === 409) {
-      queue.last_error = msg + ' Click "Cancel sync" or "Reset state" first.'
-    }
+    queue.last_error = e.response?.data?.message || e.message || 'Failed to start sync'
   } finally {
     loading.value = false
   }
 }
 
 const cancelQueue = async () => {
-  if (!isRunning.value || canceling.value) return
+  if (!isRunning.value) return
   canceling.value = true
-  actionMessage.value = ''
   try {
-    await api.post('/leads/bitrix24/cancel-queue')
-    actionMessage.value = 'Cancellation requested.'
+    await axios.post('/api/leads/bitrix24/cancel-queue')
     await fetchStatus()
   } catch (e) {
-    queue.last_error = apiErrorMessage(e, 'Failed to cancel sync')
+    queue.last_error = e.response?.data?.message || e.message || 'Failed to cancel sync'
   } finally {
     canceling.value = false
   }
 }
 
-const resetQueue = async () => {
-  if (resetting.value) return
-  resetting.value = true
-  actionMessage.value = ''
-  try {
-    await api.post('/leads/bitrix24/reset-queue')
-    actionMessage.value = 'Sync state reset. You can start again.'
-    await fetchStatus()
-  } catch (e) {
-    queue.last_error = apiErrorMessage(e, 'Failed to reset sync')
-  } finally {
-    resetting.value = false
-  }
-}
-
 onMounted(async () => {
   await fetchStatus()
+  if (isRunning.value) startPolling()
 })
 
-onUnmounted(() => {
-  stopPolling()
-  if (tickInterval) {
-    clearInterval(tickInterval)
-    tickInterval = null
-  }
-  Object.values(pulseTimers).forEach((t) => clearTimeout(t))
-})
+onUnmounted(stopPolling)
 </script>
 
 <style scoped>
 .b24-page {
+  /* soft tinted backdrop so the card "lifts" off the page */
   background: linear-gradient(180deg, #eef2ff 0%, #f5f7fb 60%, #f8fafc 100%);
   border-radius: 16px;
   padding-top: 1.5rem !important;
@@ -496,31 +329,7 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.stat-tile--pulse {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
-}
-
-.b24-live {
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.b24-live__dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 4px;
-  border-radius: 50%;
-  background: #0ea5e9;
-  animation: b24-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes b24-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
-}
-
+/* slim progress bar pops on the lighter card body */
 :deep(.progress) {
   background-color: #e2e8f0;
   border-radius: 999px;

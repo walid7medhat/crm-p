@@ -119,6 +119,9 @@ return Application::configure(basePath: dirname(__DIR__))
     $schedule->command('interviews:send-reminders --hours=1')
         ->everyMinute()
         ->timezone('Asia/Dubai');
+        
+            $schedule->command('bitrix:sync-leads')->hourly();
+
         // ==================== TEST COMMANDS ====================
         // $schedule->command('activities:send-reminders --timeframe=today --test')
         //     ->dailyAt('10:00')
