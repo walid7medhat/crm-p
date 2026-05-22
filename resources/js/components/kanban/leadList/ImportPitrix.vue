@@ -397,36 +397,76 @@
                 </div>
               </transition>
 
-              <details v-if="b24.newLeads.length || b24.existingLeads.length" class="mt-2">
-                <summary class="small text-muted" style="font-size: 11px; cursor: pointer;">
-                  Show per-lead IDs ({{ b24.newLeads.length }} new / {{ b24.existingLeads.length }} existed)
-                </summary>
-                <div class="row g-2 mt-2">
-                  <div class="col-md-6" v-if="b24.newLeads.length">
-                    <div class="fw-semibold small mb-1" style="color:#10b981; font-size: 11px;">New ({{ b24.newLeads.length }})</div>
-                    <ul class="small mb-0" style="font-size: 11px; max-height: 200px; overflow:auto;">
-                      <li v-for="e in b24.newLeads" :key="'n'+e.lead_id">Local #{{ e.lead_id }} ← Bitrix24 #{{ e.bitrix24_id }}</li>
-                    </ul>
+              <!-- Bitrix24 ID chip groups: new / already existed / problems -->
+              <div v-if="b24.newLeads.length || b24.existingLeads.length || b24.errors.length" class="mt-3 b24-id-groups">
+                <!-- Newly inserted -->
+                <div v-if="b24.newLeads.length" class="b24-id-group">
+                  <div class="b24-id-group__head" style="color:#10b981;">
+                    <i class="ri-add-circle-line"></i>
+                    <span>Inserted ({{ b24.newLeads.length }})</span>
                   </div>
-                  <div class="col-md-6" v-if="b24.existingLeads.length">
-                    <div class="fw-semibold small mb-1" style="color:#64748b; font-size: 11px;">Already existed ({{ b24.existingLeads.length }})</div>
-                    <ul class="small mb-0" style="font-size: 11px; max-height: 200px; overflow:auto;">
-                      <li v-for="e in b24.existingLeads" :key="'e'+e.lead_id">Local #{{ e.lead_id }} ← Bitrix24 #{{ e.bitrix24_id }}</li>
-                    </ul>
+                  <div class="b24-id-chips">
+                    <a
+                      v-for="e in b24.newLeads"
+                      :key="'n'+e.lead_id"
+                      class="b24-id-chip b24-id-chip--new"
+                      :href="'/leads/' + e.lead_id"
+                      target="_blank"
+                      :title="'Local lead #' + e.lead_id"
+                    >
+                      #{{ e.bitrix24_id }}
+                    </a>
                   </div>
                 </div>
-              </details>
 
-              <details v-if="b24.errors.length" class="mt-2">
-                <summary class="small text-muted" style="font-size: 11px; cursor: pointer;">
-                  Show per-lead errors ({{ b24.errors.length }})
-                </summary>
-                <ul class="small mt-2 mb-0" style="font-size: 11px;">
-                  <li v-for="(e, i) in b24.errors" :key="i">
-                    Bitrix24 #{{ e.bitrix24_id ?? '?' }}: {{ e.error }}
-                  </li>
-                </ul>
-              </details>
+                <!-- Already existed -->
+                <div v-if="b24.existingLeads.length" class="b24-id-group">
+                  <div class="b24-id-group__head" style="color:#64748b;">
+                    <i class="ri-history-line"></i>
+                    <span>Already inserted ({{ b24.existingLeads.length }})</span>
+                  </div>
+                  <div class="b24-id-chips">
+                    <a
+                      v-for="e in b24.existingLeads"
+                      :key="'e'+e.lead_id"
+                      class="b24-id-chip b24-id-chip--existing"
+                      :href="'/leads/' + e.lead_id"
+                      target="_blank"
+                      :title="'Local lead #' + e.lead_id"
+                    >
+                      #{{ e.bitrix24_id }}
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Errored -->
+                <div v-if="b24.errors.length" class="b24-id-group">
+                  <div class="b24-id-group__head" style="color:#ef4444;">
+                    <i class="ri-error-warning-line"></i>
+                    <span>Has problem ({{ b24.errors.length }})</span>
+                  </div>
+                  <div class="b24-id-chips">
+                    <span
+                      v-for="(e, i) in b24.errors"
+                      :key="'err'+i"
+                      class="b24-id-chip b24-id-chip--error"
+                      :title="e.error"
+                    >
+                      #{{ e.bitrix24_id ?? '?' }}
+                    </span>
+                  </div>
+                  <details class="mt-2">
+                    <summary class="small text-muted" style="font-size: 11px; cursor: pointer;">
+                      Show error messages
+                    </summary>
+                    <ul class="small mt-2 mb-0" style="font-size: 11px;">
+                      <li v-for="(e, i) in b24.errors" :key="'msg'+i">
+                        Bitrix24 #{{ e.bitrix24_id ?? '?' }}: {{ e.error }}
+                      </li>
+                    </ul>
+                  </details>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -919,6 +959,86 @@ const uploadFile = async () => {
 .btn-primary:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+/* Bitrix24 ID chip groups */
+.b24-id-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.b24-id-group {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #f8fafc;
+}
+
+.b24-id-group__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.b24-id-group__head i {
+  font-size: 14px;
+}
+
+.b24-id-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.b24-id-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  text-decoration: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+  cursor: default;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+a.b24-id-chip {
+  cursor: pointer;
+}
+
+a.b24-id-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+
+.b24-id-chip--new {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #6ee7b7;
+}
+
+.b24-id-chip--existing {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.b24-id-chip--error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+  cursor: help;
 }
 
 /* Custom Scrollbar */
