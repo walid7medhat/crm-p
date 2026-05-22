@@ -293,17 +293,25 @@
                                                             </div>
                                                             
                                                             <!-- Activity (last change in Bitrix24 / locally) — replaces the
-                                                                 old "Assigned By" tile. Shows the date of the latest change
-                                                                 and the person who made it, mirroring Bitrix24's lead card. -->
+                                                                 old "Assigned By" tile. Shows the date of the latest change,
+                                                                 the person who made it (name + avatar), mirroring Bitrix24.
+                                                                 Click only opens a profile when the activity user is a
+                                                                 mapped local user (id !== null); B24-only users render as
+                                                                 name + grey avatar but the click is a no-op. -->
                                                             <div v-else-if="field.key === 'assigned_by' && hasAssignedBy(task)">
                                                                 <hr class="mb-2 border-neutral-200">
                                                                 <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
                                                                     <div class="info-item">
                                                                         <div class="info-label text-secondary-light text-xs mb-1">Activity</div>
                                                                         <div class="info-value">{{ formatDate(task.last_activity_at || task.assigned_at) }}</div>
+                                                                        <div v-if="activityPerson(task)?.name" class="text-xs text-secondary-light mt-1">
+                                                                            {{ activityPerson(task).name }}
+                                                                            <span v-if="activityPerson(task)?.is_external" class="badge bg-light text-secondary ms-1" style="font-size: 9px;">external</span>
+                                                                        </div>
                                                                     </div>
                                                                     <div
                                                                         class="person-hover-anchor"
+                                                                        :class="{ 'is-external': activityPerson(task)?.is_external }"
                                                                         @mouseenter.stop="showPersonHoverCard(task, 'assigned')"
                                                                         @mouseleave.stop="hidePersonHoverCard"
                                                                           @click.stop="openPersonProfile(task, 'assigned', $event)"
@@ -801,9 +809,17 @@ const profileTriggerType = ref(null)
 const openPersonProfile = (task, type, event) => {
     if (event) event.stopPropagation()
 
-    // The "assigned" tile is now driven by last_activity_user (Bitrix24-style
-    // last-changer). Falls back to parent for legacy/non-B24 leads.
-    const person = type === 'assigned' ? activityPerson(task) : task?.responsible_person
+    // For the activity tile: try the last-activity user first. If they're an
+    // "external" Bitrix24 user with no local mapping (id === null), fall back
+    // to the assignment user (`parent`) so the popup still opens something
+    // useful — preserving the pre-change behaviour where the tile was always
+    // clickable.
+    let person
+    if (type === 'assigned') {
+        person = task?.last_activity_user?.id ? task.last_activity_user : task?.parent
+    } else {
+        person = task?.responsible_person
+    }
     if (!person?.id) return
 
     profileUserId.value = person.id
@@ -811,10 +827,12 @@ const openPersonProfile = (task, type, event) => {
     showProfilePopup.value = true
 }
 
-// Activity-tile person: strictly the last-activity user from the resource.
-// (No parent fallback — if last_activity_user is missing, the tile + click
-// resolve to nothing rather than silently opening the assignment user's profile.)
-const activityPerson = (task) => task?.last_activity_user || null
+// Activity-tile DISPLAY person — prefers the Bitrix24 last-activity user
+// (so the card shows the actual person who acted), falls back to `parent`
+// for legacy / non-B24 leads. Click + hover use this for the visual; the
+// click handler above additionally falls back when the display user is
+// external (no profile id).
+const activityPerson = (task) => task?.last_activity_user || task?.parent || null
 
 const closeProfilePopup = () => {
     showProfilePopup.value = false

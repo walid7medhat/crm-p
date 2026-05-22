@@ -144,9 +144,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             // these instead of `assigned_at` / `parent` for the "who changed it
             // last and when" tile.
             'last_activity_at'   => $lastActivityAt,
-            'last_activity_user' => $lastActivityUser
-                ? new \App\Http\Resources\User\UserResource($lastActivityUser)
-                : null,
+            'last_activity_user' => $this->formatActivityUser($lastActivityUser),
             // Bitrix24 ID of the user who did the last activity, in case the
             // local mapping (by email) didn't resolve.
             'bitrix24_last_activity_by_id' => $this->bitrix24_last_activity_by_id,
@@ -234,45 +232,88 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
 }
     /**
      * Resolve "last activity" timestamp + user for the activity tile.
-     *   Priority:
-     *     1. Bitrix24 LAST_ACTIVITY_TIME + LAST_ACTIVITY_BY (mapped to local user)
-     *     2. Latest LeadHistory row's created_at + user
      *
-     * Strictly nullable — does NOT fall back to assignedBy/addedBy. The frontend
-     * activity tile then either resolves to a real activity user or hides
-     * itself; the assignment user shows up in its own tile, not here.
-     *
-     * @return array{0: \Carbon\Carbon|\Illuminate\Support\Carbon|string|null, 1: \App\Models\User|null}
+     * Returns a `[timestamp, user]` tuple where `user` is either:
+     *   - a local User model (mapped from Bitrix24 by email, or from history)
+     *   - a stub array { name, bitrix24_id, is_external: true } for Bitrix24
+     *     users with no local mapping (avatar/name still render, but id=null
+     *     so the click handler can't open a profile)
+     *   - null when there's no activity signal at all (tile hides)
      */
     protected function resolveLastActivity($assignedByFallback): array
     {
         $lastActivityAt   = $this->bitrix24_last_activity_at;
         $lastActivityUser = null;
 
+        // 1. Bitrix24 last-activity user, mapped to a local user (best — popup will work).
+        $b24UserStub = null;
         if ($this->bitrix24_last_activity_by_id) {
             $data = is_string($this->bitrix24_data)
                 ? json_decode($this->bitrix24_data, true)
                 : $this->bitrix24_data;
             $localId = data_get($data, '_users.last_activity.local_user_id');
+            $b24Name = data_get($data, '_users.last_activity.name');
             if ($localId) {
                 $lastActivityUser = \App\Models\User::find($localId);
+            } elseif ($b24Name) {
+                // Bitrix24 user with no local mapping — keep the name visible
+                // on the card; popup click won't open because id stays null.
+                $b24UserStub = [
+                    'name'        => $b24Name,
+                    'bitrix24_id' => (int) $this->bitrix24_last_activity_by_id,
+                ];
             }
         }
 
+        // 2. Latest LeadHistory row (only useful when the history user_id
+        //    actually points to a real user — queued jobs without auth context
+        //    leave user_id null, in which case this path is a no-op).
         if (!$lastActivityUser || !$lastActivityAt) {
             $latest = $this->histories()
                 ->orderBy('created_at', 'desc')
                 ->first();
             if ($latest) {
                 $lastActivityAt   = $lastActivityAt ?? $latest->created_at;
-                $lastActivityUser = $lastActivityUser ?? $latest->user;
+                if (!$lastActivityUser && $latest->user_id && $latest->user) {
+                    $lastActivityUser = $latest->user;
+                }
             }
         }
 
         return [
             $lastActivityAt ?? $this->updated_at,
-            $lastActivityUser, // strictly nullable — no assignedBy fallback
+            $lastActivityUser ?? $b24UserStub,
         ];
+    }
+
+    /**
+     * Normalize the activity user (User model OR Bitrix24 stub) to a flat
+     * shape the frontend can render. `id` is non-null only for real local
+     * users — frontend uses that to gate the profile-click action.
+     */
+    protected function formatActivityUser($user): ?array
+    {
+        if ($user instanceof \App\Models\User) {
+            return [
+                'id'          => $user->id,
+                'name'        => $user->name,
+                'avatar'      => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                'email'       => $user->email,
+                'is_external' => false,
+                'bitrix24_id' => null,
+            ];
+        }
+        if (is_array($user) && !empty($user['name'])) {
+            return [
+                'id'          => null,
+                'name'        => $user['name'],
+                'avatar'      => null,
+                'email'       => null,
+                'is_external' => true,
+                'bitrix24_id' => $user['bitrix24_id'] ?? null,
+            ];
+        }
+        return null;
     }
 
     protected function hasServiceDuplicate(): bool
