@@ -5772,7 +5772,7 @@ body.swal2-toast-shown  {
 
 <style>
 /* Property form page: let the page grow naturally; no inner scroll on the router shell */
-#app main.dashboard-main > .dashboard-main-router:has(.property-form-root) {
+#app main.dashboard-main > .dashboard-main-router {
   height: auto !important;
   min-height: 0 !important;
   max-height: none !important;

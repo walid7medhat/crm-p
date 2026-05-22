@@ -86,12 +86,13 @@ body.app-has-video-bg #app main.dashboard-main > .navbar-header .h-40-px {
 body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router {
   flex: 1 1 auto;
   min-height: 0;
+  height: auto;
   overflow-x: hidden;
-  overflow-y: auto;
+  /* overflow-y: auto; */
   -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  padding-top: var(--app-header-below-gap, 0.5rem) !important;
+  padding-top: 0 !important;
   background: transparent !important;
 }
 

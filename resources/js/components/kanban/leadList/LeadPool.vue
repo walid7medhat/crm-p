@@ -276,7 +276,7 @@ const personHoverHideTimer = ref(null)
 
 // Pagination
 const currentPage = ref(1)
-const perPage = ref(20)
+const perPage = ref(24)
 const lastPage = ref(1)
 const total = ref(0)
 
