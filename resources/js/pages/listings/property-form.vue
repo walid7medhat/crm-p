@@ -1,5 +1,5 @@
 <template>
-  <div class="row gy-4 mt-2">
+  <div class="row gy-4 mt-2 property-form-root">
 
     <!-- 🏡 Property Details -->
     <div class="col-lg-12">
@@ -5763,9 +5763,22 @@ body.swal2-toast-shown  {
   .viewer-controls {
     width: 100%;
   }
-  
+
   .viewer-controls .btn {
     flex: 1;
   }
+}
+</style>
+
+<style>
+/* Property form page: let the page grow naturally; no inner scroll on the router shell */
+#app main.dashboard-main > .dashboard-main-router:has(.property-form-root) {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+  flex: 0 0 auto !important;
 }
 </style>

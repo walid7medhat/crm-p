@@ -17,7 +17,12 @@ class Bitrix24SyncController extends Controller
      * `next` cursor returned by the previous response, until `done` is true.
      *
      *   POST /api/leads/bitrix24/sync { start?: int, batch_size?: int (max 50) }
-     *   -> { imported_in_batch, errors, next (int|null), total, done }
+     *   -> {
+     *        imported_in_batch, new_count, existing_count,
+     *        new_leads:      [{ lead_id, bitrix24_id }, ...],
+     *        existing_leads: [{ lead_id, bitrix24_id }, ...],
+     *        errors, next (int|null), total, done
+     *      }
      */
     public function syncBatch(Request $request): JsonResponse
     {
@@ -45,11 +50,22 @@ class Bitrix24SyncController extends Controller
             $sliced = array_slice($b24Leads, 0, $batchSize);
 
             $imported = 0;
+            $newLeads = [];
+            $existingLeads = [];
             $errors = [];
             foreach ($sliced as $b24) {
                 try {
-                    $importer->importOne($b24);
+                    $r = $importer->importOne($b24);
                     $imported++;
+                    $entry = [
+                        'lead_id'     => $r['lead']->id,
+                        'bitrix24_id' => $r['bitrix24_id'],
+                    ];
+                    if ($r['created']) {
+                        $newLeads[] = $entry;
+                    } else {
+                        $existingLeads[] = $entry;
+                    }
                 } catch (\Throwable $e) {
                     $errors[] = [
                         'bitrix24_id' => $b24['ID'] ?? null,
@@ -70,6 +86,10 @@ class Bitrix24SyncController extends Controller
 
             return ApiResponse::success([
                 'imported_in_batch' => $imported,
+                'new_count'         => count($newLeads),
+                'existing_count'    => count($existingLeads),
+                'new_leads'         => $newLeads,
+                'existing_leads'    => $existingLeads,
                 'errors'            => $errors,
                 'next'              => $nextCursor,
                 'total'             => $total,
@@ -98,12 +118,14 @@ class Bitrix24SyncController extends Controller
                 return ApiResponse::error("Bitrix24 lead {$bitrixId} not found", 404);
             }
             $importer = new Bitrix24LeadImporter($client, $user->id);
-            $lead = $importer->importOne($b24);
+            $r = $importer->importOne($b24);
 
             return ApiResponse::success([
-                'lead_id'     => $lead->id,
-                'bitrix24_id' => $bitrixId,
-            ], 'Lead imported from Bitrix24');
+                'lead_id'      => $r['lead']->id,
+                'bitrix24_id'  => $bitrixId,
+                'created'      => $r['created'],
+                'already_existed' => !$r['created'],
+            ], $r['created'] ? 'Lead imported from Bitrix24' : 'Lead already existed locally — refreshed timeline and stage.');
         } catch (Bitrix24Exception $e) {
             if ($e->isNotFound()) {
                 return ApiResponse::error(

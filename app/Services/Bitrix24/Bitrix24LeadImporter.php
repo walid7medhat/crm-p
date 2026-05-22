@@ -60,6 +60,7 @@ class Bitrix24LeadImporter
         'not qualified'    => 'unqualified',
         'non qualified'    => 'unqualified',
         'Unqualified'    => 'unqualified',
+        'Unqualified Lead'    => 'unqualified',
         'disqualified'     => 'unqualified',
         'junk'             => 'unqualified',
         'spam'             => 'unqualified',
@@ -70,6 +71,7 @@ class Bitrix24LeadImporter
         'processing'       => 'contacted',
         'follow up'        => 'contacted',
         'follow-up'        => 'contacted',
+        'Follow-up / Contacted'  => 'contacted',
         'processed'        => 'converted',
         'closed won'       => 'converted',
         'closed-won'       => 'converted',
@@ -84,6 +86,9 @@ class Bitrix24LeadImporter
         'pool'             => 'pool',
         'shared'           => 'shared',
         'assigned'         => 'assigned',
+        'Future Prospected'=>'qualified',
+        'Jop Seeker'=>'unqualified',
+        'Junk'=>'unqualified',
     ];
 
     /**
@@ -122,7 +127,15 @@ class Bitrix24LeadImporter
             ?? Stage::orderBy('order', 'asc')->value('id');
     }
 
-    public function importOne(array $b24Lead): Lead
+    /**
+     * Import (or reuse) a Bitrix24 lead. Returns:
+     *   [
+     *     'lead'        => Lead,
+     *     'created'     => bool,   // true = freshly inserted, false = matched existing
+     *     'bitrix24_id' => int,
+     *   ]
+     */
+    public function importOne(array $b24Lead): array
     {
         $b24Id = (int) ($b24Lead['ID'] ?? 0);
 
@@ -157,7 +170,11 @@ class Bitrix24LeadImporter
                 // $this->importTimelineLogMessages($existing, $b24Id);
                 // $this->importSyntheticTimeline($existing, $b24Lead, $b24Id);
                  $this->importFullTimeline($existing, $b24Id);
-                return $existing;
+                return [
+                    'lead'        => $existing,
+                    'created'     => false,
+                    'bitrix24_id' => $b24Id,
+                ];
             }
         }
 
@@ -244,7 +261,11 @@ class Bitrix24LeadImporter
         $this->importTimelineLogMessages($lead, $b24Id);
         $this->importSyntheticTimeline($lead, $b24Lead, $b24Id);
 
-        return $lead;
+        return [
+            'lead'        => $lead,
+            'created'     => true,
+            'bitrix24_id' => $b24Id,
+        ];
     }
 
     /**

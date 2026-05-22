@@ -222,16 +222,72 @@
             </div>
           </div>
           
-          <!-- Help Section -->
-          <div class="text-center mt-3">
-            <small class="text-muted" style="font-size: 11px;">
-              <i class="ri-question-line me-1"></i>
-              Need help? Check our
-              <a href="#" class="text-decoration-none" style="color: #1a2a6c;">documentation</a>
-            </small>
+          <!-- ====================== Fetch single Bitrix24 lead Card ====================== -->
+          <div class="card shadow-lg border-0 rounded-4 overflow-hidden p-3 mt-4">
+            <div class="card-header bg-gradient-dark text-white py-3 px-4 border-0">
+              <div class="d-flex align-items-center gap-2">
+                <div class="header-icon">
+                  <i class="ri-search-eye-line fs-4"></i>
+                </div>
+                <div>
+                  <h5 class="fw-bold mb-0 text-white">Fetch a single Bitrix24 lead</h5>
+                  <small class="mb-0 opacity-75">Pull one lead by Bitrix24 ID — useful for testing or one-off imports</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body p-4">
+              <label class="form-label fw-semibold mb-1 small" style="color: #1a2a6c;">
+                <i class="ri-hashtag me-1"></i>
+                Bitrix24 lead ID
+              </label>
+              <div class="row g-2 align-items-end">
+                <div class="col-md-8">
+                  <input
+                    type="number"
+                    class="form-control"
+                    style="font-size: 13px;"
+                    v-model="b24.singleId"
+                    placeholder="e.g. 1389  (open the lead in Bitrix24 — the ID is in the URL)"
+                    :disabled="b24Single.running"
+                  />
+                </div>
+                <div class="col-md-4">
+                  <button
+                    class="btn btn-primary w-100"
+                    style="padding: 8px 12px; font-size: 13px;"
+                    :disabled="b24Single.running || !b24.singleId"
+                    @click="fetchOneBitrix24"
+                  >
+                    <span v-if="b24Single.running" class="spinner-border spinner-border-sm me-2"></span>
+                    <i v-else class="ri-download-cloud-2-line me-1"></i>
+                    {{ b24Single.running ? 'Fetching...' : 'Fetch lead' }}
+                  </button>
+                </div>
+              </div>
+
+              <transition name="slide-fade">
+                <div v-if="b24Single.result" class="alert mt-3 border-0 rounded-3 py-2 px-3" :class="b24Single.result.created ? 'alert-success' : 'alert-info'" style="font-size: 13px;">
+                  <i class="ri-checkbox-circle-fill me-1"></i>
+                  <template v-if="b24Single.result.created">
+                    Lead created. Local ID #{{ b24Single.result.lead_id }} (Bitrix24 #{{ b24Single.result.bitrix24_id }}).
+                  </template>
+                  <template v-else>
+                    Lead already existed. Local ID #{{ b24Single.result.lead_id }} (Bitrix24 #{{ b24Single.result.bitrix24_id }}). Timeline and stage refreshed.
+                  </template>
+                </div>
+              </transition>
+
+              <transition name="slide-fade">
+                <div v-if="b24Single.error" class="alert alert-danger mt-3 border-0 rounded-3 py-2 px-3" style="font-size: 13px;">
+                  <i class="ri-error-warning-line me-1"></i>
+                  {{ b24Single.error }}
+                </div>
+              </transition>
+            </div>
           </div>
 
-          <!-- ====================== Bitrix24 Sync Card ====================== -->
+          <!-- ====================== Bitrix24 Range Sync Card ====================== -->
           <div class="card shadow-lg border-0 rounded-4 overflow-hidden p-3 mt-4">
             <div class="card-header bg-gradient-dark text-white py-3 px-4 border-0">
               <div class="d-flex align-items-center gap-2">
@@ -240,59 +296,34 @@
                 </div>
                 <div>
                   <h5 class="fw-bold mb-0 text-white">Sync from Bitrix24</h5>
-                  <small class="mb-0 opacity-75">Pull all leads, comments and activities from your Bitrix24 portal</small>
+                  <small class="mb-0 opacity-75">Pull a range of leads with comments, activities and timeline</small>
                 </div>
               </div>
             </div>
 
             <div class="card-body p-4">
-              <div class="alert alert-warning border-0 rounded-3 py-2 px-3 mb-3" style="font-size: 12.5px;">
-                <i class="ri-alert-line me-1"></i>
-                Re-running this sync will create duplicate leads (configured for one-time migration).
+              <div class="alert alert-info border-0 rounded-3 py-2 px-3 mb-3" style="font-size: 12.5px;">
+                <i class="ri-information-line me-1"></i>
+                Re-running is safe — previously synced leads are matched by Bitrix24 ID and only their timeline/stage are refreshed (no duplicates).
               </div>
 
               <!-- Progress -->
               <div v-if="b24.running || b24.processed > 0 || b24.total > 0" class="mb-3">
-                <div class="d-flex justify-content-between align-items-center mb-1">
+                <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
                   <small class="fw-semibold" style="color: #1a2a6c;">
-                    Imported {{ b24.processed }}<template v-if="b24.total"> / {{ b24.total }}</template>
+                    Processed {{ b24.processed }}<template v-if="b24.total"> / {{ b24.total }}</template>
                   </small>
-                  <small class="text-muted">
-                    {{ b24.errors.length }} error<span v-if="b24.errors.length !== 1">s</span>
-                  </small>
+                  <div class="d-flex gap-2 align-items-center">
+                    <span class="badge rounded-pill" style="background:#10b981; font-size: 10px;">{{ b24.newCount }} new</span>
+                    <span class="badge rounded-pill" style="background:#64748b; font-size: 10px;">{{ b24.existingCount }} existed</span>
+                    <span v-if="b24.errors.length" class="badge rounded-pill" style="background:#ef4444; font-size: 10px;">{{ b24.errors.length }} error<span v-if="b24.errors.length !== 1">s</span></span>
+                  </div>
                 </div>
                 <div class="progress" style="height: 8px;">
                   <div
                     class="progress-bar"
                     :style="{ width: b24ProgressPct + '%', background: 'linear-gradient(135deg, #1a2a6c 0%, #16215c 100%)' }"
                   ></div>
-                </div>
-              </div>
-
-              <!-- Fetch single -->
-              <div class="row g-2 align-items-end mb-3">
-                <div class="col-md-8">
-                  <label class="form-label small fw-semibold mb-1" style="color: #1a2a6c;">
-                    <i class="ri-search-line me-1"></i>Fetch a single lead by Bitrix24 ID
-                  </label>
-                  <input
-                    type="number"
-                    class="form-control"
-                    style="font-size: 13px;"
-                    v-model="b24.singleId"
-                    placeholder="e.g. 42"
-                    :disabled="b24.running"
-                  />
-                </div>
-                <div class="col-md-4">
-                  <button
-                    class="btn btn-outline-secondary w-100"
-                    style="padding: 8px 12px; font-size: 13px;"
-                    :disabled="b24.running || !b24.singleId"
-                    @click="fetchOneBitrix24"
-                  >
-                    <i class="ri-download-cloud-2-line me-1"></i> Fetch lead
-                  </button>
                 </div>
               </div>
 
@@ -355,7 +386,7 @@
               <transition name="slide-fade">
                 <div v-if="b24.done && !b24.error" class="alert alert-success mt-3 border-0 rounded-3 py-2 px-3" style="font-size: 13px;">
                   <i class="ri-checkbox-circle-fill me-1"></i>
-                  Sync complete. Imported {{ b24.processed }} leads.
+                  Sync complete — {{ b24.newCount }} new, {{ b24.existingCount }} already existed (refreshed), {{ b24.errors.length }} error<span v-if="b24.errors.length !== 1">s</span>.
                 </div>
               </transition>
 
@@ -365,6 +396,26 @@
                   {{ b24.error }}
                 </div>
               </transition>
+
+              <details v-if="b24.newLeads.length || b24.existingLeads.length" class="mt-2">
+                <summary class="small text-muted" style="font-size: 11px; cursor: pointer;">
+                  Show per-lead IDs ({{ b24.newLeads.length }} new / {{ b24.existingLeads.length }} existed)
+                </summary>
+                <div class="row g-2 mt-2">
+                  <div class="col-md-6" v-if="b24.newLeads.length">
+                    <div class="fw-semibold small mb-1" style="color:#10b981; font-size: 11px;">New ({{ b24.newLeads.length }})</div>
+                    <ul class="small mb-0" style="font-size: 11px; max-height: 200px; overflow:auto;">
+                      <li v-for="e in b24.newLeads" :key="'n'+e.lead_id">Local #{{ e.lead_id }} ← Bitrix24 #{{ e.bitrix24_id }}</li>
+                    </ul>
+                  </div>
+                  <div class="col-md-6" v-if="b24.existingLeads.length">
+                    <div class="fw-semibold small mb-1" style="color:#64748b; font-size: 11px;">Already existed ({{ b24.existingLeads.length }})</div>
+                    <ul class="small mb-0" style="font-size: 11px; max-height: 200px; overflow:auto;">
+                      <li v-for="e in b24.existingLeads" :key="'e'+e.lead_id">Local #{{ e.lead_id }} ← Bitrix24 #{{ e.bitrix24_id }}</li>
+                    </ul>
+                  </div>
+                </div>
+              </details>
 
               <details v-if="b24.errors.length" class="mt-2">
                 <summary class="small text-muted" style="font-size: 11px; cursor: pointer;">
@@ -405,11 +456,23 @@ const b24 = reactive({
   processed: 0,
   total: 0,
   next: 0,
+  newCount: 0,
+  existingCount: 0,
+  newLeads: [],
+  existingLeads: [],
   errors: [],
   error: null,
   singleId: '',
   fromRow: 1,
   toRow: 1000,
+})
+
+// Separate state for the single-fetch card so it doesn't share `running` with
+// the range sync — both cards should be usable independently.
+const b24Single = reactive({
+  running: false,
+  result: null,   // { lead_id, bitrix24_id, created } | null
+  error: null,
 })
 
 const b24ProgressPct = computed(() => {
@@ -422,6 +485,10 @@ const resetBitrix24State = () => {
   b24.processed = 0
   b24.total = 0
   b24.next = 0
+  b24.newCount = 0
+  b24.existingCount = 0
+  b24.newLeads = []
+  b24.existingLeads = []
   b24.errors = []
   b24.error = null
 }
@@ -461,6 +528,14 @@ const startBitrix24Sync = async () => {
       const payload = data?.data ?? data
       b24.processed += payload.imported_in_batch || 0
       b24.total = payload.total || b24.total
+      b24.newCount += payload.new_count || 0
+      b24.existingCount += payload.existing_count || 0
+      if (Array.isArray(payload.new_leads) && payload.new_leads.length) {
+        b24.newLeads.push(...payload.new_leads)
+      }
+      if (Array.isArray(payload.existing_leads) && payload.existing_leads.length) {
+        b24.existingLeads.push(...payload.existing_leads)
+      }
       if (Array.isArray(payload.errors) && payload.errors.length) {
         b24.errors.push(...payload.errors)
       }
@@ -478,18 +553,22 @@ const startBitrix24Sync = async () => {
 }
 
 const fetchOneBitrix24 = async () => {
-  if (b24.running || !b24.singleId) return
-  resetBitrix24State()
-  b24.running = true
+  if (b24Single.running || !b24.singleId) return
+  b24Single.result = null
+  b24Single.error = null
+  b24Single.running = true
   try {
-    await axios.post(`/api/leads/bitrix24/fetch/${encodeURIComponent(b24.singleId)}`)
-    b24.processed = 1
-    b24.total = 1
-    b24.done = true
+    const { data } = await axios.post(`/api/leads/bitrix24/fetch/${encodeURIComponent(b24.singleId)}`)
+    const payload = data?.data ?? data
+    b24Single.result = {
+      lead_id: payload.lead_id,
+      bitrix24_id: payload.bitrix24_id,
+      created: !!payload.created,
+    }
   } catch (err) {
-    b24.error = err.response?.data?.message || err.message || 'Bitrix24 fetch failed'
+    b24Single.error = err.response?.data?.message || err.message || 'Bitrix24 fetch failed'
   } finally {
-    b24.running = false
+    b24Single.running = false
   }
 }
 
