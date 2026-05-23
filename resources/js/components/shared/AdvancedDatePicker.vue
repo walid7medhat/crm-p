@@ -1,5 +1,8 @@
 <template>
-  <div class="advanced-date-picker" :class="{ 'advanced-date-picker--dob': dobLayout }">
+  <div
+    class="advanced-date-picker"
+    :class="{ 'advanced-date-picker--dob': dobLayout, 'advanced-date-picker--compact': compact }"
+  >
     <button
       type="button"
       class="advanced-date-trigger d-flex align-items-center gap-2"
@@ -8,7 +11,7 @@
       @click.stop="openPicker"
     >
       <iconify-icon icon="lucide:calendar" class="advanced-date-icon" />
-      <span class="advanced-date-text">{{ displayText }}</span>
+      <span class="advanced-date-text" :class="{ 'is-empty': isDisplayEmpty }">{{ displayText }}</span>
     </button>
 
     <DateTimePicker
@@ -46,6 +49,8 @@ const props = defineProps({
   placeholder: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   invalid: { type: Boolean, default: false },
+  /** Smaller trigger text (e.g. payment breakdown quick modal). */
+  compact: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -57,14 +62,22 @@ const pickerDate = computed(() => {
   return d || new Date()
 })
 
+const emptyLabel = computed(
+  () => props.placeholder || (props.dateOnly ? 'Select date' : 'Select date and time'),
+)
+
+const isDisplayEmpty = computed(() => {
+  const v = props.modelValue
+  if (v == null || v === '') return true
+  if (v instanceof Date) return Number.isNaN(v.getTime())
+  return !parseToDate(v)
+})
+
 const displayText = computed(() => {
-  const empty =
-    props.placeholder ||
-    (props.dateOnly ? 'Select date' : 'Select date and time')
   if (props.dateOnly) {
-    return formatDateOnlyLong(props.modelValue, empty)
+    return formatDateOnlyLong(props.modelValue, emptyLabel.value)
   }
-  return formatReminderStyle(props.modelValue, empty)
+  return formatReminderStyle(props.modelValue, emptyLabel.value)
 })
 
 function openPicker() {
@@ -131,6 +144,12 @@ function onCancel() {
   white-space: nowrap;
 }
 
+.advanced-date-text.is-empty {
+  font-size: 11px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
 .advanced-date-trigger.is-invalid {
   border-color: #dc3545;
 }
@@ -175,5 +194,36 @@ function onCancel() {
 
 .advanced-date-picker--dob .advanced-date-text {
   font-weight: 500;
+}
+
+.advanced-date-picker--compact .advanced-date-text.is-empty {
+  font-size: 10px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+.advanced-date-picker--compact .advanced-date-text:not(.is-empty) {
+  font-size: 11px;
+}
+
+.advanced-date-picker--compact.advanced-date-picker--dob .advanced-date-trigger {
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.advanced-date-picker--compact.advanced-date-picker--dob .advanced-date-text.is-empty {
+  font-size: 10px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+.advanced-date-picker--compact.advanced-date-picker--dob .advanced-date-text:not(.is-empty) {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.advanced-date-picker--compact .advanced-date-icon {
+  font-size: 12px;
 }
 </style>

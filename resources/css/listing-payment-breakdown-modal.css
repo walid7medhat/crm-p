@@ -1,0 +1,98 @@
+/**
+ * Payment breakdown quick modal — compact fields.
+ * Loaded with ListingPaymentBreakdownQuickModal (and appended in app.css for cascade).
+ */
+
+.lpb-modal.lpb-modal--compact .lpb-input-shell {
+  position: relative;
+  width: 100%;
+}
+
+.lpb-modal.lpb-modal--compact .lpb-input-hint {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px !important;
+  line-height: 1.2;
+  color: #94a3b8 !important;
+  font-weight: 400;
+  pointer-events: none;
+  z-index: 2;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 16px);
+}
+
+.lpb-modal.lpb-modal--compact .lpb-input-shell .form-control.lpb-control {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  font-size: 11px !important;
+  color: #0f172a !important;
+  background-color: #fff !important;
+}
+
+.lpb-modal.lpb-modal--compact .lpb-vselect.v-select.lpb-vselect-empty .vs__placeholder {
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+  color: #94a3b8 !important;
+  font-weight: 400 !important;
+}
+
+.lpb-modal.lpb-modal--compact .lpb-vselect.v-select .vs__selected,
+.lpb-modal.lpb-modal--compact .lpb-vselect.v-select .vs__search,
+.lpb-modal.lpb-modal--compact .lpb-vselect.v-select .vs__dropdown-option {
+  font-size: 11px !important;
+}
+
+.lpb-modal.lpb-modal--compact .lpb-vselect.v-select .vs__dropdown-toggle {
+  min-height: 32px !important;
+  font-size: 11px !important;
+}
+
+.lpb-modal.lpb-modal--compact .advanced-date-picker--compact .advanced-date-text.is-empty {
+  font-size: 10px !important;
+  font-weight: 400 !important;
+  color: #94a3b8 !important;
+}
+
+.lpb-modal.lpb-modal--compact .advanced-date-picker--compact .advanced-date-text:not(.is-empty) {
+  font-size: 11px !important;
+  color: #0f172a !important;
+}
+
+.lpb-modal.lpb-modal--compact .advanced-date-picker--compact .advanced-date-trigger {
+  min-height: 32px !important;
+  padding: 4px 8px !important;
+  border-radius: 8px !important;
+}
+
+.lpb-modal.lpb-modal--compact .advanced-date-picker--compact .advanced-date-icon {
+  font-size: 12px !important;
+}
+
+.lpb-modal.lpb-modal--compact .lpb-section-title {
+  font-size: 9px !important;
+  letter-spacing: 0.05em;
+}
+
+.lpb-modal.lpb-modal--compact .lpb-label,
+.lpb-modal.lpb-modal--compact .form-check-label.lpb-label {
+  font-size: 10px !important;
+  color: #64748b !important;
+}
+
+.lpb-modal.lpb-modal--compact .lpb-modal-title {
+  font-size: 13px !important;
+}
+
+.lpb-modal.lpb-modal--compact .lpb-modal-subtitle {
+  font-size: 10px !important;
+}
+
+.lpb-modal.lpb-modal--compact .lpb-expenses-hint {
+  font-size: 9px !important;
+}

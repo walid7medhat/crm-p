@@ -82,22 +82,6 @@
                 />
               </div>
 
-              <!-- Payment Plan -->
-              <div class="col-md-4" v-if="isUnderConstruction">
-                <label class="form-label">Payment plan</label>
-                <v-select 
-                  v-model="form.payment_plans" 
-                  :options="paymentPlanOptions"
-                  placeholder="Search and select one plan"
-                  :clearable="true"
-                  :close-on-select="true"
-                  :searchable="true"
-                />
-                <div class="text-muted small mt-1">
-                  <small>One plan only — type to search the list.</small>
-                </div>
-              </div>
-
               <!-- Project Selection -->
               <div class="col-md-4">
                 <label class="form-label">Project 
@@ -152,33 +136,6 @@
                 <input v-model="form.unit_number" type="text" class="form-control" placeholder="Enter unit number" />
               </div>
 
-              <div class="col-md-4">
-                <label class="form-label">Original price (OP) <span class="text-muted fw-normal small">(developer / contract)</span></label>
-                <input
-                  :value="formatPriceInputDisplay(form.original_price)"
-                  type="text"
-                  inputmode="numeric"
-                  class="form-control"
-                  placeholder="Original price in AED"
-                  @input="form.original_price = parsePriceInputDigits($event.target.value)"
-                />
-              </div>
-
-              <!-- Selling price (listing price in DB) -->
-              <div class="col-md-4">
-                <label class="form-label">Selling price <span class="text-muted fw-normal small">(listing price)</span></label>
-                <input
-                  :value="formatPriceInputDisplay(form.price)"
-                  type="text"
-                  inputmode="numeric"
-                  class="form-control"
-                  placeholder="Selling price in AED"
-                  @input="form.price = parsePriceInputDigits($event.target.value)"
-                />
-              </div>
-              <div v-if="sellingPriceVsOpWarning" class="col-12">
-                <div class="alert alert-warning py-2 px-3 mb-0 small" role="status">{{ sellingPriceVsOpWarning }}</div>
-              </div>
             </div>
           </div>
         </div>
@@ -269,34 +226,65 @@
       <!-- 💳 Payment breakdown & NOC (off-plan; fields enabled when completion = Under Construction) -->
       <div class="col-lg-12">
         <div class="card">
-          <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <div class="card-header">
             <h6 class="card-title mb-0">Payment Breakdown &amp; NOC</h6>
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-              <button
-                v-if="isUnderConstruction"
-                type="button"
-                class="btn btn-sm btn-outline-primary"
-                @click="showPaymentDetailsPreview = true"
-              >
-                View
-              </button>
-              <span v-if="!isUnderConstruction" class="badge bg-secondary">Select “Under Construction” above to edit</span>
-            </div>
           </div>
-          <div class="card-body">
-            <div v-if="!isUnderConstruction" class="alert alert-light border mb-0" role="note">
-              <p class="mb-0 text-muted">
-                For <strong>off-plan</strong> listings, set <strong>Under Construction</strong>.
-                Use <strong>Original price</strong> and <strong>Selling price</strong> in <strong>Property Details</strong>, select a payment plan, then add installments and NOC below.
+          <div class="card-body payment-breakdown-card-body">
+            <div class="row gy-3 payment-breakdown-prices">
+              <div class="col-md-4">
+                <label class="form-label">Original price (OP) <span class="text-muted fw-normal small">(developer / contract)</span></label>
+                <input
+                  :value="formatPriceInputDisplay(form.original_price)"
+                  type="text"
+                  inputmode="numeric"
+                  class="form-control"
+                  placeholder="Original price in AED"
+                  @input="form.original_price = parsePriceInputDigits($event.target.value)"
+                />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Selling price <span class="text-muted fw-normal small">(listing price)</span></label>
+                <input
+                  :value="formatPriceInputDisplay(form.price)"
+                  type="text"
+                  inputmode="numeric"
+                  class="form-control"
+                  placeholder="Selling price in AED"
+                  @input="form.price = parsePriceInputDigits($event.target.value)"
+                />
+              </div>
+              <div v-if="isUnderConstruction" class="col-md-4">
+                <label class="form-label">Payment plan</label>
+                <v-select
+                  v-model="form.payment_plans"
+                  :options="paymentPlanOptions"
+                  label="label"
+                  placeholder="Search and select one plan"
+                  :clearable="true"
+                  :close-on-select="true"
+                  :searchable="true"
+                  :class="{ 'is-invalid': paymentPlanFieldInvalid }"
+                />
+                <div class="text-muted small mt-1">
+                  <small>One plan only — type to search the list.</small>
+                </div>
+                <div v-if="paymentPlanFieldInvalid" class="text-danger small mt-1" role="alert">
+                  {{ paymentPlanFieldError }}
+                </div>
+              </div>
+              <div v-if="sellingBelowOriginalActive" class="col-12">
+                <div class="alert alert-warning py-2 px-3 mb-0 small" role="status">{{ SELLING_BELOW_OP_WARN_MSG }}</div>
+              </div>
+            </div>
+
+            <div v-if="!isUnderConstruction" class="alert alert-light border mb-0 mt-2" role="note">
+              <p class="mb-0 text-muted small">
+                Set <strong>Completion status</strong> to <strong>Under Construction</strong> to add installments, NOC, and payment plan details below.
               </p>
             </div>
-            <template v-else>
-            <div class="row gy-3">
-              <div class="col-md-6">
-                <label class="form-label">Primary plan (first selected)</label>
-                <input :value="selectedPaymentPlanLabel" type="text" class="form-control" readonly />
-              </div>
 
+            <template v-if="isUnderConstruction">
+            <div class="row gy-3 mt-1">
               <div class="col-12">
                 <div class="payment-calc-summary border rounded-3 p-3 bg-light">
                   <div class="row g-3 small">
@@ -309,7 +297,9 @@
                     <div class="col-md-4">
                       <div class="text-muted text-uppercase fw-semibold mb-1">Premium</div>
                       <div class="fs-6 fw-semibold">Selling − OP</div>
-                      <div>{{ formatAed(premiumAmountForm) }}</div>
+                      <div :class="{ 'text-danger': premiumIsNegative }">{{ premiumDisplayAed }}</div>
+                      <div v-if="premiumIsNegative" class="text-danger small mt-1">Selling price below original price</div>
+                      <span v-if="sellingBelowOriginalActive" class="badge bg-warning text-dark mt-1">Selling below original price</span>
                     </div>
                     <div class="col-md-4">
                       <div class="text-muted text-uppercase fw-semibold mb-1">Handover balance</div>
@@ -320,15 +310,38 @@
                 </div>
               </div>
 
+              <div v-if="breakdownSellingPriceMismatchActive" class="col-12">
+                <div class="alert alert-danger py-2 px-3 mb-0 small" role="alert">
+                  <strong>Payment breakdown total does not match selling price.</strong>
+                  <span v-if="breakdownSellingDeltaMessage" class="d-block mt-1">{{ breakdownSellingDeltaMessage }}</span>
+                </div>
+              </div>
+
+              <div v-if="mixedInstallmentTypesError" class="col-12">
+                <div class="alert alert-danger py-2 px-3 mb-0 small" role="alert">{{ mixedInstallmentTypesError }}</div>
+              </div>
+
+              <div v-if="percentageInstallmentPlanMismatchError" class="col-12">
+                <div class="alert alert-danger py-2 px-3 mb-0 small" role="alert">{{ percentageInstallmentPlanMismatchError }}</div>
+              </div>
+
               <div class="col-md-4">
                 <label class="form-label">Handover date</label>
-                <input v-model="form.handover_date" type="date" class="form-control" />
+                <AdvancedDatePicker
+                  v-model="form.handover_date"
+                  date-only
+                  dob-layout
+                  :block-future-dates="false"
+                  placeholder="Select handover date"
+                  class="payment-breakdown-date-picker"
+                  :invalid="!!paymentHandoverDateError"
+                />
                 <small class="text-muted">Remaining on handover: {{ formatAed(handoverAmountForm) }}</small>
                 <div v-if="paymentHandoverDateError" class="text-danger small mt-1" role="alert">{{ paymentHandoverDateError }}</div>
               </div>
 
               <div class="col-md-4">
-                <label class="form-label">Total paid (installments)</label>
+                <label class="form-label">Total paid (installments with past due date)</label>
                 <input
                   :value="`${formatAed(paidAmountForm)} (${paidPercentOfOp.toFixed(2)}% of OP)`"
                   type="text"
@@ -352,6 +365,27 @@
               </div>
 
               <div class="col-md-12">
+                <div class="noc-summary-card border rounded-3 p-3 mb-3 bg-white">
+                  <div class="text-uppercase text-muted small fw-semibold mb-2">NOC summary</div>
+                  <div class="row g-2 small">
+                    <div class="col-md-4">
+                      <div class="text-muted">NOC required</div>
+                      <div class="fw-semibold">{{ formatAed(nocRequiredAed) }}</div>
+                      <div v-if="nocPercentOfOp > 0" class="text-muted">({{ nocPercentOfOp }}% of OP)</div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="text-muted">Scheduled installments</div>
+                      <div class="fw-semibold">{{ formatAed(scheduledInstallmentsAed) }}</div>
+                      <div class="text-muted small">Past due: {{ formatAed(paidAmountForm) }}</div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="text-muted">Remaining for NOC</div>
+                      <div class="fw-semibold" :class="nocRequirementMet ? 'text-success' : 'text-warning'">
+                        {{ nocPercentOfOp <= 0 ? '—' : formatAed(nocRemainingAed) }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div class="noc-status-box" :class="nocRequirementMet ? 'is-met' : 'is-pending'">
                   <div
                     v-if="nocRequirementWarningActive"
@@ -362,14 +396,14 @@
                     {{ NOC_PAID_BELOW_REQUIRED_MSG }}
                   </div>
                   <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-                    <strong>{{ nocRequirementMet ? 'NOC requirement met' : 'NOC: total paid is below the required threshold' }}</strong>
+                    <strong>{{ nocRequirementMet ? 'NOC requirement met' : 'NOC: paid installments are below the required threshold' }}</strong>
                     <span v-if="nocPercentOfOp > 0" class="badge rounded-pill" :class="nocRequirementMet ? 'bg-success' : 'bg-warning text-dark'">
                       {{ nocRequirementMet ? 'OK to proceed' : 'Below threshold' }}
                     </span>
                   </div>
                   <ul class="list-unstyled small mb-2 noc-status-lines">
                     <li><span class="text-muted">NOC threshold:</span> <strong>{{ nocPercentOfOp }}%</strong> of OP → <strong>{{ formatAed(nocRequiredAed) }}</strong></li>
-                    <li><span class="text-muted">Total paid (all installments):</span> <strong>{{ formatAed(paidAmountForm) }}</strong></li>
+                    <li><span class="text-muted">Paid installments (past due):</span> <strong>{{ formatAed(paidAmountForm) }}</strong></li>
                     <li v-if="nocPercentOfOp > 0 && !nocRequirementMet" class="noc-remaining-highlight mt-2 p-2 rounded">
                       <span class="text-muted">Still to pay for NOC:</span>
                       <strong class="ms-1">{{ formatAed(nocRemainingAed) }}</strong>
@@ -423,7 +457,15 @@
               </div>
               <div class="col-md-3">
                 <label class="form-label">Date</label>
-                <input v-model="installmentDraft.date" type="date" class="form-control" />
+                <AdvancedDatePicker
+                  v-model="installmentDraft.date"
+                  date-only
+                  dob-layout
+                  :block-future-dates="false"
+                  placeholder="Select installment date"
+                  class="payment-breakdown-date-picker"
+                  :invalid="!!paymentBreakdownInstallmentDateError"
+                />
               </div>
               <div class="col-md-3">
                 <button type="button" class="btn btn-primary w-100" @click="addBreakdownInstallment">
@@ -466,10 +508,10 @@
                     <td>{{ idx + 1 }}</td>
                     <td>{{ row.type }}</td>
                     <td>{{ row.type === 'Premium' ? '—' : `${row.percentage}%` }}</td>
-                    <td>{{ formatAed(row.amount) }}</td>
+                    <td :class="{ 'text-danger': row.type === 'Premium' && row.amount < 0 }">{{ formatAed(row.amount) }}</td>
                     <td>{{ row.type === 'Premium' ? '—' : formatDateShort(row.date) }}</td>
                     <td>
-                      <span class="badge" :class="row.status === 'Paid' ? 'bg-success-subtle text-success-emphasis' : 'bg-primary-subtle text-primary-emphasis'">
+                      <span class="badge" :class="breakdownRowStatusClass(row.status)">
                         {{ row.status }}
                       </span>
                     </td>
@@ -482,10 +524,52 @@
                   <tr v-if="paymentBreakdownRows.length === 0">
                     <td colspan="7" class="text-center text-muted">No installments yet.</td>
                   </tr>
+                  <tr v-if="paymentBreakdownRows.length > 0" class="table-light fw-semibold">
+                    <td colspan="2">Total</td>
+                    <td>{{ paymentBreakdownTableTotals.percentTotal }}{{ paymentBreakdownTableTotals.percentTotal !== '—' ? '%' : '' }}</td>
+                    <td>{{ formatAed(paymentBreakdownTableTotals.amountTotal) }}</td>
+                    <td colspan="3"></td>
+                  </tr>
                 </tbody>
               </table>
             </div>
-          </template>
+
+            <div class="payment-validation-summary border rounded-3 p-3 mt-3 bg-white">
+              <div class="fw-semibold small text-uppercase text-muted mb-2">Validation summary</div>
+              <ul class="list-unstyled small mb-0 payment-validation-summary-list">
+                <li
+                  v-for="item in paymentBreakdownValidationSummary"
+                  :key="item.id"
+                  class="d-flex align-items-start gap-2 py-1"
+                  :class="`payment-val-${item.level}`"
+                >
+                  <span class="payment-val-icon" aria-hidden="true">{{ item.icon }}</span>
+                  <span>{{ item.text }}</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="payment-breakdown-actions d-flex flex-wrap gap-2 justify-content-end mt-3 pt-3 border-top">
+              <button
+                type="button"
+                class="btn btn-outline-primary"
+                @click="showPaymentDetailsPreview = true"
+              >
+                <i class="fas fa-eye me-1"></i>
+                Preview
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                @click="handleSubmit('draft')"
+                :disabled="isSubmitting"
+              >
+                <i class="fas fa-save me-1"></i>
+                Save
+              </button>
+            </div>
+            </template>
+          </div>
         </div>
       </div>
       <PaymentDetailsPreviewModal
@@ -508,7 +592,6 @@
         :noc-progress-label="nocProgressPaidLabel"
         :breakdown-rows="paymentBreakdownRows"
       />
-    </div>
 
       <!-- 💰 Mortgage & Rent Info -->
       <div class="col-lg-12">
@@ -1091,8 +1174,8 @@
                 type="button"
                 class="btn btn-primary"
                 @click="handleSubmit('publish')"
-                :disabled="isSubmitting || nocRequirementWarningActive"
-                :title="nocRequirementWarningActive ? NOC_PAID_BELOW_REQUIRED_MSG : ''"
+                :disabled="isSubmitting || publishPaymentBreakdownBlocked"
+                :title="publishPaymentBreakdownBlockTitle"
               >
                 <i class="fas fa-paper-plane me-1"></i>
                 Update & Publish
@@ -1326,7 +1409,19 @@ import api from "@/plugins/axios";
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import PaymentDetailsPreviewModal from "@/components/payment-plans/PaymentDetailsPreviewModal.vue";
+import AdvancedDatePicker from "@/components/shared/AdvancedDatePicker.vue";
 import { parsePriceInputDigits, formatPriceInputDisplay } from "@/utils/priceInputFormat";
+import {
+  paymentPlanOptions,
+  paymentPlanSelectionLabel,
+  resolvePaymentPlanOption,
+} from "@/composables/listingPaymentPlanPresets";
+import {
+  useListingPaymentBreakdown,
+  NOC_PAID_BELOW_REQUIRED_MSG,
+  SELLING_BELOW_OP_WARN_MSG,
+  confirmSellingBelowOriginalIfNeeded,
+} from "@/composables/useListingPaymentBreakdown";
 
 const route = useRoute();
 const router = useRouter();
@@ -1341,13 +1436,6 @@ const isSubmitting = ref(false);
 const isSubmittingOwner = ref(false);
 
 const rentedStatusOptions = ['Available', 'Rented'];
-const paymentPlanOptions = [
-  '50/50', '40/60', '80/20', '15/85', '65/35', '60/40',
-  '20/80', '35/65', '10/90', '55/45', '45/55', '70/30',
-  '30/70', '25/75', '75/25', '10/1% Monthly', '20/1% Monthly',
-  '30/1% Monthly', '85/15', '15/85', '90/10',
-  '10% down payment, 8-year installments'
-];
 
 // Existing Data
 const existingGalleryImages = ref([]);
@@ -1624,64 +1712,79 @@ const installmentDraft = ref({
   date: new Date().toISOString().slice(0, 10),
 });
 
-/** v-model is a single string; legacy API may return arrays or {label,value}. */
-const paymentPlanSelectionLabel = (raw) => {
-  if (raw == null || raw === '') return '';
-  if (typeof raw === 'string') return raw;
-  if (Array.isArray(raw) && raw.length > 0) {
-    const p = raw[0];
-    if (typeof p === 'string') return p;
-    if (p && typeof p === 'object') return p.value || p.label || '';
+const {
+  selectedPaymentPlanLabel,
+  initialPercentForm,
+  installmentPercentForm,
+  originalPriceNum,
+  originalContractPriceNum,
+  sellingPriceNum,
+  premiumAmountForm,
+  premiumIsNegative,
+  premiumDisplayAed,
+  sellingBelowOriginalActive,
+  initialPaymentTarget,
+  ucTrancheAed,
+  handoverAmountForm,
+  installmentToAmount,
+  scheduledInstallmentsAed,
+  paidAmountForm,
+  paidPercentOfOp,
+  nocPercentOfOp,
+  nocRequiredAed,
+  nocRequirementMet,
+  nocRemainingAed,
+  nocProgressBarPct,
+  nocProgressPaidLabel,
+  nocRequirementWarningActive,
+  breakdownSellingPriceMismatchActive,
+  breakdownSellingDeltaMessage,
+  mixedInstallmentTypesError,
+  percentageInstallmentPlanMismatchError,
+  paymentHandoverDateError,
+  paymentPlanFieldInvalid,
+  paymentPlanFieldError,
+  paymentBreakdownRows,
+  breakdownRowStatusClass,
+  publishPaymentBreakdownBlocked,
+  publishPaymentBreakdownBlockTitle,
+  paymentBreakdownValidationSummary,
+  formatAed,
+  formatDateShort,
+} = useListingPaymentBreakdown({
+  form,
+  breakdownInstallments,
+  installmentDraft,
+  isUnderConstruction,
+  breakdownPaidOnLoadIds,
+});
+
+const nocRemainingPctOfOp = computed(() => {
+  const op = originalPriceNum.value;
+  if (op <= 0) return 0;
+  return (nocRemainingAed.value / op) * 100;
+});
+
+const paymentBreakdownTableTotals = computed(() => {
+  const rows = paymentBreakdownRows.value;
+  let percentTotal = 0;
+  let amountTotal = 0;
+  let hasPercent = false;
+  for (const row of rows) {
+    amountTotal += Number(row.amount || 0);
+    if (row.type === 'Premium') continue;
+    const p = parseFloat(row.percentage);
+    if (Number.isFinite(p)) {
+      percentTotal += p;
+      hasPercent = true;
+    }
   }
-  if (typeof raw === 'object') return raw.value || raw.label || '';
-  return '';
-};
-
-const firstPaymentPlanLabel = computed(() => paymentPlanSelectionLabel(form.value.payment_plans));
-
-const selectedPaymentPlanLabel = computed(() => {
-  const label = firstPaymentPlanLabel.value;
-  return label || 'No plan selected';
+  return {
+    percentTotal: hasPercent ? percentTotal.toFixed(2) : '—',
+    amountTotal,
+    rowCount: rows.length,
+  };
 });
-
-const initialPercentForm = computed(() => {
-  const raw = String(firstPaymentPlanLabel.value || '');
-  const firstPart = raw.split('/')[0];
-  const parsed = Number(firstPart);
-  return Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : 0;
-});
-
-const installmentPercentForm = computed(() => Math.max(0, 100 - initialPercentForm.value));
-const originalPriceNum = computed(() =>
-  Number(parsePriceInputDigits(form.value.original_price) || parsePriceInputDigits(form.value.price) || 0),
-);
-/** OP from the Original price field only (for selling vs contract sanity checks). */
-const originalContractPriceNum = computed(() => Number(parsePriceInputDigits(form.value.original_price) || 0));
-const sellingPriceNum = computed(() => Number(parsePriceInputDigits(form.value.price) || 0));
-
-const SELLING_SIGNIFICANTLY_BELOW_OP_MSG = 'Selling price is significantly below original price.';
-/** Warn when selling &lt; this fraction of contract OP (e.g. 0.7 = below 70%). */
-const SELLING_VS_OP_WARN_RATIO = 0.7;
-
-const getSellingPriceVsOpWarning = () => {
-  const op = originalContractPriceNum.value;
-  const sp = sellingPriceNum.value;
-  if (!(op > 0) || !(sp > 0)) return '';
-  if (sp < op * SELLING_VS_OP_WARN_RATIO) return SELLING_SIGNIFICANTLY_BELOW_OP_MSG;
-  return '';
-};
-
-const sellingPriceVsOpWarning = computed(() => getSellingPriceVsOpWarning());
-
-/** When `VITE_LISTING_BLOCK_SUBMIT_SELLING_BELOW_OP` is true/1, publish is blocked if selling is below the warn ratio vs OP. */
-const shouldBlockSubmitSellingBelowOp = () =>
-  String(import.meta.env?.VITE_LISTING_BLOCK_SUBMIT_SELLING_BELOW_OP ?? '').toLowerCase() === 'true' ||
-  import.meta.env?.VITE_LISTING_BLOCK_SUBMIT_SELLING_BELOW_OP === '1';
-
-const initialPaymentTarget = computed(() => (originalPriceNum.value * initialPercentForm.value) / 100);
-const ucTrancheAed = computed(() => initialPaymentTarget.value);
-const handoverAmountForm = computed(() => Math.max(0, originalPriceNum.value - initialPaymentTarget.value));
-const premiumAmountForm = computed(() => Math.max(0, sellingPriceNum.value - originalPriceNum.value));
 
 const startOfDay = (value) => {
   const d = value instanceof Date ? new Date(value.getTime()) : new Date(value);
@@ -1809,163 +1912,6 @@ const getBreakdownPercentageCapError = () => {
 };
 
 const paymentBreakdownPercentageCapError = computed(() => getBreakdownPercentageCapError());
-
-const HANDOVER_AFTER_INSTALLMENTS_MSG = 'Handover date must be after all installments.';
-const HANDOVER_IN_PAST_MSG = 'Handover date cannot be in the past.';
-
-const getHandoverDateError = () => {
-  if (!isUnderConstruction.value) return '';
-  const raw = form.value.handover_date;
-  if (!raw) return '';
-  const handoverDay = startOfDay(raw);
-  if (Number.isNaN(handoverDay.getTime())) return '';
-
-  const today = startOfDay(new Date());
-  if (handoverDay.getTime() < today.getTime()) return HANDOVER_IN_PAST_MSG;
-
-  let maxInstTs = null;
-  for (const entry of breakdownInstallments.value) {
-    if (!entry?.date) continue;
-    const d = startOfDay(entry.date);
-    if (Number.isNaN(d.getTime())) continue;
-    const t = d.getTime();
-    if (maxInstTs === null || t > maxInstTs) maxInstTs = t;
-  }
-  if (maxInstTs !== null && handoverDay.getTime() <= maxInstTs) return HANDOVER_AFTER_INSTALLMENTS_MSG;
-  return '';
-};
-
-const paymentHandoverDateError = computed(() => getHandoverDateError());
-
-const installmentToAmount = (entry) => {
-  if (entry.type === 'percentage') return (originalPriceNum.value * Number(entry.value || 0)) / 100;
-  return Number(entry.value || 0);
-};
-
-const formatAed = (value) =>
-  new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: 0 }).format(Number(value || 0));
-
-const formatDateShort = (dateLike) => {
-  const date = new Date(dateLike);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-};
-
-/** Sum of all installment rows (for NOC vs OP); not filtered by due date. */
-const paidAmountForm = computed(() =>
-  breakdownInstallments.value.reduce((sum, entry) => sum + installmentToAmount(entry), 0),
-);
-
-/** % of original (contract) price covered by all installments (for display). */
-const paidPercentOfOp = computed(() =>
-  (paidAmountForm.value / Math.max(1, originalPriceNum.value)) * 100,
-);
-
-/** NOC % applies to original price (OP) only — not the payment-plan split (0,10,…,50). */
-const nocPercentOfOp = computed(() => {
-  const parsed = Number(form.value.noc_percentage ?? 0);
-  return Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : 0;
-});
-
-const nocRequiredAed = computed(() => (originalPriceNum.value * nocPercentOfOp.value) / 100);
-
-const nocRequirementMet = computed(() => {
-  if (nocPercentOfOp.value <= 0) return true;
-  return paidAmountForm.value >= nocRequiredAed.value - 0.01;
-});
-
-const NOC_PAID_BELOW_REQUIRED_MSG = 'Current paid amount does not satisfy the required NOC percentage.';
-
-/** Under construction + positive NOC % + paid total below required AED (uses same 0.01 tolerance as `nocRequirementMet`). */
-const nocRequirementWarningActive = computed(
-  () => isUnderConstruction.value && nocPercentOfOp.value > 0 && !nocRequirementMet.value,
-);
-
-const nocRemainingAed = computed(() => Math.max(0, nocRequiredAed.value - paidAmountForm.value));
-
-const nocRemainingPctOfOp = computed(() => {
-  const op = originalPriceNum.value;
-  if (op <= 0) return 0;
-  return (nocRemainingAed.value / op) * 100;
-});
-
-const nocProgressBarPct = computed(() => {
-  if (nocPercentOfOp.value <= 0 || nocRequiredAed.value <= 0) return 100;
-  return Math.min(100, (paidAmountForm.value / nocRequiredAed.value) * 100);
-});
-
-const nocProgressPaidLabel = computed(() => {
-  if (nocPercentOfOp.value <= 0) return '—';
-  return `${formatAed(paidAmountForm.value)} / ${formatAed(nocRequiredAed.value)}`;
-});
-
-const paymentBreakdownRows = computed(() => {
-  const rows = [];
-  let id = 1;
-  const sorted = breakdownInstallments.value.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
-  const paid = sorted.filter((entry) => isDatePaid(entry.date));
-  const upcoming = sorted.filter((entry) => !isDatePaid(entry.date));
-
-  if (paid.length) {
-    const amount = paid.reduce((sum, entry) => sum + installmentToAmount(entry), 0);
-    rows.push({
-      id: `paid-${id++}`,
-      entryId: null,
-      type: 'Installments (paid)',
-      percentage: ((amount / Math.max(1, originalPriceNum.value)) * 100).toFixed(2),
-      amount,
-      date: paid[0]?.date || new Date(),
-      status: 'Paid',
-    });
-  }
-
-  upcoming.forEach((entry) => {
-    const amount = installmentToAmount(entry);
-    rows.push({
-      id: entry.id,
-      entryId: entry.id,
-      type: 'Installment',
-      percentage: ((amount / Math.max(1, originalPriceNum.value)) * 100).toFixed(2),
-      amount,
-      date: entry.date,
-      status: 'Upcoming',
-    });
-  });
-
-  if (premiumAmountForm.value > 0) {
-    let premiumDate = '';
-    if (form.value.handover_date) {
-      const tempDate = new Date(form.value.handover_date);
-      if (!Number.isNaN(tempDate.getTime())) {
-        tempDate.setDate(tempDate.getDate() - 1);
-        premiumDate = tempDate;
-      }
-    }
-    rows.push({
-      id: `premium-${id++}`,
-      entryId: null,
-      type: 'Premium',
-      percentage: '',
-      amount: premiumAmountForm.value,
-      date: '',
-      status: isDatePaid(premiumDate) ? 'Paid' : 'Upcoming',
-    });
-  }
-
-  if (handoverAmountForm.value > 0) {
-    rows.push({
-      id: `handover-${id++}`,
-      entryId: null,
-      type: `Handover (${installmentPercentForm.value.toFixed(0)}%)`,
-      percentage: installmentPercentForm.value.toFixed(2),
-      amount: handoverAmountForm.value,
-      date: form.value.handover_date || '',
-      status: isDatePaid(form.value.handover_date || new Date('2999-01-01')) ? 'Paid' : 'Upcoming',
-    });
-  }
-
-  return rows;
-});
 
 const addBreakdownInstallment = () => {
   const value = Number(installmentDraft.value.value || 0);
@@ -2322,7 +2268,9 @@ const fetchPropertyData = async (id) => {
       rented_until: rentedUntil || "",
       drive_link: driveLink,
       is_hot_deal:propertyData.is_hot_deal,
-      payment_plans: loadedPaymentPlanValue,
+      payment_plans: loadedPaymentPlanValue
+        ? (resolvePaymentPlanOption(loadedPaymentPlanValue) ?? loadedPaymentPlanValue)
+        : null,
       payment_plan: paymentPlanString || "",
        canShowOwner: propertyData.canShowOwner ,
       original_price: propertyData.original_price != null && propertyData.original_price !== ''
@@ -3695,9 +3643,28 @@ const handleSubmit = async (action = 'draft') => {
         isSubmitting.value = false;
         return;
       }
-      const handoverErr = getHandoverDateError();
+      const handoverErr = paymentHandoverDateError.value;
       if (handoverErr) {
         proxy.$showNotification(handoverErr, 'error');
+        isSubmitting.value = false;
+        return;
+      }
+    }
+
+    if (isUnderConstruction.value && action === 'publish') {
+      if (publishPaymentBreakdownBlocked.value) {
+        proxy.$showNotification(
+          publishPaymentBreakdownBlockTitle.value || 'Fix payment breakdown before publishing.',
+          'error',
+        );
+        isSubmitting.value = false;
+        return;
+      }
+      const confirmed = await confirmSellingBelowOriginalIfNeeded(
+        originalContractPriceNum.value,
+        sellingPriceNum.value,
+      );
+      if (!confirmed) {
         isSubmitting.value = false;
         return;
       }
@@ -3728,20 +3695,6 @@ const handleSubmit = async (action = 'draft') => {
           isSubmitting.value = false;
           return;
         }
-
-      if (isUnderConstruction.value) {
-        if (action === 'publish' && nocPercentOfOp.value > 0 && !nocRequirementMet.value) {
-          proxy.$showNotification(NOC_PAID_BELOW_REQUIRED_MSG, 'error');
-          isSubmitting.value = false;
-          return;
-        }
-      }
-
-      if (action === 'publish' && shouldBlockSubmitSellingBelowOp() && getSellingPriceVsOpWarning()) {
-        proxy.$showNotification(SELLING_SIGNIFICANTLY_BELOW_OP_MSG, 'error');
-        isSubmitting.value = false;
-        return;
-      }
 
     }
 
@@ -4118,6 +4071,54 @@ onUnmounted(() => {
 }
 
 .payment-calc-summary {
+  border-color: #e2e8f0 !important;
+}
+
+.payment-breakdown-card-body .payment-breakdown-date-picker :deep(.advanced-date-trigger) {
+  min-height: calc(1.5em + 0.75rem + 2px);
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--bs-border-radius, 0.375rem);
+  border-color: var(--bs-border-color, #dee2e6);
+  font-size: 1rem;
+}
+
+.payment-breakdown-card-body .payment-breakdown-date-picker :deep(.advanced-date-text) {
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.payment-breakdown-card-body .payment-breakdown-date-picker :deep(.advanced-date-text.is-placeholder) {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.payment-breakdown-actions {
+  gap: 0.5rem;
+}
+
+.payment-validation-summary {
+  border-color: #e2e8f0 !important;
+}
+
+.payment-validation-summary-list .payment-val-ok {
+  color: #047857;
+}
+
+.payment-validation-summary-list .payment-val-warn {
+  color: #b45309;
+}
+
+.payment-validation-summary-list .payment-val-err {
+  color: #b91c1c;
+}
+
+.payment-val-icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  text-align: center;
+}
+
+.noc-summary-card {
   border-color: #e2e8f0 !important;
 }
 

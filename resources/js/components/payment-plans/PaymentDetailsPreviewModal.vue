@@ -216,6 +216,7 @@ const formatRowPercentage = (row) => {
 
 const badgeClass = (status) => {
   if (status === 'Paid') return 'pd-badge--paid';
+  if (status === 'Selling below original price') return 'pd-badge--below-op';
   if (status === 'Due on transfer' || status === 'Due to transfer') return 'pd-badge--due';
   if (status === 'Due payment') return 'pd-badge--due';
   if (status === 'Remaining') return 'pd-badge--remaining';
@@ -620,6 +621,11 @@ const expensesGrandTotalDisplay = computed(() => {
 .pd-badge--due {
   background: #bae6fd;
   color: #075985;
+}
+
+.pd-badge--below-op {
+  background: #fecaca;
+  color: #b91c1c;
 }
 
 .pd-badge--remaining {

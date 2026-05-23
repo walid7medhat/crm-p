@@ -224,17 +224,8 @@
     <!-- 💳 Payment breakdown & NOC (off-plan; fields enabled when completion = Under Construction) -->
     <div class="col-lg-12">
       <div class="card">
-        <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="card-header">
           <h6 class="card-title mb-0">Payment Breakdown &amp; NOC</h6>
-          <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-primary"
-              @click="showPaymentDetailsPreview = true"
-            >
-              View
-            </button>
-          </div>
         </div>
         <div class="card-body payment-breakdown-card-body">
           <div class="row gy-3 payment-breakdown-prices">
@@ -304,7 +295,9 @@
                   <div class="col-md-4">
                     <div class="text-muted text-uppercase fw-semibold mb-1">Premium</div>
                     <div class="fs-6 fw-semibold">Selling − OP</div>
-                    <div>{{ formatAed(premiumAmountForm) }}</div>
+                    <div :class="{ 'text-danger': premiumIsNegative }">{{ premiumDisplayAed }}</div>
+                    <div v-if="premiumIsNegative" class="text-danger small mt-1">Selling price below original price</div>
+                    <span v-if="sellingBelowOriginalActive" class="badge bg-warning text-dark mt-1">Selling below original price</span>
                   </div>
                   <div class="col-md-4">
                     <div class="text-muted text-uppercase fw-semibold mb-1">Handover balance</div>
@@ -328,10 +321,6 @@
 
             <div v-if="percentageInstallmentPlanMismatchError" class="col-12">
               <div class="alert alert-danger py-2 px-3 mb-0 small" role="alert">{{ percentageInstallmentPlanMismatchError }}</div>
-            </div>
-
-            <div v-if="sellingBelowOriginalPriceError" class="col-12">
-              <div class="alert alert-danger py-2 px-3 mb-0 small" role="alert">{{ sellingBelowOriginalPriceError }}</div>
             </div>
 
             <div class="col-md-4">
@@ -383,8 +372,9 @@
                     <div v-if="nocPercentOfOp > 0" class="text-muted">({{ nocPercentOfOp }}% of OP)</div>
                   </div>
                   <div class="col-md-4">
-                    <div class="text-muted">Paid installments</div>
-                    <div class="fw-semibold">{{ formatAed(paidAmountForm) }}</div>
+                    <div class="text-muted">Scheduled installments</div>
+                    <div class="fw-semibold">{{ formatAed(scheduledInstallmentsAed) }}</div>
+                    <div class="text-muted small">Past due: {{ formatAed(paidAmountForm) }}</div>
                   </div>
                   <div class="col-md-4">
                     <div class="text-muted">Remaining for NOC</div>
@@ -741,6 +731,26 @@
                 <span>{{ item.text }}</span>
               </li>
             </ul>
+          </div>
+
+          <div class="payment-breakdown-actions d-flex flex-wrap gap-2 justify-content-end mt-3 pt-3 border-top">
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              @click="showPaymentDetailsPreview = true"
+            >
+              <i class="fas fa-eye me-1"></i>
+              Preview
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              @click="handleSubmit('draft')"
+              :disabled="isSubmitting"
+            >
+              <i class="fas fa-save me-1"></i>
+              Save
+            </button>
           </div>
           </template>
         </div>
@@ -1892,6 +1902,7 @@ import "vue-select/dist/vue-select.css";
 import PaymentDetailsPreviewModal from "@/components/payment-plans/PaymentDetailsPreviewModal.vue";
 import AdvancedDatePicker from "@/components/shared/AdvancedDatePicker.vue";
 import { parsePriceInputDigits, formatPriceInputDisplay } from "@/utils/priceInputFormat";
+import Swal from "sweetalert2";
 const { proxy } = getCurrentInstance();
 
 const showPaymentDetailsPreview = ref(false);
@@ -2154,7 +2165,19 @@ const initialPaymentTarget = computed(() => (originalPriceNum.value * initialPer
 /** Under-construction tranche in AED (same as initialPaymentTarget). */
 const ucTrancheAed = computed(() => initialPaymentTarget.value);
 const handoverAmountForm = computed(() => Math.max(0, originalPriceNum.value - initialPaymentTarget.value));
-const premiumAmountForm = computed(() => Math.max(0, sellingPriceNum.value - originalPriceNum.value));
+const premiumAmountForm = computed(() => sellingPriceNum.value - originalPriceNum.value);
+const premiumIsNegative = computed(() => premiumAmountForm.value < -0.01);
+const premiumDisplayAed = computed(() => {
+  const v = premiumAmountForm.value;
+  if (Math.abs(v) < 0.5) return formatAed(0);
+  if (v < 0) return `-${formatAed(Math.abs(v))}`;
+  return formatAed(v);
+});
+const sellingBelowOriginalActive = computed(() => {
+  const op = originalContractPriceNum.value;
+  const sp = sellingPriceNum.value;
+  return op > 0 && sp > 0 && sp + 0.01 < op;
+});
 
 /** Local calendar start of day (compare installment `type="date"` strings reliably). */
 const startOfDay = (value) => {
@@ -2329,7 +2352,7 @@ const nocRequiredAed = computed(() => (originalPriceNum.value * nocPercentOfOp.v
 
 const nocRequirementMet = computed(() => {
   if (nocPercentOfOp.value <= 0) return true;
-  return paidAmountForm.value >= nocRequiredAed.value - 0.01;
+  return allInstallmentsAed.value >= nocRequiredAed.value - 0.01;
 });
 
 const NOC_PAID_BELOW_REQUIRED_MSG = 'Paid installments (past due dates) do not meet the required NOC percentage.';
@@ -2339,7 +2362,7 @@ const nocRequirementWarningActive = computed(
   () => isUnderConstruction.value && nocPercentOfOp.value > 0 && !nocRequirementMet.value,
 );
 
-const nocRemainingAed = computed(() => Math.max(0, nocRequiredAed.value - paidAmountForm.value));
+const nocRemainingAed = computed(() => Math.max(0, nocRequiredAed.value - allInstallmentsAed.value));
 
 const nocRemainingPctOfOp = computed(() => {
   const op = originalPriceNum.value;
@@ -2347,14 +2370,16 @@ const nocRemainingPctOfOp = computed(() => {
   return (nocRemainingAed.value / op) * 100;
 });
 
+const scheduledInstallmentsAed = computed(() => allInstallmentsAed.value);
+
 const nocProgressBarPct = computed(() => {
   if (nocPercentOfOp.value <= 0 || nocRequiredAed.value <= 0) return 100;
-  return Math.min(100, (paidAmountForm.value / nocRequiredAed.value) * 100);
+  return Math.min(100, (allInstallmentsAed.value / nocRequiredAed.value) * 100);
 });
 
 const nocProgressPaidLabel = computed(() => {
   if (nocPercentOfOp.value <= 0) return '—';
-  return `${formatAed(paidAmountForm.value)} / ${formatAed(nocRequiredAed.value)}`;
+  return `${formatAed(allInstallmentsAed.value)} / ${formatAed(nocRequiredAed.value)}`;
 });
 
 const BREAKDOWN_SELLING_TOLERANCE_AED = 1;
@@ -2450,7 +2475,6 @@ const publishPaymentBreakdownBlocked = computed(() => {
   if (hasMixedInstallmentTypes.value) return true;
   if (percentageInstallmentPlanMismatchError.value) return true;
   if (breakdownSellingPriceMismatchActive.value) return true;
-  if (sellingBelowOriginalPriceError.value) return true;
   if (nocRequirementWarningActive.value) return true;
   if (handoverAmountNegativeBlock.value) return true;
   if (getHandoverDateError()) return true;
@@ -2467,7 +2491,6 @@ const publishPaymentBreakdownBlockTitle = computed(() => {
   if (hasMixedInstallmentTypes.value) return MIXED_INSTALLMENT_TYPES_MSG;
   if (percentageInstallmentPlanMismatchError.value) return percentageInstallmentPlanMismatchError.value;
   if (breakdownSellingPriceMismatchActive.value) return 'Payment breakdown total does not match selling price.';
-  if (sellingBelowOriginalPriceError.value) return sellingBelowOriginalPriceError.value;
   if (nocRequirementWarningActive.value) return NOC_PAID_BELOW_REQUIRED_MSG;
   if (handoverAmountNegativeBlock.value) return 'Handover amount is invalid.';
   if (getHandoverDateError()) return getHandoverDateError();
@@ -2580,10 +2603,14 @@ const paymentBreakdownValidationSummary = computed(() => {
       icon: '⚠',
       text: 'Enter original price (OP) to enforce selling ≥ OP.',
     });
-  } else if (sellingBelowOriginalPriceError.value) {
-    rows.push({ id: 'svop', level: 'err', icon: '✕', text: sellingBelowOriginalPriceError.value });
+  } else if (sellingBelowOriginalActive.value) {
+    rows.push({ id: 'svop', level: 'warn', icon: '⚠', text: 'Selling below original price' });
   } else {
-    rows.push({ id: 'svop', level: 'ok', icon: '✓', text: 'Selling price is not below original price.' });
+    rows.push({ id: 'svop', level: 'ok', icon: '✓', text: 'Selling price is at or above original price.' });
+  }
+
+  if (premiumIsNegative.value) {
+    rows.push({ id: 'prem', level: 'warn', icon: '⚠', text: 'Negative premium — selling below original price.' });
   }
 
   if (handoverAmountNegativeBlock.value) {
@@ -2620,19 +2647,25 @@ const STATUS_PAID = 'Paid';
 const STATUS_DUE_ON_TRANSFER = 'Due on transfer';
 const STATUS_UPCOMING = 'Upcoming';
 
-/** Paid by date; upcoming pre-handover installments → Due on transfer. */
-const resolveInstallmentDisplayStatus = (entry) => {
-  if (isDatePaid(entry?.date)) return STATUS_PAID;
-  return STATUS_DUE_ON_TRANSFER;
+const resolveNocInstallmentStatus = (cumulativeAfter) => {
+  if (nocPercentOfOp.value <= 0) return STATUS_UPCOMING;
+  if (cumulativeAfter <= nocRequiredAed.value + 0.01) return STATUS_DUE_ON_TRANSFER;
+  return STATUS_UPCOMING;
 };
 
 const paymentBreakdownRows = computed(() => {
   const rows = [];
   let id = 1;
   const sorted = breakdownInstallments.value.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+  let cumulative = 0;
 
   sorted.forEach((entry) => {
     const amount = installmentToAmount(entry);
+    cumulative += amount;
+    let status;
+    if (isDatePaid(entry?.date)) status = STATUS_PAID;
+    else status = resolveNocInstallmentStatus(cumulative);
+
     rows.push({
       id: entry.id,
       entryId: entry.id,
@@ -2640,23 +2673,21 @@ const paymentBreakdownRows = computed(() => {
       percentage: ((amount / Math.max(1, originalPriceNum.value)) * 100).toFixed(2),
       amount,
       date: entry.date,
-      status: resolveInstallmentDisplayStatus(entry),
+      status,
     });
   });
 
-  if (premiumAmountForm.value > 0) {
-    rows.push({
-      id: `premium-${id++}`,
-      entryId: null,
-      type: 'Premium',
-      percentage: '',
-      amount: premiumAmountForm.value,
-      date: '',
-      status: STATUS_DUE_ON_TRANSFER,
-    });
-  }
+  rows.push({
+    id: `premium-${id++}`,
+    entryId: null,
+    type: 'Premium',
+    percentage: '',
+    amount: premiumAmountForm.value,
+    date: '',
+    status: premiumIsNegative.value ? 'Selling below original price' : STATUS_UPCOMING,
+  });
 
-  if (handoverAmountForm.value > 0) {
+  if (Math.abs(handoverAmountForm.value) > 0.01) {
     rows.push({
       id: `handover-${id++}`,
       entryId: null,
@@ -2694,6 +2725,7 @@ const paymentBreakdownTableTotals = computed(() => {
 
 const breakdownRowStatusClass = (status) => {
   if (status === STATUS_PAID) return 'bg-success-subtle text-success-emphasis';
+  if (status === 'Selling below original price') return 'bg-danger-subtle text-danger-emphasis';
   if (status === STATUS_DUE_ON_TRANSFER || status === 'Due to transfer') {
     return 'bg-warning-subtle text-warning-emphasis';
   }
@@ -3957,6 +3989,20 @@ const handleSubmit = async (action = 'draft') => {
         isSubmitting.value = false;
         return;
       }
+      if (sellingBelowOriginalActive.value) {
+        const confirmed = await Swal.fire({
+          icon: 'warning',
+          title: 'Confirm selling price',
+          text: 'Selling price is lower than original price. Are you sure you want to continue?',
+          showCancelButton: true,
+          confirmButtonText: 'Continue',
+          cancelButtonText: 'Cancel',
+        });
+        if (!confirmed.isConfirmed) {
+          isSubmitting.value = false;
+          return;
+        }
+      }
     }
 
     if (action !== 'draft') {
@@ -5176,6 +5222,15 @@ body {
 .payment-breakdown-card-body .payment-breakdown-date-picker :deep(.advanced-date-text) {
   font-size: 1rem;
   font-weight: 400;
+}
+
+.payment-breakdown-card-body .payment-breakdown-date-picker :deep(.advanced-date-text.is-placeholder) {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.payment-breakdown-actions {
+  gap: 0.5rem;
 }
 
 .assignment-expenses-vat-inline {

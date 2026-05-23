@@ -45,6 +45,10 @@
         :key="property.id || index"
         class="col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600"
       >
+        <div
+          class="property-listing-card"
+          :class="{ 'property-listing-card--missing-breakdown': listingNeedsPaymentBreakdownHighlight(property) }"
+        >
        <router-link
             :to="`/property-details/${property.id}`"
             class="property-card-link"
@@ -104,6 +108,12 @@
                   </span>
                   <span v-else-if="!property.approved && !property.rejection_reason && property.status==draft" class="badge-sold bg-danger">
                     <i class="ri-time-line me-1"></i>Need Approve
+                  </span>
+                  <span
+                    v-if="listingNeedsPaymentBreakdownHighlight(property)"
+                    class="badge-missing-breakdown"
+                  >
+                    <i class="ri-error-warning-line me-1"></i>No breakdown
                   </span>
                 </div>
               <!-- Images Count Badge Only -->
@@ -170,35 +180,33 @@
                   </div>
                 </div>
 
-              <!-- Action Buttons -->
               <div class="d-flex gap-2">
-                <router-link
-              
-                  :to="`/property-details/${property.id}`"
-                  class="view-more-btn flex-grow-1"
-                >
+                <span class="view-more-btn flex-grow-1 text-center">
                   View Details
-                </router-link>
-                
-                <!-- Status Toggle Button -->
-                <!-- <button
-                  v-if="property.status !== 'converted'"
-                  class="status-toggle-btn"
-                  :class="property.is_active ? 'btn-active' : 'btn-inactive'"
-                  @click="togglePropertyStatus(property)"
-                  :title="property.is_active ? 'Deactivate Property' : 'Activate Property'"
-                >
-                  <i :class="property.is_active ? 'ri-eye-line' : 'ri-eye-off-line'"></i>
-                </button>
-                -->
-                <!-- Disabled Button for converted properties -->
-                
+                </span>
               </div>
             </div>
           </div>
        </router-link>
+          <button
+            v-if="listingNeedsPaymentBreakdownHighlight(property) && canQuickEditPaymentBreakdown(property)"
+            type="button"
+            class="btn btn-sm btn-light breakdown-quick-btn"
+            @click.stop.prevent="openBreakdownModal(property)"
+          >
+            <i class="ri-bank-card-line me-1"></i>
+            Add payment breakdown
+          </button>
+        </div>
       </div>
     </div>
+
+    <ListingPaymentBreakdownQuickModal
+      v-model="breakdownModalOpen"
+      :listing-id="breakdownModalListingId"
+      :listing-preview="breakdownModalPreview"
+      @saved="onBreakdownSaved"
+    />
 
     <!-- Pagination -->
        <div v-if="pagination && pagination.total > pagination.per_page" class="row mt-4">
@@ -260,6 +268,11 @@ import { useRoute, useRouter } from 'vue-router';
 import SearchBar from "./SearchBar.vue";
 import api from "@/plugins/axios";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
+import ListingPaymentBreakdownQuickModal from '@/components/listings/ListingPaymentBreakdownQuickModal.vue';
+import {
+  listingNeedsPaymentBreakdownHighlight,
+  canQuickEditPaymentBreakdown,
+} from '@/utils/listingPaymentBreakdownStatus';
 
 // Default images
 // import property1 from "/assets/images/a.jpeg";
@@ -269,7 +282,7 @@ import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 
 export default {
   name: 'AllListings',
-  components: { SearchBar, Breadcrumb },
+  components: { SearchBar, Breadcrumb, ListingPaymentBreakdownQuickModal },
   setup() {
       const property1 = "/assets/images/a.jpeg";
     const property2 = "/assets/images/b.jpeg";
@@ -285,6 +298,9 @@ export default {
     const isExporting = ref(false);
     const activeStatus = ref('all'); // 'all', 'active', 'inactive'
     const initialFilters = ref(null);
+    const breakdownModalOpen = ref(false);
+    const breakdownModalListingId = ref(null);
+    const breakdownModalPreview = ref(null);
    const propertyIcon = '/assets/icons/property-icon.svg';
   const bedIcon = '/assets/icons/bedroom-icon.svg';
   const bathIcon = '/assets/icons/bathroom-icon.svg';
@@ -1019,6 +1035,20 @@ const fetchProperties = async (filters = {}, page = 1) => {
       }
     };
 
+    const openBreakdownModal = (property) => {
+      breakdownModalListingId.value = property.id;
+      breakdownModalPreview.value = property;
+      breakdownModalOpen.value = true;
+    };
+
+    const onBreakdownSaved = (updated) => {
+      if (!updated?.id) return;
+      const idx = properties.value.findIndex((p) => p.id === updated.id);
+      if (idx !== -1) {
+        properties.value[idx] = { ...properties.value[idx], ...updated };
+      }
+    };
+
     // Fetch initial properties on component mount
     onMounted(() => {
       const hasQuery = Object.keys(route.query).length > 0;
@@ -1061,7 +1091,14 @@ const fetchProperties = async (filters = {}, page = 1) => {
       getAgentName,
       exportActiveListingsToExcel,
       handleImageLoad,
-      handleImageError
+      handleImageError,
+      breakdownModalOpen,
+      breakdownModalListingId,
+      breakdownModalPreview,
+      openBreakdownModal,
+      onBreakdownSaved,
+      listingNeedsPaymentBreakdownHighlight,
+      canQuickEditPaymentBreakdown,
     };
   }
 };
@@ -1481,6 +1518,43 @@ const fetchProperties = async (filters = {}, page = 1) => {
 .inactive-image {
   filter: grayscale(40%);
 }
+.property-listing-card {
+  position: relative;
+  height: 100%;
+}
+
+.property-listing-card--missing-breakdown .property-card {
+  box-shadow: 0 0 0 2px #fbbf24, 0 4px 14px rgba(251, 191, 36, 0.25);
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 28%);
+}
+
+.badge-missing-breakdown {
+  background: #f59e0b;
+  color: #1f2937;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.breakdown-quick-btn {
+  display: block;
+  width: calc(100% - 1.5rem);
+  margin: 0 0.75rem 0.75rem;
+  border: 1px solid #fbbf24;
+  background: #fffbeb;
+  color: #92400e;
+  font-weight: 600;
+  font-size: 0.8rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.breakdown-quick-btn:hover {
+  background: #fef3c7;
+  color: #78350f;
+  border-color: #f59e0b;
+}
+
 .property-card-link {
   display: block;
   text-decoration: none;

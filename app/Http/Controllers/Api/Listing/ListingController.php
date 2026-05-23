@@ -2221,6 +2221,109 @@ public function toggleArchive($id)
     }
 }
 
+public function updatePaymentBreakdown(Request $request, $id): JsonResponse
+{
+    try {
+        $listing = Listing::findOrFail($id);
+        $user = Auth::user();
+
+        if (! $user) {
+            return ApiResponse::error('Access denied', 403);
+        }
+
+        $isAdmin = $user->hasRole('super_admin') || $user->hasRole('admin');
+        $isAssignedAgent = (int) $listing->agent_id === (int) $user->id;
+
+        // Sales and other non-admin roles: assigned agent only.
+        if (! $isAdmin && ! $isAssignedAgent) {
+            return ApiResponse::error('You can only add payment breakdown to your own listings.', 403);
+        }
+
+        $validated = $request->validate([
+            'original_price' => 'nullable|numeric|min:0',
+            'price' => 'nullable|numeric|min:0',
+            'selling_price' => 'nullable|numeric|min:0',
+            'payment_plan' => 'nullable',
+            'payment_breakdown' => 'nullable',
+            'assignment_expense_lines' => 'nullable',
+            'noc_percentage' => 'nullable|integer|min:0|max:50',
+            'handover_date' => 'nullable|date',
+        ]);
+
+        $updates = [];
+
+        if (array_key_exists('original_price', $validated)) {
+            $updates['original_price'] = $validated['original_price'];
+        }
+
+        $selling = $validated['selling_price'] ?? $validated['price'] ?? null;
+        if ($selling !== null) {
+            $updates['price'] = $selling;
+            if (Schema::hasColumn('listings', 'selling_price')) {
+                $updates['selling_price'] = $selling;
+            }
+        }
+
+        if ($request->has('payment_plan')) {
+            $plan = $request->input('payment_plan');
+            if (is_string($plan)) {
+                $decoded = json_decode($plan, true);
+                $updates['payment_plan'] = $decoded !== null ? $decoded : [$plan];
+            } elseif (is_array($plan)) {
+                $updates['payment_plan'] = $plan;
+            }
+        }
+
+        if ($request->has('payment_breakdown')) {
+            $breakdown = $request->input('payment_breakdown');
+            if (is_string($breakdown)) {
+                $decoded = json_decode($breakdown, true);
+                $updates['payment_breakdown'] = is_array($decoded) ? $decoded : [];
+            } elseif (is_array($breakdown)) {
+                $updates['payment_breakdown'] = $breakdown;
+            } else {
+                $updates['payment_breakdown'] = [];
+            }
+        }
+
+        if (array_key_exists('noc_percentage', $validated)) {
+            $updates['noc_percentage'] = $validated['noc_percentage'];
+        }
+
+        if (array_key_exists('handover_date', $validated)) {
+            $updates['handover_date'] = $validated['handover_date'];
+        }
+
+        if ($request->has('assignment_expense_lines')) {
+            $lines = $request->input('assignment_expense_lines');
+            if (is_string($lines)) {
+                $decoded = json_decode($lines, true);
+                $updates['assignment_expense_lines'] = is_array($decoded) ? $decoded : [];
+            } elseif (is_array($lines)) {
+                $updates['assignment_expense_lines'] = $lines;
+            } else {
+                $updates['assignment_expense_lines'] = [];
+            }
+        }
+
+        if ($updates !== []) {
+            $listing->update($updates);
+        }
+
+        $this->clearCache();
+        $this->clearSpecificCache($listing->id);
+
+        $listing->load(['propertyType', 'area', 'agent', 'project']);
+
+        return ApiResponse::success(
+            new ListingGridResource($listing->fresh(['agent', 'propertyType', 'area', 'project'])),
+            'Payment breakdown updated successfully'
+        );
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to update payment breakdown: '.$e->getMessage(), 500);
+    }
+}
+
 public function toggleStatus($id)
 {
     try {

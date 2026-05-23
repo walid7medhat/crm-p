@@ -39,8 +39,11 @@ class Listing extends Model
         'converted_at'=>'datetime',
         //  'rented_until' => 'date',
         'payment_plan' => 'array',
+        'payment_breakdown' => 'array',
+        'assignment_expense_lines' => 'array',
         'floor_plans_source' => 'array',
         'additional_features' => 'array',
+        'handover_date' => 'date',
         'approved_at'=>'datetime',
         'approved' => 'boolean', 
 
@@ -412,5 +415,15 @@ class Listing extends Model
             ->where('status', 'approved')
             ->whereNotNull('approved_at')
             ->exists();
+    }
+
+    public function hasPaymentBreakdown(): bool
+    {
+        $rows = $this->payment_breakdown;
+        if (is_string($rows)) {
+            $decoded = json_decode($rows, true);
+            $rows = is_array($decoded) ? $decoded : [];
+        }
+        return is_array($rows) && count($rows) > 0;
     }
 }

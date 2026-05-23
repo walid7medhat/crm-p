@@ -12,6 +12,19 @@ class ListingGridResource extends JsonResource
     /** Per-request memo: "{listingId}:{userId}" => approved request_type list. */
     protected static array $accessRequestCache = [];
 
+    protected function resolveCanEditPaymentBreakdown(Request $request): bool
+    {
+        $user = $request->user() ?? auth()->user();
+        if (! $user) {
+            return false;
+        }
+        if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+            return true;
+        }
+
+        return (int) $this->agent_id === (int) $user->id;
+    }
+
     protected function hasApprovedAccess(?int $userId, string $requestType): bool
     {
         if (! $userId) return false;
@@ -87,6 +100,15 @@ class ListingGridResource extends JsonResource
             'furnished_status' => $this->furnished_status,
             'listing_status' => $this->listing_status,
             'completion_status' => $this->completion_status,
+            'original_price' => $this->original_price,
+            'selling_price' => $this->selling_price ?? $this->price,
+            'payment_breakdown' => $this->payment_breakdown,
+            'assignment_expense_lines' => $this->assignment_expense_lines,
+            'has_payment_breakdown' => $this->hasPaymentBreakdown(),
+            'noc_percentage' => $this->noc_percentage,
+            'handover_date' => $this->handover_date?->format('Y-m-d'),
+            'payment_plan' => $this->payment_plan,
+            'can_edit_payment_breakdown' => $this->resolveCanEditPaymentBreakdown($request),
             
             // 'main_image' => $this->galleryImages->first()?->image_url,
             'main_image'=> $this->hero_image_path

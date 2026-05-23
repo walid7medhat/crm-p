@@ -715,6 +715,7 @@ Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
          Route::prefix('properties')->group(function () {
                 Route::patch('/{id}/toggle-archive', [ListingController::class, 'toggleArchive']);
                 Route::patch('/{id}/toggle-status', [ListingController::class, 'toggleStatus']);
+                Route::patch('/{id}/payment-breakdown', [ListingController::class, 'updatePaymentBreakdown']);
                 Route::patch('/{id}/assign-agent', [ListingController::class, 'assignAgent']);
                 Route::patch('/{id}/mark-converted', [ListingController::class, 'markAsConverted']);
                 Route::patch('/{id}/revert-converted', [ListingController::class, 'revertFromConverted']);
