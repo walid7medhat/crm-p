@@ -303,7 +303,7 @@
                                                                 <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
                                                                     <div class="info-item">
                                                                         <div class="info-label text-secondary-light text-xs mb-1">Activity</div>
-                                                                        <div class="info-value">{{ formatDate(task.last_activity_at || task.assigned_at) }}</div>
+                                                                        <div class="info-value">{{ formatActivityDate(task) }}</div>
                                                                         <!-- <div v-if="activityPerson(task)?.name" class="text-xs text-secondary-light mt-1">
                                                                             {{ activityPerson(task).name }}
                                                                             <span v-if="activityPerson(task)?.is_external" class="badge bg-light text-secondary ms-1" style="font-size: 9px;">external</span>
@@ -816,15 +816,10 @@ const openPersonProfile = (task, type, event) => {
     // clickable.
     let person
     if (type === 'assigned') {
-        console.log(task.last_activity_user)
-        if(task && task.last_activity_user && task.last_activity_user.id){
-          person =  task.last_activity_user 
-                  console.log("last_activity_user"+person)
-
-        }else{
-          person =  task?.parent
-                  console.log("parent"+person)
-
+        if (task?.last_activity_user?.id) {
+          person = task.last_activity_user
+        } else {
+          person = task?.parent
         }
     } else {
         person = task?.responsible_person
@@ -1683,10 +1678,15 @@ const hasResponsiblePerson = (task) => {
     return !!(task?.responsible_person?.name || task?.responsible_person?.avatar)
 }
 
+const activityDisplayAt = (task) =>
+    task?.last_activity_at ?? task?.bitrix24_last_activity_at ?? task?.assigned_at ?? null
+
 const hasAssignedBy = (task) => {
     return !!(
-        task?.last_activity_at || task?.last_activity_user?.name ||
-        task?.assigned_at || task?.parent?.name || task?.parent?.avatar
+        activityDisplayAt(task) ||
+        task?.last_activity_user?.name ||
+        task?.parent?.name ||
+        task?.parent?.avatar
     )
 }
 
@@ -2584,6 +2584,11 @@ function formatDate(dateString) {
         hour12: true
     })
     return `${formattedDate}  |  ${formattedTime}`
+}
+
+/** Activity tile: Bitrix24 LAST_ACTIVITY_TIME (last_activity_at / bitrix24_last_activity_at). */
+function formatActivityDate(task) {
+    return formatDate(activityDisplayAt(task))
 }
 
 function getMobileCardIndex(column) {

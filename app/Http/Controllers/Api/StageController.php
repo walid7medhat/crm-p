@@ -496,6 +496,9 @@ class StageController extends Controller
             $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($allLeadsForMeta);
             $serviceDupFlags = $this->kanbanServiceDuplicateFlags($allLeadsForMeta);
             KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
+            KanbanLeadCardResource::setKanbanActivityUsers(
+                $this->kanbanActivityUsersForLeads($allLeadsForMeta)
+            );
 
             try {
                 foreach ($stagesWithLeads as &$stageRow) {
@@ -504,6 +507,7 @@ class StageController extends Controller
                 unset($stageRow);
             } finally {
                 KanbanLeadCardResource::clearKanbanMeta();
+                KanbanLeadCardResource::clearKanbanActivityUsers();
             }
 
             return ApiResponse::success([
@@ -795,11 +799,15 @@ class StageController extends Controller
             $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($leadsCollection);
             $serviceDupFlags = $this->kanbanServiceDuplicateFlags($leadsCollection);
             KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
+            KanbanLeadCardResource::setKanbanActivityUsers(
+                $this->kanbanActivityUsersForLeads($leadsCollection)
+            );
 
             try {
                 $leadsPayload = KanbanLeadCardResource::collection($paginatedLeads);
             } finally {
                 KanbanLeadCardResource::clearKanbanMeta();
+                KanbanLeadCardResource::clearKanbanActivityUsers();
             }
 
             return ApiResponse::success([
@@ -1215,6 +1223,35 @@ public function getOffices()
           });
     });
 }
+
+    /**
+     * Preload local users referenced in Bitrix24 LAST_ACTIVITY_BY metadata (one query).
+     *
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
+     * @return \Illuminate\Support\Collection<int, User>
+     */
+    private function kanbanActivityUsersForLeads($leads)
+    {
+        $localUserIds = [];
+        foreach ($leads as $lead) {
+            $data = is_string($lead->bitrix24_data)
+                ? json_decode($lead->bitrix24_data, true)
+                : $lead->bitrix24_data;
+            $localId = data_get($data, '_users.last_activity.local_user_id');
+            if ($localId) {
+                $localUserIds[] = (int) $localId;
+            }
+        }
+
+        $localUserIds = array_values(array_unique(array_filter($localUserIds)));
+        if ($localUserIds === []) {
+            return collect();
+        }
+
+        return User::query()
+            ->whereIn('id', $localUserIds)
+            ->get(['id', 'name', 'avatar', 'email']);
+    }
 
     /**
      * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads

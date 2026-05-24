@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Lead;
 
+use App\Http\Resources\Lead\Concerns\ResolvesLeadLastActivity;
 use App\Http\Resources\User\UserResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -10,6 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class KanbanLeadCardResource extends JsonResource
 {
+    use ResolvesLeadLastActivity;
     /** @var array<string, int> */
     protected static array $duplicateCountsByPhone = [];
 
@@ -34,6 +36,8 @@ class KanbanLeadCardResource extends JsonResource
         $duplicateNo = $phone
             ? (static::$duplicateCountsByPhone[$phone] ?? 0)
             : 0;
+
+        [$lastActivityAt, $lastActivityUser] = $this->resolveLastActivity(includeHistoryFallback: false);
 
         return [
             'id' => $this->id,
@@ -76,6 +80,10 @@ class KanbanLeadCardResource extends JsonResource
             'responsible_person' => new UserResource($this->whenLoaded('responsiblePerson')),
             'parent' => new UserResource($this->whenLoaded('addedBy')),
             'assigned_at' => $this->created_at,
+            'last_activity_at' => $lastActivityAt,
+            'last_activity_user' => $this->formatActivityUser($lastActivityUser),
+            'bitrix24_last_activity_at' => $this->bitrix24_last_activity_at,
+            'bitrix24_last_activity_by_id' => $this->bitrix24_last_activity_by_id,
             'api_first_question' => null,
             'has_service_duplicate' => static::$serviceDuplicateByLeadId[$this->id] ?? false,
             'score' => $this->score,
