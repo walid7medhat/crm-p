@@ -167,7 +167,7 @@
 
             <div v-else-if="!profileLoading && !userData" class="profile-error">
               <iconify-icon icon="lucide:alert-circle" class="icon"></iconify-icon>
-              <span>Failed to load profile data</span>
+              <span>{{ profileError || 'Failed to load profile data' }}</span>
             </div>
           </div>
         </div>
@@ -205,6 +205,7 @@ const emit = defineEmits(['update:modelValue', 'logout'])
 const router = useRouter()
 const userData = ref(null)
 const profileLoading = ref(false)
+const profileError = ref('')
 const profilePanel = ref(null)
 const avatarInput = ref(null)
 
@@ -289,27 +290,48 @@ function loadMoreTeamMembers() {
   visibleTeamCount.value += teamPageSize
 }
 
+function normalizeUserPayload(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  if (raw.data && typeof raw.data === 'object' && (raw.data.id != null || raw.data.name)) {
+    return raw.data
+  }
+  if (raw.id != null || raw.name) return raw
+  return null
+}
+
 // Fetch functions
 async function fetchUserFromAPI() {
-  if (!props.userId) return
+  const userId = Number(props.userId)
+  if (!userId || Number.isNaN(userId)) {
+    profileError.value = 'Invalid user id'
+    userData.value = null
+    return
+  }
   profileLoading.value = true
+  profileError.value = ''
   try {
-    const response = await api.get(`/users/${props.userId}`)
-    if (response.data?.data) {
-      userData.value = response.data.data
+    const response = await api.get(`/users/${userId}`)
+    const payload = normalizeUserPayload(response.data?.data)
+    if (response.data?.status !== false && payload) {
+      userData.value = payload
+    } else {
+      userData.value = null
+      profileError.value = response.data?.message || 'Failed to load profile data'
     }
   } catch (error) {
     console.error('Failed to fetch user:', error)
     userData.value = null
+    profileError.value = error?.response?.data?.message || 'Failed to load profile data'
   } finally {
     profileLoading.value = false
   }
 }
 
 async function fetchTeamMembers() {
-  if (!props.userId) return
+  const userId = Number(props.userId)
+  if (!userId || Number.isNaN(userId)) return
   try {
-    const teamRes = await api.get(`/users/${props.userId}/team-members/recursive`).catch(() => ({ data: { data: [] } }))
+    const teamRes = await api.get(`/users/${userId}/team-members/recursive`).catch(() => ({ data: { data: [] } }))
     const list = teamRes.data?.data
     if (Array.isArray(list)) {
       fetchedTeamMembers.value = list.map((m) => ({
@@ -386,6 +408,9 @@ function onAvatarChange(event) {
 }
 
 function close() {
+  userData.value = null
+  profileError.value = ''
+  fetchedTeamMembers.value = []
   emit('update:modelValue', false)
 }
 
@@ -394,13 +419,24 @@ function handleLogout() {
   close()
 }
 
-// Watch for modal open
-watch(() => props.modelValue, (isOpen) => {
-  if (isOpen && props.userId) {
-    visibleTeamCount.value = teamPageSize
-    fetchProfileAndTeam()
-  }
-})
+// Watch for modal open / user change (immediate: panel is often mounted via v-if already open)
+watch(
+  () => [props.modelValue, props.userId],
+  ([isOpen, userId]) => {
+    if (!isOpen) {
+      userData.value = null
+      profileError.value = ''
+      profileLoading.value = false
+      fetchedTeamMembers.value = []
+      return
+    }
+    if (userId) {
+      visibleTeamCount.value = teamPageSize
+      fetchProfileAndTeam()
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>

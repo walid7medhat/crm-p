@@ -1233,15 +1233,37 @@ public function getOffices()
     private function kanbanActivityUsersForLeads($leads)
     {
         $localUserIds = [];
+        $bitrixToLocal = [];
+        $activityNames = [];
         foreach ($leads as $lead) {
             $data = is_string($lead->bitrix24_data)
                 ? json_decode($lead->bitrix24_data, true)
                 : $lead->bitrix24_data;
             $localId = data_get($data, '_users.last_activity.local_user_id');
+            $b24Id = $lead->bitrix24_last_activity_by_id ? (int) $lead->bitrix24_last_activity_by_id : null;
+            $activityName = data_get($data, '_users.last_activity.name');
+            if (is_string($activityName) && trim($activityName) !== '') {
+                $activityNames[] = trim($activityName);
+            }
             if ($localId) {
-                $localUserIds[] = (int) $localId;
+                $localId = (int) $localId;
+                $localUserIds[] = $localId;
+                if ($b24Id) {
+                    $bitrixToLocal[$b24Id] = $localId;
+                }
             }
         }
+
+        $activityNames = array_values(array_unique($activityNames));
+        if ($activityNames !== []) {
+            $idsByName = User::query()
+                ->whereIn('name', $activityNames)
+                ->pluck('id')
+                ->all();
+            $localUserIds = array_merge($localUserIds, $idsByName);
+        }
+
+        KanbanLeadCardResource::setKanbanBitrixActivityUserMap($bitrixToLocal);
 
         $localUserIds = array_values(array_unique(array_filter($localUserIds)));
         if ($localUserIds === []) {
@@ -1250,7 +1272,13 @@ public function getOffices()
 
         return User::query()
             ->whereIn('id', $localUserIds)
-            ->get(['id', 'name', 'avatar', 'email']);
+            ->with([
+                'parent:id,name',
+                'roles:id,name',
+                'employeeProfile.companyBranch:id,name',
+                'employeeProfile.designation:id,name',
+            ])
+            ->get(['id', 'name', 'avatar', 'email', 'parent_id']);
     }
 
     /**
