@@ -142,7 +142,10 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'assigned_at'=>$assignmentHistory?$assignmentHistory->created_at:$this->created_at,
             // Activity-tracker (Bitrix24-style). Frontend lead card now reads
             // these instead of `assigned_at` / `parent` for the "who changed it
-            // last and when" tile.
+            // last and when" tile. `formatActivityUser` returns a flat dict
+            // (id is non-null only for real local users; B24-only users get
+            // a stub with id=null so the avatar/name still render but the
+            // click won't try to open a non-existent profile).
             'last_activity_at'   => $lastActivityAt,
             'last_activity_user' => $this->formatActivityUser($lastActivityUser),
             // Bitrix24 ID of the user who did the last activity, in case the

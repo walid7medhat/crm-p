@@ -80,6 +80,11 @@ class Lead extends Model
     {
         return $this->belongsTo(User::class, 'added_by');
     }
+          public function last_activity_user()
+    {
+        return $this->belongsTo(User::class, 'bitrix24_last_activity_by_id');
+    }
+    
 
     public function histories()
     {

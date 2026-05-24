@@ -311,7 +311,43 @@ class LeadController extends Controller
 
 
     /**
-     * Create a new lead - 
+     * Total count of all leads visible to the authenticated user. Respects the
+     * same permission scope as index(), but ignores any UI filters (search,
+     * stage, date ranges, etc.) — gives the kanban "Total Leads" KPI tile a
+     * stable, full-database number that doesn't shift when columns are paged
+     * or stages are hidden.
+     *
+     *   GET /api/leads/total-count -> { total: int }
+     */
+    public function totalCount(): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            $query = Lead::query();
+
+            if ($user->hasRole('super_admin') || $user->id == 30) {
+                // super_admin sees everything — no extra constraint
+            } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+                $subordinatesIds = $user->getAllSubordinatesIds();
+                $query->where(function ($q) use ($subordinatesIds, $user) {
+                    $q->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]))
+                      ->orWhereIn('added_by', $subordinatesIds);
+                });
+            } else {
+                $query->where(function ($q) use ($user) {
+                    $q->where('responsible_person_id', $user->id)
+                      ->orWhere('added_by', $user->id);
+                });
+            }
+
+            return ApiResponse::success(['total' => $query->count()], 'Total leads count');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to count leads: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Create a new lead -
      */
     public function store(LeadRequest $request): JsonResponse
     {

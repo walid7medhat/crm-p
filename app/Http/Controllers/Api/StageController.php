@@ -414,6 +414,7 @@ class StageController extends Controller
                           ->orWhere('work_phone_2', 'like', "%{$search}%")
                           ->orWhere('lead_source', 'like', "%{$search}%")
                           ->orWhere('status_lead', 'like', "%{$search}%")
+                          ->orWhere('more_information', 'like', "%{$search}%")
                           ->orWhere(function($q2) use ($search) {
                                 $q2->where('lead_type', 'like', "%{$search}%")
                                     ->orWhere('lead_type', 'both');
@@ -740,6 +741,7 @@ class StageController extends Controller
                           ->orWhere('work_phone_2', 'like', "%{$search}%")
                           ->orWhere('lead_source', 'like', "%{$search}%")
                           ->orWhere('status_lead', 'like', "%{$search}%")
+                          ->orWhere('more_information', 'like', "%{$search}%")
                            ->orWhere(function($q2) use ($search) {
                                 $q2->where('lead_type', 'like', "%{$search}%")
                                     ->orWhere('lead_type', 'both');
@@ -1158,57 +1160,61 @@ public function getOffices()
         });
     }
     private function applyLeadSourceFilter($query, Request $request): void
-    {
-        if (! $request->filled('source')) {
-            return;
-        }
-
-        // When the user picks a parent source (Website or Portal) without choosing a partial,
-        // also include all of that parent's known partial values — otherwise we'd miss leads
-        // whose `lead_source` is stored as the specific website/portal (e.g. "Allproperties.ae").
-        $websitePartials = ['website', 'Allproperties.ae', 'Oiaproperties.com'];
-        $portalPartials  = ['portal', 'propertyfinder', 'bayut'];
-
-        $expand = function ($value) use ($websitePartials, $portalPartials) {
-            if ($value === 'website') return $websitePartials;
-            if ($value === 'portal')  return $portalPartials;
-            return [$value];
-        };
-
-        $src = $request->source;
-
-        if (is_array($src)) {
-            $src = array_values(array_filter($src, fn ($v) => $v !== null && $v !== ''));
-
-            if (count($src) === 0) {
-                return;
-            }
-
-            // Expand each entry (so a mixed array with 'website' included also pulls the partials).
-            $expanded = [];
-            foreach ($src as $v) {
-                foreach ($expand($v) as $entry) {
-                    $expanded[] = $entry;
-                }
-            }
-            $expanded = array_values(array_unique($expanded));
-
-            if (count($expanded) === 1) {
-                $query->where('lead_source', $expanded[0]);
-            } else {
-                $query->whereIn('lead_source', $expanded);
-            }
-
-            return;
-        }
-
-        $expanded = $expand($src);
-        if (count($expanded) === 1) {
-            $query->where('lead_source', $expanded[0]);
-        } else {
-            $query->whereIn('lead_source', $expanded);
-        }
+{
+    if (! $request->filled('source')) {
+        return;
     }
+
+    $websitePartials = ['website', 'Allproperties.ae', 'Oiaproperties.com'];
+    $portalPartials  = ['portal', 'propertyfinder', 'bayut'];
+
+    $expand = function ($value) use ($websitePartials, $portalPartials) {
+        if ($value === 'website') return $websitePartials;
+        if ($value === 'portal')  return $portalPartials;
+        return [$value];
+    };
+
+    $src = $request->source;
+
+    if (is_array($src)) {
+        $src = array_values(array_filter($src, fn ($v) => $v !== null && $v !== ''));
+
+        if (count($src) === 0) {
+            return;
+        }
+
+        $expanded = [];
+        foreach ($src as $v) {
+            foreach ($expand($v) as $entry) {
+                $expanded[] = $entry;
+            }
+        }
+
+        $expanded = array_values(array_unique($expanded));
+
+        $query->where(function ($q) use ($expanded) {
+            $q->whereIn('lead_source', $expanded)
+              ->orWhere(function ($q2) use ($expanded) {
+                  foreach ($expanded as $term) {
+                      $q2->orWhere('more_information', 'LIKE', "%{$term}%");
+                  }
+              });
+        });
+
+        return;
+    }
+
+    $expanded = $expand($src);
+
+    $query->where(function ($q) use ($expanded) {
+        $q->whereIn('lead_source', $expanded)
+          ->orWhere(function ($q2) use ($expanded) {
+              foreach ($expanded as $term) {
+                  $q2->orWhere('more_information', 'LIKE', "%{$term}%");
+              }
+          });
+    });
+}
 
     /**
      * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads

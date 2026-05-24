@@ -10,6 +10,7 @@ use App\Models\LeadHistory;
 use App\Models\Stage;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -1018,18 +1019,29 @@ class Bitrix24LeadImporter
         return $parts ? implode(', ', $parts) : null;
     }
 
-    /** Strip HTML/BB-code from Bitrix24's COMMENTS field but keep line breaks. */
-    private function cleanRichText($value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-        $value = (string) $value;
-        $value = preg_replace('/<br\s*\/?>/i', "\n", $value) ?? $value;
-        $value = trim(strip_tags($value));
-        return $value === '' ? null : $value;
-    }
+        private function cleanRichText($value): ?string
+        {
+            if (empty($value)) {
+                return null;
+            }
 
+            $value = (string) $value;
+
+            // ✅ حل مشكلة url
+            $value = preg_replace('/\[url=(.*?)\](.*?)\[\/url\]/i', '$2', $value);
+            $value = preg_replace('/\[url\](.*?)\[\/url\]/i', '$1', $value);
+
+            // line breaks
+            $value = preg_replace('/<br\s*\/?>/i', "\n", $value);
+
+            // remove HTML
+            $value = strip_tags($value);
+
+            // ✅ أهم سطر (بيحل مشكلة الكومة ,)
+            $value = trim($value, " \t\n\r\0\x0B,;");
+
+            return $value !== '' ? $value : null;
+        }
     /** Translate Bitrix24 STATUS_ID (e.g. "NEW") -> human label (e.g. "New"). */
     private function statusName($statusId): ?string
     {
@@ -1050,6 +1062,54 @@ class Bitrix24LeadImporter
         }
         $this->ensureFieldMaps();
         return $this->sourceMap[$key] ?? $key;
+    }
+
+    /**
+     * Cached Bitrix24 lead-source map (STATUS_ID => NAME). Cache key persists
+     * across job chunks and re-runs — first chunk hits Bitrix24 once, all
+     * subsequent chunks read from cache for 1 hour. Distinct from the per-
+     * instance $sourceMap so 30k-lead sync chains don't re-fetch every page.
+     */
+    public function getLeadSources(): array
+    {
+        return Cache::remember('bitrix_lead_sources', 3600, function () {
+            try {
+                $r = $this->client->call('crm.status.list', [
+                    'filter' => ['ENTITY_ID' => 'SOURCE'],
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Bitrix24 getLeadSources failed: ' . $e->getMessage());
+                return [];
+            }
+
+            $mapped = [];
+            foreach ($r['result'] ?? [] as $item) {
+                $code = $item['STATUS_ID'] ?? null;
+                if ($code === null || $code === '') {
+                    continue;
+                }
+                $name = $item['NAME'] ?? $item['NAME_INIT'] ?? null;
+                $mapped[(string) $code] = (is_string($name) && trim($name) !== '')
+                    ? trim($name)
+                    : (string) $code;
+            }
+            return $mapped;
+        });
+    }
+
+    /**
+     * Resolve a Bitrix24 SOURCE_ID to its human label using the cached map.
+     * Falls back to the raw code when not found (so we never store an empty
+     * lead_source for a source that exists in Bitrix24 but isn't in
+     * crm.status.list — e.g. webform sources like "WEBFORM_15").
+     */
+    public function resolveLeadSource(?string $sourceId): ?string
+    {
+        if ($sourceId === null || $sourceId === '') {
+            return null;
+        }
+        $sources = $this->getLeadSources();
+        return $sources[$sourceId] ?? $sourceId;
     }
 
     /**
@@ -1263,7 +1323,7 @@ class Bitrix24LeadImporter
             'address'                       => $this->composeAddress($b24Lead),
             'company_name'                  => $b24Lead['COMPANY_TITLE'] ?? null,
             'position'                      => $b24Lead['POST'] ?? null,
-            'lead_source'                   => $b24Lead['SOURCE_ID'] ?? 'Bitrix24',
+            'lead_source'                   => $this->resolveLeadSource($b24Lead['SOURCE_ID'] ?? null) ?? 'Bitrix24',
             'source_information'            => $b24Lead['SOURCE_DESCRIPTION'] ?? null,
             'more_information'              => $this->cleanRichText($b24Lead['COMMENTS'] ?? null),
             'status_lead'                   => $this->statusName($statusId),
@@ -1871,5 +1931,11 @@ public function debugTimeline(int $b24LeadId): void
     {
         $hash = crc32($b24LeadId . '|' . $eventKey . '|' . $timestamp->format('YmdHis'));
         return 8_000_000_000_000_000 + abs($hash);
+    }
+    public function getLeadComment($leadId)
+    {
+        return $this->client->call('crm.lead.get', [
+            'id' => $leadId
+        ])['result']['COMMENTS'] ?? null;
     }
 }

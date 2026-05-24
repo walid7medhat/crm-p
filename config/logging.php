@@ -126,7 +126,11 @@ return [
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
-
+    'bitrix_resolve' => [
+        'driver' => 'single',
+        'path' => storage_path('logs/bitrix-resolve.log'),
+        'level' => 'debug',
+    ],
     ],
 
 ];
