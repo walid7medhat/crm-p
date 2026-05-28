@@ -1333,7 +1333,7 @@ class Bitrix24LeadImporter
             'initial_responsible_person_id' => $responsible ?? $this->fallbackUserId,
             'stage_id'                      => $this->resolveStageId($statusId),
             'last_stage_change_at'          => $created->format('Y-m-d H:i:s'),
-            'lead_number'                   => 'B24-' . $b24Id . '-' . $suffix,
+            'lead_number'                   => $this->generateUniqueLeadNumber($b24Id),
             'raw_meta_data'                 => json_encode(
                 ['field_data' => $this->buildFieldData($b24Lead)],
                 JSON_UNESCAPED_UNICODE
@@ -1350,6 +1350,14 @@ class Bitrix24LeadImporter
             'updated_at'                    => $updated->format('Y-m-d H:i:s'),
         ];
     }
+    private function generateUniqueLeadNumber(int $b24Id): string
+{
+    // استخدام جزء من الـ ID مع time() لضمان التفرد
+    $suffix = substr(md5($b24Id . time() . rand(1000, 9999)), 0, 6);
+    return 'B24-' . $b24Id . '-' . $suffix;
+}
+
+// ثم في prepareLeadRow:
 
     /**
      * High-throughput batch import for queue sync (bulk insert + batched dedup).
