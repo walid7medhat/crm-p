@@ -70,7 +70,23 @@ $listingId = $this->route('property');
             'rent_amount' => 'nullable|numeric|min:0',
             //   'rented_status' => 'nullable|in:Available,Rented',
             // 'rented_until' => 'nullable|date|after_or_equal:today',
-            'payment_plan' => 'nullable|string', 
+            'payment_plan' => 'nullable|string',
+            'original_price' => 'nullable|numeric|min:0',
+            'selling_price' => 'nullable|numeric|min:0',
+            'noc_percentage' => 'nullable|integer|min:0|max:50',
+            'handover_date' => 'nullable|date',
+            'payment_breakdown' => 'nullable|array',
+            'payment_breakdown.*.id' => 'nullable',
+            'payment_breakdown.*.type' => 'nullable|string|in:percentage,amount',
+            'payment_breakdown.*.value' => 'nullable|numeric',
+            'payment_breakdown.*.date' => 'nullable|date',
+            'assignment_expense_lines' => 'nullable|array',
+            'assignment_expense_lines.*.id' => 'nullable',
+            'assignment_expense_lines.*.label' => 'nullable|string|max:120',
+            'assignment_expense_lines.*.calcType' => 'nullable|string|in:percentage,fixed',
+            'assignment_expense_lines.*.base' => 'nullable|string|in:op,sp,premium',
+            'assignment_expense_lines.*.value' => 'nullable|numeric',
+            'assignment_expense_lines.*.vatEnabled' => 'nullable|boolean',
             'drive_link' => 'nullable|url|max:500',
             'is_hot_deal'=>'nullable|in:No,Yes',
             'project_floor_plan_ids' => 'nullable|array',
@@ -196,6 +212,23 @@ $listingId = $this->route('property');
             $this->merge([
                 'payment_plan' => json_encode($this->payment_plan)
             ]);
+        }
+
+        // FormData sends JSON-stringified arrays as strings; decode so array rules pass.
+        foreach (['payment_breakdown', 'assignment_expense_lines'] as $jsonField) {
+            if ($this->has($jsonField) && is_string($this->input($jsonField))) {
+                $decoded = json_decode($this->input($jsonField), true);
+                if (is_array($decoded)) {
+                    $this->merge([$jsonField => $decoded]);
+                } elseif ($this->input($jsonField) === '' || $this->input($jsonField) === '[]') {
+                    $this->merge([$jsonField => []]);
+                }
+            }
+        }
+
+        // Frontend uses `selling_price` as the canonical alias for `price`. Keep `price` in sync so existing validation still passes.
+        if ($this->has('selling_price') && !$this->filled('price')) {
+            $this->merge(['price' => $this->input('selling_price')]);
         }
          $floorPlansSource = [
             'project_plans_count' => count($this->project_floor_plan_ids ?? []),

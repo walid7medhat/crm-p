@@ -534,6 +534,192 @@
               </table>
             </div>
 
+
+            <section class="assignment-expenses-panel mt-4" aria-labelledby="edit-assignment-expenses-heading">
+              <div class="assignment-expenses-panel__head d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <div>
+                  <h6 id="edit-assignment-expenses-heading" class="assignment-expenses-panel__title mb-0">Assignment deal costs</h6>
+                  <p class="assignment-expenses-panel__subtitle small text-muted mb-0 mt-1">
+                    DLD, agency, mortgage fees, and other charges — calculated separately from installments.
+                  </p>
+                </div>
+              </div>
+
+              <div class="assignment-expenses-add row g-2 g-md-3 align-items-end mb-3">
+                <div class="col-12 col-md-3">
+                  <label class="form-label small mb-1">Label</label>
+                  <input
+                    v-model="assignmentExpenseDraft.label"
+                    type="text"
+                    class="form-control form-control-sm"
+                    placeholder="e.g. DLD, Agency fee"
+                  />
+                </div>
+                <div class="col-6 col-md-2">
+                  <label class="form-label small mb-1">Type</label>
+                  <v-select
+                    v-model="assignmentExpenseDraft.calcType"
+                    :options="assignmentExpenseTypeOptions"
+                    :reduce="(item) => item.value"
+                    label="label"
+                    :clearable="false"
+                  />
+                </div>
+                <div v-if="assignmentExpenseDraft.calcType === 'percentage'" class="col-6 col-md-2">
+                  <label class="form-label small mb-1">Base</label>
+                  <v-select
+                    v-model="assignmentExpenseDraft.base"
+                    :options="assignmentExpenseBaseOptions"
+                    :reduce="(item) => item.value"
+                    label="label"
+                    :clearable="false"
+                  />
+                </div>
+                <div class="col-6" :class="assignmentExpenseDraft.calcType === 'percentage' ? 'col-md-2' : 'col-md-3'">
+                  <label class="form-label small mb-1">
+                    {{ assignmentExpenseDraft.calcType === 'percentage' ? 'Value (%)' : 'Amount (AED)' }}
+                  </label>
+                  <input
+                    v-model.number="assignmentExpenseDraft.value"
+                    type="number"
+                    min="0"
+                    step="any"
+                    class="form-control form-control-sm"
+                    placeholder="0"
+                    @keydown="preventNumberInvalidKeys"
+                  />
+                </div>
+                <div class="col-6 col-md-2 d-flex align-items-end">
+                  <div class="form-check form-switch assignment-expenses-vat-switch mb-2">
+                    <input
+                      id="edit-assignment-expense-draft-vat"
+                      v-model="assignmentExpenseDraft.vatEnabled"
+                      class="form-check-input"
+                      type="checkbox"
+                    />
+                    <label class="form-check-label small" for="edit-assignment-expense-draft-vat">VAT 5%</label>
+                  </div>
+                </div>
+                <div class="col-12 col-md-2">
+                  <button type="button" class="btn btn-sm btn-outline-primary w-100" @click="onAddAssignmentExpenseLine">
+                    + Add cost line
+                  </button>
+                </div>
+              </div>
+
+              <div class="assignment-expenses-table-wrap">
+                <table class="table table-sm assignment-expenses-table mb-0">
+                  <thead>
+                    <tr>
+                      <th>Label</th>
+                      <th class="d-none d-md-table-cell">Base</th>
+                      <th>Type</th>
+                      <th>Value</th>
+                      <th class="text-end">Amount</th>
+                      <th class="text-end">VAT (5%)</th>
+                      <th class="text-end">Total</th>
+                      <th class="text-end" style="width: 4rem;"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="line in assignmentExpenseLines" :key="line.id">
+                      <td>
+                        <input
+                          v-model="line.label"
+                          type="text"
+                          class="form-control form-control-sm assignment-expenses-inline-input"
+                          placeholder="Label"
+                        />
+                      </td>
+                      <td class="d-none d-md-table-cell">
+                        <v-select
+                          v-if="line.calcType === 'percentage'"
+                          v-model="line.base"
+                          :options="assignmentExpenseBaseOptions"
+                          :reduce="(item) => item.value"
+                          label="label"
+                          :clearable="false"
+                          class="assignment-expenses-inline-select"
+                        />
+                        <span v-else class="text-muted small">—</span>
+                      </td>
+                      <td>
+                        <v-select
+                          v-model="line.calcType"
+                          :options="assignmentExpenseTypeOptions"
+                          :reduce="(item) => item.value"
+                          label="label"
+                          :clearable="false"
+                          class="assignment-expenses-inline-select"
+                        />
+                      </td>
+                      <td>
+                        <div class="d-flex align-items-center gap-1">
+                          <input
+                            v-model.number="line.value"
+                            type="number"
+                            min="0"
+                            step="any"
+                            class="form-control form-control-sm assignment-expenses-inline-input assignment-expenses-value-input"
+                            @keydown="preventNumberInvalidKeys"
+                          />
+                          <span class="text-muted small text-nowrap">{{ line.calcType === 'percentage' ? '%' : 'AED' }}</span>
+                        </div>
+                      </td>
+                      <td class="text-end text-nowrap">{{ formatAed(assignmentExpenseLineAmount(line)) }}</td>
+                      <td class="text-end text-nowrap">
+                        <label class="assignment-expenses-vat-inline d-inline-flex align-items-center justify-content-end gap-1 mb-0 small">
+                          <input
+                            v-model="line.vatEnabled"
+                            type="checkbox"
+                            class="form-check-input m-0 flex-shrink-0"
+                            :title="'Apply 5% VAT on ' + formatAed(assignmentExpenseLineAmount(line))"
+                          />
+                          <span>{{ line.vatEnabled ? formatAed(assignmentExpenseLineVat(line)) : '—' }}</span>
+                        </label>
+                      </td>
+                      <td class="text-end text-nowrap fw-semibold">{{ formatAed(assignmentExpenseLineTotal(line)) }}</td>
+                      <td class="text-end">
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-link text-danger p-0"
+                          title="Remove"
+                          @click="removeAssignmentExpenseLine(line.id)"
+                        >
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                    <tr v-if="assignmentExpenseLines.length === 0">
+                      <td colspan="8" class="text-center text-muted py-4">
+                        No cost lines yet. Add DLD, agency, or other fees above.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div
+                v-if="assignmentExpenseLines.length > 0"
+                class="assignment-expenses-summary row g-2 g-md-3 mt-3 pt-3 border-top"
+              >
+                <div class="col-4 col-md-4">
+                  <div class="assignment-expenses-summary__label">Subtotal (excl. VAT)</div>
+                  <div class="assignment-expenses-summary__value">{{ formatAed(assignmentExpensesSubtotal) }}</div>
+                </div>
+                <div class="col-4 col-md-4">
+                  <div class="assignment-expenses-summary__label">Total VAT (5%)</div>
+                  <div class="assignment-expenses-summary__value">{{ formatAed(assignmentExpensesTotalVat) }}</div>
+                </div>
+                <div class="col-4 col-md-4">
+                  <div class="assignment-expenses-summary__label">Grand total</div>
+                  <div class="assignment-expenses-summary__value assignment-expenses-summary__value--grand">
+                    {{ formatAed(assignmentExpensesGrandTotal) }}
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <div class="payment-validation-summary border rounded-3 p-3 mt-3 bg-white">
               <div class="fw-semibold small text-uppercase text-muted mb-2">Validation summary</div>
               <ul class="list-unstyled small mb-0 payment-validation-summary-list">
@@ -591,6 +777,10 @@
         :noc-requirement-met="nocRequirementMet"
         :noc-progress-label="nocProgressPaidLabel"
         :breakdown-rows="paymentBreakdownRows"
+        :assignment-expense-rows="assignmentExpenseLines"
+        :assignment-expenses-subtotal="assignmentExpensesSubtotal"
+        :assignment-expenses-total-vat="assignmentExpensesTotalVat"
+        :assignment-expenses-grand-total="assignmentExpensesGrandTotal"
       />
 
       <!-- 💰 Mortgage & Rent Info -->
@@ -1422,6 +1612,12 @@ import {
   SELLING_BELOW_OP_WARN_MSG,
   confirmSellingBelowOriginalIfNeeded,
 } from "@/composables/useListingPaymentBreakdown";
+import {
+  useListingAssignmentExpenses,
+  parseAssignmentExpenseLines,
+  assignmentExpenseTypeOptions,
+  assignmentExpenseBaseOptions,
+} from "@/composables/useListingAssignmentExpenses";
 
 const route = useRoute();
 const router = useRouter();
@@ -1759,6 +1955,29 @@ const {
   breakdownPaidOnLoadIds,
 });
 
+const {
+  assignmentExpenseLines,
+  assignmentExpenseDraft,
+  assignmentExpenseLineAmount,
+  assignmentExpenseLineVat,
+  assignmentExpenseLineTotal,
+  assignmentExpensesSubtotal,
+  assignmentExpensesTotalVat,
+  assignmentExpensesGrandTotal,
+  loadAssignmentExpenseLines,
+  addAssignmentExpenseLine,
+  removeAssignmentExpenseLine,
+} = useListingAssignmentExpenses({
+  originalPriceNum,
+  sellingPriceNum,
+  premiumAmountForm,
+  formatAed,
+});
+
+const onAddAssignmentExpenseLine = () => {
+  addAssignmentExpenseLine((msg) => proxy.$showNotification(msg, 'error'));
+};
+
 const nocRemainingPctOfOp = computed(() => {
   const op = originalPriceNum.value;
   if (op <= 0) return 0;
@@ -2033,6 +2252,7 @@ watch(() => form.value.completionStatus, (newStatus) => {
     form.value.payment_plan = null;
     breakdownInstallments.value = [];
     breakdownPaidOnLoadIds.value = new Set();
+    assignmentExpenseLines.value = [];
     form.value.handover_date = '';
     form.value.noc_percentage = 0;
     form.value.original_price = '';
@@ -2238,6 +2458,7 @@ const fetchPropertyData = async (id) => {
     }
     breakdownInstallments.value = loadedBreakdown;
     captureBreakdownPaidOnLoadIds(loadedBreakdown);
+    loadAssignmentExpenseLines(propertyData.assignment_expense_lines);
 
     form.value = {
       ...form.value,
@@ -3814,6 +4035,7 @@ const handleSubmit = async (action = 'draft') => {
     if (isUnderConstruction.value) {
       formData.append('noc_percentage', String(Number(form.value.noc_percentage ?? 0)));
       formData.append('payment_breakdown', JSON.stringify(breakdownInstallments.value));
+      formData.append('assignment_expense_lines', JSON.stringify(assignmentExpenseLines.value));
       if (form.value.handover_date) formData.append('handover_date', form.value.handover_date);
     }
 
@@ -4094,6 +4316,91 @@ onUnmounted(() => {
 
 .payment-breakdown-actions {
   gap: 0.5rem;
+}
+
+.assignment-expenses-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+}
+
+.assignment-expenses-panel__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.assignment-expenses-table-wrap {
+  max-height: min(420px, 55vh);
+  overflow: auto;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.assignment-expenses-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f1f5f9;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.assignment-expenses-table tbody td {
+  vertical-align: middle;
+  font-size: 0.8125rem;
+}
+
+.assignment-expenses-inline-input {
+  min-width: 5rem;
+  border-color: #e2e8f0;
+  background: #fff;
+}
+
+.assignment-expenses-value-input {
+  max-width: 6.5rem;
+}
+
+.assignment-expenses-inline-select :deep(.vs__dropdown-toggle) {
+  min-height: 31px;
+  font-size: 0.8125rem;
+  border-color: #e2e8f0;
+}
+
+.assignment-expenses-summary__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 0.15rem;
+}
+
+.assignment-expenses-summary__value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.assignment-expenses-summary__value--grand {
+  color: #0c2461;
+  font-size: 1.05rem;
+}
+
+.assignment-expenses-vat-inline {
+  cursor: pointer;
+  user-select: none;
+}
+
+@media (max-width: 767.98px) {
+  .assignment-expenses-panel {
+    padding: 0.75rem;
+  }
 }
 
 .payment-validation-summary {

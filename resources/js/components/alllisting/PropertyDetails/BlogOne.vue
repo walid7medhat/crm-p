@@ -314,6 +314,14 @@
               </div>
             </div>
             
+            <!-- Payment Details Section (breakdown + assignment costs) -->
+            <div class="detailed-info-section mb-16" v-if="hasPaymentDetails">
+              <div class="info-section">
+                <h3 class="section-title mb-20">Payment Details</h3>
+                <PaymentDetailsSection :listing="property" />
+              </div>
+            </div>
+
             <!-- Notes Section -->
             <div class="detailed-info-section mb-16" v-if="property.comment && property.comment.trim()">
               <div class="info-section">
@@ -2107,6 +2115,7 @@ import Swal from 'sweetalert2';
 import html2pdf from 'html2pdf.js';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
+import PaymentDetailsSection from '@/components/payment-plans/PaymentDetailsSection.vue';
 
   const starIcon = '/assets/images/star.png';
 
@@ -2115,6 +2124,7 @@ export default {
   name: "PropertyDetails",
    components: {
     vSelect,
+    PaymentDetailsSection,
   },
   data() {
     return {};
@@ -2592,12 +2602,38 @@ const hasAdditionalFeatures = computed(() => {
 });
     const hasMortgageInfo = computed(() => {
       if (!property.value) return false;
-      return property.value.mortgage_status || 
-             property.value.mortgage_amount || 
-             property.value.occupancy_status || 
-             property.value.rent_amount || 
-             property.value.rent_expiry_date || 
+      return property.value.mortgage_status ||
+             property.value.mortgage_amount ||
+             property.value.occupancy_status ||
+             property.value.rent_amount ||
+             property.value.rent_expiry_date ||
              property.value.mortgage_comment;
+    });
+
+    const parseListArray = (raw) => {
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw === 'string' && raw.trim() !== '') {
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const hasPaymentDetails = computed(() => {
+      if (!property.value) return false;
+      const pb = parseListArray(property.value.payment_breakdown);
+      const ae = parseListArray(property.value.assignment_expense_lines);
+      return (
+        pb.length > 0 ||
+        ae.length > 0 ||
+        Number(property.value.original_price || 0) > 0 ||
+        !!property.value.payment_plan ||
+        !!property.value.handover_date
+      );
     });
 
     const canRequestUnitNumber = computed(() => {
@@ -5299,12 +5335,16 @@ const createNewDesignContent = (currentUser) => {
   const hasProject = property.value?.project && property.value.project.id;
   const features = hasProject ? (Array.isArray(property.value.project?.features) ? property.value.project.features.map(f => f?.name || f?.title || f).filter(Boolean) : []) : [];
   const gallerySlides = createGallerySlides() || [];
+  const paymentDetailsSlide = createPaymentDetailsSlide();
 
   container.innerHTML = `
  <!-- Slide 1 - Cover -->
     ${createSlide1(currentUser)}
 <!-- Slide 2 - Property Details -->
     ${createSlide2()}
+
+    <!-- Slide 2.5 - Payment Details (only when data is present) -->
+    ${paymentDetailsSlide}
 
     <!-- Slide 5 - Floor Plan (optional) -->
     ${hasFloorPlans ? createSlide5() : ''}
@@ -5659,6 +5699,283 @@ const formatTextForPDF = (text) => {
   return text.replace(/\n/g, '<br>');
 };
 
+const createPaymentDetailsSlide = () => {
+  const p = property.value || {};
+
+  const parseList = (raw) => {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string' && raw.trim() !== '') {
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  const toNum = (v) => {
+    if (v === null || v === undefined || v === '') return 0;
+    const n = Number(String(v).replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const installments = parseList(p.payment_breakdown);
+  const expenses = parseList(p.assignment_expense_lines);
+  const sellingPrice = toNum(p.price ?? p.selling_price);
+  const originalPrice = toNum(p.original_price) || sellingPrice;
+  const premium = sellingPrice - originalPrice;
+  const nocPct = Math.max(0, Math.min(100, toNum(p.noc_percentage)));
+
+  if (
+    installments.length === 0 &&
+    expenses.length === 0 &&
+    originalPrice <= 0 &&
+    !p.payment_plan &&
+    !p.handover_date
+  ) {
+    return '';
+  }
+
+  let planLabel = '';
+  if (p.payment_plan) {
+    let raw = p.payment_plan;
+    if (typeof raw === 'string') {
+      try { raw = JSON.parse(raw); } catch { /* keep string */ }
+    }
+    if (Array.isArray(raw)) planLabel = String(raw[0] || '');
+    else if (raw && typeof raw === 'object') planLabel = String(raw.label || '');
+    else planLabel = String(raw || '');
+  }
+  const planMatch = String(planLabel).match(/(\d+)\s*\/\s*(\d+)/);
+  const initialPct = planMatch ? Math.max(0, Math.min(100, Number(planMatch[1]))) : 0;
+  const handoverPct = Math.max(0, 100 - initialPct);
+  const handoverAmount = originalPrice - (originalPrice * initialPct) / 100;
+
+  const startOfDay = (v) => {
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return null;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  };
+  const today = startOfDay(new Date());
+  const isPaid = (d) => {
+    const t = startOfDay(d);
+    return t !== null && today !== null && t <= today;
+  };
+
+  const installmentAmount = (entry) => {
+    if (!entry) return 0;
+    if (entry.type === 'percentage') {
+      return (originalPrice * toNum(entry.value)) / 100;
+    }
+    return toNum(entry.value);
+  };
+
+  const scheduledAed = installments.reduce((s, e) => s + installmentAmount(e), 0);
+  const paidAed = installments.reduce((s, e) => (isPaid(e?.date) ? s + installmentAmount(e) : s), 0);
+  const nocRequired = (originalPrice * nocPct) / 100;
+  const nocRemaining = Math.max(0, nocRequired - scheduledAed);
+  const nocMet = nocPct <= 0 || scheduledAed >= nocRequired - 0.01;
+
+  const fmtAed = (v) =>
+    new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: 0 }).format(toNum(v));
+
+  const fmtDate = (d) => {
+    if (!d) return '—';
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return '—';
+    return dt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const badgeStyle = (status) => {
+    if (status === 'Paid') return 'background:#22c55e;color:#fff;';
+    if (status === 'Due on transfer') return 'background:#bae6fd;color:#075985;';
+    if (status === 'Selling below original price') return 'background:#fecaca;color:#b91c1c;';
+    return 'background:#fecdd3;color:#9f1239;';
+  };
+
+  const sorted = installments.slice().sort((a, b) => new Date(a?.date || 0) - new Date(b?.date || 0));
+  let cumulative = 0;
+  const installmentRows = sorted.map((entry) => {
+    const amount = installmentAmount(entry);
+    cumulative += amount;
+    let status = 'Upcoming';
+    if (isPaid(entry?.date)) status = 'Paid';
+    else if (nocPct > 0 && cumulative <= nocRequired + 0.01) status = 'Due on transfer';
+    const pct = originalPrice > 0 ? ((amount / originalPrice) * 100).toFixed(2) : '—';
+    return `
+      <tr>
+        <td style="padding:2mm 1.5mm;font-size:2.6mm;">Installment</td>
+        <td style="padding:2mm 1.5mm;font-size:2.6mm;">${pct}%</td>
+        <td style="padding:2mm 1.5mm;font-size:2.6mm;">${fmtAed(amount)}</td>
+        <td style="padding:2mm 1.5mm;font-size:2.6mm;">${fmtDate(entry?.date)}</td>
+        <td style="padding:2mm 1.5mm;font-size:2.4mm;"><span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;${badgeStyle(status)}">${status}</span></td>
+      </tr>`;
+  }).join('');
+
+  const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Upcoming';
+  const premiumRow = (installments.length > 0 || originalPrice > 0 || sellingPrice > 0)
+    ? `<tr style="background:#f1f5f9;">
+        <td style="padding:2mm 1.5mm;font-size:2.6mm;">Premium</td>
+        <td style="padding:2mm 1.5mm;font-size:2.6mm;">—</td>
+        <td style="padding:2mm 1.5mm;font-size:2.6mm;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</td>
+        <td style="padding:2mm 1.5mm;font-size:2.6mm;">—</td>
+        <td style="padding:2mm 1.5mm;font-size:2.4mm;"><span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;${badgeStyle(premiumStatus)}">${premiumStatus}</span></td>
+      </tr>`
+    : '';
+
+  const handoverRow = Math.abs(handoverAmount) > 0.01
+    ? `<tr>
+        <td style="padding:2mm 1.5mm;font-size:2.6mm;">Handover (${handoverPct.toFixed(0)}%)</td>
+        <td style="padding:2mm 1.5mm;font-size:2.6mm;">${handoverPct.toFixed(2)}%</td>
+        <td style="padding:2mm 1.5mm;font-size:2.6mm;">${fmtAed(handoverAmount)}</td>
+        <td style="padding:2mm 1.5mm;font-size:2.6mm;">${fmtDate(p.handover_date)}</td>
+        <td style="padding:2mm 1.5mm;font-size:2.4mm;"><span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;${badgeStyle(isPaid(p.handover_date) ? 'Paid' : 'Upcoming')}">${isPaid(p.handover_date) ? 'Paid' : 'Upcoming'}</span></td>
+      </tr>`
+    : '';
+
+  const totalAmount = (installments.reduce((s, e) => s + installmentAmount(e), 0))
+    + (installments.length > 0 || originalPrice > 0 || sellingPrice > 0 ? premium : 0)
+    + (Math.abs(handoverAmount) > 0.01 ? handoverAmount : 0);
+
+  const baseLabels = { op: 'OP', sp: 'SP', premium: 'premium' };
+  const baseAmount = (b) => b === 'op' ? originalPrice : b === 'sp' ? sellingPrice : b === 'premium' ? premium : 0;
+  const expLineAmount = (l) => {
+    const calc = l?.calcType === 'fixed' ? 'fixed' : 'percentage';
+    if (calc === 'percentage') return (baseAmount(l?.base) * toNum(l?.value)) / 100;
+    return toNum(l?.value);
+  };
+
+  let expSubtotal = 0;
+  let expVatTotal = 0;
+  let expGrand = 0;
+  const expenseRows = expenses.map((l) => {
+    const amt = expLineAmount(l);
+    const vat = l?.vatEnabled ? amt * 0.05 : 0;
+    const total = amt + vat;
+    expSubtotal += amt;
+    expVatTotal += vat;
+    expGrand += total;
+    const calc = l?.calcType === 'fixed' ? 'fixed' : 'percentage';
+    const detail = calc === 'percentage'
+      ? `${toNum(l?.value)}% of ${baseLabels[l?.base] || 'OP'}`
+      : fmtAed(toNum(l?.value));
+    return `
+      <tr>
+        <td style="padding:1.8mm 1.5mm;font-size:2.6mm;">${l?.label || '—'}</td>
+        <td style="padding:1.8mm 1.5mm;font-size:2.6mm;color:#64748b;">${detail}</td>
+        <td style="padding:1.8mm 1.5mm;font-size:2.6mm;text-align:right;">${fmtAed(amt)}</td>
+        <td style="padding:1.8mm 1.5mm;font-size:2.6mm;text-align:right;">${l?.vatEnabled ? fmtAed(vat) : '—'}</td>
+        <td style="padding:1.8mm 1.5mm;font-size:2.6mm;text-align:right;font-weight:600;">${fmtAed(total)}</td>
+      </tr>`;
+  }).join('');
+
+  const expensesBlock = expenses.length > 0 ? `
+    <div style="margin-top:3mm;">
+      <div style="font-size:2.6mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#64748b;margin-bottom:1.5mm;">Assignment deal costs</div>
+      <div style="background:#fff;border-radius:3mm;padding:1.5mm 1.5mm 1mm;box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);">
+        <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:2.6mm;">
+          <thead>
+            <tr>
+              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Label</span></th>
+              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Detail</span></th>
+              <th style="padding:1mm 1.5mm;text-align:right;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Amount</span></th>
+              <th style="padding:1mm 1.5mm;text-align:right;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">VAT</span></th>
+              <th style="padding:1mm 1.5mm;text-align:right;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Total</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${expenseRows}
+            <tr style="background:#f1f5f9;">
+              <td colspan="2" style="padding:1.8mm 1.5mm;font-size:2.6mm;font-weight:700;">Total</td>
+              <td style="padding:1.8mm 1.5mm;font-size:2.6mm;text-align:right;font-weight:700;">${fmtAed(expSubtotal)}</td>
+              <td style="padding:1.8mm 1.5mm;font-size:2.6mm;text-align:right;font-weight:700;">${fmtAed(expVatTotal)}</td>
+              <td style="padding:1.8mm 1.5mm;font-size:2.6mm;text-align:right;font-weight:700;">${fmtAed(expGrand)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  ` : '';
+
+  const nocStrip = nocPct > 0 ? `
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 5mm;background:#fff;border-radius:3mm;padding:1.6mm 2mm;margin-bottom:2mm;font-size:2.6mm;box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);">
+      <span>NOC <strong>${nocPct}%</strong> · Required <strong>${fmtAed(nocRequired)}</strong></span>
+      <span>Paid <strong>${fmtAed(paidAed)}</strong></span>
+      <span>Remaining <strong>${fmtAed(nocRemaining)}</strong></span>
+      <span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;font-size:2.4mm;${nocMet ? 'background:#22c55e;color:#fff;' : 'background:#fecdd3;color:#9f1239;'}">${nocMet ? 'NOC met' : 'Below NOC'}</span>
+    </div>
+  ` : '';
+
+  const installmentTable = (installmentRows || premiumRow || handoverRow) ? `
+    <div style="margin-bottom:2.5mm;">
+      <div style="font-size:2.6mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#64748b;margin-bottom:1.5mm;">Installment breakdown</div>
+      <div style="background:#fff !important;border-radius:3mm;padding:1.5mm 1.5mm 1mm;box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);">
+        <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:2.6mm;">
+          <thead>
+            <tr>
+              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Payment type</span></th>
+              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Percentage</span></th>
+              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Amount</span></th>
+              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Date</span></th>
+              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Status</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${installmentRows}
+            ${premiumRow}
+            ${handoverRow}
+            <tr style="background:#f1f5f9;">
+              <td style="padding:2mm 1.5mm;font-size:2.6mm;font-weight:700;" colspan="2">Total</td>
+              <td style="padding:2mm 1.5mm;font-size:2.6mm;font-weight:700;">${fmtAed(totalAmount)}</td>
+              <td colspan="2"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  ` : '';
+
+  return `
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#f4f6f9 !important;">
+    <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
+      <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
+    </div>
+    <div style="position:relative !important; z-index:5 !important; padding:10mm 12mm 16mm 12mm !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
+      <div style="margin-bottom:4mm;">
+        <div style="font-size:5mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.2;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
+        <div style="width:14mm;height:1mm;background:#e85d1c;border-radius:1mm;margin-top:1.5mm;"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2mm;margin-bottom:2.5mm;">
+        <div style="background:linear-gradient(160deg,#132043 0%,#0f1f3a 100%);color:#fff;border-bottom:1mm solid #e85d1c;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
+          <div style="font-size:2.4mm;opacity:0.88;margin-bottom:1mm;">Selling price</div>
+          <div style="font-size:3.5mm;font-weight:700;">${fmtAed(sellingPrice)}</div>
+        </div>
+        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
+          <div style="font-size:2.4mm;margin-bottom:1mm;">Original price (OP)</div>
+          <div style="font-size:3.5mm;font-weight:700;">${fmtAed(originalPrice)}</div>
+        </div>
+        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
+          <div style="font-size:2.4mm;margin-bottom:1mm;">Payment plan</div>
+          <div style="font-size:3.5mm;font-weight:700;">${planLabel || '—'}</div>
+        </div>
+        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
+          <div style="font-size:2.4mm;margin-bottom:1mm;">Premium</div>
+          <div style="font-size:3.5mm;font-weight:700;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</div>
+        </div>
+      </div>
+
+      ${nocStrip}
+      ${installmentTable}
+      ${expensesBlock}
+    </div>
+    ${createFooter()}
+  </div>
+  `;
+};
+
 const createFooter = () => {
   return `
   <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#0B0736 !important; display:flex !important; align-items:center !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
@@ -5935,6 +6252,7 @@ const openDriveLink = () => {
       canShowOffers,
       canGenerateOffer,
       hasMortgageInfo,
+      hasPaymentDetails,
       canRequestUnitNumber,
       canRequestOwnerInfo,
       hasOwnerDocuments,
