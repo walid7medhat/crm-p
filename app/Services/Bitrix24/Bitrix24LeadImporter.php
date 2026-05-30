@@ -1502,75 +1502,99 @@ class Bitrix24LeadImporter
     /**
      * Bulk insert new leads via query builder (skips Eloquent events/jobs).
      */
-    public function bulkInsertLeads(array $b24Leads): int
-    {
-        if (empty($b24Leads)) {
-            return 0;
+public function bulkInsertLeads(array $b24Leads): int
+{
+    if (empty($b24Leads)) {
+        return 0;
+    }
+
+    $chunkSize = \App\Services\Bitrix24\Bitrix24SyncThrottler::resolveDbInsertChunk(
+        (int) config('bitrix24.db_insert_chunk', 500)
+    );
+    
+    $inserted = 0;
+    $historyRows = [];
+    $now = now();
+
+    foreach (array_chunk($b24Leads, $chunkSize) as $chunk) {
+        // First, collect all bitrix24 IDs from this chunk
+        $b24IdsInChunk = array_filter(array_map(fn($b24) => (int) ($b24['ID'] ?? 0), $chunk));
+        
+        if (empty($b24IdsInChunk)) {
+            continue;
         }
-
-        $chunkSize = \App\Services\Bitrix24\Bitrix24SyncThrottler::resolveDbInsertChunk(
-            (int) config('bitrix24.db_insert_chunk', 500)
-        );
-        $inserted = 0;
-        $historyRows = [];
-        $now = now();
-
-        foreach (array_chunk($b24Leads, $chunkSize) as $chunk) {
-            $rows = [];
-            $b24Ids = [];
-
-            foreach ($chunk as $b24) {
-                $b24Id = (int) ($b24['ID'] ?? 0);
-                if ($b24Id <= 0) {
-                    continue;
-                }
-                $rows[] = $this->prepareLeadRow($b24, $b24Id);
-                $b24Ids[] = $b24Id;
-            }
-
-            if (empty($rows)) {
+        
+        // Check which of these IDs already exist in the database
+        $existingIds = DB::table('leads')
+            ->whereIn('bitrix24_id', $b24IdsInChunk)
+            ->pluck('bitrix24_id')
+            ->map(fn($id) => (int) $id)
+            ->toArray();
+        
+        // Filter out leads that already exist
+        $rows = [];
+        $newB24Ids = [];
+        
+        foreach ($chunk as $b24) {
+            $b24Id = (int) ($b24['ID'] ?? 0);
+            if ($b24Id <= 0) {
                 continue;
             }
-
-            DB::table('leads')->insert($rows);
-            $inserted += count($rows);
-
-            $idMap = DB::table('leads')
-                ->whereIn('bitrix24_id', $b24Ids)
-                ->pluck('id', 'bitrix24_id');
-
-            foreach ($idMap as $b24Id => $leadId) {
-                $historyRows[] = [
-                    'lead_id'     => (int) $leadId,
-                    'user_id'     => $this->fallbackUserId,
-                    'bitrix24_id' => null,
-                    'changes'     => json_encode([
-                        'action'      => 'created',
-                        'source'      => 'bitrix24',
-                        'bitrix24_id' => (int) $b24Id,
-                    ], JSON_UNESCAPED_UNICODE),
-                    'created_at'  => $now,
-                    'updated_at'  => $now,
-                ];
+            
+            // Skip if this bitrix24_id already exists
+            if (in_array($b24Id, $existingIds)) {
+                continue;
             }
-
-            if (count($historyRows) >= $chunkSize) {
-                DB::table('lead_histories')->insert($historyRows);
-                $historyRows = [];
-            }
-
-            unset($rows, $b24Ids, $idMap);
-            if (function_exists('gc_collect_cycles')) {
-                gc_collect_cycles();
-            }
+            
+            $rows[] = $this->prepareLeadRow($b24, $b24Id);
+            $newB24Ids[] = $b24Id;
         }
 
-        if (!empty($historyRows)) {
+        if (empty($rows)) {
+            continue;
+        }
+
+        // Bulk insert only new leads
+        DB::table('leads')->insert($rows);
+        $inserted += count($rows);
+
+        // Get the IDs of the newly inserted leads
+        $idMap = DB::table('leads')
+            ->whereIn('bitrix24_id', $newB24Ids)
+            ->pluck('id', 'bitrix24_id');
+
+        foreach ($idMap as $b24Id => $leadId) {
+            $historyRows[] = [
+                'lead_id'     => (int) $leadId,
+                'user_id'     => $this->fallbackUserId,
+                'bitrix24_id' => null,
+                'changes'     => json_encode([
+                    'action'      => 'created',
+                    'source'      => 'bitrix24',
+                    'bitrix24_id' => (int) $b24Id,
+                ], JSON_UNESCAPED_UNICODE),
+                'created_at'  => $now,
+                'updated_at'  => $now,
+            ];
+        }
+
+        if (count($historyRows) >= $chunkSize) {
             DB::table('lead_histories')->insert($historyRows);
+            $historyRows = [];
         }
 
-        return $inserted;
+        unset($rows, $newB24Ids, $idMap);
+        if (function_exists('gc_collect_cycles')) {
+            gc_collect_cycles();
+        }
     }
+
+    if (!empty($historyRows)) {
+        DB::table('lead_histories')->insert($historyRows);
+    }
+
+    return $inserted;
+}
 
     // أضف هذه الدالة لفحص الـ timeline مباشرة
 public function debugTimeline(int $b24LeadId): void
