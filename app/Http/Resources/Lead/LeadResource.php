@@ -2,12 +2,14 @@
 
 namespace App\Http\Resources\Lead;
 
+use App\Http\Resources\Lead\Concerns\ResolvesLeadLastActivity;
 use App\Models\Integration;
 use App\Models\Lead;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class LeadResource extends JsonResource
 {
+    use ResolvesLeadLastActivity;
     public function toArray($request): array
     {
          $rawMetaData = is_string($this->raw_meta_data) 
@@ -36,7 +38,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
         // "Last activity" — Bitrix24-style "who last touched this lead and when".
         // Prefers B24's LAST_ACTIVITY_TIME / LAST_ACTIVITY_BY mirror columns;
         // falls back to the most recent history row for non-B24 leads.
-        [$lastActivityAt, $lastActivityUser] = $this->resolveLastActivity($assignedBy);
+        [$lastActivityAt, $lastActivityUser] = $this->resolveLastActivity(includeHistoryFallback: true);
         return [
             'id' => $this->id,
             'added_by' => $this->added_by,
@@ -233,92 +235,6 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
     
     return null;
 }
-    /**
-     * Resolve "last activity" timestamp + user for the activity tile.
-     *
-     * Returns a `[timestamp, user]` tuple where `user` is either:
-     *   - a local User model (mapped from Bitrix24 by email, or from history)
-     *   - a stub array { name, bitrix24_id, is_external: true } for Bitrix24
-     *     users with no local mapping (avatar/name still render, but id=null
-     *     so the click handler can't open a profile)
-     *   - null when there's no activity signal at all (tile hides)
-     */
-    protected function resolveLastActivity($assignedByFallback): array
-    {
-        $lastActivityAt   = $this->bitrix24_last_activity_at;
-        $lastActivityUser = null;
-
-        // 1. Bitrix24 last-activity user, mapped to a local user (best — popup will work).
-        $b24UserStub = null;
-        if ($this->bitrix24_last_activity_by_id) {
-            $data = is_string($this->bitrix24_data)
-                ? json_decode($this->bitrix24_data, true)
-                : $this->bitrix24_data;
-            $localId = data_get($data, '_users.last_activity.local_user_id');
-            $b24Name = data_get($data, '_users.last_activity.name');
-            if ($localId) {
-                $lastActivityUser = \App\Models\User::find($localId);
-            } elseif ($b24Name) {
-                // Bitrix24 user with no local mapping — keep the name visible
-                // on the card; popup click won't open because id stays null.
-                $b24UserStub = [
-                    'name'        => $b24Name,
-                    'bitrix24_id' => (int) $this->bitrix24_last_activity_by_id,
-                ];
-            }
-        }
-
-        // 2. Latest LeadHistory row (only useful when the history user_id
-        //    actually points to a real user — queued jobs without auth context
-        //    leave user_id null, in which case this path is a no-op).
-        if (!$lastActivityUser || !$lastActivityAt) {
-            $latest = $this->histories()
-                ->orderBy('created_at', 'desc')
-                ->first();
-            if ($latest) {
-                $lastActivityAt   = $lastActivityAt ?? $latest->created_at;
-                if (!$lastActivityUser && $latest->user_id && $latest->user) {
-                    $lastActivityUser = $latest->user;
-                }
-            }
-        }
-
-        return [
-            $lastActivityAt ?? $this->updated_at,
-            $lastActivityUser ?? $b24UserStub,
-        ];
-    }
-
-    /**
-     * Normalize the activity user (User model OR Bitrix24 stub) to a flat
-     * shape the frontend can render. `id` is non-null only for real local
-     * users — frontend uses that to gate the profile-click action.
-     */
-    protected function formatActivityUser($user): ?array
-    {
-        if ($user instanceof \App\Models\User) {
-            return [
-                'id'          => $user->id,
-                'name'        => $user->name,
-                'avatar'      => $user->avatar ? asset('storage/' . $user->avatar) : null,
-                'email'       => $user->email,
-                'is_external' => false,
-                'bitrix24_id' => null,
-            ];
-        }
-        if (is_array($user) && !empty($user['name'])) {
-            return [
-                'id'          => null,
-                'name'        => $user['name'],
-                'avatar'      => null,
-                'email'       => null,
-                'is_external' => true,
-                'bitrix24_id' => $user['bitrix24_id'] ?? null,
-            ];
-        }
-        return null;
-    }
-
     protected function hasServiceDuplicate(): bool
 {
     return Lead::query()

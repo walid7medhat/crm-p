@@ -259,17 +259,18 @@ class UserController extends Controller
 public function show(User $user): JsonResponse
 {
     try {
-        $currentUser = Auth::user();
-
-        // منع عرض بروفايل admin و super_admin لغيرهم
-        if (
-            $user->hasRole(['super_admin', 'admin']) &&
-            !$currentUser->hasRole(['super_admin', 'admin'])
-        ) {
-            return ApiResponse::error('Access denied', 403);
+        if (! Auth::check()) {
+            return ApiResponse::error('Unauthenticated', 401);
         }
 
-        $user->load(['roles', 'parent', 'children']);
+        $user->load([
+            'roles',
+            'parent.roles',
+            'addedBy',
+            'employeeProfile.companyBranch',
+            'employeeProfile.designation',
+            'employeeProfile.department',
+        ]);
 
         return ApiResponse::success(
             new UserResource($user),

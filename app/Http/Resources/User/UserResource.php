@@ -7,6 +7,15 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class UserResource extends JsonResource
 {
+    protected static function formatRoleLabel(?string $role): ?string
+    {
+        if ($role === null || $role === '') {
+            return null;
+        }
+
+        return ucwords(str_replace('_', ' ', $role));
+    }
+
     /**
      * Transform the resource into an array.
      */
@@ -21,14 +30,14 @@ class UserResource extends JsonResource
               'status' => $this->status,
              'parent_id' => $this->parent_id,
             'parent_name' => $this->parent?->name,
-            'parent_role'=>ucwords(str_replace('_', ' ',$this->parent?->roles->first()?->name)),
+            'parent_role' => static::formatRoleLabel($this->parent?->roles->first()?->name),
              'parent_avatar' => $this->parent && $this->parent->avatar ?  asset('storage/'. $this->parent->avatar) : null,
-            'admin_parent_name'=>ucwords(str_replace('_', ' ',$this->admin_parent?->name)),
-            'office_name'=>ucwords(str_replace('_', ' ',$this->office?->name)),
+            'admin_parent_name' => static::formatRoleLabel($this->admin_parent?->name),
+            'office_name' => static::formatRoleLabel($this->office?->name),
             'admin_parent_id'=>$this->admin_parent?->id,
             'added_by' => $this->added_by,
             'added_by_name' => $this->addedBy?->name,
-            'role_name' => ucwords(str_replace('_', ' ',$this->roles->first()?->name)),
+            'role_name' => static::formatRoleLabel($this->roles->first()?->name),
            'role_id' => $this->roles->first()?->id,
             'roles' => $this->whenLoaded('roles', function () {
                 return $this->roles->pluck('name');

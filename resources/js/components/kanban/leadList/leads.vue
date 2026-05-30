@@ -253,10 +253,12 @@
                                                                         @mouseleave.stop="hidePersonHoverCard"
                                                                         @click.stop="openPersonProfile(task, 'responsible', $event)"
                                                                     >
-                                                                        <img v-if="task.responsible_person?.avatar"  :src="task.responsible_person.avatar" alt="" class="avatar-sm rounded-circle" />
-                                                                        <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
-                                                                            <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
-                                                                        </div>
+                                                                        <img
+                                                                            v-if="responsiblePersonAvatar(task)"
+                                                                            :src="responsiblePersonAvatar(task)"
+                                                                            alt=""
+                                                                            class="avatar-sm rounded-circle"
+                                                                        />
                                                                         <transition name="person-hover-pop">
                                                                             <div
                                                                                 v-if="isPersonHoverVisible(task, 'responsible') && activePersonHover?.data"
@@ -267,14 +269,10 @@
                                                                             >
                                                                                 <div class="person-hover-head">
                                                                                     <img
-                                                                                        v-if="activePersonHover.data.avatar"
-                                                                                        :src="activePersonHover.data.avatar"
+                                                                                        :src="hoverCardPersonAvatar(activePersonHover.data)"
                                                                                         alt=""
                                                                                         class="person-hover-avatar"
                                                                                     />
-                                                                                    <div v-else class="person-hover-avatar person-hover-avatar-fallback d-flex align-items-center justify-content-center">
-                                                                                        <iconify-icon icon="solar:user-bold" class="text-neutral-600" />
-                                                                                    </div>
                                                                                     <div class="person-hover-head-text">
                                                                                         <div class="person-hover-name">{{ activePersonHover.data.name }}</div>
                                                                                         <div class="person-hover-role">{{ activePersonHover.data.position }}</div>
@@ -292,52 +290,42 @@
                                                                 </div>
                                                             </div>
                                                             
-                                                            <!-- Activity (last change in Bitrix24 / locally) — replaces the
-                                                                 old "Assigned By" tile. Shows the date of the latest change,
-                                                                 the person who made it (name + avatar), mirroring Bitrix24.
-                                                                 Click only opens a profile when the activity user is a
-                                                                 mapped local user (id !== null); B24-only users render as
-                                                                 name + grey avatar but the click is a no-op. -->
+                                                            <!-- Activity: date + avatar of Bitrix24 LAST_ACTIVITY_BY user only -->
                                                             <div v-else-if="field.key === 'assigned_by' && hasAssignedBy(task)">
                                                                 <hr class="mb-2 border-neutral-200">
                                                                 <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
                                                                     <div class="info-item">
                                                                         <div class="info-label text-secondary-light text-xs mb-1">Activity</div>
-                                                                        <div class="info-value">{{ formatDate(task.last_activity_at || task.assigned_at) }}</div>
-                                                                        <!-- <div v-if="activityPerson(task)?.name" class="text-xs text-secondary-light mt-1">
-                                                                            {{ activityPerson(task).name }}
-                                                                            <span v-if="activityPerson(task)?.is_external" class="badge bg-light text-secondary ms-1" style="font-size: 9px;">external</span>
-                                                                        </div> -->
+                                                                        <div class="info-value">{{ formatActivityDate(task) }}</div>
                                                                     </div>
                                                                     <div
-                                                                        class="person-hover-anchor"
-                                                                        :class="{ 'is-external': activityPerson(task)?.is_external }"
-                                                                        @mouseenter.stop="showPersonHoverCard(task, 'assigned')"
+                                                                        v-if="activityPerson(task)"
+                                                                        class="person-hover-anchor person-hover-clickable"
+                                                                        :title="activityPerson(task)?.name || ''"
+                                                                        @mouseenter.stop="showPersonHoverCard(task, 'activity')"
                                                                         @mouseleave.stop="hidePersonHoverCard"
-                                                                          @click.stop="openPersonProfile(task, 'assigned', $event)"
+                                                                        @click.stop="openPersonProfile(task, 'activity', $event)"
                                                                     >
-                                                                        <img v-if="activityPerson(task)?.avatar" :src="activityPerson(task).avatar"   alt="" class="avatar-sm rounded-circle" />
-                                                                        <div v-else class="avatar-sm rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center">
-                                                                            <iconify-icon icon="solar:user-bold" class="text-neutral-600"></iconify-icon>
-                                                                        </div>
+                                                                        <img
+                                                                            :src="activityPersonAvatar(task)"
+                                                                            :alt="activityPerson(task)?.name || ''"
+                                                                            class="avatar-sm rounded-circle"
+                                                                            @click.stop="openPersonProfile(task, 'activity', $event)"
+                                                                        />
                                                                         <transition name="person-hover-pop">
                                                                             <div
-                                                                                v-if="isPersonHoverVisible(task, 'assigned') && activePersonHover?.data"
+                                                                                v-if="isPersonHoverVisible(task, 'activity') && activePersonHover?.data"
                                                                                 class="person-hover-card person-hover-card-right"
                                                                                 @mouseenter.stop="cancelPersonHoverHide"
                                                                                 @mouseleave.stop="hidePersonHoverCard"
-                                                                                 @click.stop="openPersonProfile(task, 'assigned', $event)"
+                                                                                 @click.stop="openPersonProfile(task, 'activity', $event)"
                                                                             >
                                                                                 <div class="person-hover-head">
                                                                                     <img
-                                                                                        v-if="activePersonHover.data.avatar"
-                                                                                        :src="activePersonHover.data.avatar"
+                                                                                        :src="hoverCardPersonAvatar(activePersonHover.data)"
                                                                                         alt=""
                                                                                         class="person-hover-avatar"
                                                                                     />
-                                                                                    <div v-else class="person-hover-avatar person-hover-avatar-fallback d-flex align-items-center justify-content-center">
-                                                                                        <iconify-icon icon="solar:user-bold" class="text-neutral-600" />
-                                                                                    </div>
                                                                                     <div class="person-hover-head-text">
                                                                                         <div class="person-hover-name">{{ activePersonHover.data.name }}</div>
                                                                                         <div class="person-hover-role">{{ activePersonHover.data.position }}</div>
@@ -612,7 +600,7 @@
         v-if="showProfilePopup && profileUserId"
         v-model="showProfilePopup"
         :user-id="profileUserId"
-        @update:model-value="closeProfilePopup"
+        @update:model-value="onProfilePopupUpdate"
     />
     <!-- View Lead Modal -->
     <ViewLeadModal
@@ -778,6 +766,7 @@ import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
 
 import api from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
+import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
 import Swal from 'sweetalert2'
 
@@ -806,46 +795,154 @@ const profileUserId = ref(null)
 const profileTriggerType = ref(null)
 
 
-const openPersonProfile = (task, type, event) => {
-    if (event) event.stopPropagation()
+const isActivityPersonType = (type) => type === 'activity' || type === 'assigned'
 
-    // For the activity tile: try the last-activity user first. If they're an
-    // "external" Bitrix24 user with no local mapping (id === null), fall back
-    // to the assignment user (`parent`) so the popup still opens something
-    // useful — preserving the pre-change behaviour where the tile was always
-    // clickable.
-    let person
-    if (type === 'assigned') {
-        console.log(task.last_activity_user)
-        if(task && task.last_activity_user && task.last_activity_user.id){
-          person =  task.last_activity_user 
-                  console.log("last_activity_user"+person)
+const activityUserIdByNameCache = ref({})
 
-        }else{
-          person =  task?.parent
-                  console.log("parent"+person)
+const normalizePersonNameKey = (name) => String(name || '').trim().toLowerCase()
 
-        }
-    } else {
-        person = task?.responsible_person
+const resolveKanbanProfileUserId = (task, type) => {
+    if (!task) return null
+    const toId = (raw) => {
+        if (raw == null || raw === '') return null
+        const n = Number(raw)
+        return Number.isFinite(n) && n > 0 ? n : null
     }
-    if (!person?.id) return
+    if (isActivityPersonType(type)) {
+        const person = task?.last_activity_user
+        const directId = toId(person?.id)
+        if (directId) return directId
+        const nameKey = normalizePersonNameKey(person?.name)
+        if (nameKey && activityUserIdByNameCache.value[nameKey]) {
+            return activityUserIdByNameCache.value[nameKey]
+        }
+        return null
+    }
+    return toId(task?.responsible_person?.id) ?? toId(task?.responsible_person_id) ?? null
+}
 
-    profileUserId.value = person.id
+const lookupActivityUserIdByName = async (name) => {
+    const key = normalizePersonNameKey(name)
+    if (!key) return null
+    if (activityUserIdByNameCache.value[key]) {
+        return activityUserIdByNameCache.value[key]
+    }
+    try {
+        const response = await api.get('/users', { params: { search: String(name).trim() } })
+        const raw = response.data?.data
+        const users = Array.isArray(raw) ? raw : []
+        const exact = users.find((u) => normalizePersonNameKey(u?.name) === key)
+        const match = exact || users[0]
+        const id = match?.id != null ? Number(match.id) : null
+        if (id && Number.isFinite(id) && id > 0) {
+            activityUserIdByNameCache.value = { ...activityUserIdByNameCache.value, [key]: id }
+            return id
+        }
+    } catch (error) {
+        console.error('Failed to resolve activity user by name:', error)
+    }
+    return null
+}
+
+const openPersonProfile = async (task, type, event) => {
+    if (event) event.stopPropagation()
+    hidePersonHoverCard()
+    activePersonHover.value = null
+
+    let userId = resolveKanbanProfileUserId(task, type)
+    if (!userId && isActivityPersonType(type)) {
+        userId = await lookupActivityUserIdByName(activityPerson(task)?.name)
+    }
+    if (!userId) return
+
+    profileUserId.value = userId
     profileTriggerType.value = type
     showProfilePopup.value = true
 }
 
-// Activity-tile DISPLAY person — prefers the Bitrix24 last-activity user
-// (so the card shows the actual person who acted), falls back to `parent`
-// for legacy / non-B24 leads. Click + hover use this for the visual; the
-// click handler above additionally falls back when the display user is
-// external (no profile id).
-const activityPerson = (task) => task?.last_activity_user || task?.parent || null
+const onProfilePopupUpdate = (open) => {
+    showProfilePopup.value = !!open
+    if (!open) {
+        profileUserId.value = null
+        profileTriggerType.value = null
+    }
+}
+
+/** Bitrix24 LAST_ACTIVITY_BY user for the Activity tile (never the assignee/parent). */
+const activityPerson = (task) => task?.last_activity_user ?? null
+
+/** Cached CRM avatars loaded after hover/API (user id → avatar URL). */
+const activityAvatarCache = ref({})
+
+const KANBAN_DEFAULT_AVATAR_PATH = 'users/user.png'
+
+const resolveKanbanAvatarUrl = (raw) => {
+    if (raw == null || raw === '') {
+        return normalizePublicStorageUrl(KANBAN_DEFAULT_AVATAR_PATH) || ''
+    }
+    const trimmed = String(raw).trim()
+    if (/^https?:\/\//i.test(trimmed)) {
+        return normalizePublicStorageUrl(trimmed) || trimmed
+    }
+    return normalizePublicStorageUrl(trimmed) || ''
+}
+
+/** Always returns a profile image URL (real photo or default users/user.png). */
+const kanbanCardPersonAvatar = (person) => {
+    if (!person) return ''
+    const userId = person.id != null ? Number(person.id) : null
+    if (userId && activityAvatarCache.value[userId]) {
+        return activityAvatarCache.value[userId]
+    }
+    const raw = person.avatar || person.photo_url || ''
+    if (typeof raw === 'string' && raw.trim() !== '') {
+        const url = resolveKanbanAvatarUrl(raw)
+        if (url) return url
+    }
+    return resolveKanbanAvatarUrl(KANBAN_DEFAULT_AVATAR_PATH)
+}
+
+const responsiblePersonAvatar = (task) => {
+    if (!task?.responsible_person?.name && !task?.responsible_person?.avatar) return ''
+    return kanbanCardPersonAvatar(task.responsible_person)
+}
+
+const seedActivityAvatarCacheFromColumns = (cols) => {
+    const next = { ...activityAvatarCache.value }
+    const nameIds = { ...activityUserIdByNameCache.value }
+    for (const col of cols || []) {
+        for (const lead of col.leads || []) {
+            const person = lead?.last_activity_user
+            if (!person) continue
+            const id = Number(person.id)
+            if (Number.isFinite(id) && id > 0) {
+                if (person.avatar) {
+                    const url = resolveKanbanAvatarUrl(person.avatar)
+                    if (url) next[id] = url
+                }
+                const nameKey = normalizePersonNameKey(person.name)
+                if (nameKey) nameIds[nameKey] = id
+            }
+        }
+    }
+    activityAvatarCache.value = next
+    activityUserIdByNameCache.value = nameIds
+}
+
+const activityPersonAvatar = (task) => kanbanCardPersonAvatar(activityPerson(task))
+
+const hoverCardPersonAvatar = (hoverData) => {
+    if (!hoverData) return resolveKanbanAvatarUrl(KANBAN_DEFAULT_AVATAR_PATH)
+    return kanbanCardPersonAvatar({
+        id: hoverData.id,
+        avatar: hoverData.avatar,
+        photo_url: hoverData.photo_url,
+        name: hoverData.name,
+    })
+}
 
 const closeProfilePopup = () => {
-    showProfilePopup.value = false
-    profileUserId.value = null
+    onProfilePopupUpdate(false)
 }
 
 // Get user from storage (same pattern as header/index.vue)
@@ -1395,6 +1492,7 @@ const executeFetchLeads = async () => {
         }))
         
         columns.value = newData
+        seedActivityAvatarCacheFromColumns(newData)
         syncStageOrderMapFromColumns(newData)
         
         // تحديث visibleLeadCounts (العدد المرئي)
@@ -1683,11 +1781,11 @@ const hasResponsiblePerson = (task) => {
     return !!(task?.responsible_person?.name || task?.responsible_person?.avatar)
 }
 
+const activityDisplayAt = (task) =>
+    task?.last_activity_at ?? task?.bitrix24_last_activity_at ?? task?.assigned_at ?? null
+
 const hasAssignedBy = (task) => {
-    return !!(
-        task?.last_activity_at || task?.last_activity_user?.name ||
-        task?.assigned_at || task?.parent?.name || task?.parent?.avatar
-    )
+    return !!(activityDisplayAt(task) || activityPerson(task)?.name || task?.bitrix24_last_activity_by_id)
 }
 
 const enabledFieldsForColumn = (column, task) => {
@@ -1726,6 +1824,7 @@ const isFieldEnabled = (fieldKey) => {
 
 const activePersonHover = ref(null)
 const personHoverHideTimer = ref(null)
+const personHoverDetailsCache = new Map()
 
 const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallbackName = 'Unknown') => {
     const name = person?.name || person?.full_name || fallbackName
@@ -1739,7 +1838,7 @@ const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallb
         person?.team_lead?.name ||
         person?.parent?.name ||
         (type === 'responsible' ? (task?.parent?.name || task?.manager?.name || task?.team_lead?.name) : null) ||
-        (type === 'assigned' ? (task?.parent?.manager_name || task?.parent?.manager?.name || task?.manager?.name) : null) ||
+        (isActivityPersonType(type) ? (person?.parent_name || task?.parent?.manager_name || task?.parent?.manager?.name || task?.manager?.name) : null) ||
         'Not specified'
     const branch =
         person?.branch_name ||
@@ -1759,16 +1858,64 @@ const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallb
     return { name, position, manager, branch, avatar }
 }
 
+const enrichPersonHoverFromApi = async (userId, leadId, type, basePerson, task, fallbackName) => {
+    if (!userId) return
+    try {
+        let user = personHoverDetailsCache.get(userId)
+        if (!user) {
+            const response = await api.get(`/users/${userId}`)
+            const payload = response.data?.data
+            user = payload?.data && typeof payload.data === 'object' ? payload.data : payload
+            if (user?.id) {
+                personHoverDetailsCache.set(userId, user)
+            }
+        }
+        if (!user?.id) return
+        if (user.avatar) {
+            const resolved = resolveKanbanAvatarUrl(user.avatar)
+            if (resolved) {
+                activityAvatarCache.value = {
+                    ...activityAvatarCache.value,
+                    [userId]: resolved,
+                }
+            }
+        }
+        if (activePersonHover.value?.leadId !== leadId || activePersonHover.value?.type !== type) return
+        activePersonHover.value = {
+            leadId,
+            type,
+            data: normalizePersonHoverData(
+                {
+                    ...basePerson,
+                    ...user,
+                    position: user.position || user.role_name || basePerson?.position,
+                    branch_name: user.branch || user.branch_name || basePerson?.branch_name,
+                    parent_name: user.parent_name || basePerson?.parent_name,
+                },
+                task,
+                type,
+                fallbackName,
+            ),
+        }
+    } catch {
+        // keep card data from kanban payload
+    }
+}
+
 const showPersonHoverCard = (task, type) => {
     cancelPersonHoverHide()
-    const person = type === 'assigned' ? activityPerson(task) : task?.responsible_person
-    const fallbackName = type === 'assigned'
+    const person = isActivityPersonType(type) ? activityPerson(task) : task?.responsible_person
+    const fallbackName = isActivityPersonType(type)
         ? (activityPerson(task)?.name || 'Activity')
         : (task?.responsible_person?.name || 'Responsible Person')
+    const hoverType = isActivityPersonType(type) ? 'activity' : type
     activePersonHover.value = {
         leadId: task?.id,
-        type,
-        data: normalizePersonHoverData(person, task, type, fallbackName),
+        type: hoverType,
+        data: normalizePersonHoverData(person, task, hoverType, fallbackName),
+    }
+    if (isActivityPersonType(type) && person?.id) {
+        enrichPersonHoverFromApi(Number(person.id), task?.id, hoverType, person, task, fallbackName)
     }
 }
 
@@ -2584,6 +2731,11 @@ function formatDate(dateString) {
         hour12: true
     })
     return `${formattedDate}  |  ${formattedTime}`
+}
+
+/** Activity tile: Bitrix24 LAST_ACTIVITY_TIME (last_activity_at / bitrix24_last_activity_at). */
+function formatActivityDate(task) {
+    return formatDate(activityDisplayAt(task))
 }
 
 function getMobileCardIndex(column) {
@@ -3750,6 +3902,14 @@ const $showNotification = (message, type = 'info') => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+
+.person-hover-clickable {
+    cursor: pointer;
+}
+
+.person-hover-clickable:hover {
+    text-decoration: underline;
 }
 
 .person-hover-card {

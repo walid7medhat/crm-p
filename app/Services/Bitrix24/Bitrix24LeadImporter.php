@@ -36,6 +36,9 @@ class Bitrix24LeadImporter
     /** Cache: bitrix24 user_id => display name (independent of local user mapping) */
     private array $b24UserNameCache = [];
 
+    /** Cache: bitrix24 user_id => ['name' => ?string, 'photo_url' => ?string] */
+    private array $b24UserProfileCache = [];
+
     /**
      * Set to true once crm.timeline.item.list returns "method not found" for
      * this portal so we stop hammering it for the rest of the sync. The error
@@ -655,9 +658,11 @@ class Bitrix24LeadImporter
                 continue;
             }
             $idInt = (int) $id;
+            $profile = $this->bitrixUserProfile($idInt);
             $out[$role] = [
                 'bitrix24_id'   => $idInt,
-                'name'          => $this->bitrixUserName($idInt),
+                'name'          => $profile['name'],
+                'photo_url'     => $profile['photo_url'],
                 'local_user_id' => $this->mapBitrixUser($idInt),
             ];
         }
@@ -669,19 +674,36 @@ class Bitrix24LeadImporter
         if (!$b24UserId) {
             return null;
         }
-        $b24UserId = (int) $b24UserId;
-        if (array_key_exists($b24UserId, $this->b24UserNameCache)) {
-            return $this->b24UserNameCache[$b24UserId];
+
+        return $this->bitrixUserProfile((int) $b24UserId)['name'];
+    }
+
+    /**
+     * @return array{name: ?string, photo_url: ?string}
+     */
+    private function bitrixUserProfile(int $b24UserId): array
+    {
+        if (array_key_exists($b24UserId, $this->b24UserProfileCache)) {
+            return $this->b24UserProfileCache[$b24UserId];
         }
 
         $remote = $this->client->getUser($b24UserId);
         $name = null;
+        $photoUrl = null;
         if ($remote) {
-            $candidate = trim(($remote['NAME'] ?? '') . ' ' . ($remote['LAST_NAME'] ?? ''));
+            $candidate = trim(($remote['NAME'] ?? '').' '.($remote['LAST_NAME'] ?? ''));
             $name = $candidate !== '' ? $candidate : ($remote['EMAIL'] ?? "Bitrix24 user #{$b24UserId}");
+            $photo = $remote['PERSONAL_PHOTO'] ?? $remote['personal_photo'] ?? null;
+            if (is_string($photo) && trim($photo) !== '') {
+                $photoUrl = trim($photo);
+            }
         }
+
+        $profile = ['name' => $name, 'photo_url' => $photoUrl];
+        $this->b24UserProfileCache[$b24UserId] = $profile;
         $this->b24UserNameCache[$b24UserId] = $name;
-        return $name;
+
+        return $profile;
     }
 
     /**
