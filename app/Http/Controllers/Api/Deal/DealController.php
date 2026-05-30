@@ -827,7 +827,7 @@ class DealController extends Controller
             $basicFields = [
                 'source', 'deal_name', 'deal_total_amount', 'deal_commission', 
                 'agent_share', 'company_share', 'currency', 'responsible_person_id',
-                 'lost_reason', 'listing_id'
+                 'lost_reason'
             ];
 
             $dealData = [];
@@ -1000,7 +1000,7 @@ class DealController extends Controller
             $dealFields = [
                 'source', 'deal_name', 'deal_total_amount', 'deal_commission', 
                 'agent_share', 'company_share', 'currency', 'responsible_person_id',
-                'property_link', 'property_reference', 'lost_reason', 'listing_id'
+                'property_link', 'property_reference', 'lost_reason'
             ];
             
             foreach ($dealFields as $field) {
@@ -1220,6 +1220,7 @@ class DealController extends Controller
             'unit_size',
             'area_id',
             'project_id',
+            'listing_id',
             'developer_id',
             'developer_name',
             'developer_phone',
@@ -1572,6 +1573,7 @@ class DealController extends Controller
             'unit_size' => $propertyData['unit_size'] ?? null,
             'area_id' => $propertyData['area_id'] ?? null,
             'project_id' => $propertyData['project_id'] ?? null,
+            'listing_id' => $propertyData['listing_id'] ?? null,
             'developer_id' => $propertyData['developer_id'] ?? null,
             'developer_name' => $propertyData['developer_name'] ?? null,
             'developer_phone' => $propertyData['developer_phone'] ?? null,
@@ -1615,7 +1617,7 @@ class DealController extends Controller
         // Update text fields
         $property->update($request->only([
             'unit_no', 'property_type_id', 'bedrooms', 'unit_size',
-            'area_id', 'developer_id', 'developer_name', 'developer_phone',
+            'area_id', 'listing_id', 'developer_id', 'developer_name', 'developer_phone',
             'budget_from', 'budget_to', 'purchase_price', 'commission'
         ]));
 
@@ -1878,6 +1880,7 @@ public function addProperty(Request $request, Deal $deal)
             'bedrooms' => $validated['bedrooms'] ?? null,
             'unit_size' => $validated['unit_size'] ?? null,
             'area_id' => $validated['area_id'] ?? null,
+            'listing_id' => $request->input('listing_id'),
             'developer_id' => $validated['developer_id'] ?? null,
             'developer_name' => $validated['developer_name'] ?? null,
             'developer_phone' => $validated['developer_phone'] ?? null,

@@ -424,9 +424,9 @@
               </template>
             </v-select>
           </div>
-          <div class="col-md-6" v-if="availableListings.length > 0">
-            <label class="form-label-custom">Select Unit</label>
-            <v-select v-model="selectedListing" :options="availableListings" :reduce="item => item" label="display_name" placeholder="Select a unit..." class="custom-v-select" @update:modelValue="onListingSelected" :disabled="isLoadingListings" clearable>
+          <div class="col-md-6" v-if="showSingleListingPicker">
+            <label class="form-label-custom">Select Unit <span v-if="isSingleListingRequired" class="text-danger">*</span></label>
+            <v-select v-model="selectedListing" :options="availableListings" :reduce="item => item" label="display_name" placeholder="Select a unit..." class="custom-v-select" :class="{ 'is-invalid': showErrors && isSingleListingRequired && !form.listing_id }" @update:modelValue="onListingSelected" :disabled="isLoadingListings" clearable>
               <template #option="option">
                 <div><strong>{{ option.unit_number || 'No Unit' }}</strong><span class="text-muted ms-2">- {{ option.property_type?.name || 'N/A' }}</span><div class="small text-muted">{{ option.bedrooms_text }} | {{ option.size_sqft || 'N/A' }} sqft</div><div class="small text-success">{{ option.status === 'converted' ? 'Sold' : 'Rented' }}</div></div>
               </template>
@@ -434,10 +434,31 @@
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
             </v-select>
-            <div class="small text-muted mt-1"><iconify-icon icon="lucide:info" class="me-1"></iconify-icon> Showing available units in this location</div>
+            <div class="small text-muted mt-1" v-if="isLoadingListings"><b-spinner small></b-spinner> Loading units...</div>
+            <div class="small text-muted mt-1" v-else-if="!form.area_id"><iconify-icon icon="lucide:info" class="me-1"></iconify-icon> Select a property address first</div>
+            <div class="small text-muted mt-1" v-else-if="availableListings.length === 0"><iconify-icon icon="lucide:alert-circle" class="me-1"></iconify-icon> No {{ dealType === 'secondary' ? 'sold' : 'rented' }} units available for you in this area</div>
+            <div class="small text-muted mt-1" v-else><iconify-icon icon="lucide:info" class="me-1"></iconify-icon> Showing {{ dealType === 'secondary' ? 'sold' : 'rented' }} units in this location</div>
+            <div v-if="showErrors && isSingleListingRequired && !form.listing_id" class="invalid-feedback d-block">Please select a unit</div>
           </div>
-          <div class="col-md-6"><label class="form-label-custom">Unit No <span class="text-danger">*</span></label><b-form-input v-model="form.unit_no" placeholder="Enter Unit No" class="custom-input" :class="{ 'is-invalid': showErrors && !form.unit_no }" /></div>
-          <div class="col-md-4">
+
+          <!-- Secondary: read-only summary of the unit auto-filled from the chosen listing. -->
+          <div class="col-12" v-if="hidePropertyDetailFields && selectedListingSummary">
+            <div class="listing-summary-card">
+              <div class="listing-summary-title">
+                <iconify-icon icon="lucide:home" class="me-1"></iconify-icon>
+                Selected Unit
+              </div>
+              <div class="listing-summary-grid">
+                <div><span class="listing-summary-label">Unit No</span><span class="listing-summary-value">{{ selectedListingSummary.unit_number || '—' }}</span></div>
+                <div><span class="listing-summary-label">Property Type</span><span class="listing-summary-value">{{ selectedListingSummary.property_type?.name || '—' }}</span></div>
+                <div><span class="listing-summary-label">Bedrooms</span><span class="listing-summary-value">{{ selectedListingSummary.bedrooms_text || '—' }}</span></div>
+                <div><span class="listing-summary-label">Unit Size</span><span class="listing-summary-value">{{ selectedListingSummary.size_sqft ? `${selectedListingSummary.size_sqft} sqft` : '—' }}</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6" v-if="!hidePropertyDetailFields"><label class="form-label-custom">Unit No <span class="text-danger">*</span></label><b-form-input v-model="form.unit_no" placeholder="Enter Unit No" class="custom-input" :class="{ 'is-invalid': showErrors && !form.unit_no }" /></div>
+          <div class="col-md-4" v-if="!hidePropertyDetailFields">
             <label class="form-label-custom">Property Type <span class="text-danger">*</span></label>
             <v-select v-model="form.property_type_id" :options="propertyTypes" :reduce="item => item.id" label="name" placeholder="Select Property Type" class="custom-v-select" :class="{ 'is-invalid': showErrors && !form.property_type_id }" clearable>
               <template #open-indicator="{ attributes }">
@@ -445,7 +466,7 @@
               </template>
             </v-select>
           </div>
-          <div class="col-md-4" v-if="showBedroomsFieldInProperty">
+          <div class="col-md-4" v-if="!hidePropertyDetailFields && showBedroomsFieldInProperty">
             <label class="form-label-custom">Bedrooms</label>
             <v-select v-model="form.bedrooms" :options="bedroomOptions" :reduce="o => o.value" label="text" placeholder="Select Bedroom" class="custom-v-select" clearable>
               <template #open-indicator="{ attributes }">
@@ -453,7 +474,7 @@
               </template>
             </v-select>
           </div>
-          <div class="col-md-4"><label class="form-label-custom">Unit Size (sq.ft)</label><b-form-input v-model="form.unit_size" placeholder="Enter Unit Size" class="custom-input" /></div>
+          <div class="col-md-4" v-if="!hidePropertyDetailFields"><label class="form-label-custom">Unit Size (sq.ft)</label><b-form-input v-model="form.unit_size" placeholder="Enter Unit Size" class="custom-input" /></div>
             <div v-if="showBudgetFields" class="col-md-4">
               <label class="form-label-custom">
                   Budget (AED)
@@ -489,12 +510,13 @@
         <div class="input-group"><span class="input-group-text">AED</span><b-form-input v-model="form.purchase_price" type="text" inputmode="numeric" placeholder="Amount" class="custom-input" :class="{ 'is-invalid': showErrors && isPurchasePriceRequired && !form.purchase_price }" @keypress="onMoneyKeypress" /></div></div>
           <div class="col-md-4">
             <label class="form-label-custom">Developer</label>
-            <v-select v-model="form.developer_id" :options="developers" :reduce="item => item.id" label="name" placeholder="Select Developer" class="custom-v-select" clearable>
+            <v-select v-model="form.developer_id" :options="developers" :reduce="item => item.id" label="name" placeholder="Select Developer" class="custom-v-select" clearable :disabled="lockPropertyFieldsUntilListing">
               <template #open-indicator="{ attributes }">
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
             </v-select>
           </div>
+          <!-- Developer sales person — deal-specific, not on the listing, so always shown. -->
           <div class="col-md-4"><label class="form-label-custom">Developer sales person name</label><b-form-input v-model="form.developer_name" placeholder="Enter Developer Name" class="custom-input" /></div>
           <div class="col-md-4">
             <label class="form-label-custom">Developer sales person phone</label>
@@ -592,6 +614,7 @@ import PropertyList from './PropertyList.vue'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import api from '@/plugins/axios'
+import { buildListingFilterParams } from '@/composables/useDealListingPicker'
 import { isNonEmptyPhoneValid } from '@/utils/phone'
 import { getCurrentInstance } from 'vue'
 import { normalizeLanguageSelection, hasLanguageSelection } from '@/composables/useLanguageMultiSelect'
@@ -748,6 +771,9 @@ const isBudgetRequired = computed(() => {
 const showPurchasePrice = computed(() => {
   const dt = props.dealType
   if (dt !== 'primary' && dt !== 'secondary') return false
+  // Secondary deals: purchase price is the only manual figure the user enters (the listing
+  // covers everything else), so make it visible regardless of stage.
+  if (dt === 'secondary') return true
   const order = Number(props.selectedStageOrder) || 0
   if (order >= 3) return true
   const stageName = props.selectedStageName?.toLowerCase() || ''
@@ -755,6 +781,8 @@ const showPurchasePrice = computed(() => {
 })
 
 const isPurchasePriceRequired = computed(() => {
+  // Secondary deals: purchase price is mandatory — it's the only manual figure on the form.
+  if (props.dealType === 'secondary') return true
   const missingFields = props.missingFields || []
   return missingFields.includes('purchase_price')
 })
@@ -765,6 +793,22 @@ const showPropertyDocuments = computed(() => {
 
 const shouldHideSeller = computed(() => hasListingId.value && props.dealType === 'secondary')
 const shouldHideLandlord = computed(() => hasListingId.value && props.dealType === 'rental')
+
+// Single-property mode listing picker: show whenever the deal type uses a listing
+// (secondary/rental), regardless of whether listings have been fetched yet.
+const showSingleListingPicker = computed(() =>
+  !showMultiProperties.value && (props.dealType === 'secondary' || props.dealType === 'rental')
+)
+const isSingleListingRequired = computed(() => props.dealType === 'secondary')
+
+// Secondary deals: property details belong to the listing. Hide the manual inputs
+// entirely and show a read-only summary of the chosen unit instead.
+const hidePropertyDetailFields = computed(() => props.dealType === 'secondary')
+
+const selectedListingSummary = computed(() => {
+  if (!form.value?.listing_id) return null
+  return availableListings.value.find(l => l.id === form.value.listing_id) || selectedListing.value
+})
 
 // ========== Document Types ==========
 const normalizeResidencyStatus = (status) => {
@@ -1158,6 +1202,33 @@ function validateForm() {
       }
     }
   }
+  // ========== Secondary: listing_id + purchase_price mandatory for every property ==========
+  // The property must be tied to a sold-out listing, and the user must enter a purchase price
+  // (the only manual figure on a secondary deal — everything else comes from the listing).
+  if (props.dealType === 'secondary') {
+    if (showMultiProperties.value && propertiesList.value.length > 0) {
+      propertiesList.value.forEach((property, idx) => {
+        if (!property?.listing_id) {
+          errors.push(`Property ${idx + 1}: Please select a sold unit`)
+          fieldErrorsObj[`property_${idx}_listing_id`] = 'Please select a sold unit'
+        }
+        if (!property?.purchase_price) {
+          errors.push(`Property ${idx + 1}: Purchase price is required`)
+          fieldErrorsObj[`property_${idx}_purchase_price`] = 'Purchase price is required'
+        }
+      })
+    } else {
+      if (!form.value?.listing_id) {
+        errors.push('Please select a sold unit for the property')
+        fieldErrorsObj.listing_id = 'Please select a sold unit'
+      }
+      if (!form.value?.purchase_price) {
+        errors.push('Purchase price is required')
+        fieldErrorsObj.purchase_price = 'Purchase price is required'
+      }
+    }
+  }
+
   // ========== Property field validation (primary + secondary) ==========
   // Stage 2 (EOI/Security Deposit): area, property type, unit no required.
   // Stage 3+ (Booking/MOU and beyond): + bedrooms, unit_size, purchase_price.
@@ -1263,7 +1334,7 @@ const fetchAvailableListings = async (areaId) => {
   if (!currentUser.value?.id) { getCurrentUser(); if (!currentUser.value?.id) return }
   try {
     isLoadingListings.value = true
-    const params = { area_id: areaId, sold_by_agent_id: currentUser.value.id, per_page: 100 }
+    const params = buildListingFilterParams({ dealType: props.dealType, areaId, user: currentUser.value })
     const response = await api.get('/listings/properties', { params })
     const listings = response.data.data || []
     availableListings.value = listings.map(listing => ({
@@ -1448,6 +1519,8 @@ const getPropertiesData = () => {
         unit_size: prop.unit_size || '',
         area_id: prop.area_id || null,
         project_id: prop.project_id || null,
+        // Linked listing (secondary / rental). Backend stores it on deal_properties.listing_id.
+        listing_id: prop.listing_id || null,
         developer_id: prop.developer_id || null,
         developer_name: prop.developer_name || '',
         developer_phone: prop.developer_phone || '',
@@ -1748,14 +1821,21 @@ const showBedroomsFieldInProperty = computed(() => {
   
   return true
 })
-onMounted(() => {
+onMounted(async () => {
   // fetchProjects()
   getCurrentUser()
     fetchAllAreas()
 
    document.addEventListener('click', onDocumentClick)
 
-
+  // Hydrate single-property listing picker when the form is pre-populated with a listing
+  // (edit flow via InlineSectionEditor).
+  if (form.value?.area_id && form.value?.listing_id &&
+      (props.dealType === 'secondary' || props.dealType === 'rental')) {
+    await fetchAvailableListings(form.value.area_id)
+    const match = availableListings.value.find(l => l.id === form.value.listing_id)
+    if (match) selectedListing.value = match
+  }
 })
 onBeforeUnmount(() => {
 document.removeEventListener('click', onDocumentClick)
@@ -1769,6 +1849,12 @@ removeBudgetDropdownListeners()
 .section-title { font-size: 16px !important; font-weight: 600; color: var(--deal-navy-deep, #0B0736); font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); margin-bottom: 10px; letter-spacing: -0.02em; line-height: 1.35; }
 .form-card { background: #fff; border: 1px solid #e5e7eb; box-shadow: none; padding: 0.875rem 1rem !important; }
 .radius-12 { border-radius: 8px; }
+.listing-summary-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; }
+.listing-summary-title { font-size: 13px; font-weight: 600; color: #0B0736; margin-bottom: 8px; display: flex; align-items: center; }
+.listing-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px 16px; }
+.listing-summary-grid > div { display: flex; flex-direction: column; }
+.listing-summary-label { font-size: 11px; color: #64748b; font-weight: 500; }
+.listing-summary-value { font-size: 13px; color: #0f172a; font-weight: 600; }
 .form-label-custom { font-size: 12px !important; font-weight: 500; color: var(--deal-text-muted, #64748b); margin-bottom: 4px; display: block; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .custom-input { height: 42px !important; min-height: 42px; border-radius: 8px !important; border: 1px solid #e5e7eb !important; font-size: 13px !important; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }
 .custom-input::placeholder { font-size: 10px !important; color: #9ca3af; font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif); }

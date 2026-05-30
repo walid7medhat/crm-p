@@ -68,6 +68,7 @@ class DealResource extends JsonResource
             // ========== MULTI PROPERTIES ==========
             'properties' => $this->whenLoaded('properties', function () use ($request) {
                 return $this->properties->map(function ($property) use ($request) {
+                    $listing = $property->listing; // belongsTo, eager-loaded when relation is requested
                     return [
                         'id' => $property->id,
                         'sort_order' => $property->sort_order,
@@ -79,6 +80,21 @@ class DealResource extends JsonResource
                         'area_id' => $property->area_id,
                         'area_name' => $property->area?->area_title,
                         'project_id' => $property->project_id,
+                        // Linked listing — surfaced so the view-deal screen can render the
+                        // "Linked Listing" card and the deal forms can hydrate the picker.
+                        'listing_id' => $property->listing_id,
+                        'listing' => $listing ? [
+                            'id' => $listing->id,
+                            'reference_number' => $listing->reference_number,
+                            'unit_number' => $listing->unit_number,
+                            'status' => $listing->status,
+                            'number_of_bedrooms' => $listing->number_of_bedrooms,
+                            'size_sqft' => $listing->size_sqft,
+                            'property_type' => $listing->propertyType ? [
+                                'id' => $listing->propertyType->id,
+                                'name' => $listing->propertyType->name,
+                            ] : null,
+                        ] : null,
                         'developer_id' => $property->developer_id,
                         'developer_name' => $property->developer_name,
                         'developer_phone' => $property->developer_phone,

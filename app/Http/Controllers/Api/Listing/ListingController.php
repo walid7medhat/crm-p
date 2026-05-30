@@ -29,6 +29,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Schema;
 use App\Models\SearchAlert;
 use App\Jobs\CheckSearchAlerts;
+use App\Models\DealProperty;
 use App\Models\PropertyOffer;
 use App\Traits\HotDealNotifiable;
 use App\Models\HotDealRequest;
@@ -597,6 +598,42 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
                             ->where('rented_by_agent_id', $agentId);
                     });
                 });
+            }
+
+            // Used by the deal Select-Unit picker. When sent, restricts results to listings
+            // sold/rented by anyone in the current user's hierarchy (self + descendants).
+            // Super-admin / admin pass `sold_by_team=true` without effect (they already see all).
+            if ($request->boolean('sold_by_team')) {
+                $current = Auth::user();
+                if ($current && !($current->hasRole('super_admin') || $current->hasRole('admin'))) {
+                    $teamIds = User::where(function ($q) use ($current) {
+                        $q->where('id', $current->id)
+                            ->orWhere('parent_id', $current->id)
+                            ->orWhereHas('parent', function ($pq) use ($current) {
+                                $pq->where('parent_id', $current->id);
+                            });
+                    })->pluck('id');
+
+                    $query->where(function ($q) use ($teamIds) {
+                        $q->where(function ($sub) use ($teamIds) {
+                            $sub->whereIn('sold_by', ['another_agent', 'me'])
+                                ->whereIn('sold_by_agent_id', $teamIds);
+                        })
+                        ->orWhere(function ($sub) use ($teamIds) {
+                            $sub->whereIn('rented_by', ['another_agent', 'me'])
+                                ->whereIn('rented_by_agent_id', $teamIds);
+                        });
+                    });
+                }
+            }
+
+            // Used by the deal Select-Unit picker to hide listings that are already attached
+            // to a deal so the same sold unit can't be picked twice.
+            if ($request->boolean('not_in_deals')) {
+                $usedListingIds = DealProperty::whereNotNull('listing_id')->pluck('listing_id');
+                if ($usedListingIds->count() > 0) {
+                    $query->whereNotIn('id', $usedListingIds);
+                }
             }
 
             //    if ($request->has('status_in')) {

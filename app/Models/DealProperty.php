@@ -10,7 +10,11 @@ class DealProperty extends Model
     use HasFactory;
     
     protected $table = 'deal_properties';
-    
+
+    // Always hydrate the linked listing (and its property type) so DealResource can render
+    // the "Linked Listing" card without each property triggering an N+1 query.
+    protected $with = ['listing.propertyType'];
+
     protected $fillable = [
         'deal_id',
         'sort_order',
@@ -22,6 +26,9 @@ class DealProperty extends Model
         // Location
         'area_id',
         'project_id',
+        // Linked listing (secondary / rental deals attach a sold-out / rented listing here;
+        // primary deals leave it null since there's no listing inventory record).
+        'listing_id',
         // Developer
         'developer_id',
         'developer_name',
@@ -83,6 +90,11 @@ class DealProperty extends Model
     public function area()
     {
         return $this->belongsTo(Area::class);
+    }
+
+    public function listing()
+    {
+        return $this->belongsTo(Listing::class);
     }
     
     public function project()

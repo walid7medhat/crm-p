@@ -55,18 +55,18 @@
       </div>
 
       <!-- ========== LISTINGS (تظهر بعد اختيار المنطقة) ========== -->
-      <div class="col-md-6" v-if="availableListings.length > 0">
+      <div class="col-md-6" v-if="showListingPicker">
         <label class="form-label-custom">
-          Select Unit <span v-if="isRequired('listing_id')" class="text-danger">*</span>
+          Select Unit <span v-if="isListingRequired" class="text-danger">*</span>
         </label>
-        <v-select 
-          v-model="selectedListing" 
-          :options="availableListings" 
-          :reduce="item => item" 
-          label="display_name" 
-          placeholder="Select a unit..." 
+        <v-select
+          v-model="selectedListing"
+          :options="availableListings"
+          :reduce="item => item"
+          label="display_name"
+          placeholder="Select a unit..."
           class="custom-v-select"
-          :class="{ 'is-invalid': showErrors && isRequired('listing_id') && !selectedListing }"
+          :class="{ 'is-invalid': showErrors && isListingRequired && !selectedListing }"
           @update:modelValue="onListingSelected"
           :disabled="isLoadingListings"
         >
@@ -82,17 +82,46 @@
             </div>
           </template>
         </v-select>
-        <div class="small text-muted mt-1" v-if="!isLoadingListings">
+        <div class="small text-muted mt-1" v-if="isLoadingListings">
+          <b-spinner small></b-spinner> Loading units...
+        </div>
+        <div class="small text-muted mt-1" v-else-if="!localProperty.area_id">
           <iconify-icon icon="lucide:info" class="me-1"></iconify-icon>
-          Showing available units in this location
+          Select a property address first
+        </div>
+        <div class="small text-muted mt-1" v-else-if="availableListings.length === 0">
+          <iconify-icon icon="lucide:alert-circle" class="me-1"></iconify-icon>
+          No {{ dealType === 'secondary' ? 'sold' : 'rented' }} units available for you in this area
         </div>
         <div class="small text-muted mt-1" v-else>
-          <b-spinner small></b-spinner> Loading units...
+          <iconify-icon icon="lucide:info" class="me-1"></iconify-icon>
+          Showing {{ dealType === 'secondary' ? 'sold' : 'rented' }} units in this location
+        </div>
+        <div v-if="showErrors && isListingRequired && !selectedListing" class="invalid-feedback d-block">
+          Please select a unit for this property
         </div>
       </div>
 
-      <!-- ========== BASIC PROPERTY FIELDS (تتعبي تلقائياً من الـ Listing) ========== -->
-      <div class="col-md-6">
+      <!-- Read-only summary of the chosen listing — shown whenever a listing is picked,
+           regardless of deal type. For secondary the property inputs below are hidden,
+           for rental they remain visible (landlord-side fields still apply). -->
+      <div class="col-12" v-if="selectedListingSummary">
+        <div class="listing-summary-card">
+          <div class="listing-summary-title">
+            <iconify-icon icon="lucide:home" class="me-1"></iconify-icon>
+            Selected Unit
+          </div>
+          <div class="listing-summary-grid">
+            <div><span class="listing-summary-label">Unit No</span><span class="listing-summary-value">{{ selectedListingSummary.unit_number || '—' }}</span></div>
+            <div><span class="listing-summary-label">Property Type</span><span class="listing-summary-value">{{ selectedListingSummary.property_type?.name || '—' }}</span></div>
+            <div><span class="listing-summary-label">Bedrooms</span><span class="listing-summary-value">{{ selectedListingSummary.bedrooms_text || '—' }}</span></div>
+            <div><span class="listing-summary-label">Unit Size</span><span class="listing-summary-value">{{ selectedListingSummary.size_sqft ? `${selectedListingSummary.size_sqft} sqft` : '—' }}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== BASIC PROPERTY FIELDS (hidden for secondary — listing supplies them) ========== -->
+      <div class="col-md-6" v-if="!hidePropertyDetailFields">
         <label class="form-label-custom">
           Unit No <span v-if="isRequired('unit_no')" class="text-danger">*</span>
         </label>
@@ -104,7 +133,7 @@
         />
       </div>
 
-      <div class="col-md-4">
+      <div class="col-md-4" v-if="!hidePropertyDetailFields">
         <label class="form-label-custom">
           Property Type <span v-if="isRequired('property_type_id')" class="text-danger">*</span>
         </label>
@@ -123,7 +152,7 @@
         </v-select>
       </div>
 
-      <div class="col-md-4" v-if="showBedroomsField">
+      <div class="col-md-4" v-if="!hidePropertyDetailFields && showBedroomsField">
         <label class="form-label-custom">
           Bedrooms <span v-if="isRequired('bedrooms')" class="text-danger">*</span>
         </label>
@@ -142,7 +171,7 @@
        </v-select>
       </div>
 
-      <div class="col-md-4">
+      <div class="col-md-4" v-if="!hidePropertyDetailFields">
         <label class="form-label-custom">Unit Size (sq.ft)</label>
         <b-form-input
           v-model="localProperty.unit_size"
@@ -214,13 +243,13 @@
           </div>
         </div>
 
-      <!-- ========== PURCHASE PRICE (Booking, SPA, Won Stages) ========== -->
+      <!-- ========== PURCHASE PRICE (always visible on secondary; stage-gated otherwise) ========== -->
       <div class="col-md-3" v-if="showPurchasePrice">
         <label class="form-label-custom">
            <span v-if="isWonStage">Amount</span>
             <span v-else>Purchase Price</span>
-          
-          <span v-if="isRequired('purchase_price')" class="text-danger">*</span>
+
+          <span v-if="isPurchasePriceMandatory" class="text-danger">*</span>
         </label>
         <div class="input-group">
           <b-form-input
@@ -230,7 +259,7 @@
             inputmode="numeric"
             placeholder="Amount"
             class="custom-input"
-            :class="{ 'is-invalid': showErrors && isRequired('purchase_price') && !localProperty.purchase_price }"
+            :class="{ 'is-invalid': showErrors && isPurchasePriceMandatory && !localProperty.purchase_price }"
             @keypress="onMoneyKeypress"
           />
           <span class="input-group-text">AED</span>
@@ -253,8 +282,8 @@
         </div>
         </div>
 
-      <!-- ========== DEVELOPER FIELDS ========== -->
-      <div class="col-md-4">
+      <!-- ========== DEVELOPER FIELDS (hidden for secondary — listing supplies developer) ========== -->
+      <div class="col-md-4" v-if="!hidePropertyDetailFields">
         <label class="form-label-custom">Developer</label>
         <v-select
           v-model="localProperty.developer_id"
@@ -270,6 +299,7 @@
         </v-select>
       </div>
 
+      <!-- Developer sales person details — deal-specific, not on the listing, so always shown. -->
       <div class="col-md-4">
         <label class="form-label-custom">Developer Sales Person Name</label>
         <b-form-input
@@ -313,6 +343,7 @@ import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import vSelect from 'vue-select'
 import DocumentUpload from './DocumentUpload.vue'
 import api from '@/plugins/axios'
+import { buildListingFilterParams } from '@/composables/useDealListingPicker'
 
 const props = defineProps({
   dealId: { type: [Number, String], default: null },
@@ -420,6 +451,8 @@ const isWonStage = computed(() => {
 const showPurchasePrice = computed(() => {
   const dt = props.dealType
   if (dt !== 'primary' && dt !== 'secondary') return false
+  // Secondary: purchase price is the only manual figure, always visible.
+  if (dt === 'secondary') return true
   const order = Number(props.selectedStageOrder) || 0
   if (order >= 3) return true
   const stageName = props.selectedStageName?.toLowerCase() || ''
@@ -443,6 +476,32 @@ const showPropertyDocuments = computed(() => {
 function isRequired(fieldName) {
   return props.requiredFields?.includes(`property_${fieldName}`) || false
 }
+
+// Listing picker is always visible for secondary/rental — user must pick a sold/rented unit.
+const showListingPicker = computed(() =>
+  props.dealType === 'secondary' || props.dealType === 'rental'
+)
+
+// listing_id is mandatory for secondary regardless of requiredFields prop.
+const isListingRequired = computed(() =>
+  props.dealType === 'secondary' || isRequired('listing_id')
+)
+
+// Secondary property fields belong to the listing — hide them entirely. The user can
+// only set them by picking a listing, and the chosen listing's values are shown as a
+// read-only summary card.
+const hidePropertyDetailFields = computed(() => props.dealType === 'secondary')
+
+// Snapshot of the selected listing, used to render the summary card.
+const selectedListingSummary = computed(() => {
+  if (!localProperty.value?.listing_id) return null
+  return availableListings.value.find(l => l.id === localProperty.value.listing_id) || selectedListing.value
+})
+
+// Purchase price is always required on secondary (only manual figure on the form).
+const isPurchasePriceMandatory = computed(() =>
+  props.dealType === 'secondary' || isRequired('purchase_price')
+)
 
 function onMoneyKeypress(e) {
   if (!/^\d$/.test(e.key)) e.preventDefault()
@@ -581,21 +640,21 @@ const fetchAvailableListings = async (areaId) => {
     availableListings.value = []
     return
   }
-  
+
   if (!currentUser.value?.id) {
     getCurrentUser()
     if (!currentUser.value?.id) return
   }
-  
+
   try {
     isLoadingListings.value = true
-    
-    const params = {
-      area_id: areaId,
-      sold_by_agent_id: currentUser.value.id,
-      per_page: 100
-    }
-    
+
+    const params = buildListingFilterParams({
+      dealType: props.dealType,
+      areaId,
+      user: currentUser.value,
+    })
+
     const response = await api.get('/listings/properties', { params })
     
     const listings = response.data.data || []
@@ -729,10 +788,18 @@ const fetchAllAreas = async () => {
     console.error('Error loading areas:', error)
   }
 }
-onMounted(() => {
+onMounted(async () => {
   ensurePropertyDocumentArrays(localProperty.value)
   fetchAllAreas()
      document.addEventListener('click', onDocumentClick)
+
+  // Hydrate listing picker when a listing_id is already set (edit / change-stage flows).
+  if (localProperty.value.area_id && localProperty.value.listing_id &&
+      (props.dealType === 'secondary' || props.dealType === 'rental')) {
+    await fetchAvailableListings(localProperty.value.area_id)
+    const match = availableListings.value.find(l => l.id === localProperty.value.listing_id)
+    if (match) selectedListing.value = match
+  }
 })
 onBeforeUnmount(() => {
     document.removeEventListener('click', onDocumentClick)
@@ -834,6 +901,40 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
 .property-documents-block :deep(.document-upload-container .document-type-group:last-child) {
   border-bottom: none;
   padding-bottom: 0;
+}
+
+.listing-summary-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.listing-summary-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0B0736;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+.listing-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px 16px;
+}
+.listing-summary-grid > div {
+  display: flex;
+  flex-direction: column;
+}
+.listing-summary-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+.listing-summary-value {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 600;
 }
 
 

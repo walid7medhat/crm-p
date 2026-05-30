@@ -107,6 +107,10 @@ export function useStageTransition() {
             'unit_size',
             'area_id',
             'project_id',
+            // Linked listing — keep it in the change-stage payload so
+            // deal_properties.listing_id is preserved on save. Without this the
+            // whitelist drops listing_id and the secondary deal loses its sold-unit link.
+            'listing_id',
             'developer_id',
             'developer_name',
             'developer_phone',

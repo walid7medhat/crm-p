@@ -2817,6 +2817,11 @@ function onMobileCardTouchEnd(column, event) {
 function viewLead(task) {
     selectedLead.value = task?.id
     showViewModal.value = true
+    if (task?.id) {
+        // Fire-and-forget: stamp a "view" entry in the lead history so the activity timeline
+        // shows who opened the lead and when. Failures are non-fatal — never block the modal.
+        api.get(`/leads/${task.id}/history/view`).catch(() => {})
+    }
 }
 
 function isColumnVisibleOnMobile(column) {
@@ -2877,6 +2882,7 @@ function openViewLeadFromMobileSheet() {
     if (id) {
         selectedLead.value = id
         showViewModal.value = true
+        api.get(`/leads/${id}/history/view`).catch(() => {})
     }
     closeMobileQuickSheet()
 }
@@ -2912,6 +2918,9 @@ function openDuplicateLeadsModal(leadId, event) {
 function handleViewDuplicateLead(leadId) {
     selectedLead.value = leadId
     showViewModal.value = true
+    if (leadId) {
+        api.get(`/leads/${leadId}/history/view`).catch(() => {})
+    }
 }
 
 function openModal(task = null, status = '') {

@@ -641,6 +641,10 @@ const closeProfilePopup = () => {
 const viewLead = (lead) => {
     selectedLeadId.value = lead.id
     showViewModal.value = true
+    if (lead?.id) {
+        // Fire-and-forget: log a "view" history entry so admins see who opened the lead.
+        api.get(`/leads/${lead.id}/history/view`).catch(() => {})
+    }
 }
 
 // Handle lead update from modal
@@ -661,6 +665,9 @@ const openDuplicateLeadsModal = (leadId, event) => {
 const handleViewDuplicateLead = (leadId) => {
     selectedLeadId.value = leadId
     showViewModal.value = true
+    if (leadId) {
+        api.get(`/leads/${leadId}/history/view`).catch(() => {})
+    }
 }
 
 // Helper functions

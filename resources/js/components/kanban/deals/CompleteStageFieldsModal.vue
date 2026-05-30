@@ -1011,7 +1011,78 @@
                                         </template>
                                     </v-select>
                                 </div>
-                               
+
+                                <!-- Select Unit: secondary deals must pick a sold-out listing (rental picks a rented one). -->
+                                <div class="col-md-6" v-if="showListingPickerForProperty()">
+                                    <label class="form-label-custom">
+                                        Select Unit
+                                        <span v-if="isListingRequiredForProperty()" class="text-danger">*</span>
+                                    </label>
+                                    <v-select
+                                        :model-value="property.listing_id"
+                                        @update:modelValue="(val) => {
+                                            const list = availableListingsByProp[propIndex] || []
+                                            const picked = list.find(l => l.id === val) || null
+                                            onPropertyListingSelected(picked, propIndex)
+                                        }"
+                                        :options="availableListingsByProp[propIndex] || []"
+                                        :reduce="item => item.id"
+                                        label="display_name"
+                                        placeholder="Select a unit..."
+                                        class="custom-v-select"
+                                        :class="{ 'is-invalid': isListingPickerInvalid(property) }"
+                                        :disabled="loadingListingsByProp[propIndex] || !property.area_id"
+                                        clearable
+                                    >
+                                        <template #open-indicator="{ attributes }">
+                                            <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" /></span>
+                                        </template>
+                                        <template #option="option">
+                                            <div>
+                                                <strong>{{ option.unit_number || 'No Unit' }}</strong>
+                                                <span class="text-muted ms-2">- {{ option.property_type?.name || 'N/A' }}</span>
+                                                <div class="small text-muted">{{ option.bedrooms_text }} | {{ option.size_sqft || 'N/A' }} sqft</div>
+                                                <div class="small text-success">{{ option.status === 'converted' ? 'Sold' : 'Rented' }}</div>
+                                            </div>
+                                        </template>
+                                    </v-select>
+                                    <div class="small text-muted mt-1" v-if="loadingListingsByProp[propIndex]">
+                                        <b-spinner small></b-spinner> Loading units...
+                                    </div>
+                                    <div class="small text-muted mt-1" v-else-if="!property.area_id">
+                                        <iconify-icon icon="lucide:info" class="me-1"></iconify-icon>
+                                        Select a property address first
+                                    </div>
+                                    <div class="small text-muted mt-1" v-else-if="(availableListingsByProp[propIndex] || []).length === 0">
+                                        <iconify-icon icon="lucide:alert-circle" class="me-1"></iconify-icon>
+                                        No {{ normalizedDealType === 'secondary' ? 'sold' : 'rented' }} units available for you in this area
+                                    </div>
+                                    <div class="small text-muted mt-1" v-else>
+                                        <iconify-icon icon="lucide:info" class="me-1"></iconify-icon>
+                                        Showing {{ normalizedDealType === 'secondary' ? 'sold' : 'rented' }} units in this location
+                                    </div>
+                                    <div v-if="isListingPickerInvalid(property)" class="invalid-feedback d-block">
+                                        Please select a unit for this property
+                                    </div>
+                                </div>
+
+                                <!-- Secondary: read-only summary of unit details auto-filled from the listing. -->
+                                <div class="col-12" v-if="normalizedDealType === 'secondary' && property.listing_id">
+                                    <div class="listing-summary-card-modal">
+                                        <div class="listing-summary-title-modal">
+                                            <iconify-icon icon="lucide:home" class="me-1"></iconify-icon>
+                                            Selected Unit
+                                        </div>
+                                        <div class="listing-summary-grid-modal">
+                                            <div><span class="listing-summary-label-modal">Unit No</span><span class="listing-summary-value-modal">{{ property.unit_no || '—' }}</span></div>
+                                            <div><span class="listing-summary-label-modal">Property Type</span><span class="listing-summary-value-modal">{{ propertyTypes.find(t => t.id === property.property_type_id)?.name || '—' }}</span></div>
+                                            <div><span class="listing-summary-label-modal">Bedrooms</span><span class="listing-summary-value-modal">{{ property.bedrooms === 'studio' ? 'Studio' : (property.bedrooms ? `${property.bedrooms} Bed` : '—') }}</span></div>
+                                            <div><span class="listing-summary-label-modal">Unit Size</span><span class="listing-summary-value-modal">{{ property.unit_size ? `${property.unit_size} sqft` : '—' }}</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+
                                 
                                 <!-- Property Type -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('property_type_id', property)">
@@ -1025,6 +1096,7 @@
                                         placeholder="Select Type"
                                         class="custom-v-select"
                                         :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'property_type_id') }"
+                                        :disabled="isPropertyFieldLocked(property)"
                                     >
                                         <template #open-indicator="{ attributes }">
                                             <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" /></span>
@@ -1044,6 +1116,7 @@
                                         placeholder="Select Bedrooms"
                                         class="custom-v-select"
                                         :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'bedrooms') }"
+                                        :disabled="isPropertyFieldLocked(property)"
                                     >
                                         <template #open-indicator="{ attributes }">
                                             <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" /></span>
@@ -1100,6 +1173,7 @@
                                         placeholder="Select Developer"
                                         class="custom-v-select"
                                         :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'developer_id') }"
+                                        :disabled="isPropertyFieldLocked(property)"
                                     >
                                         <template #open-indicator="{ attributes }">
                                             <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" /></span>
@@ -1198,24 +1272,26 @@
                                 <!-- Unit Size -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('unit_size', property)">
                                     <label class="form-label-custom">Unit Size (sq.ft) <span v-if="isPropertyFieldRequired('unit_size', propIndex)" class="text-danger">*</span></label>
-                                    <b-form-input 
+                                    <b-form-input
                                         v-model="property.unit_size"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'unit_size', val)"
                                         type="number"
-                                        placeholder="Size in sq.ft" 
+                                        placeholder="Size in sq.ft"
                                         class="custom-input"
                                         :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'unit_size') }"
+                                        :disabled="isPropertyFieldLocked(property)"
                                     />
                                 </div>
                                  <!-- Unit No -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('unit_no', property)">
                                     <label class="form-label-custom">Unit No <span v-if="isPropertyFieldRequired('unit_no', propIndex)" class="text-danger">*</span></label>
-                                    <b-form-input 
+                                    <b-form-input
                                     v-model="property.unit_no"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'unit_no', val)"
-                                        placeholder="Enter Unit No" 
+                                        placeholder="Enter Unit No"
                                         class="custom-input"
                                         :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'unit_no') }"
+                                        :disabled="isPropertyFieldLocked(property)"
                                     />
                                 </div>
                                 
@@ -1364,6 +1440,7 @@ import DocumentUpload from './DocumentUpload.vue'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import api from '@/plugins/axios'
+import { buildListingFilterParams } from '@/composables/useDealListingPicker'
 import { isNonEmptyPhoneValid } from '@/utils/phone'
 import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
 import countries from "i18n-iso-countries";
@@ -1450,8 +1527,9 @@ const addNewProperty = () => {
         unit_no: '',
         property_type_id: null,
         bedrooms: null,
-        unit_size: shouldShowUnitSize ? '' : null,  
+        unit_size: shouldShowUnitSize ? '' : null,
         area_id: null,
+        listing_id: null,
         developer_id: null,
         developer_name: '',
         developer_phone: '',
@@ -1503,21 +1581,31 @@ const removeProperty = (propIndex) => {
         console.warn('Cannot remove the last property')
         return
     }
-    
+
     localProperties.value.splice(propIndex, 1)
-    
+
     const updatedCombined = { ...propertyDocumentsCombined.value }
     delete updatedCombined[propIndex]
     propertyDocumentsCombined.value = updatedCombined
-    
+
     localProperties.value.forEach((prop, idx) => {
         prop.sort_order = idx
     })
-    
+
     formData.value.properties = [...localProperties.value]
-    
+
+    // After splicing the array, the index-keyed listing/loading maps are stale (e.g.
+    // index 2 is now index 1). Reset and re-fetch from each property's current area_id.
+    availableListingsByProp.value = {}
+    loadingListingsByProp.value = {}
+    if (showListingPickerForProperty()) {
+        localProperties.value.forEach((prop, idx) => {
+            if (prop?.area_id) fetchPropertyListings(idx, prop.area_id)
+        })
+    }
+
     reinitializePropertyDocuments()
-    
+
     console.log('Property removed at index:', propIndex)
 }
 // Check if a section has no unresolved missing fields (completed)
@@ -1700,6 +1788,8 @@ const showBudgetFields = computed(() => {
 })
 
 const showPurchasePrice = computed(() => {
+  // Secondary: purchase price is the only manual figure on the property, always show it.
+  if (normalizedDealType.value === 'secondary') return true
   const missingKeys = effectiveMissingFields.value || []
   const hasMissingPurchasePrice = missingKeys.some((key) => key.includes('purchase_price'))
   const hasPurchaseValue = localProperties.value.some((property) => !!property?.purchase_price)
@@ -2023,6 +2113,99 @@ const selectedListing = ref(null)
 const isLoadingListings = ref(false)
 const currentUser = ref(null)
 const currentDealData = ref(null)
+
+// Per-property listing picker state. Each property can be in a different area, so each
+// row keeps its own list of selectable sold/rented units.
+const availableListingsByProp = ref({})
+const loadingListingsByProp = ref({})
+
+function getCurrentUserForListings() {
+  if (currentUser.value?.id) return currentUser.value
+  try {
+    const userData = localStorage.getItem('user')
+    if (userData) currentUser.value = JSON.parse(userData)
+  } catch (error) {
+    console.error('Error getting user for listings:', error)
+  }
+  return currentUser.value
+}
+
+async function fetchPropertyListings(propIndex, areaId) {
+  const dt = normalizedDealType.value
+  if (dt !== 'secondary' && dt !== 'rental') return
+  if (!areaId) {
+    availableListingsByProp.value = { ...availableListingsByProp.value, [propIndex]: [] }
+    return
+  }
+  const user = getCurrentUserForListings()
+  if (!user?.id) return
+
+  loadingListingsByProp.value = { ...loadingListingsByProp.value, [propIndex]: true }
+  try {
+    const params = buildListingFilterParams({ dealType: dt, areaId, user })
+    const response = await api.get('/listings/properties', { params })
+    const listings = response.data?.data || []
+    const mapped = listings.map((listing) => ({
+      id: listing.id,
+      unit_number: listing.unit_number,
+      property_type: listing.property_type,
+      property_type_id: listing.property_type_id,
+      bedrooms: listing.number_of_bedrooms,
+      bedrooms_text:
+        listing.number_of_bedrooms === 0
+          ? 'Studio'
+          : `${listing.number_of_bedrooms} Bed`,
+      size_sqft: listing.size_sqft,
+      developer_id: listing.developer_id,
+      status: listing.status,
+      display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type?.name || 'Property'}`,
+    }))
+    availableListingsByProp.value = { ...availableListingsByProp.value, [propIndex]: mapped }
+  } catch (error) {
+    console.error('Error fetching property listings:', error)
+    availableListingsByProp.value = { ...availableListingsByProp.value, [propIndex]: [] }
+  } finally {
+    loadingListingsByProp.value = { ...loadingListingsByProp.value, [propIndex]: false }
+  }
+}
+
+function onPropertyListingSelected(listing, propIndex) {
+  if (!listing) {
+    updateProperty(propIndex, 'listing_id', null)
+    return
+  }
+  updateProperty(propIndex, 'listing_id', listing.id)
+  updateProperty(propIndex, 'unit_no', listing.unit_number || '')
+  updateProperty(propIndex, 'property_type_id', listing.property_type_id || null)
+  updateProperty(
+    propIndex,
+    'bedrooms',
+    listing.bedrooms === 0 ? 'studio' : String(listing.bedrooms ?? ''),
+  )
+  updateProperty(propIndex, 'unit_size', listing.size_sqft || '')
+  updateProperty(propIndex, 'developer_id', listing.developer_id || null)
+}
+
+function showListingPickerForProperty() {
+  const dt = normalizedDealType.value
+  return dt === 'secondary' || dt === 'rental'
+}
+
+function isListingRequiredForProperty() {
+  return normalizedDealType.value === 'secondary'
+}
+
+function isListingPickerInvalid(property) {
+  if (!validationAttempted.value) return false
+  if (!isListingRequiredForProperty()) return false
+  return !property?.listing_id
+}
+
+// Secondary properties are defined by their listing — manual entry of unit/type/bedrooms/
+// size/developer is locked until a listing has been picked.
+function isPropertyFieldLocked(property) {
+  return normalizedDealType.value === 'secondary' && !property?.listing_id
+}
 
 const dealProperties = computed(() => {
   return localProperties.value
@@ -2467,25 +2650,36 @@ const updatePropertyDocuments = async  (propIndex, newDocuments) => {
 const onPropertyAreaSelected = (areaId, propIndex) => {
     const property = localProperties.value[propIndex]
     if (!property) return
-    
+
     const selectedArea = areas.value.find(a => a.id === areaId)
-    
+
     if (!selectedArea) return
-    
+
     // تحديث المنطقة
     updateProperty(propIndex, 'area_id', areaId)
-    
+
+    // Keep listing_id intact — when listings for the new area load and the existing
+    // listing_id matches one of them, the Select-Unit dropdown auto-selects it via its
+    // :model-value binding. If the listing doesn't belong to this area the dropdown
+    // simply renders empty and the user can clear/replace it explicitly.
+
     // تعيين المطور تلقائياً إذا كان موجوداً في بيانات المنطقة
     let developerId = null
-    
+
     if (selectedArea.project?.developer_id) {
         developerId = selectedArea.project.developer_id
     } else if (selectedArea.developer_id) {
         developerId = selectedArea.developer_id
     }
-    
+
     if (developerId) {
         updateProperty(propIndex, 'developer_id', developerId)
+    }
+
+    // Secondary / rental: fetch the sold (or rented) units for this area so the user
+    // can pick one in the Select Unit dropdown below.
+    if (showListingPickerForProperty()) {
+        fetchPropertyListings(propIndex, areaId)
     }
 }
 
@@ -2800,6 +2994,7 @@ async function initializeForm() {
         bedrooms: null,
         unit_size: '',
         area_id: null,
+        listing_id: null,
         developer_id: null,
         developer_name: '',
         developer_phone: '',
@@ -2817,11 +3012,21 @@ async function initializeForm() {
     if (localProperties.value.length > 0) {
       formData.value.properties = [...localProperties.value]
     }
-    
+
     // Initialize property documents
 if (localProperties.value.length > 0) {
     reinitializePropertyDocuments()
 }
+
+    // Hydrate per-property listing picker when secondary/rental properties already have
+    // an area_id set — fetch sold/rented units so the dropdown shows the pre-selected unit.
+    if (showListingPickerForProperty()) {
+        localProperties.value.forEach((prop, idx) => {
+            if (prop?.area_id) {
+                fetchPropertyListings(idx, prop.area_id)
+            }
+        })
+    }
 const sections = ['buyer', 'seller', 'tenant', 'landlord', 'properties', 'financials']
 sections.forEach(section => {
   // Only open sections that have unresolved missing fields
@@ -3156,40 +3361,53 @@ function showPartyDetailFields(partyType) {
 }
 
 function shouldShowPropertyField(fieldName, property) {
-  const isNewProperty = property && property.new; 
+  const isNewProperty = property && property.new;
   const dt = normalizedDealType.value
   const targetOrder = props.targetStageOrder || 0
+
+  // Secondary deals: the listing supplies the unit's attributes (unit no, type, size,
+  // bedrooms, developer). Those are hidden and shown read-only via the listing summary
+  // card. Purchase price and the developer-sales-person contact stay editable since they
+  // are deal-specific and not carried by the listing.
+  if (dt === 'secondary') {
+    if (fieldName === 'area_id') return true
+    if (fieldName === 'purchase_price') return true
+    if (fieldName === 'developer_name' || fieldName === 'developer_phone') return true
+    if ([
+      'unit_no', 'property_type_id', 'bedrooms', 'unit_size', 'developer_id',
+    ].includes(fieldName)) return false
+  }
+
   switch (fieldName) {
     case 'unit_no':
     case 'property_type_id':
     case 'area_id':
       return true
-      
+
     case 'unit_size':
       // عرض الحقل للخاصية الجديدة في الـ primary deal حتى لو كان فارغاً
       if (isNewProperty && dt === 'primary') return true
       return isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || dt !== 'primary'
-      
+
     case 'bedrooms':
       // عرض الحقل للخاصية الجديدة إذا كانت تظهر bedrooms بشكل عام
       if (isNewProperty) return true
       return showBedroomsForProperty(property)
-      
+
     case 'developer_id':
     case 'developer_name':
     case 'developer_phone':
-      if (dt === 'secondary') return true
       if (isNewProperty && (dt === 'primary' || dt === 'secondary')) return true
       return isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || !!property?.developer_name || !!property?.developer_phone || !!property?.developer_id
-      
+
     case 'rental_price':
       return dt === 'rental'
-      
+
     case 'purchase_price':
       if (dt !== 'primary' && dt !== 'secondary') return false
       if (targetOrder >= 3) return true
       return showPurchasePrice.value
-      
+
     default:
       return isPropertyFieldRequired(fieldName)
   }
@@ -3519,6 +3737,21 @@ const effectiveMissingFields = computed(() => {
   const withoutSecondaryBuyerKyc = withoutPartyMarkers.filter(
     (field) => !(dt === 'secondary' && field === 'buyer_document_kyc')
   )
+
+  // Secondary deals must attach a sold-out listing AND a purchase price to every
+  // property — inject both into the missing-keys set so the existing submit-blocker /
+  // required-badge / invalid-state machinery enforces it.
+  if (dt === 'secondary' && Array.isArray(localProperties.value) && localProperties.value.length > 0) {
+    const withSecondaryRequirements = [...withoutSecondaryBuyerKyc]
+    localProperties.value.forEach((_, idx) => {
+      ;[`property_${idx}_listing_id`, `property_${idx}_purchase_price`].forEach((key) => {
+        if (!withSecondaryRequirements.includes(key)) {
+          withSecondaryRequirements.push(key)
+        }
+      })
+    })
+    return withSecondaryRequirements
+  }
 
   return withoutSecondaryBuyerKyc
 })
@@ -4074,6 +4307,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
         bedrooms: prop.bedrooms || null,
         unit_size: prop.unit_size || '',
         area_id: prop.area_id || null,
+        listing_id: prop.listing_id || null,
         developer_id: prop.developer_id || null,
         developer_name: typeof prop.developer_name === 'string' ? prop.developer_name.trim() : (prop.developer_name || ''),
         developer_phone: typeof prop.developer_phone === 'string' ? prop.developer_phone.trim() : (prop.developer_phone || ''),
@@ -5009,6 +5243,40 @@ textarea.is-invalid {
   padding: 12px;
   margin-bottom: 16px;
   transition: all 0.2s;
+}
+
+.listing-summary-card-modal {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.listing-summary-title-modal {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0B0736;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+.listing-summary-grid-modal {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px 16px;
+}
+.listing-summary-grid-modal > div {
+  display: flex;
+  flex-direction: column;
+}
+.listing-summary-label-modal {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+.listing-summary-value-modal {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 600;
 }
 
 .property-card-in-modal.property-missing {

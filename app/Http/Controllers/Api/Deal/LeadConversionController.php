@@ -481,6 +481,9 @@ private function createDealProperties(Deal $deal, $request)
                 'unit_size' => $propertyData['unit_size'] ?? null,
                 'area_id' => $propertyData['area_id'] ?? null,
                 'project_id' => $propertyData['project_id'] ?? null,
+                // Secondary / rental: link to the chosen sold-out / rented listing so the
+                // deal property points back to the exact inventory record.
+                'listing_id' => $propertyData['listing_id'] ?? $request->input('listing_id'),
                 'developer_id' => $propertyData['developer_id'] ?? null,
                 'developer_name' => $propertyData['developer_name'] ?? null,
                 'developer_phone' => $propertyData['developer_phone'] ?? null,
@@ -512,6 +515,9 @@ private function createDealProperties(Deal $deal, $request)
         if ($request->filled('unit_size')) $propertyData['unit_size'] = $request->unit_size;
         if ($request->filled('area_id')) $propertyData['area_id'] = $request->area_id;
         if ($request->filled('project_id')) $propertyData['project_id'] = $request->project_id;
+        // Mirror the deal-level listing_id onto the single property row so the linked
+        // listing surfaces alongside the property in the view-deal screen.
+        if ($request->filled('listing_id')) $propertyData['listing_id'] = $request->listing_id;
         if ($request->filled('developer_id')) $propertyData['developer_id'] = $request->developer_id;
         if ($request->filled('developer_name')) $propertyData['developer_name'] = $request->developer_name;
         if ($request->filled('developer_phone')) $propertyData['developer_phone'] = $request->developer_phone;

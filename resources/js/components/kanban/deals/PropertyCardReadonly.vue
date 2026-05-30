@@ -24,6 +24,23 @@
 
     <!-- ========== VIEW MODE (one edit icon in header → in-place edit) ========== -->
     <div v-if="!isEditing" key="prop-view" class="property-card-view">
+      <!-- Linked listing — shows when this property was tied to a sold/rented listing. -->
+      <!-- <div v-if="linkedListing" class="linked-listing-card mb-3">
+        <div class="linked-listing-title">
+          <iconify-icon icon="lucide:home" class="me-1"></iconify-icon>
+          <span>Linked Listing</span>
+          <span v-if="linkedListing.status" class="linked-listing-status">
+            {{ linkedListing.status === 'converted' ? 'Sold' : (linkedListing.status === 'rented' ? 'Rented' : linkedListing.status) }}
+          </span>
+        </div>
+        <div class="linked-listing-grid">
+          <div><span class="linked-listing-label">Unit No</span><span class="linked-listing-value">{{ linkedListing.unit_number || '—' }}</span></div>
+          <div><span class="linked-listing-label">Property Type</span><span class="linked-listing-value">{{ linkedListing.property_type_name || '—' }}</span></div>
+          <div><span class="linked-listing-label">Bedrooms</span><span class="linked-listing-value">{{ linkedListing.bedrooms_text || '—' }}</span></div>
+          <div><span class="linked-listing-label">Unit Size</span><span class="linked-listing-value">{{ linkedListing.size_sqft ? `${linkedListing.size_sqft} sqft` : '—' }}</span></div>
+        </div>
+      </div> -->
+
       <div class="row g-3">
         <div class="col-md-6">
           <div class="info-group">
@@ -78,16 +95,16 @@
             <p class="info-value mb-0">{{ getDeveloperName(property.developer_id) || property.developer_name || '----' }}</p>
           </div>
         </div>
-        <div class="col-md-6" v-if="property.developer_name">
+        <div class="col-md-6">
           <div class="info-group">
             <label class="info-label">Developer Sales Person Name</label>
-            <p class="info-value mb-0">{{ property.developer_name }}</p>
+            <p class="info-value mb-0">{{ property.developer_name || '----' }}</p>
           </div>
         </div>
-        <div class="col-md-6" v-if="property.developer_phone">
+        <div class="col-md-6">
           <div class="info-group">
             <label class="info-label">Developer Sales Person Phone</label>
-            <p class="info-value mb-0">{{ property.developer_phone }}</p>
+            <p class="info-value mb-0">{{ property.developer_phone || '----' }}</p>
           </div>
         </div>
         <div class="col-md-6" v-if="property.commission">
@@ -578,6 +595,34 @@ const propertyEditDocs = ref([])
 const previewDoc = ref(null)
 const selectedListing = ref(null)
 
+// Linked listing — normalize whatever the API supplies (nested `listing` object or flat
+// listing_* fields) into a single shape consumed by the template.
+const linkedListing = computed(() => {
+  const p = props.property || {}
+  const l = p.listing || null
+  const hasLink = !!(l || p.listing_id)
+  if (!hasLink) return null
+
+  const unitNumber = l?.unit_number ?? p.listing_unit_number ?? p.unit_no ?? null
+  const status = l?.status ?? p.listing_status ?? null
+  const bedroomsRaw = l?.number_of_bedrooms ?? l?.bedrooms ?? p.listing_bedrooms ?? null
+  const bedroomsText = bedroomsRaw === 0 || bedroomsRaw === '0' || bedroomsRaw === 'studio'
+    ? 'Studio'
+    : (bedroomsRaw ? `${bedroomsRaw} Bed` : null)
+  const propertyTypeName =
+    l?.property_type?.name ?? l?.property_type_name ?? p.listing_property_type_name ?? p.property_type_name ?? null
+  const sizeSqft = l?.size_sqft ?? p.listing_size_sqft ?? p.unit_size ?? null
+
+  return {
+    id: l?.id ?? p.listing_id ?? null,
+    unit_number: unitNumber,
+    status,
+    bedrooms_text: bedroomsText,
+    property_type_name: propertyTypeName,
+    size_sqft: sizeSqft,
+  }
+})
+
 // Stage detection
 const showBudgetFields = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
@@ -919,6 +964,9 @@ function startEdit() {
     bedrooms: props.property.bedrooms || null,
     unit_size: props.property.unit_size || '',
     area_id: props.property.area_id || null,
+    // Preserve the linked listing across inline edits so the backend doesn't drop the
+    // sold-out listing reference on save.
+    listing_id: props.property.listing_id ?? props.property.listing?.id ?? null,
     developer_id: props.property.developer_id || null,
     developer_name: props.property.developer_name || '',
     developer_phone: props.property.developer_phone || '',
@@ -1247,6 +1295,50 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 6px rgba(252, 182, 0, 0.14);
   background: #fffef7 !important;
   border-color: #f59e0b !important;
+}
+
+.linked-listing-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.linked-listing-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0B0736;
+  margin-bottom: 8px;
+}
+.linked-listing-status {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.linked-listing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 16px;
+}
+.linked-listing-grid > div {
+  display: flex;
+  flex-direction: column;
+}
+.linked-listing-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+.linked-listing-value {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 600;
 }
 
 .property-edit-documents {
