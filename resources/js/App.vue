@@ -8,6 +8,7 @@
         :class="[
           showLayout ? 'dashboard-main-router' : '',
           { 'dashboard-main-router--loading': isAppLoading && showLayout },
+          { 'dashboard-main-router--home': showLayout && isDashboardHome },
         ]"
       >
         <router-view />
@@ -57,6 +58,7 @@ export default {
     const route = useRoute()
     const { isAppLoading, onLoaderHidden } = useAppLoader()
     const showLayout = computed(() => route.meta.layout !== false)
+    const isDashboardHome = computed(() => !!route.meta?.dashboardHome)
     const chatOpen = ref(false)
     const chatAgent = ref(null)
     const chatListingId = ref(null)
@@ -123,6 +125,7 @@ export default {
       isAppLoading,
       onLoaderHidden,
       showLayout,
+      isDashboardHome,
       chatOpen,
       chatAgent,
       chatListingId,

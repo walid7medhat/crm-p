@@ -147,7 +147,7 @@ const baseRoutes = [
   { path: '/suggestion', component: Suggestions, meta: { requiresAuth: true } },
   { path: '/investment-analysis', component: InvestmentAnalysis, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/city-investments', component: CitySettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/', component: Ai, meta: { requiresAuth: true } },
+   { path: '/', component: Ai, meta: { requiresAuth: true, dashboardHome: true } },
 
   { path: '/table-basic', component: BasicTable, meta: { requiresAuth: true } },
   { path: '/table-data', component: DataTable, meta: { requiresAuth: true } },

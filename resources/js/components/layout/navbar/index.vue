@@ -4,9 +4,12 @@
     :class="{
       'navbar-header--mobile-compact': isMobileViewport,
       'navbar-header--kanban-mobile': isKanbanRoute && isMobileViewport,
+      'navbar-header--dashboard-home': isDashboardHome,
     }"
   >
-    <div class="navbar-header-toolbar">
+    <div
+      class="navbar-header-toolbar"
+    >
       <div v-if="showMobileCompactHeader" class="mob-module-toolbar">
         <div class="kanban-mob-toolbar__main">
           <div class="kanban-mob-lead-select-wrap">
@@ -175,7 +178,7 @@
       <div class="navbar-header-left">
         <div class="navbar-header-left-row">
           <button
-            v-if="showBackButton"
+            v-if="showBackButton && !isDashboardHome"
             type="button"
             class="sidebar-toggle back-button"
             @click="goBack"
@@ -193,6 +196,21 @@
           >
             <iconify-icon icon="heroicons:bars-3-solid" class="icon navbar-header-menu-icon" />
           </button>
+          <nav
+            v-if="showTopModuleNav && topModuleNavItems.length"
+            class="top-module-nav"
+            aria-label="Main modules"
+          >
+            <router-link
+              v-for="item in topModuleNavItems"
+              :key="item.id"
+              :to="item.path"
+              class="top-module-btn"
+              :class="{ active: isTopModuleActive(item) }"
+            >
+              {{ item.label }}
+            </router-link>
+          </nav>
           <select
             v-if="isMobileViewport && moduleHeaderTabs.length"
             class="module-tab-select"
@@ -210,7 +228,7 @@
           </select>
           <nav
             v-if="moduleHeaderTabs.length"
-            class="module-tabs-nav"
+            class="module-tabs-nav module-tabs-nav--sub"
             :class="{ 'module-tabs-nav--hide-on-mobile': isMobileViewport }"
             aria-label="Section navigation"
           >
@@ -365,6 +383,15 @@
           <i class="ri-add-line"></i>
           <span class="d-none d-sm-inline">Create Listing</span>
         </router-link>
+        <button
+          v-if="isDashboardHome && isSuperAdmin"
+          type="button"
+          class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border navbar-settings-btn"
+          aria-label="Settings"
+          @click="router.push('/system-overview')"
+        >
+          <iconify-icon icon="lucide:settings" style="font-size: 18px;" />
+        </button>
         <SystemOverviewLangToggle />
         <NotificationBell 
           ref="notificationBell"
@@ -583,6 +610,8 @@ import { useRouter, useRoute } from 'vue-router';
 import {
   resolveActiveModule,
   buildHeaderTabs,
+  buildTopModuleNav,
+  isTopModuleNavActive,
   isTabActive,
 } from '@/composables/useLayoutNavigation.js';
 import { useTheme } from '@/composables/useTheme.js';
@@ -597,7 +626,6 @@ const { isMobileViewport, toggleMobileMenu } = useMobileNavigation();
 import api from '@/plugins/axios';
 import Swal from 'sweetalert2';
 import { BFormInput } from 'bootstrap-vue-3';
-
 const userPlaceholder = userAvatarPlaceholder;
 const { theme, toggleTheme } = useTheme();
 const router = useRouter();
@@ -606,6 +634,9 @@ function goBack() {
   router.back();
 }
 const route = useRoute();
+const isDashboardHome = computed(
+  () => !!route.meta?.dashboardHome || route.path === '/' || route.path === '',
+);
 const { proxy } = getCurrentInstance();
 const user = ref(null);
 
@@ -642,6 +673,23 @@ const moduleHeaderTabs = computed(() =>
     hasPermission: (p) => proxy?.$hasPermission?.(p) ?? true,
   }),
 );
+
+const showTopModuleNav = computed(() => !isMobileViewport.value);
+
+const topModuleNavItems = computed(() =>
+  buildTopModuleNav({
+    isAdmin: isAdmin.value,
+    isSuperAdmin: isSuperAdmin.value,
+    isShowOnlyListing: isShowOnlyListingNav.value,
+    userId: Number(user.value?.id) || 0,
+    canAccessListings: isAdmin.value || isShowOnlyListingNav.value,
+    hasPermission: (p) => proxy?.$hasPermission?.(p) ?? true,
+  }),
+);
+
+function isTopModuleActive(item) {
+  return isTopModuleNavActive(route.path, activeLayoutModule.value, item);
+}
 
 function isModuleTabActive(tab) {
   return isTabActive(route.path, tab);
@@ -1813,6 +1861,129 @@ const showBackButton = computed(() => {
   padding: 10px 0;
 }
 
+.navbar-header-toolbar--home {
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr) minmax(0, auto);
+}
+
+.navbar-header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 0.5rem;
+  pointer-events: auto;
+}
+
+/* Top shortcut menu: CRM, HRM, Accounts, Listings, Learnings */
+.top-module-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(8, 4, 40, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  flex-shrink: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.top-module-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.top-module-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.top-module-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.top-module-btn.active {
+  background: #fff;
+  color: #1a1330;
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.module-tabs-nav--sub {
+  margin-left: 4px;
+}
+
+.navbar-global-search-wrap {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.navbar-global-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 4px 6px 4px 16px;
+  border-radius: 999px;
+  background: rgba(8, 4, 40, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.navbar-global-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+}
+
+.navbar-global-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.navbar-global-search-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.navbar-global-search-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.navbar-settings-btn {
+  width: 34px;
+  height: 34px;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  color: #fff;
+}
+
 .navbar-header-left {
   justify-self: start;
   min-width: 0;
@@ -2729,7 +2900,15 @@ const showBackButton = computed(() => {
 
 /* Mobile responsive */
 @media (max-width: 768px) {
-  .navbar-header-center {
+  .top-module-nav {
+    display: none;
+  }
+
+  .navbar-global-search-wrap {
+    display: none;
+  }
+
+  .navbar-header:not(.navbar-header--dashboard-home) .navbar-header-center {
     display: none;
   }
   

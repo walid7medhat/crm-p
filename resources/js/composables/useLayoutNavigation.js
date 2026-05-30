@@ -237,6 +237,63 @@ export function buildHeaderTabs(module, ctx = {}) {
 }
 
 /**
+ * Top header shortcut row (CRM, HRM, Listings) — dashboard / home layout.
+ */
+export function buildTopModuleNav(ctx = {}) {
+  const {
+    isAdmin,
+    isSuperAdmin,
+    isShowOnlyListing,
+    hasPermission,
+    userId,
+    canAccessListings,
+  } = ctx;
+
+  const items = [];
+
+  if (isAdmin) {
+    items.push({
+      id: 'crm',
+      label: 'CRM',
+      path: '/',
+      matchModules: [LAYOUT_MODULES.DASHBOARD, LAYOUT_MODULES.CRM],
+    });
+  }
+
+  if (isSuperAdmin || userId === 186) {
+    items.push({
+      id: 'hr',
+      label: 'HRM',
+      path: '/hr',
+      matchModules: [LAYOUT_MODULES.HR],
+    });
+  }
+
+  if (canAccessListings && !isShowOnlyListing) {
+    const listingsPath =
+      isAdmin || (hasPermission && hasPermission('listings-list'))
+        ? LISTINGS_OVERVIEW_PATH
+        : '/my-listing';
+    items.push({
+      id: 'listings',
+      label: 'Listings',
+      path: listingsPath,
+      matchModules: [LAYOUT_MODULES.LISTINGS],
+    });
+  }
+
+  return items;
+}
+
+export function isTopModuleNavActive(currentPath, activeModule, item) {
+  if (item.matchModules?.length && item.matchModules.includes(activeModule)) {
+    return true;
+  }
+  const paths = item.matchPaths || (item.path ? [item.path] : []);
+  return paths.some((p) => isPathActive(currentPath, p));
+}
+
+/**
  * Merge property/inventory items into the Listings sidebar dropdown (ordered sections).
  */
 export function buildListingsSidebarSections(sections) {

@@ -519,6 +519,9 @@ Route::middleware(['jwt.auth'])->group(function () {
     [DashboardController::class, 'getAdminLatestRequests']
 );
   Route::get('/dashboard/property-types-with-listings', [DashboardController::class, 'getPropertyTypesWithListings']);
+    Route::get('/dashboard/listings-status-summary', [DashboardController::class, 'getListingsStatusSummary']);
+    Route::get('/dashboard/kanban-task-summary', [DashboardController::class, 'getKanbanTaskSummary']);
+    Route::get('/dashboard/schedule', [DashboardController::class, 'getDashboardSchedule']);
 
    Route::get('/sidebar/counts', [DashboardController::class, 'getSidebarCounts']);
 

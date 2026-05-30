@@ -67,6 +67,11 @@
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   }
 
+  /* Home dashboard: extra bottom space for dock + chat FAB (scroll lives on main) */
+  #app main.dashboard-main > .dashboard-main-router--home {
+    padding-bottom: calc(130px + env(safe-area-inset-bottom, 0px));
+  }
+
   /* Auth uses its own background image; hide global shell background */
   html:has(#app main.auth-page-main) .crm-bg-image,
   html:has(#app main.auth-page-main) .crm-bg-video,

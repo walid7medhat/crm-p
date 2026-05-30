@@ -24,6 +24,7 @@ import '../css/form-placeholders.css'
 import '../css/mobile-layout.css'
 import '../css/kanban-layout.css'
 import '../css/crm-background.css'
+import '../css/dashboard-home.css'
 
 const addCSS = (url) => {
   const link = document.createElement('link')

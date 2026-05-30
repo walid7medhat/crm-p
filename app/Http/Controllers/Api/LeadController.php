@@ -897,6 +897,7 @@ class LeadController extends Controller
     /**
      * Change lead stage
      */
+
 public function changeStage(Request $request, Lead $lead): JsonResponse
 {
     try {
@@ -981,11 +982,16 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
        
             
         }
-        if( $oldStage->order == 10){
-                LeadComment::where('lead_id', $lead->id)->delete();
-                LeadActivity::where('lead_id', $lead->id)->delete();
-                LeadHistory::where('lead_id', $lead->id)->delete();
-            }
+        // Lead Pool → assign to me: hide prior comments/activities/history from sales (soft delete).
+        // Admin and super_admin still see them via withTrashed on Lead relations and history().
+        $assigningSelfFromLeadPool = $this->isLeadPoolStage($oldStage)
+            && ! $this->isLeadPoolStage($newStage)
+            && $request->filled('responsible_person_id')
+            && (int) $request->responsible_person_id === (int) $user->id;
+
+        if ($assigningSelfFromLeadPool) {
+            $this->softDeleteLeadPriorEngagement($lead->id);
+        }
         if($newStage->order == 2 && !is_null($lead->revert)){
             $lead->update([
                 'revert' => null,
@@ -1573,5 +1579,32 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve clients: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Whether a stage is the Lead Pool column (name or kanban order 9).
+     */
+    private function isLeadPoolStage(?Stage $stage): bool
+    {
+        if (! $stage) {
+            return false;
+        }
+
+        $name = strtolower(trim((string) $stage->name));
+
+        return $name === 'lead pool'
+            || $name === 'leadpool'
+            || (int) $stage->order === 9;
+    }
+
+    /**
+     * Soft-delete prior engagement when a lead is claimed from Lead Pool.
+     * Visible only to admin / super_admin (see Lead::{comments,activities,histories} and history()).
+     */
+    private function softDeleteLeadPriorEngagement(int $leadId): void
+    {
+        LeadComment::where('lead_id', $leadId)->delete();
+        LeadActivity::where('lead_id', $leadId)->delete();
+        LeadHistory::where('lead_id', $leadId)->whereNull('deal_id')->delete();
     }
 }
