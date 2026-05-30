@@ -239,22 +239,23 @@
                         </div>
                       </div>
                     </div>
-                   <div class="info-item" v-if="hasAdditionalFeatures">
-                        <span class="info-label">Additional Features</span>
-                        <div class="info-value">
-                          <div class="additional-field">
-                            <span v-for="(feature, index) in additionalFeaturesList" 
-                                  :key="index" 
-                                  class="">
-                            
-                              {{ feature }}
-                               <span v-if="index < additionalFeaturesList.length - 1" class="separator">-</span>
-                            </span>
-                            
-
-                          </div>
+                   <!-- Each additional feature gets its own row, like the other info items. -->
+                    
+                    <div class="info-item full-width" v-if="hasAdditionalFeatures">
+                      <span class="info-label">Features</span>
+                      <div class="info-value">
+                        <div class="payment-plans-container">
+                          <span
+                            v-for="(feature, index) in additionalFeaturesList"
+                            :key="index"
+                            class="badge bg-primary me-1 mb-1"
+                          >
+                            {{ feature }}
+                          </span>
                         </div>
                       </div>
+                    </div>
+                   
                   <!--<div class="info-item" v-if="false">-->
                   <!--  <span class="info-label">View</span>-->
                   <!--  <span class="info-value">{{ property.unit_view }}</span>-->
@@ -314,6 +315,41 @@
               </div>
             </div>
             
+            <!-- Floor Plans Section -->
+            <div class="detailed-info-section mb-16" v-if="property.floor_plans && property.floor_plans.length > 0">
+              <div class="info-section">
+                <h3 class="section-title mb-20">
+                  <i class="ri-layout-grid-line me-2"></i>
+                  Floor Plans
+                  <small class="text-muted ms-2">({{ property.floor_plans.length }})</small>
+                </h3>
+                <div class="floor-plans-grid">
+                  <div
+                    v-for="(plan, idx) in property.floor_plans"
+                    :key="plan.id || idx"
+                    class="floor-plan-card"
+                    @click="openFloorPlanSlider(idx)"
+                  >
+                    <div class="floor-plan-card-thumb">
+                      <img
+                        v-if="plan.image_url"
+                        :src="plan.image_url"
+                        :alt="plan.name || 'Floor Plan'"
+                        loading="lazy"
+                      />
+                      <div v-else class="floor-plan-card-placeholder">
+                        <i class="ri-image-line"></i>
+                      </div>
+                      <div class="floor-plan-card-overlay">
+                        <i class="ri-zoom-in-line"></i>
+                      </div>
+                    </div>
+                    <div class="floor-plan-card-name">{{ plan.name || `Floor Plan ${idx + 1}` }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Payment Details Section (breakdown + assignment costs) -->
             <div class="detailed-info-section mb-16" v-if="hasPaymentDetails">
               <div class="info-section">
@@ -2602,6 +2638,8 @@ const hasAdditionalFeatures = computed(() => {
 });
     const hasMortgageInfo = computed(() => {
       if (!property.value) return false;
+      // Mortgage doesn't apply to under-construction units — hide the whole block.
+      if (property.value.completion_status === 'Under Construction') return false;
       return property.value.mortgage_status ||
              property.value.mortgage_amount ||
              property.value.occupancy_status ||
@@ -9614,6 +9652,81 @@ margin: 0 2px;
   .rejection-reason-wrapper {
     flex-wrap: wrap;
   }
+}
+
+/* ── Floor Plans section grid (added in Property Details) ── */
+.floor-plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+.floor-plan-card {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+.floor-plan-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
+}
+.floor-plan-card-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+.floor-plan-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.floor-plan-card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 28px;
+}
+.floor-plan-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 7, 54, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 24px;
+  opacity: 0;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+.floor-plan-card:hover .floor-plan-card-overlay {
+  background: rgba(11, 7, 54, 0.45);
+  opacity: 1;
+}
+.floor-plan-card-name {
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0B0736;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Icon used next to each Additional Feature row label */
+.feature-row-icon {
+  color: #16a34a;
+  font-size: 0.9rem;
 }
 
 </style>
