@@ -337,6 +337,19 @@ const orderedLeadIds = computed(() => leads.value.map((l) => l.id))
 const selection = useLeadPoolSelection(() => orderedLeadIds.value)
 const { isAssigning, assignToMe } = useLeadPoolBulkActions()
 
+// Role gating — comments/activities/"More Information" on lead-pool cards are super_admin-only.
+const currentUserRoles = (() => {
+    try {
+        const raw = localStorage.getItem('user')
+        const parsed = raw ? JSON.parse(raw) : null
+        return Array.isArray(parsed?.roles) ? parsed.roles : []
+    } catch {
+        return []
+    }
+})()
+const isSuperAdmin = currentUserRoles.includes('super_admin')
+const isAdminOrSuper = isSuperAdmin || currentUserRoles.includes('admin')
+
 function enterSelectMode() {
   selectMode.value = true
 }
@@ -509,6 +522,8 @@ const goToPage = (page) => {
 const enabledFieldsForLead = (lead) => {
     return cardFields.value
         .filter(field => field.enabled)
+        // "More Information" (api_first_question) is super_admin-only in the lead pool.
+        .filter(field => field.key !== 'api_first_question' || isSuperAdmin)
         .filter(field => hasDynamicFieldValue(lead, field.key))
         .sort((a, b) => a.order - b.order)
 }

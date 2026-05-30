@@ -88,6 +88,9 @@ class Lead extends Model
 
     public function histories()
     {
+        if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'super_admin'])) {
+            return $this->hasMany(LeadHistory::class)->withTrashed()->latest();
+        }
         return $this->hasMany(LeadHistory::class)->latest();
     }
     public function createdHistory()

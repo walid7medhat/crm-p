@@ -88,7 +88,7 @@
                 'search-wrapper-expanded': hasAnySearchCriteria,
                 'search-wrapper-has-selection': hasAnySearchCriteria,
               }"
-              @click="openSearchModal"
+              @click="canUseLeadSearchModal && openSearchModal()"
             >
               <button
                 type="button"
@@ -118,7 +118,7 @@
                   <span class="search-tag-more-text" @click.stop="showSearchModal = true">+{{ moreFiltersCountResolved }} more</span>
                 </div>
               </div>
-              <div class="search-input-container flex-grow-1" @click.stop="openSearchModal">
+              <div class="search-input-container flex-grow-1" @click.stop="canUseLeadSearchModal && openSearchModal()">
                 <b-form-input
                   :placeholder="searchInputPlaceholder"
                   :model-value="searchInputDisplay"
@@ -128,7 +128,7 @@
                   @update:model-value="onSearchInputUpdate"
                   @focus="onSearchFocus"
                   @blur="onSearchBlur"
-                  @click.stop="openSearchModal"
+                  @click.stop="canUseLeadSearchModal && openSearchModal()"
                 />
               </div>
               <button
@@ -249,7 +249,7 @@
                     'search-wrapper-has-selection': hasAnySearchCriteria,
                     'search-wrapper-tall': searchInputFocused
                 }"
-                @click="openSearchModal"
+                @click="canUseLeadSearchModal && openSearchModal()"
             >
                 <button
                     type="button"
@@ -282,7 +282,7 @@
                 <div
                     class="search-input-container d-flex align-items-center"
                     :class="{ 'search-input-container-tall': searchInputFocused }"
-                    @click.stop="openSearchModal"
+                    @click.stop="canUseLeadSearchModal && openSearchModal()"
                 >
                     <b-form-input
                         :placeholder="searchInputPlaceholder"
@@ -293,10 +293,11 @@
                         @update:model-value="onSearchInputUpdate"
                         @focus="onSearchFocus"
                         @blur="onSearchBlur"
-                        @click.stop="openSearchModal"
+                        @click.stop="canUseLeadSearchModal && openSearchModal()"
                     />
                 </div>
                 <button
+                    v-if="canUseLeadSearchModal"
                     type="button"
                     class="search-filter-btn"
                     aria-label="Add filter"
@@ -965,6 +966,13 @@ const hasAnySearchCriteria = computed(() => {
     return hasTextSearch || hasPills || hasQuery;
 });
 
+// Lead Pool advanced search (filter modal) is admin/super_admin-only — other users
+// get plain text search via the input field only.
+const canUseLeadSearchModal = computed(() => {
+    if (activeKanbanTab.value !== 'lead-pool') return true;
+    return isAdmin.value;
+});
+
 function onSearchInputUpdate(val) {
     if (resolvedActiveFilters.value.length) {
         clearSearchFilter();
@@ -1216,6 +1224,15 @@ function onSearchDropdownReposition() {
 }
 
 const openSearchModal = () => {
+    if (!canUseLeadSearchModal.value) {
+        // Non-admin on lead-pool: focus the text input, never open the filter modal.
+        searchInputFocused.value = true;
+        nextTick(() => {
+            const searchInput = searchDropdownAnchorRef.value?.querySelector('.search-input');
+            if (searchInput) searchInput.focus();
+        });
+        return;
+    }
     showSearchModal.value = true;
     searchInputFocused.value = true;
     nextTick(() => {
@@ -1234,6 +1251,7 @@ function onSearchFocus() {
         searchBlurTimeout = null;
     }
     searchInputFocused.value = true;
+    if (!canUseLeadSearchModal.value) return;
     showSearchModal.value = true;
     nextTick(updateSearchDropdownPosition);
 }

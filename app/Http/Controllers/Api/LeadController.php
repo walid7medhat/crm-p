@@ -22,6 +22,7 @@ use Carbon\Carbon;
 use App\Http\Resources\Lead\DuplicateLeadResource;
 use App\Helpers\LeadHistoryHelper;
 use App\Http\Resources\Lead\LeadHistoryResource;
+use App\Models\LeadActivity;
 use App\Models\LeadHistory;
 use App\Models\LeadComment;
 use Illuminate\Support\Str;
@@ -250,13 +251,18 @@ class LeadController extends Controller
                           })
                           ->orWhereHas('integration', function ($st) use ($search) {
                               $st->where('track_keyword', 'like', "%{$search}%");
+                          })
+                          // Lead-pool text search also walks the comment body so reps can find leads
+                          // by something a teammate wrote about them earlier.
+                          ->orWhereHas('comments', function ($cm) use ($search) {
+                              $cm->where('comment', 'like', "%{$search}%");
                           });
                     });
                 }
         
                 // Apply permission scope to the query (without consuming it with ->get()) so
                 // we can either paginate or fetch all leads depending on the request.
-                if ($user->hasRole('super_admin') || $user->id == 30) {
+                if ($user->hasRole('super_admin') || $user->id == 30 || $request->stage_id==10) {
                     // super admin sees everything
                 } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
                     $subordinatesIds = $user->getAllSubordinatesIds();
@@ -972,8 +978,14 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 'new_person' => $newPerson?->name,
                 'action' => 'assigned'
             ];
+       
+            
         }
-
+        if( $oldStage->order == 10){
+                LeadComment::where('lead_id', $lead->id)->delete();
+                LeadActivity::where('lead_id', $lead->id)->delete();
+                LeadHistory::where('lead_id', $lead->id)->delete();
+            }
         if($newStage->order == 2 && !is_null($lead->revert)){
             $lead->update([
                 'revert' => null,
@@ -1269,6 +1281,12 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
 {
     $query = LeadHistory::where('lead_id', $leadId)->whereNull('deal_id')
         ->with('user:id,name,avatar');
+
+    // Lead Pool assign-to-me soft-deletes the prior history rows. Super_admin/admin should
+    // still see them; everyone else only gets live history.
+    if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'super_admin'])) {
+        $query->withTrashed();
+    }
     
     // Search functionality - search in multiple fields
     if ($request->filled('search')) {

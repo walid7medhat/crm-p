@@ -68,8 +68,8 @@
                     @person-updated="handlePersonUpdated"
                 />
               
-              <div class="d-flex justify-content-between align-items-center mb-4">
-                  
+              <div v-if="canViewCommentsAndActivities" class="d-flex justify-content-between align-items-center mb-4">
+
                 <!-- Activity/Comments Toggle -->
                 <div class="d-flex gap-2 mb-4 p-1 radius-100 w-fit-content toggle-buttons-container">
                       <button 
@@ -116,43 +116,43 @@
                 </div>
 
                 <!-- Activity View -->
-                <ActivitySection 
-                    v-if="activeViewTab === 'activity'" 
+                <ActivitySection
+                    v-if="canViewCommentsAndActivities && activeViewTab === 'activity'"
                     :lead-id="lead?.id"
                     @activity-created="handleActivityCreated"
                 />
 
                 <!-- Comments View -->
-                <CommentsSection 
-                    v-if="activeViewTab === 'comments'" 
+                <CommentsSection
+                    v-if="canViewCommentsAndActivities && activeViewTab === 'comments'"
                     :lead-id="lead?.id"
                     @comment-created="handleCommentCreated"
                 />
 
             </div>
 
-          
+
 
             <!-- Lead Activity List -->
-            <ActivityList 
-                v-if="activeViewTab === 'activity'" 
+            <ActivityList
+                v-if="canViewCommentsAndActivities && activeViewTab === 'activity'"
                 ref="activityListRef"
-                :lead-id="lead?.id" 
+                :lead-id="lead?.id"
                  :key-delete="activityListKey"
             />
-            <CommentList 
-                v-if="activeViewTab === 'comments'" 
+            <CommentList
+                v-if="canViewCommentsAndActivities && activeViewTab === 'comments'"
                 ref="commentListRef"
-                :lead-id="lead?.id" 
+                :lead-id="lead?.id"
                  :key="commentListKey"
             />
-              
+
             <!-- Lead Activity timeline: under comments, grouped by date (who assigned, created, history). Key forces refetch when stage changes so "Stage changed" appears immediately. -->
-            <LeadActivityTimeline 
-                v-if="activeViewTab === 'comments' && lead?.id" 
+            <LeadActivityTimeline
+                v-if="canViewCommentsAndActivities && activeViewTab === 'comments' && lead?.id"
                 :key="`timeline-${lead?.id}-${lead?.stage_id}`"
-                :lead-id="lead?.id" 
-               
+                :lead-id="lead?.id"
+
             />
             <!-- Lead Created (first section from bottom) -->
             <div v-if="lead?.id" class="lead-created-section bg-white p-3 radius-12 shadow-sm">
@@ -252,10 +252,20 @@ const getUserFromStorage = () => {
 const user = ref(getUserFromStorage())
 const canDeleteAll = computed(() => {
     if (!user.value) return false
-    
-    const isAdminUser = user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin') 
-    
+
+    const isAdminUser = user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin')
+
     return isAdminUser
+})
+
+const isSuperAdminUser = computed(() => user.value?.roles?.includes('super_admin') ?? false)
+
+// Lead Pool (stage_id = 10) comments/activities are super_admin-only — they're cleared
+// on assign-to-me anyway, and we don't want non-admins to see them during triage.
+const isLeadPoolLead = computed(() => Number(props.lead?.stage_id) === 10)
+const canViewCommentsAndActivities = computed(() => {
+    if (!isLeadPoolLead.value) return true
+    return isSuperAdminUser.value
 })
 
 const selectedRequirementSource = computed(() => {

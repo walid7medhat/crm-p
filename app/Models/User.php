@@ -120,7 +120,7 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
 
     public function canViewLead(Lead $lead): bool
     {
-        if ($this->hasRole('admin') || $this->hasRole('super_admin')) {
+        if ($this->hasRole('admin') || $this->hasRole('super_admin') || $lead->stage_id==10) {
             return true;
         }
 
