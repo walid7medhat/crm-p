@@ -560,69 +560,84 @@
                                     </div>
                                 </div>
                             </div>
-                              <!-- 🖼️ Gallery Images Section -->
+                              <!-- 🖼️ Gallery Images Section (max 3, reorderable) -->
                             <div class="card mb-4">
                             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0 text-dark card-title">
                                     <i class="fas fa-images me-2"></i>
                                     Gallery Images
-                                    <span v-if="galleryImages.length > 0" class="badge bg-primary ms-2">
-                                        {{ galleryImages.length }}
+                                    <span class="badge bg-primary ms-2">
+                                        {{ galleryCount }} / 3
                                     </span>
                                 </h6>
-                                <button type="button" class="btn btn-sm btn-outline-primary" @click="$refs.galleryInput.click()">
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    @click="$refs.galleryInput.click()"
+                                    :disabled="galleryAtMax"
+                                    :title="galleryAtMax ? 'Maximum of 3 images reached' : 'Add Images'"
+                                >
                                     <i class="fas fa-plus"></i> Add Images
                                 </button>
                             </div>
                             <div class="card-body">
-                                <!-- Gallery Images Grid -->
-                                <div v-if="galleryImages.length > 0 || existingGalleryImages.length > 0" class="gallery-grid">
-                                    <!-- Existing Gallery Images -->
-                                    <div v-for="(image, idx) in existingGalleryImages" 
-                                        :key="'existing-gallery-' + image.id" 
-                                        class="gallery-item"
-                                        :class="{'marked-for-delete': galleryImagesToDelete.includes(image.id)}">
-                                        <div class="gallery-image-wrapper">
-                                            <img :src="image.image_url" :alt="'Gallery ' + (idx + 1)" class="gallery-img">
-                                            <div class="gallery-overlay">
-                                                <button type="button" class="btn btn-sm btn-danger" 
-                                                        @click="toggleDeleteGalleryImage(image.id)"
-                                                        :title="galleryImagesToDelete.includes(image.id) ? 'Restore' : 'Delete'">
-                                                    <i :class="galleryImagesToDelete.includes(image.id) ? 'fas fa-undo' : 'fas fa-trash'"></i>
-                                                </button>
-                                            </div>
-                                            <span v-if="galleryImagesToDelete.includes(image.id)" class="delete-badge">
-                                                Will delete
-                                            </span>
-                                        </div>
-                                    </div>
+                                <!-- Unified ordered gallery (drag & drop to reorder) -->
+                                <draggable
+                                    v-if="orderedGalleryItems.length > 0"
+                                    v-model="orderedGalleryItemsModel"
+                                    item-key="_key"
+                                    tag="div"
+                                    class="gallery-grid"
+                                    ghost-class="gallery-ghost"
+                                    chosen-class="gallery-chosen"
+                                    drag-class="gallery-drag"
+                                    :animation="180"
+                                    filter=".no-drag"
+                                    :prevent-on-filter="true"
+                                >
+                                    <template #item="{ element: item, index: idx }">
+                                        <div
+                                            class="gallery-item"
+                                            :class="{ 'new': item._kind === 'new' }"
+                                        >
+                                            <div class="gallery-image-wrapper">
+                                                <img
+                                                    :src="item._kind === 'existing' ? item.image_url : item.preview"
+                                                    :alt="'Gallery ' + (idx + 1)"
+                                                    class="gallery-img"
+                                                />
 
-                                    <!-- New Gallery Images Preview -->
-                                    <div v-for="(image, idx) in galleryImages" 
-                                        :key="'new-gallery-' + idx" 
-                                        class="gallery-item new">
-                                        <div class="gallery-image-wrapper">
-                                            <img :src="image.preview" :alt="'Gallery ' + (idx + 1)" class="gallery-img">
-                                            <div class="gallery-overlay">
-                                                <button type="button" class="btn btn-sm btn-danger" 
-                                                        @click="removeGalleryImage(idx)">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
+                                                <span class="order-badge">#{{ idx + 1 }}</span>
+                                                <span v-if="item._kind === 'new'" class="new-badge">New</span>
+
+                                                <span class="drag-hint" title="Drag to reorder">
+                                                    <i class="fas fa-up-down-left-right"></i>
+                                                </span>
+
+                                                <div class="gallery-overlay">
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-sm btn-danger no-drag"
+                                                        @click="item._kind === 'existing' ? toggleDeleteGalleryImage(item.id) : removeGalleryImage(item._idx)"
+                                                        title="Remove"
+                                                    >
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <span class="new-badge">New</span>
                                         </div>
-                                    </div>
-                                </div>
+                                    </template>
+                                </draggable>
 
                                 <!-- Empty State -->
                                 <div v-else class="empty-gallery text-center py-4">
                                     <i class="fas fa-images fa-3x text-muted mb-3"></i>
                                     <p class="text-muted mb-0">No gallery images added yet</p>
-                                    <small class="text-muted">Click "Add Images" to upload</small>
+                                    <small class="text-muted">Click "Add Images" to upload (up to 3)</small>
                                 </div>
 
                                 <!-- Hidden File Input -->
-                                <input ref="galleryInput" type="file" class="d-none" @change="handleGalleryImages" 
+                                <input ref="galleryInput" type="file" class="d-none" @change="handleGalleryImages"
                                     multiple accept="image/jpeg,image/png,image/jpg,image/gif">
                             </div>
                         </div>
@@ -664,12 +679,14 @@ import { useRoute, useRouter } from "vue-router";
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
+import draggable from 'vuedraggable';
 
 export default {
     name: 'ProjectForm',
     components: {
         Breadcrumb,
-        vSelect  
+        vSelect,
+        draggable
     },
     setup() {
         const instance = getCurrentInstance();
@@ -707,43 +724,84 @@ export default {
             { value: 'Under Construction', label: 'Under Construction', icon: 'fas fa-hourglass-start text-warning' },
             { value: 'Ready', label: 'Ready', icon: 'fas fa-check-circle text-success' }
         ]);
+        // Hard limit on the gallery (existing kept + new added)
+        const GALLERY_MAX = 3;
+
+        /** Count of gallery slots currently occupied (kept existing + new pending). */
+        const galleryCount = computed(() => {
+            const keptExisting = existingGalleryImages.value.filter(
+                (img) => !galleryImagesToDelete.value.includes(img.id)
+            ).length;
+            return keptExisting + galleryImages.value.length;
+        });
+
+        const galleryAtMax = computed(() => galleryCount.value >= GALLERY_MAX);
+
+        const nextSortOrder = () => {
+            const maxExisting = existingGalleryImages.value.reduce(
+                (m, x) => Math.max(m, Number(x.sort_order || 0)), 0
+            );
+            const maxNew = galleryImages.value.reduce(
+                (m, x) => Math.max(m, Number(x.sort_order || 0)), 0
+            );
+            return Math.max(maxExisting, maxNew) + 1;
+        };
+
         const handleGalleryImages = (event) => {
             const files = Array.from(event.target.files);
-            
+
             if (files.length === 0) return;
-        
+
             const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
             const maxSize = 5 * 1024 * 1024; // 5MB
-            
-            files.forEach(file => {
+
+            const remainingSlots = GALLERY_MAX - galleryCount.value;
+            if (remainingSlots <= 0) {
+                showNotification(`You can upload up to ${GALLERY_MAX} images only`, 'warning');
+                event.target.value = '';
+                return;
+            }
+
+            const toAccept = files.slice(0, remainingSlots);
+            if (files.length > toAccept.length) {
+                showNotification(
+                    `Only the first ${remainingSlots} image(s) will be added (limit is ${GALLERY_MAX})`,
+                    'warning'
+                );
+            }
+
+            toAccept.forEach((file) => {
                 if (!validTypes.includes(file.type)) {
                     showNotification('Please upload valid image files (JPEG, PNG, JPG, GIF)', 'error');
                     return;
                 }
-        
+
                 if (file.size > maxSize) {
                     showNotification('Image size should be less than 5MB', 'error');
                     return;
                 }
-        
+
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     galleryImages.value.push({
                         file: file,
-                        preview: e.target.result
+                        preview: e.target.result,
+                        sort_order: nextSortOrder(),
                     });
                 };
                 reader.readAsDataURL(file);
             });
-        
+
             event.target.value = '';
         };
-        
+
         // Remove new gallery image
         const removeGalleryImage = (index) => {
             galleryImages.value.splice(index, 1);
+            // Resync orders so they stay 1..N for tidy submission
+            resyncGalleryOrders();
         };
-        
+
         // Toggle delete existing gallery image
         const toggleDeleteGalleryImage = (imageId) => {
             const index = galleryImagesToDelete.value.indexOf(imageId);
@@ -754,7 +812,77 @@ export default {
                 galleryImagesToDelete.value.splice(index, 1);
                 showNotification('Image restored', 'success');
             }
+            resyncGalleryOrders();
         };
+
+        /** Unified ordered list of gallery items (kept existing + new), sorted by sort_order. */
+        const orderedGalleryItems = computed(() => {
+            const items = [];
+            existingGalleryImages.value.forEach((img) => {
+                if (galleryImagesToDelete.value.includes(img.id)) return;
+                items.push({
+                    _kind: 'existing',
+                    _key: `e-${img.id}`,
+                    id: img.id,
+                    image_url: img.image_url,
+                    name: img.name,
+                    sort_order: Number(img.sort_order || 0),
+                });
+            });
+            galleryImages.value.forEach((img, idx) => {
+                items.push({
+                    _kind: 'new',
+                    _key: `n-${idx}`,
+                    _idx: idx,
+                    preview: img.preview,
+                    sort_order: Number(img.sort_order || 0),
+                });
+            });
+            items.sort((a, b) => a.sort_order - b.sort_order);
+            return items;
+        });
+
+        /** Swap an item's sort_order with its neighbour in either direction. */
+        const moveGalleryItem = (item, direction) => {
+            const ordered = orderedGalleryItems.value;
+            const pos = ordered.findIndex((i) => i._key === item._key);
+            const swapPos = direction === 'up' ? pos - 1 : pos + 1;
+            if (pos < 0 || swapPos < 0 || swapPos >= ordered.length) return;
+
+            const a = ordered[pos];
+            const b = ordered[swapPos];
+            const aOrder = a.sort_order;
+            const bOrder = b.sort_order;
+            applySortOrder(a, bOrder);
+            applySortOrder(b, aOrder);
+        };
+
+        /** Write sort_order back to whichever source array the item belongs to. */
+        const applySortOrder = (item, newOrder) => {
+            if (item._kind === 'existing') {
+                const src = existingGalleryImages.value.find((x) => x.id === item.id);
+                if (src) src.sort_order = newOrder;
+            } else {
+                const src = galleryImages.value[item._idx];
+                if (src) src.sort_order = newOrder;
+            }
+        };
+
+        /** Compact sort_order values to 1..N (after deletes / drops) to keep things tidy. */
+        const resyncGalleryOrders = () => {
+            const ordered = orderedGalleryItems.value;
+            ordered.forEach((item, idx) => applySortOrder(item, idx + 1));
+        };
+
+        /** Writable model that <draggable> binds to. On drop, vuedraggable hands us
+         *  the freshly reordered array — we write a new sort_order onto each underlying
+         *  source item, which then re-derives `orderedGalleryItems` in the new order. */
+        const orderedGalleryItemsModel = computed({
+            get: () => orderedGalleryItems.value,
+            set: (newOrder) => {
+                newOrder.forEach((item, idx) => applySortOrder(item, idx + 1));
+            },
+        });
 
         // Project Form Data (removed price and sqft fields)
         const projectForm = ref({
@@ -1165,7 +1293,14 @@ export default {
                             currentImage.value = projectData.main_image;
                         }
                         if (projectData.images) {
-                            existingGalleryImages.value = projectData.images.filter(img => !img.is_main);
+                            // Keep gallery (non-main) images, and ensure each has a sort_order
+                            // so the unified ordered list works even on legacy rows.
+                            existingGalleryImages.value = projectData.images
+                                .filter(img => !img.is_main)
+                                .map((img, idx) => ({
+                                    ...img,
+                                    sort_order: Number(img.sort_order ?? idx + 1),
+                                }));
                         }
                     
                         // Set existing floor plan images
@@ -1333,11 +1468,26 @@ export default {
                 } else if (isEditMode.value && !selectedImage.value) {
                     formData.append('keep_current_image', 'true');
                 }  
-                // Add gallery images (multiple)
-                galleryImages.value.forEach((image, index) => {
-                    formData.append('images[]', image.file);
+                // Send gallery in the user's chosen order. For each ordered slot:
+                //  - existing images get an image_orders[id] entry so the backend can update sort_order
+                //  - new images are appended in display order, with images_order[] holding the slot index
+                resyncGalleryOrders();
+                const ordered = orderedGalleryItems.value;
+                let newImgIdx = 0;
+                ordered.forEach((item, idx) => {
+                    const sortOrder = idx + 1;
+                    if (item._kind === 'existing') {
+                        formData.append(`image_orders[${item.id}]`, sortOrder);
+                    } else {
+                        const src = galleryImages.value[item._idx];
+                        if (src && src.file) {
+                            formData.append('images[]', src.file);
+                            formData.append(`images_order[${newImgIdx}]`, sortOrder);
+                            newImgIdx += 1;
+                        }
+                    }
                 });
-                
+
                 // Add gallery images to delete (if any)
                 if (galleryImagesToDelete.value.length > 0) {
                     galleryImagesToDelete.value.forEach((imageId, index) => {
@@ -1565,7 +1715,11 @@ export default {
             galleryImagesToDelete,
             handleGalleryImages,
             removeGalleryImage,
-            toggleDeleteGalleryImage
+            toggleDeleteGalleryImage,
+            galleryCount,
+            galleryAtMax,
+            orderedGalleryItems,
+            orderedGalleryItemsModel
         };
     }
 };
@@ -2359,6 +2513,58 @@ export default {
     align-items: center;
     justify-content: center;
     padding: 0;
+}
+
+/* Order indicator on each card (top-left) */
+.order-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #0B0736;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    z-index: 2;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+/* Drag & drop cues */
+.gallery-item {
+    cursor: grab;
+    user-select: none;
+}
+.gallery-item:active {
+    cursor: grabbing;
+}
+.drag-hint {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.85);
+    color: #0B0736;
+    font-size: 0.7rem;
+    padding: 4px 6px;
+    border-radius: 6px;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+.gallery-item:hover .drag-hint {
+    opacity: 1;
+}
+.gallery-ghost {
+    opacity: 0.45;
+    background: #f1f5f9;
+    border: 2px dashed #94a3b8 !important;
+}
+.gallery-chosen {
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
+}
+.gallery-drag {
+    transform: rotate(2deg);
 }
 
 .gallery-item.marked-for-delete {
