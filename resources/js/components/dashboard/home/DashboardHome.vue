@@ -107,7 +107,7 @@
           </div>
         </article>
         </div>
-        <div v-if="isMobileViewport" class="dh-metrics-dots" aria-hidden="true">
+        <div v-if="isMobileViewport || isStackedHomeLayout" class="dh-metrics-dots" aria-hidden="true">
           <button
             v-for="(_, idx) in metricSlideCount"
             :key="idx"
@@ -369,12 +369,19 @@ let donutChart = null
 let layoutResizeObserver = null
 
 const MOBILE_CHART_HEIGHT = 200
+const STACKED_CHART_HEIGHT = 240
+
+const isStackedHomeLayout = ref(false)
+
+function updateStackedHomeLayout() {
+  if (typeof window === 'undefined') return
+  isStackedHomeLayout.value =
+    isMobileViewport.value || window.matchMedia('(max-width: 1540px)').matches
+}
 
 const chartHeightFrom = (el, fallback = 200) => {
-  const isMobile =
-    isMobileViewport.value ||
-    (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches)
-  if (isMobile) return MOBILE_CHART_HEIGHT
+  if (isMobileViewport.value) return MOBILE_CHART_HEIGHT
+  if (isStackedHomeLayout.value) return STACKED_CHART_HEIGHT
   if (!el?.parentElement) return fallback
   const h = el.parentElement.clientHeight
   return h > 60 && h < 400 ? Math.floor(h) : fallback
@@ -393,11 +400,12 @@ const resizeCharts = () => {
 
 const donutSizePx = () => {
   const wrap = donutChartRef.value?.parentElement
-  if (!wrap) return isMobileViewport.value ? 112 : 140
+  const stacked = isMobileViewport.value || isStackedHomeLayout.value
+  if (!wrap) return stacked ? 112 : 140
   const w = wrap.clientWidth || 140
   const h = wrap.clientHeight || 140
-  const cap = isMobileViewport.value ? 112 : 160
-  const floor = isMobileViewport.value ? 96 : 100
+  const cap = stacked ? 112 : 160
+  const floor = stacked ? 96 : 100
   return Math.max(floor, Math.min(Math.floor(Math.min(w, h)), cap))
 }
 
@@ -578,6 +586,7 @@ watch([loading, listingsRing], async () => {
 })
 
 watch(isMobileViewport, async () => {
+  updateStackedHomeLayout()
   if (!loading.value) {
     await nextTick()
     requestAnimationFrame(() => {
@@ -610,15 +619,18 @@ function scrollToMetric(index) {
 
 onMounted(() => {
   loadAll()
+  updateStackedHomeLayout()
+  window.addEventListener('resize', updateStackedHomeLayout, { passive: true })
   const metricsEl = metricsSectionRef.value?.querySelector('.dh-metrics-carousel')
   metricsEl?.addEventListener('scroll', updateMetricSlideFromScroll, { passive: true })
-  if (typeof ResizeObserver === 'undefined' || isMobileViewport.value) return
+  if (typeof ResizeObserver === 'undefined') return
   layoutResizeObserver = new ResizeObserver(() => resizeCharts())
   const root = document.querySelector('.crm-dashboard-home .dh-layout')
   if (root) layoutResizeObserver.observe(root)
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateStackedHomeLayout)
   const metricsEl = metricsSectionRef.value?.querySelector('.dh-metrics-carousel')
   metricsEl?.removeEventListener('scroll', updateMetricSlideFromScroll)
   layoutResizeObserver?.disconnect()

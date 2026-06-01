@@ -162,33 +162,131 @@
   top: calc(100% + 8px);
   right: 0;
   z-index: 6000;
-  width: min(320px, calc(100vw - 32px));
+  width: min(400px, calc(100vw - 24px));
   background: #fff;
   border-radius: 16px;
-  padding: 16px;
+  padding: 18px;
   box-shadow: 0 16px 48px rgba(42, 21, 72, 0.18);
   border: 1px solid #eeeaf5;
 }
 
 .dh-date-range-title {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--dh-text);
-  margin: 0 0 14px;
+  margin: 0 0 12px;
+}
+
+.dh-date-range-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.dh-date-range-preset {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: var(--dh-text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.dh-date-range-preset:hover {
+  background: var(--dh-purple-100);
+  border-color: #d4c4ef;
+  color: var(--dh-purple-700);
 }
 
 .dh-date-range-fields {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+}
+
+.dh-date-range-field-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .dh-date-range-label {
-  display: block;
   font-size: 12px;
+  font-weight: 700;
+  color: var(--dh-text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dh-date-range-preview {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dh-purple-700);
+  white-space: nowrap;
+}
+
+/* Day / Month / Year dropdowns */
+.dh-ymd-select {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dh-ymd-select--invalid .dh-ymd-select__control {
+  border-color: #dc2626;
+}
+
+.dh-ymd-select__field {
+  min-width: 0;
+}
+
+.dh-ymd-select__label {
+  display: block;
+  font-size: 10px;
   font-weight: 600;
   color: var(--dh-text-muted);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.dh-ymd-select__control {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 28px 8px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dh-text);
+  background: #faf9fc
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 10px center;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  appearance: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dh-ymd-select__control:hover:not(:disabled) {
+  border-color: #d4c4ef;
+}
+
+.dh-ymd-select__control:focus {
+  outline: none;
+  border-color: var(--dh-purple-500);
+  box-shadow: 0 0 0 3px rgba(124, 92, 191, 0.2);
+}
+
+.dh-ymd-select__control:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background-color: #f3f4f6;
 }
 
 .dh-date-range-error {
@@ -229,8 +327,15 @@
   background: var(--dh-purple-800);
 }
 
-.dh-date-range-popover .advanced-date-trigger {
-  min-height: 40px;
+@media (max-width: 480px) {
+  .dh-date-range-popover {
+    width: min(360px, calc(100vw - 20px));
+    padding: 14px;
+  }
+
+  .dh-ymd-select {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* 12-column grid: main ~75% + sidebar ~25%, fills remaining viewport height */
@@ -484,15 +589,17 @@
 .dh-panel--task {
   justify-content: flex-start;
   padding: 16px 18px 18px;
+  min-height: 118px;
 }
 
 .dh-panel--task .dh-panel-head {
   margin-bottom: 14px;
+  flex-shrink: 0;
 }
 
 .dh-panel--task .dh-task-cards {
-  flex: 1;
-  min-height: 0;
+  flex: 1 1 auto;
+  min-height: 88px;
   gap: 10px;
 }
 
@@ -1123,15 +1230,16 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
   ) !important;
 }
 
-@media (max-width: 1200px) {
-  #app main.dashboard-main > .dashboard-main-router--home {
+/* Laptop / tablet: single-column stack (sidebar leaves ~1100–1300px content) */
+@media (max-width: 1540px) {
+  #app main.dashboard-main > .dashboard-main-router--home:has(.crm-dashboard-home) {
     height: auto !important;
     max-height: none !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
   }
 
-  body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
+  body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home:has(.crm-dashboard-home) {
     height: auto !important;
     max-height: none !important;
   }
@@ -1139,51 +1247,134 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
   .crm-dashboard-home {
     height: auto;
     min-height: 0;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .dh-layout {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--dh-layout-gap);
+    height: auto;
+    min-height: 0;
+    width: 100%;
+  }
+
+  .dh-layout > * {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: none;
+    grid-column: auto !important;
+    grid-row: auto !important;
     height: auto;
     min-height: 0;
   }
 
   .dh-layout__metrics {
-    grid-column: 1 / -1;
-    grid-row: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
-  .dh-layout__task {
-    grid-column: 1 / -1;
-    grid-row: auto;
-    min-height: 118px;
+  .dh-metrics-carousel {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 2px 2px 6px;
+    width: 100%;
   }
 
-  .dh-layout__chart,
-  .dh-layout__agents {
-    grid-column: 1 / -1;
+  .dh-metrics-carousel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dh-metrics-carousel > .dh-metric-card,
+  .dh-metrics-carousel > .dh-metric-link {
+    flex: 0 0 min(300px, 88vw);
+    max-width: min(300px, 88vw);
+    scroll-snap-align: center;
+    min-height: 140px;
+    height: auto;
+  }
+
+  .dh-metrics-carousel > .dh-metric-link {
+    display: block;
+  }
+
+  .dh-metrics-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .dh-panel {
+    height: auto;
+    max-height: none;
+  }
+
+  .dh-panel--task {
+    min-height: 148px;
+  }
+
+  .dh-panel--task .dh-task-cards {
+    flex: 0 0 auto;
+    min-height: 96px;
+  }
+
+  .dh-panel--chart {
+    min-height: 300px;
+  }
+
+  .dh-chart-wrap {
+    height: 240px;
     min-height: 240px;
+    max-height: 240px;
+    flex: none;
   }
 
-  .dh-layout__listings,
-  .dh-layout__announce {
-    grid-column: 1 / -1;
+  .dh-panel.dh-panel--listings {
+    min-height: 200px;
+  }
+
+  .dh-panel--schedule {
+    min-height: 300px;
+  }
+
+  .dh-panel--agents {
     min-height: 220px;
   }
 
-  .dh-layout__schedule {
-    grid-column: 1 / -1;
-    grid-row: auto;
-    min-height: 280px;
+  .dh-panel--announce {
+    min-height: 180px;
   }
 
-  .dh-panel.dh-panel--listings,
-  .dh-panel--chart {
-    overflow: hidden;
+  .dh-agents-list {
+    max-height: 320px;
+    overflow-y: auto;
   }
 
-  .dh-listings-content {
-    overflow: hidden;
+  .dh-schedule-timeline {
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  .dh-metrics-carousel .dh-metric-value-row--requests {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .dh-metrics-carousel .dh-metric-io {
+    align-items: flex-start;
+    text-align: left;
   }
 }
 
@@ -1246,21 +1437,21 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
   }
 
   .crm-dashboard-home .dh-layout {
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
     width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
     overflow: visible !important;
-    gap: 0 !important;
+    gap: 12px !important;
   }
 
   .crm-dashboard-home .dh-layout > * {
-    display: block !important;
     position: relative !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 0 12px !important;
+    margin: 0 !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
@@ -1270,10 +1461,18 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
 
   .crm-dashboard-home .dh-panel {
     height: auto !important;
-    min-height: 0 !important;
     max-height: none !important;
     flex: none !important;
     overflow: hidden !important;
+  }
+
+  .crm-dashboard-home .dh-panel--task {
+    min-height: 148px !important;
+  }
+
+  .crm-dashboard-home .dh-panel--task .dh-task-cards {
+    flex: 0 0 auto !important;
+    min-height: 96px !important;
   }
 
   .dh-layout__metrics {
@@ -1420,20 +1619,16 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
     flex-shrink: 0;
   }
 
-  .dh-layout__task {
-    min-height: 0 !important;
-  }
-
   .dh-layout__chart {
     min-height: 0 !important;
-    max-height: 280px !important;
-    overflow: hidden !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .dh-layout__listings {
     min-height: 0 !important;
-    max-height: 200px !important;
-    overflow: hidden !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .dh-layout__schedule {

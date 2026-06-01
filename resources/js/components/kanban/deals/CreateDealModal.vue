@@ -65,8 +65,7 @@
               class="deal-stage-pill"
               :class="{ active: selectedStageIndex === index }"
                 :style="{
-                            backgroundColor: index <= selectedStageIndex ? stage.color : 'transparent',
-                            borderColor: index <= selectedStageIndex ? stage.color : '#E2E8F0',
+                            ...getDealStagePillStyle(dealType, stage, index, selectedStageIndex),
                             zIndex: currentStages.length - index,
                         }"
               @click="selectedStageId = stage.id"
@@ -138,6 +137,7 @@ import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import { normalizeLanguageSelection, hasLanguageSelection } from '@/composables/useLanguageMultiSelect'
 import { isNonEmptyPhoneValid } from '@/utils/phone'
+import { enrichDealStages, getDealStagePillStyle } from '@/config/dealStageStyles.js'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -214,7 +214,10 @@ const currentStages = computed(() => {
     return stageType === 'deal' && stageDealType === dealType.value
   })
 
-  return filtered.sort((a, b) => (a.order || 0) - (b.order || 0))
+  return enrichDealStages(
+    dealType.value,
+    filtered.sort((a, b) => (a.order || 0) - (b.order || 0))
+  )
 })
 
 // Watch for deal type changes

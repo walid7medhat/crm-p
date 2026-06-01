@@ -75,8 +75,7 @@
                 upcoming: selectedStageIndex < index
               }"
                :style="{
-                            backgroundColor: index <= selectedStageIndex ? stage.color : 'transparent',
-                            borderColor: index <= selectedStageIndex ? stage.color : '#E2E8F0',
+                            ...getDealStagePillStyle(dealType, stage, index, selectedStageIndex),
                             zIndex: currentStages.length - index,
                         }"
               :aria-current="selectedStageIndex === index ? 'step' : undefined"
@@ -313,6 +312,7 @@ import ResponsiblePersonSection from './ResponsiblePersonSection.vue'
 import DealLeadInformationSection from './DealLeadInformationSection.vue'
 import ViewLeadModal from '../viewLead/ViewLeadModal.vue'
 import axios from '@/plugins/axios'
+import { enrichDealStage, getDealStagePillStyle } from '@/config/dealStageStyles.js'
 import { useStageTransition } from '@/composables/useStageTransition'
 import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
 const props = defineProps({
@@ -460,14 +460,14 @@ async function fetchStagesFromAPI(dealTypeValue = null) {
     }
     
     // تحويل البيانات إلى الفورمات المطلوب
-    const formattedStages = stagesData.map(stage => ({
-      id: stage.id,
-      name: stage.name,
-      order: stage.order,
-      dotColor: stage.color || getDefaultColor(stage.order),
-      bg: stage.bg_color || '#F1F5F9',
-      color: stage.color || '#3B82F6'
-    }))
+    const formattedStages = stagesData.map((stage) =>
+      enrichDealStage(type, {
+        id: stage.id,
+        name: stage.name,
+        order: stage.order,
+        color: stage.color,
+      })
+    )
     
     // ترتيب حسب order
     formattedStages.sort((a, b) => (a.order || 0) - (b.order || 0))

@@ -63,7 +63,7 @@
                   <!-- Column Header with editing capability -->
                   <div 
                     class="column-header d-flex align-items-center justify-content-between cursor-move flex-shrink-0" 
-                    :style="{ backgroundColor: column.headerBg }"
+                    :style="getDealColumnHeaderStyle(column, activeTypeTab)"
                   >
                     <div class="d-flex align-items-center gap-2">
                       <!-- <div class="stage-circle">
@@ -477,6 +477,10 @@ import StageChangeReasonModal from './StageChangeReasonModal.vue'
 import CompleteStageFieldsModal from './CompleteStageFieldsModal.vue'
 import { useStageTransition } from '@/composables/useStageTransition'
 import ProfilePopup from '../shared/ProfilePopup.vue'
+import {
+  getDealColumnHeaderStyle,
+  resolveDealStageStyle,
+} from '@/config/dealStageStyles.js'
 
 const props = defineProps({
   filters: {
@@ -742,12 +746,6 @@ const hasResponsiblePerson = (deal) => {
     return !!(deal?.responsible_person?.name || deal?.responsible_person?.avatar)
 }
 
-// Map stage colors to header backgrounds
-function getHeaderBg(color) {
-  if (!color) return '#DBEAFE'
-  return color + '20' // Add 20% opacity
-}
-
 // Get full avatar URL
 function getAvatarUrl(path) {
   if (!path) return ''
@@ -1004,20 +1002,27 @@ async function executeFetchDeals() {
     });
     
     if (response.data.success) {
-      stagesData.value = response.data.data.map(stage => ({
+      stagesData.value = response.data.data.map(stage => {
+        const stageStyle = resolveDealStageStyle(activeTypeTab.value, {
+          order: stage.order,
+          name: stage.stage_name,
+        })
+        return {
         stage_id: stage.stage_id,
          order: stage.order,
         title: stage.stage_name,
-        headerBg: stage.stage_color,
-        dotColor: stage.stage_color || '#3B82F6',
-        color: stage.stage_color || '#3B82F6',
+        headerBg: stageStyle.gradient,
+        headerGradient: stageStyle.gradient,
+        dotColor: stageStyle.dotColor,
+        color: stageStyle.dotColor,
         deals_count: stage.deals_count,
         deals: stage.deals || [], // أول 10 صفقات
         currentPage: 1,
         hasMoreDeals: (stage.deals?.length || 0) < (stage.total_count || stage.deals_count || 0),
         loadingMore: false,
         total_count: stage.total_count || stage.deals_count || 0
-      }));
+      }
+      });
       error.value = null;
     } else {
       throw new Error('Failed to fetch deals');
@@ -1492,10 +1497,15 @@ async function saveStage() {
 
     const column = columns.value.find(c => c.stage_id === stageForm.value.id)
     if (column) {
+      const stageStyle = resolveDealStageStyle(activeTypeTab.value, {
+        order: column.order,
+        name: stageForm.value.name,
+      })
       column.title = stageForm.value.name
-      column.dotColor = stageForm.value.color
-      column.color = stageForm.value.color
-      column.headerBg = stageForm.value.color
+      column.dotColor = stageStyle.dotColor
+      column.color = stageStyle.dotColor
+      column.headerBg = stageStyle.gradient
+      column.headerGradient = stageStyle.gradient
     }
 
     showNotification('Stage updated successfully', 'success')

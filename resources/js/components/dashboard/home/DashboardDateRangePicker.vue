@@ -16,27 +16,46 @@
 
     <div v-if="open" class="dh-date-range-popover" role="dialog" aria-label="Select date range">
       <p class="dh-date-range-title">Custom date range</p>
+
+      <div class="dh-date-range-presets" role="group" aria-label="Quick ranges">
+        <button
+          v-for="preset in presets"
+          :key="preset.id"
+          type="button"
+          class="dh-date-range-preset"
+          @click="applyPreset(preset)"
+        >
+          {{ preset.label }}
+        </button>
+      </div>
+
       <div class="dh-date-range-fields">
         <div class="dh-date-range-field">
-          <label class="dh-date-range-label">From</label>
-          <AdvancedDatePicker
+          <div class="dh-date-range-field-head">
+            <span class="dh-date-range-label">From</span>
+            <span v-if="fromPreview" class="dh-date-range-preview">{{ fromPreview }}</span>
+          </div>
+          <DateYmdSelect
+            id-prefix="dh-from"
             v-model="draftFrom"
-            date-only
-            placeholder="Select start date"
-            :block-future-dates="false"
+            :invalid="!!error && !draftFrom"
           />
         </div>
         <div class="dh-date-range-field">
-          <label class="dh-date-range-label">To</label>
-          <AdvancedDatePicker
+          <div class="dh-date-range-field-head">
+            <span class="dh-date-range-label">To</span>
+            <span v-if="toPreview" class="dh-date-range-preview">{{ toPreview }}</span>
+          </div>
+          <DateYmdSelect
+            id-prefix="dh-to"
             v-model="draftTo"
-            date-only
-            placeholder="Select end date"
-            :block-future-dates="false"
+            :invalid="!!error && !draftTo"
           />
         </div>
       </div>
+
       <p v-if="error" class="dh-date-range-error">{{ error }}</p>
+
       <div class="dh-date-range-actions">
         <button type="button" class="dh-date-range-btn dh-date-range-btn--ghost" @click="onCancel">
           Cancel
@@ -50,8 +69,8 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
+import DateYmdSelect from '@/components/dashboard/home/DateYmdSelect.vue'
 import { parseToDate, toDateOnlyApiString } from '@/composables/useAdvancedDateModel.js'
 
 const props = defineProps({
@@ -69,6 +88,23 @@ const open = ref(false)
 const draftFrom = ref('')
 const draftTo = ref('')
 const error = ref('')
+
+const presets = [
+  { id: '7d', label: 'Last 7 days', days: 7 },
+  { id: '30d', label: 'Last 30 days', days: 30 },
+  { id: '3m', label: 'Last 3 months', months: 3 },
+  { id: 'year', label: 'This year', type: 'year' },
+  { id: 'month', label: 'This month', type: 'month' },
+]
+
+function formatPreview(ymd) {
+  const d = parseToDate(ymd)
+  if (!d) return ''
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+const fromPreview = computed(() => formatPreview(draftFrom.value))
+const toPreview = computed(() => formatPreview(draftTo.value))
 
 function syncDraft() {
   draftFrom.value = props.dateFrom || ''
@@ -94,11 +130,29 @@ function onCancel() {
   open.value = false
 }
 
+function applyPreset(preset) {
+  const end = new Date()
+  const start = new Date()
+  if (preset.days) {
+    start.setDate(end.getDate() - (preset.days - 1))
+  } else if (preset.months) {
+    start.setMonth(end.getMonth() - preset.months)
+    start.setDate(start.getDate() + 1)
+  } else if (preset.type === 'year') {
+    start.setMonth(0, 1)
+  } else if (preset.type === 'month') {
+    start.setDate(1)
+  }
+  draftFrom.value = toDateOnlyApiString(start)
+  draftTo.value = toDateOnlyApiString(end)
+  error.value = ''
+}
+
 function onApply() {
   const from = parseToDate(draftFrom.value)
   const to = parseToDate(draftTo.value)
   if (!from || !to) {
-    error.value = 'Please select both start and end dates.'
+    error.value = 'Please select day, month, and year for both dates.'
     return
   }
   if (from.getTime() > to.getTime()) {
@@ -115,8 +169,6 @@ function onApply() {
 function onClickOutside(e) {
   if (!open.value || !rootRef.value) return
   if (rootRef.value.contains(e.target)) return
-  if (e.target.closest?.('.date-time-picker-overlay')) return
-  if (e.target.closest?.('.flatpickr-calendar')) return
   onCancel()
 }
 

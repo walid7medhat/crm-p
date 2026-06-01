@@ -84,7 +84,10 @@
           No {{ activeDealTypeLabel.toLowerCase() }} stages found yet.
         </div>
         <div v-for="stage in activeStages" :key="stage.id" class="stage-editor-row">
-          <div class="stage-preview-chip" :style="{ '--stage-color': stageDrafts[stage.id]?.color || stage.color || '#e2e8f0' }">
+          <div
+            class="stage-preview-chip"
+            :style="getStagePreviewStyle(stage)"
+          >
             <span class="stage-preview-order">{{ stage.order }}</span>
             <span class="stage-preview-name">{{ stageDrafts[stage.id]?.name || stage.name }}</span>
           </div>
@@ -127,6 +130,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
+import { resolveDealStageStyle } from '@/config/dealStageStyles.js'
 
 const dealTypeTabs = [
   { id: 'primary', label: 'Primary' },
@@ -152,6 +156,14 @@ const activeDealTypeLabel = computed(() => {
 const activeStages = computed(() => {
   return [...stages.value].sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
 })
+
+function getStagePreviewStyle(stage) {
+  const resolved = resolveDealStageStyle(activeDealType.value, {
+    order: stage.order,
+    name: stageDrafts.value[stage.id]?.name || stage.name,
+  })
+  return { background: resolved.gradient }
+}
 
 function normalizeStagesFromResponse(payload) {
   if (Array.isArray(payload?.data?.data?.data)) return payload.data.data.data

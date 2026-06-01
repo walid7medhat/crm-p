@@ -34,10 +34,7 @@
         <div class="deal-progress-wrapper py-2 px-3" v-if="targetStageName">
           <!-- <div class="deal-progress-label">Pipeline</div> -->
           <div class="deal-progress-bar">
-            <div class="deal-stage-pill active" aria-current="step">
-              <div class="stage-circle">
-                <div class="stage-dot" style="background-color: #3b82f6;"></div>
-              </div>
+            <div class="deal-stage-pill active" aria-current="step" :style="targetStagePillStyle">
               <span class="stage-text">{{ targetStageName }}</span>
             </div>
           </div>
@@ -1443,6 +1440,7 @@ import api from '@/plugins/axios'
 import { buildListingFilterParams } from '@/composables/useDealListingPicker'
 import { isNonEmptyPhoneValid } from '@/utils/phone'
 import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
+import { resolveDealStageStyle } from '@/config/dealStageStyles.js'
 import countries from "i18n-iso-countries";
 import en from "i18n-iso-countries/langs/en.json";
 
@@ -1474,6 +1472,17 @@ const props = defineProps({
   groupedMissing: { type: Object, default: () => ({ sections: [], by_stage: [] }) },
   deal: { type: Object, default: null },
   requiredFields: { type: Array, default: () => [] } 
+})
+
+const targetStagePillStyle = computed(() => {
+  const resolved = resolveDealStageStyle(props.dealType, {
+    order: props.targetStageOrder,
+    name: props.targetStageName,
+  })
+  return {
+    background: resolved.gradient,
+    borderColor: resolved.dotColor,
+  }
 })
 
 /**
