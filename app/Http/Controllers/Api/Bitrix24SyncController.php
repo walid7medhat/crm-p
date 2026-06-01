@@ -209,6 +209,19 @@ class Bitrix24SyncController extends Controller
             'skip_existing' => $skipExisting,
         ])->save();
 
+        // Fetch the Bitrix24 grand total up-front (one quick page call) and store
+        // it now, so the UI shows "0 / total" immediately — without waiting for a
+        // queue worker to run the first chunk. On resume we keep whatever's larger.
+        try {
+            $page  = (new Bitrix24Client())->listLeads((int) $state->cursor);
+            $total = (int) ($page['total'] ?? 0);
+            if ($total > (int) ($state->total ?? 0)) {
+                $state->forceFill(['total' => $total])->save();
+            }
+        } catch (\Throwable $e) {
+            // Non-fatal: the running job will fill in the total on its first chunk.
+        }
+
         SyncBitrix24LeadsJob::dispatch($user->id, $skipExisting);
 
         return ApiResponse::success([

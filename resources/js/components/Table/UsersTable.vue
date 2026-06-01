@@ -148,7 +148,7 @@
                                 </span>
                             </td>
                                 <td>
-                                    <span class="">{{ user.role_name.replace(/_/g, ' ') }}</span>
+                                    <span class="">{{ user.role_name?.replace(/_/g, ' ') }}</span>
                                 </td>
                                 <td>
                                     <p class="text-md mb-0 fw-medium" v-if="user.parent_name">{{ user.parent_name }}</p>
