@@ -119,7 +119,7 @@ public function index(Request $request)
     // ================= Listings =================
     $listingsBase = Listing::where('is_active', true)
         ->where('is_archived', false)
-        ->whereNotIn('status', ['converted','draft']);
+        ->whereNotIn('status', ['converted','draft','rented'])->where('approved', true);
 
     $totalListings = (clone $listingsBase)
         ->when($hasDateFilter, fn ($q) => $this->applyCreatedBetween($q, $rangeFrom, $rangeTo))
@@ -1052,9 +1052,9 @@ public function getPropertyTypesWithListings(Request $request)
         return response()->json([
             'success' => true,
             'data' => [
-                'new' => $pick(['new', 'fresh', 'incoming']),
-                'assigned' => $pick(['assign', 'contact', 'qualified']),
-                'deal_won' => $pick(['won', 'closed', 'convert', 'deal']),
+                'new' => $pick(['New Lead', 'fresh', 'incoming']),
+                'assigned' => $pick(['Assigned', 'Contacted', 'Qualified']),
+                'deal_won' => $pick(['won', 'closed', 'Converted', 'deal']),
                 'stages' => $stages->map(fn ($s) => [
                     'id' => $s->id,
                     'name' => $s->name,
