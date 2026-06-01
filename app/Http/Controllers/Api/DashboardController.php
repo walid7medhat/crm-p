@@ -1039,17 +1039,20 @@ public function getPropertyTypesWithListings(Request $request)
             ->get(['id', 'name', 'order']);
 
         $pick = function (array $needles) use ($stages) {
+            $total = 0;
+
             foreach ($stages as $stage) {
-                $name = Str::of($stage->name)->lower();
+                $name = strtolower((string) $stage->name);
 
                 foreach ($needles as $needle) {
-                    if ($name->contains(Str::lower($needle))) {
-                        return (int) $stage->leads_count;
+                    if (str_contains($name, strtolower($needle))) {
+                        $total += (int) $stage->leads_count;
+                        break; // عشان مايتحسبش مرتين
                     }
                 }
             }
 
-            return 0;
+            return $total;
         };
         return response()->json([
             'success' => true,
