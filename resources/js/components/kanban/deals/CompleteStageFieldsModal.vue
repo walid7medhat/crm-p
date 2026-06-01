@@ -34,7 +34,7 @@
         <div class="deal-progress-wrapper py-2 px-3" v-if="targetStageName">
           <!-- <div class="deal-progress-label">Pipeline</div> -->
           <div class="deal-progress-bar">
-            <div class="deal-stage-pill active" aria-current="step" :style="targetStagePillStyle">
+            <div class="deal-stage-pill active" aria-current="step" >
               <span class="stage-text">{{ targetStageName }}</span>
             </div>
           </div>

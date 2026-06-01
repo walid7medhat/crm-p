@@ -52,6 +52,14 @@ class SyncBitrix24LeadsJob implements ShouldQueue
 
         $b24Leads = $page['result'] ?? [];
         $next     = $page['next'] ?? null;
+        $total    = (int) ($page['total'] ?? 0);
+
+        // Persist the Bitrix24 grand total so the UI can show "x / total"
+        // instead of "x / —". Bitrix returns it on every page; keep the
+        // largest value we've seen in case an early page reported 0.
+        if ($total > (int) ($state->total ?? 0)) {
+            $state->update(['total' => $total]);
+        }
 
         // check existing (optional optimization)
         $existingMap = [];

@@ -831,25 +831,40 @@ export default {
          * (e.g. http://127.0.0.1:8001) while the SPA runs on another host. Use the same
          * origin as the page for /storage/ URLs so images load in production.
          */
-        resolveMediaUrl(url) {
-            if (!url || typeof url !== 'string') return null;
+       resolveMediaUrl(url) {
+            // Return early if url is null, undefined, or not a string
+            if (!url || typeof url !== 'string') return this.defaultAvatar;
+            
             try {
+                // Check if it's already a valid URL
                 const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : undefined);
                 const path = parsed.pathname + parsed.search;
+                
                 if (!path.includes('/storage/')) {
                     return parsed.href;
                 }
+                
                 const badLocal = /^(127\.0\.0\.1|localhost)$/i.test(parsed.hostname);
                 const pageOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+                
                 if (!pageOrigin) return parsed.href;
                 if (badLocal || parsed.origin !== pageOrigin) {
                     return `${pageOrigin}${path}`;
                 }
                 return parsed.href;
-            } catch {
-                if (typeof window === 'undefined') return url;
-                if (url.startsWith('/')) return `${window.location.origin}${url}`;
-                return `${window.location.origin}/storage/${url.replace(/^\/+/, '')}`;
+            } catch (error) {
+                // URL parsing failed, try to handle relative paths
+                if (typeof window === 'undefined') return this.defaultAvatar;
+                
+                if (typeof url === 'string' && url.startsWith('/')) {
+                    return `${window.location.origin}${url}`;
+                }
+                
+                if (typeof url === 'string' && !url.startsWith('http')) {
+                    return `${window.location.origin}/storage/${url.replace(/^\/+/, '')}`;
+                }
+                
+                return this.defaultAvatar;
             }
         },
 
