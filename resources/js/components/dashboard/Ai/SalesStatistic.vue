@@ -1,271 +1,138 @@
 <template>
-  <div class="col-xxl-6 col-xl-12">
-    <div class="card h-100">
-      <div class="card-body">
-        <div class="d-flex flex-wrap align-items-center justify-content-between">
-          <h6 class="text-lg mb-0">Listings Statistics</h6>
-          <select v-model="selectedPeriod" @change="fetchData" class="form-select bg-base form-select-sm w-auto radius-8">
+  <div class="ai-panel ai-panel--chart-kpi">
+    <div class="ai-panel__body ai-chart-kpi__body">
+      <div class="ai-panel__head">
+        <h2 class="ai-panel__title">Listings Statistics</h2>
+        <label class="ai-period-select">
+          <iconify-icon icon="lucide:calendar" width="15" height="15" class="ai-period-select__icon" />
+          <select v-model="selectedPeriod" class="ai-period-select__native" @change="fetchData">
             <option value="yearly">Yearly</option>
             <option value="monthly">Monthly</option>
             <option value="weekly">Weekly</option>
           </select>
-        </div>
-        <div id="chart" class="pt-28 apexcharts-tooltip-style-1"></div>
+          <iconify-icon icon="lucide:chevrons-up-down" width="14" height="14" class="ai-period-select__chev" />
+        </label>
       </div>
+      <div ref="chartRef" class="ai-chart ai-chart--line-kpi" />
     </div>
   </div>
 </template>
 
 <script>
-import ApexCharts from 'apexcharts';
-import { ref, onMounted } from 'vue';
-import axios from 'axios';
+import ApexCharts from 'apexcharts'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import axios from 'axios'
+
+function resolveYAxisMax(maxValue) {
+  const max = Number(maxValue) || 0
+  if (max <= 0) return 100
+  if (max <= 600) return 600
+  const step = max <= 1200 ? 200 : 500
+  return Math.ceil(max / step) * step
+}
 
 export default {
   name: 'ListingsStatistics',
   setup() {
-    const selectedPeriod = ref('yearly');
-    const stats = ref({
-      total_listings: 0,
-      growth_percentage: 0,
-      daily_change: 0
-    });
-    let chart = null;
+    const selectedPeriod = ref('yearly')
+    const chartRef = ref(null)
+    let chart = null
 
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token')
         const response = await axios.get(`/api/dashboard/listings-statistics?period=${selectedPeriod.value}`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
-        
-        stats.value = response.data.data;
-        updateChart(response.data.chart_data);
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
+        updateChart(response.data.chart_data)
       } catch (error) {
-        console.error('Error fetching listings statistics:', error);
+        console.error('Error fetching listings statistics:', error)
       }
-    };
+    }
 
     const updateChart = (chartData) => {
-      if (chart) {
-        chart.destroy();
-      }
+      if (!chartRef.value || !chartData?.values) return
+      if (chart) chart.destroy()
 
-      // حساب الحد الأقصى للقيمة للـ Y-axis
-      const maxValue = Math.max(...chartData.values);
-      const yAxisMax = maxValue > 0 ? Math.ceil(maxValue * 1.1) : 10;
+      const yMax = resolveYAxisMax(Math.max(...chartData.values, 0))
 
-      const options = {
-        series: [{
-          name: 'Listings Count',
-          data: chartData.values
-        }],
+      chart = new ApexCharts(chartRef.value, {
+        series: [{ name: 'Listings', data: chartData.values }],
         chart: {
-          height: 264,
-          type: 'line',
+          height: 268,
+          type: 'area',
+          width: '100%',
           toolbar: { show: false },
           zoom: { enabled: false },
-          dropShadow: {
-            enabled: true,
-            top: 6,
-            left: 0,
-            blur: 4,
-            color: '#000',
-            opacity: 0.1,
-          },
+          fontFamily: 'Inter, system-ui, sans-serif',
         },
         colors: ['#733E87'],
         dataLabels: { enabled: false },
-        stroke: {
-          curve: 'smooth',
-          colors: ['#733E87'],
-          width: 3,
-        },
-        markers: {
-          size: 5,
-          colors: ['#733E87'],
-          strokeColors: '#fff',
-          strokeWidth: 2,
-          hover: { 
-            size: 7,
-            sizeOffset: 1
-          },
-        },
-        tooltip: {
-          enabled: true,
-          theme: 'light',
-          x: { 
-            show: true,
-            format: 'dd MMM'
-          },
-          y: { 
-            formatter: function(value) {
-              return value + (value === 1 ? ' Listing' : ' Listings');
-            },
-            title: {
-              formatter: function() {
-                return 'Count: ';
-              }
-            }
-          },
-          marker: {
-            show: true,
-            fillColors: ['#733E87']
-          },
-          style: {
-            fontSize: '12px',
-            fontFamily: 'inherit'
-          }
-        },
-        grid: {
-          row: {
-            colors: ['transparent', 'transparent'],
-            opacity: 0.5,
-          },
-          borderColor: '#E5E7EB',
-          strokeDashArray: 3,
-          xaxis: {
-            lines: {
-              show: true
-            }
-          },
-          yaxis: {
-            lines: {
-              show: true
-            }
-          }
-        },
-        yaxis: {
-          min: 0,
-          max: yAxisMax,
-          tickAmount: 5,
-          labels: {
-            formatter: function (value) {
-              return Math.round(value);
-            },
-            style: { 
-              fontSize: '12px',
-              colors: '#6B7280',
-              fontFamily: 'inherit'
-            },
-          },
-          title: {
-            text: 'Number of Listings',
-            style: {
-              fontSize: '12px',
-              fontWeight: 400,
-              color: '#6B7280',
-              fontFamily: 'inherit'
-            }
-          }
-        },
-        xaxis: {
-          categories: chartData.labels,
-          tooltip: { enabled: false },
-          labels: { 
-            style: { 
-              fontSize: '11px',
-              colors: '#6B7280',
-              fontFamily: 'inherit'
-            },
-            rotate: selectedPeriod.value === 'monthly' ? -45 : 0,
-            trim: true,
-            hideOverlappingLabels: true
-          },
-          axisBorder: { 
-            show: false 
-          },
-          axisTicks: {
-            show: true,
-            color: '#E5E7EB'
-          },
-          crosshairs: {
-            show: true,
-            width: 1,
-            position: 'back',
-            stroke: {
-              color: '#733E87',
-              width: 1,
-              dashArray: 0
-            },
-            fill: {
-              type: 'solid',
-              color: '#FEF3CD',
-              gradient: {
-                colorFrom: '#FEF3CD',
-                colorTo: '#FEF3CD',
-                stops: [0, 100],
-                opacityFrom: 0.4,
-                opacityTo: 0.5,
-              }
-            },
-          },
-        },
+        stroke: { curve: 'smooth', width: 3, colors: ['#733E87'] },
         fill: {
           type: 'gradient',
           gradient: {
-            shadeIntensity: 1,
-            opacityFrom: 0.7,
-            opacityTo: 0.2,
-            stops: [0, 80, 100],
+            type: 'vertical',
+            shadeIntensity: 0.2,
+            opacityFrom: 0.5,
+            opacityTo: 0.02,
+            stops: [0, 85, 100],
             colorStops: [
-              {
-                offset: 0,
-                color: '#733E87',
-                opacity: 0.4
-              },
-              {
-                offset: 100,
-                color: '#733E87',
-                opacity: 0.1
-              }
-            ]
-          }
-        }
-      };
+              { offset: 0, color: '#A78BFA', opacity: 0.55 },
+              { offset: 100, color: '#733E87', opacity: 0.05 },
+            ],
+          },
+        },
+        markers: {
+          size: 4,
+          colors: ['#733E87'],
+          strokeColors: '#fff',
+          strokeWidth: 2,
+          hover: { size: 6 },
+        },
+        tooltip: {
+          theme: 'light',
+          x: { show: true },
+          y: { formatter: (v) => `${Math.round(v)} listing${v === 1 ? '' : 's'}` },
+        },
+        grid: {
+          borderColor: 'transparent',
+          strokeDashArray: 4,
+          xaxis: { lines: { show: false } },
+          yaxis: { lines: { show: true } },
+          padding: { left: 8, right: 12 },
+        },
+        yaxis: {
+          min: 0,
+          max: yMax,
+          tickAmount: yMax <= 600 ? 6 : 5,
+          labels: {
+            style: { fontSize: '11px', colors: '#94a3b8' },
+            formatter: (v) => Math.round(v),
+          },
+        },
+        xaxis: {
+          categories: chartData.labels,
+          labels: {
+            style: { fontSize: '11px', colors: '#64748b', fontWeight: 500 },
+            rotate: 0,
+          },
+          axisBorder: { show: false },
+          axisTicks: { show: false },
+        },
+      })
+      chart.render()
+    }
 
-      chart = new ApexCharts(document.querySelector('#chart'), options);
-      chart.render();
-    };
+    onMounted(fetchData)
+    onBeforeUnmount(() => {
+      if (chart) chart.destroy()
+    })
 
-    const formatNumber = (num) => {
-      return new Intl.NumberFormat().format(num);
-    };
-
-    onMounted(() => {
-      fetchData();
-    });
-
-    return {
-      selectedPeriod,
-      stats,
-      fetchData,
-      formatNumber
-    };
+    return { selectedPeriod, chartRef, fetchData }
   },
-};
+}
 </script>
-
-<style scoped>
-/* يمكن إضافة ألوان مخصصة إذا لزم الأمر */
-:deep(.apexcharts-tooltip) {
-  border-color: #733E87 !important;
-}
-
-:deep(.apexcharts-tooltip-title) {
-  background-color: #733E87 !important;
-  color: white !important;
-  border-color: #733E87 !important;
-}
-
-:deep(.apexcharts-xcrosshairs) {
-  stroke: #733E87 !important;
-}
-
-:deep(.apexcharts-ycrosshairs) {
-  stroke: #733E87 !important;
-}
-</style>
