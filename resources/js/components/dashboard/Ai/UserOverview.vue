@@ -9,6 +9,7 @@
             <option value="today">Today</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
+             <option value="yearly">>Yearly</option>
           </select>
           <iconify-icon icon="lucide:chevrons-up-down" width="14" height="14" class="ai-period-select__chev" />
         </label>

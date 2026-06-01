@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import api from '@/plugins/axios'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
-import { toDateOnlyApiString, parseToDate } from '@/composables/useAdvancedDateModel.js'
+import { parseToDate } from '@/composables/useAdvancedDateModel.js'
 
 const defaultStats = () => ({
   total_agents: 0,
@@ -15,17 +15,9 @@ const defaultStats = () => ({
   total_listings: 0,
 })
 
-function defaultDateRange() {
-  const end = new Date()
-  const start = new Date()
-  start.setMonth(start.getMonth() - 2)
-  return {
-    from: toDateOnlyApiString(start),
-    to: toDateOnlyApiString(end),
-  }
-}
-
-const initialRange = defaultDateRange()
+// Default = no date filter → show ALL data. The range is only set once the
+// user picks one in the date picker, after which everything filters by it.
+const initialRange = { from: '', to: '' }
 
 /** Shared dashboard state (navbar date picker + home page) */
 const loading = ref(true)
@@ -78,10 +70,14 @@ export function useDashboardHome() {
     return 'Select date range'
   })
 
-  const dateParams = computed(() => ({
-    date_from: dateFrom.value,
-    date_to: dateTo.value,
-  }))
+  // Only include the date keys when a range is actually selected; otherwise
+  // omit them so the API returns all-time data (its filters are opt-in).
+  const dateParams = computed(() => {
+    const params = {}
+    if (dateFrom.value) params.date_from = dateFrom.value
+    if (dateTo.value) params.date_to = dateTo.value
+    return params
+  })
 
   const formatNumber = (n) => new Intl.NumberFormat().format(Number(n) || 0)
 
@@ -136,9 +132,9 @@ export function useDashboardHome() {
   }
 
   const fetchSchedule = async () => {
-    const res = await api.get('/dashboard/schedule', {
-      params: { date: dateTo.value, ...dateParams.value },
-    })
+    const params = { ...dateParams.value }
+    if (dateTo.value) params.date = dateTo.value
+    const res = await api.get('/dashboard/schedule', { params })
     schedule.value = {
       label: res.data?.data?.label || '',
       items: res.data?.data?.items || [],

@@ -82,98 +82,132 @@ public function index(Request $request)
     $logs = $query->latest()->get();
     
     return response()->json($logs);
-}
-    public function getStats(Request $request)
-    {
-        [$rangeFrom, $rangeTo] = $this->resolveDashboardDateRange($request);
-        $thirtyDaysAgo = Carbon::now()->subDays(30);
-        $changeFrom = $rangeFrom ?? $thirtyDaysAgo;
-        $changeTo = $rangeTo;
-        $currentUser=auth()->user();
-        $user_herarchy=User::where(function($q) use ($currentUser) {
-                $q->where('id', $currentUser->id)
-                ->orWhere('parent_id', $currentUser->id)
-                ->orWhereHas('parent', function($parentQuery) use ($currentUser) {
-                    $parentQuery->where('parent_id', $currentUser->id);
-                });
-            })->pluck('id')->toArray();
-        // Total Agents (users with sales role)
-        $agentsBase = User::when(!($currentUser->hasRole('super_admin')|| $currentUser->hasRole('admin')) ,function($q)use ($user_herarchy){
-            $q->whereIn('parent_id', $user_herarchy);
-        });
-        $totalAgents = (clone $agentsBase)->when($rangeFrom || $rangeTo, function ($q) use ($rangeFrom, $rangeTo) {
-            $this->applyCreatedBetween($q, $rangeFrom, $rangeTo);
-        })->count();
+}public function getStats(Request $request)
+{
+    [$rangeFrom, $rangeTo] = $this->resolveDashboardDateRange($request);
 
-        $agentsChange = (clone $agentsBase)->where('created_at', '>=', $changeFrom)
-            ->when($changeTo, fn ($q) => $q->where('created_at', '<=', $changeTo))
-            ->count();
+    $hasDateFilter = $rangeFrom || $rangeTo;
 
-        // Total Listings
-        $totalListings = Listing::where('is_active',true)->where('is_archived',false)->whereNotIn('status',['converted','draft'])->count();
-        $listingsChange = Listing::where('is_active',true)->where('is_archived',false)->whereNotIn('status',['converted','draft'])->where('created_at', '>=', $thirtyDaysAgo)->count();
+    $changeFrom = $hasDateFilter ? $rangeFrom : null;
+    $changeTo   = $hasDateFilter ? $rangeTo   : null;
 
-        // My Orders (for authenticated user)
-        $ordersBase = ListingAccessRequest::when(!($currentUser->hasRole('super_admin')|| $currentUser->hasRole('admin')) ,function($q)use ($user_herarchy){
-            $q->where('requested_by', auth()->id());
-        });
-        $myOrders = (clone $ordersBase)->when($rangeFrom || $rangeTo, function ($q) use ($rangeFrom, $rangeTo) {
-            $this->applyCreatedBetween($q, $rangeFrom, $rangeTo);
-        })->count();
-        $ordersChange = (clone $ordersBase)->where('created_at', '>=', $changeFrom)
-            ->when($changeTo, fn ($q) => $q->where('created_at', '<=', $changeTo))
-            ->count();
+    $currentUser = auth()->user();
 
-        $requestsBase = ListingAccessRequest::when(!($currentUser->hasRole('super_admin')|| $currentUser->hasRole('admin')) ,function($q)use ($user_herarchy){
-             $q->whereHas('listing', function ($query) use ($user_herarchy) {
-                $query->where(function($q) use ($user_herarchy) {
-                $q->orWhereIn('agent_id', $user_herarchy);
+    $user_herarchy = User::where(function($q) use ($currentUser) {
+        $q->where('id', $currentUser->id)
+          ->orWhere('parent_id', $currentUser->id)
+          ->orWhereHas('parent', function($parentQuery) use ($currentUser) {
+              $parentQuery->where('parent_id', $currentUser->id);
+          });
+    })->pluck('id')->toArray();
+
+    // ================= Agents =================
+    $agentsBase = User::when(
+        !($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')),
+        fn($q) => $q->whereIn('parent_id', $user_herarchy)
+    );
+
+    $totalAgents = (clone $agentsBase)
+        ->when($hasDateFilter, fn ($q) => $this->applyCreatedBetween($q, $rangeFrom, $rangeTo))
+        ->count();
+
+    $agentsChange = (clone $agentsBase)
+        ->when($changeFrom, fn ($q) => $q->where('created_at', '>=', $changeFrom))
+        ->when($changeTo, fn ($q) => $q->where('created_at', '<=', $changeTo))
+        ->count();
+
+    // ================= Listings =================
+    $listingsBase = Listing::where('is_active', true)
+        ->where('is_archived', false)
+        ->whereNotIn('status', ['converted','draft']);
+
+    $totalListings = (clone $listingsBase)
+        ->when($hasDateFilter, fn ($q) => $this->applyCreatedBetween($q, $rangeFrom, $rangeTo))
+        ->count();
+
+    $listingsChange = (clone $listingsBase)
+        ->when($changeFrom, fn ($q) => $q->where('created_at', '>=', $changeFrom))
+        ->when($changeTo, fn ($q) => $q->where('created_at', '<=', $changeTo))
+        ->count();
+
+    // ================= Orders =================
+    $ordersBase = ListingAccessRequest::when(
+        !($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')),
+        fn($q) => $q->where('requested_by', auth()->id())
+    );
+
+    $myOrders = (clone $ordersBase)
+        ->when($hasDateFilter, fn ($q) => $this->applyCreatedBetween($q, $rangeFrom, $rangeTo))
+        ->count();
+
+    $ordersChange = (clone $ordersBase)
+        ->when($changeFrom, fn ($q) => $q->where('created_at', '>=', $changeFrom))
+        ->when($changeTo, fn ($q) => $q->where('created_at', '<=', $changeTo))
+        ->count();
+
+    // ================= Requests =================
+    $requestsBase = ListingAccessRequest::when(
+        !($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')),
+        function($q) use ($user_herarchy) {
+            $q->whereHas('listing', function ($query) use ($user_herarchy) {
+                $query->whereIn('agent_id', $user_herarchy);
             });
-        });});
-        $myRequests = (clone $requestsBase)->when($rangeFrom || $rangeTo, function ($q) use ($rangeFrom, $rangeTo) {
-            $this->applyCreatedBetween($q, $rangeFrom, $rangeTo);
-        })->count();
-        $requestsChange = (clone $requestsBase)->where('created_at', '>=', $changeFrom)
-            ->when($changeTo, fn ($q) => $q->where('created_at', '<=', $changeTo))
-            ->count();
+        }
+    );
 
-         $developers=Developer::count();
-         $ownersBase = Owner::when(!($currentUser->hasRole('super_admin')|| $currentUser->hasRole('admin')) ,function($q)use ($user_herarchy){
-            $q->where('added_by', auth()->id());
-        });
-         $owners = (clone $ownersBase)->when($rangeFrom || $rangeTo, function ($q) use ($rangeFrom, $rangeTo) {
-            $this->applyCreatedBetween($q, $rangeFrom, $rangeTo);
-        })->count();
-        $ownersChange = (clone $ownersBase)->where('created_at', '>=', $changeFrom)
-            ->when($changeTo, fn ($q) => $q->where('created_at', '<=', $changeTo))
-            ->count();
-         $property_types=PropertyType::count();
-         $unit_views=UnitView::count();
-         $areas=Area::count();
-         $layout_types=LayoutType::count();
+    $myRequests = (clone $requestsBase)
+        ->when($hasDateFilter, fn ($q) => $this->applyCreatedBetween($q, $rangeFrom, $rangeTo))
+        ->count();
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'total_agents' => $totalAgents,
-                'agents_change' => $agentsChange,
-                'total_listings' => $totalListings,
-                'listings_change' => $listingsChange,
-                'my_orders' => $myOrders,
-                'orders_change' => $ordersChange,
-                'my_requests' => $myRequests,
-                'requests_change' => $requestsChange,
-                'owners'=>$owners,
-                'owners_change' => $ownersChange,
-                'developers'=>$developers,
-                'property_types'=>$property_types,
-                'unit_views'=>$unit_views,
-                'areas'=>$areas,
-                'layout_types'=>$layout_types,
-               
-            ]
-        ]);
-    }
+    $requestsChange = (clone $requestsBase)
+        ->when($changeFrom, fn ($q) => $q->where('created_at', '>=', $changeFrom))
+        ->when($changeTo, fn ($q) => $q->where('created_at', '<=', $changeTo))
+        ->count();
+
+    // ================= Owners =================
+    $ownersBase = Owner::when(
+        !($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')),
+        fn($q) => $q->where('added_by', auth()->id())
+    );
+
+    $owners = (clone $ownersBase)
+        ->when($hasDateFilter, fn ($q) => $this->applyCreatedBetween($q, $rangeFrom, $rangeTo))
+        ->count();
+
+    $ownersChange = (clone $ownersBase)
+        ->when($changeFrom, fn ($q) => $q->where('created_at', '>=', $changeFrom))
+        ->when($changeTo, fn ($q) => $q->where('created_at', '<=', $changeTo))
+        ->count();
+
+    // ================= Static Counts =================
+    $developers      = Developer::count();
+    $property_types  = PropertyType::count();
+    $unit_views      = UnitView::count();
+    $areas           = Area::count();
+    $layout_types    = LayoutType::count();
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'total_agents'     => $totalAgents,
+            'agents_change'    => $agentsChange,
+            'total_listings'   => $totalListings,
+            'listings_change'  => $listingsChange,
+            'my_orders'        => $myOrders,
+            'orders_change'    => $ordersChange,
+            'my_requests'      => $myRequests,
+            'requests_change'  => $requestsChange,
+            'owners'           => $owners,
+            'owners_change'    => $ownersChange,
+            'developers'       => $developers,
+            'property_types'   => $property_types,
+            'unit_views'       => $unit_views,
+            'areas'            => $areas,
+            'layout_types'     => $layout_types,
+            'is_filtered'      => $hasDateFilter,
+        ]
+    ]);
+}
   public function getListingsStatistics(Request $request)
 {
     $period = $request->get('period', 'yearly');
@@ -549,6 +583,39 @@ public function getLeadsOverview(Request $request)
             ->count();
 
             break;
+        case 'yearly':
+                $newLeads = ListingAccessRequest::when(
+                    !($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')),
+                    fn($q) => $q->where('requested_by', $currentUser->id)
+                )
+                ->whereYear('created_at', now()->year)
+                ->count();
+
+                $approvedLeads = ListingAccessRequest::when(
+                    !($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')),
+                    function($q) use ($user_hierarchy) {
+                        $q->whereHas('listing', function ($query) use ($user_hierarchy) {
+                            $query->whereIn('agent_id', $user_hierarchy);
+                        });
+                    }
+                )
+                ->where('status', 'approved')
+                ->whereYear('created_at', now()->year)
+                ->count();
+
+                $rejectedLeads = ListingAccessRequest::when(
+                    !($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')),
+                    function($q) use ($user_hierarchy) {
+                        $q->whereHas('listing', function ($query) use ($user_hierarchy) {
+                            $query->whereIn('agent_id', $user_hierarchy);
+                        });
+                    }
+                )
+                ->where('status', 'rejected')
+                ->whereYear('created_at', now()->year)
+                ->count();
+
+                break;
     }
 
     $totalLeads = $newLeads + $approvedLeads + $rejectedLeads;
